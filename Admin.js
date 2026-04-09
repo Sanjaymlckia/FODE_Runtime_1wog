@@ -3465,115 +3465,172 @@ function admin_previewStageBatch(payload) {
 
 function admin_sendStageBatch(payload) {
   return withEnvelope_("admin_sendStageBatch", function (dbgId) {
+    var requestId = clean_(dbgId || newDebugId_());
     var adminEmail = getActiveUserEmail_();
-    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
-    requireSuperAdmin_(adminEmail);
-    var p = payload && typeof payload === "object" ? payload : {};
-    var actor = resolveAdminCommActor_(p);
-    var stage = normalizeStageBatchStage_(p.stage || "");
-    var limit = clampStageBatchLimit_(p.limit);
-    var requestedOffset = clampStageBatchOffset_(p.offset);
-    if (p.confirmSend !== true) {
-      return adminCommBlockedResult_("send_stage_batch", "CONFIRM_REQUIRED", dbgId, {
-        blockReason: "Explicit confirmation is required before batch send.",
-        limit: limit,
-        offset: requestedOffset
-      });
-    }
-    if (!stage) {
-      return adminCommBlockedResult_("send_stage_batch", "UNSUPPORTED_STAGE", dbgId, {
-        blockReason: "Unsupported stage for batch send.",
-        limit: limit,
-        offset: requestedOffset
-      });
-    }
-    var messageType = getBatchMessageTypeForStage_(stage);
-    if (!messageType) {
-      return adminCommBlockedResult_("send_stage_batch", "STAGE_NOT_SENDABLE", dbgId, {
-        blockReason: "No batch message is supported for this stage.",
-        limit: limit,
-        offset: requestedOffset
-      });
-    }
-    var previewGate = readStageBatchPreviewCache_(adminEmail);
-    if (!previewGate
-      || clean_(previewGate.stage || "").toUpperCase() !== stage
-      || Number(previewGate.limit || 0) !== limit
-      || clean_(previewGate.messageType || "") !== messageType
-      || !(Number(previewGate.eligible || 0) > 0)) {
-      return adminCommBlockedResult_("send_stage_batch", "PREVIEW_REQUIRED", dbgId, {
-        blockReason: "A successful preview for the same stage and batch size is required before send. Diagnostic offset is ignored in production selection.",
-        limit: limit,
-        offset: requestedOffset,
+    var stage = "";
+    var messageType = "";
+    try {
+      if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+      requireSuperAdmin_(adminEmail);
+      var p = payload && typeof payload === "object" ? payload : {};
+      var actor = resolveAdminCommActor_(p);
+      stage = normalizeStageBatchStage_(p.stage || "");
+      var limit = clampStageBatchLimit_(p.limit);
+      var requestedOffset = clampStageBatchOffset_(p.offset);
+      if (p.confirmSend !== true) {
+        return adminCommBlockedResult_("send_stage_batch", "CONFIRM_REQUIRED", requestId, {
+          blockReason: "Explicit confirmation is required before batch send.",
+          limit: limit,
+          offset: requestedOffset
+        });
+      }
+      if (!stage) {
+        return adminCommBlockedResult_("send_stage_batch", "UNSUPPORTED_STAGE", requestId, {
+          blockReason: "Unsupported stage for batch send.",
+          limit: limit,
+          offset: requestedOffset
+        });
+      }
+      messageType = getBatchMessageTypeForStage_(stage);
+      if (!messageType) {
+        return adminCommBlockedResult_("send_stage_batch", "STAGE_NOT_SENDABLE", requestId, {
+          blockReason: "No batch message is supported for this stage.",
+          limit: limit,
+          offset: requestedOffset
+        });
+      }
+      var previewGate = readStageBatchPreviewCache_(adminEmail);
+      if (!previewGate
+        || clean_(previewGate.stage || "").toUpperCase() !== stage
+        || Number(previewGate.limit || 0) !== limit
+        || clean_(previewGate.messageType || "") !== messageType
+        || !(Number(previewGate.eligible || 0) > 0)) {
+        return adminCommBlockedResult_("send_stage_batch", "PREVIEW_REQUIRED", requestId, {
+          blockReason: "A successful preview for the same stage and batch size is required before send. Diagnostic offset is ignored in production selection.",
+          limit: limit,
+          offset: requestedOffset,
+          messageType: messageType
+        });
+      }
+      stageBatchLogSummary_("STAGE_SEND_START", {
+        requestId: requestId,
+        stage: stage,
         messageType: messageType
       });
-    }
-    var priority = mapStagePriority_(stage);
-    var cohort = collectStageBatchCohort_(stage, limit, requestedOffset, {
-      messageType: messageType,
-      actorEmail: actor.actorEmail,
-      actorRole: actor.actorRole,
-      debugId: dbgId
-    });
-    var out = {
-      ok: true,
-      stage: stage,
-      priority: priority,
-      messageType: messageType,
-      sendable: true,
-      totalInStageAtSend: Number(cohort.totalInStage || 0),
-      eligibleUnsentFoundAtSend: Number(cohort.eligibleUnsentTotal || 0),
-      sendLimit: Number(cohort.limit || limit),
-      requestedOffset: requestedOffset,
-      offset: Number(cohort.offset || 0),
-      offsetApplied: cohort.offsetApplied === true,
-      offsetIgnored: cohort.offsetIgnored === true,
-      offsetMode: clean_(cohort.offsetMode || "PRODUCTION_STATEFUL"),
-      alreadySentExcluded: Number(cohort.alreadySentExcluded || 0),
-      failedExcluded: Number(cohort.failedExcluded || 0),
-      attempted: 0,
-      sent: 0,
-      blocked: 0,
-      failed: 0,
-      blockedByReason: {},
-      sentApplicantIdsSample: []
-    };
-    var batchLabel = "STAGE_SEND::" + stage + "::" + dbgId;
-    (cohort.candidates || []).forEach(function (candidate) {
-      out.attempted++;
-      var sendResult = sendApplicantMessage_(candidate.applicantId, messageType, {
+      var priority = mapStagePriority_(stage);
+      var cohort = collectStageBatchCohort_(stage, limit, requestedOffset, {
+        messageType: messageType,
         actorEmail: actor.actorEmail,
         actorRole: actor.actorRole,
-        batchLabel: batchLabel
+        debugId: requestId
       });
-      var resultType = clean_(sendResult && sendResult.result || "").toUpperCase();
-      if (resultType === "SENT") {
-        out.sent++;
-        pushStageBatchSample_(out.sentApplicantIdsSample, candidate.applicantId);
-      } else if (resultType === "BLOCKED") {
-        out.blocked++;
-        incrementStageBatchReason_(out.blockedByReason, sendResult && (sendResult.blockCode || sendResult.code || "BLOCKED"));
-      } else {
-        out.failed++;
-      }
-    });
-    clearStageBatchPreviewCache_(adminEmail);
-    stageBatchLogSummary_("STAGE_BATCH_SEND_SUMMARY", {
-      debugId: dbgId,
-      stage: stage,
-      batchSizeRequested: limit,
-      requestedOffset: requestedOffset,
-      offsetIgnored: out.offsetIgnored === true,
-      totalEligibleUnsentRowsFound: out.eligibleUnsentFoundAtSend,
-      rowsAttempted: out.attempted,
-      rowsSent: out.sent,
-      rowsBlocked: out.blocked,
-      rowsFailed: out.failed,
-      alreadySentExcluded: out.alreadySentExcluded,
-      failedExcluded: out.failedExcluded,
-      blockedByReason: out.blockedByReason
-    });
-    return out;
+      stageBatchLogSummary_("STAGE_SEND_COHORT_READY", {
+        requestId: requestId,
+        stage: stage,
+        messageType: messageType,
+        total: Number((cohort.candidates || []).length || 0)
+      });
+      var out = {
+        ok: true,
+        stage: stage,
+        priority: priority,
+        messageType: messageType,
+        sendable: true,
+        requestId: requestId,
+        totalInStageAtSend: Number(cohort.totalInStage || 0),
+        eligibleUnsentFoundAtSend: Number(cohort.eligibleUnsentTotal || 0),
+        sendLimit: Number(cohort.limit || limit),
+        requestedOffset: requestedOffset,
+        offset: Number(cohort.offset || 0),
+        offsetApplied: cohort.offsetApplied === true,
+        offsetIgnored: cohort.offsetIgnored === true,
+        offsetMode: clean_(cohort.offsetMode || "PRODUCTION_STATEFUL"),
+        alreadySentExcluded: Number(cohort.alreadySentExcluded || 0),
+        failedExcluded: Number(cohort.failedExcluded || 0),
+        attempted: 0,
+        sent: 0,
+        blocked: 0,
+        failed: 0,
+        blockedByReason: {},
+        sentApplicantIdsSample: []
+      };
+      var batchLabel = "STAGE_SEND::" + stage + "::" + requestId;
+      (cohort.candidates || []).forEach(function (candidate, index) {
+        out.attempted++;
+        stageBatchLogSummary_("STAGE_SEND_CANDIDATE_BEGIN", {
+          requestId: requestId,
+          applicantId: clean_(candidate && candidate.applicantId || ""),
+          stage: stage,
+          messageType: messageType,
+          index: index + 1,
+          total: Number((cohort.candidates || []).length || 0)
+        });
+        var sendResult = sendApplicantMessage_(candidate.applicantId, messageType, {
+          actorEmail: actor.actorEmail,
+          actorRole: actor.actorRole,
+          batchLabel: batchLabel,
+          debugId: requestId
+        });
+        stageBatchLogSummary_("STAGE_SEND_CANDIDATE_END", {
+          requestId: requestId,
+          applicantId: clean_(candidate && candidate.applicantId || ""),
+          stage: stage,
+          messageType: messageType,
+          index: index + 1,
+          total: Number((cohort.candidates || []).length || 0),
+          result: clean_(sendResult && sendResult.result || "")
+        });
+        var resultType = clean_(sendResult && sendResult.result || "").toUpperCase();
+        if (resultType === "SENT") {
+          out.sent++;
+          pushStageBatchSample_(out.sentApplicantIdsSample, candidate.applicantId);
+        } else if (resultType === "BLOCKED") {
+          out.blocked++;
+          incrementStageBatchReason_(out.blockedByReason, sendResult && (sendResult.blockCode || sendResult.code || "BLOCKED"));
+        } else {
+          out.failed++;
+        }
+      });
+      clearStageBatchPreviewCache_(adminEmail);
+      stageBatchLogSummary_("STAGE_BATCH_SEND_SUMMARY", {
+        debugId: requestId,
+        requestId: requestId,
+        stage: stage,
+        batchSizeRequested: limit,
+        requestedOffset: requestedOffset,
+        offsetIgnored: out.offsetIgnored === true,
+        totalEligibleUnsentRowsFound: out.eligibleUnsentFoundAtSend,
+        rowsAttempted: out.attempted,
+        rowsSent: out.sent,
+        rowsBlocked: out.blocked,
+        rowsFailed: out.failed,
+        alreadySentExcluded: out.alreadySentExcluded,
+        failedExcluded: out.failedExcluded,
+        blockedByReason: out.blockedByReason
+      });
+      stageBatchLogSummary_("STAGE_SEND_COMPLETE", {
+        requestId: requestId,
+        stage: stage,
+        messageType: messageType,
+        index: Number(out.attempted || 0),
+        total: Number((cohort.candidates || []).length || 0),
+        sent: Number(out.sent || 0),
+        blocked: Number(out.blocked || 0),
+        failed: Number(out.failed || 0)
+      });
+      return out;
+    } catch (e) {
+      stageBatchLogSummary_("STAGE_SEND_FAIL", {
+        requestId: requestId,
+        applicantId: "",
+        stage: stage,
+        messageType: messageType,
+        index: 0,
+        total: 0,
+        error: String(e && e.message ? e.message : e || "Stage batch send failed.")
+      });
+      throw e;
+    }
   });
 }
 
@@ -3740,3 +3797,5 @@ function adminDryRunFirst50LegacyInvites() {
   console.log('DRYRUN_50 ' + JSON.stringify(summary));
   return summary;
 }
+
+

@@ -1836,14 +1836,61 @@ function sendStageBatchUi_(){
   if (!previewReady || batchState.busy || !IS_SUPER) return;
   var confirmText = "Send " + String(limit) + " emails for stage " + stage + " using the next eligible unsent records? Preview prepared: " + String(Number(batchState.previewEligible || 0)) + ". Message: " + messageType + ". Diagnostic offset is ignored.";
   if (!window.confirm(confirmText)) return;
+  batchState.sendRequestSeq = Number(batchState.sendRequestSeq || 0) + 1;
+  var requestSeq = batchState.sendRequestSeq;
+  var clientRequestId = "send-client-" + String(Date.now()) + "-" + String(requestSeq);
+  var requestStartedAtMs = Date.now();
+  var timeoutMs = 20000;
+  console.log("[StageBatchSend] start", { requestId: clientRequestId, stage: stage, limit: limit, offset: offset, timeoutMs: timeoutMs, messageType: messageType });
+  batchState.sendActiveSeq = requestSeq;
+  batchState.sendClientRequestId = clientRequestId;
   batchState.busy = true;
   batchState.action = "send";
   renderBatchPanel();
+  var timeoutHandle = window.setTimeout(function(){
+    if (batchState.sendActiveSeq !== requestSeq) {
+      console.log("[StageBatchSend] stale_ignored", { requestId: clientRequestId, source: "timeout" });
+      return;
+    }
+    batchState.sendActiveSeq = 0;
+    batchState.busy = false;
+    var clientElapsedMs = Date.now() - requestStartedAtMs;
+    resetBatchPreviewState_(false);
+    batchState.action = "send";
+    batchState.result = {
+      ok: false,
+      path: "timeout",
+      action: "send_stage_batch",
+      message: "Stage batch send timed out before server response.",
+      error: "Stage batch send timed out before server response.",
+      clientElapsedMs: clientElapsedMs,
+      requestId: clientRequestId,
+      stage: stage,
+      messageType: messageType,
+      sendLimit: limit,
+      requestedOffset: offset,
+      offsetIgnored: offset > 0
+    };
+    console.log("[StageBatchSend] terminal", { requestId: clientRequestId, path: "timeout", clientElapsedMs: clientElapsedMs });
+    renderBatchPanel();
+  }, timeoutMs);
   google.script.run
     .withSuccessHandler(function(res){
+      console.log("[StageBatchSend] success_callback", { requestId: clientRequestId });
+      window.clearTimeout(timeoutHandle);
+      if (batchState.sendActiveSeq !== requestSeq) {
+        console.log("[StageBatchSend] stale_ignored", { requestId: clientRequestId, source: "success_callback" });
+        return;
+      }
+      batchState.sendActiveSeq = 0;
       batchState.busy = false;
-      batchState.result = res && typeof res === "object" ? res : { ok: false, message: "Invalid send response.", debugId: "" };
+      var clientElapsedMs = Date.now() - requestStartedAtMs;
+      var response = res && typeof res === "object" ? res : { ok: false, message: "Invalid send response.", debugId: "", requestId: clientRequestId };
+      response.clientElapsedMs = clientElapsedMs;
+      if (!response.requestId) response.requestId = clientRequestId;
+      batchState.result = response;
       resetBatchPreviewState_(true);
+      console.log("[StageBatchSend] terminal", { requestId: String(response.requestId || clientRequestId), path: response.ok === true ? "success" : "error", clientElapsedMs: clientElapsedMs });
       renderBatchPanel();
       if (batchState.result && batchState.result.ok === true) {
         loadStageDashboard({ force: 1 });
@@ -1852,10 +1899,33 @@ function sendStageBatchUi_(){
       }
     })
     .withFailureHandler(function(err){
+      console.log("[StageBatchSend] failure_callback", { requestId: clientRequestId, error: String((err && err.message) || err || "Server failure") });
+      window.clearTimeout(timeoutHandle);
+      if (batchState.sendActiveSeq !== requestSeq) {
+        console.log("[StageBatchSend] stale_ignored", { requestId: clientRequestId, source: "failure_callback" });
+        return;
+      }
+      batchState.sendActiveSeq = 0;
       batchState.busy = false;
+      var clientElapsedMs = Date.now() - requestStartedAtMs;
       resetBatchPreviewState_(false);
       batchState.action = "send";
-      batchState.result = { ok: false, message: String((err && err.message) || err || "Server failure"), debugId: "" };
+      batchState.result = {
+        ok: false,
+        path: "error",
+        action: "send_stage_batch",
+        message: String((err && err.message) || err || "Server failure"),
+        error: String((err && err.message) || err || "Server failure"),
+        clientElapsedMs: clientElapsedMs,
+        requestId: clientRequestId,
+        stage: stage,
+        messageType: messageType,
+        sendLimit: limit,
+        requestedOffset: offset,
+        offsetIgnored: offset > 0,
+        debugId: ""
+      };
+      console.log("[StageBatchSend] terminal", { requestId: clientRequestId, path: "error", reason: "failure_callback", clientElapsedMs: clientElapsedMs });
       renderBatchPanel();
     })
     .admin_sendStageBatch({ stage: stage, limit: limit, offset: offset, confirmSend: true });
@@ -3565,3 +3635,5 @@ function renderStageDashboard_(items, emptyMessage){
   </script>
 </body>
 </html>
+
+

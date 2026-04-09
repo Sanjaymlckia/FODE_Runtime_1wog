@@ -5806,26 +5806,42 @@ function buildCampaignEmailBody_(row, portalUrl, applicantId) {
   ].join("\n");
 }
 
-function campaignSendEmailGmail_(toEmail, subject, body) {
+function campaignSendEmailGmail_(toEmail, subject, body, meta) {
+  var trace = meta && typeof meta === "object" ? meta : {};
   var alias = clean_(CONFIG.CAMPAIGN_GMAIL_ALIAS || "");
   var replyTo = clean_(CONFIG.CAMPAIGN_REPLY_TO || "fode@kundu.ac");
   var to = clean_(toEmail || "");
+  var traceBase = {
+    applicantId: clean_(trace.applicantId || ""),
+    recipient: to,
+    alias: alias,
+    requestId: clean_(trace.requestId || trace.debugId || ""),
+    batchId: clean_(trace.batchId || trace.batchLabel || "")
+  };
   if (!to) return { ok: false, error: "Missing recipient email" };
   if (!alias) return { ok: false, error: "Missing campaign Gmail alias" };
+  campaignLog_("GMAIL_ALIAS_LOOKUP_BEGIN", traceBase);
   try {
     var aliases = GmailApp.getAliases();
     if (Array.isArray(aliases) && aliases.indexOf(alias) === -1) {
+      campaignLog_("GMAIL_ALIAS_LOOKUP_END", Object.assign({}, traceBase, { aliasCount: aliases.length, aliasConfigured: false }));
       return { ok: false, error: "Campaign alias not configured: " + alias };
     }
-  } catch (_aliasErr) {}
+    campaignLog_("GMAIL_ALIAS_LOOKUP_END", Object.assign({}, traceBase, { aliasCount: Array.isArray(aliases) ? aliases.length : 0, aliasConfigured: true }));
+  } catch (_aliasErr) {
+    campaignLog_("GMAIL_ALIAS_LOOKUP_END", Object.assign({}, traceBase, { error: String(_aliasErr && _aliasErr.message ? _aliasErr.message : _aliasErr || "") }));
+  }
+  campaignLog_("GMAIL_SEND_BEGIN", traceBase);
   try {
     GmailApp.sendEmail(to, String(subject || ""), String(body || ""), {
       from: alias,
       replyTo: replyTo,
       name: clean_(CONFIG.EMAIL_FROM_NAME || "FODE Admissions") || "FODE Admissions"
     });
+    campaignLog_("GMAIL_SEND_END", Object.assign({}, traceBase, { ok: true }));
     return { ok: true, to: to, from: alias, replyTo: replyTo };
   } catch (e) {
+    campaignLog_("GMAIL_SEND_END", Object.assign({}, traceBase, { ok: false, error: String(e && e.message ? e.message : e) }));
     return { ok: false, error: String(e && e.message ? e.message : e), to: to, from: alias, replyTo: replyTo };
   }
 }
@@ -6529,7 +6545,14 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
       debugId: clean_(ctx.debugId || options.debugId || newDebugId_())
     };
   }
-  var sendRes = campaignSendEmailGmail_(ctx.effectiveEmail, message.subject, message.body);
+  var requestId = clean_(ctx.debugId || options.debugId || newDebugId_());
+  var batchId = clean_(options.batchLabel || ctx.batchLabel || "");
+  var sendRes = campaignSendEmailGmail_(ctx.effectiveEmail, message.subject, message.body, {
+    applicantId: clean_(ctx.applicantId || ""),
+    requestId: requestId,
+    batchId: batchId,
+    batchLabel: batchId
+  });
   if (!sendRes.ok) {
     recordApplicantContactOutcome_(ctx, "FAILED", {
       actorEmail: actorEmail,
@@ -6545,7 +6568,7 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
       messageType: clean_(ctx.messageType || ""),
       effectiveEmail: clean_(ctx.effectiveEmail || ""),
       subject: clean_(message.subject || ""),
-      debugId: clean_(ctx.debugId || options.debugId || newDebugId_())
+      debugId: requestId
     };
   }
   var now = new Date();
@@ -6557,7 +6580,21 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
     Email_Next_Action_Date: computeNextActionDate_(nextAttempt, now)
   };
   if (clean_(options.batchLabel || ctx.batchLabel || "")) patch.Email_Campaign_Batch = clean_(options.batchLabel || ctx.batchLabel || "");
+  campaignLog_("GMAIL_PATCH_BEGIN", {
+    applicantId: clean_(ctx.applicantId || ""),
+    recipient: clean_(ctx.effectiveEmail || ""),
+    alias: clean_(sendRes.from || ""),
+    requestId: requestId,
+    batchId: batchId
+  });
   applyPatch_(ctx.sheet, ctx.rowNumber, patch);
+  campaignLog_("GMAIL_PATCH_END", {
+    applicantId: clean_(ctx.applicantId || ""),
+    recipient: clean_(ctx.effectiveEmail || ""),
+    alias: clean_(sendRes.from || ""),
+    requestId: requestId,
+    batchId: batchId
+  });
   setLastCommunicationSentAt_(ctx.applicantId, ctx.messageType, now.toISOString());
   recordApplicantContactOutcome_(ctx, "SENT", {
     actorEmail: actorEmail,
@@ -7311,5 +7348,4 @@ function testCampaignGmailAuth() {
     aliases: GmailApp.getAliases()
   };
 }
-
 
