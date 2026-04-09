@@ -753,6 +753,7 @@
       previewActiveSeq: 0,
       previewClientRequestId: "",
       previewClientElapsedMs: 0,
+      previewRequestId: "",
       disabledReason: "",
       busy: false,
       action: "",
@@ -1556,6 +1557,7 @@ function resetBatchPreviewState_(preserveResult){
   batchState.previewEligible = 0;
   batchState.previewClientElapsedMs = 0;
   batchState.previewClientRequestId = "";
+  batchState.previewRequestId = "";
   if (!preserveResult) batchState.result = null;
 }
 function clearBatchSelection_(preserveResult){
@@ -1673,6 +1675,8 @@ function renderBatchPanel(){
   var previewReady = batchState.previewReady === true
     && batchState.selectedStage === batchState.previewStage
     && Number(batchState.previewLimit || 0) === limit
+    && Number(batchState.previewOffset || 0) === Number(getStageBatchOffsetUi_() || 0)
+    && !!String(batchState.previewRequestId || "")
     && sendable;
   if (previewBtn) {
     previewBtn.disabled = !selectedStage || batchState.busy || !IS_SUPER;
@@ -1782,7 +1786,9 @@ function previewStageBatchUi_(){
         batchState.previewReady = true;
         batchState.previewStage = stage;
         batchState.previewLimit = limit;
+        batchState.previewOffset = offset;
         batchState.previewEligible = Number(response.count || 0);
+        batchState.previewRequestId = String(response.requestId || "");
       } else {
         resetBatchPreviewState_(true);
         batchState.result = response;
@@ -1832,6 +1838,8 @@ function sendStageBatchUi_(){
   var previewReady = batchState.previewReady === true
     && batchState.selectedStage === batchState.previewStage
     && Number(batchState.previewLimit || 0) === limit
+    && Number(batchState.previewOffset || 0) === offset
+    && !!String(batchState.previewRequestId || "")
     && batchState.sendable === true;
   if (!previewReady || batchState.busy || !IS_SUPER) return;
   var confirmText = "Send " + String(limit) + " emails for stage " + stage + " using the next eligible unsent records? Preview prepared: " + String(Number(batchState.previewEligible || 0)) + ". Message: " + messageType + ". Diagnostic offset is ignored.";
@@ -1928,7 +1936,7 @@ function sendStageBatchUi_(){
       console.log("[StageBatchSend] terminal", { requestId: clientRequestId, path: "error", reason: "failure_callback", clientElapsedMs: clientElapsedMs });
       renderBatchPanel();
     })
-    .admin_sendStageBatch({ stage: stage, limit: limit, offset: offset, confirmSend: true });
+    .admin_sendStageBatch({ stage: stage, limit: limit, offset: offset, previewRequestId: String(batchState.previewRequestId || ""), confirmSend: true });
 }
 function renderStageDashboard_(items, emptyMessage){
       stageDashboardState = Array.isArray(items) ? items.slice() : [];
@@ -3635,5 +3643,6 @@ function renderStageDashboard_(items, emptyMessage){
   </script>
 </body>
 </html>
+
 
 
