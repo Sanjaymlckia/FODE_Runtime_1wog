@@ -1,0 +1,3567 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <style>
+    :root{
+      --bg: <?= BRAND.bg ?>;
+      --card: <?= BRAND.card ?>;
+      --text: <?= BRAND.text ?>;
+      --muted: <?= BRAND.muted ?>;
+      --accent: <?= BRAND.accent ?>;
+      --danger: <?= BRAND.danger ?>;
+      --warn: <?= BRAND.warn ?>;
+      --ok: <?= BRAND.ok ?>;
+      --mlcBlue: #66b2ff;
+      --mlcBlueDark: #0f4f94;
+      --tagBg: rgba(102, 178, 255, .22);
+      --tagText: #e7f4ff;
+      --labelText: #d9eaff;
+      --fieldBorder: rgba(122,184,245,.68);
+      --fieldBg: rgba(10,30,54,.74);
+      --radius: 14px;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: radial-gradient(1000px 700px at 20% -10%, rgba(14,165,164,.25), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+    }
+    .wrap{ max-width:1100px; margin:0 auto; padding:22px; }
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:14px 16px; background: rgba(17,26,46,.85);
+      border: 1px solid rgba(148,163,184,.18);
+      border-radius: var(--radius);
+      backdrop-filter: blur(8px);
+    }
+    .brand h1{ margin:0; font-size:18px; }
+    .sub{ font-size:12px; color:var(--muted); margin-top:4px; }
+    .verBadge{
+      display:inline-block;
+      margin-left:8px;
+      padding:2px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:800;
+      color:#e2e8f0;
+      background: rgba(14,165,164,.20);
+      border:1px solid rgba(14,165,164,.35);
+      vertical-align:middle;
+    }
+    .verBadge.mismatch{
+      color:#fff1f2;
+      background: rgba(239,68,68,.25);
+      border-color: rgba(239,68,68,.55);
+    }
+    .diagLinks a{ color:#93c5fd; text-decoration:none; }
+    .diagLinks a:hover{ text-decoration:underline; }
+    .card{
+      background: rgba(17,26,46,.85);
+      border: 1px solid rgba(148,163,184,.18);
+      border-radius: var(--radius);
+      padding:14px;
+      backdrop-filter: blur(8px);
+      margin-top:14px;
+    }
+    .queue-panel{ padding:14px; }
+    .queue-panel h3{ margin:0 0 10px 0; font-size:16px; }
+    .queue-section{
+      margin-top:10px;
+      border:1px solid rgba(148,163,184,.18);
+      border-radius:12px;
+      background: rgba(11,18,32,.35);
+      padding:10px;
+    }
+    .queue-section.expanded{
+      border-color: rgba(14,165,164,.45);
+      box-shadow: inset 0 0 0 1px rgba(14,165,164,.2);
+    }
+    .queue-header{ font-weight:800; font-size:13px; margin-bottom:8px; }
+    .queue-empty{ font-size:12px; color:var(--muted); }
+    .queue-table th, .queue-table td{ padding:8px 6px; font-size:12px; }
+    .queue-section-header{
+      display:flex; justify-content:space-between; align-items:center; gap:8px;
+      width:100%; background:transparent; border:0; color:inherit; padding:0; cursor:pointer;
+      text-align:left;
+    }
+    .queue-section-header .caret{ font-size:12px; color:var(--muted); }
+    .queue-section-body.hidden{ display:none; }
+    .stageDashboardMeta{ margin:0 0 10px 0; font-size:12px; color:var(--muted); }
+    .stageCards{ display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; }
+    .stageCard{
+      width:100%; text-align:left; cursor:pointer;
+      border:1px solid rgba(148,163,184,.18);
+      border-radius:12px;
+      background: rgba(11,18,32,.35);
+      padding:10px;
+      color:inherit;
+    }
+    .stageCard.selected{
+      border-color: rgba(102,178,255,.68);
+      box-shadow: inset 0 0 0 1px rgba(102,178,255,.22);
+      background: rgba(17,26,46,.55);
+    }
+    .stageCardStage{ font-weight:800; font-size:13px; }
+    .stageCardMeta{ margin-top:8px; font-size:12px; color:var(--muted); display:flex; flex-wrap:wrap; gap:8px; }
+    .priorityBadge{
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800;
+      border:1px solid currentColor;
+    }
+    .priorityHigh{ color:#ff4d4f; background:rgba(255,77,79,.12); }
+    .priorityNormal{ color:#faad14; background:rgba(250,173,20,.12); }
+    .priorityLow{ color:#52c41a; background:rgba(82,196,26,.12); }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+    .field{ flex: 1 1 240px; }
+    label{ display:block; font-size:12px; color:var(--labelText); margin-bottom:6px; font-weight:700; }
+    input, textarea, select{
+      width:100%;
+      padding:10px 11px;
+      border-radius: 12px;
+      border: 1px solid var(--fieldBorder);
+      background: var(--fieldBg);
+      color: var(--text);
+      outline:none;
+    }
+    input:focus, textarea:focus, select:focus{
+      border-color: var(--mlcBlue);
+      box-shadow: 0 0 0 2px rgba(79,156,255,.18);
+    }
+    textarea{ min-height:52px; resize:vertical; }
+    .btn{
+      border:none; cursor:pointer;
+      padding:10px 12px;
+      border-radius: 12px;
+      color: var(--text);
+      background: rgba(148,163,184,.10);
+      border: 1px solid rgba(148,163,184,.18);
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .btn.accent{ background: rgba(14,165,164,.18); border-color: rgba(14,165,164,.35); }
+    .btn.ok{ background: rgba(34,197,94,.16); border-color: rgba(34,197,94,.35); }
+    .btn.warn{ background: rgba(245,158,11,.16); border-color: rgba(245,158,11,.35); }
+    .btn.danger{ background: rgba(239,68,68,.16); border-color: rgba(239,68,68,.35); }
+    .btn.small{ padding:8px 10px; font-size:12px; }
+    .btn-sm{ padding:8px 10px; font-size:12px; }
+    .btn-success{
+      background: rgba(34,197,94,.16);
+      border-color: rgba(34,197,94,.35);
+      color: var(--text);
+    }
+    .btn:hover{ filter:brightness(1.08); }
+    .btn:focus-visible{
+      outline:2px solid rgba(102,178,255,.65);
+      outline-offset:1px;
+    }
+    table{ width:100%; border-collapse: collapse; }
+    th, td{ text-align:left; padding:10px 8px; font-size:13px; border-bottom: 1px solid rgba(148,163,184,.12); }
+    th{ color:var(--muted); font-weight:700; font-size:12px; }
+    a{ color: rgba(14,165,164,.95); text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+    .muted{ color:var(--muted); }
+    .statusTag{
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:800;
+      border:1px solid rgba(120,170,235,.45);
+      background: var(--tagBg);
+      color: var(--tagText);
+    }
+    .statusTag.ready{
+      background: rgba(34,197,94,.2);
+      border-color: rgba(34,197,94,.45);
+      color: #d6ffe6;
+    }
+    .statusTag.off{
+      background: rgba(148,163,184,.14);
+      border-color: rgba(148,163,184,.3);
+      color: #d6deea;
+    }
+    .statusTag.sent{
+      background: rgba(56,189,248,.2);
+      border-color: rgba(56,189,248,.48);
+      color: #ddf5ff;
+    }
+    .badge{
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:800;
+      border:1px solid rgba(120,170,235,.45);
+      background: var(--tagBg);
+      color: var(--tagText);
+    }
+    .bg-success{
+      background: rgba(34,197,94,.2);
+      border-color: rgba(34,197,94,.45);
+      color: #d6ffe6;
+    }
+    .bg-warning{
+      background: rgba(245,158,11,.2);
+      border-color: rgba(245,158,11,.45);
+      color: #fde68a;
+    }
+    .text-dark{ color:#1f2937; }
+    .bg-secondary{
+      background: rgba(148,163,184,.2);
+      border-color: rgba(148,163,184,.45);
+      color: #e5e7eb;
+    }
+    .badge-success{
+      background: rgba(34,197,94,.2);
+      border-color: rgba(34,197,94,.45);
+      color: #d6ffe6;
+    }
+    .badge-warning{
+      background: rgba(245,158,11,.2);
+      border-color: rgba(245,158,11,.45);
+      color: #fde68a;
+    }
+    .badge-muted{
+      background: rgba(148,163,184,.2);
+      border-color: rgba(148,163,184,.45);
+      color: #e5e7eb;
+    }
+    .bulk-actions-bar{
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--card);
+      padding: 10px;
+      border-bottom: 1px solid var(--fieldBorder);
+      border-radius: 10px;
+    }
+    .sendSummary{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid rgba(102,178,255,.45);
+      background: rgba(13,43,77,.5);
+      color:#dff0ff;
+      font-size:12px;
+    }
+    .sendSummary.err{
+      border-color: rgba(239,68,68,.55);
+      background: rgba(120,23,34,.38);
+      color: #ffe4e8;
+    }
+
+    .commMeta{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+      gap:10px;
+      margin-top:8px;
+    }
+    .commControls{
+      display:flex;
+      gap:10px;
+      align-items:flex-end;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+    .commResultBox{
+      margin-top:10px;
+      padding:12px;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.18);
+      background: rgba(11,18,32,.45);
+    }
+    .commResultBox.warn{
+      border-color: rgba(245,158,11,.45);
+      background: rgba(120,53,15,.2);
+    }
+    .commResultBox.ok{
+      border-color: rgba(34,197,94,.45);
+      background: rgba(20,83,45,.22);
+    }
+    .commResultBox.err{
+      border-color: rgba(239,68,68,.45);
+      background: rgba(127,29,29,.24);
+    }
+    .commPreviewBody{
+      white-space:pre-wrap;
+      font-size:13px;
+      line-height:1.55;
+      margin-top:8px;
+    }
+    .modalBack{
+      position:fixed; inset:0; background: rgba(0,0,0,.55);
+      display:none; align-items:center; justify-content:center; padding:18px;
+    }
+    .modal{
+      width:min(1050px, 100%);
+      max-height: 92vh;
+      overflow:auto;
+      border-radius: 18px;
+      background: rgba(24,34,58,.97);
+      border: 1px solid rgba(191,219,254,.24);
+      padding:16px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 22px 60px rgba(0,0,0,.36), 0 0 0 1px rgba(191,219,254,.05);
+    }
+    .modalHead{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+      margin-bottom: 10px;
+    }
+    .kv{ display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:10px; margin: 10px 0 12px 0; }
+    .box{
+      padding:10px; border-radius: 12px;
+      border: 1px solid rgba(148,163,184,.18);
+      background: rgba(11,18,32,.45);
+    }
+    .k{ font-size:12px; color:var(--muted); }
+    .modal .k{ color:#d7e6ff; }
+    .modal label{ color:#e4f0ff; }
+    .v{ font-size:13px; margin-top:4px; }
+    .docs{ display:grid; grid-template-columns: 1fr; gap:10px; margin-top:8px; }
+    .doc{
+      padding:10px; border-radius: 12px;
+      border: 1px solid rgba(148,163,184,.18);
+      background: rgba(11,18,32,.45);
+      display:grid;
+      grid-template-columns: 1.2fr .8fr 1fr .6fr;
+      gap:10px;
+      align-items:start;
+    }
+    .docComment{
+      min-height:60px;
+      height:60px;
+      resize:vertical;
+      padding:8px;
+      font-size:.95rem;
+      border-radius:6px;
+      background: var(--fieldBg);
+      color: var(--text);
+    }
+    .comment-box{
+      min-height:60px;
+      height:60px;
+      resize:vertical;
+      padding:8px;
+      font-size:.95rem;
+      border-radius:6px;
+      background: var(--fieldBg);
+      color: var(--text);
+    }
+    .docTitle{ font-weight:800; font-size:13px; }
+    .docWarn{ margin-top:6px; font-size:12px; opacity:.85; color:var(--warn); }
+    .overrideTag{
+      display:inline-block;
+      margin-top:6px;
+      padding:2px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:700;
+      color:#fde68a;
+      background:rgba(120,53,15,.35);
+      border:1px solid rgba(217,119,6,.45);
+    }
+    .dirtyWarn{
+      margin-top:6px;
+      font-size:12px;
+      color:#fbbf24;
+      font-weight:700;
+    }
+    .hidden{ display:none !important; }
+    .docPreviewBack{
+      position:fixed; inset:0; z-index:9999;
+      background: rgba(0,0,0,.6);
+      display:flex; align-items:center; justify-content:center;
+      padding:16px;
+    }
+    .docPreviewPanel{
+      width:min(90vw, 1200px);
+      height:min(90vh, 900px);
+      border-radius:16px;
+      overflow:hidden;
+      border: 1px solid rgba(148,163,184,.18);
+      background: rgba(17,26,46,.98);
+      display:flex; flex-direction:column;
+    }
+    .docPreviewHead{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px; padding:10px 12px;
+      border-bottom:1px solid rgba(148,163,184,.18);
+    }
+    .docPreviewFrame{
+      flex:1 1 auto;
+      width:100%;
+      border:0;
+      background:#000;
+    }
+    @media (max-width: 900px){
+      .kv{ grid-template-columns:1fr; }
+      .doc{ grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <h1>FODE Admin — Document Verification</h1>
+        <div class="sub">Signed in as: <?= USER_EMAIL ?></div>
+      </div>
+      <div class="sub" title="Script ID: <?= BUILD_SCRIPT_ID ?>">
+        <div>WebApp: <?= WEBAPP_URL ?> <span id="versionBadge" class="verBadge"></span></div>
+        <div>Build: <?= CONFIG.VERSION ?> | Rendered: <?= BUILD_RENDERED_AT ?></div>
+        <div id="runtimeInfoLine">Runtime: loading...</div>
+        <div class="diagLinks">Diagnostics:
+          <a href="<?!= ((CONFIG && CONFIG.WEBAPP_URL_ADMIN) ? CONFIG.WEBAPP_URL_ADMIN : '') ?>?view=whoami" target="_blank" rel="noopener">Admin whoami</a> |
+          <a href="<?!= ((CONFIG && CONFIG.WEBAPP_URL_STUDENT) ? CONFIG.WEBAPP_URL_STUDENT : '') ?>?view=whoami" target="_blank" rel="noopener">Student whoami</a>
+        </div>
+      </div>
+    </div>
+    <div id="studentUrlWarn" class="card" style="display:none;border-color: rgba(245,158,11,.45);">
+      <div style="color:#f59e0b;font-weight:700;">Student URL warning</div>
+      <div class="muted" id="studentUrlWarnText" style="margin-top:6px;"></div>
+    </div>
+
+    <div id="stageDashboardPanel" class="card queue-panel">
+      <h3>Stage Dashboard</h3>
+      <div id="stageFilterMeta" class="stageDashboardMeta">Click a stage to filter the applicant table.</div>
+      <div id="stageDashboardCards" class="stageCards"></div>
+    </div>
+
+    <div id="stageBatchPanel" class="card queue-panel">
+      <h3>Stage Batch Actions</h3>
+      <div class="commMeta">
+        <div class="box"><div class="k">Selected Stage</div><div class="v" id="stageBatchSelectedStage">&mdash;</div></div>
+        <div class="box"><div class="k">Priority</div><div class="v" id="stageBatchPriority">&mdash;</div></div>
+        <div class="box"><div class="k">Recommended Message Type</div><div class="v" id="stageBatchMessageType">&mdash;</div></div>
+        <div class="box"><div class="k">Sendable</div><div class="v" id="stageBatchSendable">&mdash;</div></div>
+        <div class="box"><div class="k">Disabled Reason</div><div class="v" id="stageBatchDisabledReason">&mdash;</div></div>
+      </div>
+      <div class="commControls">
+        <div class="field" style="max-width:180px;">
+          <label>Batch Size</label>
+          <input id="stageBatchLimit" type="number" min="1" max="100" step="1" value="50">
+        </div>
+        <div class="field" style="max-width:180px;">
+          <label>Diagnostic Offset (ignored in production)</label>
+          <input id="stageBatchOffset" type="number" min="0" step="1" value="0">
+        </div>
+        <button id="btnStageBatchPreview" class="btn small" type="button" onclick="previewStageBatchUi_()">Preview Cohort</button>
+        <button id="btnStageBatchSend" class="btn small ok" type="button" onclick="sendStageBatchUi_()" disabled>Send Stage Batch</button>
+        <div id="stageBatchInlineNote" class="muted" style="font-size:12px;">Standard production stage sends automatically use the next eligible unsent records. Diagnostic offset is ignored unless a separate diagnostic flow is introduced.</div>
+      </div>
+      <div id="stageBatchSummary" class="sendSummary hidden"></div>
+    </div>
+
+    <div id="reviewQueuesPanel" class="card queue-panel">
+      <h3>Review Queues</h3>
+      <div id="queueDocs" class="queue-section"></div>
+      <div id="queueAwaitingPayment" class="queue-section"></div>
+      <div id="queuePayments" class="queue-section"></div>
+      <div id="queueAnomalies" class="queue-section"></div>
+      <div id="queuePaidApproved" class="queue-section"></div>
+      <div class="row" style="margin-top:10px;align-items:center;gap:8px;">
+        <button id="btnQueueLoadMore" class="btn small" type="button">Load More</button>
+        <span id="queueLoadMoreMeta" class="muted" style="font-size:12px;"></span>
+      </div>
+      <div id="docsSendSummary" class="sendSummary hidden"></div>
+      <div id="docsSendFailures" class="sendSummary hidden" style="margin-top:6px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <div class="field">
+          <label>ApplicantID</label>
+          <input id="qApplicantId" placeholder="e.g., FODE-26-002879">
+        </div>
+        <div class="field">
+          <label>Parent Email (Corrected)</label>
+          <input id="qEmail" placeholder="e.g., parent@example.com">
+        </div>
+        <button class="btn accent" onclick="search()">Search</button>
+        <button class="btn" onclick="clearSearch()">Clear</button>
+        <button id="btnScanBounces" class="btn small" type="button" onclick="runBounceScanUi_()">Scan Bounces</button>
+      </div>
+      <div id="msg" class="muted" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
+        <div style="font-weight:900;">Results</div>
+        <div class="muted" style="font-size:12px;">Search by ApplicantID for exact match.</div>
+      </div>
+      <div class="bulk-actions-bar" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px;">
+        <button id="btnSelectAllEligibleDocs" class="btn small" type="button">Select All Eligible (Docs)</button>
+        <button id="btnClearDocsSelection" class="btn small" type="button">Clear Selection</button>
+        <button id="btnSendDocsBulk" class="btn small accent" type="button" disabled>Send Docs Quote to Selected</button>
+        <button id="btnRefreshEligibility" class="btn small" type="button">Refresh Eligibility</button>
+        <button id="btnPaymentFollowupSoon" class="btn small" type="button" disabled title="Payment workflow (coming soon)">Payment workflow (coming soon)</button>
+        <span class="muted" id="docsBulkStatus" style="font-size:12px;"></span>
+      </div>
+      <div style="margin-top:10px; overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:32px;"></th>
+              <th>ApplicantID</th>
+              <th>Name</th>
+              <th>Doc Status</th>
+              <th>Payment</th>
+              <th>Portal</th>
+              <th>Docs Follow-Up</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="8" class="muted">No results yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="modalBack" class="modalBack">
+    <div class="modal">
+      <div class="modalHead">
+        <div>
+          <div style="font-weight:900; font-size:16px;" id="mTitle">Applicant Review</div>
+          <div class="muted" style="font-size:12px; margin-top:4px;" id="mSub"></div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn small" onclick="closeModal()">Close</button>
+        </div>
+      </div>
+
+      <div class="kv">
+        <div class="box hidden">
+          <div class="k">Doc Verification (Computed)</div>
+          <div class="v" id="mOverall">-</div>
+          <div id="mOverallOverride" class="overrideTag hidden" style="display:none;" title="Stored overall differs from computed; super admin override in effect.">Overridden</div>
+        </div>
+        <div class="box hidden">
+          <div class="k">Overall (Computed)</div>
+          <div class="v" id="mOverallComputed">-</div>
+        </div>
+        <div class="box">
+          <div class="k">Payment Status</div>
+          <div class="v" id="mPayment">-</div>
+        </div>
+        <div class="box">
+          <div class="k">Workflow Fields</div>
+          <div class="v" style="font-size:13px;font-weight:600;line-height:1.6;">
+            <div id="mWorkflowPortalSubmitted">Portal Submitted: No</div>
+            <div id="mWorkflowDocsVerified">Docs Verified: No</div>
+            <div id="mWorkflowPaymentReceived">Payment Received: No</div>
+            <div id="mWorkflowPaymentVerified">Payment Verified: No</div>
+            <div id="mWorkflowEnrolledConfirmed">Enrolled Confirmed: No</div>
+          </div>
+        </div>
+        <div class="box">
+          <div class="k">Portal Access</div>
+          <div class="v" id="mPortal">-</div>
+        </div>
+        <div class="box">
+          <div class="k">Token Age</div>
+          <div class="v" id="mTokenAge">-</div>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="k">Audit</div>
+        <div class="v" id="mAudit">—</div>
+        <div id="dirtyWarn" class="dirtyWarn hidden">⚠ Unsaved changes — click "Save Document Statuses"</div>
+      </div>
+
+      <div class="box" id="communicationsCard" style="margin-top:12px;">
+        <div style="font-weight:900;">Communications</div>
+        <div class="commMeta">
+          <div class="box"><div class="k">Applicant ID</div><div class="v" id="commApplicantId">&mdash;</div></div>
+          <div class="box"><div class="k">Effective Email</div><div class="v" id="commEffectiveEmail">&mdash;</div></div>
+          <div class="box"><div class="k">Email Status</div><div class="v" id="commEmailStatus">&mdash;</div></div>
+          <div class="box"><div class="k">Last Contacted At</div><div class="v" id="commLastContactedAt">&mdash;</div></div>
+          <div class="box"><div class="k">Last Contact Type</div><div class="v" id="commLastContactType">&mdash;</div></div>
+          <div class="box"><div class="k">Last Contact By</div><div class="v" id="commLastContactBy">&mdash;</div></div>
+          <div class="box"><div class="k">Last Contact Subject</div><div class="v" id="commLastContactSubject">&mdash;</div></div>
+          <div class="box"><div class="k">Last Contact Result</div><div class="v" id="commLastContactResult">&mdash;</div></div>
+        </div>
+        <div id="commDerivedMeta" class="box hidden" style="margin-top:10px;background:#f8fbff;border-color:#d7e6ff;"></div>
+        <div class="commControls">
+          <div class="field" style="max-width:260px;">
+            <label>Message Type</label>
+            <select id="commMessageType">
+              <option value="legacy_invite">Legacy Invite</option>
+              <option value="reminder">Reminder</option>
+            </select>
+          </div>
+          <button id="btnCommPreview" class="btn small" type="button" onclick="previewApplicantMessageUi_()">Preview</button>
+          <button id="btnCommSend" class="btn small ok" type="button" onclick="sendApplicantMessageUi_()" disabled>Send</button>
+          <div id="commInlineNote" class="muted" style="font-size:12px;"></div>
+        </div>
+        <div id="commResult" class="commResultBox hidden"></div>
+      </div>
+
+      <div id="overallLockInfo" class="box hidden" style="background:#eef6ff;border-color:#bfd8ff;">
+        <div class="k">Overall Status Lock</div>
+        <div class="v" style="font-size:13px;font-weight:600;color:#1f3b63;">Overall status is locked because payment is verified. Unlock the form to make further changes.</div>
+      </div>
+
+      <div style="margin-top:12px; font-weight:900;">Documents (status + comment)</div>
+      <div id="docs" class="docs"></div>
+
+      <div class="row" style="margin-top:12px;">
+        <div class="field">
+          <label>Set Overall Status</label>
+          <select id="overallStatus" title="">
+            <option>Pending</option>
+            <option>Docs_Verified</option>
+            <option>Verified</option>
+            <option>Rejected</option>
+            <option>Fraudulent</option>
+          </select>
+        </div>
+        <div class="field" style="flex: 2 1 420px;">
+          <label>Overall Reason (only if Rejected/Fraudulent) — stored in each doc comment as you choose</label>
+          <textarea id="overallReason" placeholder="Optional overall note. (We do not write a separate Fraud_Reason column.)"></textarea>
+        </div>
+        <button id="btnSaveOverall" class="btn ok" onclick="saveOverall()">Save Overall</button>
+        <div style="flex:1;"></div>
+        <button id="btnUnlockPortal" class="btn small" onclick="unlockReview_()">Unlock</button>
+        <button id="btnLockPortal" class="btn small danger" onclick="lockReview_()">Lock</button>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <button id="btnSaveDocs" class="btn accent" onclick="saveDocs()">Save Document Statuses</button>
+        <button id="btnCopyLink" class="btn" onclick="copyPortalLink()">Copy Portal Link</button>
+        <button id="btnResetLink" class="btn warn" onclick="resetPortalLink()">Reset Link</button>
+        <button id="btnRefreshDetails" class="btn small" onclick="refreshDetails()">Refresh Details</button>
+      </div>
+      <div id="docsRouteHint" class="muted" style="margin-top:8px;font-size:12px;"></div>
+
+      <details id="superEmailOverrideWrap" style="margin-top:10px;">
+        <summary style="cursor:pointer;font-weight:700;">Super Admin: Override Parent Email (Corrected)</summary>
+        <div class="row" style="margin-top:8px;">
+          <div class="field">
+            <label>New Email</label>
+            <input id="overrideEmail" type="email" placeholder="parent@example.com">
+          </div>
+          <div class="field" style="flex: 2 1 420px;">
+            <label>Reason (required)</label>
+            <textarea id="overrideReason" placeholder="Reason for post-verification email override"></textarea>
+          </div>
+          <button id="btnApplyEmailOverride" class="btn warn" type="button" onclick="applyEmailOverride_()">Apply Override</button>
+        </div>
+      </details>
+
+      <div id="superTools" class="row" style="margin-top:10px;">
+        <div class="field" style="max-width:130px;">
+          <label>Batch size</label>
+          <input id="bfBatchSize" type="number" min="1" step="1" value="200">
+        </div>
+        <div class="field" style="max-width:130px;">
+          <label>Start row</label>
+          <input id="bfStartRow" type="number" min="2" step="1" value="2">
+        </div>
+        <button id="btnBackfillDry" class="btn small" onclick="backfillBatch('dry')">Dry Run Batch</button>
+        <button id="btnBackfillApply" class="btn small warn" onclick="backfillBatch('apply')">Apply Batch</button>
+        <button id="btnBackfillNext" class="btn small" style="display:none;" disabled onclick="runNextBackfillBatch()">Run Next Batch</button>
+        <select id="exportScope" style="max-width:260px;">
+          <option value="search_first">Export Scope: Search results first</option>
+          <option value="range">Export Scope: Range (Start row + Batch size)</option>
+          <option value="all">Export Scope: All rows</option>
+        </select>
+        <button class="btn small ok" onclick="exportPortalLinksCsv()">Export Portal Links (CSV)</button>
+      </div>
+
+      <div id="portalLinkBox" class="muted" style="margin-top:10px;word-break:break-all;"></div>
+      <div id="mMsg" class="muted" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <div id="docPreviewBack" class="docPreviewBack hidden" onclick="if(event.target===this) closeDocPreview_();">
+    <div class="docPreviewPanel">
+      <div class="docPreviewHead">
+        <div id="docPreviewTitle" style="font-weight:800;font-size:14px;">Document Preview</div>
+        <button type="button" class="btn small" onclick="closeDocPreview_()">Close</button>
+      </div>
+      <iframe id="docPreviewFrame" class="docPreviewFrame" title="Document Preview" src=""></iframe>
+    </div>
+  </div>
+
+  <script>
+    const ADMIN_ROLE = "<?= ADMIN_ROLE ?>";
+    const IS_SUPER = "<?= IS_SUPER ?>".toLowerCase() === "true";
+    const CAN_OVERRIDE = "<?= CAN_OVERRIDE ?>".toLowerCase() === "true";
+    const ADMIN_EMAIL = "<?= USER_EMAIL ?>";
+    const STUDENT_URL_READY = "<?= STUDENT_URL_READY ?>".toLowerCase() === "true";
+    const STUDENT_URL_WARNING = "<?= STUDENT_URL_WARNING ?>";
+    const VERSION = <?!= JSON.stringify(String((CONFIG && CONFIG.VERSION) || "")) ?>;
+    const VERSION_SHORT = <?!= JSON.stringify((function(v){
+      v = String(v || "");
+      var tail = v.split("-").pop();
+      if (/^r\d+$/i.test(tail)) return tail;
+      var m = v.match(/-r(\d+)\b/i);
+      return m ? ("r" + m[1]) : "r?";
+    })((CONFIG && CONFIG.VERSION) || "")) ?>;
+    const BUILD_VERSION = "<?= BUILD_VERSION ?>";
+    const BUILD_RENDERED_AT = "<?= BUILD_RENDERED_AT ?>";
+    const BUILD_SCRIPT_ID = "<?= BUILD_SCRIPT_ID ?>";
+    const CFG_WEBAPP_URL_ADMIN = <?!= JSON.stringify(String((CONFIG && CONFIG.WEBAPP_URL_ADMIN) || "")) ?>;
+    const CFG_WEBAPP_URL_STUDENT = <?!= JSON.stringify(String((CONFIG && CONFIG.WEBAPP_URL_STUDENT) || "")) ?>;
+    const CFG_WEBAPP_URL_STUDENT_EXEC = <?!= JSON.stringify(String((CONFIG && (CONFIG.WEBAPP_URL_STUDENT_EXEC || CONFIG.WEBAPP_URL_STUDENT)) || "")) ?>;
+
+    window.WEBAPP_URL_ADMIN = window.WEBAPP_URL_ADMIN || CFG_WEBAPP_URL_ADMIN || "";
+    window.WEBAPP_URL_STUDENT = window.WEBAPP_URL_STUDENT || CFG_WEBAPP_URL_STUDENT || "";
+    window.WEBAPP_URL_STUDENT_EXEC = window.WEBAPP_URL_STUDENT_EXEC || CFG_WEBAPP_URL_STUDENT_EXEC || "";
+    const DEPLOY_VERSION_NUMBER = <?!= JSON.stringify(Number((CONFIG && CONFIG.DEPLOY_VERSION_NUMBER) || 0)) ?>;
+    const DOCS_FOLLOWUP_ENABLED = <?!= JSON.stringify(!!(CONFIG && CONFIG.DOCS_FOLLOWUP_ENABLE)) ?>;
+    const DOCS_FOLLOWUP_SHOW_IN_QUEUES = <?!= JSON.stringify(!!(CONFIG && CONFIG.DOCS_FOLLOWUP_SHOW_IN_QUEUES)) ?>;
+    const DOCS_FOLLOWUP_COOLDOWN_MS = <?!= JSON.stringify(Number((CONFIG && CONFIG.DOCS_FOLLOWUP_COOLDOWN_MS) || 300000)) ?>;
+    const QUEUE_PAGE_SIZE = 10;
+    const QUEUE_FETCH_SIZE = 20;
+    const queuePagerState = {};
+    const queueRenderCache = {};
+    let queueExpandState = {};
+    let queueDataState = {
+      docs: [],
+      awaitingPayment: [],
+      payments: [],
+      anomalies: [],
+      paidApproved: [],
+      counts: { docs: 0, awaitingPayment: 0, payments: 0, anomalies: 0, paidApproved: 0 },
+      hasMore: false,
+      nextOffset: 0
+    };
+    let stageDashboardState = [];
+    let selectedStageFilter = "";
+    let batchState = {
+      selectedStage: null,
+      priority: null,
+      messageType: null,
+      sendable: false,
+      previewReady: false,
+      previewStage: null,
+      previewLimit: null,
+      previewOffset: null,
+      previewEligible: 0,
+      previewRequestSeq: 0,
+      previewActiveSeq: 0,
+      previewClientRequestId: "",
+      previewClientElapsedMs: 0,
+      disabledReason: "",
+      busy: false,
+      action: "",
+      result: null
+    };
+    let currentRowNumber = null;
+    let currentDetail = null;
+    let modalState = {
+      isLocked: true,
+      isSuperAdmin: false,
+      isPaymentVerified: false,
+      bypassPaymentFreeze: false
+    };
+    let isLinkBusy = false;
+    let isUiBusy = false;
+    let isDirty = false;
+    let lastRequestId = 0;
+    let lastSearchResults = [];
+    let lastSearchRows = [];
+    let selectedDocsRowNumbers = {};
+    let lastDocsSendAttemptByApplicantId = {};
+    let isDocsSendBusy = false;
+    let isBounceScanBusy = false;
+    let currentPortalLinkInfo = null;
+    let runtimeInfoCache = null;
+    let communicationsState = {
+      applicantId: "",
+      previewApplicantId: "",
+      previewMessageType: "",
+      selectedMessageType: "legacy_invite",
+      result: null,
+      busy: false
+    };
+    let commDerivedRequestId = 0;
+    // Session-only fallback for "Sent" state when no persistent sent field is present in payload.
+    let docsFollowupSentRows = new Set();
+    let lastBackfillMode = "dry";
+
+    function setMsg(id, txt){
+      var el = document.getElementById(id);
+      if (!el) {
+        console.warn("[AdminUI] setMsg target missing:", id);
+        return;
+      }
+      el.textContent = txt || "";
+    }
+    function setBounceScanBusy_(busy){
+      isBounceScanBusy = !!busy;
+      var btn = document.getElementById("btnScanBounces");
+      if (!btn) return;
+      btn.disabled = !!busy;
+      btn.textContent = busy ? "Scanning..." : "Scan Bounces";
+    }
+    function runBounceScanUi_(){
+      if (isBounceScanBusy) return;
+      setBounceScanBusy_(true);
+      setMsg("msg", "Scanning Gmail bounces...");
+      google.script.run
+        .withSuccessHandler(function(res){
+          setBounceScanBusy_(false);
+          var data = (res && typeof res === "object") ? res : {};
+          var summary = "Bounce scan complete: scanned=" + String(Number(data.scanned || 0))
+            + " | matched=" + String(Number(data.matched || 0))
+            + " | updated=" + String(Number(data.updated || 0));
+          setMsg("msg", summary);
+          setMsg("mMsg", summary);
+          if (String(document.getElementById("qApplicantId").value || "").trim()
+            || String(document.getElementById("qEmail").value || "").trim()
+            || (lastSearchResults && lastSearchResults.length)) {
+            search();
+          }
+        })
+        .withFailureHandler(function(err){
+          setBounceScanBusy_(false);
+          var msg = err && err.message ? err.message : err;
+          setMsg("msg", "Bounce scan error: " + msg);
+          setMsg("mMsg", "Bounce scan error: " + msg);
+        })
+        .admin_runBounceScan();
+    }
+    function resetModalState_(){
+      modalState = {
+        isLocked: true,
+        isSuperAdmin: false,
+        isPaymentVerified: false,
+        bypassPaymentFreeze: false
+      };
+    }
+
+    function isModalBypassActive_(){
+      return !!(modalState && modalState.isSuperAdmin && modalState.bypassPaymentFreeze && !modalState.isLocked);
+    }
+
+    function canEditModalNow_(){
+      if (!currentRowNumber || !currentDetail) return false;
+      if (isUiBusy) return false;
+      if (!modalState || modalState.isLocked) return false;
+      if (modalState.isPaymentVerified && !isModalBypassActive_()) return false;
+      return true;
+    }
+
+    function syncModalEditControls_(){
+      var allowEdit = canEditModalNow_();
+      Array.from(document.querySelectorAll(".docStatus, .docComment")).forEach(function(el){
+        if (el) el.disabled = !allowEdit;
+      });
+      var overallReasonEl = document.getElementById("overallReason");
+      if (overallReasonEl) overallReasonEl.disabled = !allowEdit;
+
+      var btnSaveDocs = document.getElementById("btnSaveDocs");
+      if (btnSaveDocs) btnSaveDocs.disabled = !allowEdit;
+
+      var btnSaveOverall = document.getElementById("btnSaveOverall");
+      var overallStatusEl = document.getElementById("overallStatus");
+      var allowOverall = allowEdit && !!CAN_OVERRIDE;
+      if (modalState && modalState.isPaymentVerified && !isModalBypassActive_()) allowOverall = false;
+      if (overallStatusEl) {
+        overallStatusEl.disabled = !allowOverall;
+        if (allowOverall) overallStatusEl.title = "";
+      }
+      if (btnSaveOverall) btnSaveOverall.disabled = !allowOverall;
+
+      var btnUnlock = document.getElementById("btnUnlockPortal");
+      var btnLock = document.getElementById("btnLockPortal");
+      var hasRecord = !!currentRowNumber && !!currentDetail;
+      if (btnUnlock) btnUnlock.disabled = !hasRecord || !!isUiBusy;
+      if (btnLock) btnLock.disabled = !hasRecord || !!isUiBusy;
+    }
+    function esc(s){ return String(s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+    function normalizeStudentBaseUrl_(url){
+      var raw = String(url || "").trim();
+      if (!raw) return "";
+      return raw.replace(/^https:\/\/script\.google\.com\/a\/[^/]+\/macros\/s\//i, "https://script.google.com/macros/s/");
+    }
+    function parsePortalLinkInfo_(link){
+      var raw = String(link || "").trim();
+      if (!raw) return null;
+      try {
+        var u = new URL(raw);
+        var id = String(u.searchParams.get("id") || "").trim();
+        var s = String(u.searchParams.get("s") || "").trim();
+        if (!id || !s) return null;
+        return {
+          applicantId: id,
+          secret: s,
+          baseUrl: normalizeStudentBaseUrl_(u.origin + u.pathname)
+        };
+      } catch (e) {
+        return null;
+      }
+    }
+    function buildFileProxyUrlFromPortalInfo_(portalInfo, field, mode){
+      var info = portalInfo && typeof portalInfo === "object" ? portalInfo : null;
+      if (!info || !info.baseUrl || !info.applicantId || !info.secret || !field) return "";
+      var m = (mode === "download") ? "download" : "open";
+      return info.baseUrl
+        + "?view=file"
+        + "&mode=" + encodeURIComponent(m)
+        + "&id=" + encodeURIComponent(String(info.applicantId || ""))
+        + "&s=" + encodeURIComponent(String(info.secret || ""))
+        + "&field=" + encodeURIComponent(String(field || ""));
+    }
+    function getPortalLinkInfoForApplicant_(applicantId, onDone){
+      var id = String(applicantId || "").trim();
+      var done = (typeof onDone === "function") ? onDone : function(){};
+      if (!id) { done(null); return; }
+      if (currentPortalLinkInfo && currentPortalLinkInfo.applicantId === id) {
+        done(currentPortalLinkInfo);
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(function(res){
+          var link = (res && (res.url || res.portalUrl || res.link)) ? String(res.url || res.portalUrl || res.link) : "";
+          var info = parsePortalLinkInfo_(link);
+          if (info && info.applicantId === id) {
+            currentPortalLinkInfo = info;
+            done(info);
+            return;
+          }
+          done(null);
+        })
+        .withFailureHandler(function(_err){
+          done(null);
+        })
+        .admin_getStudentPortalLink({ applicantId: id });
+    }
+    function enrichDocsWithProxyUrls_(docs, portalInfo){
+      return (Array.isArray(docs) ? docs : []).map(function(x){
+        var row = Object.assign({}, x || {});
+        var fileKey = String(row.file || "").trim();
+        row.fileProxyOpenUrl = buildFileProxyUrlFromPortalInfo_(portalInfo, fileKey, "open");
+        row.fileProxyDownloadUrl = buildFileProxyUrlFromPortalInfo_(portalInfo, fileKey, "download");
+        return row;
+      });
+    }
+    function openDocPreview_(label, url){
+      var previewUrl = String(url || "").trim();
+      if (!previewUrl) {
+        alert("No preview available");
+        return;
+      }
+      var back = document.getElementById("docPreviewBack");
+      var title = document.getElementById("docPreviewTitle");
+      var frame = document.getElementById("docPreviewFrame");
+      if (!back || !title || !frame) return;
+      title.textContent = label ? ("Preview: " + String(label)) : "Document Preview";
+      frame.src = previewUrl;
+      back.classList.remove("hidden");
+    }
+    function closeDocPreview_(){
+      var back = document.getElementById("docPreviewBack");
+      var frame = document.getElementById("docPreviewFrame");
+      if (frame) frame.src = "";
+      if (back) back.classList.add("hidden");
+    }
+    function isCommBounceFlagTrue_(value){
+      var raw = String(value || "").trim().toLowerCase();
+      return raw === "true" || raw === "yes" || raw === "1";
+    }
+    function commPortalSubmittedActive_(detail){
+      var raw = String((detail && detail.Portal_Submitted) || "").trim();
+      return !!raw && raw !== "No";
+    }
+    function resetCommunicationsState_(applicantId, preserveResult){
+      communicationsState.applicantId = String(applicantId || communicationsState.applicantId || "");
+      communicationsState.previewApplicantId = "";
+      communicationsState.previewMessageType = "";
+      if (!preserveResult) communicationsState.result = null;
+      communicationsState.busy = false;
+    }
+    function getSelectedCommMessageType_(){
+      var el = document.getElementById("commMessageType");
+      return String((el && el.value) || communicationsState.selectedMessageType || "legacy_invite").trim();
+    }
+    function setSelectedCommMessageType_(messageType){
+      var val = String(messageType || "legacy_invite").trim() || "legacy_invite";
+      communicationsState.selectedMessageType = val;
+      var el = document.getElementById("commMessageType");
+      if (el) el.value = val;
+    }
+    function formatCommValue_(value){
+      var raw = String(value == null ? "" : value).trim();
+      return raw || "?";
+    }
+    function communicationsDisableReason_(detail){
+      var d = detail || currentDetail || {};
+      var effectiveEmail = String(d.Effective_Email || d.Parent_Email_Corrected || d.Parent_Email || "").trim();
+      if (!effectiveEmail) return "Effective email is missing.";
+      if (String(d.Email_Status || "").trim() === "DO_NOT_CONTACT") return "This applicant is marked Do Not Contact.";
+      if (isCommBounceFlagTrue_(d.Email_Bounce_Flag)) return "This applicant email is marked bounced.";
+      if (commPortalSubmittedActive_(d)) return "Portal already submitted for this applicant.";
+      return "";
+    }
+    function renderCommunicationsDerived_(detail){
+      var box = document.getElementById("commDerivedMeta");
+      if (!box) return;
+      var d = detail || currentDetail || {};
+      var rows = [];
+      if (d.Comm_Stage) rows.push({ label: "Stage", value: d.Comm_Stage });
+      if (d.Comm_Stage) rows.push({ label: "Priority", html: renderPriorityBadge_(mapStagePriorityUi_(d.Comm_Stage)) });
+      if (d.Comm_Status) rows.push({ label: "Comm Status", value: d.Comm_Status });
+      if (d.Comm_Can_Send_Now === true || d.Comm_Can_Send_Now === false) rows.push({ label: "Can Send Now", value: d.Comm_Can_Send_Now ? "YES" : "NO" });
+      if (d.Comm_Block_Code) rows.push({ label: "Code", value: d.Comm_Block_Code });
+      if (d.Comm_Block_Reason) rows.push({ label: "Reason", value: d.Comm_Block_Reason });
+      if (d.Comm_Recommended_Message_Type) rows.push({ label: "Recommended Message", value: d.Comm_Recommended_Message_Type });
+      if (d.Comm_Awaiting_Response === true || d.Comm_Awaiting_Response === false) rows.push({ label: "Awaiting Response", value: d.Comm_Awaiting_Response ? "YES" : "NO" });
+      if (!rows.length) {
+        box.className = "box hidden";
+        box.innerHTML = "";
+        return;
+      }
+      var parts = ['<div style="font-weight:800;margin-bottom:6px;color:#f4f9ff;">Lifecycle & Eligibility</div>'];
+      rows.forEach(function(row){
+        parts.push('<div style="margin-top:4px;"><span style="color:#b9cbe0;">' + esc(row.label) + ':</span> <span style="color:#f4f9ff;">' + (row.html || esc(row.value)) + '</span></div>');
+      });
+      box.className = "box";
+      box.style.marginTop = "10px";
+      box.style.background = "rgba(8, 18, 32, .96)";
+      box.style.borderColor = "rgba(148, 163, 184, .34)";
+      box.style.color = "#f4f9ff";
+      box.style.boxShadow = "inset 0 0 0 1px rgba(148, 163, 184, .10)";
+      box.innerHTML = parts.join("");
+    }
+    function requestCommunicationsDerived_(detail){
+      var d = detail || currentDetail || {};
+      var applicantId = String((d && d.ApplicantID) || "").trim();
+      var rowNumber = Number((d && d._rowNumber) || currentRowNumber || 0) || 0;
+      if (!applicantId && !rowNumber) {
+        renderCommunicationsDerived_(d);
+        return;
+      }
+      var reqId = ++commDerivedRequestId;
+      google.script.run
+        .withSuccessHandler(function(res){
+          if (reqId !== commDerivedRequestId) return;
+          if (!res || res.ok !== true || !currentDetail) return;
+          var currentId = String((currentDetail && currentDetail.ApplicantID) || "").trim();
+          var responseId = String((res && res.applicantId) || applicantId || "").trim();
+          if (currentId && responseId && currentId !== responseId) return;
+          currentDetail.Comm_Stage = String(res.Comm_Stage || "");
+          currentDetail.Comm_Status = String(res.Comm_Status || "");
+          currentDetail.Comm_Can_Send_Now = res.Comm_Can_Send_Now === true;
+          currentDetail.Comm_Block_Code = String(res.Comm_Block_Code || "");
+          currentDetail.Comm_Block_Reason = String(res.Comm_Block_Reason || "");
+          currentDetail.Comm_Recommended_Message_Type = String(res.Comm_Recommended_Message_Type || "");
+          currentDetail.Comm_Awaiting_Response = res.Comm_Awaiting_Response === true;
+          renderCommunicationsDerived_(currentDetail);
+          updateCommunicationsUi_();
+        })
+        .withFailureHandler(function(){
+          if (reqId !== commDerivedRequestId) return;
+          renderCommunicationsDerived_(d);
+        })
+        .admin_getApplicantCommDerived_json({ applicantId: applicantId, rowNumber: rowNumber });
+    }
+    function renderCommunicationsStatus_(detail){
+      var d = detail || currentDetail || {};
+      var map = {
+        commApplicantId: d.ApplicantID,
+        commEffectiveEmail: d.Effective_Email || d.Parent_Email_Corrected || d.Parent_Email || "",
+        commEmailStatus: d.Email_Status,
+        commLastContactedAt: d.Last_Contacted_At,
+        commLastContactType: d.Last_Contact_Type,
+        commLastContactBy: d.Last_Contact_By,
+        commLastContactSubject: d.Last_Contact_Subject,
+        commLastContactResult: d.Last_Contact_Result
+      };
+      Object.keys(map).forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.textContent = formatCommValue_(map[id]);
+      });
+      renderCommunicationsDerived_(d);
+    }
+    function renderCommunicationsResult_(result){
+      var box = document.getElementById("commResult");
+      if (!box) return;
+      var res = result && typeof result === "object" ? result : null;
+      if (!res) {
+        box.className = "commResultBox hidden";
+        box.innerHTML = "";
+        return;
+      }
+      var resultType = String(res.result || "").trim().toUpperCase();
+      var cls = "commResultBox";
+      var title = "Result";
+      if (resultType === "BLOCKED") { cls += " warn"; title = "Action blocked"; }
+      else if (resultType === "SENT") { cls += " ok"; title = "Send complete"; }
+      else if (resultType === "FAILED") { cls += " err"; title = "Send failed"; }
+      else { title = "Preview"; }
+      var parts = [];
+      parts.push('<div style="font-weight:800;">' + esc(title) + '</div>');
+      if (resultType === "BLOCKED") {
+        parts.push('<div style="margin-top:6px;"><strong>Result:</strong> ' + esc(resultType) + '</div>');
+        if (res.blockCode) parts.push('<div style="margin-top:6px;"><strong>Code:</strong> ' + esc(res.blockCode) + '</div>');
+        if (res.blockReason) parts.push('<div style="margin-top:6px;"><strong>Reason:</strong> ' + esc(res.blockReason) + '</div>');
+        if (res.debugId) parts.push('<div class="muted" style="margin-top:6px;font-size:12px;"><strong>Debug:</strong> ' + esc(res.debugId) + '</div>');
+      }
+      if (resultType === 'PREVIEW' && res.subject) parts.push('<div style="margin-top:8px;"><strong>Subject:</strong> ' + esc(res.subject) + '</div>');
+      if (resultType === 'PREVIEW' && res.body) parts.push('<div class="commPreviewBody">' + esc(res.body) + '</div>');
+      if (resultType === "SENT") {
+        parts.push('<div style="margin-top:6px;">Message sent successfully.</div>');
+        if (res.subject) parts.push('<div style="margin-top:6px;"><strong>Subject:</strong> ' + esc(res.subject) + '</div>');
+      }
+      if (resultType === "FAILED") {
+        var detail = String(res.error || res.message || res.code || "Send failed.").trim();
+        parts.push('<div style="margin-top:6px;">' + esc(detail) + '</div>');
+      }
+      if (resultType !== "BLOCKED" && res.blockCode) parts.push('<div class="muted" style="margin-top:6px;font-size:12px;">Code: ' + esc(res.blockCode) + '</div>');
+      if (resultType !== "BLOCKED" && res.debugId) parts.push('<div class="muted" style="margin-top:6px;font-size:12px;">Debug ID: ' + esc(res.debugId) + '</div>');
+      box.className = cls;
+      box.innerHTML = parts.join("");
+    }
+    function updateCommunicationsUi_(){
+      var previewBtn = document.getElementById("btnCommPreview");
+      var sendBtn = document.getElementById("btnCommSend");
+      var selectEl = document.getElementById("commMessageType");
+      var noteEl = document.getElementById("commInlineNote");
+      if (!previewBtn || !sendBtn || !selectEl || !noteEl) return;
+      var detail = currentDetail || {};
+      var selectedType = getSelectedCommMessageType_();
+      var disableReason = communicationsDisableReason_(detail);
+      var previewReady = communicationsState.previewApplicantId === String(detail.ApplicantID || "") && communicationsState.previewMessageType === selectedType && communicationsState.result && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
+      var controlsDisabled = !currentRowNumber || isUiBusy || communicationsState.busy || !!disableReason;
+      selectEl.disabled = !currentRowNumber || isUiBusy || communicationsState.busy;
+      previewBtn.disabled = controlsDisabled;
+      sendBtn.disabled = controlsDisabled || !previewReady;
+      previewBtn.textContent = communicationsState.busy ? "Working..." : "Preview";
+      sendBtn.textContent = communicationsState.busy ? "Sending..." : "Send";
+      noteEl.textContent = communicationsState.busy ? (previewReady ? "Sending..." : "Loading preview...") : (disableReason || (previewReady ? "Preview ready. You may send this message." : "Preview is required before send."));
+    }
+    function resetCommunicationsForSelection_(preserveResult){
+      communicationsState.previewApplicantId = "";
+      communicationsState.previewMessageType = "";
+      if (!preserveResult) communicationsState.result = null;
+      renderCommunicationsResult_(communicationsState.result);
+      updateCommunicationsUi_();
+    }
+    function onCommunicationsMessageTypeChange_(){
+      setSelectedCommMessageType_(getSelectedCommMessageType_());
+      resetCommunicationsForSelection_(false);
+    }
+    function runCommunicationsAction_(fnName, payload, onOk){
+      communicationsState.busy = true;
+      updateCommunicationsUi_();
+      var reqId = ++lastRequestId;
+      setUiBusy_(true);
+      var runner = google.script.run
+        .withSuccessHandler(function(res){
+          if (reqId !== lastRequestId) return;
+          communicationsState.busy = false;
+          setUiBusy_(false);
+          if (typeof onOk === "function") onOk(res);
+          updateCommunicationsUi_();
+        })
+        .withFailureHandler(function(err){
+          if (reqId !== lastRequestId) return;
+          communicationsState.busy = false;
+          setUiBusy_(false);
+          communicationsState.result = {
+            ok: false,
+            result: "FAILED",
+            blockCode: "",
+            blockReason: String((err && err.message) || err || "Server error"),
+            debugId: ""
+          };
+          renderCommunicationsResult_(communicationsState.result);
+          updateCommunicationsUi_();
+        });
+      runner[fnName](payload || {});
+    }
+    function refreshCommunicationsDetail_(done){
+      if (!currentRowNumber) {
+        if (typeof done === "function") done(null);
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(function(res){
+          var detail = normalizeDetailResponse_(res);
+          if (detail) {
+            currentDetail = detail;
+            renderCommunicationsStatus_(detail);
+            requestCommunicationsDerived_(detail);
+          }
+          if (typeof done === "function") done(detail || null);
+        })
+        .withFailureHandler(function(_err){
+          if (typeof done === "function") done(null);
+        })
+        .admin_getApplicantDetail_json({ rowNumber: currentRowNumber, applicantId: (currentDetail && currentDetail.ApplicantID) || "" });
+    }
+    function previewApplicantMessageUi_(){
+      if (!currentDetail || communicationsState.busy) return;
+      var applicantId = String(currentDetail.ApplicantID || "").trim();
+      var messageType = getSelectedCommMessageType_();
+      communicationsState.result = null;
+      updateCommunicationsUi_();
+      runCommunicationsAction_("admin_previewApplicantMessage", { applicantId: applicantId, messageType: messageType }, function(res){
+        communicationsState.result = res && typeof res === "object" ? res : { ok: false, result: "FAILED", blockReason: "Invalid preview response.", debugId: "" };
+        if (communicationsState.result.eligible === true && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW") {
+          communicationsState.previewApplicantId = applicantId;
+          communicationsState.previewMessageType = messageType;
+        } else {
+          communicationsState.previewApplicantId = "";
+          communicationsState.previewMessageType = "";
+        }
+        renderCommunicationsResult_(communicationsState.result);
+      });
+    }
+    function sendApplicantMessageUi_(){
+      if (!currentDetail || communicationsState.busy) return;
+      var applicantId = String(currentDetail.ApplicantID || "").trim();
+      var messageType = getSelectedCommMessageType_();
+      var previewReady = communicationsState.previewApplicantId === applicantId && communicationsState.previewMessageType === messageType && communicationsState.result && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
+      if (!previewReady) return;
+      if (!window.confirm("Send " + messageType.replaceAll("_", " ") + " to this applicant now?")) return;
+      runCommunicationsAction_("admin_sendApplicantMessage", { applicantId: applicantId, messageType: messageType }, function(res){
+        communicationsState.result = res && typeof res === "object" ? res : { ok: false, result: "FAILED", blockReason: "Invalid send response.", debugId: "" };
+        renderCommunicationsResult_(communicationsState.result);
+        if (String(communicationsState.result.result || "").toUpperCase() === "SENT") {
+          refreshCommunicationsDetail_(function(){ updateCommunicationsUi_(); });
+        }
+      });
+    }
+    function isEnvelope_(res){ return !!res && typeof res === "object" && Object.prototype.hasOwnProperty.call(res, "ok"); }
+    function getErrorText_(res, fallback){
+      if (res && typeof res.error === "string" && res.error.trim()) return res.error.trim();
+      return fallback || "Server returned an error";
+    }
+    function getDebugId_(res){
+      if (res && typeof res.debugId === "string" && res.debugId.trim()) return res.debugId.trim();
+      return "(no debug id)";
+    }
+    function handleApiResult_(opts, ctx){
+      if (arguments.length >= 2) {
+        var resLegacy = opts;
+        var context = String(ctx || "");
+        if (!isEnvelope_(resLegacy)) {
+          var invalidLegacyMsg = "Error: Invalid " + (context || "server") + " response. Debug ID: " + getDebugId_(resLegacy);
+          setModalMsg_(invalidLegacyMsg);
+          setMsg_(invalidLegacyMsg);
+          return { ok: false, error: invalidLegacyMsg };
+        }
+        if (resLegacy.ok !== true) {
+          var errLegacyMsg = "Error: " + getErrorText_(resLegacy, "Server returned an error") + " | Debug ID: " + getDebugId_(resLegacy);
+          setModalMsg_(errLegacyMsg);
+          setMsg_(errLegacyMsg);
+          return { ok: false, error: errLegacyMsg };
+        }
+        return { ok: true, detail: resLegacy.detail, res: resLegacy };
+      }
+      var res = opts && opts.res;
+      var targetId = (opts && opts.targetId) || "mMsg";
+      var fallbackError = (opts && opts.fallbackError) || "Server returned an error";
+      if (!res) {
+        console.error("INVALID_ENVELOPE null", opts || {});
+        showInlineError_("No response from server.");
+        if (opts && typeof opts.onError === "function") opts.onError("No response from server.", res);
+        if (opts && typeof opts.onDone === "function") opts.onDone();
+        return;
+      }
+      if (!isEnvelope_(res)) {
+        var ts = new Date().toLocaleString();
+        var invalidMsg = "Error: Invalid server response. Please retry. If it persists, report this time: " + ts;
+        console.error("INVALID_ENVELOPE", res);
+        setMsg(targetId, invalidMsg);
+        setMsg("mMsg", invalidMsg);
+        setMsg("msg", invalidMsg);
+        if (opts && typeof opts.onError === "function") opts.onError(invalidMsg, res);
+        if (opts && typeof opts.onDone === "function") opts.onDone();
+        return;
+      }
+      if (res.ok !== true) {
+        var codeText = (res && res.code) ? String(res.code) : "ERROR";
+        var errMsg = getErrorText_(res, fallbackError) + " (code: " + codeText + ", dbg: " + getDebugId_(res) + ")";
+        setMsg(targetId, errMsg);
+        setMsg("mMsg", "Error: " + errMsg);
+        setMsg("msg", "Error: " + errMsg);
+        if (opts && typeof opts.onError === "function") opts.onError(errMsg, res);
+        if (opts && typeof opts.onDone === "function") opts.onDone();
+        return;
+      }
+      clearInlineError_();
+      try { console.log("[AdminUI] API_OK", { context: (opts && opts.context) || "", debugId: res && res.debugId }); } catch (_e) {}
+      if (opts && typeof opts.onOk === "function") opts.onOk(res.detail, res);
+      if (opts && typeof opts.onDone === "function") opts.onDone();
+    }
+    function setModalMsg_(txt){ setMsg("mMsg", txt || ""); }
+    function setMsg_(txt){ setMsg("msg", txt || ""); }
+    function showInlineError_(txt){
+      var msg = String(txt || "Server returned an error");
+      setMsg("mMsg", "Error: " + msg);
+      setMsg("msg", "Error: " + msg);
+    }
+    function clearInlineError_(){
+      setMsg("mMsg", "");
+      setMsg("msg", "");
+    }
+    function updateDirtyGuardUi_(){
+      const copyBtn = document.getElementById("btnCopyLink");
+      const resetBtn = document.getElementById("btnResetLink");
+      const refreshBtn = document.getElementById("btnRefreshDetails");
+      if (copyBtn) copyBtn.disabled = copyBtn.disabled || isDirty || isLinkBusy;
+      if (resetBtn) resetBtn.disabled = resetBtn.disabled || isDirty || isLinkBusy;
+      if (refreshBtn) refreshBtn.disabled = refreshBtn.disabled || isDirty;
+      var warn = document.getElementById("dirtyWarn");
+      if (warn) warn.classList.toggle("hidden", !isDirty);
+    }
+    function setDirty_(flag){
+      isDirty = !!flag;
+      updateDirtyGuardUi_();
+    }
+    function setLinkBusy(flag){
+      isLinkBusy = !!flag;
+      const copyBtn = document.getElementById("btnCopyLink");
+      const resetBtn = document.getElementById("btnResetLink");
+      if (copyBtn) {
+        copyBtn.disabled = isLinkBusy || isDirty;
+        copyBtn.textContent = isLinkBusy ? "Working..." : "Copy Portal Link";
+      }
+      if (resetBtn) {
+        resetBtn.disabled = isLinkBusy || isDirty;
+        resetBtn.textContent = isLinkBusy ? "Resetting..." : "Reset Link";
+      }
+      updateDirtyGuardUi_();
+    }
+
+    function setActionButtonsEnabled(enabled){
+      const ids = [
+        "btnSaveOverall",
+        "btnCopyLink",
+        "btnResetLink",
+        "btnRefreshDetails"
+      ];
+      ids.forEach(function(id){
+        const el = document.getElementById(id);
+        if (el) el.disabled = !enabled;
+      });
+      applyPortalLockControls_(currentDetail);
+      syncModalEditControls_();
+      updateDirtyGuardUi_();
+      updateCommunicationsUi_();
+    }
+
+    function setUiBusy_(flag){
+      isUiBusy = !!flag;
+      if (isUiBusy) {
+        setActionButtonsEnabled(false);
+        return;
+      }
+      setActionButtonsEnabled(!!currentRowNumber);
+      applyPortalLockControls_(currentDetail);
+      syncModalEditControls_();
+      updateCommunicationsUi_();
+    }
+
+    function applyPortalLockControls_(detail){
+      const btnUnlock = document.getElementById("btnUnlockPortal");
+      const btnLock = document.getElementById("btnLockPortal");
+      const overallStatusEl = document.getElementById("overallStatus");
+      const overallLockInfo = document.getElementById("overallLockInfo");
+      const d = detail || currentDetail || null;
+      if (!btnUnlock || !btnLock || !d) return;
+      const paymentBadge = d.Payment_Badge || ((d.paymentVerified === true || d.Payment_Verified_Bool) ? "Verified" : "Pending");
+      const paymentLocked = paymentBadge === "Verified";
+      const bypassActive = isModalBypassActive_();
+      btnUnlock.title = paymentLocked
+        ? (modalState && modalState.isSuperAdmin
+            ? (bypassActive ? "Super Admin override enabled." : "Payment verified. Super Admin can unlock for audited edits.")
+            : "Payment is verified. Only Super Admin can unlock this record for editing.")
+        : "Unlock editing controls";
+      btnLock.title = bypassActive ? "Lock editing controls and clear Super Admin override" : "Lock editing controls";
+      if (overallLockInfo) overallLockInfo.classList.toggle("hidden", !paymentLocked);
+      if (overallStatusEl) {
+        const canUseOverall = !!CAN_OVERRIDE && !modalState.isLocked && (!paymentLocked || bypassActive) && !isUiBusy;
+        overallStatusEl.disabled = !canUseOverall;
+        overallStatusEl.title = paymentLocked
+          ? (bypassActive ? "Super Admin override enabled (audited)." : "Locked because payment is verified.")
+          : (!CAN_OVERRIDE ? "Computed automatically based on document and payment status" : "");
+      }
+      syncModalEditControls_();
+    }
+
+    function normalizeDetailResponse_(res){
+      var raw = res;
+      if (typeof raw === "string") {
+        try { raw = JSON.parse(raw); } catch (e) { raw = null; }
+      }
+      if (!raw || raw.ok !== true || !raw.detail || typeof raw.detail !== "object") return null;
+      return raw.detail;
+    }
+
+    function run_(fnName, args, onOk, opts){
+      opts = opts || {};
+      var reqId = ++lastRequestId;
+      if (opts.linkBusy) setLinkBusy(true);
+      setUiBusy_(true);
+      if (opts.message) setMsg("mMsg", opts.message);
+      var runner = google.script.run
+        .withSuccessHandler(function(res){
+          if (reqId !== lastRequestId) return;
+          try {
+            if (typeof onOk === "function") onOk(res);
+          } catch (e) {
+            setMsg("mMsg", "Error: " + (e && e.message ? e.message : e));
+          } finally {
+            if (opts.linkBusy) setLinkBusy(false);
+            setUiBusy_(false);
+          }
+        })
+        .withFailureHandler(function(err){
+          if (reqId !== lastRequestId) return;
+          var failText = "Server error: " + (err && err.message ? err.message : err);
+          setMsg("mMsg", failText);
+          setMsg("msg", failText);
+          if (opts.linkBusy) setLinkBusy(false);
+          setUiBusy_(false);
+        });
+      if (!runner || typeof runner[fnName] !== "function") {
+        if (opts.linkBusy) setLinkBusy(false);
+        setUiBusy_(false);
+        setMsg("mMsg", "Error: Unknown action " + String(fnName || ""));
+        return;
+      }
+      runner[fnName](args || {});
+    }
+
+    function getBackfillNumber_(id, fallback){
+      var el = document.getElementById(id);
+      var n = Number(el && el.value);
+      if (!Number.isFinite(n) || n < 1) return fallback;
+      return Math.floor(n);
+    }
+
+    function resetQueueDataState_(){
+      queueDataState = {
+        docs: [],
+        awaitingPayment: [],
+        payments: [],
+        anomalies: [],
+        paidApproved: [],
+        counts: { docs: 0, awaitingPayment: 0, payments: 0, anomalies: 0, paidApproved: 0 },
+        hasMore: false,
+        nextOffset: 0
+      };
+    }
+
+    function mergeQueueRows_(existingRows, newRows){
+      var out = [];
+      var seen = {};
+      var a = Array.isArray(existingRows) ? existingRows : [];
+      var b = Array.isArray(newRows) ? newRows : [];
+      a.concat(b).forEach(function(row){
+        var n = Number(row && row.rowNumber || 0);
+        if (!Number.isFinite(n) || n < 2) return;
+        var k = String(n);
+        if (seen[k]) return;
+        seen[k] = true;
+        out.push(row);
+      });
+      return out;
+    }
+
+    function updateQueueLoadMoreUi_(isLoading){
+      var btn = document.getElementById("btnQueueLoadMore");
+      var meta = document.getElementById("queueLoadMoreMeta");
+      if (!btn || !meta) return;
+      var hasMore = !!(queueDataState && queueDataState.hasMore);
+      var loadedMax = Math.max(
+        Number((queueDataState.docs || []).length || 0),
+        Number((queueDataState.awaitingPayment || []).length || 0),
+        Number((queueDataState.payments || []).length || 0),
+        Number((queueDataState.anomalies || []).length || 0),
+        Number((queueDataState.paidApproved || []).length || 0)
+      );
+      btn.disabled = !!isLoading || !hasMore;
+      btn.textContent = isLoading ? "Loading..." : "Load More";
+      meta.textContent = hasMore
+        ? ("Loaded " + String(loadedMax) + " rows per queue section")
+        : "All available queue rows loaded";
+    }
+
+    function mapStagePriorityUi_(stage){
+      var normalized = String(stage || "").trim().toUpperCase();
+      if (normalized === "PAYMENT_REQUIRED" || normalized === "RECEIPT_AWAITING_VERIFICATION") return "HIGH";
+      if (normalized === "DOCS_REQUIRED" || normalized === "REMINDER_DUE" || normalized === "INVITED_AWAITING_RESPONSE") return "NORMAL";
+      return "LOW";
+    }
+    function priorityClassName_(priority){
+      var normalized = String(priority || "").trim().toUpperCase();
+      if (normalized === "HIGH") return "priorityHigh";
+      if (normalized === "NORMAL") return "priorityNormal";
+      return "priorityLow";
+    }
+    function renderPriorityBadge_(priority){
+      var normalized = String(priority || "LOW").trim().toUpperCase() || "LOW";
+      return '<span class="priorityBadge ' + priorityClassName_(normalized) + '">' + esc(normalized) + '</span>';
+    }
+    function updateStageFilterMeta_(){
+      var el = document.getElementById("stageFilterMeta");
+      if (!el) return;
+      el.textContent = selectedStageFilter
+        ? ("Table filter: " + selectedStageFilter + " (click again to clear)")
+        : "Click a stage to filter the applicant table.";
+    }
+    function getBatchMessageTypeForStageUi_(stage){
+      var normalized = String(stage || "").trim().toUpperCase();
+      if (normalized === "INVITE_PENDING") return "legacy_invite";
+      if (["INVITED_AWAITING_RESPONSE", "REMINDER_DUE", "DOCS_REQUIRED", "PAYMENT_REQUIRED", "RECEIPT_AWAITING_VERIFICATION"].indexOf(normalized) >= 0) return "reminder";
+      return "";
+    }
+    function isBatchSendableStageUi_(stage){
+      return !!getBatchMessageTypeForStageUi_(stage);
+    }
+    function clampStageBatchLimitUi_(raw){
+      var n = Math.floor(Number(raw || 0));
+      if (!(n > 0)) return 50;
+      return Math.max(1, Math.min(100, n));
+    }
+    function clampStageBatchOffsetUi_(raw){
+      var n = Math.floor(Number(raw || 0));
+      if (!(n >= 0)) return 0;
+      return Math.max(0, n);
+    }
+    function getStageBatchLimitUi_(){
+      var el = document.getElementById("stageBatchLimit");
+      var value = clampStageBatchLimitUi_(el && el.value);
+      if (el) el.value = String(value);
+      return value;
+    }
+    function getStageBatchOffsetUi_(){
+  var el = document.getElementById("stageBatchOffset");
+  var value = clampStageBatchOffsetUi_(el && el.value);
+  if (el) el.value = String(value);
+  return value;
+}
+function resetBatchPreviewState_(preserveResult){
+  batchState.previewReady = false;
+  batchState.previewStage = null;
+  batchState.previewLimit = null;
+  batchState.previewOffset = null;
+  batchState.previewEligible = 0;
+  batchState.previewClientElapsedMs = 0;
+  batchState.previewClientRequestId = "";
+  if (!preserveResult) batchState.result = null;
+}
+function clearBatchSelection_(preserveResult){
+  batchState.selectedStage = null;
+  batchState.priority = null;
+  batchState.messageType = null;
+  batchState.sendable = false;
+  batchState.disabledReason = "";
+  resetBatchPreviewState_(preserveResult);
+}
+function onStageSelected(stageIndex){
+  var idx = Number(stageIndex);
+  var item = Number.isFinite(idx) && idx >= 0 ? stageDashboardState[idx] : null;
+  var stage = item ? String(item.stage || "").trim().toUpperCase() : "";
+  if (!stage) {
+    selectedStageFilter = "";
+    clearBatchSelection_(false);
+    renderStageDashboard_(stageDashboardState);
+    renderBatchPanel();
+    search();
+    return;
+  }
+  if (selectedStageFilter === stage) {
+    selectedStageFilter = "";
+    clearBatchSelection_(false);
+  } else {
+    selectedStageFilter = stage;
+    batchState.selectedStage = stage;
+    batchState.priority = String(item.priority || mapStagePriorityUi_(stage)).trim().toUpperCase() || mapStagePriorityUi_(stage);
+    batchState.messageType = getBatchMessageTypeForStageUi_(stage);
+    batchState.sendable = isBatchSendableStageUi_(stage);
+    batchState.disabledReason = batchState.sendable ? "" : "No batch message is supported for this stage.";
+    resetBatchPreviewState_(false);
+  }
+  renderStageDashboard_(stageDashboardState);
+  renderBatchPanel();
+  search();
+}
+function renderStageBatchSummary_(res){
+  var box = document.getElementById("stageBatchSummary");
+  if (!box) return;
+  if (!res) {
+    box.classList.add("hidden");
+    box.classList.remove("err");
+    box.innerHTML = "";
+    return;
+  }
+  var parts = [];
+  var blockedMap = (res && typeof res.blockedByReason === "object" && res.blockedByReason) ? res.blockedByReason : {};
+  var blockedList = Object.keys(blockedMap).sort().map(function(key){
+    return '<span>' + esc(key) + ': ' + esc(String(Number(blockedMap[key] || 0))) + '</span>';
+  }).join(' | ');
+  var isPreview = String(res.action || "") === "preview_stage_batch" || batchState.action === "preview";
+  if (isPreview) {
+    if (res.ok === false) parts.push('<div style="font-weight:800;">Batch Preview Error</div>');
+    else if (Number(res.count || 0) > 0) parts.push('<div style="font-weight:800;">Batch Preview</div>');
+    else parts.push('<div style="font-weight:800;">Batch Preview Complete</div>');
+    parts.push('<div style="margin-top:6px;">Stage: ' + esc(String(res.stage || "")) + ' | Message: ' + esc(String(res.messageType || "(none)")) + ' | Count: ' + esc(String(Number(res.count || 0))) + '</div>');
+    parts.push('<div style="margin-top:6px;">Request ID: ' + esc(String(res.requestId || "")) + ' | Client Elapsed: ' + esc(String(Number(res.clientElapsedMs || 0))) + ' ms | Server Elapsed: ' + esc(String(Number(res.elapsedMs || 0))) + ' ms</div>');
+    if (res.ok === false) {
+      parts.push('<div style="margin-top:6px;">Error: ' + esc(String(res.message || res.error || "Preview failed.")) + '</div>');
+    } else {
+      parts.push('<div style="margin-top:6px;">Message: ' + esc(String(res.message || "Preview ready.")) + '</div>');
+      parts.push('<div style="margin-top:6px;">Eligible Unsent Found: ' + esc(String(Number(res.eligibleUnsentFound || 0))) + ' | Blocked: ' + esc(String(Number(res.blocked || 0))) + ' | Already SENT Excluded: ' + esc(String(Number(res.alreadySentExcluded || 0))) + ' | Failed Excluded: ' + esc(String(Number(res.failedExcluded || 0))) + '</div>');
+      parts.push('<div style="margin-top:6px;">Selection Mode: next eligible unsent records' + (res.offsetIgnored ? ' | Diagnostic Offset Ignored: YES' : ' | Diagnostic Offset Ignored: NO') + '</div>');
+      if (!Number(res.count || 0) && res.emptyReason) parts.push('<div style="margin-top:6px;">Reason: ' + esc(String(res.emptyReason || "")) + '</div>');
+      if (blockedList) parts.push('<div style="margin-top:6px;">Blocked By Reason: ' + blockedList + '</div>');
+      if (Array.isArray(res.eligibleApplicantIdsSample) && res.eligibleApplicantIdsSample.length) parts.push('<div style="margin-top:6px;">Eligible Sample: ' + esc(res.eligibleApplicantIdsSample.join(", ")) + '</div>');
+      if (Array.isArray(res.blockedApplicantIdsSample) && res.blockedApplicantIdsSample.length) parts.push('<div style="margin-top:6px;">Blocked Sample: ' + esc(res.blockedApplicantIdsSample.join(", ")) + '</div>');
+    }
+  } else if (batchState.action === "send") {
+    parts.push('<div style="font-weight:800;">Batch Send</div>');
+    parts.push('<div style="margin-top:6px;">Stage: ' + esc(String(res.stage || "")) + ' | Priority: ' + esc(String(res.priority || "")) + '</div>');
+    parts.push('<div style="margin-top:6px;">Message: ' + esc(String(res.messageType || "(none)")) + ' | Send Limit: ' + esc(String(Number(res.sendLimit || 0))) + ' | Eligible Unsent Found: ' + esc(String(Number(res.eligibleUnsentFoundAtSend || 0))) + '</div>');
+    parts.push('<div style="margin-top:6px;">Attempted: ' + esc(String(Number(res.attempted || 0))) + ' | Sent: ' + esc(String(Number(res.sent || 0))) + ' | Blocked: ' + esc(String(Number(res.blocked || 0))) + ' | Failed: ' + esc(String(Number(res.failed || 0))) + '</div>');
+    parts.push('<div style="margin-top:6px;">Already SENT Excluded: ' + esc(String(Number(res.alreadySentExcluded || 0))) + ' | Failed Excluded: ' + esc(String(Number(res.failedExcluded || 0))) + ' | Diagnostic Offset Ignored: ' + esc(res.offsetIgnored ? 'YES' : 'NO') + '</div>');
+    if (blockedList) parts.push('<div style="margin-top:6px;">Blocked By Reason: ' + blockedList + '</div>');
+    if (Array.isArray(res.sentApplicantIdsSample) && res.sentApplicantIdsSample.length) parts.push('<div style="margin-top:6px;">Sent Sample: ' + esc(res.sentApplicantIdsSample.join(", ")) + '</div>');
+  } else if (res.ok === false) {
+    parts.push('<div style="font-weight:800;">Batch Action Failed</div>');
+    if (res.blockCode || res.code) parts.push('<div style="margin-top:6px;">Code: ' + esc(String(res.blockCode || res.code || "ERROR")) + '</div>');
+    if (res.blockReason || res.message || res.error) parts.push('<div style="margin-top:6px;">Reason: ' + esc(String(res.blockReason || res.message || res.error || "Server returned an error.")) + '</div>');
+  }
+  if (res.debugId && !isPreview) parts.push('<div class="muted" style="margin-top:6px;font-size:12px;">Debug ID: ' + esc(String(res.debugId || "")) + '</div>');
+  box.classList.remove("hidden");
+  box.classList.toggle("err", !!(res && res.ok === false));
+  box.innerHTML = parts.join("");
+}
+
+function renderBatchPanel(){
+  var selectedStage = batchState.selectedStage;
+  var priority = batchState.priority;
+  var messageType = batchState.messageType || "";
+  var sendable = batchState.sendable === true;
+  var limit = getStageBatchLimitUi_();
+  getStageBatchOffsetUi_();
+  var stageEl = document.getElementById("stageBatchSelectedStage");
+  var priorityEl = document.getElementById("stageBatchPriority");
+  var msgTypeEl = document.getElementById("stageBatchMessageType");
+  var sendableEl = document.getElementById("stageBatchSendable");
+  var disabledReasonEl = document.getElementById("stageBatchDisabledReason");
+  var previewBtn = document.getElementById("btnStageBatchPreview");
+  var sendBtn = document.getElementById("btnStageBatchSend");
+  var noteEl = document.getElementById("stageBatchInlineNote");
+  if (stageEl) stageEl.textContent = selectedStage || "-";
+  if (priorityEl) priorityEl.innerHTML = selectedStage ? renderPriorityBadge_(priority || mapStagePriorityUi_(selectedStage)) : "&mdash;";
+  if (msgTypeEl) msgTypeEl.textContent = messageType || "-";
+  if (sendableEl) sendableEl.textContent = selectedStage ? (sendable ? "YES" : "NO") : "-";
+  var disabledReason = "";
+  if (!selectedStage) disabledReason = "Select a stage card to preview or send the next eligible unsent cohort.";
+  else if (!IS_SUPER) disabledReason = "SUPER admin required for stage batch actions.";
+  else if (!sendable) disabledReason = batchState.disabledReason || "No batch message is supported for this stage.";
+  batchState.disabledReason = disabledReason;
+  if (disabledReasonEl) disabledReasonEl.textContent = disabledReason || "-";
+  var previewReady = batchState.previewReady === true
+    && batchState.selectedStage === batchState.previewStage
+    && Number(batchState.previewLimit || 0) === limit
+    && sendable;
+  if (previewBtn) {
+    previewBtn.disabled = !selectedStage || batchState.busy || !IS_SUPER;
+    previewBtn.textContent = batchState.busy && batchState.action === "preview" ? "Previewing..." : "Preview Cohort";
+  }
+  if (sendBtn) {
+    sendBtn.disabled = !previewReady || batchState.busy || !IS_SUPER;
+    sendBtn.textContent = batchState.busy && batchState.action === "send" ? "Sending..." : "Send Stage Batch";
+  }
+  if (noteEl) {
+    if (batchState.busy && batchState.action === "preview") noteEl.textContent = "Loading the next eligible unsent cohort...";
+    else if (batchState.busy && batchState.action === "send") noteEl.textContent = "Sending the next eligible unsent cohort...";
+    else if (disabledReason) noteEl.textContent = disabledReason;
+    else if (previewReady) noteEl.textContent = "Preview ready for send. Standard production flow uses the next eligible unsent records; diagnostic offset is ignored.";
+    else noteEl.textContent = "Preview is required before send. Standard production flow uses the next eligible unsent records; diagnostic offset is ignored.";
+  }
+  renderStageBatchSummary_(batchState.result);
+}
+function onStageBatchLimitChange_(){
+  getStageBatchLimitUi_();
+  resetBatchPreviewState_(false);
+  renderBatchPanel();
+}
+function onStageBatchOffsetChange_(){
+  getStageBatchOffsetUi_();
+  renderBatchPanel();
+}
+function bindStageBatchControls_(){
+  var limitInput = document.getElementById("stageBatchLimit");
+  if (limitInput && limitInput.dataset.bound !== "1") {
+    limitInput.dataset.bound = "1";
+    limitInput.addEventListener("change", onStageBatchLimitChange_);
+    limitInput.addEventListener("input", onStageBatchLimitChange_);
+  }
+  var offsetInput = document.getElementById("stageBatchOffset");
+  if (offsetInput && offsetInput.dataset.bound !== "1") {
+    offsetInput.dataset.bound = "1";
+    offsetInput.addEventListener("change", onStageBatchOffsetChange_);
+    offsetInput.addEventListener("input", onStageBatchOffsetChange_);
+  }
+  renderBatchPanel();
+}
+function previewStageBatchUi_(){
+  var stage = batchState.selectedStage;
+  var limit = getStageBatchLimitUi_();
+  var offset = getStageBatchOffsetUi_();
+  if (!stage || batchState.busy || !IS_SUPER) return;
+  batchState.previewRequestSeq = Number(batchState.previewRequestSeq || 0) + 1;
+  var requestSeq = batchState.previewRequestSeq;
+  var clientRequestId = "preview-client-" + String(Date.now()) + "-" + String(requestSeq);
+  var requestStartedAtMs = Date.now();
+  var timeoutMs = 20000;
+  console.log("[StageBatchPreview] start", { requestId: clientRequestId, stage: stage, limit: limit, offset: offset, timeoutMs: timeoutMs });
+  resetBatchPreviewState_(false);
+  batchState.previewActiveSeq = requestSeq;
+  batchState.previewClientRequestId = clientRequestId;
+  batchState.busy = true;
+  batchState.action = "preview";
+  renderBatchPanel();
+  var timeoutHandle = window.setTimeout(function(){
+    if (batchState.previewActiveSeq !== requestSeq) {
+      console.log("[StageBatchPreview] stale_ignored", { requestId: clientRequestId, source: "timeout" });
+      return;
+    }
+    batchState.previewActiveSeq = 0;
+    batchState.busy = false;
+    var clientElapsedMs = Date.now() - requestStartedAtMs;
+    batchState.previewClientElapsedMs = clientElapsedMs;
+    resetBatchPreviewState_(false);
+    batchState.action = "preview";
+    batchState.result = {
+      ok: false,
+      action: "preview_stage_batch",
+      message: "Preview timed out.",
+      error: "Preview timed out.",
+      emptyReason: "",
+      elapsedMs: 0,
+      clientElapsedMs: clientElapsedMs,
+      requestId: clientRequestId,
+      stage: stage,
+      messageType: batchState.messageType || "",
+      count: 0,
+      previewLimit: limit,
+      requestedOffset: offset,
+      offsetIgnored: offset > 0
+    };
+    console.log("[StageBatchPreview] terminal", { requestId: clientRequestId, path: "error", reason: "timeout", clientElapsedMs: clientElapsedMs });
+    renderBatchPanel();
+  }, timeoutMs);
+  google.script.run
+    .withSuccessHandler(function(res){
+      console.log("[StageBatchPreview] success_callback", { requestId: clientRequestId });
+      window.clearTimeout(timeoutHandle);
+      if (batchState.previewActiveSeq !== requestSeq) {
+        console.log("[StageBatchPreview] stale_ignored", { requestId: clientRequestId, source: "success_callback" });
+        return;
+      }
+      batchState.previewActiveSeq = 0;
+      batchState.busy = false;
+      batchState.previewClientElapsedMs = Date.now() - requestStartedAtMs;
+      var response = res && typeof res === "object" ? res : { ok: false, message: "Invalid preview response.", requestId: clientRequestId, stage: stage, messageType: batchState.messageType || "", count: 0, elapsedMs: 0, emptyReason: "" };
+      response.clientElapsedMs = batchState.previewClientElapsedMs;
+      if (!response.requestId) response.requestId = clientRequestId;
+      batchState.result = response;
+      var terminalPath = response.ok === false ? "error" : (Number(response.count || 0) > 0 ? "success" : "empty");
+      if (response.ok === true && String(response.stage || "").toUpperCase() === stage && Number(response.previewLimit || 0) === limit && Number(response.count || 0) > 0) {
+        batchState.previewReady = true;
+        batchState.previewStage = stage;
+        batchState.previewLimit = limit;
+        batchState.previewEligible = Number(response.count || 0);
+      } else {
+        resetBatchPreviewState_(true);
+        batchState.result = response;
+      }
+      console.log("[StageBatchPreview] terminal", { requestId: String(response.requestId || clientRequestId), path: terminalPath, count: Number(response.count || 0), clientElapsedMs: Number(response.clientElapsedMs || 0), serverElapsedMs: Number(response.elapsedMs || 0) });
+      renderBatchPanel();
+    })
+    .withFailureHandler(function(err){
+      console.log("[StageBatchPreview] failure_callback", { requestId: clientRequestId, error: String((err && err.message) || err || "Preview request failed.") });
+      window.clearTimeout(timeoutHandle);
+      if (batchState.previewActiveSeq !== requestSeq) {
+        console.log("[StageBatchPreview] stale_ignored", { requestId: clientRequestId, source: "failure_callback" });
+        return;
+      }
+      batchState.previewActiveSeq = 0;
+      batchState.busy = false;
+      var clientElapsedMs = Date.now() - requestStartedAtMs;
+      batchState.previewClientElapsedMs = clientElapsedMs;
+      resetBatchPreviewState_(false);
+      batchState.action = "preview";
+      batchState.result = {
+        ok: false,
+        action: "preview_stage_batch",
+        message: String((err && err.message) || err || "Preview request failed."),
+        error: String((err && err.message) || err || "Preview request failed."),
+        emptyReason: "",
+        elapsedMs: 0,
+        clientElapsedMs: clientElapsedMs,
+        requestId: clientRequestId,
+        stage: stage,
+        messageType: batchState.messageType || "",
+        count: 0,
+        previewLimit: limit,
+        requestedOffset: offset,
+        offsetIgnored: offset > 0
+      };
+      console.log("[StageBatchPreview] terminal", { requestId: clientRequestId, path: "error", reason: "failure_callback", clientElapsedMs: clientElapsedMs });
+      renderBatchPanel();
+    })
+    .admin_previewStageBatch({ stage: stage, limit: limit, offset: offset });
+}
+function sendStageBatchUi_(){
+  var stage = batchState.selectedStage;
+  var limit = getStageBatchLimitUi_();
+  var offset = getStageBatchOffsetUi_();
+  var messageType = batchState.messageType || "";
+  var previewReady = batchState.previewReady === true
+    && batchState.selectedStage === batchState.previewStage
+    && Number(batchState.previewLimit || 0) === limit
+    && batchState.sendable === true;
+  if (!previewReady || batchState.busy || !IS_SUPER) return;
+  var confirmText = "Send " + String(limit) + " emails for stage " + stage + " using the next eligible unsent records? Preview prepared: " + String(Number(batchState.previewEligible || 0)) + ". Message: " + messageType + ". Diagnostic offset is ignored.";
+  if (!window.confirm(confirmText)) return;
+  batchState.busy = true;
+  batchState.action = "send";
+  renderBatchPanel();
+  google.script.run
+    .withSuccessHandler(function(res){
+      batchState.busy = false;
+      batchState.result = res && typeof res === "object" ? res : { ok: false, message: "Invalid send response.", debugId: "" };
+      resetBatchPreviewState_(true);
+      renderBatchPanel();
+      if (batchState.result && batchState.result.ok === true) {
+        loadStageDashboard({ force: 1 });
+        loadReviewQueues({ force: 1 });
+        if (selectedStageFilter) search();
+      }
+    })
+    .withFailureHandler(function(err){
+      batchState.busy = false;
+      resetBatchPreviewState_(false);
+      batchState.action = "send";
+      batchState.result = { ok: false, message: String((err && err.message) || err || "Server failure"), debugId: "" };
+      renderBatchPanel();
+    })
+    .admin_sendStageBatch({ stage: stage, limit: limit, offset: offset, confirmSend: true });
+}
+function renderStageDashboard_(items, emptyMessage){
+      stageDashboardState = Array.isArray(items) ? items.slice() : [];
+      var box = document.getElementById("stageDashboardCards");
+      if (!box) return;
+      updateStageFilterMeta_();
+      if (!stageDashboardState.length) {
+        box.innerHTML = '<div class="muted" style="font-size:12px;">' + esc(emptyMessage || "No data or failed to load") + '</div>';
+        return;
+      }
+      box.innerHTML = stageDashboardState.map(function(item, index){
+        var stage = String((item && item.stage) || "UNKNOWN").trim();
+        var priority = String((item && item.priority) || mapStagePriorityUi_(stage)).trim().toUpperCase();
+        var selected = selectedStageFilter === stage;
+        return '<button type="button" class="stageCard' + (selected ? ' selected' : '') + '" onclick="onStageSelected(' + String(index) + ')">' +
+          '<div class="stageCardStage">' + esc(stage) + '</div>' +
+          '<div style="margin-top:8px;">' + renderPriorityBadge_(priority) + '</div>' +
+          '<div class="stageCardMeta">' +
+            '<span>' + esc(String(Number(item && item.total || 0))) + ' total</span>' +
+            '<span>' + esc(String(Number(item && item.actionable || 0))) + ' actionable</span>' +
+            '<span>' + esc(String(Number(item && item.blocked || 0))) + ' blocked</span>' +
+          '</div>' +
+        '</button>';
+      }).join("");
+    }
+    function loadStageDashboard(opts){
+      var o = (opts && typeof opts === "object") ? opts : {};
+      google.script.run
+        .withSuccessHandler(function(res){
+          var rows = (res && Array.isArray(res.stages)) ? res.stages : [];
+          renderStageDashboard_(rows, rows.length ? "" : "No data or failed to load");
+        })
+        .withFailureHandler(function(err){
+          console.error("[AdminUI] admin_getStageAggregation failure:", err);
+          renderStageDashboard_([], "No data or failed to load");
+        })
+        .admin_getStageAggregation({ force: o.force ? 1 : 0 });
+    }
+    function toggleStageFilter(stage){
+      var normalized = String(stage || "").trim().toUpperCase();
+      selectedStageFilter = normalized;
+      var matched = stageDashboardState.findIndex(function(item){ return String((item && item.stage) || "").trim().toUpperCase() === normalized; });
+      onStageSelected(matched);
+    }
+    function loadReviewQueues(opts){
+      var o = (opts && typeof opts === "object") ? opts : {};
+      var append = o.append === true;
+      var force = Number(o.force || 0) === 1;
+      if (!append) loadStageDashboard({ force: force });
+      if (!append) {
+        resetQueuePagerState_();
+        resetQueueDataState_();
+      }
+      var requestOffset = append ? Number(queueDataState.nextOffset || 0) : 0;
+      if (!Number.isFinite(requestOffset) || requestOffset < 0) requestOffset = 0;
+      updateQueueLoadMoreUi_(true);
+      requestAnimationFrame(function(){
+        google.script.run
+          .withSuccessHandler(function(res){
+            try {
+              var data = (res && typeof res === "object") ? res : {};
+              if (append) {
+                queueDataState.docs = mergeQueueRows_(queueDataState.docs, data.docs);
+                queueDataState.awaitingPayment = mergeQueueRows_(queueDataState.awaitingPayment, data.awaitingPayment);
+                queueDataState.payments = mergeQueueRows_(queueDataState.payments, data.payments);
+                queueDataState.anomalies = mergeQueueRows_(queueDataState.anomalies, data.anomalies);
+                queueDataState.paidApproved = mergeQueueRows_(queueDataState.paidApproved, data.paidApproved);
+              } else {
+                queueDataState.docs = Array.isArray(data.docs) ? data.docs.slice() : [];
+                queueDataState.awaitingPayment = Array.isArray(data.awaitingPayment) ? data.awaitingPayment.slice() : [];
+                queueDataState.payments = Array.isArray(data.payments) ? data.payments.slice() : [];
+                queueDataState.anomalies = Array.isArray(data.anomalies) ? data.anomalies.slice() : [];
+                queueDataState.paidApproved = Array.isArray(data.paidApproved) ? data.paidApproved.slice() : [];
+              }
+              queueDataState.counts = (data && data.counts) ? data.counts : (queueDataState.counts || {});
+              queueDataState.hasMore = !!(data && data.hasMore);
+              queueDataState.nextOffset = Number(data && data.nextOffset || 0) || 0;
+              requestAnimationFrame(function(){
+                renderReviewQueues(queueDataState, { keepPager: append });
+                updateQueueLoadMoreUi_(false);
+              });
+            } catch (e) {
+              console.error("[AdminUI] renderReviewQueues error:", e);
+              updateQueueLoadMoreUi_(false);
+            }
+          })
+          .withFailureHandler(function(err){
+            console.error("[AdminUI] admin_getReviewQueues failure:", err);
+            var el = document.getElementById("queueDocs");
+            if (el) el.innerHTML = "<div class='queue-header'>Documents to Verify</div><div class='queue-empty'>Could not load queues.</div>";
+            updateQueueLoadMoreUi_(false);
+          })
+          .admin_getReviewQueues({ offset: requestOffset, limit: QUEUE_FETCH_SIZE, force: force ? 1 : 0 });
+      });
+    }
+
+    function resetQueuePagerState_(){
+      Object.keys(queuePagerState).forEach(function(k){ delete queuePagerState[k]; });
+      Object.keys(queueRenderCache).forEach(function(k){ delete queueRenderCache[k]; });
+    }
+
+    function setDefaultQueueExpandState_(counts){
+      const c = counts || {};
+      queueExpandState = {
+        queueDocs: Number(c.docs || 0) > 0,
+        queueAwaitingPayment: false,
+        queuePayments: false,
+        queueAnomalies: false,
+        queuePaidApproved: false
+      };
+      if (!queueExpandState.queueDocs && Number(c.awaitingPayment || 0) > 0) {
+        queueExpandState.queueAwaitingPayment = true;
+      }
+      if (!queueExpandState.queueDocs && !queueExpandState.queueAwaitingPayment && Number(c.payments || 0) > 0) {
+        queueExpandState.queuePayments = true;
+      }
+    }
+
+    function isQueueExpanded_(queueKey){
+      return !!queueExpandState[String(queueKey || "")];
+    }
+
+    function toggleQueueSection(queueKey){
+      var key = String(queueKey || "");
+      queueExpandState[key] = !isQueueExpanded_(key);
+      rerenderQueue_(key);
+    }
+
+    function getQueuePageState_(queueKey){
+      if (!queuePagerState[queueKey]) queuePagerState[queueKey] = { page: 0 };
+      return queuePagerState[queueKey];
+    }
+
+    function formatQueueEmail_(row){
+      var r = row || {};
+      var original = String(r.parentEmail || "").trim();
+      var corrected = String(r.correctedEmail || "").trim();
+      var effective = String(r.effectiveEmail || corrected || original || "").trim();
+      if (!effective) return "-";
+      if (corrected && original && corrected.toLowerCase() !== original.toLowerCase()) {
+        return effective + " (was " + original + ")";
+      }
+      return effective;
+    }
+    function workflowYesNo_(value){
+      return String(value || "").trim().toLowerCase() === "yes" ? "Yes" : "No";
+    }
+
+    function workflowEnrolledLabel_(row){
+      var enrolled = workflowYesNo_(row && row.Enrolled_Confirmed);
+      if (enrolled === "Yes") return "Yes";
+      if (workflowYesNo_(row && row.Payment_Verified) === "Yes") return "Yes (derived)";
+      return "No";
+    }
+
+    function workflowSummaryText_(row){
+      var r = row || {};
+      return [
+        "Portal Submitted: " + workflowYesNo_(r.Portal_Submitted),
+        "Docs Verified: " + workflowYesNo_(r.Docs_Verified),
+        "Payment Received: " + workflowYesNo_(r.Payment_Received),
+        "Payment Verified: " + workflowYesNo_(r.Payment_Verified),
+        "Enrolled Confirmed: " + workflowEnrolledLabel_(r)
+      ].join(" | ");
+    }
+
+    function paymentBadgeFromRow_(row){
+      var r = row || {};
+      var computed = String(r.Payment_Status_Computed || "").trim();
+      if (computed) {
+        var lcComputed = computed.toLowerCase();
+        if (lcComputed.indexOf("verified") >= 0) return { label: "Verified", cls: "badge badge-success" };
+        if (lcComputed.indexOf("pending") >= 0) return { label: "Pending", cls: "badge badge-warning" };
+        if (lcComputed.indexOf("not") >= 0 || lcComputed.indexOf("missing") >= 0) return { label: "Not Uploaded", cls: "badge badge-muted" };
+        return { label: "Pending", cls: "badge badge-warning" };
+      }
+      var verifiedRaw = r.Payment_Verified;
+      var isVerified = verifiedRaw === true || String(verifiedRaw || "").trim().toLowerCase() === "yes";
+      if (isVerified) return { label: "Verified", cls: "badge badge-success" };
+      if (String(r.Fee_Receipt_File || "").trim()) return { label: "Pending", cls: "badge badge-warning" };
+      return { label: "Not Uploaded", cls: "badge badge-muted" };
+    }
+
+    function renderQueueSection(containerId, title, rows, totalCount){
+      var el = document.getElementById(containerId);
+      if (!el) return;
+      var list = Array.isArray(rows) ? rows : [];
+      var total = Number(totalCount || 0);
+      var queueKey = String(containerId || "");
+      queueRenderCache[queueKey] = {
+        containerId: containerId,
+        title: title,
+        rows: list.slice(),
+        totalCount: total
+      };
+      var pager = getQueuePageState_(queueKey);
+      var totalPages = Math.max(1, Math.ceil(list.length / QUEUE_PAGE_SIZE));
+      if (pager.page >= totalPages) pager.page = totalPages - 1;
+      if (pager.page < 0) pager.page = 0;
+      var start = pager.page * QUEUE_PAGE_SIZE;
+      var end = start + QUEUE_PAGE_SIZE;
+      var pageRows = list.slice(start, end);
+      var expanded = isQueueExpanded_(queueKey);
+      el.classList.toggle("expanded", expanded);
+      var html = "";
+      html += "<button type='button' class='queue-section-header' data-action='queue-toggle' data-queue-key='" + esc(queueKey) + "' title='Toggle section'>";
+      html += "<div class='queue-header'>" + esc(title) + " (" + total + ")</div>";
+      html += "<div class='caret'>" + (expanded ? "v" : ">") + "</div>";
+      html += "</button>";
+      html += "<div class='queue-section-body " + (expanded ? "" : "hidden") + "'>";
+      if (!list.length) {
+        html += "<div class='queue-empty'>No records pending</div>";
+      } else {
+        var isDocsQueue = queueKey === "queueDocs" && DOCS_FOLLOWUP_SHOW_IN_QUEUES;
+        if (isDocsQueue) {
+          var selectedCount = selectedDocsRows_().length;
+          html += "<div class='row' style='margin-bottom:8px;align-items:center;gap:8px;'>";
+          html += "<button class='btn small' type='button' data-action='queue-docs-select-ready'>Select All Ready</button>";
+          html += "<button class='btn small' type='button' data-action='queue-docs-clear'>Clear</button>";
+          html += "<button class='btn small accent' type='button' data-action='queue-docs-send-selected' " + ((isDocsSendBusy || selectedCount === 0) ? "disabled" : "") + ">" + (isDocsSendBusy ? "Sending..." : "Send Quote to Selected") + "</button>";
+          html += "<span class='muted' style='font-size:12px;'>" + String(selectedCount) + " selected</span>";
+          html += "</div>";
+          html += "<table class='queue-table'><tr><th style='width:30px;'></th><th>Applicant</th><th>Name</th><th>Workflow</th><th>Docs Follow-Up</th><th>Action</th></tr>";
+          pageRows.forEach(function(row){
+            var rowNumber = Number(row && row.rowNumber || 0);
+            var applicantId = String((row && (row.ApplicantID || row.applicantId)) || "");
+            var name = String(row && row.name || "");
+            var emailLabel = formatQueueEmail_(row);
+            var nameDisplay = name + (emailLabel && emailLabel !== "-" ? (" - " + emailLabel) : "");
+            var dbg = String(row && row.debugId || "");
+            var sentAt = String(row && row.docsFollowupSentAt || "");
+            var sentFlag = !!(row && (row.docsFollowupSent || row.docsFollowupStatus === "Sent"));
+            var hasPersistentSent = !!sentAt || sentFlag;
+            var hasSessionSent = docsFollowupSentRows.has(rowNumber);
+            var isSent = hasPersistentSent || hasSessionSent;
+            var eligible = !!(row && row.eligibleDocsFollowUp);
+            var canSendQuote = DOCS_FOLLOWUP_ENABLED && eligible && !isSent;
+            var canReview = !!applicantId || (Number.isFinite(rowNumber) && rowNumber >= 2);
+            var reviewTitle = canReview ? "Open review" : ("RowNumber missing - cannot review." + (dbg ? (" (dbg: " + dbg + ")") : ""));
+            var checkDisabled = (!canSendQuote || isDocsSendBusy) ? "disabled" : "";
+            var checkChecked = selectedDocsRowNumbers[String(rowNumber)] ? "checked" : "";
+            var statusText = isSent ? "Sent" : (eligible ? "Ready" : "Not ready");
+            var statusClass = isSent ? "statusTag sent" : (eligible ? "statusTag ready" : "statusTag off");
+            var sendTitle = isSent ? "Already sent." : (eligible ? "Send docs quote email now." : "All required documents must be Verified first.");
+            html += "<tr>";
+            html += "<td><input type='checkbox' data-action='docs-select-row' data-row-number='" + esc(String(Number.isFinite(rowNumber) ? rowNumber : "")) + "' data-applicant-id='" + esc(applicantId) + "' data-eligible='" + (canSendQuote ? "1" : "0") + "' " + checkChecked + " " + checkDisabled + "></td>";
+            html += "<td>" + esc(applicantId) + "</td>";
+            html += "<td>" + esc(nameDisplay) + "</td>";
+            html += "<td class='muted' style='font-size:12px;'>" + esc(workflowSummaryText_(row)) + "</td>";
+            html += "<td><span class='" + statusClass + "'>" + esc(statusText) + "</span></td>";
+            html += "<td><button class='btn small' data-action='send-docs-single' data-applicant-id='" + esc(applicantId) + "' data-row-number='" + esc(String(Number.isFinite(rowNumber) ? rowNumber : "")) + "' title='" + esc(sendTitle) + "' " + (canSendQuote && !isDocsSendBusy ? "" : "disabled ") + ">Send Quote</button> <button class='btn small' data-action='queue-review' data-applicant-id='" + esc(applicantId) + "' data-row-number='" + esc(String(Number.isFinite(rowNumber) ? rowNumber : "")) + "' title='" + esc(reviewTitle) + "' " + (canReview ? "" : "disabled ") + ">Review</button></td>";
+            html += "</tr>";
+          });
+        } else if (queueKey === "queuePayments") {
+          html += "<table class='queue-table'><tr><th>Applicant</th><th>Name</th><th>Workflow</th><th>Payment</th><th>Action</th></tr>";
+          pageRows.forEach(function(row){
+            var rowNumber = Number(row && row.rowNumber || 0);
+            var applicantId = String(row && row.applicantId || "");
+            var name = String(row && row.name || "");
+            var emailLabel = formatQueueEmail_(row);
+            var nameDisplay = name + (emailLabel && emailLabel !== "-" ? (" - " + emailLabel) : "");
+            var dbg = String(row && row.debugId || "");
+            var canReview = !!applicantId || (Number.isFinite(rowNumber) && rowNumber >= 2);
+            var reviewTitle = canReview ? "Open review" : ("RowNumber missing - cannot review." + (dbg ? (" (dbg: " + dbg + ")") : ""));
+            var paymentBadge = paymentBadgeFromRow_(row);
+            html += "<tr>";
+            html += "<td>" + esc(applicantId) + "</td>";
+            html += "<td>" + esc(nameDisplay) + "</td>";
+            html += "<td class='muted' style='font-size:12px;'>" + esc(workflowSummaryText_(row)) + "</td>";
+            html += "<td><span class='" + esc(paymentBadge.cls) + "'>" + esc(paymentBadge.label) + "</span></td>";
+            html += "<td><button class='btn small' data-action='queue-review' data-applicant-id='" + esc(applicantId) + "' data-row-number='" + esc(String(Number.isFinite(rowNumber) ? rowNumber : "")) + "' title='" + esc(reviewTitle) + "' " + (canReview ? "" : "disabled ") + ">Review</button></td>";
+            html += "</tr>";
+          });
+        } else {
+          html += "<table class='queue-table'><tr><th>Applicant</th><th>Name</th><th>Workflow</th><th>Action</th></tr>";
+          pageRows.forEach(function(row){
+            var rowNumber = Number(row && row.rowNumber || 0);
+            var applicantId = String(row && row.applicantId || "");
+            var name = String(row && row.name || "");
+            var emailLabel = formatQueueEmail_(row);
+            var nameDisplay = name + (emailLabel && emailLabel !== "-" ? (" - " + emailLabel) : "");
+            var dbg = String(row && row.debugId || "");
+            var canReview = !!applicantId || (Number.isFinite(rowNumber) && rowNumber >= 2);
+            var reviewTitle = canReview ? "Open review" : ("RowNumber missing - cannot review." + (dbg ? (" (dbg: " + dbg + ")") : ""));
+            html += "<tr>";
+            html += "<td>" + esc(applicantId) + "</td>";
+            html += "<td>" + esc(nameDisplay) + "</td>";
+            html += "<td class='muted' style='font-size:12px;'>" + esc(workflowSummaryText_(row)) + "</td>";
+            html += "<td><button class='btn small' data-action='queue-review' data-applicant-id='" + esc(applicantId) + "' data-row-number='" + esc(String(Number.isFinite(rowNumber) ? rowNumber : "")) + "' title='" + esc(reviewTitle) + "' " + (canReview ? "" : "disabled ") + ">Review</button></td>";
+            html += "</tr>";
+          });
+        }
+        html += "</table>";
+        html += "<div class='row' style='margin-top:8px;align-items:center;gap:8px;'>";
+        html += "<button class='btn small' " + (pager.page <= 0 ? "disabled" : "") + " onclick='queuePrevPage(" + JSON.stringify(queueKey) + ")'>Prev</button>";
+        html += "<button class='btn small' " + (end >= list.length ? "disabled" : "") + " onclick='queueNextPage(" + JSON.stringify(queueKey) + ")'>Next</button>";
+        html += "<div class='muted' style='font-size:12px;'>Page " + (pager.page + 1) + " of " + totalPages + "</div>";
+        html += "</div>";
+      }
+      html += "</div>";
+      el.innerHTML = html;
+    }
+
+    function rerenderQueue_(queueKey){
+      var q = queueRenderCache[String(queueKey || "")];
+      if (!q) return;
+      renderQueueSection(q.containerId, q.title, q.rows, q.totalCount);
+    }
+
+    function queuePrevPage(queueKey){
+      var state = getQueuePageState_(queueKey);
+      if (state.page > 0) state.page--;
+      rerenderQueue_(queueKey);
+    }
+
+    function queueNextPage(queueKey){
+      var q = queueRenderCache[String(queueKey || "")];
+      if (!q) return;
+      var maxPage = Math.max(0, Math.ceil((q.rows || []).length / QUEUE_PAGE_SIZE) - 1);
+      var state = getQueuePageState_(queueKey);
+      if (state.page < maxPage) state.page++;
+      rerenderQueue_(queueKey);
+    }
+
+    function applySmartExpansion(counts){
+      var c = counts || {};
+      setDefaultQueueExpandState_(c);
+      ["queueDocs","queueAwaitingPayment","queuePayments","queueAnomalies","queuePaidApproved"].forEach(function(id){
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.classList.toggle("expanded", isQueueExpanded_(id));
+      });
+    }
+
+    function renderReviewQueues(data, opts){
+      var o = (opts && typeof opts === "object") ? opts : {};
+      var d = (data && typeof data === "object") ? data : {};
+      var counts = d.counts || {};
+      if (!o.keepPager) resetQueuePagerState_();
+      applySmartExpansion(counts);
+      renderQueueSection("queueDocs", "Documents to Verify", d.docs, counts.docs);
+      renderQueueSection("queueAwaitingPayment", "Awaiting Payment", d.awaitingPayment, counts.awaitingPayment);
+      renderQueueSection("queuePayments", "Payments to Verify", d.payments, counts.payments);
+      renderQueueSection("queueAnomalies", "Payment-First Anomalies", d.anomalies, counts.anomalies);
+      renderQueueSection("queuePaidApproved", "Enrolled / Confirmed", d.paidApproved, counts.paidApproved);
+    }
+
+    function initQueuePanelEvents_(){
+      var panel = document.getElementById("reviewQueuesPanel");
+      if (!panel || panel.dataset.bound === "1") return;
+      panel.dataset.bound = "1";
+      panel.addEventListener("click", function(e){
+        var target = e.target;
+        if (!target || !target.closest) return;
+        var toggleBtn = target.closest('button[data-action="queue-toggle"]');
+        if (toggleBtn) {
+          e.preventDefault();
+          var queueKey = String(toggleBtn.getAttribute("data-queue-key") || "");
+          if (queueKey) toggleQueueSection(queueKey);
+          return;
+        }
+        var queueSendSingle = target.closest('button[data-action="send-docs-single"]');
+        if (queueSendSingle) {
+          e.preventDefault();
+          var qApplicantId = String(queueSendSingle.getAttribute("data-applicant-id") || "").trim();
+          var qRowNumber = Number(queueSendSingle.getAttribute("data-row-number") || 0);
+          if (!Number.isFinite(qRowNumber) || qRowNumber < 2) {
+            setDocsSendSummary_("Cannot send docs quote: invalid row number.", true);
+            return;
+          }
+          sendDocsFollowup_([qRowNumber], "queue-single", [qApplicantId]);
+          return;
+        }
+        var selectReadyBtn = target.closest('button[data-action="queue-docs-select-ready"]');
+        if (selectReadyBtn) {
+          e.preventDefault();
+          var qDocs = (queueRenderCache.queueDocs && queueRenderCache.queueDocs.rows) ? queueRenderCache.queueDocs.rows : [];
+          qDocs.forEach(function(row){
+            var rowNum = Number(row && row.rowNumber || 0);
+            var sentAt = String(row && row.docsFollowupSentAt || "");
+            var sentFlag = !!(row && (row.docsFollowupSent || row.docsFollowupStatus === "Sent"));
+            var rowNumKey = Number(row && row.rowNumber || 0);
+            var hasSessionSent = docsFollowupSentRows.has(rowNumKey);
+            var canSelect = !!(row && row.eligibleDocsFollowUp) && !sentAt && !sentFlag && !hasSessionSent;
+            if (canSelect && Number.isFinite(rowNum) && rowNum >= 2) selectedDocsRowNumbers[String(rowNum)] = true;
+          });
+          rerenderQueue_("queueDocs");
+          updateBulkDocsUi_();
+          return;
+        }
+        var clearBtn = target.closest('button[data-action="queue-docs-clear"]');
+        if (clearBtn) {
+          e.preventDefault();
+          clearDocsSelection_();
+          rerenderQueue_("queueDocs");
+          return;
+        }
+        var sendSelectedBtn = target.closest('button[data-action="queue-docs-send-selected"]');
+        if (sendSelectedBtn) {
+          e.preventDefault();
+          var selectedRows = selectedDocsRows_();
+          var qByRow = {};
+          var qRows = (queueRenderCache.queueDocs && queueRenderCache.queueDocs.rows) ? queueRenderCache.queueDocs.rows : [];
+          qRows.forEach(function(r){ qByRow[String(Number(r && r.rowNumber || 0))] = r || {}; });
+          var ids = selectedRows.map(function(rowNum){
+            var row = qByRow[String(rowNum)] || {};
+            return String((row.ApplicantID || row.applicantId || "") || "");
+          });
+          sendDocsFollowup_(selectedRows, "queue-bulk", ids);
+          return;
+        }
+        var btn = target.closest('button[data-action="queue-review"]');
+        if (!btn) return;
+        e.preventDefault();
+        var applicantId = String(btn.getAttribute("data-applicant-id") || "").trim();
+        var rowNumberRaw = String(btn.getAttribute("data-row-number") || "").trim();
+        var rowNumber = Number(rowNumberRaw);
+        if (applicantId) {
+          review(null, applicantId, btn);
+          return;
+        }
+        if (Number.isFinite(rowNumber) && rowNumber >= 2) {
+          review(rowNumber, "", btn);
+          return;
+        }
+        setMsg("msg", "Queue item missing review identifiers. Cannot open Review.");
+        setMsg("mMsg", "Queue item missing review identifiers.");
+      });
+      panel.addEventListener("change", function(e){
+        var chk = e.target && e.target.closest ? e.target.closest('input[data-action="docs-select-row"]') : null;
+        if (!chk) return;
+        var rowNumber = Number(chk.getAttribute("data-row-number") || 0);
+        if (!Number.isFinite(rowNumber) || rowNumber < 2) return;
+        if (chk.checked) selectedDocsRowNumbers[String(rowNumber)] = true;
+        else delete selectedDocsRowNumbers[String(rowNumber)];
+        updateBulkDocsUi_();
+      });
+    }
+
+    function setBackfillLoading_(busy){
+      var dryBtn = document.getElementById("btnBackfillDry");
+      var applyBtn = document.getElementById("btnBackfillApply");
+      var nextBtn = document.getElementById("btnBackfillNext");
+      var sizeInput = document.getElementById("bfBatchSize");
+      var startInput = document.getElementById("bfStartRow");
+      if (dryBtn) dryBtn.disabled = !!busy;
+      if (applyBtn) applyBtn.disabled = !!busy;
+      if (nextBtn) nextBtn.disabled = !!busy || nextBtn.style.display === "none";
+      if (sizeInput) sizeInput.disabled = !!busy;
+      if (startInput) startInput.disabled = !!busy;
+    }
+
+    function setBackfillNextState_(nextStartRow){
+      var nextBtn = document.getElementById("btnBackfillNext");
+      var startInput = document.getElementById("bfStartRow");
+      if (!nextBtn || !startInput) return;
+      if (nextStartRow) {
+        startInput.value = String(nextStartRow);
+        nextBtn.style.display = "inline-block";
+        nextBtn.disabled = false;
+      } else {
+        nextBtn.style.display = "none";
+        nextBtn.disabled = true;
+      }
+    }
+
+    function clearSearch(){
+      document.getElementById("qApplicantId").value = "";
+      document.getElementById("qEmail").value = "";
+      document.getElementById("tbody").innerHTML = `<tr><td colspan="8" class="muted">No results yet.</td></tr>`;
+      lastSearchResults = [];
+      lastSearchRows = [];
+      clearDocsSelection_();
+      setMsg("msg","");
+    }
+
+    function setReviewButtonLoading_(btn, isLoading){
+      if (!btn) return;
+      if (isLoading) {
+        if (!btn.dataset.origText) btn.dataset.origText = btn.textContent || "Review";
+        btn.disabled = true;
+        btn.textContent = "Loading...";
+        return;
+      }
+      btn.disabled = false;
+      btn.textContent = btn.dataset.origText || "Review";
+      delete btn.dataset.origText;
+    }
+
+    function openModalLoading_(applicantId, rowNumber){
+      document.getElementById("mTitle").textContent = "Applicant Review - " + (applicantId || "Unknown");
+      document.getElementById("mSub").textContent = "RowNumber: " + String(rowNumber || "");
+      document.getElementById("docs").innerHTML = '<div class="muted">Loading...</div>';
+      document.getElementById("mMsg").textContent = "Loading...";
+      document.getElementById("modalBack").style.display = "flex";
+    }
+
+    function clearDocsLoading_(msg){
+      var docs = document.getElementById("docs");
+      if (!docs) return;
+      if (msg) docs.innerHTML = '<div class="muted">' + esc(msg) + '</div>';
+      else docs.innerHTML = "";
+    }
+
+    function renderReviewButtonCell_(r){
+      var n = Number(r && r.rowNumber || 0);
+      var hasRowNumber = Number.isFinite(n) && n >= 2;
+      var applicantId = esc((r && r.applicantId) || "");
+      if (!hasRowNumber) {
+        return ''
+          + '<button class="btn small" type="button" disabled data-action="review" data-applicant-id="' + applicantId + '">Review</button>'
+          + '<div class="muted" style="font-size:11px;margin-top:4px;">RowNumber missing from server results</div>';
+      }
+      return ''
+        + '<button class="btn small accent btnReview" type="button"'
+        + ' data-action="review"'
+        + ' data-applicant-id="' + applicantId + '"'
+        + ' data-row-number="' + String(n) + '">Review</button>';
+    }
+
+    function isDocsFollowupSent_(row){
+      var rowNumber = Number(row && row.rowNumber || 0);
+      var sentAt = String((row && row.docsFollowupSentAt) || "");
+      var sentFlag = !!(row && (row.docsFollowupSent || row.docsFollowupStatus === "Sent"));
+      return !!sentAt || sentFlag || docsFollowupSentRows.has(rowNumber);
+    }
+
+    function docsFollowupReason_(row){
+      if (!DOCS_FOLLOWUP_ENABLED) return "Docs follow-up is disabled by config.";
+      if (isDocsFollowupSent_(row)) return "Already sent.";
+      return "All required documents must be Verified first.";
+    }
+
+    function renderDocsFollowupCell_(r){
+      var eligible = !!(r && r.eligibleDocsFollowUp);
+      var isSent = isDocsFollowupSent_(r);
+      var applicantId = esc((r && r.applicantId) || "");
+      var rowNumber = Number(r && r.rowNumber || 0);
+      var canSend = DOCS_FOLLOWUP_ENABLED && eligible && !isSent;
+      var title = canSend ? "Eligible for manual Docs Follow-Up send." : docsFollowupReason_(r);
+      var html = "";
+      if (isSent) {
+        html += '<span class="badge bg-secondary" title="Already sent">Sent</span>';
+      } else if (canSend) {
+        html += '<button class="btn btn-success btn-sm send-quote-btn" type="button" data-action="send-docs-single" data-applicant-id="' + applicantId + '" data-row-number="' + esc(String(Number.isFinite(rowNumber) ? rowNumber : "")) + '" title="' + esc("Send docs quote email now.") + '">Send Quote</button>';
+        html += ' <span class="badge bg-success" title="' + esc(title) + '">Ready</span>';
+      } else {
+        html += '<span class="badge bg-warning text-dark" title="' + esc(title) + '">Not Ready</span>';
+      }
+      return html;
+    }
+
+    function clearDocsSelection_(){
+      selectedDocsRowNumbers = {};
+      updateBulkDocsUi_();
+    }
+
+    function selectedDocsRows_(){
+      return Object.keys(selectedDocsRowNumbers)
+        .map(function(k){ return Number(k); })
+        .filter(function(n){ return Number.isFinite(n) && n >= 2; });
+    }
+
+    function updateBulkDocsUi_(){
+      var selected = selectedDocsRows_();
+      var count = selected.length;
+      var btn = document.getElementById("btnSendDocsBulk");
+      if (btn) btn.disabled = isDocsSendBusy || count === 0 || !DOCS_FOLLOWUP_ENABLED;
+      var msg = document.getElementById("docsBulkStatus");
+      if (msg) msg.textContent = DOCS_FOLLOWUP_ENABLED ? (count ? (count + " selected") : "No rows selected") : "Docs follow-up disabled";
+      Array.from(document.querySelectorAll('input[data-action="docs-select-row"]')).forEach(function(chk){
+        var n = Number(chk.getAttribute("data-row-number") || 0);
+        chk.checked = !!selectedDocsRowNumbers[String(n)];
+        chk.disabled = isDocsSendBusy || chk.getAttribute("data-eligible") !== "1";
+      });
+      Array.from(document.querySelectorAll('button[data-action="send-docs-single"]')).forEach(function(btnEl){
+        if (isDocsSendBusy) btnEl.disabled = true;
+      });
+    }
+
+    function setDocsSendBusy_(busy){
+      isDocsSendBusy = !!busy;
+      var ids = ["btnSelectAllEligibleDocs", "btnClearDocsSelection", "btnRefreshEligibility"];
+      ids.forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.disabled = isDocsSendBusy;
+      });
+      var sendBtn = document.getElementById("btnSendDocsBulk");
+      if (sendBtn) sendBtn.textContent = isDocsSendBusy ? "Sending..." : "Send Docs Quote to Selected";
+      rerenderQueue_("queueDocs");
+      updateBulkDocsUi_();
+    }
+
+    function getDocsSendCooldownMs_(){
+      var n = Number(DOCS_FOLLOWUP_COOLDOWN_MS || 300000);
+      if (!Number.isFinite(n) || n < 0) return 300000;
+      return n;
+    }
+
+    function canAttemptDocsSend_(applicantId){
+      var id = String(applicantId || "").trim();
+      if (!id) return true;
+      var last = Number(lastDocsSendAttemptByApplicantId[id] || 0);
+      if (!last) return true;
+      return (Date.now() - last) >= getDocsSendCooldownMs_();
+    }
+
+    function rememberDocsSendAttempt_(applicantId){
+      var id = String(applicantId || "").trim();
+      if (!id) return;
+      lastDocsSendAttemptByApplicantId[id] = Date.now();
+    }
+
+    function summarizeDocsFollowupResponse_(res){
+      var list = Array.isArray(res && res.results) ? res.results : [];
+      var summary = (res && res.summary) || {};
+      var sentCount = Number(summary.sentCount || 0);
+      var failedCount = Number(summary.failedCount || 0);
+      var failures = list.filter(function(x){ return !(x && x.ok); });
+      return {
+        sentCount: sentCount,
+        failedCount: failedCount,
+        failures: failures,
+        text: "Docs Quote: Sent " + sentCount + ", Failed " + failedCount
+      };
+    }
+
+    function setDocsSendSummary_(text, isErr){
+      var panel = document.getElementById("docsSendSummary");
+      if (!panel) return;
+      panel.classList.remove("hidden");
+      panel.classList.toggle("err", !!isErr);
+      panel.textContent = String(text || "");
+    }
+
+    function setDocsSendFailures_(rows){
+      var panel = document.getElementById("docsSendFailures");
+      if (!panel) return;
+      var list = Array.isArray(rows) ? rows : [];
+      if (!list.length) {
+        panel.classList.add("hidden");
+        panel.textContent = "";
+        return;
+      }
+      var lines = list.map(function(r){
+        var id = r && (r.ApplicantID || r.applicantId) ? (r.ApplicantID || r.applicantId) : ("row " + String(r && r.rowNumber || ""));
+        return id + " - " + String((r && r.code) || "ERROR") + ": " + String((r && r.message) || "");
+      });
+      panel.classList.remove("hidden");
+      panel.classList.remove("err");
+      panel.textContent = "Failures: " + lines.join(" | ");
+    }
+
+    function refreshAfterDocsFollowup_(){
+      loadReviewQueues({ force: 1 });
+      var applicantId = (document.getElementById("qApplicantId") || {}).value || "";
+      var email = (document.getElementById("qEmail") || {}).value || "";
+      if (String(applicantId).trim() || String(email).trim() || (lastSearchRows && lastSearchRows.length)) search();
+    }
+
+    function renderDocsFollowupSummary_(res, sourceLabel){
+      if (!res || typeof res !== "object" || typeof res.ok !== "boolean") {
+        setDocsSendSummary_("Invalid server response.", true);
+        setDocsSendFailures_([]);
+        return;
+      }
+      if (!res.ok) {
+        setDocsSendSummary_("Error: " + String(res.message || "Docs follow-up send failed") + " (code: " + String(res.code || "") + ", dbg: " + String(res.debugId || res.dbg || "") + ")", true);
+        setDocsSendFailures_([]);
+        return;
+      }
+      var s = summarizeDocsFollowupResponse_(res);
+      var okRows = (Array.isArray(res.results) ? res.results : [])
+        .filter(function(x){ return !!(x && x.ok); })
+        .map(function(x){ return Number(x.rowNumber || 0); })
+        .filter(function(n){ return Number.isFinite(n) && n >= 2; });
+      okRows.forEach(function(n){ docsFollowupSentRows.add(n); });
+      setDocsSendSummary_("[" + sourceLabel + "] " + s.text + " | dbg: " + String(res.debugId || res.dbg || ""), false);
+      setDocsSendFailures_(s.failures);
+      if (okRows.length === 1) {
+        setMsg("docsBulkStatus", "Docs follow-up sent for row " + okRows[0]);
+        setMsg("msg", "Docs follow-up sent for row " + okRows[0]);
+      } else {
+        setMsg("docsBulkStatus", s.text);
+        setMsg("msg", s.text);
+      }
+      clearDocsSelection_();
+      refreshAfterDocsFollowup_();
+    }
+
+    function renderDocsFollowupError_(err){
+      var msg = (err && err.message) ? err.message : String(err || "Unknown server error");
+      setDocsSendSummary_("Server failure: " + msg, true);
+      setDocsSendFailures_([]);
+      setMsg("docsBulkStatus", "Server failure: " + msg);
+      setMsg("msg", "Server failure: " + msg);
+    }
+
+    function sendDocsFollowup_(rowNumbers, sourceLabel, applicantIds){
+      if (!DOCS_FOLLOWUP_ENABLED) {
+        setMsg("msg", "Docs follow-up is disabled by config.");
+        return;
+      }
+      var rows = Array.isArray(rowNumbers) ? rowNumbers : [];
+      var ids = Array.isArray(applicantIds) ? applicantIds : [];
+      if (!rows.length) {
+        setDocsSendSummary_("No applicants selected.", true);
+        return;
+      }
+      var blocked = [];
+      ids.forEach(function(id){
+        if (id && !canAttemptDocsSend_(id)) blocked.push(id);
+      });
+      if (blocked.length) {
+        setDocsSendSummary_("Please wait before trying again. Blocked: " + blocked.join(", "), true);
+        return;
+      }
+      ids.forEach(function(id){ rememberDocsSendAttempt_(id); });
+      setDocsSendBusy_(true);
+      setDocsSendSummary_("Sending...", false);
+      setMsg("docsBulkStatus", "Sending...");
+      google.script.run
+        .withSuccessHandler(function(res){
+          setDocsSendBusy_(false);
+          renderDocsFollowupSummary_(res, sourceLabel);
+        })
+        .withFailureHandler(function(err){
+          setDocsSendBusy_(false);
+          renderDocsFollowupError_(err);
+        })
+        .admin_sendDocsFollowupEmails({ mode: rows.length > 1 ? "bulk" : "single", rowNumbers: rows });
+    }
+
+    function search(){
+      const applicantId = document.getElementById("qApplicantId").value.trim();
+      const email = document.getElementById("qEmail").value.trim();
+
+      setMsg("msg","Searching...");
+      google.script.run
+        .withSuccessHandler(res => {
+          const rows = (res && res.rows) ? res.rows : [];
+          if (rows.length) {
+            const sample = rows[0] || {};
+            console.log("[AdminUI] rendered %s results. sample=%o", rows.length, {
+              ApplicantID: sample.applicantId || "",
+              RowNumber: sample.rowNumber
+            });
+          } else {
+            console.log("[AdminUI] rendered 0 results.");
+          }
+          lastSearchResults = rows
+            .map(function(r){ return Number(r && r.rowNumber || 0); })
+            .filter(function(n){ return Number.isFinite(n) && n > 1; });
+          lastSearchRows = rows.slice();
+          clearDocsSelection_();
+          if (!rows.length){
+            document.getElementById("tbody").innerHTML = `<tr><td colspan="8" class="muted">No matches found.</td></tr>`;
+            setMsg("msg","No matches.");
+            return;
+          }
+          setMsg("msg", rows.length + " match(es).");
+          document.getElementById("tbody").innerHTML = rows.map(r => `
+            <tr>
+              <td><input type="checkbox" data-action="docs-select-row" data-row-number="${Number(r.rowNumber || 0)}" data-applicant-id="${esc(r.applicantId)}" data-eligible="${(r.eligibleDocsFollowUp && !isDocsFollowupSent_(r)) ? "1" : "0"}" ${(r.eligibleDocsFollowUp && !isDocsFollowupSent_(r)) ? "" : "disabled"}></td>
+              <td>${esc(r.applicantId)}</td>
+              <td>${esc(r.name)}</td>
+              <td>${esc(r.docStatus)}</td>
+              <td>${esc(r.paymentVerified)}</td>
+              <td>${esc(r.portalAccess)}</td>
+              <td>${renderDocsFollowupCell_(r)}</td>
+              <td>${renderReviewButtonCell_(r)}</td>
+            </tr>
+          `).join("");
+          updateBulkDocsUi_();
+        })
+        .withFailureHandler(err => {
+          console.error("[AdminUI] admin_searchApplicants failure:", err);
+          setMsg("msg","Error: " + (err && err.message ? err.message : err));
+        })
+        .admin_searchApplicants({ applicantId, email, stage: selectedStageFilter });
+    }
+
+    function review(rowNumber, applicantId, triggerBtn){
+      const reqId = ++lastRequestId;
+      const rowNum = Number(rowNumber);
+      const id = String(applicantId || "").trim();
+      console.log("[AdminUI] REVIEW_CLICK rowNumber=%s applicantId=%s reqId=%s", rowNumber, id || "", reqId);
+      if (!id && (!Number.isFinite(rowNum) || rowNum < 2)) {
+        const msg = "Cannot open Review: missing rowNumber and ApplicantID.";
+        setMsg("msg", msg);
+        setMsg("mMsg", msg);
+        return;
+      }
+      currentRowNumber = (Number.isFinite(rowNum) && rowNum >= 2) ? rowNum : null;
+      currentDetail = null;
+      resetCommunicationsState_("", false);
+      renderCommunicationsResult_(null);
+      currentPortalLinkInfo = null;
+      setActionButtonsEnabled(false);
+      document.getElementById("portalLinkBox").textContent = "";
+      setLinkBusy(false);
+      setReviewButtonLoading_(triggerBtn, true);
+      openModalLoading_(id || "", currentRowNumber || "");
+      setMsg("mMsg","Loading...");
+      var detailPayload = {};
+      if (id) detailPayload.applicantId = id;
+      if (Number.isFinite(rowNum) && rowNum >= 2) detailPayload.rowNumber = rowNum;
+      google.script.run
+        .withSuccessHandler(function(res){
+          if (reqId !== lastRequestId) {
+            clearDocsLoading_("");
+            setReviewButtonLoading_(triggerBtn, false);
+            return;
+          }
+          console.log("[AdminUI] SIG detail_json handler typeof=", typeof res);
+          console.log("[AdminUI] detail response raw:", res);
+          if (typeof res === "string") {
+            try {
+              res = JSON.parse(res);
+            } catch (e) {
+              res = null;
+            }
+          }
+          var apiResult = handleApiResult_(res, "detail");
+          if (!apiResult || apiResult.ok !== true) {
+            clearDocsLoading_("Detail request failed");
+            setActionButtonsEnabled(false);
+            setReviewButtonLoading_(triggerBtn, false);
+            setLinkBusy(false);
+            return;
+          }
+          var detail = null;
+          if (res && res.ok === true && res.detail && typeof res.detail === "object") {
+            detail = res.detail;
+          } else if (res && res.detail && typeof res.detail === "object") {
+            detail = res.detail;
+          }
+
+          if (!detail) {
+            var invalidMsg = "Invalid detail response";
+            setMsg("mMsg", invalidMsg);
+            setMsg("msg", invalidMsg);
+            clearDocsLoading_("Invalid detail response");
+            console.error("Unexpected detail response shape:", res);
+            setActionButtonsEnabled(false);
+            setReviewButtonLoading_(triggerBtn, false);
+            setLinkBusy(false);
+            return;
+          }
+
+          clearDocsLoading_("");
+          currentDetail = detail;
+          currentRowNumber = Number((detail && detail._rowNumber) || rowNum || 0) || null;
+          openModal(currentDetail);
+          setActionButtonsEnabled(!!currentRowNumber);
+          setMsg("mMsg", "");
+          setMsg("msg", "");
+          setReviewButtonLoading_(triggerBtn, false);
+          setLinkBusy(false);
+        })
+        .withFailureHandler(function(err){
+          if (reqId !== lastRequestId) {
+            clearDocsLoading_("");
+            setReviewButtonLoading_(triggerBtn, false);
+            return;
+          }
+          console.error("[AdminUI] SIG detail_json failure:", err);
+          var failMsg = "Detail request failed: " + (err && err.message ? err.message : String(err));
+          setModalMsg_(failMsg);
+          setMsg_(failMsg);
+          clearDocsLoading_(failMsg);
+          setReviewButtonLoading_(triggerBtn, false);
+          setLinkBusy(false);
+          setActionButtonsEnabled(false);
+        })
+        .admin_getApplicantDetail_json(detailPayload);
+    }
+
+    function onResultsClick_(ev){
+      var singleSendBtn = ev.target && ev.target.closest ? ev.target.closest('[data-action="send-docs-single"]') : null;
+      if (singleSendBtn) {
+        ev.preventDefault();
+        var sendApplicantId = String(singleSendBtn.getAttribute("data-applicant-id") || "").trim();
+        var sendRowNumber = Number(singleSendBtn.getAttribute("data-row-number") || 0);
+        if (!Number.isFinite(sendRowNumber) || sendRowNumber < 2) {
+          setMsg("msg", "Cannot send docs quote: invalid row number.");
+          return;
+        }
+        sendDocsFollowup_([sendRowNumber], "results-single", [sendApplicantId]);
+        return;
+      }
+      var btn = ev.target && ev.target.closest ? ev.target.closest('[data-action="review"]') : null;
+      if (!btn) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      var applicantId = (btn.getAttribute("data-applicant-id") || "").trim();
+      var rawRow = (btn.getAttribute("data-row-number") || "").trim();
+      var rowNumber = Number(rawRow);
+      var clickReqId = Date.now();
+      console.log("[AdminUI] REVIEW_CLICK rowNumber=%s applicantId=%s reqId=%s", rawRow || "(blank)", applicantId || "(blank)", clickReqId);
+
+      if (!rawRow || !Number.isFinite(rowNumber) || rowNumber < 2) {
+        setMsg("msg", "RowNumber missing/invalid. Cannot open Review.");
+        setMsg("mMsg", "RowNumber missing from server results");
+        return;
+      }
+      if (!applicantId) {
+        setMsg("mMsg", "Review handler missing ApplicantID attribute");
+        return;
+      }
+      review(rowNumber, applicantId, btn);
+    }
+
+    function onResultsChange_(ev){
+      var chk = ev.target && ev.target.closest ? ev.target.closest('input[data-action="docs-select-row"]') : null;
+      if (!chk) return;
+      var rowNumber = Number(chk.getAttribute("data-row-number") || 0);
+      if (!Number.isFinite(rowNumber) || rowNumber < 2) return;
+      if (chk.checked) selectedDocsRowNumbers[String(rowNumber)] = true;
+      else delete selectedDocsRowNumbers[String(rowNumber)];
+      updateBulkDocsUi_();
+    }
+
+    function selectAllEligibleDocs_(){
+      selectedDocsRowNumbers = {};
+      (lastSearchRows || []).forEach(function(r){
+        var rowNumber = Number(r && r.rowNumber || 0);
+        if (!Number.isFinite(rowNumber) || rowNumber < 2) return;
+        if (r && r.eligibleDocsFollowUp) selectedDocsRowNumbers[String(rowNumber)] = true;
+      });
+      updateBulkDocsUi_();
+    }
+
+    function sendSelectedDocs_(){
+      var selectedRows = selectedDocsRows_();
+      if (!selectedRows.length) {
+        setMsg("docsBulkStatus", "No rows selected.");
+        return;
+      }
+      var byRow = {};
+      (lastSearchRows || []).forEach(function(r){
+        byRow[String(Number(r && r.rowNumber || 0))] = r || {};
+      });
+      var applicantIds = selectedRows.map(function(rowNum){
+        var row = byRow[String(rowNum)] || {};
+        return String(row.applicantId || "");
+      });
+      sendDocsFollowup_(selectedRows, "results-bulk", applicantIds);
+    }
+
+    function setRoleUi(){
+      const showSuper = IS_SUPER;
+      const superTools = document.getElementById("superTools");
+      const btnReset = document.getElementById("btnResetLink");
+      const btnLock = document.getElementById("btnLockPortal");
+      const btnUnlock = document.getElementById("btnUnlockPortal");
+      const overallStatusEl = document.getElementById("overallStatus");
+      const emailOverrideWrap = document.getElementById("superEmailOverrideWrap");
+      if (superTools) superTools.style.display = showSuper ? "flex" : "none";
+      if (btnReset) btnReset.style.display = "inline-block";
+      if (btnLock) btnLock.style.display = "inline-block";
+      if (btnUnlock) btnUnlock.style.display = "inline-block";
+      if (overallStatusEl) {
+        overallStatusEl.disabled = !CAN_OVERRIDE;
+        if (!CAN_OVERRIDE) {
+          overallStatusEl.title = "Computed automatically based on document and payment status";
+        } else {
+          overallStatusEl.title = "";
+        }
+      }
+      const warn = document.getElementById("studentUrlWarn");
+      const warnText = document.getElementById("studentUrlWarnText");
+      if (warn && warnText) {
+        warn.style.display = STUDENT_URL_READY ? "none" : "block";
+        warnText.textContent = STUDENT_URL_WARNING || "Student URL not configured.";
+      }
+      if (emailOverrideWrap) emailOverrideWrap.style.display = showSuper ? "block" : "none";
+    }
+
+    function applyAuditNow(){
+      const now = new Date().toISOString();
+      document.getElementById("mAudit").textContent = "Last: " + now + " | By: " + (ADMIN_EMAIL || "admin");
+    }
+
+    function openModal(d){
+      setRoleUi();
+      resetModalState_();
+      setDirty_(false);
+      setLinkBusy(false);
+      setActionButtonsEnabled(!!currentRowNumber);
+      setMsg("mMsg","");
+      document.getElementById("portalLinkBox").textContent = "";
+      document.getElementById("mTitle").textContent = "Applicant Review — " + (d.ApplicantID || "Unknown");
+      var fullName = ((d.First_Name||"") + " " + (d.Last_Name||"")).trim();
+      var baseEmail = String(d.Parent_Email || "").trim();
+      var correctedEmail = String(d.Parent_Email_Corrected || "").trim();
+      var effectiveEmail = String(d.Effective_Email || correctedEmail || baseEmail || "").trim();
+      var emailLabel = effectiveEmail || "-";
+      if (correctedEmail && baseEmail && correctedEmail.toLowerCase() !== baseEmail.toLowerCase()) {
+        emailLabel += " (was " + baseEmail + ")";
+      }
+      document.getElementById("mSub").textContent = "Name: " + fullName + " | Email: " + emailLabel;
+      var routeHint = document.getElementById("docsRouteHint");
+      if (routeHint) {
+        routeHint.textContent = "Quote will be sent to: " + emailLabel + " (CC: fode_kia@kundu.ac; Reply-To: fode@kundu.ac)";
+      }
+      var overrideEmail = document.getElementById("overrideEmail");
+      var overrideReason = document.getElementById("overrideReason");
+      if (overrideEmail) overrideEmail.value = effectiveEmail || "";
+      if (overrideReason) overrideReason.value = "";
+
+      var overallComputed = d.Overall_Status_Computed || d.Doc_Verification_Status_Computed || d.Doc_Verification_Status || "Pending";
+      var docComputed = d.Doc_Verification_Status_Computed || d.Doc_Verification_Status || "Pending";
+      var paymentBadge = d.Payment_Badge || (d.Payment_Verified_Bool ? "Verified" : "Pending");
+      modalState.isSuperAdmin = !!(d.isSuperAdmin === true || IS_SUPER);
+      modalState.isPaymentVerified = !!(d.isPaymentVerified === true || d.paymentVerified === true || d.Payment_Verified_Bool || paymentBadge === "Verified");
+      modalState.isLocked = true;
+      modalState.bypassPaymentFreeze = false;
+      document.getElementById("mOverall").textContent = String(docComputed || "Pending");
+      var overallComputedEl = document.getElementById("mOverallComputed");
+      if (overallComputedEl) overallComputedEl.textContent = String(overallComputed || "Pending");
+      document.getElementById("mPayment").textContent = paymentBadge === "Verified"
+        ? "Payment Verified"
+        : (paymentBadge === "Rejected" ? "Payment Rejected" : "Payment Pending");
+      document.getElementById("mWorkflowPortalSubmitted").textContent = "Portal Submitted: " + workflowYesNo_(d.Portal_Submitted);
+      document.getElementById("mWorkflowDocsVerified").textContent = "Docs Verified: " + workflowYesNo_(d.Docs_Verified);
+      document.getElementById("mWorkflowPaymentReceived").textContent = "Payment Received: " + workflowYesNo_(d.Payment_Received);
+      document.getElementById("mWorkflowPaymentVerified").textContent = "Payment Verified: " + workflowYesNo_(d.Payment_Verified);
+      document.getElementById("mWorkflowEnrolledConfirmed").textContent = "Enrolled Confirmed: " + workflowEnrolledLabel_(d);
+      var overrideTag = document.getElementById("mOverallOverride");
+      if (overrideTag) {
+        var overridden = d.Overall_IsOverridden === true;
+        overrideTag.classList.toggle("hidden", !overridden);
+        overrideTag.title = overridden
+          ? ("Stored overall differs from computed; super admin override in effect. Stored: " + String(d.Overall_OverrideValue || d.Overall_Status_Stored || ""))
+          : "Stored overall differs from computed; super admin override in effect.";
+      }
+      var portalLockState = d.Portal_Locked_Computed ? "Form Locked" : "Form Open";
+      document.getElementById("mPortal").textContent = (d.Portal_Access_Status || "Open") + " | " + portalLockState;
+      if (d.PortalTokenAgeDays === null || d.PortalTokenAgeDays === undefined || d.PortalTokenAgeDays === "") {
+        document.getElementById("mTokenAge").textContent = "Not issued";
+      } else {
+        let tokenText = String(d.PortalTokenAgeDays) + " day(s)";
+        if (d.PortalTokenExpired) tokenText += " | Expired";
+        else if (d.PortalTokenMaxAgeDays) tokenText += " / " + String(d.PortalTokenMaxAgeDays) + " max";
+        document.getElementById("mTokenAge").textContent = tokenText;
+      }
+      document.getElementById("mAudit").textContent = "Last: " + (d.Doc_Last_Verified_At ? String(d.Doc_Last_Verified_At) : "—")
+        + " | By: " + (d.Doc_Last_Verified_By || "—");
+
+      var incomingApplicantId = String((d && d.ApplicantID) || "").trim();
+      var previousApplicantId = String(communicationsState.applicantId || "").trim();
+      if (incomingApplicantId !== previousApplicantId) {
+        resetCommunicationsState_(incomingApplicantId, false);
+        setSelectedCommMessageType_("legacy_invite");
+      } else {
+        communicationsState.applicantId = incomingApplicantId;
+        setSelectedCommMessageType_(communicationsState.selectedMessageType || "legacy_invite");
+      }
+      renderCommunicationsStatus_(d);
+      requestCommunicationsDerived_(d);
+      renderCommunicationsResult_(incomingApplicantId !== previousApplicantId ? null : communicationsState.result);
+      updateCommunicationsUi_();
+      var commTypeEl = document.getElementById("commMessageType");
+      if (commTypeEl) commTypeEl.onchange = onCommunicationsMessageTypeChange_;
+      document.getElementById("overallStatus").value = d.Overall_Status_Stored || overallComputed || "Pending";
+      document.getElementById("overallReason").value = "";
+      document.getElementById("portalLinkBox").textContent = "";
+      applyPortalLockControls_(d);
+
+      const baseDocs = Array.isArray(d._docs) ? d._docs : [];
+      renderDocCards_(enrichDocsWithProxyUrls_(baseDocs, currentPortalLinkInfo));
+      getPortalLinkInfoForApplicant_(d.ApplicantID || "", function(portalInfo){
+        if (!currentDetail || String((currentDetail && currentDetail.ApplicantID) || "") !== String(d.ApplicantID || "")) return;
+        var docsWithProxy = enrichDocsWithProxyUrls_(Array.isArray(currentDetail._docs) ? currentDetail._docs : [], portalInfo);
+        renderDocCards_(docsWithProxy);
+      });
+
+      document.getElementById("modalBack").style.display = "flex";
+      syncModalEditControls_();
+    }
+
+    function renderDocCards_(docs){
+      var list = Array.isArray(docs) ? docs : [];
+      document.getElementById("docs").innerHTML = list.map((x, i) => `
+        <div class="doc" data-i="${i}">
+          <div>
+            <div class="docTitle">${esc(x.label)}</div>
+            <div class="muted" style="font-size:12px; margin-top:4px;">
+              ${x.hasFile
+                ? (x.fileProxyOpenUrl
+                    ? `<a href="${esc(x.fileProxyOpenUrl)}" target="_blank" rel="noopener">Open</a>
+                       <a href="${esc(x.fileProxyDownloadUrl || x.fileProxyOpenUrl)}" target="_blank" rel="noopener">Download</a>
+                       <button type="button" class="btn small docPreviewBtn" data-label="${esc(x.label)}" data-url="${esc(x.fileProxyOpenUrl)}">Preview</button>`
+                    : `<span class="muted">Resolving secure link...</span>`)
+                : `Not uploaded`}
+            </div>
+            ${!x.hasFile ? `<div class="docWarn">Cannot verify: no file uploaded.</div>` : ``}
+          </div>
+          <div>
+            <label>Status</label>
+            <select class="docStatus" data-has-file="${x.hasFile ? "1" : "0"}">
+              ${["Pending","Verified","Rejected","Fraudulent"].map(s => {
+                const isDisabled = (s === "Verified" && !x.hasFile) ? "disabled" : "";
+                return `<option value="${s}" ${s===x.status?"selected":""} ${isDisabled}>${s}</option>`;
+              }).join("")}
+            </select>
+            ${x.statusField === "Receipt_Status" ? '<div class="muted" style="font-size:12px;margin-top:6px;">Payment is confirmed when Receipt status is set to Verified.</div>' : ''}
+          </div>
+          <div>
+            <label>Comment</label>
+            <textarea class="docComment comment-box" rows="2" placeholder="Comment...">${esc(x.comment)}</textarea>
+          </div>
+          <div>
+            <div class="muted" style="font-size:12px;">Field map</div>
+            <div class="muted" style="font-size:12px; margin-top:6px;">
+              ${esc(x.statusField)}<br>${esc(x.commentField)}
+            </div>
+          </div>
+        </div>
+      `).join("");
+      const statusEls = Array.from(document.querySelectorAll(".docStatus"));
+      statusEls.forEach(function(sel){
+        sel.dataset.prev = sel.value;
+        sel.addEventListener("focus", function(){
+          this.dataset.prev = this.value;
+        });
+        sel.addEventListener("change", function(){
+          var hasFile = this.getAttribute("data-has-file") === "1";
+          if (this.value === "Verified" && !hasFile) {
+            alert("Cannot verify: no file uploaded.");
+            this.value = this.dataset.prev || "Pending";
+            return;
+          }
+          this.dataset.prev = this.value;
+          setDirty_(true);
+        });
+      });
+      const commentEls = Array.from(document.querySelectorAll(".docComment"));
+      commentEls.forEach(function(txt){
+        txt.addEventListener("input", function(){
+          setDirty_(true);
+        });
+      });
+      const previewEls = Array.from(document.querySelectorAll(".docPreviewBtn"));
+      previewEls.forEach(function(btn){
+        btn.addEventListener("click", function(){
+          openDocPreview_(this.getAttribute("data-label") || "", this.getAttribute("data-url") || "");
+        });
+      });
+    }
+
+    function closeModal(){
+      document.getElementById("modalBack").style.display = "none";
+      currentRowNumber = null;
+      currentDetail = null;
+      currentPortalLinkInfo = null;
+      resetModalState_();
+      setDirty_(false);
+      setLinkBusy(false);
+      setActionButtonsEnabled(false);
+      setMsg("mMsg","");
+    }
+
+    function saveDocs(){
+      if (!currentRowNumber || !currentDetail) return;
+
+      const docEls = Array.from(document.querySelectorAll(".doc"));
+      const docs = docEls.map((el, idx) => {
+        const status = el.querySelector(".docStatus").value;
+        const comment = el.querySelector(".docComment").value.trim();
+        const base = currentDetail._docs[idx];
+        return {
+          statusField: base.statusField,
+          commentField: base.commentField,
+          status, comment
+        };
+      });
+
+      const receiptDocBase = (Array.isArray(currentDetail && currentDetail._docs) ? currentDetail._docs : []).find(function(x){
+        return x && x.statusField === "Receipt_Status";
+      });
+      const receiptDocNext = docs.find(function(x){
+        return x && x.statusField === "Receipt_Status";
+      });
+      let overridePaymentBeforeDocs = false;
+      const currentDocStage = String((currentDetail && (currentDetail.Doc_Verification_Status_Computed || currentDetail.Doc_Verification_Status)) || "Pending");
+      const receiptWasVerified = !!(receiptDocBase && String(receiptDocBase.status || "") === "Verified");
+      const receiptToVerified = !!(receiptDocNext && String(receiptDocNext.status || "") === "Verified");
+      if (receiptToVerified && !receiptWasVerified && currentDocStage !== "Verified") {
+        const confirmMsg = "Documents are not verified yet. Verifying payment first is an override and will be logged. Continue?";
+        if (!window.confirm(confirmMsg)) return;
+        overridePaymentBeforeDocs = true;
+      }
+
+      var payload = {
+        rowNumber: currentRowNumber,
+        applicantId: (currentDetail && currentDetail.ApplicantID) || "",
+        docs: docs,
+        overridePaymentBeforeDocs: overridePaymentBeforeDocs,
+        bypassPaymentFreeze: !!(modalState && modalState.bypassPaymentFreeze)
+      };
+      var reqId = "SAVE-" + Date.now() + "-" + Math.floor(Math.random() * 1000000);
+      var callId = ++lastRequestId;
+      console.log("[SAVE] calling admin_updateDocStatuses", {
+        reqId: reqId,
+        applicantId: payload.applicantId || "",
+        rowNumber: payload.rowNumber || null,
+        keys: Object.keys(payload || {})
+      });
+      console.log("[SAVE] payload", payload);
+      setUiBusy_(true);
+      setMsg("mMsg", "Saving document statuses...");
+      google.script.run
+        .withSuccessHandler(function(res){
+          if (callId !== lastRequestId) return;
+          console.log("[SAVE] success raw", { reqId: reqId, res: res });
+          if (!res) {
+            showInlineError_("No response from server. Req: " + reqId);
+            setUiBusy_(false);
+            return;
+          }
+          if (typeof res !== "object" || typeof res.ok !== "boolean") {
+            console.error("[SAVE] invalid envelope", { reqId: reqId, res: res });
+            showInlineError_("Invalid server response. Req: " + reqId);
+            setUiBusy_(false);
+            return;
+          }
+          if (res.ok === true) {
+            clearInlineError_();
+            var actionSummary = "";
+            if (res.actions && typeof res.actions === "object") {
+              var qStatus = String(res.actions.quoteEmail || "skipped");
+              var iStatus = String(res.actions.invoice || "skipped");
+              actionSummary = " | Quote email: " + qStatus + " | Invoice trigger: " + iStatus;
+              if (iStatus === "failed") {
+                actionSummary += (res.actions.invoiceCode ? (" (" + String(res.actions.invoiceCode) + ")") : "");
+              }
+            }
+            setMsg("mMsg", "Saved. Debug: " + (res.debugId || "(none)") + actionSummary);
+            try { console.log("[SAVE] ok", { reqId: reqId, debugId: res.debugId || "", code: res.code || "" }); } catch (_e) {}
+            if (res.actions && typeof res.actions === "object") {
+              setMsg("msg", "Quote email: " + String(res.actions.quoteEmail || "skipped") + " | Invoice trigger: " + String(res.actions.invoice || "skipped"));
+              if (String(res.actions.invoice || "") === "failed" && res.debugId) {
+                console.warn("[SAVE] invoice action failed", { debugId: res.debugId, actions: res.actions });
+              }
+            }
+            applyAuditNow();
+            setDirty_(false);
+            setUiBusy_(false);
+            refreshDetails();
+            search();
+            return;
+          }
+          showInlineError_((res.message || "Save failed")
+            + " (code: " + (res.code || "")
+            + ", dbg: " + (res.debugId || "")
+            + ", req: " + reqId + ")");
+          setUiBusy_(false);
+        })
+        .withFailureHandler(function(err){
+          if (callId !== lastRequestId) return;
+          console.error("[SAVE] failure", { reqId: reqId, err: err });
+          var msg = (err && (err.message || (typeof err.toString === "function" ? err.toString() : ""))) || "Unknown Apps Script failure";
+          showInlineError_("Server failure: " + msg + " (req: " + reqId + ")");
+          setUiBusy_(false);
+        })
+        .admin_updateDocStatuses(payload);
+    }
+
+    function saveOverall(){
+      if (!currentRowNumber) return;
+      if (!CAN_OVERRIDE) {
+        setMsg("mMsg","Overall status is computed automatically based on document and payment status.");
+        return;
+      }
+
+      const action = document.getElementById("overallStatus").value;
+      const reason = document.getElementById("overallReason").value.trim();
+
+      if ((action === "Rejected" || action === "Fraudulent") && !reason){
+        setMsg("mMsg","Reason required for " + action + ".");
+        return;
+      }
+
+      run_("admin_setOverallStatus", { rowNumber: currentRowNumber, action, reason }, function(res){
+          var finalStatus = (res && res.overallStatus) ? res.overallStatus : action;
+          var docComputed = (res && res.docVerificationStatusComputed) ? res.docVerificationStatusComputed : "";
+          var overallComputed = (res && (res.overallStatusComputed || res.computed)) ? (res.overallStatusComputed || res.computed) : "";
+          setMsg("mMsg","Saved overall status: " + finalStatus + ".");
+          document.getElementById("mOverall").textContent = docComputed || document.getElementById("mOverall").textContent || "Pending";
+          var overallComputedEl = document.getElementById("mOverallComputed");
+          if (overallComputedEl && overallComputed) overallComputedEl.textContent = overallComputed;
+          if (res && res.paymentBadge) {
+            document.getElementById("mPayment").textContent = res.paymentBadge === "Verified"
+              ? "Payment Verified"
+              : (res.paymentBadge === "Rejected" ? "Payment Rejected" : "Payment Pending");
+          }
+          var overrideTag = document.getElementById("mOverallOverride");
+          if (overrideTag) {
+            var overridden = !!(res && (res.overallIsOverridden || res.overridden));
+            overrideTag.classList.toggle("hidden", !overridden);
+            if (overridden) {
+              overrideTag.title = "Stored overall differs from computed; super admin override in effect.";
+            }
+          }
+          if (finalStatus === "Fraudulent") document.getElementById("mPortal").textContent = "Locked";
+          applyAuditNow();
+          search();
+          refreshDetails();
+      }, { message: "Saving overall status..." });
+    }
+
+    function setPortal(status){
+      if (!currentRowNumber) return;
+      run_("admin_setPortalAccess", { rowNumber: currentRowNumber, status }, function(res){
+          setMsg("mMsg","Portal set to: " + status + ".");
+          var freshDetail = res && res.detail;
+          if (freshDetail) {
+            currentDetail = freshDetail;
+            openModal(currentDetail);
+          } else {
+            refreshDetails();
+          }
+          applyAuditNow();
+          search();
+      }, { message: "Updating portal access..." });
+    }
+
+    function unlockReview_(){
+      if (!currentRowNumber || !currentDetail) return;
+      var paymentVerified = !!(modalState && modalState.isPaymentVerified);
+      var isSuperAdmin = !!(modalState && modalState.isSuperAdmin);
+      if (paymentVerified && !isSuperAdmin) {
+        modalState.isLocked = true;
+        modalState.bypassPaymentFreeze = false;
+        syncModalEditControls_();
+        setMsg("mMsg", "Payment is verified. Only Super Admin can unlock this record for editing.");
+        return;
+      }
+      modalState.isLocked = false;
+      if (paymentVerified && isSuperAdmin) {
+        modalState.bypassPaymentFreeze = true;
+        setMsg("mMsg", "Super Admin override enabled. Changes will be audited.");
+      } else {
+        modalState.bypassPaymentFreeze = false;
+        setMsg("mMsg", "Editing unlocked.");
+      }
+      applyPortalLockControls_(currentDetail);
+      syncModalEditControls_();
+    }
+
+    function lockReview_(){
+      if (!currentRowNumber || !currentDetail) return;
+      modalState.isLocked = true;
+      modalState.bypassPaymentFreeze = false;
+      applyPortalLockControls_(currentDetail);
+      syncModalEditControls_();
+      setMsg("mMsg", "Editing locked.");
+    }
+
+    function copyPortalLink(){
+      if (!currentRowNumber) return;
+      if (isLinkBusy) return;
+      if (isDirty) {
+        setMsg("mMsg", "Unsaved changes detected. Click \"Save Document Statuses\" first.");
+        return;
+      }
+      if (!STUDENT_URL_READY) {
+        setMsg("mMsg", STUDENT_URL_WARNING || "Student URL not configured.");
+        return;
+      }
+      var applicantId = String((currentDetail && currentDetail.ApplicantID) || "").trim();
+      if (!applicantId) {
+        setMsg("mMsg", "ApplicantID missing.");
+        return;
+      }
+      run_("admin_getStudentPortalLink", { applicantId: applicantId }, function(res){
+          const rawLink = (res && (res.url || res.portalUrl || res.link)) ? (res.url || res.portalUrl || res.link) : "";
+          const parsed = parsePortalLinkInfo_(rawLink);
+          const link = parsed ? (String(parsed.baseUrl || "") + "?view=portal&id=" + encodeURIComponent(parsed.applicantId) + "&s=" + encodeURIComponent(parsed.secret)) : rawLink;
+          if (!res || res.ok !== true || !link) {
+            setMsg("mMsg", "Portal link error. Debug: " + String((res && res.debugId) || ""));
+            return;
+          }
+          document.getElementById("portalLinkBox").textContent = link || "";
+          if (link && navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(link).then(function(){
+              setMsg("mMsg","Copied");
+            }).catch(function(){
+              setMsg("mMsg","Copied");
+            });
+          } else {
+            setMsg("mMsg","Copied");
+          }
+      }, { message: "Generating portal link...", linkBusy: true });
+    }
+
+    function resetPortalLink(){
+      if (!currentRowNumber) return;
+      if (isLinkBusy) return;
+      if (isDirty) {
+        setMsg("mMsg", "Unsaved changes detected. Click \"Save Document Statuses\" first.");
+        return;
+      }
+      if (!STUDENT_URL_READY) {
+        setMsg("mMsg", STUDENT_URL_WARNING || "Student URL not configured.");
+        return;
+      }
+      run_("admin_resetPortalSecret", { rowNumber: currentRowNumber }, function(res){
+          const rawLink = (res && (res.portalUrl || res.newPortalUrl || res.link)) ? (res.portalUrl || res.newPortalUrl || res.link) : "";
+          const parsed = parsePortalLinkInfo_(rawLink);
+          const link = parsed ? (String(parsed.baseUrl || "") + "?view=portal&id=" + encodeURIComponent(parsed.applicantId) + "&s=" + encodeURIComponent(parsed.secret)) : rawLink;
+          if (!res || res.ok !== true || !link) {
+            setMsg("mMsg", "Portal link error. Debug: " + String((res && res.debugId) || ""));
+            return;
+          }
+          document.getElementById("portalLinkBox").textContent = link || "";
+          function afterCopy_(copied){
+            setMsg("mMsg", copied ? "Copied" : "Copied");
+          }
+          if (link && navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(link).then(function(){ afterCopy_(true); }).catch(function(){ afterCopy_(false); });
+          } else {
+            afterCopy_(false);
+          }
+      }, { message: "Resetting portal link...", linkBusy: true });
+    }
+
+    function refreshDetails(){
+      if (!currentRowNumber) return;
+      if (isDirty) {
+        setMsg("mMsg", "Unsaved changes detected. Click \"Save Document Statuses\" first.");
+        return;
+      }
+      run_("admin_getApplicantDetail_json", { rowNumber: currentRowNumber, applicantId: (currentDetail && currentDetail.ApplicantID) || "" }, function(res){
+        var detail = normalizeDetailResponse_(res);
+        if (!detail) {
+          setMsg("mMsg", "Error: Invalid detail response.");
+          return;
+        }
+        currentDetail = detail;
+        openModal(currentDetail);
+        setMsg("mMsg", "");
+        loadReviewQueues({ force: 1 });
+      }, { message: "Refreshing details..." });
+    }
+
+    function applyEmailOverride_(){
+      if (!IS_SUPER) {
+        setMsg("mMsg", "Access denied: SUPER admin required.");
+        return;
+      }
+      if (!currentRowNumber || !currentDetail) return;
+      var newEmail = String((document.getElementById("overrideEmail") || {}).value || "").trim();
+      var reason = String((document.getElementById("overrideReason") || {}).value || "").trim();
+      if (!newEmail) {
+        setMsg("mMsg", "New email is required.");
+        return;
+      }
+      if (!reason) {
+        setMsg("mMsg", "Reason is required.");
+        return;
+      }
+      var payload = {
+        rowNumber: currentRowNumber,
+        applicantId: String(currentDetail.ApplicantID || ""),
+        newEmail: newEmail,
+        reason: reason
+      };
+      run_("admin_updateParentEmailCorrected", payload, function(res){
+        var updatedEmail = String((res && res.newEmail) || newEmail);
+        if (currentDetail) {
+          currentDetail.Parent_Email_Corrected = updatedEmail;
+          currentDetail.Effective_Email = updatedEmail;
+        }
+        setMsg("mMsg", "Email updated; Docs Follow-Up reset to Ready");
+        loadReviewQueues({ force: 1 });
+        refreshDetails();
+        search();
+      }, { message: "Applying email override..." });
+    }
+
+    function backfillBatch(mode){
+      if (!IS_SUPER) return;
+      var dryRun = mode !== "apply";
+      lastBackfillMode = dryRun ? "dry" : "apply";
+      var limit = getBackfillNumber_("bfBatchSize", 200);
+      var startRow = Math.max(2, getBackfillNumber_("bfStartRow", 2));
+      var loadingText = dryRun ? "Backfill dry run batch..." : "Backfill apply batch...";
+      setMsg("msg", loadingText);
+      setMsg("mMsg", loadingText);
+      setBackfillLoading_(true);
+
+      google.script.run
+        .withSuccessHandler(function(res){
+          var summary = "Backfill batch done: "
+            + "start=" + (res.startRow || startRow)
+            + ", end=" + (res.endRow || "")
+            + ", checked=" + (res.checked || 0)
+            + ", updated=" + (res.updated || 0)
+            + ", skipped=" + (res.skipped || 0)
+            + ", generated=" + (res.generatedCount || 0)
+            + ", rekeyed=" + (res.rekeyedCount || 0)
+            + ", createdSecretsRows=" + (res.createdSecretsRows || 0)
+            + ", nextStartRow=" + (res.nextStartRow || "");
+          setMsg("msg", summary);
+          setMsg("mMsg", summary);
+          setBackfillNextState_(res.nextStartRow || "");
+          setBackfillLoading_(false);
+        })
+        .withFailureHandler(function(err){
+          setMsg("msg", "Backfill error: " + (err && err.message ? err.message : err));
+          setMsg("mMsg", "Backfill error: " + (err && err.message ? err.message : err));
+          setBackfillLoading_(false);
+        })
+        .admin_backfillPortalTokens({
+          dryRun: dryRun,
+          startRow: startRow,
+          limit: limit
+        });
+    }
+
+    function runNextBackfillBatch(){
+      var mode = lastBackfillMode === "apply" ? "apply" : "dry";
+      backfillBatch(mode);
+    }
+
+    function exportPortalLinksCsv(){
+      if (!IS_SUPER) return;
+      if (!STUDENT_URL_READY) {
+        setMsg("mMsg", STUDENT_URL_WARNING || "Student URL not configured.");
+        return;
+      }
+      var scopeValue = document.getElementById("exportScope").value || "search_first";
+      var scope = (scopeValue === "all" || scopeValue === "range") ? scopeValue : "search_first";
+      var startRowRaw = Number((document.getElementById("bfStartRow") || {}).value);
+      var batchSizeRaw = Number((document.getElementById("bfBatchSize") || {}).value);
+      var startRow = Math.floor(startRowRaw);
+      var batchSize = Math.floor(batchSizeRaw);
+      if (scope === "range") {
+        if (!Number.isFinite(startRow) || startRow < 2) {
+          setMsg("mMsg", "Start row must be 2 or greater for Range export.");
+          return;
+        }
+        if (!Number.isFinite(batchSize) || batchSize < 1) {
+          setMsg("mMsg", "Batch size must be 1 or greater for Range export.");
+          return;
+        }
+      } else {
+        startRow = Math.max(2, getBackfillNumber_("bfStartRow", 2));
+        batchSize = Math.max(1, getBackfillNumber_("bfBatchSize", 200));
+      }
+      var payload = {
+        scope: scope,
+        startRow: startRow,
+        batchSize: batchSize,
+        currentSearchRowNumbers: lastSearchResults.slice()
+      };
+      run_("admin_exportPortalLinksCsv", payload, function(res){
+        handleApiResult_({
+          res: res,
+          targetId: "mMsg",
+          fallbackError: "Could not export portal links",
+          onOk: function(detail){
+            var data = detail || {};
+            var csv = String(data.csv || "");
+            var filename = String(data.filename || "portal-links.csv");
+            if (!csv) {
+              setMsg("mMsg", "Error: Empty CSV content.");
+              return;
+            }
+            var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            setMsg("mMsg",
+              "Export complete: exported=" + (data.exportedCount || 0)
+              + ", generated=" + (data.generatedCount || 0)
+              + ", rekeyed=" + (data.rekeyedCount || 0));
+          }
+        });
+      }, { message: "Preparing CSV export..." });
+    }
+
+    setRoleUi();
+    function renderRuntimeStopState_(reason){
+      var line = document.getElementById("runtimeInfoLine");
+      var badge = document.getElementById("versionBadge");
+      var detail = String(reason || "Runtime info unavailable");
+      if (line) {
+        line.textContent = "VERSION MISMATCH - STOP DEPLOY";
+        line.title = detail;
+      }
+      if (badge) {
+        badge.textContent = "VERSION MISMATCH - STOP DEPLOY";
+        badge.classList.add("mismatch");
+        badge.title = detail;
+      }
+    }
+    function renderRuntimeInfoLine_(runtime){
+      var line = document.getElementById("runtimeInfoLine");
+      if (!line) return;
+      var info = (runtime && typeof runtime === "object") ? runtime : null;
+      if (!info || info.ok !== true) {
+        renderRuntimeStopState_("Runtime fetch failed");
+        return;
+      }
+      if (info.mismatch) {
+        renderRuntimeStopState_(info.warning || "Runtime mismatch detected");
+        return;
+      }
+      line.textContent = "Runtime: " + String(info.version || "-")
+        + " | Deploy: " + String(Number(info.deployVersion || 0));
+      line.title = String(info.timestamp || "");
+    }
+    function fetchRuntimeInfo_(){
+      google.script.run
+        .withSuccessHandler(function(res){
+          runtimeInfoCache = res || null;
+          renderRuntimeInfoLine_(runtimeInfoCache);
+          initVersionBadge_();
+        })
+        .withFailureHandler(function(err){
+          runtimeInfoCache = null;
+          renderRuntimeStopState_(err && err.message ? err.message : "Runtime fetch failed");
+        })
+        .admin_getRuntimeInfo();
+    }
+    function initVersionBadge_() {
+      var badge = document.getElementById("versionBadge");
+      if (!badge) return;
+      var rt = (runtimeInfoCache && runtimeInfoCache.ok === true) ? runtimeInfoCache : null;
+      if (!rt || rt.mismatch) {
+        renderRuntimeStopState_(rt && rt.warning ? rt.warning : "Runtime mismatch detected");
+        return;
+      }
+      var runtimeVersion = String(rt.version || "");
+      var deployNum = Number(rt.deployVersion || 0);
+      badge.textContent = "Runtime: " + runtimeVersion + " | Deploy: " + String(deployNum);
+      badge.classList.remove("mismatch");
+      badge.title = "Admin=" + String(rt.canonicalAdminUrl || "") + " | Student=" + String(rt.canonicalStudentUrl || "");
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", function(){
+        fetchRuntimeInfo_();
+        initQueuePanelEvents_();
+        bindDocsFollowupControls_();
+        bindStageBatchControls_();
+        loadStageDashboard();
+        loadReviewQueues();
+      });
+    } else {
+      fetchRuntimeInfo_();
+      initQueuePanelEvents_();
+      bindDocsFollowupControls_();
+      bindStageBatchControls_();
+        loadStageDashboard();
+        loadReviewQueues();
+    }
+    setActionButtonsEnabled(false);
+    var resultsBody = document.getElementById("tbody");
+    if (resultsBody) resultsBody.addEventListener("click", onResultsClick_);
+    if (resultsBody) resultsBody.addEventListener("change", onResultsChange_);
+
+    function bindDocsFollowupControls_(){
+      var selectAllBtn = document.getElementById("btnSelectAllEligibleDocs");
+      var clearBtn = document.getElementById("btnClearDocsSelection");
+      var sendBtn = document.getElementById("btnSendDocsBulk");
+      var refreshBtn = document.getElementById("btnRefreshEligibility");
+      var loadMoreBtn = document.getElementById("btnQueueLoadMore");
+      if (selectAllBtn && selectAllBtn.dataset.bound !== "1") {
+        selectAllBtn.dataset.bound = "1";
+        selectAllBtn.addEventListener("click", selectAllEligibleDocs_);
+      }
+      if (clearBtn && clearBtn.dataset.bound !== "1") {
+        clearBtn.dataset.bound = "1";
+        clearBtn.addEventListener("click", function(){ clearDocsSelection_(); });
+      }
+      if (sendBtn && sendBtn.dataset.bound !== "1") {
+        sendBtn.dataset.bound = "1";
+        sendBtn.addEventListener("click", sendSelectedDocs_);
+      }
+      if (refreshBtn && refreshBtn.dataset.bound !== "1") {
+        refreshBtn.dataset.bound = "1";
+        refreshBtn.addEventListener("click", function(){
+          loadReviewQueues({ force: 1 });
+          search();
+        });
+      }
+      if (loadMoreBtn && loadMoreBtn.dataset.bound !== "1") {
+        loadMoreBtn.dataset.bound = "1";
+        loadMoreBtn.addEventListener("click", function(){ loadReviewQueues({ append: true }); });
+      }
+      updateBulkDocsUi_();
+      updateQueueLoadMoreUi_(false);
+    }
+  </script>
+</body>
+</html>
