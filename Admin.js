@@ -3547,6 +3547,16 @@ function admin_sendStageBatch(payload) {
         });
       }
       var previewGate = readStageBatchPreviewCache_(adminEmail);
+      var cachedStage = clean_(previewGate && previewGate.stage || "").toUpperCase();
+      var cachedMessageType = clean_(previewGate && previewGate.messageType || "");
+      var cachedRequestId = clean_(previewGate && previewGate.requestId || "");
+      var cachedOffset = Number(previewGate && previewGate.offset || 0);
+      var cachedLimit = Number(previewGate && previewGate.limit || 0);
+      var cachedCandidateCount = Number(previewGate && previewGate.candidateCount || 0);
+      var cachedCandidateIdsSample = Array.isArray(previewGate && previewGate.candidateIds)
+        ? previewGate.candidateIds.map(function (id) { return clean_(id || ""); }).filter(function (id) { return !!id; }).slice(0, 5)
+        : [];
+      var candidateHashPresent = !!clean_(previewGate && previewGate.candidateHash || "");
       stageBatchLogSummary_("STAGE_SEND_PREVIEW_PARITY_BEGIN", {
         requestId: requestId,
         previewRequestId: previewRequestId,
@@ -3554,67 +3564,122 @@ function admin_sendStageBatch(payload) {
         messageType: messageType,
         limit: limit,
         offset: requestedOffset,
-        candidateCount: Number(previewGate && previewGate.candidateCount || 0),
+        candidateCount: cachedCandidateCount,
         candidateHash: clean_(previewGate && previewGate.candidateHash || "")
       });
-      if (!previewGate
-        || !previewRequestId
-        || clean_(previewGate.stage || "").toUpperCase() !== stage
-        || Number(previewGate.limit || 0) !== limit
-        || Number(previewGate.offset || 0) !== requestedOffset
-        || clean_(previewGate.messageType || "") !== messageType
-        || clean_(previewGate.requestId || "") !== previewRequestId
-        || !(Number(previewGate.eligible || 0) > 0)) {
-        stageBatchLogSummary_("STAGE_SEND_PREVIEW_PARITY_FAIL", {
-          requestId: requestId,
-          previewRequestId: previewRequestId,
-          stage: stage,
-          messageType: messageType,
-          limit: limit,
-          offset: requestedOffset,
-          candidateCount: Number(previewGate && previewGate.candidateCount || 0),
-          candidateHash: clean_(previewGate && previewGate.candidateHash || ""),
-          reason: "PREVIEW_STALE"
-        });
-        return adminCommBlockedResult_("send_stage_batch", "PREVIEW_STALE", requestId, {
-          blockReason: "A matching preview snapshot is required before send.",
-          limit: limit,
-          offset: requestedOffset,
-          messageType: messageType
-        });
-      }
-      var previewCandidateIds = Array.isArray(previewGate.candidateIds) ? previewGate.candidateIds.map(function (id) {
+      var previewCandidateIds = Array.isArray(previewGate && previewGate.candidateIds) ? previewGate.candidateIds.map(function (id) {
         return clean_(id || "");
       }).filter(function (id) {
         return !!id;
       }) : [];
-      var previewCandidateCount = Number(previewGate.candidateCount != null ? previewGate.candidateCount : previewCandidateIds.length);
-      var previewCandidateHash = clean_(previewGate.candidateHash || "");
+      var previewCandidateCount = Number(previewGate && previewGate.candidateCount != null ? previewGate.candidateCount : previewCandidateIds.length);
+      var previewCandidateHash = clean_(previewGate && previewGate.candidateHash || "");
       var computedCandidateHash = stageBatchCandidateHash_(previewCandidateIds);
-      var previewSnapshotMalformed = !Array.isArray(previewGate.candidateIds)
-        || !previewGate.writtenAt
-        || previewCandidateCount !== previewCandidateIds.length
-        || !previewCandidateIds.length;
-      if (previewSnapshotMalformed || (previewCandidateHash && previewCandidateHash !== computedCandidateHash)) {
-        if (previewSnapshotMalformed) clearStageBatchPreviewCache_(adminEmail);
-        stageBatchLogSummary_("STAGE_SEND_PREVIEW_PARITY_FAIL", {
-          requestId: requestId,
+      var hashMatch = !candidateHashPresent || previewCandidateHash === computedCandidateHash;
+      function buildPreviewParityDecision_(rejectionSubtype, blockCode, blockReason) {
+        return {
+          blockCode: clean_(blockCode || "PREVIEW_STALE"),
+          blockReason: clean_(blockReason || "A matching preview snapshot is required before send."),
+          rejectionSubtype: clean_(rejectionSubtype || "UNKNOWN"),
+          snapshotExists: !!previewGate,
           previewRequestId: previewRequestId,
-          stage: stage,
-          messageType: messageType,
-          limit: limit,
-          offset: requestedOffset,
-          candidateCount: previewCandidateCount,
-          candidateHash: previewCandidateHash,
-          reason: "PREVIEW_CHANGED_RETRY"
-        });
-        return adminCommBlockedResult_("send_stage_batch", "PREVIEW_CHANGED_RETRY", requestId, {
-          blockReason: "Preview snapshot is invalid or changed. Re-run preview before send.",
+          cachedRequestId: cachedRequestId,
+          requestedStage: stage,
+          cachedStage: cachedStage,
+          requestedMessageType: messageType,
+          cachedMessageType: cachedMessageType,
+          requestedOffset: requestedOffset,
+          cachedOffset: cachedOffset,
+          requestedLimit: limit,
+          cachedLimit: cachedLimit,
+          cachedCandidateCount: cachedCandidateCount,
+          cachedCandidateIdsSample: cachedCandidateIdsSample,
+          candidateHashPresent: candidateHashPresent,
+          hashMatch: hashMatch
+        };
+      }
+      var staleSubtype = "";
+      if (!previewGate) staleSubtype = "SNAPSHOT_MISSING";
+      else if (!previewRequestId) staleSubtype = "PREVIEW_REQUEST_ID_MISSING";
+      else if (cachedStage !== stage) staleSubtype = "STAGE_MISMATCH";
+      else if (cachedLimit !== limit) staleSubtype = "LIMIT_MISMATCH";
+      else if (cachedOffset !== requestedOffset) staleSubtype = "OFFSET_MISMATCH";
+      else if (cachedMessageType !== messageType) staleSubtype = "MESSAGE_TYPE_MISMATCH";
+      else if (cachedRequestId !== previewRequestId) staleSubtype = "REQUEST_ID_MISMATCH";
+      else if (!(Number(previewGate.eligible || 0) > 0)) staleSubtype = "ELIGIBLE_ZERO";
+      if (staleSubtype) {
+        var previewStaleDecision = buildPreviewParityDecision_(staleSubtype, "PREVIEW_STALE", "A matching preview snapshot is required before send.");
+        stageBatchLogSummary_("STAGE_SEND_PREVIEW_PARITY_DECISION", Object.assign({
+          requestId: requestId,
+          decision: "REJECT"
+        }, previewStaleDecision));
+        stageBatchLogSummary_("STAGE_SEND_PREVIEW_PARITY_FAIL", Object.assign({
+          requestId: requestId,
+          reason: "PREVIEW_STALE"
+        }, previewStaleDecision));
+        var previewStaleResult = adminCommBlockedResult_("send_stage_batch", previewStaleDecision.blockCode, requestId, {
+          blockReason: previewStaleDecision.blockReason,
           limit: limit,
           offset: requestedOffset,
           messageType: messageType
         });
+        Object.keys(previewStaleDecision).forEach(function (key) {
+          previewStaleResult[key] = previewStaleDecision[key];
+        });
+        previewStaleResult.offset = requestedOffset;
+        return previewStaleResult;
       }
+      var previewChangedSubtype = "";
+      if (!Array.isArray(previewGate.candidateIds)) previewChangedSubtype = "CANDIDATE_IDS_MISSING";
+      else if (!previewGate.writtenAt) previewChangedSubtype = "WRITTEN_AT_MISSING";
+      else if (previewCandidateCount !== previewCandidateIds.length) previewChangedSubtype = "CANDIDATE_COUNT_MISMATCH";
+      else if (!previewCandidateIds.length) previewChangedSubtype = "CANDIDATE_IDS_EMPTY";
+      else if (candidateHashPresent && !hashMatch) previewChangedSubtype = "CANDIDATE_HASH_MISMATCH";
+      if (previewChangedSubtype) {
+        if (previewChangedSubtype !== "CANDIDATE_HASH_MISMATCH") clearStageBatchPreviewCache_(adminEmail);
+        var previewChangedDecision = buildPreviewParityDecision_(previewChangedSubtype, "PREVIEW_CHANGED_RETRY", "Preview snapshot is invalid or changed. Re-run preview before send.");
+        stageBatchLogSummary_("STAGE_SEND_PREVIEW_PARITY_DECISION", Object.assign({
+          requestId: requestId,
+          decision: "REJECT"
+        }, previewChangedDecision));
+        stageBatchLogSummary_("STAGE_SEND_PREVIEW_PARITY_FAIL", Object.assign({
+          requestId: requestId,
+          reason: "PREVIEW_CHANGED_RETRY"
+        }, previewChangedDecision));
+        var previewChangedRetryResult = adminCommBlockedResult_("send_stage_batch", previewChangedDecision.blockCode, requestId, {
+          blockReason: previewChangedDecision.blockReason,
+          limit: limit,
+          offset: requestedOffset,
+          messageType: messageType
+        });
+        Object.keys(previewChangedDecision).forEach(function (key) {
+          previewChangedRetryResult[key] = previewChangedDecision[key];
+        });
+        previewChangedRetryResult.offset = requestedOffset;
+        return previewChangedRetryResult;
+      }
+      stageBatchLogSummary_("STAGE_SEND_PREVIEW_PARITY_DECISION", {
+        requestId: requestId,
+        decision: "MATCH",
+        blockCode: "",
+        blockReason: "",
+        rejectionSubtype: "",
+        snapshotExists: true,
+        previewRequestId: previewRequestId,
+        cachedRequestId: cachedRequestId,
+        requestedStage: stage,
+        cachedStage: cachedStage,
+        requestedMessageType: messageType,
+        cachedMessageType: cachedMessageType,
+        requestedOffset: requestedOffset,
+        cachedOffset: cachedOffset,
+        requestedLimit: limit,
+        cachedLimit: cachedLimit,
+        cachedCandidateCount: cachedCandidateCount,
+        cachedCandidateIdsSample: cachedCandidateIdsSample,
+        candidateHashPresent: candidateHashPresent,
+        hashMatch: hashMatch
+      });
       stageBatchLogSummary_("STAGE_SEND_PREVIEW_PARITY_MATCH", {
         requestId: requestId,
         previewRequestId: previewRequestId,
@@ -3903,6 +3968,7 @@ function adminDryRunFirst50LegacyInvites() {
   console.log('DRYRUN_50 ' + JSON.stringify(summary));
   return summary;
 }
+
 
 
 

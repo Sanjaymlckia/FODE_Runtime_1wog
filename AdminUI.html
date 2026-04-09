@@ -1611,23 +1611,48 @@ function renderStageBatchSummary_(res){
     return '<span>' + esc(key) + ': ' + esc(String(Number(blockedMap[key] || 0))) + '</span>';
   }).join(' | ');
   var isPreview = String(res.action || "") === "preview_stage_batch" || batchState.action === "preview";
-  if (isPreview) {
-    if (res.ok === false) parts.push('<div style="font-weight:800;">Batch Preview Error</div>');
-    else if (Number(res.count || 0) > 0) parts.push('<div style="font-weight:800;">Batch Preview</div>');
+  if (res.ok === false) {
+    var blockedTitle = isPreview ? "Batch Preview Error" : (batchState.action === "send" ? "Batch Send Blocked" : "Batch Action Failed");
+    parts.push('<div style="font-weight:800;">' + esc(blockedTitle) + '</div>');
+    if (res.stage || res.messageType) parts.push('<div style="margin-top:6px;">Stage: ' + esc(String(res.stage || "")) + ' | Message: ' + esc(String(res.messageType || "(none)")) + '</div>');
+    if (res.blockCode || res.code) parts.push('<div style="margin-top:6px;">Code: ' + esc(String(res.blockCode || res.code || "ERROR")) + '</div>');
+    if (res.blockReason || res.message || res.error) parts.push('<div style="margin-top:6px;">Reason: ' + esc(String(res.blockReason || res.message || res.error || "Server returned an error.")) + '</div>');
+    if (!isPreview) {
+      var forensicPayload = {
+        blockCode: String(res.blockCode || res.code || ""),
+        blockReason: String(res.blockReason || res.message || res.error || ""),
+        rejectionSubtype: String(res.rejectionSubtype || ""),
+        snapshotExists: !!res.snapshotExists,
+        previewRequestId: String(res.previewRequestId || ""),
+        cachedRequestId: String(res.cachedRequestId || ""),
+        requestedStage: String(res.requestedStage || ""),
+        cachedStage: String(res.cachedStage || ""),
+        requestedMessageType: String(res.requestedMessageType || ""),
+        cachedMessageType: String(res.cachedMessageType || ""),
+        requestedOffset: Number(res.requestedOffset || 0),
+        cachedOffset: Number(res.cachedOffset || 0),
+        requestedLimit: Number(res.requestedLimit || 0),
+        cachedLimit: Number(res.cachedLimit || 0),
+        cachedCandidateCount: Number(res.cachedCandidateCount || 0),
+        cachedCandidateIdsSample: Array.isArray(res.cachedCandidateIdsSample) ? res.cachedCandidateIdsSample.slice() : [],
+        candidateHashPresent: !!res.candidateHashPresent,
+        hashMatch: res.hashMatch === true
+      };
+      if (res.previewRequestId || res.cachedRequestId) parts.push('<div style="margin-top:6px;">Preview Request ID: ' + esc(String(res.previewRequestId || "")) + ' | Cached Request ID: ' + esc(String(res.cachedRequestId || "")) + '</div>');
+      parts.push('<details style="margin-top:8px;"><summary>Parity Gate Details</summary><pre style="margin-top:8px;">' + esc(JSON.stringify(forensicPayload, null, 2)) + '</pre></details>');
+    }
+  } else if (isPreview) {
+    if (Number(res.count || 0) > 0) parts.push('<div style="font-weight:800;">Batch Preview</div>');
     else parts.push('<div style="font-weight:800;">Batch Preview Complete</div>');
     parts.push('<div style="margin-top:6px;">Stage: ' + esc(String(res.stage || "")) + ' | Message: ' + esc(String(res.messageType || "(none)")) + ' | Count: ' + esc(String(Number(res.count || 0))) + '</div>');
     parts.push('<div style="margin-top:6px;">Request ID: ' + esc(String(res.requestId || "")) + ' | Client Elapsed: ' + esc(String(Number(res.clientElapsedMs || 0))) + ' ms | Server Elapsed: ' + esc(String(Number(res.elapsedMs || 0))) + ' ms</div>');
-    if (res.ok === false) {
-      parts.push('<div style="margin-top:6px;">Error: ' + esc(String(res.message || res.error || "Preview failed.")) + '</div>');
-    } else {
-      parts.push('<div style="margin-top:6px;">Message: ' + esc(String(res.message || "Preview ready.")) + '</div>');
-      parts.push('<div style="margin-top:6px;">Eligible Unsent Found: ' + esc(String(Number(res.eligibleUnsentFound || 0))) + ' | Blocked: ' + esc(String(Number(res.blocked || 0))) + ' | Already SENT Excluded: ' + esc(String(Number(res.alreadySentExcluded || 0))) + ' | Failed Excluded: ' + esc(String(Number(res.failedExcluded || 0))) + '</div>');
-      parts.push('<div style="margin-top:6px;">Selection Mode: next eligible unsent records' + (res.offsetIgnored ? ' | Diagnostic Offset Ignored: YES' : ' | Diagnostic Offset Ignored: NO') + '</div>');
-      if (!Number(res.count || 0) && res.emptyReason) parts.push('<div style="margin-top:6px;">Reason: ' + esc(String(res.emptyReason || "")) + '</div>');
-      if (blockedList) parts.push('<div style="margin-top:6px;">Blocked By Reason: ' + blockedList + '</div>');
-      if (Array.isArray(res.eligibleApplicantIdsSample) && res.eligibleApplicantIdsSample.length) parts.push('<div style="margin-top:6px;">Eligible Sample: ' + esc(res.eligibleApplicantIdsSample.join(", ")) + '</div>');
-      if (Array.isArray(res.blockedApplicantIdsSample) && res.blockedApplicantIdsSample.length) parts.push('<div style="margin-top:6px;">Blocked Sample: ' + esc(res.blockedApplicantIdsSample.join(", ")) + '</div>');
-    }
+    parts.push('<div style="margin-top:6px;">Message: ' + esc(String(res.message || "Preview ready.")) + '</div>');
+    parts.push('<div style="margin-top:6px;">Eligible Unsent Found: ' + esc(String(Number(res.eligibleUnsentFound || 0))) + ' | Blocked: ' + esc(String(Number(res.blocked || 0))) + ' | Already SENT Excluded: ' + esc(String(Number(res.alreadySentExcluded || 0))) + ' | Failed Excluded: ' + esc(String(Number(res.failedExcluded || 0))) + '</div>');
+    parts.push('<div style="margin-top:6px;">Selection Mode: next eligible unsent records' + (res.offsetIgnored ? ' | Diagnostic Offset Ignored: YES' : ' | Diagnostic Offset Ignored: NO') + '</div>');
+    if (!Number(res.count || 0) && res.emptyReason) parts.push('<div style="margin-top:6px;">Reason: ' + esc(String(res.emptyReason || "")) + '</div>');
+    if (blockedList) parts.push('<div style="margin-top:6px;">Blocked By Reason: ' + blockedList + '</div>');
+    if (Array.isArray(res.eligibleApplicantIdsSample) && res.eligibleApplicantIdsSample.length) parts.push('<div style="margin-top:6px;">Eligible Sample: ' + esc(res.eligibleApplicantIdsSample.join(', ')) + '</div>');
+    if (Array.isArray(res.blockedApplicantIdsSample) && res.blockedApplicantIdsSample.length) parts.push('<div style="margin-top:6px;">Blocked Sample: ' + esc(res.blockedApplicantIdsSample.join(', ')) + '</div>');
   } else if (batchState.action === "send") {
     parts.push('<div style="font-weight:800;">Batch Send</div>');
     parts.push('<div style="margin-top:6px;">Stage: ' + esc(String(res.stage || "")) + ' | Priority: ' + esc(String(res.priority || "")) + '</div>');
@@ -1635,11 +1660,10 @@ function renderStageBatchSummary_(res){
     parts.push('<div style="margin-top:6px;">Attempted: ' + esc(String(Number(res.attempted || 0))) + ' | Sent: ' + esc(String(Number(res.sent || 0))) + ' | Blocked: ' + esc(String(Number(res.blocked || 0))) + ' | Failed: ' + esc(String(Number(res.failed || 0))) + '</div>');
     parts.push('<div style="margin-top:6px;">Already SENT Excluded: ' + esc(String(Number(res.alreadySentExcluded || 0))) + ' | Failed Excluded: ' + esc(String(Number(res.failedExcluded || 0))) + ' | Diagnostic Offset Ignored: ' + esc(res.offsetIgnored ? 'YES' : 'NO') + '</div>');
     if (blockedList) parts.push('<div style="margin-top:6px;">Blocked By Reason: ' + blockedList + '</div>');
-    if (Array.isArray(res.sentApplicantIdsSample) && res.sentApplicantIdsSample.length) parts.push('<div style="margin-top:6px;">Sent Sample: ' + esc(res.sentApplicantIdsSample.join(", ")) + '</div>');
-  } else if (res.ok === false) {
-    parts.push('<div style="font-weight:800;">Batch Action Failed</div>');
-    if (res.blockCode || res.code) parts.push('<div style="margin-top:6px;">Code: ' + esc(String(res.blockCode || res.code || "ERROR")) + '</div>');
-    if (res.blockReason || res.message || res.error) parts.push('<div style="margin-top:6px;">Reason: ' + esc(String(res.blockReason || res.message || res.error || "Server returned an error.")) + '</div>');
+    if (Array.isArray(res.sentApplicantIdsSample) && res.sentApplicantIdsSample.length) parts.push('<div style="margin-top:6px;">Sent Sample: ' + esc(res.sentApplicantIdsSample.join(', ')) + '</div>');
+  }
+    if (blockedList) parts.push('<div style="margin-top:6px;">Blocked By Reason: ' + blockedList + '</div>');
+    if (Array.isArray(res.sentApplicantIdsSample) && res.sentApplicantIdsSample.length) parts.push('<div style="margin-top:6px;">Sent Sample: ' + esc(res.sentApplicantIdsSample.join(', ')) + '</div>');
   }
   if (res.debugId && !isPreview) parts.push('<div class="muted" style="margin-top:6px;font-size:12px;">Debug ID: ' + esc(String(res.debugId || "")) + '</div>');
   box.classList.remove("hidden");
@@ -1896,6 +1920,9 @@ function sendStageBatchUi_(){
       var response = res && typeof res === "object" ? res : { ok: false, message: "Invalid send response.", debugId: "", requestId: clientRequestId };
       response.clientElapsedMs = clientElapsedMs;
       if (!response.requestId) response.requestId = clientRequestId;
+      if (response.ok === false && String(response.action || "") === "send_stage_batch") {
+        console.log("[StageBatchSend] blocked_response", response);
+      }
       batchState.result = response;
       resetBatchPreviewState_(true);
       console.log("[StageBatchSend] terminal", { requestId: String(response.requestId || clientRequestId), path: response.ok === true ? "success" : "error", clientElapsedMs: clientElapsedMs });
