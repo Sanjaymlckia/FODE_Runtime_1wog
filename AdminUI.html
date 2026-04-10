@@ -694,12 +694,12 @@
   </div>
 
   <script>
-    const ADMIN_ROLE = "<?= ADMIN_ROLE ?>";
-    const IS_SUPER = "<?= IS_SUPER ?>".toLowerCase() === "true";
-    const CAN_OVERRIDE = "<?= CAN_OVERRIDE ?>".toLowerCase() === "true";
-    const ADMIN_EMAIL = "<?= USER_EMAIL ?>";
-    const STUDENT_URL_READY = "<?= STUDENT_URL_READY ?>".toLowerCase() === "true";
-    const STUDENT_URL_WARNING = "<?= STUDENT_URL_WARNING ?>";
+    const ADMIN_ROLE = <?!= JSON.stringify(String(ADMIN_ROLE || "")) ?>;
+    const IS_SUPER = <?!= JSON.stringify(!!IS_SUPER) ?>;
+    const CAN_OVERRIDE = <?!= JSON.stringify(!!CAN_OVERRIDE) ?>;
+    const ADMIN_EMAIL = <?!= JSON.stringify(String(USER_EMAIL || "")) ?>;
+    const STUDENT_URL_READY = <?!= JSON.stringify(!!STUDENT_URL_READY) ?>;
+    const STUDENT_URL_WARNING = <?!= JSON.stringify(String(STUDENT_URL_WARNING || "")) ?>;
     const VERSION = <?!= JSON.stringify(String((CONFIG && CONFIG.VERSION) || "")) ?>;
     const VERSION_SHORT = <?!= JSON.stringify((function(v){
       v = String(v || "");
@@ -708,9 +708,9 @@
       var m = v.match(/-r(\d+)\b/i);
       return m ? ("r" + m[1]) : "r?";
     })((CONFIG && CONFIG.VERSION) || "")) ?>;
-    const BUILD_VERSION = "<?= BUILD_VERSION ?>";
-    const BUILD_RENDERED_AT = "<?= BUILD_RENDERED_AT ?>";
-    const BUILD_SCRIPT_ID = "<?= BUILD_SCRIPT_ID ?>";
+    const BUILD_VERSION = <?!= JSON.stringify(String(BUILD_VERSION || "")) ?>;
+    const BUILD_RENDERED_AT = <?!= JSON.stringify(String(BUILD_RENDERED_AT || "")) ?>;
+    const BUILD_SCRIPT_ID = <?!= JSON.stringify(String(BUILD_SCRIPT_ID || "")) ?>;
     const CFG_WEBAPP_URL_ADMIN = <?!= JSON.stringify(String((CONFIG && CONFIG.WEBAPP_URL_ADMIN) || "")) ?>;
     const CFG_WEBAPP_URL_STUDENT = <?!= JSON.stringify(String((CONFIG && CONFIG.WEBAPP_URL_STUDENT) || "")) ?>;
     const CFG_WEBAPP_URL_STUDENT_EXEC = <?!= JSON.stringify(String((CONFIG && (CONFIG.WEBAPP_URL_STUDENT_EXEC || CONFIG.WEBAPP_URL_STUDENT)) || "")) ?>;
@@ -1659,9 +1659,6 @@ function renderStageBatchSummary_(res){
     parts.push('<div style="margin-top:6px;">Message: ' + esc(String(res.messageType || "(none)")) + ' | Send Limit: ' + esc(String(Number(res.sendLimit || 0))) + ' | Eligible Unsent Found: ' + esc(String(Number(res.eligibleUnsentFoundAtSend || 0))) + '</div>');
     parts.push('<div style="margin-top:6px;">Attempted: ' + esc(String(Number(res.attempted || 0))) + ' | Sent: ' + esc(String(Number(res.sent || 0))) + ' | Blocked: ' + esc(String(Number(res.blocked || 0))) + ' | Failed: ' + esc(String(Number(res.failed || 0))) + '</div>');
     parts.push('<div style="margin-top:6px;">Already SENT Excluded: ' + esc(String(Number(res.alreadySentExcluded || 0))) + ' | Failed Excluded: ' + esc(String(Number(res.failedExcluded || 0))) + ' | Diagnostic Offset Ignored: ' + esc(res.offsetIgnored ? 'YES' : 'NO') + '</div>');
-    if (blockedList) parts.push('<div style="margin-top:6px;">Blocked By Reason: ' + blockedList + '</div>');
-    if (Array.isArray(res.sentApplicantIdsSample) && res.sentApplicantIdsSample.length) parts.push('<div style="margin-top:6px;">Sent Sample: ' + esc(res.sentApplicantIdsSample.join(', ')) + '</div>');
-  }
     if (blockedList) parts.push('<div style="margin-top:6px;">Blocked By Reason: ' + blockedList + '</div>');
     if (Array.isArray(res.sentApplicantIdsSample) && res.sentApplicantIdsSample.length) parts.push('<div style="margin-top:6px;">Sent Sample: ' + esc(res.sentApplicantIdsSample.join(', ')) + '</div>');
   }
@@ -3670,6 +3667,9 @@ function renderStageDashboard_(items, emptyMessage){
   </script>
 </body>
 </html>
+
+
+
 
 
 

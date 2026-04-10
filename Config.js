@@ -7,10 +7,10 @@
  */
 var CONFIG = {
   // Versioning (change control)
-VERSION: "r098",
-CHANGELOG_LAST: "r096: 1wog identity reconciliation",
-DEPLOY_VERSION_NUMBER: 98,
-BUILD_LABEL: "r096 1wog identity reconciliation",
+VERSION: "r104",
+CHANGELOG_LAST: "r104: clean release after head integrity restore",
+DEPLOY_VERSION_NUMBER: 104,
+BUILD_LABEL: "r104 clean release after head integrity restore",
 
   // STAGING/PROD data mode routing (working sheet)
   DATA_MODE: "PROD", // "STAGING" | "PROD"
@@ -325,6 +325,10 @@ var SCHEMA = {
   VERIFIED_BY: "Verified_By",
   VERIFIED_AT: "Verified_At"
 };
+
+
+
+
 
 
 
