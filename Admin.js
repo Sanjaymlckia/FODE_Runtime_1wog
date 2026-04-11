@@ -3084,6 +3084,56 @@ function stageBatchShouldExcludeFailedDefault_(rowObj, messageType) {
   return lastResult === "FAILED" && lastType === normalizedType;
 }
 
+function stageBatchDurableGroupForStage_(stage, messageType) {
+  var normalizedStage = normalizeStageBatchStage_(stage);
+  var normalizedType = normalizeApplicantMessageType_(messageType || getBatchMessageTypeForStage_(normalizedStage) || "");
+  if (!normalizedType) return "";
+  if (normalizedType === "legacy_invite") return "legacy_invite";
+  if (normalizedType !== "reminder") return "";
+  switch (normalizedStage) {
+    case "INVITED_AWAITING_RESPONSE":
+    case "REMINDER_DUE":
+      return "pre_response_reminder";
+    case "DOCS_REQUIRED":
+      return "docs_required_reminder";
+    case "PAYMENT_REQUIRED":
+      return "payment_required_reminder";
+    case "RECEIPT_AWAITING_VERIFICATION":
+      return "receipt_verification_reminder";
+    default:
+      return "";
+  }
+}
+
+function stageBatchDurableGroupFromLastContactBatch_(rowObj) {
+  var row = rowObj || {};
+  var batchLabel = clean_(row.Last_Contact_Batch || "");
+  if (!batchLabel) return "";
+  var match = /^STAGE_SEND::([^:]+)::/.exec(batchLabel);
+  if (!match || !match[1]) return "";
+  var priorStage = normalizeStageBatchStage_(match[1] || "");
+  if (!priorStage) return "";
+  return stageBatchDurableGroupForStage_(priorStage, getBatchMessageTypeForStage_(priorStage));
+}
+
+function stageBatchShouldExcludePriorSuccessDefault_(rowObj, stage, messageType) {
+  var row = rowObj || {};
+  var normalizedType = normalizeApplicantMessageType_(messageType || "");
+  if (!normalizedType) return false;
+  if (normalizedType === "legacy_invite") {
+    return normalizeEmailStatus_(row.Email_Status || "") === "SENT";
+  }
+  if (normalizedType !== "reminder") return false;
+  var currentGroup = stageBatchDurableGroupForStage_(stage, normalizedType);
+  if (!currentGroup) return false;
+  var lastType = normalizeApplicantMessageType_(row.Last_Contact_Type || "");
+  var lastResult = clean_(row.Last_Contact_Result || "").toUpperCase();
+  if (lastType !== normalizedType || lastResult !== "SENT") return false;
+  var priorGroup = stageBatchDurableGroupFromLastContactBatch_(row);
+  if (!priorGroup) return false;
+  return priorGroup === currentGroup;
+}
+
 function stageBatchLogSummary_(eventName, payload) {
   var tag = clean_(eventName || "STAGE_BATCH");
   var data = payload && typeof payload === "object" ? payload : {};
@@ -3285,7 +3335,7 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
       phaseTimings.eligibilityFilteringMs += new Date().getTime() - filterStartedAtMs;
       continue;
     }
-    if (inviteStatefulFlow && normalizeEmailStatus_(rowObj.Email_Status || "") === "SENT") {
+    if (stageBatchShouldExcludePriorSuccessDefault_(rowObj, normalizedStage, messageType)) {
       alreadySentExcluded++;
       phaseTimings.eligibilityFilteringMs += new Date().getTime() - filterStartedAtMs;
       continue;
@@ -3968,6 +4018,7 @@ function adminDryRunFirst50LegacyInvites() {
   console.log('DRYRUN_50 ' + JSON.stringify(summary));
   return summary;
 }
+
 
 
 
