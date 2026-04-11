@@ -3037,12 +3037,10 @@ function stageBatchCandidateHash_(candidateIds) {
 
 function stageBatchShouldExcludeFailedDefault_(rowObj, messageType) {
   // Production invite batches skip prior hard failures for the same message type until an explicit retry flow is used.
-  var row = rowObj || {};
   var normalizedType = normalizeApplicantMessageType_(messageType || "");
   if (!normalizedType) return false;
-  var lastType = normalizeApplicantMessageType_(row.Last_Contact_Type || "");
-  var lastResult = clean_(row.Last_Contact_Result || "").toUpperCase();
-  return lastResult === "FAILED" && lastType === normalizedType;
+  var communicationState = deriveCommunicationState_(rowObj || {}, normalizedType, {});
+  return communicationState.durablePriorFailureSameType === true;
 }
 
 function stageBatchDurableGroupForStage_(stage, messageType) {
@@ -3078,19 +3076,17 @@ function stageBatchDurableGroupFromLastContactBatch_(rowObj) {
 }
 
 function stageBatchShouldExcludePriorSuccessDefault_(rowObj, stage, messageType) {
-  var row = rowObj || {};
   var normalizedType = normalizeApplicantMessageType_(messageType || "");
   if (!normalizedType) return false;
+  var communicationState = deriveCommunicationState_(rowObj || {}, normalizedType, {});
   if (normalizedType === "legacy_invite") {
-    return normalizeEmailStatus_(row.Email_Status || "") === "SENT";
+    return clean_(communicationState.base && communicationState.base.emailStatus || "") === "SENT";
   }
   if (normalizedType !== "reminder") return false;
   var currentGroup = stageBatchDurableGroupForStage_(stage, normalizedType);
   if (!currentGroup) return false;
-  var lastType = normalizeApplicantMessageType_(row.Last_Contact_Type || "");
-  var lastResult = clean_(row.Last_Contact_Result || "").toUpperCase();
-  if (lastType !== normalizedType || lastResult !== "SENT") return false;
-  var priorGroup = stageBatchDurableGroupFromLastContactBatch_(row);
+  if (communicationState.lastContactMatchesScopedType !== true || communicationState.lastContactWasSent !== true) return false;
+  var priorGroup = stageBatchDurableGroupFromLastContactBatch_(rowObj || {});
   if (!priorGroup) return false;
   return priorGroup === currentGroup;
 }

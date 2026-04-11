@@ -6000,6 +6000,75 @@ function communicationPaymentOutstanding_(rowObj) {
   return !(derivePaymentBadge_(row) === "Verified" || clean_(row.Payment_Verified || "") === "Yes");
 }
 
+function communicationFamilyForMessageType_(messageType) {
+  var normalizedType = normalizeApplicantMessageType_(messageType || "");
+  if (normalizedType === "legacy_invite") return "invite";
+  if (normalizedType === "reminder") return "reminder";
+  if (normalizedType === "docs_missing") return "docs_followup";
+  if (normalizedType === "payment_followup") return "payment_followup";
+  return "";
+}
+
+function deriveCommunicationState_(rowObj, messageType, opts) {
+  var row = rowObj || {};
+  var options = opts && typeof opts === "object" ? opts : {};
+  var normalizedType = normalizeApplicantMessageType_(messageType || "");
+  var applicantId = clean_(row.ApplicantID || options.applicantId || "");
+  var effectiveEmail = getCampaignEffectiveEmail_(row);
+  var emailStatus = normalizeEmailStatus_(row.Email_Status || "");
+  var lastContactType = normalizeApplicantMessageType_(row.Last_Contact_Type || "");
+  var lastContactResult = clean_(row.Last_Contact_Result || "").toUpperCase();
+  var lastContactBatch = clean_(row.Last_Contact_Batch || "");
+  var lastContactedAt = clean_(row.Last_Contacted_At || "");
+  var cooldownLookup = options.cooldownLookup && typeof options.cooldownLookup === "object" ? options.cooldownLookup : null;
+  var cooldownLastSentAt = "";
+  if (normalizedType) {
+    if (cooldownLookup && cooldownLookup.byApplicantId) {
+      cooldownLastSentAt = clean_(cooldownLookup.byApplicantId[applicantId] || "");
+    } else {
+      cooldownLastSentAt = getLastCommunicationSentAt_(applicantId, normalizedType);
+    }
+  }
+  var cooldownExpiresAtMs = cooldownLastSentAt ? parseTime_(cooldownLastSentAt) + communicationCooldownMs_() : 0;
+  var nowMs = Number(options.nowMs || new Date().getTime());
+  var baseState = {
+    applicantId: applicantId,
+    effectiveEmail: clean_(effectiveEmail || ""),
+    hasEffectiveEmail: !!clean_(effectiveEmail || ""),
+    hasValidEffectiveEmail: isValidEffectiveEmail_(effectiveEmail),
+    emailStatus: emailStatus,
+    portalSubmittedActive: isCampaignPortalSubmittedActive_(row),
+    bounceFlag: isCampaignBounceFlagTrue_(row.Email_Bounce_Flag),
+    bounceReason: clean_(row.Email_Bounce_Reason || ""),
+    docsVerified: computeDocVerificationStatus_(row) === "Verified" || clean_(row.Docs_Verified || "") === "Yes",
+    paymentVerified: derivePaymentBadge_(row) === "Verified" || clean_(row.Payment_Verified || "") === "Yes",
+    docsMissing: communicationDocsMissing_(row),
+    paymentOutstanding: communicationPaymentOutstanding_(row),
+    requiresPortalUrl: communicationRequiresPortalUrl_(normalizedType),
+    attemptCount: campaignAttemptCount_(row),
+    nextActionAtMs: parseTime_(row.Email_Next_Action_Date || ""),
+    emailLastSentAt: clean_(row.Email_Last_Sent_At || ""),
+    lastContactType: lastContactType,
+    lastContactResult: lastContactResult,
+    lastContactBatch: lastContactBatch,
+    lastContactedAt: lastContactedAt
+  };
+  return {
+    applicantId: applicantId,
+    messageType: normalizedType,
+    communicationFamily: communicationFamilyForMessageType_(normalizedType),
+    cooldownLastSentAt: cooldownLastSentAt,
+    cooldownActive: !!(cooldownExpiresAtMs && cooldownExpiresAtMs > nowMs),
+    cooldownExpiresAtMs: cooldownExpiresAtMs,
+    lastContactMatchesScopedType: !!(normalizedType && baseState.lastContactType === normalizedType),
+    lastContactWasSent: baseState.lastContactResult === "SENT",
+    lastContactWasFailed: baseState.lastContactResult === "FAILED",
+    durablePriorSuccess: !!(normalizedType && baseState.emailStatus === "SENT" && baseState.lastContactType === normalizedType && (!!baseState.lastContactedAt || baseState.lastContactResult === "SENT")),
+    durablePriorFailureSameType: !!(normalizedType && baseState.lastContactType === normalizedType && baseState.lastContactResult === "FAILED"),
+    base: baseState
+  };
+}
+
 function communicationMessageTypeForFilter_(filterType) {
   var normalized = normalizeApplicantBatchFilterType_(filterType);
   if (normalized === "legacy_invite_eligible") return "legacy_invite";
@@ -6010,15 +6079,16 @@ function communicationMessageTypeForFilter_(filterType) {
 
 function communicationMatchesFilterPrecheck_(rowObj, filterType) {
   var row = rowObj || {};
-  var applicantId = clean_(row.ApplicantID || "");
+  var state = deriveCommunicationState_(row, communicationMessageTypeForFilter_(filterType), {});
+  var applicantId = clean_(state.applicantId || "");
   if (!applicantId) return false;
   var normalized = normalizeApplicantBatchFilterType_(filterType);
   if (normalized === "legacy_invite_eligible") {
-    var status = normalizeEmailStatus_(row.Email_Status || "");
+    var status = clean_(state.base && state.base.emailStatus || "");
     return !status || status === "NEW" || status === "READY";
   }
-  if (normalized === "docs_missing") return communicationDocsMissing_(row);
-  if (normalized === "payment_pending") return communicationPaymentOutstanding_(row);
+  if (normalized === "docs_missing") return state.base && state.base.docsMissing === true;
+  if (normalized === "payment_pending") return state.base && state.base.paymentOutstanding === true;
   return false;
 }
 
@@ -6152,21 +6222,29 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
   var portalSecretLookup = options.portalSecretLookup && typeof options.portalSecretLookup === "object" ? options.portalSecretLookup : null;
   var cooldownLookup = options.cooldownLookup && typeof options.cooldownLookup === "object" ? options.cooldownLookup : null;
   var resolutionStartedAtMs = new Date().getTime();
+  var communicationState = deriveCommunicationState_(row, normalizedType, {
+    applicantId: clean_(row.ApplicantID || options.applicantId || ""),
+    cooldownLookup: cooldownLookup,
+    nowMs: resolutionStartedAtMs
+  });
+  var baseState = communicationState.base || {};
   var context = {
     ok: true,
     eligible: false,
     blockCode: "",
     blockReason: "",
-    effectiveEmail: "",
+    effectiveEmail: clean_(baseState.effectiveEmail || ""),
     portalUrl: "",
     rowObj: row,
-    applicantId: clean_(row.ApplicantID || options.applicantId || ""),
+    applicantId: clean_(communicationState.applicantId || ""),
     messageType: normalizedType || clean_(messageType || ""),
-    emailStatus: "",
-    portalSubmittedActive: false,
-    docsVerified: false,
-    paymentVerified: false,
-    requiresPortalUrl: false,
+    communicationFamily: clean_(communicationState.communicationFamily || ""),
+    emailStatus: clean_(baseState.emailStatus || ""),
+    portalSubmittedActive: baseState.portalSubmittedActive === true,
+    docsVerified: baseState.docsVerified === true,
+    paymentVerified: baseState.paymentVerified === true,
+    requiresPortalUrl: baseState.requiresPortalUrl === true,
+    cooldownLastSentAt: clean_(communicationState.cooldownLastSentAt || ""),
     debugId: debugId,
     requestId: requestId,
     actorEmail: actor.email,
@@ -6198,28 +6276,11 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
   if (clean_(options.action || "") === "planBatch" && !actor.isSuper) return block("ROLE_BLOCKED");
   if (!context.applicantId) return block("APPLICANT_NOT_FOUND");
 
-  context.effectiveEmail = getCampaignEffectiveEmail_(row);
-  context.emailStatus = normalizeEmailStatus_(row.Email_Status || "");
-  context.portalSubmittedActive = isCampaignPortalSubmittedActive_(row);
-  context.docsVerified = computeDocVerificationStatus_(row) === "Verified" || clean_(row.Docs_Verified || "") === "Yes";
-  context.paymentVerified = derivePaymentBadge_(row) === "Verified" || clean_(row.Payment_Verified || "") === "Yes";
-  context.requiresPortalUrl = communicationRequiresPortalUrl_(normalizedType);
-
-  if (!clean_(context.effectiveEmail || "")) return block("NO_EFFECTIVE_EMAIL");
-  if (!isValidEffectiveEmail_(context.effectiveEmail)) return block("INVALID_EMAIL", "Applicant does not have a valid email address.");
-  if (isCampaignBounceFlagTrue_(row.Email_Bounce_Flag)) return block("BOUNCED", clean_(row.Email_Bounce_Reason || "") || communicationBlockReason_("BOUNCED", normalizedType));
+  if (!baseState.hasEffectiveEmail) return block("NO_EFFECTIVE_EMAIL");
+  if (baseState.hasValidEffectiveEmail !== true) return block("INVALID_EMAIL", "Applicant does not have a valid email address.");
+  if (baseState.bounceFlag) return block("BOUNCED", clean_(baseState.bounceReason || "") || communicationBlockReason_("BOUNCED", normalizedType));
   if (context.emailStatus === "DO_NOT_CONTACT") return block("DO_NOT_CONTACT");
-
-  var lastSentAt = "";
-  if (cooldownLookup && cooldownLookup.byApplicantId) {
-    lastSentAt = clean_(cooldownLookup.byApplicantId[context.applicantId] || "");
-  } else {
-    lastSentAt = getLastCommunicationSentAt_(context.applicantId, normalizedType);
-  }
-  if (lastSentAt) {
-    var cooldownRemaining = parseTime_(lastSentAt) + communicationCooldownMs_();
-    if (cooldownRemaining > new Date().getTime()) return block("COOLDOWN_ACTIVE");
-  }
+  if (communicationState.cooldownActive) return block("COOLDOWN_ACTIVE");
 
   if (context.requiresPortalUrl) {
     var secretRes = null;
@@ -6247,10 +6308,10 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
   if ((normalizedType === "legacy_invite" || normalizedType === "reminder") && context.portalSubmittedActive) {
     return block("PORTAL_ALREADY_SUBMITTED");
   }
-  if (normalizedType === "docs_missing" && !communicationDocsMissing_(row)) {
+  if (normalizedType === "docs_missing" && baseState.docsMissing !== true) {
     return block("DOCS_ALREADY_COMPLETE");
   }
-  if (normalizedType === "payment_followup" && !communicationPaymentOutstanding_(row)) {
+  if (normalizedType === "payment_followup" && baseState.paymentOutstanding !== true) {
     return block("PAYMENT_ALREADY_RESOLVED");
   }
 
@@ -6314,15 +6375,12 @@ function hasPriorSuccessfulMessageSend_(context) {
   var ctx = context || {};
   var rowObj = ctx.rowObj || {};
   var messageType = normalizeApplicantMessageType_(ctx.messageType || "");
-  var lastType = normalizeApplicantMessageType_(rowObj.Last_Contact_Type || "");
-  var emailStatus = normalizeEmailStatus_(ctx.emailStatus || rowObj.Email_Status || "");
-  var lastResult = clean_(rowObj.Last_Contact_Result || "").toUpperCase();
-  var lastContactedAt = clean_(rowObj.Last_Contacted_At || "");
-  var cachedSentAt = messageType ? getLastCommunicationSentAt_(ctx.applicantId || rowObj.ApplicantID || "", messageType) : "";
-
+  var communicationState = deriveCommunicationState_(rowObj, messageType, {
+    applicantId: clean_(ctx.applicantId || rowObj.ApplicantID || "")
+  });
   if (!messageType) return false;
-  if (cachedSentAt) return true;
-  return emailStatus === "SENT" && lastType === messageType && (!!lastContactedAt || lastResult === "SENT");
+  if (communicationState.cooldownLastSentAt) return true;
+  return communicationState.durablePriorSuccess === true;
 }
 
 function communicationRecommendedMessageTypeForStage_(stage) {
@@ -6396,11 +6454,17 @@ function deriveApplicantActionability_(rowObj, lifecycleStage, opts) {
   var isValidEmail = typeof options.isValidEmail === 'function' ? options.isValidEmail : isValidEffectiveEmail_;
   var getRecommendedMessageType = typeof options.getRecommendedMessageType === 'function' ? options.getRecommendedMessageType : communicationRecommendedMessageTypeForStage_;
   var resolveEligibility = options.resolveEligibility === true;
-  var effectiveEmail = clean_(getEffectiveEmail(row));
-  var emailStatus = normalizeEmailStatus_(row.Email_Status || "");
-  var portalSubmittedActive = isCampaignPortalSubmittedActive_(row);
-  var bounceFlag = isCampaignBounceFlagTrue_(row.Email_Bounce_Flag);
   var recommendedMessageType = clean_(getRecommendedMessageType(stage) || "");
+  var communicationState = resolveEligibility
+    ? deriveCommunicationState_(row, recommendedMessageType, { applicantId: applicantId })
+    : null;
+  var baseState = communicationState && communicationState.base ? communicationState.base : {};
+  var effectiveEmail = resolveEligibility ? clean_(baseState.effectiveEmail || "") : clean_(getEffectiveEmail(row));
+  var emailStatus = resolveEligibility ? clean_(baseState.emailStatus || "") : normalizeEmailStatus_(row.Email_Status || "");
+  var portalSubmittedActive = resolveEligibility ? baseState.portalSubmittedActive === true : isCampaignPortalSubmittedActive_(row);
+  var bounceFlag = resolveEligibility ? baseState.bounceFlag === true : isCampaignBounceFlagTrue_(row.Email_Bounce_Flag);
+  var bounceReason = resolveEligibility ? clean_(baseState.bounceReason || "") : clean_(row.Email_Bounce_Reason || "");
+  var hasValidEffectiveEmail = resolveEligibility ? baseState.hasValidEffectiveEmail === true : isValidEmail(effectiveEmail);
   var awaitingResponse = ["INVITED_AWAITING_RESPONSE", "REMINDER_DUE", "DOCS_REQUIRED", "PAYMENT_REQUIRED", "RECEIPT_AWAITING_VERIFICATION"].indexOf(stage) >= 0;
   var commStatus = "ACTIONABLE";
   var canSendNow = false;
@@ -6411,14 +6475,14 @@ function deriveApplicantActionability_(rowObj, lifecycleStage, opts) {
     commStatus = "INVALID_EMAIL";
     blockCode = "INVALID_EMAIL";
     blockReason = "Applicant does not have a valid email address.";
-  } else if (!isValidEmail(effectiveEmail)) {
+  } else if (hasValidEffectiveEmail !== true) {
     commStatus = "INVALID_EMAIL";
     blockCode = "INVALID_EMAIL";
     blockReason = "Applicant does not have a valid email address.";
   } else if (bounceFlag) {
     commStatus = "BOUNCED";
     blockCode = "BOUNCED";
-    blockReason = clean_(row.Email_Bounce_Reason || "") || communicationBlockReason_("BOUNCED", recommendedMessageType || stage);
+    blockReason = clean_(bounceReason || "") || communicationBlockReason_("BOUNCED", recommendedMessageType || stage);
   } else if (emailStatus === "DO_NOT_CONTACT") {
     commStatus = "DO_NOT_CONTACT";
     blockCode = "DO_NOT_CONTACT";
@@ -6897,8 +6961,9 @@ function campaign_prepareLegacyRows_() {
   for (var r = 1; r < ctx.values.length; r++) {
     var rowNumber = r + 1;
     var rowObj = campaignRowObjectFromValues_(headers, ctx.values[r]);
-    var applicantId = clean_(rowObj.ApplicantID || "");
-    var status = normalizeEmailStatus_(rowObj.Email_Status || "");
+    var state = deriveCommunicationState_(rowObj, "legacy_invite", {});
+    var applicantId = clean_(state.applicantId || "");
+    var status = clean_(state.base && state.base.emailStatus || "");
     if (status === "READY") {
       keptReady++;
       continue;
@@ -7310,20 +7375,22 @@ function campaign_sendLegacyFollowups_(limit) {
     if (selected >= batchLimit) break;
     var rowNumber = r + 1;
     var rowObj = campaignRowObjectFromValues_(headers, ctx.values[r]);
-    if (normalizeEmailStatus_(rowObj.Email_Status || "") !== "SENT") continue;
-    if (isCampaignPortalSubmittedActive_(rowObj)) {
-      skipped.push({ applicantId: clean_(rowObj.ApplicantID || ""), rowNumber: rowNumber, reason: "PORTAL_ALREADY_SUBMITTED" });
+    var state = deriveCommunicationState_(rowObj, "reminder", {});
+    var baseState = state.base || {};
+    if (clean_(baseState.emailStatus || "") !== "SENT") continue;
+    if (baseState.portalSubmittedActive === true) {
+      skipped.push({ applicantId: clean_(state.applicantId || ""), rowNumber: rowNumber, reason: "PORTAL_ALREADY_SUBMITTED" });
       continue;
     }
-    if (isCampaignBounceFlagTrue_(rowObj.Email_Bounce_Flag)) continue;
-    var nextActionTs = parseTime_(rowObj.Email_Next_Action_Date || "");
+    if (baseState.bounceFlag === true) continue;
+    var nextActionTs = Number(baseState.nextActionAtMs || 0);
     if (!(nextActionTs > 0) || nextActionTs > todayTs) continue;
-    var attemptCount = campaignAttemptCount_(rowObj);
+    var attemptCount = Number(baseState.attemptCount || 0);
     if (attemptCount < 1 || attemptCount >= 3) continue;
     selected++;
-    var sendRes = sendApplicantMessage_(clean_(rowObj.ApplicantID || ""), "reminder", { batchLabel: batchLabel });
+    var sendRes = sendApplicantMessage_(clean_(state.applicantId || ""), "reminder", { batchLabel: batchLabel });
     if (sendRes.result === "SENT") sent++;
-    else skipped.push({ applicantId: clean_(rowObj.ApplicantID || ""), rowNumber: rowNumber, reason: clean_(sendRes.blockCode || sendRes.code || sendRes.error || "SEND_FAILED") });
+    else skipped.push({ applicantId: clean_(state.applicantId || ""), rowNumber: rowNumber, reason: clean_(sendRes.blockCode || sendRes.code || sendRes.error || "SEND_FAILED") });
   }
   var summary = {
     ok: true,

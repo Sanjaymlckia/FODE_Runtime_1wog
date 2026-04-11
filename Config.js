@@ -7,10 +7,10 @@
  */
 var CONFIG = {
   // Versioning (change control)
-VERSION: "r106",
-CHANGELOG_LAST: "r106: stage vs queue helper-boundary hardening",
-DEPLOY_VERSION_NUMBER: 106,
-BUILD_LABEL: "r106 stage vs queue helper-boundary hardening",
+VERSION: "r108",
+CHANGELOG_LAST: "r108: restore stage aggregation snapshot-safe actionability path",
+DEPLOY_VERSION_NUMBER: 108,
+BUILD_LABEL: "r108 restore stage aggregation snapshot-safe actionability path",
 
   // STAGING/PROD data mode routing (working sheet)
   DATA_MODE: "PROD", // "STAGING" | "PROD"
