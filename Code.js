@@ -6348,16 +6348,14 @@ function communicationOverlayStatusFromCode_(code) {
   return "NOT_STAGE_MESSAGE_MATCH";
 }
 
-function getApplicantStageAndEligibility_(rowObj) {
+function deriveApplicantLifecycleStage_(rowObj) {
   var row = rowObj || {};
-  var applicantId = clean_(row.ApplicantID || "");
   var emailStatus = normalizeEmailStatus_(row.Email_Status || "");
-  var effectiveEmail = clean_(getCampaignEffectiveEmail_(row));
   var portalSubmittedActive = isCampaignPortalSubmittedActive_(row);
   var bounceFlag = isCampaignBounceFlagTrue_(row.Email_Bounce_Flag);
   var docsVerified = computeDocVerificationStatus_(row) === "Verified" || clean_(row.Docs_Verified || "") === "Yes";
-  var paymentVerified = derivePaymentBadge_(row) === "Verified" || clean_(row.Payment_Verified || "") === "Yes";
   var paymentBadge = derivePaymentBadge_(row);
+  var paymentVerified = paymentBadge === "Verified" || clean_(row.Payment_Verified || "") === "Yes";
   var receiptStatus = clean_(row.Receipt_Status || "");
   var receiptEvidencePresent = !!receiptStatus || !!clean_(row.Fee_Receipt_File || "");
   var attemptCount = campaignAttemptCount_(row);
@@ -6386,7 +6384,23 @@ function getApplicantStageAndEligibility_(rowObj) {
   else if (reminderDue) stage = "REMINDER_DUE";
   else if (emailStatus === "SENT") stage = "INVITED_AWAITING_RESPONSE";
 
-  var recommendedMessageType = communicationRecommendedMessageTypeForStage_(stage);
+  return stage;
+}
+
+function deriveApplicantActionability_(rowObj, lifecycleStage, opts) {
+  var row = rowObj || {};
+  var options = opts && typeof opts === 'object' ? opts : {};
+  var stage = clean_(lifecycleStage || deriveApplicantLifecycleStage_(row)).toUpperCase();
+  var applicantId = clean_(row.ApplicantID || "");
+  var getEffectiveEmail = typeof options.getEffectiveEmail === 'function' ? options.getEffectiveEmail : getCampaignEffectiveEmail_;
+  var isValidEmail = typeof options.isValidEmail === 'function' ? options.isValidEmail : isValidEffectiveEmail_;
+  var getRecommendedMessageType = typeof options.getRecommendedMessageType === 'function' ? options.getRecommendedMessageType : communicationRecommendedMessageTypeForStage_;
+  var resolveEligibility = options.resolveEligibility === true;
+  var effectiveEmail = clean_(getEffectiveEmail(row));
+  var emailStatus = normalizeEmailStatus_(row.Email_Status || "");
+  var portalSubmittedActive = isCampaignPortalSubmittedActive_(row);
+  var bounceFlag = isCampaignBounceFlagTrue_(row.Email_Bounce_Flag);
+  var recommendedMessageType = clean_(getRecommendedMessageType(stage) || "");
   var awaitingResponse = ["INVITED_AWAITING_RESPONSE", "REMINDER_DUE", "DOCS_REQUIRED", "PAYMENT_REQUIRED", "RECEIPT_AWAITING_VERIFICATION"].indexOf(stage) >= 0;
   var commStatus = "ACTIONABLE";
   var canSendNow = false;
@@ -6397,7 +6411,7 @@ function getApplicantStageAndEligibility_(rowObj) {
     commStatus = "INVALID_EMAIL";
     blockCode = "INVALID_EMAIL";
     blockReason = "Applicant does not have a valid email address.";
-  } else if (!isValidEffectiveEmail_(effectiveEmail)) {
+  } else if (!isValidEmail(effectiveEmail)) {
     commStatus = "INVALID_EMAIL";
     blockCode = "INVALID_EMAIL";
     blockReason = "Applicant does not have a valid email address.";
@@ -6425,6 +6439,9 @@ function getApplicantStageAndEligibility_(rowObj) {
     commStatus = "NOT_STAGE_MESSAGE_MATCH";
     blockCode = "NOT_STAGE_MESSAGE_MATCH";
     blockReason = "No communication is recommended for the current lifecycle stage.";
+  } else if (!resolveEligibility) {
+    commStatus = "ACTIONABLE";
+    canSendNow = true;
   } else if (!applicantId) {
     commStatus = "NOT_STAGE_MESSAGE_MATCH";
     blockCode = "MISSING_APPLICANT_ID";
@@ -6448,13 +6465,28 @@ function getApplicantStageAndEligibility_(rowObj) {
   }
 
   return {
-    stage: stage,
     commStatus: commStatus,
     canSendNow: !!canSendNow,
     blockCode: blockCode,
     blockReason: blockReason,
     recommendedMessageType: recommendedMessageType,
     awaitingResponse: !!awaitingResponse
+  };
+}
+
+function getApplicantStageAndEligibility_(rowObj) {
+  var row = rowObj || {};
+  var stage = deriveApplicantLifecycleStage_(row);
+  var actionability = deriveApplicantActionability_(row, stage, { resolveEligibility: true });
+
+  return {
+    stage: stage,
+    commStatus: actionability.commStatus,
+    canSendNow: !!actionability.canSendNow,
+    blockCode: actionability.blockCode,
+    blockReason: actionability.blockReason,
+    recommendedMessageType: actionability.recommendedMessageType,
+    awaitingResponse: !!actionability.awaitingResponse
   };
 }
 
@@ -7348,4 +7380,5 @@ function testCampaignGmailAuth() {
     aliases: GmailApp.getAliases()
   };
 }
+
 

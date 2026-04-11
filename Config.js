@@ -7,10 +7,10 @@
  */
 var CONFIG = {
   // Versioning (change control)
-VERSION: "r105",
-CHANGELOG_LAST: "r105: stage-batch lifecycle-scoped durable exclusion",
-DEPLOY_VERSION_NUMBER: 105,
-BUILD_LABEL: "r105 stage-batch lifecycle-scoped durable exclusion",
+VERSION: "r106",
+CHANGELOG_LAST: "r106: stage vs queue helper-boundary hardening",
+DEPLOY_VERSION_NUMBER: 106,
+BUILD_LABEL: "r106 stage vs queue helper-boundary hardening",
 
   // STAGING/PROD data mode routing (working sheet)
   DATA_MODE: "PROD", // "STAGING" | "PROD"
@@ -325,6 +325,7 @@ var SCHEMA = {
   VERIFIED_BY: "Verified_By",
   VERIFIED_AT: "Verified_At"
 };
+
 
 
 

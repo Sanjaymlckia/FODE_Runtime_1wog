@@ -1999,58 +1999,19 @@ function stageAggregationIsValidEmail_(email) {
 
 function stageAggregationSnapshot_(rowObj) {
   var row = rowObj || {};
-  var emailStatus = normalizeEmailStatus_(row.Email_Status || "");
-  var effectiveEmail = stageAggregationEffectiveEmail_(row);
-  var portalSubmittedActive = isCampaignPortalSubmittedActive_(row);
-  var bounceFlag = isCampaignBounceFlagTrue_(row.Email_Bounce_Flag);
-  var docsVerified = computeDocVerificationStatus_(row) === "Verified" || clean_(row.Docs_Verified || "") === "Yes";
-  var paymentBadge = derivePaymentBadge_(row);
-  var paymentVerified = paymentBadge === "Verified" || clean_(row.Payment_Verified || "") === "Yes";
-  var receiptStatus = clean_(row.Receipt_Status || "");
-  var receiptEvidencePresent = !!receiptStatus || !!clean_(row.Fee_Receipt_File || "");
-  var attemptCount = campaignAttemptCount_(row);
-  var nextActionTs = parseTime_(row.Email_Next_Action_Date || "");
-  var now = new Date();
-  var todayTs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  var keys = typeof resolveDocStatusKeys_ === "function" ? resolveDocStatusKeys_(row) : {};
-  var docSignals = [keys.birth, keys.report, keys.photo, keys.transfer].filter(Boolean).some(function (key) {
-    return !!clean_(row[key] || "");
+  var stage = deriveApplicantLifecycleStage_(row);
+  var actionability = deriveApplicantActionability_(row, stage, {
+    getEffectiveEmail: stageAggregationEffectiveEmail_,
+    isValidEmail: stageAggregationIsValidEmail_,
+    getRecommendedMessageType: stageAggregationRecommendedMessageType_,
+    resolveEligibility: false
   });
-  var docStage = computeDocVerificationStatus_(row);
-  var reminderDue = emailStatus === "SENT"
-    && !portalSubmittedActive
-    && !bounceFlag
-    && attemptCount >= 1
-    && attemptCount < 3
-    && nextActionTs > 0
-    && nextActionTs <= todayTs;
-  var stage = "INVITE_PENDING";
-  var commStatus = "ACTIONABLE";
-  var recommendedMessageType = "";
-
-  if (paymentVerified) stage = "COMPLETE";
-  else if (portalSubmittedActive || emailStatus === "RESPONDED") stage = "PROCESSING";
-  else if (docsVerified && !paymentVerified && paymentBadge !== "Verified" && receiptEvidencePresent) stage = "RECEIPT_AWAITING_VERIFICATION";
-  else if (docsVerified && !paymentVerified) stage = "PAYMENT_REQUIRED";
-  else if (!docsVerified && (docSignals || docStage === "Rejected")) stage = "DOCS_REQUIRED";
-  else if (reminderDue) stage = "REMINDER_DUE";
-  else if (emailStatus === "SENT") stage = "INVITED_AWAITING_RESPONSE";
-
-  recommendedMessageType = stageAggregationRecommendedMessageType_(stage);
-
-  if (!stageAggregationIsValidEmail_(effectiveEmail)) commStatus = "INVALID_EMAIL";
-  else if (bounceFlag) commStatus = "BOUNCED";
-  else if (emailStatus === "DO_NOT_CONTACT") commStatus = "DO_NOT_CONTACT";
-  else if (portalSubmittedActive) commStatus = "PORTAL_SUBMITTED";
-  else if (emailStatus === "RESPONDED") commStatus = "RESPONDED";
-  else if (stage === "INVITED_AWAITING_RESPONSE") commStatus = "COOLDOWN";
-  else if (!recommendedMessageType) commStatus = "NOT_STAGE_MESSAGE_MATCH";
 
   return {
     stage: stage,
     priority: mapStagePriority_(stage),
-    commStatus: commStatus,
-    canSendNow: commStatus === "ACTIONABLE"
+    commStatus: actionability.commStatus,
+    canSendNow: actionability.canSendNow
   };
 }
 
@@ -4018,6 +3979,7 @@ function adminDryRunFirst50LegacyInvites() {
   console.log('DRYRUN_50 ' + JSON.stringify(summary));
   return summary;
 }
+
 
 
 
