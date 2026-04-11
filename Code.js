@@ -4173,6 +4173,35 @@ function buildCrmPayloadFromRow_(rowObj) {
   };
 }
 
+function deriveFodeCrmStageFromRow_(rowObj) {
+  var row = rowObj || {};
+  var overallStatus = clean_(row.Overall_Status || row["Overall Status"] || row.Status || row["Application Status"] || "");
+  var registrationComplete = clean_(row.Registration_Complete || "") === "Yes";
+  var paymentVerified = clean_(row.Payment_Verified || "") === "Yes" || (typeof derivePaymentBadge_ === 'function' && derivePaymentBadge_(row) === "Verified");
+  var queueState = typeof classifyAdminQueueState_ === 'function' ? clean_(classifyAdminQueueState_(row) || "") : "";
+  var admissionGranted = registrationComplete || queueState === "enrolled_ready" || (/approved|granted|enrolled_ready/i.test(overallStatus) && paymentVerified);
+
+  if (paymentVerified && admissionGranted) return clean_(CONFIG.CRM_STAGE_ADMISSION_GRANTED || "Admission Granted");
+  if (paymentVerified) return clean_(CONFIG.CRM_STAGE_PAYMENT_CONFIRMED || "Payment Confirmed");
+  return "";
+}
+
+function shouldCreateFodeCrmDeal_(rowObj) {
+  var row = rowObj || {};
+  if (clean_(row.Deal_ID || "")) return false;
+  var stage = deriveFodeCrmStageFromRow_(row);
+  return stage === clean_(CONFIG.CRM_STAGE_ADMISSION_GRANTED || "Admission Granted");
+}
+
+function shouldCreateFodeCrmInvoice_(rowObj) {
+  var row = rowObj || {};
+  if (!clean_(row.Deal_ID || "")) return false;
+  if (clean_(row.CRM_Invoice_Triggered || "")) return false;
+  var stage = deriveFodeCrmStageFromRow_(row);
+  return stage === clean_(CONFIG.CRM_STAGE_PAYMENT_CONFIRMED || "Payment Confirmed")
+    || stage === clean_(CONFIG.CRM_STAGE_ADMISSION_GRANTED || "Admission Granted");
+}
+
 function ensureStableFormId_(rowObj, sh, rowNumber, idx) {
   var row = rowObj || {};
   var stable = clean_(row.FormID || row.FD_FormID || "");

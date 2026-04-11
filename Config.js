@@ -7,10 +7,10 @@
  */
 var CONFIG = {
   // Versioning (change control)
-VERSION: "r108",
-CHANGELOG_LAST: "r108: restore stage aggregation snapshot-safe actionability path",
-DEPLOY_VERSION_NUMBER: 108,
-BUILD_LABEL: "r108 restore stage aggregation snapshot-safe actionability path",
+VERSION: "r109",
+CHANGELOG_LAST: "r109: add flagged FODE CRM pipeline scaffolding",
+DEPLOY_VERSION_NUMBER: 109,
+BUILD_LABEL: "r109 add flagged FODE CRM pipeline scaffolding",
 
   // STAGING/PROD data mode routing (working sheet)
   DATA_MODE: "PROD", // "STAGING" | "PROD"
@@ -79,6 +79,15 @@ BUILD_LABEL: "r108 restore stage aggregation snapshot-safe actionability path",
   DEAL_DUPLICATE_FIELD: "FormID",
   CRM_PIPELINE_FODE: "FODE Admissions",
   CRM_STAGE_PAYMENT_VERIFIED: "Payment Verified",
+  ENABLE_FODE_CRM_PIPELINE: false,
+  FODE_CRM_PIPELINE_NAME: "FODE",
+  CRM_STAGE_QUALIFIED: "Qualified",
+  CRM_STAGE_PAYMENT_PENDING: "Payment Pending",
+  CRM_STAGE_PAYMENT_CONFIRMED: "Payment Confirmed",
+  CRM_STAGE_ADMISSION_GRANTED: "Admission Granted",
+  CRM_STAGE_INVOICED: "Invoiced",
+  CRM_STAGE_COMPLETED: "Completed",
+  CRM_STAGE_CLOSED: "Closed",
 
   FEE_REGISTRATION_KINA: 600,
   FEE_PER_SUBJECT_KINA: 450,

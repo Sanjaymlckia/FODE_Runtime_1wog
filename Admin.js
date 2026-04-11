@@ -1002,6 +1002,35 @@ function admin_setPaymentVerified_impl_(payload, dbgId) {
   }
 }
 
+function triggerCrmDealForFode_(rowObj, rowNumber, sh, idx) {
+  if (CONFIG.ENABLE_FODE_CRM_PIPELINE !== true) {
+    return { attempted: false, ok: true, enabled: false, reason: "FEATURE_FLAG_DISABLED" };
+  }
+  var row = rowObj || {};
+  return {
+    attempted: false,
+    ok: true,
+    enabled: true,
+    shouldCreateDeal: typeof shouldCreateFodeCrmDeal_ === 'function' ? shouldCreateFodeCrmDeal_(row) : false,
+    rowNumber: Number(rowNumber || 0)
+  };
+}
+
+function syncFodeCrmStage_(rowObj, rowNumber, sh, idx) {
+  if (CONFIG.ENABLE_FODE_CRM_PIPELINE !== true) {
+    return { attempted: false, ok: true, enabled: false, reason: "FEATURE_FLAG_DISABLED" };
+  }
+  var row = rowObj || {};
+  return {
+    attempted: false,
+    ok: true,
+    enabled: true,
+    crmStage: typeof deriveFodeCrmStageFromRow_ === 'function' ? clean_(deriveFodeCrmStageFromRow_(row) || "") : "",
+    shouldCreateInvoice: typeof shouldCreateFodeCrmInvoice_ === 'function' ? shouldCreateFodeCrmInvoice_(row) : false,
+    rowNumber: Number(rowNumber || 0)
+  };
+}
+
 function crm_syncOnPaymentVerified_(rowNumber, sh, idx) {
   var dbgId = newDebugId_();
   var sheet = sh || openDataSheet_();
