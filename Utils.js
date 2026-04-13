@@ -110,6 +110,27 @@ function safeErr_(e) {
   };
 }
 
+function requiredSystemSenderAlias_() {
+  return "fode_kia@kundu.ac";
+}
+
+function requiredSystemReplyTo_() {
+  return "fode@kundu.ac";
+}
+
+function assertRequiredSystemSenderAlias_() {
+  var alias = requiredSystemSenderAlias_();
+  var aliases = GmailApp.getAliases();
+  if (!Array.isArray(aliases) || aliases.indexOf(alias) === -1) {
+    throw new Error("Missing required alias: " + alias);
+  }
+  return {
+    from: alias,
+    replyTo: requiredSystemReplyTo_(),
+    aliases: aliases
+  };
+}
+
 function getScriptProp_(key) {
   var k = clean_(key);
   if (!k) return "";
@@ -1436,6 +1457,7 @@ function adminSendEmail_(to, subject, body, opts) {
   var fromAddr = safeStr_(CONFIG.EMAIL_FROM_ADDRESS || "");
   var replyTo = safeStr_(o.replyTo || CONFIG.EMAIL_REPLY_TO || "");
   var cc = safeStr_(o.cc || "");
+  var enforcedIdentity = null;
   var bcc = safeStr_(o.bcc || "");
   var htmlBody = safeStr_(o.htmlBody || "");
   var fromName = safeStr_(o.name || CONFIG.EMAIL_FROM_NAME || "");
@@ -1454,14 +1476,16 @@ function adminSendEmail_(to, subject, body, opts) {
       if (htmlBody) mailOpts.htmlBody = htmlBody;
       MailApp.sendEmail(toEmail, subj, textBody, mailOpts);
     } else {
+      enforcedIdentity = assertRequiredSystemSenderAlias_();
+      fromAddr = enforcedIdentity.from;
+      replyTo = enforcedIdentity.replyTo;
       var gmailOpts = {};
       if (fromName) gmailOpts.name = fromName;
-      if (replyTo) gmailOpts.replyTo = replyTo;
+      gmailOpts.replyTo = replyTo;
       if (cc) gmailOpts.cc = cc;
       if (bcc) gmailOpts.bcc = bcc;
       if (htmlBody) gmailOpts.htmlBody = htmlBody;
-      var senderMode = safeStr_(o.senderMode || CONFIG.EMAIL_SENDER_MODE || "DEFAULT").toUpperCase();
-      if (senderMode === "ALIAS" && fromAddr) gmailOpts.from = fromAddr;
+      gmailOpts.from = fromAddr;
       GmailApp.sendEmail(toEmail, subj, textBody, gmailOpts);
     }
     return { ok: true, from: fromAddr, replyTo: replyTo, cc: cc };
@@ -1998,3 +2022,7 @@ function writeApplicantContactTracking_(sheet, rowIndex, updates) {
   applyPatch_(sh, rowNum, patch);
   return true;
 }
+
+
+
+

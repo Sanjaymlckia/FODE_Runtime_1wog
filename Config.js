@@ -7,10 +7,10 @@
  */
 var CONFIG = {
   // Versioning (change control)
-VERSION: "r112",
-CHANGELOG_LAST: "r112: automated send runner and bounce ingestion scaffolding",
-DEPLOY_VERSION_NUMBER: 112,
-BUILD_LABEL: "r112 automated send runner and bounce ingestion scaffolding",
+VERSION: "r113",
+CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alignment",
+DEPLOY_VERSION_NUMBER: 113,
+BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
 
   // STAGING/PROD data mode routing (working sheet)
   DATA_MODE: "PROD", // "STAGING" | "PROD"
@@ -347,6 +347,7 @@ var SCHEMA = {
   VERIFIED_BY: "Verified_By",
   VERIFIED_AT: "Verified_At"
 };
+
 
 
 

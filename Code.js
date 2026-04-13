@@ -5837,8 +5837,9 @@ function buildCampaignEmailBody_(row, portalUrl, applicantId) {
 
 function campaignSendEmailGmail_(toEmail, subject, body, meta) {
   var trace = meta && typeof meta === "object" ? meta : {};
-  var alias = clean_(CONFIG.CAMPAIGN_GMAIL_ALIAS || "");
-  var replyTo = clean_(CONFIG.CAMPAIGN_REPLY_TO || "fode@kundu.ac");
+  var identity = null;
+  var alias = requiredSystemSenderAlias_();
+  var replyTo = requiredSystemReplyTo_();
   var to = clean_(toEmail || "");
   var traceBase = {
     applicantId: clean_(trace.applicantId || ""),
@@ -5848,17 +5849,16 @@ function campaignSendEmailGmail_(toEmail, subject, body, meta) {
     batchId: clean_(trace.batchId || trace.batchLabel || "")
   };
   if (!to) return { ok: false, error: "Missing recipient email" };
-  if (!alias) return { ok: false, error: "Missing campaign Gmail alias" };
   campaignLog_("GMAIL_ALIAS_LOOKUP_BEGIN", traceBase);
   try {
-    var aliases = GmailApp.getAliases();
-    if (Array.isArray(aliases) && aliases.indexOf(alias) === -1) {
-      campaignLog_("GMAIL_ALIAS_LOOKUP_END", Object.assign({}, traceBase, { aliasCount: aliases.length, aliasConfigured: false }));
-      return { ok: false, error: "Campaign alias not configured: " + alias };
-    }
-    campaignLog_("GMAIL_ALIAS_LOOKUP_END", Object.assign({}, traceBase, { aliasCount: Array.isArray(aliases) ? aliases.length : 0, aliasConfigured: true }));
-  } catch (_aliasErr) {
-    campaignLog_("GMAIL_ALIAS_LOOKUP_END", Object.assign({}, traceBase, { error: String(_aliasErr && _aliasErr.message ? _aliasErr.message : _aliasErr || "") }));
+    identity = assertRequiredSystemSenderAlias_();
+    alias = clean_(identity.from || alias);
+    replyTo = clean_(identity.replyTo || replyTo);
+    campaignLog_("GMAIL_ALIAS_LOOKUP_END", Object.assign({}, traceBase, { aliasCount: Array.isArray(identity.aliases) ? identity.aliases.length : 0, aliasConfigured: true }));
+  } catch (aliasErr) {
+    var aliasMessage = String(aliasErr && aliasErr.message ? aliasErr.message : aliasErr || "Missing required alias: fode_kia@kundu.ac");
+    campaignLog_("GMAIL_ALIAS_LOOKUP_END", Object.assign({}, traceBase, { aliasConfigured: false, error: aliasMessage }));
+    return { ok: false, error: aliasMessage, to: to, from: alias, replyTo: replyTo };
   }
   campaignLog_("GMAIL_SEND_BEGIN", traceBase);
   try {
@@ -5867,10 +5867,10 @@ function campaignSendEmailGmail_(toEmail, subject, body, meta) {
       replyTo: replyTo,
       name: clean_(CONFIG.EMAIL_FROM_NAME || "FODE Admissions") || "FODE Admissions"
     });
-    campaignLog_("GMAIL_SEND_END", Object.assign({}, traceBase, { ok: true }));
+    campaignLog_("GMAIL_SEND_END", Object.assign({}, traceBase, { ok: true, from: alias, replyTo: replyTo }));
     return { ok: true, to: to, from: alias, replyTo: replyTo };
   } catch (e) {
-    campaignLog_("GMAIL_SEND_END", Object.assign({}, traceBase, { ok: false, error: String(e && e.message ? e.message : e) }));
+    campaignLog_("GMAIL_SEND_END", Object.assign({}, traceBase, { ok: false, error: String(e && e.message ? e.message : e), from: alias, replyTo: replyTo }));
     return { ok: false, error: String(e && e.message ? e.message : e), to: to, from: alias, replyTo: replyTo };
   }
 }
@@ -7725,6 +7725,7 @@ function ingestRecentBounces_(opts) {
       reason: "BOUNCE_INGESTION_DISABLED"
     };
   }
+  assertRequiredSystemSenderAlias_();
   var ctx = campaignGetContext_();
   var sh = ctx.sheet;
   var lookup = buildBounceRowLookup_(ctx);
@@ -7896,9 +7897,16 @@ function campaign_getLegacyEmailSummary_() {
 function testCampaignGmailAuth() {
   return {
     ok: true,
-    aliases: GmailApp.getAliases()
+    aliases: GmailApp.getAliases(),
+    requiredAlias: requiredSystemSenderAlias(),
+    requiredReplyTo: requiredSystemReplyTo()
   };
 }
+
+
+
+
+
 
 
 
