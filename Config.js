@@ -7,10 +7,10 @@
  */
 var CONFIG = {
   // Versioning (change control)
-VERSION: "r109",
-CHANGELOG_LAST: "r109: add flagged FODE CRM pipeline scaffolding",
-DEPLOY_VERSION_NUMBER: 109,
-BUILD_LABEL: "r109 add flagged FODE CRM pipeline scaffolding",
+VERSION: "r112",
+CHANGELOG_LAST: "r112: automated send runner and bounce ingestion scaffolding",
+DEPLOY_VERSION_NUMBER: 112,
+BUILD_LABEL: "r112 automated send runner and bounce ingestion scaffolding",
 
   // STAGING/PROD data mode routing (working sheet)
   DATA_MODE: "PROD", // "STAGING" | "PROD"
@@ -81,6 +81,19 @@ BUILD_LABEL: "r109 add flagged FODE CRM pipeline scaffolding",
   CRM_STAGE_PAYMENT_VERIFIED: "Payment Verified",
   ENABLE_FODE_CRM_PIPELINE: false,
   FODE_CRM_PIPELINE_NAME: "FODE",
+  MAX_STAGE_BATCH_SIZE: 30,
+  DEFAULT_STAGE_BATCH_SIZE: 20,
+  ENABLE_AUTOMATED_STAGE_RUNNER: false,
+  DAILY_SEND_CAP: 300,
+  PER_RUN_BATCH_SIZE: 20,
+  MAX_PER_RUN_BATCH_SIZE: 25,
+  ENABLE_BOUNCE_INGESTION: false,
+  AUTOMATED_STAGE_RUNNER_STAGE: "INVITE_PENDING",
+  BOUNCE_INGESTION_LOOKBACK_DAYS: 14,
+  BOUNCE_INGESTION_MAX_MESSAGES: 200,
+  SCRIPT_PROP_AUTOSEND_DAILY_PREFIX: "FODE_AUTOSEND_DAILY::",
+  SCRIPT_PROP_AUTOSEND_LAST_RUN: "FODE_AUTOSEND_LAST_RUN",
+  SCRIPT_PROP_AUTOSEND_LAST_RESULT: "FODE_AUTOSEND_LAST_RESULT",
   CRM_STAGE_QUALIFIED: "Qualified",
   CRM_STAGE_PAYMENT_PENDING: "Payment Pending",
   CRM_STAGE_PAYMENT_CONFIRMED: "Payment Confirmed",
@@ -334,6 +347,8 @@ var SCHEMA = {
   VERIFIED_BY: "Verified_By",
   VERIFIED_AT: "Verified_At"
 };
+
+
 
 
 

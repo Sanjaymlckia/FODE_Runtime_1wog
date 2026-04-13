@@ -6743,6 +6743,358 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
   };
 }
 
+function automatedStageRunnerDailyPrefix_() {
+  return clean_(CONFIG.SCRIPT_PROP_AUTOSEND_DAILY_PREFIX || "FODE_AUTOSEND_DAILY::");
+}
+
+function automatedStageRunnerLastRunKey_() {
+  return clean_(CONFIG.SCRIPT_PROP_AUTOSEND_LAST_RUN || "FODE_AUTOSEND_LAST_RUN");
+}
+
+function automatedStageRunnerLastResultKey_() {
+  return clean_(CONFIG.SCRIPT_PROP_AUTOSEND_LAST_RESULT || "FODE_AUTOSEND_LAST_RESULT");
+}
+
+function automatedStageRunnerDateKey_(dateValue) {
+  var dt = dateValue instanceof Date ? new Date(dateValue.getTime()) : new Date(dateValue || new Date());
+  var tz = "GMT";
+  try {
+    tz = Session.getScriptTimeZone() || "GMT";
+  } catch (_err) {}
+  return Utilities.formatDate(dt, tz, "yyyy-MM-dd");
+}
+
+function automatedStageRunnerCounterKey_(dateValue) {
+  return automatedStageRunnerDailyPrefix_() + automatedStageRunnerDateKey_(dateValue);
+}
+
+function readAutomatedStageRunnerDailyCount_(dateValue) {
+  var key = automatedStageRunnerCounterKey_(dateValue);
+  var raw = "";
+  try {
+    raw = clean_(PropertiesService.getScriptProperties().getProperty(key) || "");
+  } catch (_err) {
+    raw = "";
+  }
+  var parsed = Math.max(0, Math.floor(Number(raw || 0)));
+  return {
+    key: key,
+    used: parsed
+  };
+}
+
+function getRemainingDailySendAllowance_(dateValue) {
+  var cap = Math.max(0, Math.floor(Number(CONFIG.DAILY_SEND_CAP || 0)));
+  var current = readAutomatedStageRunnerDailyCount_(dateValue);
+  return {
+    key: current.key,
+    cap: cap,
+    used: current.used,
+    remaining: Math.max(0, cap - current.used)
+  };
+}
+
+function incrementDailySendCount_(count, dateValue) {
+  var delta = Math.max(0, Math.floor(Number(count || 0)));
+  var current = readAutomatedStageRunnerDailyCount_(dateValue);
+  var used = current.used + delta;
+  PropertiesService.getScriptProperties().setProperty(current.key, String(used));
+  return {
+    key: current.key,
+    used: used,
+    cap: Math.max(0, Math.floor(Number(CONFIG.DAILY_SEND_CAP || 0))),
+    remaining: Math.max(0, Math.floor(Number(CONFIG.DAILY_SEND_CAP || 0)) - used)
+  };
+}
+
+function automatedStageRunnerActor_() {
+  var email = clean_((CONFIG.SUPER_ADMIN_EMAILS && CONFIG.SUPER_ADMIN_EMAILS[0]) || (CONFIG.ADMIN_EMAILS && CONFIG.ADMIN_EMAILS[0]) || "").toLowerCase();
+  var role = email && typeof getAdminRole_ === "function" ? clean_(getAdminRole_(email) || "") : "";
+  if (!role) role = email && CONFIG.ADMIN_ROLES ? clean_(CONFIG.ADMIN_ROLES[email] || "") : "";
+  role = String(role || (email ? "SUPER" : "")).toUpperCase();
+  var isAdmin = false;
+  if (email && typeof isAdmin_ === "function") isAdmin = isAdmin_(email);
+  return {
+    actorEmail: email,
+    actorRole: role,
+    isAdmin: !!isAdmin,
+    isSuper: role === "SUPER"
+  };
+}
+
+function shouldRunAutomatedStageBatch_() {
+  var enabled = CONFIG.ENABLE_AUTOMATED_STAGE_RUNNER === true;
+  var stage = typeof normalizeStageBatchStage_ === "function"
+    ? normalizeStageBatchStage_(CONFIG.AUTOMATED_STAGE_RUNNER_STAGE || "")
+    : clean_(CONFIG.AUTOMATED_STAGE_RUNNER_STAGE || "").toUpperCase();
+  var messageType = typeof getBatchMessageTypeForStage_ === "function" ? clean_(getBatchMessageTypeForStage_(stage) || "") : "";
+  var configuredBatchSize = Math.max(1, Math.floor(Number(CONFIG.PER_RUN_BATCH_SIZE || 20)));
+  var maxPerRun = Math.max(1, Math.floor(Number(CONFIG.MAX_PER_RUN_BATCH_SIZE || 25)));
+  var stageMax = Math.max(1, Math.floor(Number(CONFIG.MAX_STAGE_BATCH_SIZE || maxPerRun || 25)));
+  var safeMax = Math.max(1, Math.min(maxPerRun, stageMax));
+  return {
+    enabled: enabled,
+    ok: enabled && !!stage && !!messageType,
+    stage: stage,
+    messageType: messageType,
+    perRunBatchSize: Math.max(1, Math.min(configuredBatchSize, safeMax)),
+    maxPerRunBatchSize: safeMax,
+    reason: !enabled ? "AUTOMATION_DISABLED" : (!stage ? "UNSUPPORTED_STAGE" : (!messageType ? "STAGE_NOT_SENDABLE" : ""))
+  };
+}
+
+function automatedStageRunnerFinalize_(summary) {
+  var out = summary && typeof summary === "object" ? summary : {};
+  var nowIso = new Date().toISOString();
+  out.writtenAt = clean_(out.writtenAt || nowIso);
+  try {
+    var props = PropertiesService.getScriptProperties();
+    props.setProperty(automatedStageRunnerLastRunKey_(), out.writtenAt);
+    props.setProperty(automatedStageRunnerLastResultKey_(), JSON.stringify(out));
+  } catch (_err) {}
+  try {
+    campaignLog_("AUTOMATED_STAGE_RUNNER", out);
+  } catch (_err2) {}
+  return out;
+}
+
+function runAutomatedStageBatchChunk_(opts) {
+  var options = opts && typeof opts === "object" ? opts : {};
+  var now = new Date();
+  var requestId = clean_(options.requestId || newDebugId_());
+  var gate = shouldRunAutomatedStageBatch_();
+  if (!gate.enabled && options.force !== true) {
+    return automatedStageRunnerFinalize_({
+      ok: true,
+      action: "automated_stage_batch",
+      result: "SKIPPED",
+      reason: gate.reason || "AUTOMATION_DISABLED",
+      requestId: requestId,
+      stage: clean_(gate.stage || ""),
+      messageType: clean_(gate.messageType || ""),
+      source: clean_(options.source || "MANUAL")
+    });
+  }
+  if (!gate.stage || !gate.messageType) {
+    return automatedStageRunnerFinalize_({
+      ok: false,
+      action: "automated_stage_batch",
+      result: "ERROR",
+      reason: gate.reason || "UNSUPPORTED_STAGE",
+      requestId: requestId,
+      stage: clean_(gate.stage || ""),
+      messageType: clean_(gate.messageType || ""),
+      source: clean_(options.source || "MANUAL")
+    });
+  }
+  var allowance = getRemainingDailySendAllowance_(now);
+  if (!(allowance.remaining > 0)) {
+    return automatedStageRunnerFinalize_({
+      ok: true,
+      action: "automated_stage_batch",
+      result: "SKIPPED",
+      reason: "DAILY_CAP_REACHED",
+      requestId: requestId,
+      stage: gate.stage,
+      messageType: gate.messageType,
+      source: clean_(options.source || "MANUAL"),
+      dailyCap: allowance.cap,
+      dailyUsed: allowance.used,
+      remainingDailyAllowance: allowance.remaining
+    });
+  }
+  var effectiveRunSize = Math.max(0, Math.min(gate.perRunBatchSize, gate.maxPerRunBatchSize, allowance.remaining));
+  if (!(effectiveRunSize > 0)) {
+    return automatedStageRunnerFinalize_({
+      ok: true,
+      action: "automated_stage_batch",
+      result: "SKIPPED",
+      reason: "NO_RUN_ALLOWANCE",
+      requestId: requestId,
+      stage: gate.stage,
+      messageType: gate.messageType,
+      source: clean_(options.source || "MANUAL"),
+      dailyCap: allowance.cap,
+      dailyUsed: allowance.used,
+      remainingDailyAllowance: allowance.remaining
+    });
+  }
+  var actor = automatedStageRunnerActor_();
+  if (!actor.isAdmin) {
+    return automatedStageRunnerFinalize_({
+      ok: false,
+      action: "automated_stage_batch",
+      result: "ERROR",
+      reason: "RUNNER_ACTOR_INVALID",
+      requestId: requestId,
+      stage: gate.stage,
+      messageType: gate.messageType,
+      source: clean_(options.source || "MANUAL")
+    });
+  }
+  var bounceSummary = null;
+  if (CONFIG.ENABLE_BOUNCE_INGESTION === true || options.forceBounceIngestion === true) {
+    bounceSummary = ingestRecentBounces_({
+      source: clean_(options.source || "MANUAL"),
+      force: options.forceBounceIngestion === true
+    });
+  }
+  var cohort = collectStageBatchCohort_(gate.stage, effectiveRunSize, 0, {
+    messageType: gate.messageType,
+    actorEmail: actor.actorEmail,
+    actorRole: actor.actorRole,
+    debugId: requestId,
+    requestId: requestId
+  });
+  var candidates = Array.isArray(cohort && cohort.candidates) ? cohort.candidates : [];
+  if (!candidates.length) {
+    return automatedStageRunnerFinalize_({
+      ok: true,
+      action: "automated_stage_batch",
+      result: "EMPTY",
+      reason: clean_(cohort && cohort.emptyReason || "NO_ELIGIBLE_ROWS"),
+      requestId: requestId,
+      stage: gate.stage,
+      messageType: gate.messageType,
+      source: clean_(options.source || "MANUAL"),
+      dailyCap: allowance.cap,
+      dailyUsed: allowance.used,
+      remainingDailyAllowance: allowance.remaining,
+      effectiveRunSize: effectiveRunSize,
+      totalInStage: Number(cohort && cohort.totalInStage || 0),
+      eligibleUnsentFound: Number(cohort && cohort.eligibleUnsentTotal || 0),
+      bounceSummary: bounceSummary
+    });
+  }
+  var out = {
+    ok: true,
+    action: "automated_stage_batch",
+    result: "COMPLETE",
+    reason: "",
+    requestId: requestId,
+    stage: gate.stage,
+    messageType: gate.messageType,
+    source: clean_(options.source || "MANUAL"),
+    triggerCadenceMinutes: 10,
+    dailyCap: allowance.cap,
+    dailyUsedBefore: allowance.used,
+    remainingDailyAllowanceBefore: allowance.remaining,
+    effectiveRunSize: effectiveRunSize,
+    totalInStage: Number(cohort && cohort.totalInStage || 0),
+    eligibleUnsentFound: Number(cohort && cohort.eligibleUnsentTotal || 0),
+    attempted: 0,
+    sent: 0,
+    blocked: 0,
+    failed: 0,
+    blockedByReason: {},
+    sentApplicantIdsSample: [],
+    bounceSummary: bounceSummary
+  };
+  var batchLabel = "STAGE_SEND::" + gate.stage + "::" + requestId;
+  for (var i = 0; i < candidates.length; i++) {
+    var candidate = candidates[i] && typeof candidates[i] === "object" ? candidates[i] : {};
+    var applicantId = clean_(candidate.applicantId || "");
+    if (!applicantId) continue;
+    out.attempted++;
+    var sendResult = sendApplicantMessage_(applicantId, gate.messageType, {
+      actorEmail: actor.actorEmail,
+      actorRole: actor.actorRole,
+      batchLabel: batchLabel,
+      debugId: requestId
+    });
+    var resultType = clean_(sendResult && sendResult.result || "").toUpperCase();
+    if (resultType === "SENT") {
+      out.sent++;
+      pushStageBatchSample_(out.sentApplicantIdsSample, applicantId);
+    } else if (resultType === "BLOCKED") {
+      out.blocked++;
+      incrementStageBatchReason_(out.blockedByReason, sendResult && (sendResult.blockCode || sendResult.code || "BLOCKED"));
+    } else {
+      out.failed++;
+    }
+  }
+  var dailyAfter = out.sent > 0 ? incrementDailySendCount_(out.sent, now) : allowance;
+  out.dailyUsedAfter = Number(dailyAfter.used || allowance.used || 0);
+  out.remainingDailyAllowanceAfter = Number(dailyAfter.remaining != null ? dailyAfter.remaining : allowance.remaining);
+  out.processedCount = Number(out.attempted || 0);
+  out.remainingEligibleEstimate = Math.max(0, Number(cohort && cohort.eligibleUnsentTotal || 0) - out.processedCount);
+  out.message = out.remainingEligibleEstimate > 0
+    ? "Automated chunk completed safely. Next trigger run can continue from row truth."
+    : "Automated chunk completed safely.";
+  return automatedStageRunnerFinalize_(out);
+}
+
+function runAutomatedStageBatchWithLock_(opts) {
+  var options = opts && typeof opts === "object" ? opts : {};
+  var requestId = clean_(options.requestId || newDebugId_());
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) {
+    return automatedStageRunnerFinalize_({
+      ok: true,
+      action: "automated_stage_batch",
+      result: "SKIPPED",
+      reason: "LOCK_UNAVAILABLE",
+      requestId: requestId,
+      stage: clean_(CONFIG.AUTOMATED_STAGE_RUNNER_STAGE || ""),
+      source: clean_(options.source || "MANUAL")
+    });
+  }
+  try {
+    return runAutomatedStageBatchChunk_(Object.assign({}, options, { requestId: requestId }));
+  } finally {
+    try { lock.releaseLock(); } catch (_err) {}
+  }
+}
+
+function runAutomatedStageBatchScheduled() {
+  return runAutomatedStageBatchWithLock_({ source: "TRIGGER" });
+}
+
+function getAutomatedStageRunnerTriggerFunctionName_() {
+  return "runAutomatedStageBatchScheduled";
+}
+
+function ensureAutomatedStageRunnerTrigger_() {
+  var fnName = getAutomatedStageRunnerTriggerFunctionName_();
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    var trigger = triggers[i];
+    if (clean_(trigger.getHandlerFunction() || "") === fnName) {
+      return {
+        ok: true,
+        created: false,
+        functionName: fnName,
+        cadenceMinutes: 10
+      };
+    }
+  }
+  ScriptApp.newTrigger(fnName).timeBased().everyMinutes(10).create();
+  return {
+    ok: true,
+    created: true,
+    functionName: fnName,
+    cadenceMinutes: 10
+  };
+}
+
+function removeAutomatedStageRunnerTrigger_() {
+  var fnName = getAutomatedStageRunnerTriggerFunctionName_();
+  var triggers = ScriptApp.getProjectTriggers();
+  var removed = 0;
+  for (var i = 0; i < triggers.length; i++) {
+    var trigger = triggers[i];
+    if (clean_(trigger.getHandlerFunction() || "") !== fnName) continue;
+    ScriptApp.deleteTrigger(trigger);
+    removed++;
+  }
+  return {
+    ok: true,
+    functionName: fnName,
+    removed: removed,
+    cadenceMinutes: 10
+  };
+}
+
 function admin_getApplicantCommDerived_json(payload) {
   var p = payload && typeof payload === "object" ? payload : {};
   var adminEmail = typeof getActiveUserEmail_ === 'function' ? clean_(getActiveUserEmail_() || "") : clean_((typeof getCallerEmail_ === 'function' ? getCallerEmail_() : "") || "");
@@ -7308,31 +7660,90 @@ function findBounceApplicantMatch_(lookup, email) {
   return null;
 }
 
-function buildBounceRowPatch_(rowObj, reason) {
+function normalizeBounceClassification_(value) {
+  var normalized = clean_(value || "").toUpperCase();
+  return ["NONE", "TEMPORARY", "HARD", "INVALID", "BLOCKED"].indexOf(normalized) >= 0 ? normalized : "NONE";
+}
+
+function normalizeBounceReason_(classification, reason) {
+  var normalizedClass = normalizeBounceClassification_(classification);
+  var normalizedReason = clean_(reason || "");
+  if (!normalizedReason) return normalizedClass;
+  return normalizedClass + ": " + normalizedReason;
+}
+
+function classifyBounceResult_(subject, plainBody, extractedReason) {
+  var reason = clean_(extractedReason || campaignExtractBounceReason_(plainBody, subject) || "");
+  var blob = [clean_(subject || ""), reason, String(plainBody || "")].join("\n").toLowerCase();
+  if (!campaignIsBounceMessage_(blob)) return { classification: "NONE", reason: reason };
+  if (/user unknown|unknown user|address not found|does not exist|no such user|invalid recipient|bad destination mailbox address|recipient address rejected|mailbox unavailable/i.test(blob)) {
+    return { classification: "INVALID", reason: reason };
+  }
+  if (/message blocked|blocked|suppressed|policy|reputation|spam|access denied|denied|unauthorized/i.test(blob)) {
+    return { classification: "BLOCKED", reason: reason };
+  }
+  if (/quota exceeded|mailbox full|temporar|try again later|deferred|greylist|rate limit|resources temporarily unavailable|status:\s*4\./i.test(blob)) {
+    return { classification: "TEMPORARY", reason: reason };
+  }
+  if (/status:\s*5\.|\b550\b|\b551\b|\b552\b|\b553\b|\b554\b|undeliverable|delivery has failed|delivery failed|permanent/i.test(blob)) {
+    return { classification: "HARD", reason: reason };
+  }
+  return { classification: "HARD", reason: reason };
+}
+
+function applyBounceStateToRow_(rowObj, classification, reason) {
   var row = rowObj || {};
+  var normalizedClass = normalizeBounceClassification_(classification);
+  var normalizedReason = normalizeBounceReason_(normalizedClass, reason);
   var patch = {};
   var currentReason = clean_(row.Email_Bounce_Reason || "");
   var currentStatus = normalizeEmailStatus_(row.Email_Status || "");
   var nextActionDate = clean_(row.Email_Next_Action_Date || "");
-  if (!isCampaignBounceFlagTrue_(row.Email_Bounce_Flag)) patch.Email_Bounce_Flag = "YES";
-  if (clean_(reason || "") && clean_(reason || "") !== currentReason) patch.Email_Bounce_Reason = clean_(reason || "");
-  if (currentStatus !== "BOUNCED") patch.Email_Status = "BOUNCED";
-  if (nextActionDate) patch.Email_Next_Action_Date = "";
+  if (normalizedClass === "TEMPORARY") {
+    var retryAt = computeNextActionDate_(1, new Date());
+    if (normalizedReason && normalizedReason !== currentReason) patch.Email_Bounce_Reason = normalizedReason;
+    if (retryAt !== nextActionDate) patch.Email_Next_Action_Date = retryAt;
+    return patch;
+  }
+  if (normalizedClass === "HARD" || normalizedClass === "INVALID" || normalizedClass === "BLOCKED") {
+    if (!isCampaignBounceFlagTrue_(row.Email_Bounce_Flag)) patch.Email_Bounce_Flag = "YES";
+    if (normalizedReason && normalizedReason !== currentReason) patch.Email_Bounce_Reason = normalizedReason;
+    if (currentStatus !== "BOUNCED") patch.Email_Status = "BOUNCED";
+    if (nextActionDate) patch.Email_Next_Action_Date = "";
+  }
   return patch;
 }
 
-function admin_scanBounces_() {
+function ingestRecentBounces_(opts) {
+  var options = opts && typeof opts === "object" ? opts : {};
+  var enabled = CONFIG.ENABLE_BOUNCE_INGESTION === true || options.force === true;
+  if (!enabled) {
+    return {
+      ok: true,
+      action: "bounce_ingestion",
+      result: "SKIPPED",
+      reason: "BOUNCE_INGESTION_DISABLED"
+    };
+  }
   var ctx = campaignGetContext_();
   var sh = ctx.sheet;
   var lookup = buildBounceRowLookup_(ctx);
   var processedIds = readBounceScanProcessedIds_();
   var cacheDirty = false;
-  var query = 'from:(mailer-daemon@google.com OR mailer-daemon@googlemail.com) newer_than:14d';
+  var lookbackDays = Math.max(1, Math.floor(Number(CONFIG.BOUNCE_INGESTION_LOOKBACK_DAYS || 14)));
+  var maxMessages = Math.max(1, Math.floor(Number(CONFIG.BOUNCE_INGESTION_MAX_MESSAGES || 200)));
+  var query = 'from:(mailer-daemon@google.com OR mailer-daemon@googlemail.com) newer_than:' + lookbackDays + 'd';
   var threads = GmailApp.search(query, 0, 200);
   var scanned = 0;
   var matched = 0;
   var updated = 0;
-  var maxMessages = 200;
+  var countsByClassification = {
+    NONE: 0,
+    TEMPORARY: 0,
+    HARD: 0,
+    INVALID: 0,
+    BLOCKED: 0
+  };
   var nowIso = new Date().toISOString();
   outer:
   for (var t = 0; t < threads.length; t++) {
@@ -7355,11 +7766,13 @@ function admin_scanBounces_() {
       scanned++;
       var emailMatches = campaignExtractBounceEmails_(blob);
       var email = emailMatches.length ? clean_(emailMatches[0] || "").toLowerCase() : "";
-      var reason = campaignExtractBounceReason_(plainBody, subject);
+      var bounce = classifyBounceResult_(subject, plainBody, campaignExtractBounceReason_(plainBody, subject));
+      var classification = normalizeBounceClassification_(bounce && bounce.classification || "NONE");
+      countsByClassification[classification] = Number(countsByClassification[classification] || 0) + 1;
       var matchedRow = findBounceApplicantMatch_(lookup, email);
       if (matchedRow) {
         matched++;
-        var patch = buildBounceRowPatch_(matchedRow.row, reason);
+        var patch = applyBounceStateToRow_(matchedRow.row, classification, bounce && bounce.reason || "");
         if (Object.keys(patch).length) {
           applyPatch_(sh, matchedRow.rowNumber, patch);
           updated++;
@@ -7378,16 +7791,26 @@ function admin_scanBounces_() {
   if (cacheDirty) writeBounceScanProcessedIds_(processedIds);
   var summary = {
     ok: true,
+    action: "bounce_ingestion",
+    result: "COMPLETE",
     scanned: scanned,
     matched: matched,
-    updated: updated
+    updated: updated,
+    countsByClassification: countsByClassification,
+    lookbackDays: lookbackDays,
+    maxMessages: maxMessages,
+    source: clean_(options.source || "MANUAL")
   };
   campaignLog_("CAMPAIGN_BOUNCE_SUMMARY", summary);
   return summary;
 }
 
+function admin_scanBounces_(opts) {
+  return ingestRecentBounces_(Object.assign({}, opts || {}, { force: true, source: clean_(opts && opts.source || "ADMIN") }));
+}
+
 function campaign_processBounces_() {
-  return admin_scanBounces_();
+  return ingestRecentBounces_({ source: "CAMPAIGN" });
 }
 
 function campaign_sendLegacyFollowups_(limit) {
@@ -7476,5 +7899,7 @@ function testCampaignGmailAuth() {
     aliases: GmailApp.getAliases()
   };
 }
+
+
 
 

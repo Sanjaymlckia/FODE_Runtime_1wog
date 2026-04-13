@@ -336,6 +336,8 @@ function admin_getApplicantDetail(payload) {
       Parent_Email_Corrected: clean_(row[idx.Parent_Email_Corrected - 1]),
       Email_Status: idx.Email_Status ? clean_(row[idx.Email_Status - 1]) : "",
       Email_Bounce_Flag: idx.Email_Bounce_Flag ? clean_(row[idx.Email_Bounce_Flag - 1]) : "",
+      Email_Bounce_Reason: idx.Email_Bounce_Reason ? clean_(row[idx.Email_Bounce_Reason - 1]) : "",
+      Email_Next_Action_Date: idx.Email_Next_Action_Date ? clean_(row[idx.Email_Next_Action_Date - 1]) : "",
       Last_Contacted_At: idx.Last_Contacted_At ? clean_(row[idx.Last_Contacted_At - 1]) : "",
       Last_Contact_Type: idx.Last_Contact_Type ? clean_(row[idx.Last_Contact_Type - 1]) : "",
       Last_Contact_By: idx.Last_Contact_By ? clean_(row[idx.Last_Contact_By - 1]) : "",
@@ -2915,6 +2917,38 @@ function admin_runBounceScan(payload) {
   });
 }
 
+function admin_runAutomatedStageBatchOnce(payload) {
+  return withEnvelope_("admin_runAutomatedStageBatchOnce", function () {
+    var adminEmail = getActiveUserEmail_();
+    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    requireSuperAdmin_(adminEmail);
+    var p = payload && typeof payload === "object" ? payload : {};
+    return runAutomatedStageBatchWithLock_({
+      source: "ADMIN",
+      force: p.force === true,
+      forceBounceIngestion: p.forceBounceIngestion === true
+    });
+  });
+}
+
+function admin_installAutomatedStageRunnerTrigger(payload) {
+  return withEnvelope_("admin_installAutomatedStageRunnerTrigger", function () {
+    var adminEmail = getActiveUserEmail_();
+    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    requireSuperAdmin_(adminEmail);
+    return ensureAutomatedStageRunnerTrigger_();
+  });
+}
+
+function admin_removeAutomatedStageRunnerTrigger(payload) {
+  return withEnvelope_("admin_removeAutomatedStageRunnerTrigger", function () {
+    var adminEmail = getActiveUserEmail_();
+    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    requireSuperAdmin_(adminEmail);
+    return removeAutomatedStageRunnerTrigger_();
+  });
+}
+
 function admin_campaignSendLegacyFollowups(payload) {
   return withEnvelope_("admin_campaignSendLegacyFollowups", function () {
     var adminEmail = getActiveUserEmail_();
@@ -2993,14 +3027,30 @@ function isBatchSendableStage_(stage) {
 
 function clampStageBatchLimit_(rawLimit) {
   var n = Math.floor(Number(rawLimit || 0));
-  if (!(n > 0)) return 50;
-  return Math.max(1, Math.min(100, n));
+  var safeDefault = Math.max(1, Number(CONFIG.DEFAULT_STAGE_BATCH_SIZE || 20));
+  var safeMax = Math.max(1, Number(CONFIG.MAX_STAGE_BATCH_SIZE || 30));
+  if (!(n > 0)) return Math.min(safeDefault, safeMax);
+  return Math.max(1, Math.min(safeMax, n));
 }
 
 function clampStageBatchOffset_(rawOffset) {
   var n = Math.floor(Number(rawOffset || 0));
   if (!(n >= 0)) return 0;
   return Math.max(0, n);
+}
+
+function stageBatchLimitMeta_(rawLimit) {
+  var requested = Math.floor(Number(rawLimit || 0));
+  var effective = clampStageBatchLimit_(rawLimit);
+  var safeMax = Math.max(1, Number(CONFIG.MAX_STAGE_BATCH_SIZE || 30));
+  var clamped = requested > safeMax;
+  return {
+    requested: requested,
+    effective: effective,
+    safeMax: safeMax,
+    clamped: clamped,
+    warning: clamped ? ("Batch size reduced to safe limit (" + safeMax + ") to prevent timeout") : ""
+  };
 }
 
 function getStageBatchPreviewCacheKey_(adminEmail) {
@@ -3141,6 +3191,7 @@ function stageBatchPreviewResponse_(data) {
   var ok = src.ok === false ? false : true;
   var emptyReason = clean_(src.emptyReason || "");
   var message = clean_(src.message || "");
+  var warning = clean_(src.warning || "");
   if (!message) {
     if (ok && emptyReason) message = emptyReason;
     else if (ok) message = "Preview ready.";
@@ -3186,6 +3237,10 @@ function stageBatchPreviewResponse_(data) {
     blockedByReason: src.blockedByReason || {},
     eligibleApplicantIdsSample: Array.isArray(src.eligibleApplicantIdsSample) ? src.eligibleApplicantIdsSample.slice(0, 10) : [],
     blockedApplicantIdsSample: Array.isArray(src.blockedApplicantIdsSample) ? src.blockedApplicantIdsSample.slice(0, 10) : [],
+    warning: warning,
+    warnings: Array.isArray(src.warnings) ? src.warnings.slice(0, 10).map(function (msg) { return clean_(msg || ""); }).filter(function (msg) { return !!msg; }) : (warning ? [warning] : []),
+    processedCount: Number(src.processedCount || 0),
+    remainingEligibleEstimate: Number(src.remainingEligibleEstimate || 0),
     priority: clean_(src.priority || ""),
     blockCode: clean_(src.blockCode || src.code || ""),
     blockReason: clean_(src.blockReason || src.error || ""),
@@ -3411,7 +3466,8 @@ function admin_previewStageBatch(payload) {
       var p = payload && typeof payload === "object" ? payload : {};
       var actor = resolveAdminCommActor_(p);
       stage = normalizeStageBatchStage_(p.stage || "");
-      limit = clampStageBatchLimit_(p.limit);
+      limitMeta = stageBatchLimitMeta_(p.limit);
+      limit = limitMeta.effective;
       requestedOffset = clampStageBatchOffset_(p.offset);
       messageType = getBatchMessageTypeForStage_(stage);
       if (!stage) {
@@ -3461,7 +3517,8 @@ function admin_previewStageBatch(payload) {
       var emptyReason = clean_(cohort.emptyReason || "");
       var out = stageBatchPreviewResponse_({
         ok: true,
-        message: emptyReason || "Preview ready.",
+        message: emptyReason || (limitMeta.warning ? ("Preview ready. " + limitMeta.warning) : "Preview ready."),
+        warning: limitMeta.warning,
         stage: stage,
         priority: priority,
         requestId: requestId,
@@ -3472,6 +3529,8 @@ function admin_previewStageBatch(payload) {
         totalInStage: Number(cohort.totalInStage || 0),
         eligibleUnsentFound: Number(cohort.eligibleUnsentTotal || 0),
         previewLimit: Number(cohort.limit || limit),
+        processedCount: 0,
+        remainingEligibleEstimate: Math.max(0, Number(cohort.eligibleUnsentTotal || 0) - Number((cohort.candidates || []).length || 0)),
         requestedOffset: requestedOffset,
         offset: Number(cohort.offset || 0),
         offsetApplied: cohort.offsetApplied === true,
@@ -3557,7 +3616,8 @@ function admin_sendStageBatch(payload) {
       var p = payload && typeof payload === "object" ? payload : {};
       var actor = resolveAdminCommActor_(p);
       stage = normalizeStageBatchStage_(p.stage || "");
-      var limit = clampStageBatchLimit_(p.limit);
+      var limitMeta = stageBatchLimitMeta_(p.limit);
+      var limit = limitMeta.effective;
       var requestedOffset = clampStageBatchOffset_(p.offset);
       var previewRequestId = clean_(p.previewRequestId || "");
       if (p.confirmSend !== true) {
@@ -3589,6 +3649,7 @@ function admin_sendStageBatch(payload) {
       var cachedOffset = Number(previewGate && previewGate.offset || 0);
       var cachedLimit = Number(previewGate && previewGate.limit || 0);
       var cachedCandidateCount = Number(previewGate && previewGate.candidateCount || 0);
+      var cachedEligibleUnsentFound = Number(previewGate && previewGate.eligibleUnsentFound || 0);
       var cachedCandidateIdsSample = Array.isArray(previewGate && previewGate.candidateIds)
         ? previewGate.candidateIds.map(function (id) { return clean_(id || ""); }).filter(function (id) { return !!id; }).slice(0, 5)
         : [];
@@ -3748,6 +3809,8 @@ function admin_sendStageBatch(payload) {
         totalInStageAtSend: 0,
         eligibleUnsentFoundAtSend: previewCandidateIds.length,
         sendLimit: limit,
+        warning: limitMeta.warning,
+        warnings: limitMeta.warning ? [limitMeta.warning] : [],
         requestedOffset: requestedOffset,
         offset: requestedOffset,
         offsetApplied: false,
@@ -3760,7 +3823,9 @@ function admin_sendStageBatch(payload) {
         blocked: 0,
         failed: 0,
         blockedByReason: {},
-        sentApplicantIdsSample: []
+        sentApplicantIdsSample: [],
+        processedCount: 0,
+        remainingEligibleEstimate: 0
       };
       var batchLabel = "STAGE_SEND::" + stage + "::" + requestId;
       previewCandidateIds.forEach(function (applicantId, index) {
@@ -3816,6 +3881,12 @@ function admin_sendStageBatch(payload) {
         failedExcluded: out.failedExcluded,
         blockedByReason: out.blockedByReason
       });
+      out.processedCount = Number(out.attempted || 0);
+      out.remainingEligibleEstimate = Math.max(0, cachedEligibleUnsentFound - out.processedCount);
+      out.message = out.remainingEligibleEstimate > 0
+        ? "Batch completed safely. Re-run to continue remaining records."
+        : "Batch completed safely.";
+      if (limitMeta.warning) out.message += " " + limitMeta.warning;
       stageBatchLogSummary_("STAGE_SEND_COMPLETE", {
         requestId: requestId,
         stage: stage,
@@ -4004,6 +4075,9 @@ function adminDryRunFirst50LegacyInvites() {
   console.log('DRYRUN_50 ' + JSON.stringify(summary));
   return summary;
 }
+
+
+
 
 
 
