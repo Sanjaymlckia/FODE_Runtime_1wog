@@ -153,7 +153,7 @@ function getStudentUrlWarning_() {
 /******************** ADMIN API ********************/
 
 function admin_searchApplicants(payload) {
-  var adminEmail = getActiveUserEmail_();
+  var adminEmail = getCallerEmail_();
   if (!isAdmin_(adminEmail)) throw new Error("Access denied");
 
   payload = payload || {};
