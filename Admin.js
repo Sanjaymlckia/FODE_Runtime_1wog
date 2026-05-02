@@ -528,12 +528,8 @@ function admin_getPortalLink(payload) {
 }
 
 /**
- * REWORKED:
- * - Generates a new plain secret (used in the portal link as `s=...`)
- * - Stores ONLY:
- *   - PortalTokenHash
- *   - PortalTokenIssuedAt
- * - Updates Doc_Last_Verified_At / By
+ * Resets the portal secret using the shared PortalSecrets helper layer.
+ * Existing schema only: no columns are created here.
  */
 function admin_resetPortalLink(payload) {
   payload = payload || {};
@@ -558,11 +554,17 @@ function admin_resetPortalLink(payload) {
     var applicantId = clean_(rowObj.ApplicantID || "");
     if (!applicantId) return { ok: false, code: "PORTAL_RESET_ERROR", debugId: debugId, message: "Link generation failed" };
 
-    var newSecret = Utilities.getUuid();
-    var setRes = setPortalSecretForApplicant_(applicantId, newSecret);
-    if (!setRes || setRes.ok !== true) return { ok: false, code: "PORTAL_RESET_ERROR", debugId: debugId, message: "Link generation failed" };
+    var fullName = (clean_(rowObj.First_Name || "") + " " + clean_(rowObj.Last_Name || "")).trim();
+    var email = clean_(rowObj.Parent_Email_Corrected || rowObj.Parent_Email || "");
+    var setRes = resetPortalSecretForApplicant_(applicantId, {
+      email: email,
+      fullName: fullName,
+      admissionsSheet: sh,
+      rowNumber: rowNumber
+    });
+    if (!setRes || setRes.ok !== true || !clean_(setRes.secretPlain || setRes.secret || "")) return { ok: false, code: "PORTAL_RESET_ERROR", debugId: debugId, message: "Link generation failed" };
 
-    var portalUrl = buildStudentPortalUrl_(applicantId, newSecret);
+    var portalUrl = buildStudentPortalUrl_(applicantId, clean_(setRes.secretPlain || setRes.secret || ""));
     logAdminEvent_("PORTAL_URL_RESET", {
       operatorEmail: adminEmail || "",
       applicantId: applicantId,

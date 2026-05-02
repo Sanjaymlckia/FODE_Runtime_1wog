@@ -3417,84 +3417,324 @@ function htmlOutput_(html) {
 }
 
 /******************** LOOKUP ********************/
-function resolvePortalSecretColumnIndex_(idx) {
+function getPortalSecretsStoreConfig_(opts) {
+  var options = (opts && typeof opts === "object") ? opts : {};
+  var source = clean_(options.source || "").toLowerCase();
+  var sheetId = "";
+  var tabName = "";
+  if (clean_(options.spreadsheetId || "")) sheetId = clean_(options.spreadsheetId || "");
+  else if (clean_(options.sheetId || "")) sheetId = clean_(options.sheetId || "");
+  try {
+    if (!sheetId && source === "config" && typeof CONFIG !== "undefined") sheetId = clean_(CONFIG.PORTAL_SECRETS_SHEET_ID || "");
+  } catch (_cfgOnlyIdErr) {}
+  try {
+    if (!sheetId && source !== "config" && typeof PORTAL_SECRETS_SPREADSHEET_ID !== "undefined") sheetId = clean_(PORTAL_SECRETS_SPREADSHEET_ID || "");
+  } catch (_idErr) {}
+  try {
+    if (!sheetId && source !== "config" && typeof CONFIG !== "undefined") sheetId = clean_(CONFIG.PORTAL_SECRETS_SHEET_ID || "");
+  } catch (_cfgIdErr) {}
+  if (clean_(options.tabName || "")) tabName = clean_(options.tabName || "");
+  try {
+    if (!tabName && source === "config" && typeof CONFIG !== "undefined") tabName = clean_(CONFIG.PORTAL_SECRETS_TAB || "");
+  } catch (_cfgOnlyTabErr) {}
+  try {
+    if (!tabName && source !== "config" && typeof PORTAL_SECRETS_TAB !== "undefined") tabName = clean_(PORTAL_SECRETS_TAB || "");
+  } catch (_tabErr) {}
+  try {
+    if (!tabName && source !== "config" && typeof CONFIG !== "undefined") tabName = clean_(CONFIG.PORTAL_SECRETS_TAB || "");
+  } catch (_cfgTabErr) {}
+  return {
+    sheetId: sheetId,
+    tabName: tabName || "PortalSecrets"
+  };
+}
+
+function openPortalSecretsExistingSheet_(debugId, opts) {
+  var dbg = clean_(debugId || newDebugId_());
+  var cfg = getPortalSecretsStoreConfig_(opts);
+  if (!cfg.sheetId) return { ok: false, code: "SECRETS_CONFIG_MISSING", debugId: dbg };
+  try {
+    var ss = SpreadsheetApp.openById(cfg.sheetId);
+    var sh = ss.getSheetByName(cfg.tabName);
+    if (!sh) return { ok: false, code: "SECRETS_TAB_NOT_FOUND", debugId: dbg };
+    return { ok: true, sheet: sh, debugId: dbg };
+  } catch (e) {
+    return {
+      ok: false,
+      code: "SECRET_LOOKUP_FAILED",
+      debugId: dbg,
+      error: clean_(stringifyGsError_(e) || String(e && e.message ? e.message : e))
+    };
+  }
+}
+
+function resolvePortalSecretPlainColumnIndex_(idx) {
   var map = idx || {};
-  if (map.Secret) return map.Secret;
   if (map.Secret_Plain) return map.Secret_Plain;
-  if (map.Secret_Hash) return map.Secret_Hash;
+  if (map.Secret) return map.Secret;
   return 0;
 }
 
-function getPortalSecretForApplicant_(applicantId) {
+function resolvePortalSecretColumnIndex_(idx) {
+  var map = idx || {};
+  return resolvePortalSecretPlainColumnIndex_(map) || map.Secret_Hash || 0;
+}
+
+function buildPortalSecretHeaderIndex_(headers) {
+  var idx = {};
+  var values = headers || [];
+  for (var i = 0; i < values.length; i++) {
+    var h = clean_(values[i]);
+    if (h) idx[h] = i + 1;
+  }
+  return idx;
+}
+
+function normalizePortalSecretRow_(idx, row, rowIndex) {
+  var map = idx || {};
+  var values = row || [];
+  var plainCol = resolvePortalSecretPlainColumnIndex_(map);
+  var issuedCol = map.Issued_At || map.IssuedAt || map.PortalTokenIssuedAt || map.Last_Rotated_At || map.Created_At || 0;
+  return {
+    applicantId: clean_(map.ApplicantID ? values[map.ApplicantID - 1] : ""),
+    secretPlain: clean_(plainCol ? values[plainCol - 1] : ""),
+    secretHash: clean_(map.Secret_Hash ? values[map.Secret_Hash - 1] : ""),
+    issuedAt: issuedCol ? values[issuedCol - 1] : "",
+    status: clean_(map.Status ? values[map.Status - 1] : ""),
+    found: false,
+    reason: "",
+    rowIndex: Number(rowIndex || 0)
+  };
+}
+
+function emptyPortalSecretLookup_(applicantId, reason, debugId, extra) {
+  var out = {
+    applicantId: clean_(applicantId || ""),
+    secretPlain: "",
+    secretHash: "",
+    issuedAt: "",
+    status: "",
+    found: false,
+    reason: clean_(reason || "NO_SECRET"),
+    ok: false,
+    code: clean_(reason || "NO_SECRET"),
+    debugId: clean_(debugId || newDebugId_())
+  };
+  var more = (extra && typeof extra === "object") ? extra : {};
+  for (var k in more) {
+    if (Object.prototype.hasOwnProperty.call(more, k)) out[k] = more[k];
+  }
+  return out;
+}
+
+function lookupPortalSecretForApplicant_(applicantId, opts) {
   var debugId = newDebugId_();
   var idNorm = clean_(applicantId || "");
-  if (!idNorm) return { ok: false, code: "NO_SECRET", debugId: debugId };
+  if (!idNorm) return emptyPortalSecretLookup_(idNorm, "MISSING_APPLICANT_ID", debugId);
+  var opened = openPortalSecretsExistingSheet_(debugId, opts);
+  if (!opened || opened.ok !== true) {
+    return emptyPortalSecretLookup_(idNorm, clean_(opened && opened.code || "SECRET_LOOKUP_FAILED"), debugId, {
+      error: clean_(opened && opened.error || "")
+    });
+  }
   try {
-    var ss = SpreadsheetApp.openById(PORTAL_SECRETS_SPREADSHEET_ID);
-    var sh = ss.getSheetByName(PORTAL_SECRETS_TAB);
-    if (!sh) return { ok: false, code: "NO_SECRET", debugId: debugId };
+    var sh = opened.sheet;
     var lastCol = sh.getLastColumn();
     var lastRow = sh.getLastRow();
-    if (lastCol < 1 || lastRow < 2) return { ok: false, code: "NO_SECRET", debugId: debugId };
+    if (lastCol < 1 || lastRow < 2) return emptyPortalSecretLookup_(idNorm, "NO_SECRET", debugId);
     var headers = sh.getRange(1, 1, 1, lastCol).getValues()[0];
-    var idx = {};
-    for (var i = 0; i < headers.length; i++) {
-      var h = clean_(headers[i]);
-      if (h) idx[h] = i + 1;
-    }
-    var secretCol = resolvePortalSecretColumnIndex_(idx);
-    if (!idx.ApplicantID) return { ok: false, code: "NO_SECRET", debugId: debugId };
-    if (!secretCol) return { ok: false, code: "SECRET_COLUMN_MISSING", debugId: debugId };
+    var idx = buildPortalSecretHeaderIndex_(headers);
+    if (!idx.ApplicantID) return emptyPortalSecretLookup_(idNorm, "APPLICANT_ID_COLUMN_MISSING", debugId);
+    if (!resolvePortalSecretColumnIndex_(idx)) return emptyPortalSecretLookup_(idNorm, "SECRET_COLUMN_MISSING", debugId);
     var data = sh.getRange(2, 1, lastRow - 1, lastCol).getValues();
     var idLower = idNorm.toLowerCase();
+    var inactiveMatch = null;
+    var unusableMatch = null;
+    var hasStatus = !!idx.Status;
+    for (var r = 0; r < data.length; r++) {
+      var rec = normalizePortalSecretRow_(idx, data[r], r + 2);
+      if (!rec.applicantId || rec.applicantId.toLowerCase() !== idLower) continue;
+      if (hasStatus && rec.status !== "Active") {
+        if (!inactiveMatch) inactiveMatch = rec;
+        continue;
+      }
+      if (!rec.secretPlain && !rec.secretHash) {
+        if (!unusableMatch) unusableMatch = rec;
+        continue;
+      }
+      rec.found = true;
+      rec.reason = "FOUND";
+      rec.ok = true;
+      rec.code = "OK";
+      rec.secret = rec.secretPlain || rec.secretHash;
+      rec.debugId = debugId;
+      return rec;
+    }
+    if (unusableMatch) {
+      return emptyPortalSecretLookup_(idNorm, "UNUSABLE_SECRET", debugId, {
+        rowIndex: unusableMatch.rowIndex,
+        status: unusableMatch.status
+      });
+    }
+    if (inactiveMatch) {
+      return emptyPortalSecretLookup_(idNorm, "INACTIVE_SECRET", debugId, {
+        rowIndex: inactiveMatch.rowIndex,
+        status: inactiveMatch.status
+      });
+    }
+    return emptyPortalSecretLookup_(idNorm, "NO_SECRET", debugId);
+  } catch (e) {
+    return emptyPortalSecretLookup_(idNorm, "SECRET_LOOKUP_FAILED", debugId, {
+      error: clean_(stringifyGsError_(e) || String(e && e.message ? e.message : e))
+    });
+  }
+}
+
+function getPortalSecretForApplicant_(applicantId) {
+  var res = lookupPortalSecretForApplicant_(applicantId);
+  if (!res || res.found !== true || !clean_(res.secret || res.secretPlain || "")) {
+    return {
+      ok: false,
+      code: clean_(res && res.reason || res && res.code || "NO_SECRET"),
+      debugId: clean_(res && res.debugId || newDebugId_()),
+      applicantId: clean_(applicantId || ""),
+      found: false,
+      reason: clean_(res && res.reason || "NO_SECRET"),
+      status: clean_(res && res.status || "")
+    };
+  }
+  res.secret = clean_(res.secret || res.secretPlain || "");
+  return res;
+}
+
+function makePortalSecretForReset_() {
+  return Utilities.getUuid();
+}
+
+function buildPortalSecretOutputRow_(idx, lastCol, applicantId, secretPlain, secretHash, nowIso, opts) {
+  var row = [];
+  for (var i = 0; i < lastCol; i++) row.push("");
+  var map = idx || {};
+  var options = (opts && typeof opts === "object") ? opts : {};
+  if (map.ApplicantID) row[map.ApplicantID - 1] = clean_(applicantId || "");
+  if (map.Email) row[map.Email - 1] = clean_(options.email || "");
+  if (map.Full_Name) row[map.Full_Name - 1] = clean_(options.fullName || "");
+  if (map.Secret_Plain) row[map.Secret_Plain - 1] = clean_(secretPlain || "");
+  if (map.Secret) row[map.Secret - 1] = clean_(secretPlain || "");
+  if (map.Secret_Hash) row[map.Secret_Hash - 1] = clean_(secretHash || "");
+  if (map.Created_At) row[map.Created_At - 1] = nowIso;
+  if (map.Last_Rotated_At) row[map.Last_Rotated_At - 1] = nowIso;
+  if (map.Issued_At) row[map.Issued_At - 1] = nowIso;
+  if (map.IssuedAt) row[map.IssuedAt - 1] = nowIso;
+  if (map.Status) row[map.Status - 1] = "Active";
+  return row;
+}
+
+function writeAdmissionPortalSecretMetadata_(sheet, rowNumber, secretHash, issuedAt) {
+  var targetRow = Number(rowNumber || 0);
+  if (!sheet || !targetRow || targetRow < 2) return { updated: false, fields: [] };
+  var idx = getHeaderIndexMap_(sheet);
+  var fields = [];
+  if (idx.PortalTokenHash && clean_(secretHash || "")) {
+    sheet.getRange(targetRow, idx.PortalTokenHash).setValue(clean_(secretHash || ""));
+    fields.push("PortalTokenHash");
+  }
+  if (idx.PortalTokenIssuedAt) {
+    sheet.getRange(targetRow, idx.PortalTokenIssuedAt).setValue(issuedAt || new Date());
+    fields.push("PortalTokenIssuedAt");
+  }
+  return { updated: fields.length > 0, fields: fields };
+}
+
+function resetPortalSecretForApplicant_(applicantId, opts) {
+  var debugId = newDebugId_();
+  var options = (opts && typeof opts === "object") ? opts : {};
+  var idNorm = clean_(applicantId || "");
+  if (!idNorm) return emptyPortalSecretLookup_(idNorm, "MISSING_APPLICANT_ID", debugId);
+  var secretPlain = clean_(options.secretPlain || "") || (options.usePortalSecretGenerator === true && typeof newPortalSecret_ === "function" ? newPortalSecret_() : makePortalSecretForReset_());
+  var secretHash = typeof hashPortalSecret_ === "function" ? hashPortalSecret_(secretPlain) : "";
+  var opened = openPortalSecretsExistingSheet_(debugId);
+  if (!opened || opened.ok !== true) {
+    return emptyPortalSecretLookup_(idNorm, clean_(opened && opened.code || "SECRET_LOOKUP_FAILED"), debugId, {
+      error: clean_(opened && opened.error || "")
+    });
+  }
+  try {
+    var sh = opened.sheet;
+    var lastCol = sh.getLastColumn();
+    var lastRow = sh.getLastRow();
+    if (lastCol < 1) return emptyPortalSecretLookup_(idNorm, "PORTAL_SECRETS_SCHEMA_EMPTY", debugId);
+    var headers = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+    var idx = buildPortalSecretHeaderIndex_(headers);
+    var plainCol = resolvePortalSecretPlainColumnIndex_(idx);
+    if (!idx.ApplicantID) return emptyPortalSecretLookup_(idNorm, "APPLICANT_ID_COLUMN_MISSING", debugId);
+    if (!plainCol && !idx.Secret_Hash) return emptyPortalSecretLookup_(idNorm, "SECRET_COLUMN_MISSING", debugId);
+
+    var data = lastRow >= 2 ? sh.getRange(2, 1, lastRow - 1, lastCol).getValues() : [];
+    var idLower = idNorm.toLowerCase();
+    var matchingRows = [];
     for (var r = 0; r < data.length; r++) {
       var rowId = clean_(data[r][idx.ApplicantID - 1]);
-      if (rowId && rowId.toLowerCase() === idLower) {
-        var secret = clean_(data[r][secretCol - 1]);
-        if (!secret) return { ok: false, code: "NO_SECRET", debugId: debugId };
-        return { ok: true, secret: secret };
-      }
+      if (rowId && rowId.toLowerCase() === idLower) matchingRows.push(r + 2);
     }
-    return { ok: false, code: "NO_SECRET", debugId: debugId };
-  } catch (_e) {
-    return { ok: false, code: "NO_SECRET", debugId: debugId };
+    var now = new Date();
+    var nowIso = now.toISOString();
+    var rowIndex = 0;
+    var previousRowsInactive = 0;
+
+    if (idx.Status) {
+      for (var i = 0; i < matchingRows.length; i++) {
+        var currentStatus = clean_(sh.getRange(matchingRows[i], idx.Status).getValue() || "");
+        if (currentStatus === "Active") {
+          sh.getRange(matchingRows[i], idx.Status).setValue("Inactive");
+          previousRowsInactive++;
+        }
+      }
+      var appendRow = buildPortalSecretOutputRow_(idx, lastCol, idNorm, secretPlain, secretHash, nowIso, options);
+      rowIndex = sh.getLastRow() + 1;
+      sh.getRange(rowIndex, 1, 1, lastCol).setValues([appendRow]);
+    } else if (matchingRows.length) {
+      rowIndex = matchingRows[0];
+      if (plainCol) sh.getRange(rowIndex, plainCol).setValue(secretPlain);
+      if (idx.Secret_Hash) sh.getRange(rowIndex, idx.Secret_Hash).setValue(secretHash);
+      if (idx.Last_Rotated_At) sh.getRange(rowIndex, idx.Last_Rotated_At).setValue(nowIso);
+      if (idx.Issued_At) sh.getRange(rowIndex, idx.Issued_At).setValue(nowIso);
+      if (idx.IssuedAt) sh.getRange(rowIndex, idx.IssuedAt).setValue(nowIso);
+    } else {
+      var newRow = buildPortalSecretOutputRow_(idx, lastCol, idNorm, secretPlain, secretHash, nowIso, options);
+      rowIndex = sh.getLastRow() + 1;
+      sh.getRange(rowIndex, 1, 1, lastCol).setValues([newRow]);
+    }
+
+    var admissionsUpdate = writeAdmissionPortalSecretMetadata_(options.admissionsSheet, options.rowNumber, secretHash, now);
+    return {
+      applicantId: idNorm,
+      secretPlain: secretPlain,
+      secretHash: secretHash,
+      issuedAt: nowIso,
+      status: idx.Status ? "Active" : "",
+      found: true,
+      reason: "RESET",
+      ok: true,
+      code: "OK",
+      secret: secretPlain,
+      rowIndex: rowIndex,
+      previousRowsInactive: previousRowsInactive,
+      admissionsUpdated: admissionsUpdate.updated === true,
+      admissionsFields: admissionsUpdate.fields,
+      debugId: debugId
+    };
+  } catch (e) {
+    return emptyPortalSecretLookup_(idNorm, "SECRET_RESET_FAILED", debugId, {
+      error: clean_(stringifyGsError_(e) || String(e && e.message ? e.message : e))
+    });
   }
 }
 
 function setPortalSecretForApplicant_(applicantId, newSecret) {
-  var debugId = newDebugId_();
-  var idNorm = clean_(applicantId || "");
   var secretNorm = clean_(newSecret || "");
-  if (!idNorm || !secretNorm) return { ok: false, code: "NO_SECRET", debugId: debugId };
-  try {
-    var ss = SpreadsheetApp.openById(PORTAL_SECRETS_SPREADSHEET_ID);
-    var sh = ss.getSheetByName(PORTAL_SECRETS_TAB);
-    if (!sh) return { ok: false, code: "NO_SECRET", debugId: debugId };
-    var lastCol = sh.getLastColumn();
-    var lastRow = sh.getLastRow();
-    if (lastCol < 1 || lastRow < 2) return { ok: false, code: "NO_SECRET", debugId: debugId };
-    var headers = sh.getRange(1, 1, 1, lastCol).getValues()[0];
-    var idx = {};
-    for (var i = 0; i < headers.length; i++) {
-      var h = clean_(headers[i]);
-      if (h) idx[h] = i + 1;
-    }
-    var secretCol = resolvePortalSecretColumnIndex_(idx);
-    if (!idx.ApplicantID) return { ok: false, code: "NO_SECRET", debugId: debugId };
-    if (!secretCol) return { ok: false, code: "SECRET_COLUMN_MISSING", debugId: debugId };
-    var data = sh.getRange(2, 1, lastRow - 1, lastCol).getValues();
-    var idLower = idNorm.toLowerCase();
-    for (var r = 0; r < data.length; r++) {
-      var rowId = clean_(data[r][idx.ApplicantID - 1]);
-      if (rowId && rowId.toLowerCase() === idLower) {
-        sh.getRange(r + 2, secretCol).setValue(secretNorm);
-        return { ok: true };
-      }
-    }
-    return { ok: false, code: "NO_SECRET", debugId: debugId };
-  } catch (_e) {
-    return { ok: false, code: "NO_SECRET", debugId: debugId };
-  }
+  if (!clean_(applicantId || "") || !secretNorm) return { ok: false, code: "NO_SECRET", debugId: newDebugId_() };
+  return resetPortalSecretForApplicant_(applicantId, { secretPlain: secretNorm });
 }
 
 function buildStudentPortalUrl_(applicantId, secret) {
@@ -6188,7 +6428,9 @@ function previewRpcPayloadSize_(payload) {
 
 function buildPortalSecretPreviewLookup_() {
   try {
-    var secretsSheet = openPortalSecrets_();
+    var opened = openPortalSecretsExistingSheet_(newDebugId_(), { source: "config" });
+    if (!opened || opened.ok !== true) throw new Error(clean_(opened && opened.code || "SECRET_LOOKUP_FAILED"));
+    var secretsSheet = opened.sheet;
     var idx = getHeaderIndexMap_(secretsSheet);
     if (!idx.ApplicantID) throw new Error("PortalSecrets missing header: ApplicantID");
     var data = withSpreadsheetRetry_(function () {
@@ -6197,16 +6439,29 @@ function buildPortalSecretPreviewLookup_() {
     var byApplicantId = {};
     for (var r = 1; r < data.length; r++) {
       var row = data[r] || [];
-      var applicantId = clean_(row[idx.ApplicantID - 1]);
-      if (!applicantId || byApplicantId[applicantId]) continue;
+      var rec = normalizePortalSecretRow_(idx, row, r + 1);
+      var applicantId = clean_(rec.applicantId || "");
+      if (!applicantId) continue;
+      if (idx.Status && rec.status !== "Active") {
+        if (!byApplicantId[applicantId]) {
+          byApplicantId[applicantId] = {
+            rowIndex: Number(rec.rowIndex || 0),
+            status: clean_(rec.status || ""),
+            secretPlain: clean_(rec.secretPlain || ""),
+            secretHash: clean_(rec.secretHash || "")
+          };
+        }
+        continue;
+      }
+      if (byApplicantId[applicantId] && (!idx.Status || byApplicantId[applicantId].status === "Active")) continue;
       byApplicantId[applicantId] = {
-        rowIndex: r + 1,
-        status: clean_(idx.Status ? row[idx.Status - 1] : ""),
-        secretPlain: clean_(idx.Secret_Plain ? row[idx.Secret_Plain - 1] : ""),
-        secretHash: clean_(idx.Secret_Hash ? row[idx.Secret_Hash - 1] : "")
+        rowIndex: Number(rec.rowIndex || 0),
+        status: clean_(rec.status || ""),
+        secretPlain: clean_(rec.secretPlain || ""),
+        secretHash: clean_(rec.secretHash || "")
       };
     }
-    return { ok: true, byApplicantId: byApplicantId };
+    return { ok: true, byApplicantId: byApplicantId, hasStatus: !!idx.Status };
   } catch (e) {
     return {
       ok: false,
@@ -6317,7 +6572,7 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
       var cachedSecret = portalSecretLookup.byApplicantId[context.applicantId] || null;
       if (!cachedSecret) return block("MISSING_PORTAL_SECRET");
       var cachedStatus = clean_(cachedSecret.status || "");
-      if (cachedStatus !== "Active") return block("INACTIVE_SECRET");
+      if (portalSecretLookup.hasStatus === true && cachedStatus !== "Active") return block("INACTIVE_SECRET");
       if (!clean_(cachedSecret.secretPlain || "") || !clean_(cachedSecret.secretHash || "")) return block("UNUSABLE_SECRET");
       secretRes = {
         ok: true,

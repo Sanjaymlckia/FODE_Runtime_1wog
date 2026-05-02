@@ -1936,26 +1936,23 @@ function getActivePortalSecretForCampaign_(applicantId) {
   var id = clean_(applicantId || "");
   if (!id) return { ok: false, code: "MISSING_APPLICANT_ID" };
   try {
-    assertDriveId_(CONFIG.PORTAL_SECRETS_SHEET_ID, "CONFIG.PORTAL_SECRETS_SHEET_ID");
-    var ss = SpreadsheetApp.openById(CONFIG.PORTAL_SECRETS_SHEET_ID);
-    var sh = ss.getSheetByName(clean_(CONFIG.PORTAL_SECRETS_TAB || "PortalSecrets"));
-    if (!sh) return { ok: false, code: "SECRETS_TAB_NOT_FOUND" };
-    var rowIndex = findPortalSecretsRowByApplicantId_(sh, id);
-    if (!rowIndex) return { ok: false, code: "NO_SECRET" };
-    var rec = readPortalSecretsRecord_(sh, rowIndex);
-    var status = clean_(rec.Status || "");
-    var secretPlain = clean_(rec.Secret_Plain || "");
-    var secretHash = clean_(rec.Secret_Hash || "");
-    if (status !== "Active") return { ok: false, code: "INACTIVE_SECRET", status: status };
-    if (!secretPlain || !secretHash) return { ok: false, code: "UNUSABLE_SECRET", status: status };
+    var rec = lookupPortalSecretForApplicant_(id, { source: "config" });
+    if (!rec || rec.found !== true) {
+      return {
+        ok: false,
+        code: clean_(rec && rec.reason || rec && rec.code || "NO_SECRET"),
+        status: clean_(rec && rec.status || "")
+      };
+    }
+    if (!clean_(rec.secretPlain || "") || !clean_(rec.secretHash || "")) return { ok: false, code: "UNUSABLE_SECRET", status: clean_(rec.status || "") };
     return {
       ok: true,
       applicantId: id,
-      rowIndex: rowIndex,
-      status: status,
-      secretPlain: secretPlain,
-      secretHash: secretHash,
-      createdAt: safeStr_(rec.Created_At || "")
+      rowIndex: Number(rec.rowIndex || 0),
+      status: clean_(rec.status || ""),
+      secretPlain: clean_(rec.secretPlain || ""),
+      secretHash: clean_(rec.secretHash || ""),
+      createdAt: safeStr_(rec.issuedAt || "")
     };
   } catch (e) {
     return {
