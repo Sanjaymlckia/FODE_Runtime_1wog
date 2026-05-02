@@ -74,7 +74,7 @@ function withEnvelope_(fnName, fn) {
 }
 
 function renderAdminApp_(e) {
-  var email = getActiveUserEmail_();
+  var email = getCallerEmail_();
   if (!isAdmin_(email)) {
     var debugId = makeDebugId_();
     var activeUserEmail = "";
