@@ -3,11 +3,12 @@
 ## Baseline
 
 - Script ID: `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`
-- Known baseline version: `r116 / 116`
-- Commit: `757d325a7d4c55cf0ec7c231c95b3e55683bec13`
-- Tag: `staging-as116`
-- Canonical Admin Deployment ID: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @116`
-- Canonical Student Deployment ID: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @116`
+- Known baseline version: `r118 / 118`
+- Commit: `5649a3f`
+- Tag: `staging-as118`
+- Canonical Admin Deployment ID: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @118`
+- Canonical Student Deployment ID: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @118`
+- Admin UI smoke: PASS; Stage Dashboard and Review Queues load.
 
 ## Runtime Identity Rule
 
@@ -34,8 +35,8 @@
 
 ## Acceptance PASS Rules
 
-- `VERSION == r116`
-- `DEPLOY_VERSION_NUMBER == 116`
+- `VERSION == r118`
+- `DEPLOY_VERSION_NUMBER == 118`
 - `VERSION == "r" + DEPLOY_VERSION_NUMBER`
 - Script ID matches `1wog`.
 - No stored or generated canonical link uses workspace-domain Apps Script paths.

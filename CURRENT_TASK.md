@@ -2,13 +2,14 @@
 
 ## Current Objective
 
-Verify and use `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo for CodexHub.
+Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and r118 baseline.
 
 ## Files In Scope
 
 - `CURRENT_TASK.md`
 - `LIVE_URLS.md`
 - `KNOWN_GOOD_STATE.md`
+- `AGENTS.md`
 - CodexHub harness registry/docs only when explicitly authorized by CIS
 
 ## Current Authority
@@ -16,11 +17,11 @@ Verify and use `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authori
 - GitHub repo: `Sanjaymlckia/FODE_Runtime_1wog`
 - Local repo: `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog`
 - Script ID: `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`
-- Baseline: `r116 / 116`
+- Baseline: `r118 / 118`
 
 ## Next Exact Step
 
-Use CodexHub to launch/select `FODE_RUNTIME` and confirm it opens `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog`, reads this `CURRENT_TASK.md` first, and does not select any legacy or deprecated local path.
+Keep authority docs aligned to the live r118 runtime baseline. Any future runtime, source, clasp, or deployment work requires a fresh CIS.
 
 ## Cautions
 
