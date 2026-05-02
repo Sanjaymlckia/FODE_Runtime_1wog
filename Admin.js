@@ -2049,7 +2049,7 @@ function stageAggregationSnapshot_(rowObj) {
 }
 
 function admin_getStageAggregation(payload) {
-  var adminEmail = getActiveUserEmail_();
+  var adminEmail = getCallerEmail_();
   if (!isAdmin_(adminEmail)) throw new Error("Access denied");
   var p = payload && typeof payload === "object" ? payload : {};
   var force = p.force === 1 || p.force === true;
@@ -2103,7 +2103,7 @@ function admin_getStageAggregation(payload) {
 }
 
 function admin_getReviewQueues(payload) {
-  var adminEmail = getActiveUserEmail_();
+  var adminEmail = getCallerEmail_();
   if (!isAdmin_(adminEmail)) throw new Error("Access denied");
   payload = payload || {};
   var offset = Math.max(0, Number(payload.offset || 0));
