@@ -1908,7 +1908,7 @@ function sendStageBatchUi_(){
   var requestSeq = batchState.sendRequestSeq;
   var clientRequestId = "send-client-" + String(Date.now()) + "-" + String(requestSeq);
   var requestStartedAtMs = Date.now();
-  var timeoutMs = 20000;
+  var timeoutMs = 180000;
   console.log("[StageBatchSend] start", { requestId: clientRequestId, stage: stage, limit: limit, offset: offset, timeoutMs: timeoutMs, messageType: messageType });
   batchState.sendActiveSeq = requestSeq;
   batchState.sendClientRequestId = clientRequestId;

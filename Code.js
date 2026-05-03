@@ -7010,6 +7010,15 @@ function automatedStageRunnerLastResultKey_() {
   return clean_(CONFIG.SCRIPT_PROP_AUTOSEND_LAST_RESULT || "FODE_AUTOSEND_LAST_RESULT");
 }
 
+function readAutomatedStageRunnerLastResult_() {
+  try {
+    var raw = clean_(PropertiesService.getScriptProperties().getProperty(automatedStageRunnerLastResultKey_()) || "");
+    return raw ? JSON.parse(raw) : null;
+  } catch (_err) {
+    return null;
+  }
+}
+
 function automatedStageRunnerDateKey_(dateValue) {
   var dt = dateValue instanceof Date ? new Date(dateValue.getTime()) : new Date(dateValue || new Date());
   var tz = "GMT";
@@ -7039,7 +7048,7 @@ function readAutomatedStageRunnerDailyCount_(dateValue) {
 }
 
 function getRemainingDailySendAllowance_(dateValue) {
-  var cap = Math.max(0, Math.floor(Number(CONFIG.DAILY_SEND_CAP || 0)));
+  var cap = Math.max(0, Math.floor(Number(CONFIG.AUTOMATED_STAGE_DAILY_CAP || CONFIG.DAILY_SEND_CAP || 0)));
   var current = readAutomatedStageRunnerDailyCount_(dateValue);
   return {
     key: current.key,
@@ -7054,12 +7063,24 @@ function incrementDailySendCount_(count, dateValue) {
   var current = readAutomatedStageRunnerDailyCount_(dateValue);
   var used = current.used + delta;
   PropertiesService.getScriptProperties().setProperty(current.key, String(used));
+  var cap = Math.max(0, Math.floor(Number(CONFIG.AUTOMATED_STAGE_DAILY_CAP || CONFIG.DAILY_SEND_CAP || 0)));
   return {
     key: current.key,
     used: used,
-    cap: Math.max(0, Math.floor(Number(CONFIG.DAILY_SEND_CAP || 0))),
-    remaining: Math.max(0, Math.floor(Number(CONFIG.DAILY_SEND_CAP || 0)) - used)
+    cap: cap,
+    remaining: Math.max(0, cap - used)
   };
+}
+
+function automatedStageRunnerLog_(eventName, payload) {
+  var event = clean_(eventName || "");
+  var data = payload && typeof payload === "object" ? payload : {};
+  try {
+    console.log(event, JSON.stringify(data));
+  } catch (_err) {}
+  try {
+    campaignLog_(event, data);
+  } catch (_err2) {}
 }
 
 function automatedStageRunnerActor_() {
@@ -7083,8 +7104,8 @@ function shouldRunAutomatedStageBatch_() {
     ? normalizeStageBatchStage_(CONFIG.AUTOMATED_STAGE_RUNNER_STAGE || "")
     : clean_(CONFIG.AUTOMATED_STAGE_RUNNER_STAGE || "").toUpperCase();
   var messageType = typeof getBatchMessageTypeForStage_ === "function" ? clean_(getBatchMessageTypeForStage_(stage) || "") : "";
-  var configuredBatchSize = Math.max(1, Math.floor(Number(CONFIG.PER_RUN_BATCH_SIZE || 20)));
-  var maxPerRun = Math.max(1, Math.floor(Number(CONFIG.MAX_PER_RUN_BATCH_SIZE || 25)));
+  var configuredBatchSize = Math.max(1, Math.floor(Number(CONFIG.AUTOMATED_STAGE_BATCH_SIZE || CONFIG.DEFAULT_STAGE_BATCH_SIZE || CONFIG.PER_RUN_BATCH_SIZE || 20)));
+  var maxPerRun = Math.max(1, Math.floor(Number(CONFIG.MAX_PER_RUN_BATCH_SIZE || CONFIG.MAX_STAGE_BATCH_SIZE || configuredBatchSize || 30)));
   var stageMax = Math.max(1, Math.floor(Number(CONFIG.MAX_STAGE_BATCH_SIZE || maxPerRun || 25)));
   var safeMax = Math.max(1, Math.min(maxPerRun, stageMax));
   return {
@@ -7096,6 +7117,12 @@ function shouldRunAutomatedStageBatch_() {
     maxPerRunBatchSize: safeMax,
     reason: !enabled ? "AUTOMATION_DISABLED" : (!stage ? "UNSUPPORTED_STAGE" : (!messageType ? "STAGE_NOT_SENDABLE" : ""))
   };
+}
+
+function automatedStageRunnerTimeoutLimitMs_() {
+  var configured = Math.floor(Number(CONFIG.AUTOMATED_STAGE_TIMEOUT_MS || 0));
+  if (configured > 0) return Math.max(1000, Math.min(configured, 295000));
+  return 270000;
 }
 
 function automatedStageRunnerFinalize_(summary) {
@@ -7116,8 +7143,20 @@ function automatedStageRunnerFinalize_(summary) {
 function runAutomatedStageBatchChunk_(opts) {
   var options = opts && typeof opts === "object" ? opts : {};
   var now = new Date();
+  var startedAtMs = now.getTime();
+  var timeoutLimitMs = automatedStageRunnerTimeoutLimitMs_();
   var requestId = clean_(options.requestId || newDebugId_());
   var gate = shouldRunAutomatedStageBatch_();
+  automatedStageRunnerLog_("AUTO_STAGE_RUN_START", {
+    requestId: requestId,
+    source: clean_(options.source || "MANUAL"),
+    enabled: gate.enabled === true,
+    stage: clean_(gate.stage || ""),
+    messageType: clean_(gate.messageType || ""),
+    batchSize: Number(gate.perRunBatchSize || 0),
+    dailyCap: Math.max(0, Math.floor(Number(CONFIG.AUTOMATED_STAGE_DAILY_CAP || CONFIG.DAILY_SEND_CAP || 0))),
+    timeoutLimitMs: timeoutLimitMs
+  });
   if (!gate.enabled && options.force !== true) {
     return automatedStageRunnerFinalize_({
       ok: true,
@@ -7144,6 +7183,13 @@ function runAutomatedStageBatchChunk_(opts) {
   }
   var allowance = getRemainingDailySendAllowance_(now);
   if (!(allowance.remaining > 0)) {
+    automatedStageRunnerLog_("AUTO_STAGE_CAP_REACHED", {
+      requestId: requestId,
+      stage: gate.stage,
+      dailyCap: allowance.cap,
+      sentToday: allowance.used,
+      remainingDailyAllowance: allowance.remaining
+    });
     return automatedStageRunnerFinalize_({
       ok: true,
       action: "automated_stage_batch",
@@ -7194,15 +7240,78 @@ function runAutomatedStageBatchChunk_(opts) {
       force: options.forceBounceIngestion === true
     });
   }
+  var portalSecretLookup = null;
+  if (typeof communicationRequiresPortalUrl_ === "function" && communicationRequiresPortalUrl_(gate.messageType) && typeof buildPortalSecretPreviewLookup_ === "function") {
+    portalSecretLookup = buildPortalSecretPreviewLookup_();
+  }
+  var cooldownLookup = null;
+  if (typeof buildCommunicationCooldownPreviewLookup_ === "function") {
+    cooldownLookup = buildCommunicationCooldownPreviewLookup_(gate.messageType);
+  }
   var cohort = collectStageBatchCohort_(gate.stage, effectiveRunSize, 0, {
     messageType: gate.messageType,
     actorEmail: actor.actorEmail,
     actorRole: actor.actorRole,
     debugId: requestId,
-    requestId: requestId
+    requestId: requestId,
+    portalSecretLookup: portalSecretLookup && portalSecretLookup.ok ? portalSecretLookup : null,
+    cooldownLookup: cooldownLookup && cooldownLookup.ok ? cooldownLookup : null,
+    previewEarlyStop: true,
+    previewEligibleBuffer: 0
   });
+  var elapsedAfterCollectMs = new Date().getTime() - startedAtMs;
+  if (elapsedAfterCollectMs >= timeoutLimitMs) {
+    automatedStageRunnerLog_("AUTO_STAGE_RUN_TIMEOUT_NEAR", {
+      requestId: requestId,
+      stage: gate.stage,
+      messageType: gate.messageType,
+      attempted: 0,
+      sent: 0,
+      elapsedMs: elapsedAfterCollectMs,
+      timeoutLimitMs: timeoutLimitMs,
+      phase: "COLLECT"
+    });
+    return automatedStageRunnerFinalize_({
+      ok: true,
+      action: "automated_stage_batch",
+      result: "PARTIAL_TIMEOUT",
+      reason: "TIMEOUT_NEAR",
+      requestId: requestId,
+      stage: gate.stage,
+      messageType: gate.messageType,
+      source: clean_(options.source || "MANUAL"),
+      dailyCap: allowance.cap,
+      dailyUsedBefore: allowance.used,
+      dailyUsedAfter: allowance.used,
+      remainingDailyAllowanceBefore: allowance.remaining,
+      remainingDailyAllowanceAfter: allowance.remaining,
+      effectiveRunSize: effectiveRunSize,
+      totalInStage: Number(cohort && cohort.totalInStage || 0),
+      eligibleUnsentFound: Number(cohort && cohort.eligibleUnsentTotal || 0),
+      attempted: 0,
+      sent: 0,
+      blocked: 0,
+      failed: 0,
+      processedCount: 0,
+      remainingEligibleEstimate: Number(cohort && cohort.eligibleUnsentTotal || 0),
+      bounceSummary: bounceSummary,
+      timedOutNearLimit: true,
+      timeoutLimitMs: timeoutLimitMs,
+      elapsedMs: elapsedAfterCollectMs,
+      message: "Automated chunk stopped before Apps Script timeout. Next run can continue from row truth."
+    });
+  }
   var candidates = Array.isArray(cohort && cohort.candidates) ? cohort.candidates : [];
   if (!candidates.length) {
+    automatedStageRunnerLog_("AUTO_STAGE_NO_ELIGIBLE", {
+      requestId: requestId,
+      stage: gate.stage,
+      messageType: gate.messageType,
+      reason: clean_(cohort && cohort.emptyReason || "NO_ELIGIBLE_ROWS"),
+      dailyCap: allowance.cap,
+      sentToday: allowance.used,
+      batchSize: effectiveRunSize
+    });
     return automatedStageRunnerFinalize_({
       ok: true,
       action: "automated_stage_batch",
@@ -7243,10 +7352,60 @@ function runAutomatedStageBatchChunk_(opts) {
     failed: 0,
     blockedByReason: {},
     sentApplicantIdsSample: [],
-    bounceSummary: bounceSummary
+    bounceSummary: bounceSummary,
+    timedOutNearLimit: false,
+    timeoutLimitMs: timeoutLimitMs,
+    elapsedMs: 0
   };
   var batchLabel = "STAGE_SEND::" + gate.stage + "::" + requestId;
+  var dailyAfter = allowance;
+  function finishAutomatedStageRunnerOut_(result, reason) {
+    out.result = clean_(result || out.result || "COMPLETE");
+    out.reason = clean_(reason || out.reason || "");
+    out.dailyUsedAfter = Number(dailyAfter.used || allowance.used || 0);
+    out.remainingDailyAllowanceAfter = Number(dailyAfter.remaining != null ? dailyAfter.remaining : allowance.remaining);
+    out.processedCount = Number(out.attempted || 0);
+    out.remainingEligibleEstimate = Math.max(0, Number(cohort && cohort.eligibleUnsentTotal || 0) - out.processedCount);
+    out.elapsedMs = new Date().getTime() - startedAtMs;
+    if (out.result === "PARTIAL_TIMEOUT") {
+      out.message = "Automated chunk stopped before Apps Script timeout. Next run can continue from row truth.";
+    } else {
+      out.message = out.remainingEligibleEstimate > 0
+        ? "Automated chunk completed safely. Next trigger run can continue from row truth."
+        : "Automated chunk completed safely.";
+    }
+    automatedStageRunnerLog_("AUTO_STAGE_BATCH_SENT", {
+      requestId: requestId,
+      stage: gate.stage,
+      messageType: gate.messageType,
+      attempted: out.attempted,
+      sent: out.sent,
+      blocked: out.blocked,
+      failed: out.failed,
+      dailyUsedBefore: out.dailyUsedBefore,
+      dailyUsedAfter: out.dailyUsedAfter,
+      batchSize: effectiveRunSize,
+      dailyCap: allowance.cap,
+      result: out.result,
+      elapsedMs: out.elapsedMs
+    });
+    return automatedStageRunnerFinalize_(out);
+  }
   for (var i = 0; i < candidates.length; i++) {
+    var elapsedBeforeSendMs = new Date().getTime() - startedAtMs;
+    if (elapsedBeforeSendMs >= timeoutLimitMs) {
+      out.timedOutNearLimit = true;
+      automatedStageRunnerLog_("AUTO_STAGE_RUN_TIMEOUT_NEAR", {
+        requestId: requestId,
+        stage: gate.stage,
+        messageType: gate.messageType,
+        attempted: out.attempted,
+        sent: out.sent,
+        elapsedMs: elapsedBeforeSendMs,
+        timeoutLimitMs: timeoutLimitMs
+      });
+      return finishAutomatedStageRunnerOut_("PARTIAL_TIMEOUT", "TIMEOUT_NEAR");
+    }
     var candidate = candidates[i] && typeof candidates[i] === "object" ? candidates[i] : {};
     var applicantId = clean_(candidate.applicantId || "");
     if (!applicantId) continue;
@@ -7261,22 +7420,34 @@ function runAutomatedStageBatchChunk_(opts) {
     if (resultType === "SENT") {
       out.sent++;
       pushStageBatchSample_(out.sentApplicantIdsSample, applicantId);
+      dailyAfter = incrementDailySendCount_(1, now);
+      if (!(Number(dailyAfter.remaining || 0) > 0)) {
+        out.reason = "DAILY_CAP_REACHED";
+        break;
+      }
     } else if (resultType === "BLOCKED") {
       out.blocked++;
       incrementStageBatchReason_(out.blockedByReason, sendResult && (sendResult.blockCode || sendResult.code || "BLOCKED"));
     } else {
       out.failed++;
     }
+    var elapsedAfterSendMs = new Date().getTime() - startedAtMs;
+    if (elapsedAfterSendMs >= timeoutLimitMs && i < candidates.length - 1) {
+      out.timedOutNearLimit = true;
+      automatedStageRunnerLog_("AUTO_STAGE_RUN_TIMEOUT_NEAR", {
+        requestId: requestId,
+        stage: gate.stage,
+        messageType: gate.messageType,
+        attempted: out.attempted,
+        sent: out.sent,
+        elapsedMs: elapsedAfterSendMs,
+        timeoutLimitMs: timeoutLimitMs,
+        phase: "SEND"
+      });
+      return finishAutomatedStageRunnerOut_("PARTIAL_TIMEOUT", "TIMEOUT_NEAR");
+    }
   }
-  var dailyAfter = out.sent > 0 ? incrementDailySendCount_(out.sent, now) : allowance;
-  out.dailyUsedAfter = Number(dailyAfter.used || allowance.used || 0);
-  out.remainingDailyAllowanceAfter = Number(dailyAfter.remaining != null ? dailyAfter.remaining : allowance.remaining);
-  out.processedCount = Number(out.attempted || 0);
-  out.remainingEligibleEstimate = Math.max(0, Number(cohort && cohort.eligibleUnsentTotal || 0) - out.processedCount);
-  out.message = out.remainingEligibleEstimate > 0
-    ? "Automated chunk completed safely. Next trigger run can continue from row truth."
-    : "Automated chunk completed safely.";
-  return automatedStageRunnerFinalize_(out);
+  return finishAutomatedStageRunnerOut_("COMPLETE", out.reason);
 }
 
 function runAutomatedStageBatchWithLock_(opts) {
@@ -7296,58 +7467,230 @@ function runAutomatedStageBatchWithLock_(opts) {
   }
   try {
     return runAutomatedStageBatchChunk_(Object.assign({}, options, { requestId: requestId }));
+  } catch (err) {
+    automatedStageRunnerLog_("AUTO_STAGE_RUN_ERROR", {
+      requestId: requestId,
+      source: clean_(options.source || "MANUAL"),
+      error: String((err && err.message) || err || "Unknown automation error")
+    });
+    return automatedStageRunnerFinalize_({
+      ok: false,
+      action: "automated_stage_batch",
+      result: "ERROR",
+      reason: "RUNNER_EXCEPTION",
+      requestId: requestId,
+      source: clean_(options.source || "MANUAL"),
+      error: String((err && err.message) || err || "Unknown automation error")
+    });
   } finally {
     try { lock.releaseLock(); } catch (_err) {}
   }
 }
 
-function runAutomatedStageBatchScheduled() {
+function automatedStageBatchRunner() {
   return runAutomatedStageBatchWithLock_({ source: "TRIGGER" });
 }
 
+function runAutomatedStageBatchScheduled() {
+  return automatedStageRunnerFinalize_({
+    ok: true,
+    action: "automated_stage_batch",
+    result: "SKIPPED",
+    reason: "LEGACY_TRIGGER_FUNCTION_DISABLED",
+    requestId: newDebugId_(),
+    source: "LEGACY_TRIGGER"
+  });
+}
+
 function getAutomatedStageRunnerTriggerFunctionName_() {
-  return "runAutomatedStageBatchScheduled";
+  return "automatedStageBatchRunner";
+}
+
+function inspectAutomatedStageRunnerTriggers_() {
+  var fnName = getAutomatedStageRunnerTriggerFunctionName_();
+  try {
+    var triggers = ScriptApp.getProjectTriggers();
+    var count = 0;
+    for (var i = 0; i < triggers.length; i++) {
+      if (clean_(triggers[i].getHandlerFunction() || "") === fnName) count++;
+    }
+    return {
+      ok: true,
+      functionName: fnName,
+      triggerCount: count,
+      error: null
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      functionName: fnName,
+      triggerCount: null,
+      error: {
+        code: "TRIGGER_API_UNAVAILABLE",
+        message: String((err && err.message) || err || "Trigger APIs are unavailable in this execution context.")
+      }
+    };
+  }
 }
 
 function ensureAutomatedStageRunnerTrigger_() {
   var fnName = getAutomatedStageRunnerTriggerFunctionName_();
-  var triggers = ScriptApp.getProjectTriggers();
-  for (var i = 0; i < triggers.length; i++) {
-    var trigger = triggers[i];
-    if (clean_(trigger.getHandlerFunction() || "") === fnName) {
+  var lastResult = readAutomatedStageRunnerLastResult_();
+  var lastSource = clean_(lastResult && lastResult.source || "").toUpperCase();
+  var lastOutcome = clean_(lastResult && lastResult.result || "").toUpperCase();
+  var lastElapsedMs = Number(lastResult && lastResult.elapsedMs || 0);
+  if (!(lastResult && lastResult.ok === true && lastOutcome === "COMPLETE" && (lastSource === "ADMIN" || lastSource === "MANUAL") && lastElapsedMs > 0 && lastElapsedMs < 60000)) {
+    return {
+      ok: false,
+      created: false,
+      functionName: fnName,
+      triggerCount: null,
+      removedDuplicates: 0,
+      cadenceMinutes: 10,
+      error: {
+        code: "MANUAL_RUN_UNDER_60S_REQUIRED",
+        message: "Run the automation manually and confirm it completes under 60 seconds before installing a trigger."
+      },
+      lastRun: lastResult
+    };
+  }
+  var inspection = inspectAutomatedStageRunnerTriggers_();
+  if (!inspection.ok) {
+    return {
+      ok: false,
+      created: false,
+      functionName: fnName,
+      triggerCount: null,
+      removedDuplicates: 0,
+      cadenceMinutes: 10,
+      error: inspection.error
+    };
+  }
+  try {
+    var triggers = ScriptApp.getProjectTriggers();
+    var existing = [];
+    for (var i = 0; i < triggers.length; i++) {
+      var trigger = triggers[i];
+      if (clean_(trigger.getHandlerFunction() || "") === fnName) existing.push(trigger);
+    }
+    var removedDuplicates = 0;
+    for (var j = 1; j < existing.length; j++) {
+      ScriptApp.deleteTrigger(existing[j]);
+      removedDuplicates++;
+    }
+    if (existing.length) {
       return {
         ok: true,
         created: false,
         functionName: fnName,
+        triggerCount: 1,
+        removedDuplicates: removedDuplicates,
         cadenceMinutes: 10
       };
     }
+    ScriptApp.newTrigger(fnName).timeBased().everyMinutes(10).create();
+    return {
+      ok: true,
+      created: true,
+      functionName: fnName,
+      triggerCount: 1,
+      removedDuplicates: removedDuplicates,
+      cadenceMinutes: 10
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      created: false,
+      functionName: fnName,
+      triggerCount: null,
+      removedDuplicates: 0,
+      cadenceMinutes: 10,
+      error: {
+        code: "TRIGGER_API_UNAVAILABLE",
+        message: String((err && err.message) || err || "Trigger APIs are unavailable in this execution context.")
+      }
+    };
   }
-  ScriptApp.newTrigger(fnName).timeBased().everyMinutes(10).create();
-  return {
-    ok: true,
-    created: true,
-    functionName: fnName,
-    cadenceMinutes: 10
-  };
 }
 
 function removeAutomatedStageRunnerTrigger_() {
   var fnName = getAutomatedStageRunnerTriggerFunctionName_();
-  var triggers = ScriptApp.getProjectTriggers();
-  var removed = 0;
-  for (var i = 0; i < triggers.length; i++) {
-    var trigger = triggers[i];
-    if (clean_(trigger.getHandlerFunction() || "") !== fnName) continue;
-    ScriptApp.deleteTrigger(trigger);
-    removed++;
+  var inspection = inspectAutomatedStageRunnerTriggers_();
+  if (!inspection.ok) {
+    return {
+      ok: false,
+      functionName: fnName,
+      removed: 0,
+      cadenceMinutes: 10,
+      error: inspection.error
+    };
   }
+  try {
+    var triggers = ScriptApp.getProjectTriggers();
+    var removed = 0;
+    for (var i = 0; i < triggers.length; i++) {
+      var trigger = triggers[i];
+      if (clean_(trigger.getHandlerFunction() || "") !== fnName) continue;
+      ScriptApp.deleteTrigger(trigger);
+      removed++;
+    }
+    return {
+      ok: true,
+      functionName: fnName,
+      removed: removed,
+      cadenceMinutes: 10
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      functionName: fnName,
+      removed: 0,
+      cadenceMinutes: 10,
+      error: {
+        code: "TRIGGER_API_UNAVAILABLE",
+        message: String((err && err.message) || err || "Trigger APIs are unavailable in this execution context.")
+      }
+    };
+  }
+}
+
+function getAutomatedStageRunnerStatus_() {
+  var fnName = getAutomatedStageRunnerTriggerFunctionName_();
+  var today = readAutomatedStageRunnerDailyCount_(new Date());
+  var gate = shouldRunAutomatedStageBatch_();
+  var triggerInspection = inspectAutomatedStageRunnerTriggers_();
+  var lastResult = readAutomatedStageRunnerLastResult_();
   return {
     ok: true,
     functionName: fnName,
-    removed: removed,
-    cadenceMinutes: 10
+    enabled: CONFIG.ENABLE_AUTOMATED_STAGE_RUNNER === true,
+    dailyCap: Math.max(0, Math.floor(Number(CONFIG.AUTOMATED_STAGE_DAILY_CAP || CONFIG.DAILY_SEND_CAP || 0))),
+    batchSize: Number(gate.perRunBatchSize || 0),
+    sentToday: Number(today.used || 0),
+    counterKey: today.key,
+    triggerCount: triggerInspection.ok ? triggerInspection.triggerCount : null,
+    triggerInspection: triggerInspection,
+    lastRun: lastResult,
+    timeoutLimitMs: automatedStageRunnerTimeoutLimitMs_(),
+    version: clean_(CONFIG.VERSION || ""),
+    deployVersion: Number(CONFIG.DEPLOY_VERSION_NUMBER || 0)
   };
+}
+
+function admin_getAutomatedStageRunnerStatus() {
+  var adminEmail = typeof getCallerEmail_ === "function" ? clean_(getCallerEmail_() || "") : "";
+  if (typeof isAdmin_ === "function" && !isAdmin_(adminEmail)) throw new Error("Access denied");
+  requireSuperAdmin_(adminEmail);
+  return getAutomatedStageRunnerStatus_();
+}
+
+function admin_installOrUpdateAutomatedStageRunnerTrigger() {
+  var adminEmail = typeof getCallerEmail_ === "function" ? clean_(getCallerEmail_() || "") : "";
+  if (typeof isAdmin_ === "function" && !isAdmin_(adminEmail)) throw new Error("Access denied");
+  requireSuperAdmin_(adminEmail);
+  var trigger = ensureAutomatedStageRunnerTrigger_();
+  var status = getAutomatedStageRunnerStatus_();
+  return Object.assign({}, trigger, { status: status });
 }
 
 function admin_getApplicantCommDerived_json(payload) {
