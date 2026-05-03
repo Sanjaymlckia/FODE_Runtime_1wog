@@ -2,7 +2,7 @@
 
 ## Current Objective
 
-Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and r118 baseline.
+Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and r119 stable baseline.
 
 ## Files In Scope
 
@@ -17,11 +17,11 @@ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative
 - GitHub repo: `Sanjaymlckia/FODE_Runtime_1wog`
 - Local repo: `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog`
 - Script ID: `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`
-- Baseline: `r118 / 118`
+- Baseline: `r119 / 119`
 
 ## Next Exact Step
 
-Keep authority docs aligned to the live r118 runtime baseline. Any future runtime, source, clasp, or deployment work requires a fresh CIS.
+Keep authority docs aligned to the live r119 stable runtime baseline. Any future runtime, source, clasp, or deployment work requires a fresh CIS.
 
 ## Cautions
 

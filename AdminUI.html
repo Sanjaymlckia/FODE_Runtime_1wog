@@ -1803,14 +1803,33 @@ function previewStageBatchUi_(){
       if (!response.requestId) response.requestId = clientRequestId;
       batchState.result = response;
       var terminalPath = response.ok === false ? "error" : (Number(response.count || 0) > 0 ? "success" : "empty");
-      if (response.ok === true && String(response.stage || "").toUpperCase() === stage && Number(response.previewLimit || 0) === limit && Number(response.count || 0) > 0) {
+      var previewStateCheck = {
+        requestId: String(response.requestId || clientRequestId),
+        stage: stage,
+        responseStage: String(response.stage || ""),
+        stageMatch: String(response.stage || "").toUpperCase() === stage,
+        limit: limit,
+        responsePreviewLimit: Number(response.previewLimit || 0),
+        limitMatch: Number(response.previewLimit || 0) === limit,
+        offset: offset,
+        responseOffset: Number(response.offset || 0),
+        offsetMatch: Number(offset || 0) === Number(offset || 0),
+        hasRequestId: !!String(response.requestId || ""),
+        count: Number(response.count || 0),
+        countPositive: Number(response.count || 0) > 0,
+        sendable: batchState.sendable === true,
+        responseOk: response.ok === true
+      };
+      console.log("STAGE_BATCH_PREVIEW_STATE_CHECK", previewStateCheck);
+      if (response.ok === true && previewStateCheck.countPositive) {
         batchState.previewReady = true;
         batchState.previewStage = stage;
         batchState.previewLimit = limit;
         batchState.previewOffset = offset;
         batchState.previewEligible = Number(response.count || 0);
-        batchState.previewRequestId = String(response.requestId || "");
+        batchState.previewRequestId = String(response.requestId || clientRequestId);
       } else {
+        console.log("STAGE_BATCH_PREVIEW_READY_FALSE", previewStateCheck);
         resetBatchPreviewState_(true);
         batchState.result = response;
       }
@@ -1862,7 +1881,27 @@ function sendStageBatchUi_(){
     && Number(batchState.previewOffset || 0) === offset
     && !!String(batchState.previewRequestId || "")
     && batchState.sendable === true;
-  if (!previewReady || batchState.busy || !IS_SUPER) return;
+  if (!previewReady || batchState.busy || !IS_SUPER) {
+    console.log("STAGE_BATCH_SEND_GUARD_BLOCKED", {
+      stage: stage,
+      previewStage: batchState.previewStage,
+      stageMatch: batchState.selectedStage === batchState.previewStage,
+      limit: limit,
+      previewLimit: Number(batchState.previewLimit || 0),
+      limitMatch: Number(batchState.previewLimit || 0) === limit,
+      offset: offset,
+      previewOffset: Number(batchState.previewOffset || 0),
+      offsetMatch: Number(batchState.previewOffset || 0) === offset,
+      hasRequestId: !!String(batchState.previewRequestId || ""),
+      count: Number(batchState.previewEligible || 0),
+      countPositive: Number(batchState.previewEligible || 0) > 0,
+      sendable: batchState.sendable === true,
+      busy: batchState.busy === true,
+      isSuper: IS_SUPER === true,
+      previewReady: previewReady === true
+    });
+    return;
+  }
   var confirmText = "Send " + String(limit) + " emails for stage " + stage + " using the next eligible unsent records? Preview prepared: " + String(Number(batchState.previewEligible || 0)) + ". Message: " + messageType + ". Diagnostic offset is ignored.";
   if (!window.confirm(confirmText)) return;
   batchState.sendRequestSeq = Number(batchState.sendRequestSeq || 0) + 1;
