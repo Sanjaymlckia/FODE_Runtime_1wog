@@ -7352,7 +7352,7 @@ function removeAutomatedStageRunnerTrigger_() {
 
 function admin_getApplicantCommDerived_json(payload) {
   var p = payload && typeof payload === "object" ? payload : {};
-  var adminEmail = typeof getActiveUserEmail_ === 'function' ? clean_(getActiveUserEmail_() || "") : clean_((typeof getCallerEmail_ === 'function' ? getCallerEmail_() : "") || "");
+  var adminEmail = typeof getCallerEmail_ === 'function' ? clean_(getCallerEmail_() || "") : "";
   if (typeof isAdmin_ === 'function' && !isAdmin_(adminEmail)) throw new Error("Access denied");
   var applicantId = clean_(p.applicantId || "");
   var rowNumber = Number(p.rowNumber || 0);

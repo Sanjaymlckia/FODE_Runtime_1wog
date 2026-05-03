@@ -229,7 +229,7 @@ function admin_searchApplicants(payload) {
 function admin_getApplicantDetail(payload) {
   try {
     Logger.log("SIG admin_getApplicantDetail: %s row=%s id=%s", ADMIN_DETAIL_SIG, payload && payload.rowNumber, payload && payload.applicantId);
-    var adminEmail = getActiveUserEmail_();
+    var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) {
       return { ok: false, error: "Access denied" };
     }
@@ -543,7 +543,7 @@ function admin_resetPortalLink(payload) {
     caller: callerEmail
   }));
   try {
-    var adminEmail = getActiveUserEmail_();
+    var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) return { ok: false, code: "PORTAL_RESET_ERROR", debugId: debugId, message: "Link generation failed" };
     var rowNumber = Number(payload.rowNumber || 0);
     if (!rowNumber || rowNumber < 2) return { ok: false, code: "PORTAL_RESET_ERROR", debugId: debugId, message: "Link generation failed" };
@@ -612,7 +612,7 @@ function admin_updateDocStatuses(payload) {
 function admin_updateDocStatuses_impl_(payload, dbgId) {
   dbgId = String(dbgId || adminDebugId_());
   try {
-  var adminEmail = getActiveUserEmail_();
+  var adminEmail = getCallerEmail_();
   if (!isAdmin_(adminEmail)) return err_("ACCESS_DENIED", "Access denied", dbgId);
 
   payload = payload || {};
@@ -788,7 +788,7 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
 }
 
 function admin_setOverallStatus(payload) {
-  var adminEmail = getActiveUserEmail_();
+  var adminEmail = getCallerEmail_();
   if (!isAdmin_(adminEmail)) throw new Error("Access denied");
 
   payload = payload || {};
@@ -850,7 +850,7 @@ function admin_setOverallStatus(payload) {
 }
 
 function admin_setPortalAccess(payload) {
-  var adminEmail = getActiveUserEmail_();
+  var adminEmail = getCallerEmail_();
   if (!isAdmin_(adminEmail)) throw new Error("Access denied");
   requireSuperAdmin_(adminEmail);
 
@@ -1335,7 +1335,7 @@ function composeDocsFollowupBody_(rowObj, portalUrl) {
 
 function admin_sendDocsFollowupEmails(payload) {
   return withEnvelope_("admin_sendDocsFollowupEmails", function(dbgId) {
-    var adminEmail = getActiveUserEmail_();
+    var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) return err_("ACCESS_DENIED", "Access denied", dbgId);
     if (CONFIG.DOCS_FOLLOWUP_ENABLE !== true) return ok_({
       summary: { sentCount: 0, failedCount: 0 },
@@ -1475,7 +1475,7 @@ function admin_sendDocsFollowupEmails(payload) {
 
 function admin_updateParentEmailCorrected(payload) {
   return withEnvelope_("admin_updateParentEmailCorrected", function (dbgId) {
-    var operatorEmail = getActiveUserEmail_();
+    var operatorEmail = getCallerEmail_();
     if (!isAdmin_(operatorEmail)) return err_("ACCESS_DENIED", "Access denied", dbgId);
     requireSuperAdmin_(operatorEmail);
     if (!(CONFIG && CONFIG.SUPERADMIN_ALLOW_EMAIL_OVERRIDE_POST_DOCS_VERIFIED === true)) {
@@ -2590,7 +2590,7 @@ function recomputeOverallDocStatus_(sh, rowNumber, idx, docMap) {
 }
 
 function admin_backfillPortalTokens(payload) {
-  var adminEmail = getActiveUserEmail_();
+  var adminEmail = getCallerEmail_();
   if (!isAdmin_(adminEmail)) throw new Error("Access denied");
   requireSuperAdmin_(adminEmail);
 
@@ -2786,7 +2786,7 @@ function admin_backfillPortalTokensApply(payload) {
 }
 
 function admin_exportPortalLinksCsv(payload) {
-  var adminEmail = getActiveUserEmail_();
+  var adminEmail = getCallerEmail_();
   if (!isAdmin_(adminEmail)) throw new Error("Access denied");
   requireSuperAdmin_(adminEmail);
   if (!isStudentUrlConfigured_()) throw new Error(getStudentUrlWarning_());
@@ -2913,7 +2913,7 @@ function admin_campaignProcessBounces(payload) {
 
 function admin_runBounceScan(payload) {
   return withEnvelope_("admin_runBounceScan", function () {
-    var adminEmail = getActiveUserEmail_();
+    var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
     return admin_scanBounces_();
   });
@@ -3462,7 +3462,7 @@ function admin_previewStageBatch(payload) {
       payloadAssemblyMs: 0
     };
     try {
-      var adminEmail = getActiveUserEmail_();
+      var adminEmail = getCallerEmail_();
       if (!isAdmin_(adminEmail)) throw new Error("Access denied");
       requireSuperAdmin_(adminEmail);
       var p = payload && typeof payload === "object" ? payload : {};
@@ -3609,7 +3609,7 @@ function admin_previewStageBatch(payload) {
 function admin_sendStageBatch(payload) {
   return withEnvelope_("admin_sendStageBatch", function (dbgId) {
     var requestId = clean_(dbgId || newDebugId_());
-    var adminEmail = getActiveUserEmail_();
+    var adminEmail = getCallerEmail_();
     var stage = "";
     var messageType = "";
     try {
@@ -3916,7 +3916,7 @@ function admin_sendStageBatch(payload) {
 }
 function admin_previewApplicantMessage(payload) {
   return withEnvelope_("admin_previewApplicantMessage", function (dbgId) {
-    var adminEmail = getActiveUserEmail_();
+    var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
     var p = payload && typeof payload === "object" ? payload : {};
     var applicantId = clean_(p.applicantId || "");
@@ -3942,7 +3942,7 @@ function admin_previewApplicantMessage(payload) {
 
 function admin_sendApplicantMessage(payload) {
   return withEnvelope_("admin_sendApplicantMessage", function (dbgId) {
-    var adminEmail = getActiveUserEmail_();
+    var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
     var p = payload && typeof payload === "object" ? payload : {};
     var applicantId = clean_(p.applicantId || "");

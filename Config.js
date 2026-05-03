@@ -7,9 +7,9 @@
  */
 var CONFIG = {
   // Versioning (change control)
-VERSION: "r118",
+VERSION: "r119",
 CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alignment",
-DEPLOY_VERSION_NUMBER: 118,
+DEPLOY_VERSION_NUMBER: 119,
 BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
 
   // STAGING/PROD data mode routing (working sheet)
