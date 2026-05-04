@@ -7,9 +7,9 @@
  */
 var CONFIG = {
   // Versioning (change control)
-VERSION: "r125",
+VERSION: "r129",
 CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alignment",
-DEPLOY_VERSION_NUMBER: 125,
+DEPLOY_VERSION_NUMBER: 129,
 BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
 
   // STAGING/PROD data mode routing (working sheet)
@@ -92,6 +92,8 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   MAX_PER_RUN_BATCH_SIZE: 30,
   ENABLE_BOUNCE_INGESTION: false,
   AUTOMATED_STAGE_RUNNER_STAGE: "INVITE_PENDING",
+  STAGE_CURSOR_PREFIX: "STAGE_CURSOR::",
+  SCAN_TIME_BUDGET_MS: 240000,
   BOUNCE_INGESTION_LOOKBACK_DAYS: 14,
   BOUNCE_INGESTION_MAX_MESSAGES: 200,
   SCRIPT_PROP_AUTOSEND_DAILY_PREFIX: "FODE_AUTOSEND_DAILY::",

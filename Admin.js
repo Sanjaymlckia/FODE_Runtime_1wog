@@ -3120,7 +3120,20 @@ function stageBatchShouldExcludeFailedDefault_(rowObj, messageType) {
   // Production invite batches skip prior hard failures for the same message type until an explicit retry flow is used.
   var normalizedType = normalizeApplicantMessageType_(messageType || "");
   if (!normalizedType) return false;
-  var communicationState = deriveCommunicationState_(rowObj || {}, normalizedType, {});
+  var row = rowObj || {};
+  var status = clean_(row.Email_Status || "").toUpperCase();
+  var flag = clean_(row.Email_Bounce_Flag || "").toUpperCase();
+  var reason = clean_(row.Email_Bounce_Reason || "");
+  var reasonLower = reason.toLowerCase();
+  if (status === "FAILED") {
+    if (["HARD", "DOMAIN", "UNKNOWN"].indexOf(flag) >= 0) return true;
+    if (reasonLower.indexOf("missing required alias") >= 0) return true;
+    if (flag === "TEMP") {
+      var nextActionMs = typeof parseTime_ === "function" ? parseTime_(row.Email_Next_Action_Date || "") : 0;
+      return !(nextActionMs > 0 && nextActionMs <= new Date().getTime());
+    }
+  }
+  var communicationState = deriveCommunicationState_(row, normalizedType, {});
   return communicationState.durablePriorFailureSameType === true;
 }
 
@@ -3297,6 +3310,23 @@ function stageBatchEmptyReason_(cohort) {
   return "No eligible unsent invite candidates found under current rules.";
 }
 
+function getStageCursorKey_(stage, messageType) {
+  return clean_(CONFIG.STAGE_CURSOR_PREFIX || "STAGE_CURSOR::") + clean_(stage || "") + "::" + clean_(messageType || "");
+}
+
+function getStageCursor_(stage, messageType) {
+  var key = getStageCursorKey_(stage, messageType);
+  var v = clean_(PropertiesService.getScriptProperties().getProperty(key) || "");
+  var n = parseInt(v, 10);
+  return n && n >= 2 ? n : 2;
+}
+
+function setStageCursor_(stage, messageType, row) {
+  var key = getStageCursorKey_(stage, messageType);
+  var n = parseInt(row, 10);
+  PropertiesService.getScriptProperties().setProperty(key, String(n && n >= 2 ? n : 2));
+}
+
 function collectStageBatchCohort_(stage, limit, offset, opts) {
   var normalizedStage = normalizeStageBatchStage_(stage);
   var batchLimit = clampStageBatchLimit_(limit);
@@ -3332,6 +3362,13 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
   var previewEligibleBuffer = Math.max(0, Math.min(10, Math.floor(Number(options.previewEligibleBuffer || 2))));
   var previewEligibleTarget = previewEarlyStop ? Math.max(batchLimit, batchLimit + previewEligibleBuffer) : 0;
   var eligibleCountBounded = false;
+  var lastRow = values.length;
+  var savedCursor = Math.max(2, getStageCursor_(normalizedStage, messageType));
+  var cursor = savedCursor > lastRow ? 2 : savedCursor;
+  var nextCursor = cursor;
+  var scanned = 0;
+  var timeBudgetMs = Math.max(1, Number(CONFIG.SCAN_TIME_BUDGET_MS || 240000));
+  var scanStoppedByTimeBudget = false;
   if (!headers.length || values.length < 2 || !normalizedStage) {
     var emptyCohort = {
       stage: normalizedStage,
@@ -3357,7 +3394,12 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
     emptyCohort.emptyReason = stageBatchEmptyReason_(emptyCohort);
     return emptyCohort;
   }
-  for (var r = 1; r < values.length; r++) {
+  for (var r = cursor - 1; r < values.length; r++) {
+    if (new Date().getTime() - startedAtMs > timeBudgetMs) {
+      scanStoppedByTimeBudget = true;
+      Logger.log("AUTO_STAGE_RUN_TIMEOUT_NEAR");
+      break;
+    }
     var hydrateStartedAtMs = new Date().getTime();
     var row = values[r] || [];
     var rowObj = {};
@@ -3366,8 +3408,13 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
       if (h) rowObj[h] = row[c];
     }
     phaseTimings.rowHydrationMs += new Date().getTime() - hydrateStartedAtMs;
+    scanned++;
+    nextCursor = r + 2;
     var applicantId = clean_(rowObj.ApplicantID || "");
     if (!applicantId) continue;
+    if (clean_(rowObj.Email_Status || "").toUpperCase() === "SENT") {
+      continue;
+    }
     var candidateStartedAtMs = new Date().getTime();
     var snapshot = stageAggregationSnapshot_(rowObj);
     phaseTimings.candidateSelectionMs += new Date().getTime() - candidateStartedAtMs;
@@ -3410,8 +3457,9 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
           effectiveEmail: clean_(resolved.effectiveEmail || "")
         });
       }
-      if (previewEligibleTarget > 0 && eligibleUnsentTotal >= previewEligibleTarget) {
+      if (candidates.length >= batchLimit || (previewEligibleTarget > 0 && eligibleUnsentTotal >= previewEligibleTarget)) {
         eligibleCountBounded = true;
+        nextCursor = r + 2;
         break;
       }
       continue;
@@ -3420,6 +3468,17 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
     incrementStageBatchReason_(blockedByReason, resolved && (resolved.blockCode || resolved.code || "BLOCKED"));
     pushStageBatchSample_(blockedApplicantIdsSample, applicantId);
   }
+  if (nextCursor > lastRow) nextCursor = 2;
+  setStageCursor_(normalizedStage, messageType, nextCursor);
+  Logger.log("AUTO_STAGE_CURSOR_UPDATE " + JSON.stringify({
+    stage: normalizedStage,
+    messageType: messageType,
+    nextCursor: nextCursor,
+    scanned: scanned,
+    found: candidates.length,
+    timeBudgetMs: timeBudgetMs,
+    scanStoppedByTimeBudget: scanStoppedByTimeBudget
+  }));
   var cohort = {
     stage: normalizedStage,
     messageType: messageType,
@@ -3439,6 +3498,10 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
     blockedApplicantIdsSample: blockedApplicantIdsSample,
     candidates: candidates,
     eligibleCountBounded: eligibleCountBounded,
+    scanCursor: cursor,
+    nextCursor: nextCursor,
+    scanned: scanned,
+    scanStoppedByTimeBudget: scanStoppedByTimeBudget,
     elapsedMs: new Date().getTime() - startedAtMs,
     phaseTimings: phaseTimings
   };
