@@ -2,7 +2,28 @@
 
 ## Current Objective
 
-Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and release r129 failed retry guard.
+Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and restore r112 email sender behavior after the r113 alias hard-block regression.
+
+## Current Issue
+
+- r113 alias hard-block regression identified.
+- Email send-block caused by r113 alias enforcement (`assertRequiredSystemSenderAlias_`).
+- Confirmed working baseline: `r112` (`ca86c0e`).
+- Required behavior:
+  - `FROM = fode_kia@kundu.ac`
+  - `REPLY-TO = fode@kundu.ac` (collaborative inbox)
+- Root cause:
+  - `GmailApp.getAliases()` empty -> hard fail introduced in `r113`.
+- Action plan:
+  - Restore `r112` behavior by removing strict alias assertion from:
+    - `campaignSendEmailGmail_`
+    - `adminSendEmail_`
+    - `ingestRecentBounces_`
+- Status:
+  - r112 behavior restored in working tree, with campaign alias lookup made diagnostic-only so `GmailApp.sendEmail` is the runtime test.
+  - Files changed: `Code.js`, `Utils.js`.
+  - No push/version/deploy yet.
+  - Next step: final review, then prepare release CIS if approved.
 
 ## Files In Scope
 
@@ -144,12 +165,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-Complete r129 runtime acceptance:
-
-1. Preview batch does not include `FAILED` rows with `Missing required alias`.
-2. New send batch does not retry those rows.
-3. SENT rows remain skipped.
-4. TEMP failures remain eligible only when due.
+Final review, then prepare release CIS if approved.
 
 ## Cautions
 
