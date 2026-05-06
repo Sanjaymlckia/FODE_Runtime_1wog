@@ -7,9 +7,9 @@
  */
 var CONFIG = {
   // Versioning (change control)
-VERSION: "r136",
+VERSION: "r137",
 CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alignment",
-DEPLOY_VERSION_NUMBER: 136,
+DEPLOY_VERSION_NUMBER: 137,
 BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
 
   // STAGING/PROD data mode routing (working sheet)
@@ -91,6 +91,10 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   ENABLE_TRIGGER_EMAIL_SENDS: false,
   ENABLE_PROPERTY_CLEANUP_TOOLS: true,
   MAX_PROPERTY_DELETE_BATCH: 500,
+  COMMUNICATION_COOLDOWN_CACHE_TTL_SECONDS: 3600,
+  COMMUNICATION_COOLDOWN_CACHE_MAX_TTL_SECONDS: 21600,
+  SCRIPT_PROPERTY_HEALTH_COUNT_LIMIT: 500,
+  SCRIPT_PROPERTY_HEALTH_SIZE_LIMIT: 500000,
   AUTOMATED_STAGE_DAILY_CAP: 500,
   DAILY_SEND_CAP: 500,
   PER_RUN_BATCH_SIZE: 30,

@@ -6166,49 +6166,29 @@ function communicationCooldownMs_() {
 }
 
 function communicationCooldownKey_(applicantId, messageType) {
-  return "COMM_LAST::" + clean_(messageType || "") + "::" + clean_(applicantId || "");
+  return getCommunicationCooldownCacheKey_(applicantId, messageType);
 }
 
 function getLastCommunicationSentAt_(applicantId, messageType) {
-  try {
-    return clean_(PropertiesService.getScriptProperties().getProperty(communicationCooldownKey_(applicantId, messageType)) || "");
-  } catch (_err) {
-    return "";
-  }
+  var state = getCommunicationCooldownState_(applicantId, messageType);
+  return clean_((state && (state.sentAt || state.cachedAt)) || "");
 }
 
 function buildCommunicationCooldownPreviewLookup_(messageType) {
   var normalizedType = normalizeApplicantMessageType_(messageType);
-  var prefix = "COMM_LAST::" + clean_(normalizedType || "") + "::";
-  var byApplicantId = {};
-  if (!normalizedType) return { ok: true, messageType: "", byApplicantId: byApplicantId };
-  try {
-    var props = PropertiesService.getScriptProperties().getProperties() || {};
-    Object.keys(props).forEach(function (key) {
-      var normalizedKey = clean_(key || "");
-      if (normalizedKey.indexOf(prefix) !== 0) return;
-      var applicantId = clean_(normalizedKey.slice(prefix.length));
-      if (!applicantId) return;
-      byApplicantId[applicantId] = clean_(props[key] || "");
-    });
-    return {
-      ok: true,
-      messageType: normalizedType,
-      byApplicantId: byApplicantId
-    };
-  } catch (_err) {
-    return {
-      ok: false,
-      messageType: normalizedType,
-      byApplicantId: {}
-    };
-  }
+  return {
+    ok: true,
+    source: "CACHE_SERVICE_NON_ENUMERABLE",
+    messageType: normalizedType,
+    byApplicantId: {}
+  };
 }
 
 function setLastCommunicationSentAt_(applicantId, messageType, isoValue) {
-  try {
-    PropertiesService.getScriptProperties().setProperty(communicationCooldownKey_(applicantId, messageType), clean_(isoValue || ""));
-  } catch (_err) {}
+  setCommunicationCooldownState_(applicantId, messageType, {
+    sentAt: clean_(isoValue || new Date().toISOString()),
+    source: "email_dispatch"
+  }, Math.ceil(communicationCooldownMs_() / 1000));
 }
 
 function communicationGetActorInfo_(opts) {
@@ -6898,6 +6878,54 @@ function buildApplicantMessage_(context) {
   return { ok: false, code: "UNKNOWN_MESSAGE_TYPE", subject: "", body: "" };
 }
 
+function computeEmailIdempotencyKey_(context, opts) {
+  var ctx = context && typeof context === "object" ? context : {};
+  var options = opts && typeof opts === "object" ? opts : {};
+  var applicantId = clean_(ctx.applicantId || options.applicantId || "");
+  var messageType = clean_(ctx.messageType || options.messageType || "").toLowerCase();
+  var batchId = clean_(options.batchId || options.batchLabel || ctx.batchLabel || "");
+  return ["EMAIL", applicantId, messageType, batchId].join("::");
+}
+
+function wasEmailAlreadyProcessed_(context, idempotencyKey) {
+  var ctx = context && typeof context === "object" ? context : {};
+  var messageType = clean_(ctx.messageType || "").toLowerCase();
+  var row = ctx.rowObj || {};
+  var emailStatus = clean_(row.Email_Status || ctx.emailStatus || "").toUpperCase();
+  var lastContactType = clean_(row.Last_Contact_Type || "").toLowerCase();
+  var lastContactResult = clean_(row.Last_Contact_Result || "").toUpperCase();
+  var lastContactBatch = clean_(row.Last_Contact_Batch || "");
+  var batchId = clean_(ctx.batchLabel || "");
+  var durableMatch = !!(messageType && lastContactType === messageType && lastContactResult === "SENT");
+  if (batchId && lastContactBatch && batchId !== lastContactBatch) durableMatch = false;
+  var legacyInviteSent = messageType === "legacy_invite" && emailStatus === "SENT";
+  var cacheState = getCommunicationCooldownState_(ctx.applicantId || "", messageType);
+  var cacheMatch = !!(cacheState && clean_(cacheState.idempotencyKey || "") === clean_(idempotencyKey || ""));
+  return {
+    ok: true,
+    alreadyProcessed: durableMatch || legacyInviteSent || cacheMatch,
+    durableMatch: durableMatch,
+    legacyInviteSent: legacyInviteSent,
+    cacheMatch: cacheMatch,
+    idempotencyKey: clean_(idempotencyKey || "")
+  };
+}
+
+function recordEmailProcessingResult_(context, idempotencyKey, result) {
+  var ctx = context && typeof context === "object" ? context : {};
+  var res = result && typeof result === "object" ? result : {};
+  var label = clean_(res.label || "EMAIL_PROCESSING_RESULT");
+  logOperationalBlock_(label, {
+    applicantId: clean_(ctx.applicantId || ""),
+    messageType: clean_(ctx.messageType || ""),
+    batchLabel: clean_(ctx.batchLabel || ""),
+    idempotencyKey: clean_(idempotencyKey || ""),
+    result: clean_(res.result || ""),
+    blockCode: clean_(res.blockCode || ""),
+    dryRun: res.dryRun === true
+  });
+}
+
 function dispatchApplicantMessage_(context, builtMessage, opts) {
   var ctx = context || {};
   var message = builtMessage || {};
@@ -6958,6 +6986,26 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
       debugId: clean_(ctx.debugId || options.debugId || newDebugId_())
     };
   }
+  var idempotencyKey = computeEmailIdempotencyKey_(ctx, options);
+  var processed = wasEmailAlreadyProcessed_(ctx, idempotencyKey);
+  if (processed.alreadyProcessed) {
+    recordEmailProcessingResult_(ctx, idempotencyKey, {
+      label: "EMAIL_IDEMPOTENCY_SUPPRESSED",
+      result: "BLOCKED",
+      blockCode: "ALREADY_PROCESSED"
+    });
+    return {
+      ok: false,
+      result: "BLOCKED",
+      blockCode: "ALREADY_PROCESSED",
+      blockReason: "This email action has already been processed for the current durable state.",
+      applicantId: clean_(ctx.applicantId || ""),
+      messageType: clean_(ctx.messageType || ""),
+      effectiveEmail: clean_(ctx.effectiveEmail || ""),
+      subject: clean_(message.subject || ""),
+      debugId: clean_(ctx.debugId || options.debugId || newDebugId_())
+    };
+  }
   var requestId = clean_(ctx.debugId || options.debugId || newDebugId_());
   var batchId = clean_(options.batchLabel || ctx.batchLabel || "");
   var sendRes = campaignSendEmailGmail_(ctx.effectiveEmail, message.subject, message.body, {
@@ -7008,7 +7056,17 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
     requestId: requestId,
     batchId: batchId
   });
-  setLastCommunicationSentAt_(ctx.applicantId, ctx.messageType, now.toISOString());
+  setCommunicationCooldownState_(ctx.applicantId, ctx.messageType, {
+    sentAt: now.toISOString(),
+    source: "email_dispatch",
+    idempotencyKey: idempotencyKey,
+    batchLabel: batchId,
+    result: "SENT"
+  }, Math.ceil(communicationCooldownMs_() / 1000));
+  recordEmailProcessingResult_(ctx, idempotencyKey, {
+    label: "EMAIL_PROCESSING_RESULT",
+    result: "SENT"
+  });
   recordApplicantContactOutcome_(ctx, "SENT", {
     actorEmail: actorEmail,
     batchLabel: clean_(options.batchLabel || ctx.batchLabel || ""),

@@ -2,7 +2,7 @@
 
 ## Current Objective
 
-Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and complete r136 Script Properties dry-run and capped cleanup containment.
+Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and complete r137 Email State Architecture Hardening Phase 1.
 
 ## Current Issue
 
@@ -10,17 +10,24 @@ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative
 - Trigger freeze active.
 - Production email freeze active.
 - May 5 sheet restore completed.
-- Property-growth cleanup containment active.
-- r136 cleanup target is `COMM_LAST::*` only.
-- Cleanup defaults to dry-run.
-- Deletion requires `confirm=true` and `prefix="COMM_LAST::"`.
-- Confirmed deletion blocks when eligible count exceeds `MAX_PROPERTY_DELETE_BATCH = 500` unless `forceLargeDelete === true`.
-- Protected runtime/config/deployment/cursor keys must not be deleted.
-- Phase A: deploy r136, verify whoami, verify inventory RPC wrappers, verify full dry-run output.
-- Phase B: manually review property counts, protected counts, eligible counts, and estimated size reduction.
-- Phase C: only then run confirmed cleanup.
-- Longer-term direction: move communication cooldown state away from unbounded Script Properties after containment.
+- r136 property cleanup accepted: `COMM_LAST::*` reduced to `0`; final Script Properties count `6`; protected/non-matching keys preserved.
+- r137 hardening replaces hidden/unbounded `COMM_LAST::*` cooldown behavior with bounded `CacheService` state.
+- `COMM_LAST::*` must never be recreated by email cooldown logic.
+- Script Properties policy: keep only bounded config, cursors, locks, deployment/runtime metadata, and explicitly protected operational state.
+- Bounded-state doctrine: ephemeral communication state belongs in TTL cache or observable sheet-backed durable truth, not unbounded Script Properties.
+- Observability-first doctrine: email gates, trigger state, property health, last automation run, last batch ID, and last blocked reason must be visible in Admin UI via RPC.
+- No hidden unbounded operational state is permitted.
 - No unattended production sends permitted during stabilization.
+- No production email restart is authorized in r137.
+- r137 Apps Script version `137` created with description `r137: email state architecture hardening`.
+- Admin deployment pinned to `@137`.
+- Student deployment pinned to `@137`.
+- Admin whoami: `r137 / 137`, mismatch `false`.
+- Student whoami: `r137 / 137`, mismatch `false`.
+- Admin RPC registry includes `admin_getOperationalSafetyStatus`: PASS.
+- Admin `?view=admin` HTML includes Runtime Safety, Property Health, and Email Pipeline Status panels: PASS.
+- CLI execution of `admin_getOperationalSafetyStatus` and `admin_getPropertyInventorySummary` remains blocked by Apps Script execution permissions.
+- Browser/operator confirmation of populated panel values and live property counts: MANUAL REQUIRED before git commit/tag finalization.
 - r113 alias hard-block regression identified.
 - Email send-block caused by r113 alias enforcement (`assertRequiredSystemSenderAlias_`).
 - Confirmed working baseline: `r112` (`ca86c0e`).
@@ -46,7 +53,7 @@ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative
   - Student whoami: `r136 / 136`, mismatch `false`.
   - Admin RPC registry includes `admin_dryRunCleanupAllCommLastProperties`: PASS.
   - Admin RPC registry includes `admin_confirmCleanupCommLastBatch500`: PASS.
-  - No confirmed cleanup executed.
+  - Confirmed cleanup later accepted by operator: `COMM_LAST::*` reduced from `802` to `0`; final Script Properties count `6`.
   - r135 diagnostics visibility instrumentation in progress.
   - Diagnostic wrappers must log terminal markers and return full objects.
   - Compact display wrappers must return browser-visible summaries for inventory, prefix breakdown, and dry-run cleanup.
@@ -58,7 +65,7 @@ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative
   - Admin RPC registry includes compact display wrapper functions: PASS.
   - CLI execution of display/dry-run wrappers remains blocked by Apps Script execution permissions.
   - Operator-visible dry-run must be completed from Apps Script editor using the no-arg display/log wrappers.
-  - No confirmed cleanup executed.
+  - r136 confirmed cleanup completed and accepted before r137 planning.
   - r134 identity correction completed after Apps Script version `133` was created with stale `r132 / 132` runtime identity.
   - Apps Script version `133` must not be treated as accepted because deployment pin `@133` did not match runtime identity.
   - Corrected runtime/deployment identity: `r134 / 134` pinned to Apps Script version `134`.
@@ -76,10 +83,10 @@ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative
   - Admin whoami: `r134 / 134`, mismatch `false`.
   - Student whoami: `r134 / 134`, mismatch `false`.
   - Admin RPC registry includes diagnostic wrapper functions: PASS.
-  - Confirmed cleanup remains blocked until wrapper dry-run output is manually reviewed.
+  - r136 confirmed cleanup completed and accepted; no further Script Properties deletion is authorized in r137.
   - Inventory RPC execution: MANUAL REQUIRED (`clasp run admin_getPropertyInventorySummary` denied by Apps Script execution permissions).
   - Dry-run cleanup execution: MANUAL REQUIRED (`clasp run admin_cleanupEphemeralCommunicationProperties` unavailable from current CLI execution path).
-  - Confirmed cleanup remains blocked until inventory and dry-run output are manually reviewed.
+  - r136 inventory and dry-run review completed before accepted cleanup; no further Script Properties deletion is authorized in r137.
   - r131 deployed for stabilization freeze and property containment.
   - `SYSTEM_STABILIZATION_MODE = true`.
   - `ENABLE_AUTOMATED_STAGE_RUNNER = false`.
@@ -109,9 +116,11 @@ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative
 ## Files In Scope
 
 - `Admin.js`
+- `AdminUI.html`
 - `Code.js`
 - `Config.js`
 - `CURRENT_TASK.md`
+- `Utils.js`
 
 ## Current Authority
 
@@ -249,7 +258,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-r136 full dry-run wrapper acceptance only; do not run confirmed cleanup until visible dry-run evidence is reviewed.
+r137 manual/browser acceptance only: verify populated Admin operational safety panels and live property counts, then commit/tag if accepted. Do not restart email sends.
 
 ## Cautions
 
@@ -263,3 +272,4 @@ r136 full dry-run wrapper acceptance only; do not run confirmed cleanup until vi
 - No commit/tag until all acceptance evidence is confirmed.
 - Treat live `whoami` as runtime truth.
 - Rollback prefers repinning Admin and Student to r124; if a trigger was installed, remove or disable the `automatedStageBatchRunner` trigger.
+- r137 rollback target is Admin and Student repin to `@136`; verify whoami returns `r136 / 136`, mismatch `false`.

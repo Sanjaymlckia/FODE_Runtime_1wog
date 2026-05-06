@@ -427,6 +427,43 @@
       <div class="muted" id="studentUrlWarnText" style="margin-top:6px;"></div>
     </div>
 
+    <div id="runtimeSafetyPanel" class="card queue-panel">
+      <h3>Runtime Safety</h3>
+      <div class="commMeta">
+        <div class="box"><div class="k">Runtime Version</div><div class="v" id="opsRuntimeVersion">loading...</div></div>
+        <div class="box"><div class="k">Deploy Version</div><div class="v" id="opsDeployVersion">loading...</div></div>
+        <div class="box"><div class="k">Stabilization Mode</div><div class="v" id="opsStabilizationMode">loading...</div></div>
+        <div class="box"><div class="k">Production Sends</div><div class="v" id="opsProductionSends">loading...</div></div>
+        <div class="box"><div class="k">Trigger Sends</div><div class="v" id="opsTriggerSends">loading...</div></div>
+        <div class="box"><div class="k">Trigger Installed</div><div class="v" id="opsTriggerInstalled">loading...</div></div>
+        <div class="box"><div class="k">Last Automation Run</div><div class="v" id="opsLastAutomationRun">loading...</div></div>
+        <div class="box"><div class="k">Last Batch ID</div><div class="v" id="opsLastBatchId">loading...</div></div>
+        <div class="box"><div class="k">Last Batch Result</div><div class="v" id="opsLastBatchResult">loading...</div></div>
+      </div>
+    </div>
+
+    <div id="propertyHealthPanel" class="card queue-panel">
+      <h3>Property Health</h3>
+      <div class="commMeta">
+        <div class="box"><div class="k">Total Properties</div><div class="v" id="opsPropertyTotal">loading...</div></div>
+        <div class="box"><div class="k">Estimated Size</div><div class="v" id="opsPropertySize">loading...</div></div>
+        <div class="box"><div class="k">COMM_LAST Count</div><div class="v" id="opsCommLastCount">loading...</div></div>
+        <div class="box"><div class="k">Health</div><div class="v" id="opsPropertyHealth">loading...</div></div>
+      </div>
+    </div>
+
+    <div id="emailPipelinePanel" class="card queue-panel">
+      <h3>Email Pipeline Status</h3>
+      <div class="commMeta">
+        <div class="box"><div class="k">Manual Send</div><div class="v" id="opsManualSend">loading...</div></div>
+        <div class="box"><div class="k">Batch Send</div><div class="v" id="opsBatchSend">loading...</div></div>
+        <div class="box"><div class="k">Trigger Send</div><div class="v" id="opsTriggerSendGate">loading...</div></div>
+        <div class="box"><div class="k">Daily Cap</div><div class="v" id="opsDailyCap">loading...</div></div>
+        <div class="box"><div class="k">Per-Run Cap</div><div class="v" id="opsPerRunCap">loading...</div></div>
+        <div class="box"><div class="k">Last Blocked Reason</div><div class="v" id="opsLastBlockedReason">loading...</div></div>
+      </div>
+    </div>
+
     <div id="stageDashboardPanel" class="card queue-panel">
       <h3>Stage Dashboard</h3>
       <div id="stageFilterMeta" class="stageDashboardMeta">Click a stage to filter the applicant table.</div>
@@ -3649,9 +3686,60 @@ function renderStageDashboard_(items, emptyMessage){
       badge.classList.remove("mismatch");
       badge.title = "Admin=" + String(rt.canonicalAdminUrl || "") + " | Student=" + String(rt.canonicalStudentUrl || "");
     }
+    function opsText_(v){
+      if (v === true) return "ON";
+      if (v === false) return "OFF";
+      if (v === null || v === undefined || v === "") return "-";
+      return String(v);
+    }
+    function setOpsValue_(id, value){
+      var el = document.getElementById(id);
+      if (el) el.textContent = opsText_(value);
+    }
+    function renderOperationalSafetyStatus_(res){
+      var data = res && typeof res === "object" ? res : {};
+      var runtime = data.runtime || {};
+      var gates = data.gates || {};
+      var trigger = data.trigger || {};
+      var automation = data.automation || {};
+      var propertyHealth = data.propertyHealth || {};
+      setOpsValue_("opsRuntimeVersion", runtime.version || "-");
+      setOpsValue_("opsDeployVersion", runtime.deployVersion || "-");
+      setOpsValue_("opsStabilizationMode", gates.stabilizationMode === true);
+      setOpsValue_("opsProductionSends", gates.productionSendsEnabled === true);
+      setOpsValue_("opsTriggerSends", gates.triggerSendsEnabled === true);
+      setOpsValue_("opsTriggerInstalled", trigger.installed === true ? "YES" : "NO");
+      setOpsValue_("opsLastAutomationRun", automation.lastRun || "-");
+      setOpsValue_("opsLastBatchId", automation.lastBatchId || "-");
+      setOpsValue_("opsLastBatchResult", automation.lastBatchResult || "-");
+      setOpsValue_("opsPropertyTotal", propertyHealth.totalPropertyCount);
+      setOpsValue_("opsPropertySize", propertyHealth.totalSerializedSizeEstimate);
+      setOpsValue_("opsCommLastCount", propertyHealth.commLastCount);
+      setOpsValue_("opsPropertyHealth", propertyHealth.healthLevel || "-");
+      setOpsValue_("opsManualSend", gates.manualSendEnabled === true);
+      setOpsValue_("opsBatchSend", gates.batchSendEnabled === true);
+      setOpsValue_("opsTriggerSendGate", gates.triggerSendsEnabled === true);
+      setOpsValue_("opsDailyCap", gates.dailyCap);
+      setOpsValue_("opsPerRunCap", gates.perRunCap);
+      setOpsValue_("opsLastBlockedReason", gates.lastBlockedReason || "-");
+    }
+    function fetchOperationalSafetyStatus_(){
+      google.script.run
+        .withSuccessHandler(function(res){
+          renderOperationalSafetyStatus_(res || {});
+        })
+        .withFailureHandler(function(err){
+          var message = err && err.message ? err.message : "Operational safety status unavailable";
+          ["opsRuntimeVersion","opsDeployVersion","opsStabilizationMode","opsProductionSends","opsTriggerSends","opsTriggerInstalled","opsLastAutomationRun","opsLastBatchId","opsLastBatchResult","opsPropertyTotal","opsPropertySize","opsCommLastCount","opsPropertyHealth","opsManualSend","opsBatchSend","opsTriggerSendGate","opsDailyCap","opsPerRunCap","opsLastBlockedReason"].forEach(function(id){
+            setOpsValue_(id, message);
+          });
+        })
+        .admin_getOperationalSafetyStatus({});
+    }
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", function(){
         fetchRuntimeInfo_();
+        fetchOperationalSafetyStatus_();
         initQueuePanelEvents_();
         bindDocsFollowupControls_();
         bindStageBatchControls_();
@@ -3660,6 +3748,7 @@ function renderStageDashboard_(items, emptyMessage){
       });
     } else {
       fetchRuntimeInfo_();
+      fetchOperationalSafetyStatus_();
       initQueuePanelEvents_();
       bindDocsFollowupControls_();
       bindStageBatchControls_();

@@ -3129,6 +3129,93 @@ function admin_getDryRunCleanupAllCommLastDisplaySummary() {
   return summary;
 }
 
+function propertyHealthLevel_(summary) {
+  var total = Number(summary && summary.totalPropertyCount || 0);
+  var size = Number(summary && summary.totalSerializedSizeEstimate || 0);
+  var countLimit = Math.max(1, Number(CONFIG.SCRIPT_PROPERTY_HEALTH_COUNT_LIMIT || 500));
+  var sizeLimit = Math.max(1, Number(CONFIG.SCRIPT_PROPERTY_HEALTH_SIZE_LIMIT || 500000));
+  var ratio = Math.max(total / countLimit, size / sizeLimit);
+  if (ratio >= 0.75) return "CRITICAL";
+  if (ratio >= 0.50) return "WARNING";
+  return "HEALTHY";
+}
+
+function admin_getOperationalSafetyStatus(payload) {
+  var adminEmail = typeof getCallerEmail_ === "function" ? clean_(getCallerEmail_() || "") : "";
+  if (typeof isAdmin_ === "function" && !isAdmin_(adminEmail)) throw new Error("Access denied");
+  var runtime = typeof buildRuntimeTruth_ === "function"
+    ? buildRuntimeTruth_({ parameter: { view: "admin" } }, "admin")
+    : { ok: true, version: clean_(CONFIG.VERSION || ""), deployVersion: Number(CONFIG.DEPLOY_VERSION_NUMBER || 0) };
+  var triggerStatus = null;
+  try {
+    triggerStatus = typeof getAutomatedStageRunnerStatus_ === "function" ? getAutomatedStageRunnerStatus_() : null;
+  } catch (triggerErr) {
+    triggerStatus = { ok: false, triggerCount: null, error: clean_(triggerErr && triggerErr.message ? triggerErr.message : triggerErr) };
+  }
+  var propertySummary = getPropertyInventorySummary_();
+  var lastRun = triggerStatus && triggerStatus.lastRun && typeof triggerStatus.lastRun === "object" ? triggerStatus.lastRun : null;
+  var stabilizationMode = isSystemStabilizationModeActive_();
+  var productionSendsEnabled = CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS === true && stabilizationMode !== true;
+  var triggerSendsEnabled = CONFIG.ENABLE_TRIGGER_EMAIL_SENDS === true && stabilizationMode !== true;
+  var automatedRunnerEnabled = CONFIG.ENABLE_AUTOMATED_STAGE_RUNNER === true && stabilizationMode !== true;
+  var lastBlockedReason = stabilizationMode
+    ? "SYSTEM_STABILIZATION_MODE_ACTIVE"
+    : (!productionSendsEnabled ? "PRODUCTION_EMAIL_SENDS_DISABLED" : "");
+  return {
+    ok: true,
+    actorEmail: adminEmail,
+    runtime: {
+      version: clean_(runtime.version || CONFIG.VERSION || ""),
+      deployVersion: Number(runtime.deployVersion || CONFIG.DEPLOY_VERSION_NUMBER || 0),
+      mismatch: runtime.mismatch === true,
+      warning: clean_(runtime.warning || ""),
+      canonicalAdminUrl: clean_(runtime.canonicalAdminUrl || CONFIG.WEBAPP_URL_ADMIN || ""),
+      canonicalStudentUrl: clean_(runtime.canonicalStudentUrl || CONFIG.WEBAPP_URL_STUDENT || "")
+    },
+    gates: {
+      stabilizationMode: stabilizationMode,
+      productionSendsEnabled: productionSendsEnabled,
+      manualSendEnabled: productionSendsEnabled,
+      batchSendEnabled: productionSendsEnabled,
+      triggerSendsEnabled: triggerSendsEnabled,
+      automatedStageRunnerEnabled: automatedRunnerEnabled,
+      bounceIngestionEnabled: CONFIG.ENABLE_BOUNCE_INGESTION === true && stabilizationMode !== true,
+      dailyCap: Number(CONFIG.DAILY_SEND_CAP || CONFIG.AUTOMATED_STAGE_DAILY_CAP || 0),
+      automatedDailyCap: Number(CONFIG.AUTOMATED_STAGE_DAILY_CAP || CONFIG.DAILY_SEND_CAP || 0),
+      perRunCap: Number(CONFIG.PER_RUN_BATCH_SIZE || CONFIG.DEFAULT_STAGE_BATCH_SIZE || 0),
+      maxPerRunCap: Number(CONFIG.MAX_PER_RUN_BATCH_SIZE || CONFIG.MAX_STAGE_BATCH_SIZE || 0),
+      lastBlockedReason: lastBlockedReason
+    },
+    trigger: {
+      installed: !!(triggerStatus && Number(triggerStatus.triggerCount || 0) > 0),
+      triggerCount: triggerStatus ? triggerStatus.triggerCount : null,
+      functionName: clean_(triggerStatus && triggerStatus.functionName || ""),
+      inspectionOk: !!(triggerStatus && triggerStatus.triggerInspection && triggerStatus.triggerInspection.ok)
+    },
+    automation: {
+      lastRun: clean_(lastRun && (lastRun.writtenAt || lastRun.timestamp || lastRun.startedAt) || ""),
+      lastBatchId: clean_(lastRun && (lastRun.batchId || lastRun.batchLabel || lastRun.requestId || lastRun.debugId) || ""),
+      lastBatchResult: clean_(lastRun && (lastRun.result || lastRun.blockCode || lastRun.message || "") || "")
+    },
+    propertyHealth: {
+      totalPropertyCount: Number(propertySummary.totalPropertyCount || 0),
+      totalSerializedSizeEstimate: Number(propertySummary.totalSerializedSizeEstimate || 0),
+      commLastCount: Number(propertySummary.commLastCount || 0),
+      eligibleCommLastDeletionCount: Number(propertySummary.eligibleCommLastDeletionCount || 0),
+      protectedCount: Number(propertySummary.protectedCount || 0),
+      healthLevel: propertyHealthLevel_(propertySummary),
+      countLimit: Number(CONFIG.SCRIPT_PROPERTY_HEALTH_COUNT_LIMIT || 500),
+      sizeLimit: Number(CONFIG.SCRIPT_PROPERTY_HEALTH_SIZE_LIMIT || 500000)
+    },
+    cooldown: {
+      source: "CacheService.getScriptCache",
+      ttlSeconds: Number(CONFIG.COMMUNICATION_COOLDOWN_CACHE_TTL_SECONDS || 3600),
+      maxTtlSeconds: Number(CONFIG.COMMUNICATION_COOLDOWN_CACHE_MAX_TTL_SECONDS || 21600),
+      scriptPropertiesCommLastWritesEnabled: false
+    }
+  };
+}
+
 function admin_runAutomatedStageBatchOnce(payload) {
   return withEnvelope_("admin_runAutomatedStageBatchOnce", function () {
     var adminEmail = getActiveUserEmail_();

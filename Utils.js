@@ -1337,6 +1337,78 @@ function systemStabilizationBlockResult_(action, code, requestId, extra) {
   };
 }
 
+function communicationCooldownCacheTtlSeconds_(ttlSeconds) {
+  var configured = Math.floor(Number(ttlSeconds || CONFIG.COMMUNICATION_COOLDOWN_CACHE_TTL_SECONDS || 3600));
+  var maxTtl = Math.max(1, Math.floor(Number(CONFIG.COMMUNICATION_COOLDOWN_CACHE_MAX_TTL_SECONDS || 21600)));
+  if (!(configured > 0)) configured = 3600;
+  return Math.max(1, Math.min(configured, maxTtl));
+}
+
+function getCommunicationCooldownCacheKey_(applicantId, messageType) {
+  var type = safeStr_(messageType || "").toLowerCase();
+  var id = safeStr_(applicantId || "");
+  var key = "COMM_COOLDOWN::" + type + "::" + id;
+  return key.length <= 240 ? key : key.slice(0, 240);
+}
+
+function getCommunicationCooldownState_(applicantId, messageType) {
+  var key = getCommunicationCooldownCacheKey_(applicantId, messageType);
+  if (!safeStr_(applicantId || "") || !safeStr_(messageType || "")) return null;
+  try {
+    var raw = CacheService.getScriptCache().get(key);
+    if (!raw) return null;
+    var parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch (err) {
+    logOperationalBlock_("COMMUNICATION_COOLDOWN_CACHE_READ_FAILED", {
+      key: key,
+      error: safeStr_(err && err.message ? err.message : err)
+    });
+    return null;
+  }
+}
+
+function setCommunicationCooldownState_(applicantId, messageType, state, ttlSeconds) {
+  var id = safeStr_(applicantId || "");
+  var type = safeStr_(messageType || "").toLowerCase();
+  if (!id || !type) return { ok: false, key: "", stored: false, error: "MISSING_SCOPE" };
+  var key = getCommunicationCooldownCacheKey_(id, type);
+  var ttl = communicationCooldownCacheTtlSeconds_(ttlSeconds);
+  var payload = state && typeof state === "object" ? Object.assign({}, state) : {};
+  payload.applicantId = id;
+  payload.messageType = type;
+  payload.cachedAt = payload.cachedAt || new Date().toISOString();
+  payload.ttlSeconds = ttl;
+  try {
+    CacheService.getScriptCache().put(key, JSON.stringify(payload), ttl);
+    return { ok: true, key: key, stored: true, ttlSeconds: ttl };
+  } catch (err) {
+    logOperationalBlock_("COMMUNICATION_COOLDOWN_CACHE_WRITE_FAILED", {
+      key: key,
+      ttlSeconds: ttl,
+      error: safeStr_(err && err.message ? err.message : err)
+    });
+    return { ok: false, key: key, stored: false, ttlSeconds: ttl, error: safeStr_(err && err.message ? err.message : err) };
+  }
+}
+
+function clearCommunicationCooldownState_(applicantId, messageType) {
+  var id = safeStr_(applicantId || "");
+  var type = safeStr_(messageType || "").toLowerCase();
+  if (!id || !type) return { ok: false, key: "", cleared: false, error: "MISSING_SCOPE" };
+  var key = getCommunicationCooldownCacheKey_(id, type);
+  try {
+    CacheService.getScriptCache().remove(key);
+    return { ok: true, key: key, cleared: true };
+  } catch (err) {
+    logOperationalBlock_("COMMUNICATION_COOLDOWN_CACHE_CLEAR_FAILED", {
+      key: key,
+      error: safeStr_(err && err.message ? err.message : err)
+    });
+    return { ok: false, key: key, cleared: false, error: safeStr_(err && err.message ? err.message : err) };
+  }
+}
+
 function isEphemeralCommunicationProperty_(key) {
   var k = safeStr_(key || "");
   return k.indexOf("COMM_LAST::") === 0;
