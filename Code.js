@@ -6087,6 +6087,12 @@ function campaignSendEmailGmail_(toEmail, subject, body, meta) {
     requestId: clean_(trace.requestId || trace.debugId || ""),
     batchId: clean_(trace.batchId || trace.batchLabel || "")
   };
+  if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true) {
+    var blockedCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "PRODUCTION_EMAIL_SENDS_DISABLED";
+    if (isSystemStabilizationModeActive_()) logOperationalBlock_("SYSTEM_STABILIZATION_MODE_ACTIVE", Object.assign({}, traceBase, { action: "campaign_send_email" }));
+    logOperationalBlock_("EMAIL_SEND_BLOCKED", Object.assign({}, traceBase, { action: "campaign_send_email", blockCode: blockedCode, from: alias, replyTo: replyTo }));
+    return { ok: false, error: blockedCode, blocked: true, to: to, from: alias, replyTo: replyTo };
+  }
   if (!to) return { ok: false, error: "Missing recipient email" };
   if (!alias) return { ok: false, error: "Missing campaign Gmail alias" };
   campaignLog_("GMAIL_ALIAS_LOOKUP_BEGIN", traceBase);
@@ -6897,6 +6903,34 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
   var message = builtMessage || {};
   var options = opts && typeof opts === "object" ? opts : {};
   var actorEmail = clean_(options.actorEmail || ctx.actorEmail || (typeof getCallerEmail_ === "function" ? getCallerEmail_() : "") || "");
+  if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true) {
+    var dispatchBlockCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "PRODUCTION_EMAIL_SENDS_DISABLED";
+    if (isSystemStabilizationModeActive_()) logOperationalBlock_("SYSTEM_STABILIZATION_MODE_ACTIVE", {
+      action: "dispatch_applicant_message",
+      applicantId: clean_(ctx.applicantId || ""),
+      messageType: clean_(ctx.messageType || ""),
+      debugId: clean_(ctx.debugId || options.debugId || "")
+    });
+    logOperationalBlock_("EMAIL_SEND_BLOCKED", {
+      action: "dispatch_applicant_message",
+      blockCode: dispatchBlockCode,
+      applicantId: clean_(ctx.applicantId || ""),
+      messageType: clean_(ctx.messageType || ""),
+      actorEmail: actorEmail,
+      debugId: clean_(ctx.debugId || options.debugId || "")
+    });
+    return {
+      ok: false,
+      result: "BLOCKED",
+      code: dispatchBlockCode,
+      blockCode: dispatchBlockCode,
+      applicantId: clean_(ctx.applicantId || ""),
+      messageType: clean_(ctx.messageType || ""),
+      effectiveEmail: clean_(ctx.effectiveEmail || ""),
+      subject: clean_(message.subject || ""),
+      debugId: clean_(ctx.debugId || options.debugId || newDebugId_())
+    };
+  }
   if (!ctx.eligible) {
     return {
       ok: false,
@@ -7452,6 +7486,29 @@ function runAutomatedStageBatchChunk_(opts) {
 function runAutomatedStageBatchWithLock_(opts) {
   var options = opts && typeof opts === "object" ? opts : {};
   var requestId = clean_(options.requestId || newDebugId_());
+  var source = clean_(options.source || "MANUAL");
+  if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_AUTOMATED_STAGE_RUNNER !== true || CONFIG.ENABLE_TRIGGER_EMAIL_SENDS !== true) {
+    var reason = isSystemStabilizationModeActive_()
+      ? "SYSTEM_STABILIZATION_MODE_ACTIVE"
+      : (CONFIG.ENABLE_AUTOMATED_STAGE_RUNNER !== true ? "AUTO_STAGE_DISABLED" : "AUTO_STAGE_SENDS_DISABLED");
+    if (isSystemStabilizationModeActive_()) logOperationalBlock_("SYSTEM_STABILIZATION_MODE_ACTIVE", { action: "automated_stage_batch", requestId: requestId, source: source });
+    if (CONFIG.ENABLE_AUTOMATED_STAGE_RUNNER !== true) logOperationalBlock_("AUTO_STAGE_DISABLED", { action: "automated_stage_batch", requestId: requestId, source: source });
+    if (CONFIG.ENABLE_TRIGGER_EMAIL_SENDS !== true) logOperationalBlock_("AUTO_STAGE_SENDS_DISABLED", { action: "automated_stage_batch", requestId: requestId, source: source });
+    if (source === "TRIGGER") logOperationalBlock_("TRIGGER_SEND_BLOCKED", { action: "automated_stage_batch", requestId: requestId, blockCode: reason });
+    logOperationalBlock_("AUTO_STAGE_SAFE_NOOP", { action: "automated_stage_batch", requestId: requestId, source: source, blockCode: reason });
+    return {
+      ok: true,
+      action: "automated_stage_batch",
+      result: "SKIPPED",
+      reason: reason,
+      requestId: requestId,
+      source: source,
+      safeNoop: true,
+      sheetMutations: 0,
+      propertyMutations: 0,
+      emailsSent: 0
+    };
+  }
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(1000)) {
     return automatedStageRunnerFinalize_({
@@ -7487,6 +7544,9 @@ function runAutomatedStageBatchWithLock_(opts) {
 }
 
 function automatedStageBatchRunner() {
+  if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_AUTOMATED_STAGE_RUNNER !== true || CONFIG.ENABLE_TRIGGER_EMAIL_SENDS !== true) {
+    return runAutomatedStageBatchWithLock_({ source: "TRIGGER" });
+  }
   return runAutomatedStageBatchWithLock_({ source: "TRIGGER" });
 }
 
@@ -7775,6 +7835,36 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
 
 function sendApplicantMessage_(applicantId, messageType, opts) {
   var options = opts && typeof opts === "object" ? opts : {};
+  if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true) {
+    var requestId = clean_(options.debugId || newDebugId_());
+    var blockCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "PRODUCTION_EMAIL_SENDS_DISABLED";
+    if (isSystemStabilizationModeActive_()) logOperationalBlock_("SYSTEM_STABILIZATION_MODE_ACTIVE", {
+      action: "send_applicant_message",
+      applicantId: clean_(applicantId || ""),
+      messageType: clean_(messageType || ""),
+      debugId: requestId
+    });
+    logOperationalBlock_("EMAIL_SEND_BLOCKED", {
+      action: "send_applicant_message",
+      blockCode: blockCode,
+      applicantId: clean_(applicantId || ""),
+      messageType: clean_(messageType || ""),
+      batchLabel: clean_(options.batchLabel || ""),
+      debugId: requestId
+    });
+    return {
+      ok: true,
+      action: "send",
+      result: "BLOCKED",
+      eligible: false,
+      blockCode: blockCode,
+      blockReason: "Production email sends are disabled during stabilization.",
+      applicantId: clean_(applicantId || ""),
+      messageType: clean_(messageType || ""),
+      effectiveEmail: "",
+      debugId: requestId
+    };
+  }
   var context = resolveApplicantMessageContext_(applicantId, messageType, Object.assign({}, options, { action: "send" }));
   if (!context.eligible) {
     if (!hasPriorSuccessfulMessageSend_(context)) {
@@ -8313,8 +8403,19 @@ function applyBounceStateToRow_(rowObj, classification, reason) {
 
 function ingestRecentBounces_(opts) {
   var options = opts && typeof opts === "object" ? opts : {};
+  if (isSystemStabilizationModeActive_()) {
+    logOperationalBlock_("SYSTEM_STABILIZATION_MODE_ACTIVE", { action: "bounce_ingestion", source: clean_(options.source || "MANUAL") });
+    logOperationalBlock_("BOUNCE_SCAN_BLOCKED", { action: "bounce_ingestion", blockCode: "SYSTEM_STABILIZATION_MODE_ACTIVE", source: clean_(options.source || "MANUAL") });
+    return {
+      ok: true,
+      action: "bounce_ingestion",
+      result: "SKIPPED",
+      reason: "SYSTEM_STABILIZATION_MODE_ACTIVE"
+    };
+  }
   var enabled = CONFIG.ENABLE_BOUNCE_INGESTION === true || options.force === true;
   if (!enabled) {
+    logOperationalBlock_("BOUNCE_SCAN_BLOCKED", { action: "bounce_ingestion", blockCode: "BOUNCE_INGESTION_DISABLED", source: clean_(options.source || "MANUAL") });
     return {
       ok: true,
       action: "bounce_ingestion",

@@ -1308,6 +1308,155 @@ function safeStr_(v) {
   return String(v === null || v === undefined ? "" : v).trim();
 }
 
+function isSystemStabilizationModeActive_() {
+  return CONFIG && CONFIG.SYSTEM_STABILIZATION_MODE === true;
+}
+
+function logOperationalBlock_(label, payload) {
+  var tag = safeStr_(label || "OPERATION_BLOCKED");
+  var data = payload && typeof payload === "object" ? payload : {};
+  var line = tag + " " + JSON.stringify(data);
+  try { console.log(line); } catch (_consoleErr) {}
+  try { Logger.log(line); } catch (_loggerErr) {}
+}
+
+function systemStabilizationBlockResult_(action, code, requestId, extra) {
+  var more = extra && typeof extra === "object" ? extra : {};
+  var blockCode = safeStr_(code || "SYSTEM_STABILIZATION_MODE_ACTIVE");
+  return {
+    ok: false,
+    action: safeStr_(action || ""),
+    result: "BLOCKED",
+    eligible: false,
+    blockCode: blockCode,
+    blockReason: safeStr_(more.blockReason || "System stabilization mode is active."),
+    applicantId: safeStr_(more.applicantId || ""),
+    messageType: safeStr_(more.messageType || ""),
+    effectiveEmail: safeStr_(more.effectiveEmail || ""),
+    debugId: safeStr_(requestId || more.debugId || "")
+  };
+}
+
+function isEphemeralCommunicationProperty_(key) {
+  var k = safeStr_(key || "");
+  return k.indexOf("COMM_LAST::") === 0;
+}
+
+function isProtectedRuntimeProperty_(key) {
+  var k = safeStr_(key || "");
+  if (!k) return false;
+  if (k.indexOf("STAGE_CURSOR::") === 0) return true;
+  if (k.indexOf("FODE_AUTOSEND_") === 0) return true;
+  if (k.indexOf("FODE_BOUNCE_") === 0) return true;
+  if (k.indexOf("FODE_UPLOAD_ROOT_") === 0) return true;
+  if (k.indexOf("LOCK") >= 0 || k.indexOf("LOCK_") === 0) return true;
+  if (k.indexOf("DEPLOY") >= 0 || k.indexOf("RUNTIME") >= 0 || k.indexOf("CONFIG") >= 0) return true;
+  return false;
+}
+
+function propertyPrefixForInventory_(key) {
+  var k = safeStr_(key || "");
+  if (!k) return "";
+  var doubleColon = k.indexOf("::");
+  if (doubleColon >= 0) return k.slice(0, doubleColon + 2);
+  var underscore = k.indexOf("_");
+  if (underscore > 0) return k.slice(0, underscore + 1);
+  return k;
+}
+
+function parsePropertyTimestamp_(value) {
+  var s = safeStr_(value || "");
+  if (!s) return null;
+  var parsed = Date.parse(s);
+  if (!isNaN(parsed)) return new Date(parsed).toISOString();
+  try {
+    var obj = JSON.parse(s);
+    var candidates = [obj.writtenAt, obj.timestamp, obj.ts, obj.sentAt, obj.updatedAt, obj.createdAt];
+    for (var i = 0; i < candidates.length; i++) {
+      var candidate = safeStr_(candidates[i] || "");
+      if (!candidate) continue;
+      var nested = Date.parse(candidate);
+      if (!isNaN(nested)) return new Date(nested).toISOString();
+    }
+  } catch (_jsonErr) {}
+  return null;
+}
+
+function buildPropertyInventory_() {
+  var props = PropertiesService.getScriptProperties().getProperties() || {};
+  var keys = Object.keys(props);
+  var totalSize = 0;
+  var prefixMap = {};
+  var commLastCount = 0;
+  var oldest = "";
+  var newest = "";
+  keys.forEach(function (key) {
+    var value = String(props[key] || "");
+    totalSize += key.length + value.length;
+    var prefix = propertyPrefixForInventory_(key) || "(none)";
+    if (!prefixMap[prefix]) {
+      prefixMap[prefix] = {
+        prefix: prefix,
+        count: 0,
+        serializedSizeEstimate: 0,
+        ephemeralCount: 0,
+        protectedCount: 0
+      };
+    }
+    prefixMap[prefix].count++;
+    prefixMap[prefix].serializedSizeEstimate += key.length + value.length;
+    if (isEphemeralCommunicationProperty_(key)) {
+      commLastCount++;
+      prefixMap[prefix].ephemeralCount++;
+    }
+    if (isProtectedRuntimeProperty_(key)) prefixMap[prefix].protectedCount++;
+    var ts = parsePropertyTimestamp_(value);
+    if (ts) {
+      if (!oldest || ts < oldest) oldest = ts;
+      if (!newest || ts > newest) newest = ts;
+    }
+  });
+  var prefixes = Object.keys(prefixMap).map(function (prefix) { return prefixMap[prefix]; })
+    .sort(function (a, b) {
+      if (b.count !== a.count) return b.count - a.count;
+      return b.serializedSizeEstimate - a.serializedSizeEstimate;
+    });
+  return {
+    ok: true,
+    totalPropertyCount: keys.length,
+    totalSerializedSizeEstimate: totalSize,
+    commLastCount: commLastCount,
+    oldestParseableTimestamp: oldest,
+    newestParseableTimestamp: newest,
+    topPrefixes: prefixes.slice(0, 20),
+    prefixes: prefixes
+  };
+}
+
+function getPropertyInventorySummary_() {
+  var inventory = buildPropertyInventory_();
+  return {
+    ok: true,
+    totalPropertyCount: inventory.totalPropertyCount,
+    totalSerializedSizeEstimate: inventory.totalSerializedSizeEstimate,
+    commLastCount: inventory.commLastCount,
+    oldestParseableTimestamp: inventory.oldestParseableTimestamp,
+    newestParseableTimestamp: inventory.newestParseableTimestamp,
+    topPrefixes: inventory.topPrefixes
+  };
+}
+
+function getPropertyPrefixBreakdown_() {
+  var inventory = buildPropertyInventory_();
+  return {
+    ok: true,
+    totalPropertyCount: inventory.totalPropertyCount,
+    totalSerializedSizeEstimate: inventory.totalSerializedSizeEstimate,
+    commLastCount: inventory.commLastCount,
+    prefixes: inventory.prefixes
+  };
+}
+
 function hasValue_(v) {
   return !!safeStr_(v);
 }
@@ -1460,6 +1609,22 @@ function adminSendEmail_(to, subject, body, opts) {
   var bcc = safeStr_(o.bcc || "");
   var htmlBody = safeStr_(o.htmlBody || "");
   var fromName = safeStr_(o.name || CONFIG.EMAIL_FROM_NAME || "");
+
+  if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true) {
+    var blockCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "PRODUCTION_EMAIL_SENDS_DISABLED";
+    if (isSystemStabilizationModeActive_()) logOperationalBlock_("SYSTEM_STABILIZATION_MODE_ACTIVE", {
+      action: "admin_send_email",
+      recipient: toEmail
+    });
+    logOperationalBlock_("EMAIL_SEND_BLOCKED", {
+      action: "admin_send_email",
+      blockCode: blockCode,
+      recipient: toEmail,
+      from: fromAddr,
+      replyTo: replyTo
+    });
+    return { ok: false, error: blockCode, blocked: true, from: fromAddr, replyTo: replyTo, cc: cc };
+  }
 
   if (!toEmail) {
     return { ok: false, error: "Missing recipient email", from: fromAddr, replyTo: replyTo, cc: cc };

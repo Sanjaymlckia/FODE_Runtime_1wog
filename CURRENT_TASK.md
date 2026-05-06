@@ -2,10 +2,16 @@
 
 ## Current Objective
 
-Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and restore r112 email sender behavior after the r113 alias hard-block regression.
+Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and complete r131 Stabilization Phase 1 containment for trigger/email/property safety.
 
 ## Current Issue
 
+- Stabilization phase active.
+- Trigger freeze active.
+- Production email freeze active.
+- May 5 sheet restore completed.
+- Property-growth investigation active.
+- No unattended production sends permitted during stabilization.
 - r113 alias hard-block regression identified.
 - Email send-block caused by r113 alias enforcement (`assertRequiredSystemSenderAlias_`).
 - Confirmed working baseline: `r112` (`ca86c0e`).
@@ -20,6 +26,23 @@ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative
     - `adminSendEmail_`
     - `ingestRecentBounces_`
 - Status:
+  - r131 deployed for stabilization freeze and property containment.
+  - `SYSTEM_STABILIZATION_MODE = true`.
+  - `ENABLE_AUTOMATED_STAGE_RUNNER = false`.
+  - `ENABLE_PRODUCTION_EMAIL_SENDS = false`.
+  - `ENABLE_TRIGGER_EMAIL_SENDS = false`.
+  - No trigger creation/update/delete authorized in source implementation.
+  - No sheet data mutation scripts authorized.
+  - Apps Script version `131` created with description `r131: stabilization freeze and property containment`.
+  - Admin deployment pinned to `@131`.
+  - Student deployment pinned to `@131`.
+  - Admin whoami: `r131 / 131`, mismatch `false`.
+  - Student whoami: `r131 / 131`, mismatch `false`.
+  - Admin portal HTTP load: PASS.
+  - Admin RPC registry includes `admin_getPropertyInventorySummary`: PASS.
+  - Trigger safe-noop runtime execution: MANUAL REQUIRED (`clasp run automatedStageBatchRunner` denied by Apps Script permissions).
+  - Property inventory RPC runtime execution: MANUAL REQUIRED (`clasp run admin_getPropertyInventorySummary` denied by Apps Script permissions).
+  - Deployment Execute as / Access settings: MANUAL REQUIRED from Apps Script deployment UI.
   - r130 deployed and verified.
   - r112 behavior restored with campaign alias lookup diagnostic-only so `GmailApp.sendEmail` is the runtime test.
   - Files changed: `Code.js`, `Utils.js`, `Config.js`, `CURRENT_TASK.md`.
@@ -172,7 +195,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-r130 runtime testing.
+r131 manual acceptance checks: trigger safe-noop, property inventory RPC, Admin runtime badge, and deployment Execute as / Access settings.
 
 ## Cautions
 

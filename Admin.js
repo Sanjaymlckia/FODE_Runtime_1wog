@@ -2891,6 +2891,21 @@ function admin_campaignSendLegacyBatch(payload) {
     var adminEmail = getActiveUserEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
     var p = payload || {};
+    if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true) {
+      var blockCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "PRODUCTION_EMAIL_SENDS_DISABLED";
+      if (isSystemStabilizationModeActive_()) logOperationalBlock_("SYSTEM_STABILIZATION_MODE_ACTIVE", {
+        action: "campaign_send_legacy_batch",
+        actorEmail: clean_(adminEmail || "")
+      });
+      logOperationalBlock_("EMAIL_SEND_BLOCKED", {
+        action: "campaign_send_legacy_batch",
+        blockCode: blockCode,
+        actorEmail: clean_(adminEmail || "")
+      });
+      return adminCommBlockedResult_("campaign_send_legacy_batch", blockCode, "", {
+        blockReason: "Legacy campaign sends are disabled during stabilization."
+      });
+    }
     return campaign_sendLegacyBatch_(p.limit, p);
   });
 }
@@ -2916,6 +2931,24 @@ function admin_runBounceScan(payload) {
     var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
     return admin_scanBounces_();
+  });
+}
+
+function admin_getPropertyInventorySummary() {
+  return withEnvelope_("admin_getPropertyInventorySummary", function () {
+    var adminEmail = getCallerEmail_();
+    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    requireSuperAdmin_(adminEmail);
+    return getPropertyInventorySummary_();
+  });
+}
+
+function admin_getPropertyPrefixBreakdown() {
+  return withEnvelope_("admin_getPropertyPrefixBreakdown", function () {
+    var adminEmail = getCallerEmail_();
+    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    requireSuperAdmin_(adminEmail);
+    return getPropertyPrefixBreakdown_();
   });
 }
 
@@ -2956,6 +2989,21 @@ function admin_campaignSendLegacyFollowups(payload) {
     var adminEmail = getActiveUserEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
     var p = payload || {};
+    if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true) {
+      var blockCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "PRODUCTION_EMAIL_SENDS_DISABLED";
+      if (isSystemStabilizationModeActive_()) logOperationalBlock_("SYSTEM_STABILIZATION_MODE_ACTIVE", {
+        action: "campaign_send_legacy_followups",
+        actorEmail: clean_(adminEmail || "")
+      });
+      logOperationalBlock_("EMAIL_SEND_BLOCKED", {
+        action: "campaign_send_legacy_followups",
+        blockCode: blockCode,
+        actorEmail: clean_(adminEmail || "")
+      });
+      return adminCommBlockedResult_("campaign_send_legacy_followups", blockCode, "", {
+        blockReason: "Legacy campaign follow-up sends are disabled during stabilization."
+      });
+    }
     return campaign_sendLegacyFollowups_(p.limit);
   });
 }
@@ -3679,6 +3727,23 @@ function admin_sendStageBatch(payload) {
       if (!isAdmin_(adminEmail)) throw new Error("Access denied");
       requireSuperAdmin_(adminEmail);
       var p = payload && typeof payload === "object" ? payload : {};
+      if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true) {
+        var blockCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "PRODUCTION_EMAIL_SENDS_DISABLED";
+        if (isSystemStabilizationModeActive_()) logOperationalBlock_("SYSTEM_STABILIZATION_MODE_ACTIVE", {
+          action: "send_stage_batch",
+          requestId: requestId,
+          actorEmail: clean_(adminEmail || "")
+        });
+        logOperationalBlock_("EMAIL_SEND_BLOCKED", {
+          action: "send_stage_batch",
+          blockCode: blockCode,
+          requestId: requestId,
+          actorEmail: clean_(adminEmail || "")
+        });
+        return adminCommBlockedResult_("send_stage_batch", blockCode, requestId, {
+          blockReason: "Stage batch sends are disabled during stabilization."
+        });
+      }
       var actor = resolveAdminCommActor_(p);
       stage = normalizeStageBatchStage_(p.stage || "");
       var limitMeta = stageBatchLimitMeta_(p.limit);
