@@ -20,10 +20,14 @@ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative
     - `adminSendEmail_`
     - `ingestRecentBounces_`
 - Status:
-  - r112 behavior restored in working tree, with campaign alias lookup made diagnostic-only so `GmailApp.sendEmail` is the runtime test.
-  - Files changed: `Code.js`, `Utils.js`.
-  - No push/version/deploy yet.
-  - Next step: final review, then prepare release CIS if approved.
+  - r130 deployed and verified.
+  - r112 behavior restored with campaign alias lookup diagnostic-only so `GmailApp.sendEmail` is the runtime test.
+  - Files changed: `Code.js`, `Utils.js`, `Config.js`, `CURRENT_TASK.md`.
+  - Admin deployment pinned to `@130`.
+  - Student deployment pinned to `@130`.
+  - Admin whoami: `r130 / 130`, mismatch `false`.
+  - Student whoami: `r130 / 130`, mismatch `false`.
+  - Tag pushed: `staging-as130`.
 
 ## Files In Scope
 
@@ -165,7 +169,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-Final review, then prepare release CIS if approved.
+r130 runtime testing.
 
 ## Cautions
 
