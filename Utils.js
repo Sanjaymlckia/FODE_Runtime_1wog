@@ -1388,6 +1388,8 @@ function buildPropertyInventory_() {
   var totalSize = 0;
   var prefixMap = {};
   var commLastCount = 0;
+  var ephemeralCount = 0;
+  var protectedCount = 0;
   var oldest = "";
   var newest = "";
   keys.forEach(function (key) {
@@ -1407,9 +1409,13 @@ function buildPropertyInventory_() {
     prefixMap[prefix].serializedSizeEstimate += key.length + value.length;
     if (isEphemeralCommunicationProperty_(key)) {
       commLastCount++;
+      ephemeralCount++;
       prefixMap[prefix].ephemeralCount++;
     }
-    if (isProtectedRuntimeProperty_(key)) prefixMap[prefix].protectedCount++;
+    if (isProtectedRuntimeProperty_(key)) {
+      protectedCount++;
+      prefixMap[prefix].protectedCount++;
+    }
     var ts = parsePropertyTimestamp_(value);
     if (ts) {
       if (!oldest || ts < oldest) oldest = ts;
@@ -1426,6 +1432,9 @@ function buildPropertyInventory_() {
     totalPropertyCount: keys.length,
     totalSerializedSizeEstimate: totalSize,
     commLastCount: commLastCount,
+    ephemeralCount: ephemeralCount,
+    protectedCount: protectedCount,
+    eligibleCommLastDeletionCount: commLastCount,
     oldestParseableTimestamp: oldest,
     newestParseableTimestamp: newest,
     topPrefixes: prefixes.slice(0, 20),
@@ -1440,6 +1449,9 @@ function getPropertyInventorySummary_() {
     totalPropertyCount: inventory.totalPropertyCount,
     totalSerializedSizeEstimate: inventory.totalSerializedSizeEstimate,
     commLastCount: inventory.commLastCount,
+    ephemeralCount: inventory.ephemeralCount,
+    protectedCount: inventory.protectedCount,
+    eligibleCommLastDeletionCount: inventory.eligibleCommLastDeletionCount,
     oldestParseableTimestamp: inventory.oldestParseableTimestamp,
     newestParseableTimestamp: inventory.newestParseableTimestamp,
     topPrefixes: inventory.topPrefixes
@@ -1453,8 +1465,113 @@ function getPropertyPrefixBreakdown_() {
     totalPropertyCount: inventory.totalPropertyCount,
     totalSerializedSizeEstimate: inventory.totalSerializedSizeEstimate,
     commLastCount: inventory.commLastCount,
+    ephemeralCount: inventory.ephemeralCount,
+    protectedCount: inventory.protectedCount,
+    eligibleCommLastDeletionCount: inventory.eligibleCommLastDeletionCount,
     prefixes: inventory.prefixes
   };
+}
+
+function cleanupEphemeralCommunicationProperties_(opts) {
+  var options = opts && typeof opts === "object" ? opts : {};
+  var prefix = safeStr_(options.prefix || "");
+  var confirm = options.confirm === true;
+  var forceLargeDelete = options.forceLargeDelete === true;
+  var limit = Math.max(1, Math.floor(Number(options.limit || 0)));
+  var olderThanIso = safeStr_(options.olderThanIso || "");
+  var olderThanMs = olderThanIso ? Date.parse(olderThanIso) : 0;
+  if (olderThanIso && isNaN(olderThanMs)) {
+    olderThanMs = 0;
+  }
+  var maxDelete = Math.max(1, Math.floor(Number(CONFIG.MAX_PROPERTY_DELETE_BATCH || 500)));
+  var propsService = PropertiesService.getScriptProperties();
+  var props = propsService.getProperties() || {};
+  var keys = Object.keys(props);
+  var before = buildPropertyInventory_();
+  var blocked = "";
+  var eligible = [];
+  var protectedSkipped = 0;
+  var nonMatchingSkipped = 0;
+  keys.forEach(function (key) {
+    if (key.indexOf(prefix) !== 0) {
+      nonMatchingSkipped++;
+      return;
+    }
+    if (isProtectedRuntimeProperty_(key)) {
+      protectedSkipped++;
+      return;
+    }
+    if (!isEphemeralCommunicationProperty_(key)) {
+      nonMatchingSkipped++;
+      return;
+    }
+    if (olderThanMs > 0) {
+      var ts = parsePropertyTimestamp_(props[key]);
+      var tsMs = ts ? Date.parse(ts) : 0;
+      if (!tsMs || tsMs >= olderThanMs) return;
+    }
+    eligible.push(key);
+  });
+  if (limit > 0 && eligible.length > limit) eligible = eligible.slice(0, limit);
+
+  function result_(label, deleted, afterInventory) {
+    var after = afterInventory || before;
+    var out = {
+      ok: !blocked,
+      action: "property_cleanup",
+      prefix: prefix,
+      confirm: confirm,
+      dryRun: !confirm,
+      forceLargeDelete: forceLargeDelete,
+      maxDeleteBatch: maxDelete,
+      limit: limit,
+      olderThanIso: olderThanIso,
+      blocked: blocked,
+      totalBefore: before.totalPropertyCount,
+      totalAfter: after.totalPropertyCount,
+      commLastBefore: before.commLastCount,
+      commLastAfter: after.commLastCount,
+      eligible: eligible.length,
+      deleted: deleted,
+      protectedSkipped: protectedSkipped,
+      nonMatchingSkipped: nonMatchingSkipped,
+      estimatedSizeBefore: before.totalSerializedSizeEstimate,
+      estimatedSizeAfter: after.totalSerializedSizeEstimate,
+      estimatedSizeReduction: Math.max(0, before.totalSerializedSizeEstimate - after.totalSerializedSizeEstimate)
+    };
+    logOperationalBlock_(label, out);
+    return out;
+  }
+
+  if (CONFIG.ENABLE_PROPERTY_CLEANUP_TOOLS !== true) {
+    blocked = "PROPERTY_CLEANUP_TOOLS_DISABLED";
+    return result_("PROPERTY_CLEANUP_BLOCKED", 0, before);
+  }
+  if (prefix !== "COMM_LAST::") {
+    blocked = "INVALID_PREFIX";
+    return result_("PROPERTY_CLEANUP_BLOCKED", 0, before);
+  }
+  if (!confirm) {
+    return result_("PROPERTY_CLEANUP_DRY_RUN", 0, before);
+  }
+  if (eligible.length > maxDelete && !forceLargeDelete) {
+    blocked = "MAX_PROPERTY_DELETE_BATCH_EXCEEDED";
+    return result_("PROPERTY_CLEANUP_LIMIT_BLOCKED", 0, before);
+  }
+
+  logOperationalBlock_("PROPERTY_CLEANUP_DELETE_BEGIN", {
+    action: "property_cleanup",
+    prefix: prefix,
+    eligible: eligible.length,
+    maxDeleteBatch: maxDelete,
+    forceLargeDelete: forceLargeDelete
+  });
+  var deleted = 0;
+  eligible.forEach(function (key) {
+    propsService.deleteProperty(key);
+    deleted++;
+  });
+  return result_("PROPERTY_CLEANUP_DELETE_END", deleted, buildPropertyInventory_());
 }
 
 function hasValue_(v) {

@@ -2952,6 +2952,183 @@ function admin_getPropertyPrefixBreakdown() {
   });
 }
 
+function admin_cleanupEphemeralCommunicationProperties(payload) {
+  return withEnvelope_("admin_cleanupEphemeralCommunicationProperties", function () {
+    var adminEmail = getCallerEmail_();
+    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    requireSuperAdmin_(adminEmail);
+    return cleanupEphemeralCommunicationProperties_(payload || {});
+  });
+}
+
+function admin_logPropertyInventorySummary() {
+  var result = admin_getPropertyInventorySummary();
+  console.log("PROPERTY_INVENTORY_RESULT_START");
+  console.log(JSON.stringify(result, null, 2));
+  console.log("PROPERTY_INVENTORY_RESULT_END");
+  return result;
+}
+
+function admin_logPropertyPrefixBreakdown() {
+  var result = admin_getPropertyPrefixBreakdown();
+  console.log("PROPERTY_PREFIX_BREAKDOWN_RESULT_START");
+  console.log(JSON.stringify(result, null, 2));
+  console.log("PROPERTY_PREFIX_BREAKDOWN_RESULT_END");
+  return result;
+}
+
+function admin_dryRunCleanupCommLastProperties() {
+  var result = admin_cleanupEphemeralCommunicationProperties({ prefix: "COMM_LAST::" });
+  console.log("PROPERTY_CLEANUP_DRY_RUN_RESULT_START");
+  console.log(JSON.stringify(result, null, 2));
+  console.log("PROPERTY_CLEANUP_DRY_RUN_RESULT_END");
+  return result;
+}
+
+function admin_dryRunCleanupAllCommLastProperties() {
+  var result = admin_cleanupEphemeralCommunicationProperties({ prefix: "COMM_LAST::", limit: 500 });
+  console.log("PROPERTY_CLEANUP_ALL_DRY_RUN_RESULT_START");
+  console.log(JSON.stringify(result, null, 2));
+  console.log("PROPERTY_CLEANUP_ALL_DRY_RUN_RESULT_END");
+  return result;
+}
+
+function admin_confirmCleanupCommLastBatch500() {
+  var result = admin_cleanupEphemeralCommunicationProperties({
+    prefix: "COMM_LAST::",
+    limit: 500,
+    confirm: true
+  });
+  console.log("PROPERTY_CLEANUP_CONFIRM_BATCH500_RESULT_START");
+  console.log(JSON.stringify(result, null, 2));
+  console.log("PROPERTY_CLEANUP_CONFIRM_BATCH500_RESULT_END");
+  return result;
+}
+
+function admin_getPropertyInventoryDisplaySummary() {
+  var result = admin_getPropertyInventorySummary();
+  var summary = {
+    ok: result && result.ok === true,
+    totalProperties: Number(result && result.totalPropertyCount || 0),
+    totalSerializedSizeEstimate: Number(result && result.totalSerializedSizeEstimate || 0),
+    commLastCount: Number(result && result.commLastCount || 0),
+    eligibleDeletionCount: Number(result && result.eligibleCommLastDeletionCount || 0),
+    protectedCount: Number(result && result.protectedCount || 0),
+    dryRun: true,
+    blocked: "",
+    deleteLimit: Number(CONFIG.MAX_PROPERTY_DELETE_BATCH || 500),
+    version: clean_(CONFIG.VERSION || ""),
+    deployVersion: Number(CONFIG.DEPLOY_VERSION_NUMBER || 0)
+  };
+  summary.displayText = [
+    "Property inventory",
+    "Total properties: " + summary.totalProperties,
+    "Estimated serialized size: " + summary.totalSerializedSizeEstimate,
+    "COMM_LAST::* count: " + summary.commLastCount,
+    "Eligible deletion count: " + summary.eligibleDeletionCount,
+    "Protected count: " + summary.protectedCount,
+    "Delete limit: " + summary.deleteLimit,
+    "Runtime: " + summary.version + " / " + summary.deployVersion
+  ].join("\n");
+  return summary;
+}
+
+function admin_getPropertyPrefixDisplaySummary() {
+  var result = admin_getPropertyPrefixBreakdown();
+  var prefixes = Array.isArray(result && result.prefixes) ? result.prefixes.slice(0, 10) : [];
+  var summary = {
+    ok: result && result.ok === true,
+    totalProperties: Number(result && result.totalPropertyCount || 0),
+    totalSerializedSizeEstimate: Number(result && result.totalSerializedSizeEstimate || 0),
+    commLastCount: Number(result && result.commLastCount || 0),
+    eligibleDeletionCount: Number(result && result.eligibleCommLastDeletionCount || 0),
+    protectedCount: Number(result && result.protectedCount || 0),
+    dryRun: true,
+    blocked: "",
+    deleteLimit: Number(CONFIG.MAX_PROPERTY_DELETE_BATCH || 500),
+    topPrefixes: prefixes
+  };
+  summary.displayText = [
+    "Property prefix breakdown",
+    "Total properties: " + summary.totalProperties,
+    "COMM_LAST::* count: " + summary.commLastCount,
+    "Protected count: " + summary.protectedCount,
+    "Top prefixes:",
+    prefixes.map(function (p) {
+      return "- " + clean_(p.prefix || "") + " count=" + Number(p.count || 0) + " size=" + Number(p.serializedSizeEstimate || 0);
+    }).join("\n")
+  ].join("\n");
+  return summary;
+}
+
+function admin_getDryRunCleanupCommLastDisplaySummary() {
+  var result = admin_cleanupEphemeralCommunicationProperties({ prefix: "COMM_LAST::" });
+  var summary = {
+    ok: result && result.ok === true,
+    totalProperties: Number(result && result.totalBefore || 0),
+    totalPropertiesAfter: Number(result && result.totalAfter || 0),
+    commLastCount: Number(result && result.commLastBefore || 0),
+    commLastCountAfter: Number(result && result.commLastAfter || 0),
+    eligibleDeletionCount: Number(result && result.eligible || 0),
+    protectedSkipped: Number(result && result.protectedSkipped || 0),
+    estimatedSizeReduction: Number(result && result.estimatedSizeReduction || 0),
+    dryRun: result ? result.dryRun === true : true,
+    blocked: clean_(result && result.blocked || ""),
+    deleted: Number(result && result.deleted || 0),
+    deleteLimit: Number(result && result.maxDeleteBatch || CONFIG.MAX_PROPERTY_DELETE_BATCH || 500)
+  };
+  summary.displayText = [
+    "COMM_LAST::* cleanup dry-run",
+    "Dry run: " + summary.dryRun,
+    "Blocked: " + (summary.blocked || "no"),
+    "Deleted: " + summary.deleted,
+    "Total properties before: " + summary.totalProperties,
+    "Total properties after: " + summary.totalPropertiesAfter,
+    "COMM_LAST::* before: " + summary.commLastCount,
+    "COMM_LAST::* after: " + summary.commLastCountAfter,
+    "Eligible deletion count: " + summary.eligibleDeletionCount,
+    "Protected skipped: " + summary.protectedSkipped,
+    "Estimated size reduction: " + summary.estimatedSizeReduction,
+    "Delete limit: " + summary.deleteLimit
+  ].join("\n");
+  return summary;
+}
+
+function admin_getDryRunCleanupAllCommLastDisplaySummary() {
+  var result = admin_cleanupEphemeralCommunicationProperties({ prefix: "COMM_LAST::", limit: 500 });
+  var summary = {
+    ok: result && result.ok === true,
+    totalProperties: Number(result && result.totalBefore || 0),
+    totalPropertiesAfter: Number(result && result.totalAfter || 0),
+    commLastCount: Number(result && result.commLastBefore || 0),
+    commLastCountAfter: Number(result && result.commLastAfter || 0),
+    eligibleDeletionCount: Number(result && result.eligible || 0),
+    protectedSkipped: Number(result && result.protectedSkipped || 0),
+    estimatedSizeReduction: Number(result && result.estimatedSizeReduction || 0),
+    dryRun: result ? result.dryRun === true : true,
+    blocked: clean_(result && result.blocked || ""),
+    deleted: Number(result && result.deleted || 0),
+    deleteLimit: Number(result && result.maxDeleteBatch || CONFIG.MAX_PROPERTY_DELETE_BATCH || 500),
+    requestedLimit: 500
+  };
+  summary.displayText = [
+    "COMM_LAST::* cleanup full dry-run",
+    "Dry run: " + summary.dryRun,
+    "Blocked: " + (summary.blocked || "no"),
+    "Deleted: " + summary.deleted,
+    "Total properties before: " + summary.totalProperties,
+    "Total properties after: " + summary.totalPropertiesAfter,
+    "COMM_LAST::* before: " + summary.commLastCount,
+    "COMM_LAST::* after: " + summary.commLastCountAfter,
+    "Eligible deletion count: " + summary.eligibleDeletionCount,
+    "Protected skipped: " + summary.protectedSkipped,
+    "Estimated size reduction: " + summary.estimatedSizeReduction,
+    "Delete limit: " + summary.deleteLimit,
+    "Requested limit: " + summary.requestedLimit
+  ].join("\n");
+  return summary;
+}
+
 function admin_runAutomatedStageBatchOnce(payload) {
   return withEnvelope_("admin_runAutomatedStageBatchOnce", function () {
     var adminEmail = getActiveUserEmail_();

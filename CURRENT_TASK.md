@@ -2,7 +2,7 @@
 
 ## Current Objective
 
-Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and complete r131 Stabilization Phase 1 containment for trigger/email/property safety.
+Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and complete r136 Script Properties dry-run and capped cleanup containment.
 
 ## Current Issue
 
@@ -10,7 +10,16 @@ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative
 - Trigger freeze active.
 - Production email freeze active.
 - May 5 sheet restore completed.
-- Property-growth investigation active.
+- Property-growth cleanup containment active.
+- r136 cleanup target is `COMM_LAST::*` only.
+- Cleanup defaults to dry-run.
+- Deletion requires `confirm=true` and `prefix="COMM_LAST::"`.
+- Confirmed deletion blocks when eligible count exceeds `MAX_PROPERTY_DELETE_BATCH = 500` unless `forceLargeDelete === true`.
+- Protected runtime/config/deployment/cursor keys must not be deleted.
+- Phase A: deploy r136, verify whoami, verify inventory RPC wrappers, verify full dry-run output.
+- Phase B: manually review property counts, protected counts, eligible counts, and estimated size reduction.
+- Phase C: only then run confirmed cleanup.
+- Longer-term direction: move communication cooldown state away from unbounded Script Properties after containment.
 - No unattended production sends permitted during stabilization.
 - r113 alias hard-block regression identified.
 - Email send-block caused by r113 alias enforcement (`assertRequiredSystemSenderAlias_`).
@@ -26,6 +35,51 @@ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative
     - `adminSendEmail_`
     - `ingestRecentBounces_`
 - Status:
+  - r136 deployed with full dry-run and capped cleanup wrappers.
+  - Existing single-key dry-run wrapper remains as smoke test.
+  - Full dry-run wrapper evaluates up to 500 `COMM_LAST::*` keys and must not delete.
+  - Confirmed batch wrapper is capped at 500 and must not be run until full dry-run evidence is reviewed.
+  - Apps Script version `136` created with description `r136: full dry-run and capped property cleanup wrappers`.
+  - Admin deployment pinned to `@136`.
+  - Student deployment pinned to `@136`.
+  - Admin whoami: `r136 / 136`, mismatch `false`.
+  - Student whoami: `r136 / 136`, mismatch `false`.
+  - Admin RPC registry includes `admin_dryRunCleanupAllCommLastProperties`: PASS.
+  - Admin RPC registry includes `admin_confirmCleanupCommLastBatch500`: PASS.
+  - No confirmed cleanup executed.
+  - r135 diagnostics visibility instrumentation in progress.
+  - Diagnostic wrappers must log terminal markers and return full objects.
+  - Compact display wrappers must return browser-visible summaries for inventory, prefix breakdown, and dry-run cleanup.
+  - Apps Script version `135` created with description `r135: property diagnostics visible output`.
+  - Admin deployment pinned to `@135`.
+  - Student deployment pinned to `@135`.
+  - Admin whoami: `r135 / 135`, mismatch `false`.
+  - Student whoami: `r135 / 135`, mismatch `false`.
+  - Admin RPC registry includes compact display wrapper functions: PASS.
+  - CLI execution of display/dry-run wrappers remains blocked by Apps Script execution permissions.
+  - Operator-visible dry-run must be completed from Apps Script editor using the no-arg display/log wrappers.
+  - No confirmed cleanup executed.
+  - r134 identity correction completed after Apps Script version `133` was created with stale `r132 / 132` runtime identity.
+  - Apps Script version `133` must not be treated as accepted because deployment pin `@133` did not match runtime identity.
+  - Corrected runtime/deployment identity: `r134 / 134` pinned to Apps Script version `134`.
+  - `ENABLE_PROPERTY_CLEANUP_TOOLS = true`.
+  - `MAX_PROPERTY_DELETE_BATCH = 500`.
+  - No confirmed property deletion executed during deployment phase.
+  - No sheet row mutation authorized.
+  - No email sends authorized.
+  - No trigger install/remove/update authorized.
+  - Apps Script version `132` created with description `r132: script properties cleanup containment`.
+  - Apps Script version `133` created with diagnostic wrappers but stale `r132 / 132` runtime identity.
+  - Apps Script version `134` created with description `r134: script properties cleanup containment with diagnostics`.
+  - Admin deployment pinned to `@134`.
+  - Student deployment pinned to `@134`.
+  - Admin whoami: `r134 / 134`, mismatch `false`.
+  - Student whoami: `r134 / 134`, mismatch `false`.
+  - Admin RPC registry includes diagnostic wrapper functions: PASS.
+  - Confirmed cleanup remains blocked until wrapper dry-run output is manually reviewed.
+  - Inventory RPC execution: MANUAL REQUIRED (`clasp run admin_getPropertyInventorySummary` denied by Apps Script execution permissions).
+  - Dry-run cleanup execution: MANUAL REQUIRED (`clasp run admin_cleanupEphemeralCommunicationProperties` unavailable from current CLI execution path).
+  - Confirmed cleanup remains blocked until inventory and dry-run output are manually reviewed.
   - r131 deployed for stabilization freeze and property containment.
   - `SYSTEM_STABILIZATION_MODE = true`.
   - `ENABLE_AUTOMATED_STAGE_RUNNER = false`.
@@ -195,7 +249,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-r131 manual acceptance checks: trigger safe-noop, property inventory RPC, Admin runtime badge, and deployment Execute as / Access settings.
+r136 full dry-run wrapper acceptance only; do not run confirmed cleanup until visible dry-run evidence is reviewed.
 
 ## Cautions
 
