@@ -3155,12 +3155,19 @@ function admin_getOperationalSafetyStatus(payload) {
   var propertySummary = getPropertyInventorySummary_();
   var lastRun = triggerStatus && triggerStatus.lastRun && typeof triggerStatus.lastRun === "object" ? triggerStatus.lastRun : null;
   var stabilizationMode = isSystemStabilizationModeActive_();
+  var manualProbeEnabled = isManualSingleSendProbeEnabled_() === true;
   var productionSendsEnabled = CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS === true && stabilizationMode !== true;
-  var triggerSendsEnabled = CONFIG.ENABLE_TRIGGER_EMAIL_SENDS === true && stabilizationMode !== true;
-  var automatedRunnerEnabled = CONFIG.ENABLE_AUTOMATED_STAGE_RUNNER === true && stabilizationMode !== true;
+  var batchSendsEnabled = isBatchSendEnabled_() === true;
+  var triggerSendsEnabled = isTriggerSendEnabled_() === true;
+  var automatedRunnerEnabled = CONFIG.ENABLE_AUTOMATED_STAGE_RUNNER === true && triggerSendsEnabled === true;
+  var manualStatus = getManualSendProbeStatus_() || {};
   var lastBlockedReason = stabilizationMode
-    ? "SYSTEM_STABILIZATION_MODE_ACTIVE"
+    ? (manualProbeEnabled ? "" : "SYSTEM_STABILIZATION_MODE_ACTIVE")
     : (!productionSendsEnabled ? "PRODUCTION_EMAIL_SENDS_DISABLED" : "");
+  var propertyWarning = "";
+  var expectedPropertyCount = Math.max(0, Number(CONFIG.EXPECTED_SCRIPT_PROPERTY_COUNT_AFTER_CLEANUP || 0));
+  if (Number(propertySummary.commLastCount || 0) > 0) propertyWarning = "COMM_LAST_PROPERTY_REGRESSION";
+  else if (expectedPropertyCount && Number(propertySummary.totalPropertyCount || 0) > expectedPropertyCount) propertyWarning = "SCRIPT_PROPERTY_COUNT_GREW";
   return {
     ok: true,
     actorEmail: adminEmail,
@@ -3175,8 +3182,9 @@ function admin_getOperationalSafetyStatus(payload) {
     gates: {
       stabilizationMode: stabilizationMode,
       productionSendsEnabled: productionSendsEnabled,
-      manualSendEnabled: productionSendsEnabled,
-      batchSendEnabled: productionSendsEnabled,
+      manualProbeMode: manualProbeEnabled,
+      manualSendEnabled: manualProbeEnabled,
+      batchSendEnabled: batchSendsEnabled,
       triggerSendsEnabled: triggerSendsEnabled,
       automatedStageRunnerEnabled: automatedRunnerEnabled,
       bounceIngestionEnabled: CONFIG.ENABLE_BOUNCE_INGESTION === true && stabilizationMode !== true,
@@ -3204,8 +3212,17 @@ function admin_getOperationalSafetyStatus(payload) {
       eligibleCommLastDeletionCount: Number(propertySummary.eligibleCommLastDeletionCount || 0),
       protectedCount: Number(propertySummary.protectedCount || 0),
       healthLevel: propertyHealthLevel_(propertySummary),
+      warning: propertyWarning,
       countLimit: Number(CONFIG.SCRIPT_PROPERTY_HEALTH_COUNT_LIMIT || 500),
       sizeLimit: Number(CONFIG.SCRIPT_PROPERTY_HEALTH_SIZE_LIMIT || 500000)
+    },
+    manualProbe: {
+      enabled: manualProbeEnabled,
+      lastManualSend: clean_(manualStatus.sentAt || manualStatus.recordedAt || ""),
+      lastManualRecipient: clean_(manualStatus.maskedRecipient || ""),
+      lastManualResult: clean_(manualStatus.result || ""),
+      idempotencyActive: true,
+      lastIdempotencyKey: clean_(manualStatus.idempotencyKey || "")
     },
     cooldown: {
       source: "CacheService.getScriptCache",
@@ -3991,8 +4008,8 @@ function admin_sendStageBatch(payload) {
       if (!isAdmin_(adminEmail)) throw new Error("Access denied");
       requireSuperAdmin_(adminEmail);
       var p = payload && typeof payload === "object" ? payload : {};
-      if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true) {
-        var blockCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "PRODUCTION_EMAIL_SENDS_DISABLED";
+      if (isBatchSendEnabled_() !== true) {
+        var blockCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "BATCH_SENDS_DISABLED";
         if (isSystemStabilizationModeActive_()) logOperationalBlock_("SYSTEM_STABILIZATION_MODE_ACTIVE", {
           action: "send_stage_batch",
           requestId: requestId,
@@ -4341,6 +4358,18 @@ function admin_sendApplicantMessage(payload) {
     var requestedType = clean_(p.messageType || "");
     var messageType = normalizeApplicantMessageType_(requestedType);
     var actor = resolveAdminCommActor_(p);
+    if (Array.isArray(p.applicantIds) || Array.isArray(p.recipients) || Array.isArray(p.messages)) {
+      return adminCommBlockedResult_("send", "BULK_NOT_ALLOWED", dbgId, {
+        blockReason: "Manual single-send probe accepts one applicant only."
+      });
+    }
+    if (p.confirmManualSingleSend !== true) {
+      return adminCommBlockedResult_("send", "CONFIRM_REQUIRED", dbgId, {
+        applicantId: applicantId,
+        messageType: requestedType,
+        blockReason: "Preview and explicit manual single-send confirmation are required."
+      });
+    }
     if (!applicantId) return adminCommBlockedResult_("send", "MISSING_APPLICANT_ID", dbgId, { blockReason: "Applicant ID is required." });
     if (!messageType) {
       return adminCommBlockedResult_("send", "UNSUPPORTED_MESSAGE_TYPE", dbgId, {
@@ -4353,7 +4382,8 @@ function admin_sendApplicantMessage(payload) {
       actorEmail: actor.actorEmail,
       actorRole: actor.actorRole,
       batchLabel: clean_(p.batchLabel || ""),
-      debugId: clean_(p.debugId || dbgId)
+      debugId: clean_(p.debugId || dbgId),
+      manualSingleSendProbe: true
     });
   });
 }

@@ -2,7 +2,7 @@
 
 ## Current Objective
 
-Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and complete r137 Email State Architecture Hardening Phase 1.
+Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and complete r138 Manual Single-Send Reactivation Probe.
 
 ## Current Issue
 
@@ -18,7 +18,21 @@ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative
 - Observability-first doctrine: email gates, trigger state, property health, last automation run, last batch ID, and last blocked reason must be visible in Admin UI via RPC.
 - No hidden unbounded operational state is permitted.
 - No unattended production sends permitted during stabilization.
-- No production email restart is authorized in r137.
+- r138 is manual-send probe only.
+- Batch sends remain frozen.
+- Trigger sends remain frozen.
+- Automated stage runner remains frozen.
+- No automation restart is authorized.
+- Replay-safe manual single-send verification is in progress.
+- Production email restart beyond one controlled manual applicant send is not authorized in r138.
+- r138 Apps Script version `138` created with description `r138: manual single-send probe`.
+- Admin deployment pinned to `@138`.
+- Student deployment pinned to `@138`.
+- Admin whoami: `r138 / 138`, mismatch `false`.
+- Student whoami: `r138 / 138`, mismatch `false`.
+- Admin `?view=admin` HTML includes manual probe mode, last manual send, last manual recipient, last manual result, idempotency active, and explicit manual send confirmation wiring: PASS.
+- CLI execution of `admin_getOperationalSafetyStatus` remains blocked by Apps Script execution permissions.
+- Manual browser/operator acceptance still required: one controlled manual send, replay attempt, post-send property count, `COMM_LAST::* = 0`, and no automation activity.
 - r137 Apps Script version `137` created with description `r137: email state architecture hardening`.
 - Admin deployment pinned to `@137`.
 - Student deployment pinned to `@137`.
@@ -258,7 +272,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-r137 manual/browser acceptance only: verify populated Admin operational safety panels and live property counts, then commit/tag if accepted. Do not restart email sends.
+r138 manual/browser acceptance only: run one controlled manual send, retry the same action for replay blocking, verify `COMM_LAST::* = 0`, verify total properties remain bounded, then commit/tag only if accepted. Do not enable batch sends, triggers, or automation.
 
 ## Cautions
 
@@ -272,4 +286,4 @@ r137 manual/browser acceptance only: verify populated Admin operational safety p
 - No commit/tag until all acceptance evidence is confirmed.
 - Treat live `whoami` as runtime truth.
 - Rollback prefers repinning Admin and Student to r124; if a trigger was installed, remove or disable the `automatedStageBatchRunner` trigger.
-- r137 rollback target is Admin and Student repin to `@136`; verify whoami returns `r136 / 136`, mismatch `false`.
+- r138 rollback target is Admin and Student repin to `@137`; verify whoami returns `r137 / 137`, mismatch `false`.

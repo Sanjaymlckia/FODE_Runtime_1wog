@@ -6080,6 +6080,7 @@ function campaignSendEmailGmail_(toEmail, subject, body, meta) {
   var alias = clean_(CONFIG.CAMPAIGN_GMAIL_ALIAS || "");
   var replyTo = clean_(CONFIG.CAMPAIGN_REPLY_TO || "fode@kundu.ac");
   var to = clean_(toEmail || "");
+  var manualProbe = trace.manualSingleSendProbe === true;
   var traceBase = {
     applicantId: clean_(trace.applicantId || ""),
     recipient: to,
@@ -6087,11 +6088,15 @@ function campaignSendEmailGmail_(toEmail, subject, body, meta) {
     requestId: clean_(trace.requestId || trace.debugId || ""),
     batchId: clean_(trace.batchId || trace.batchLabel || "")
   };
-  if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true) {
+  if (!manualProbe && (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true)) {
     var blockedCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "PRODUCTION_EMAIL_SENDS_DISABLED";
     if (isSystemStabilizationModeActive_()) logOperationalBlock_("SYSTEM_STABILIZATION_MODE_ACTIVE", Object.assign({}, traceBase, { action: "campaign_send_email" }));
     logOperationalBlock_("EMAIL_SEND_BLOCKED", Object.assign({}, traceBase, { action: "campaign_send_email", blockCode: blockedCode, from: alias, replyTo: replyTo }));
     return { ok: false, error: blockedCode, blocked: true, to: to, from: alias, replyTo: replyTo };
+  }
+  if (manualProbe && isManualSingleSendProbeEnabled_() !== true) {
+    logOperationalBlock_("MANUAL_SEND_PROBE_BLOCKED", Object.assign({}, traceBase, { action: "campaign_send_email", blockCode: "MANUAL_SINGLE_SENDS_DISABLED" }));
+    return { ok: false, error: "MANUAL_SINGLE_SENDS_DISABLED", blocked: true, to: to, from: alias, replyTo: replyTo };
   }
   if (!to) return { ok: false, error: "Missing recipient email" };
   if (!alias) return { ok: false, error: "Missing campaign Gmail alias" };
@@ -6926,12 +6931,31 @@ function recordEmailProcessingResult_(context, idempotencyKey, result) {
   });
 }
 
+function countEmailRecipients_(email) {
+  var raw = String(email || "");
+  return raw.split(/[;,]/).map(function (part) { return clean_(part || ""); }).filter(function (part) { return !!part; }).length;
+}
+
+function logManualSendProbe_(label, context, idempotencyKey, payload) {
+  var ctx = context && typeof context === "object" ? context : {};
+  var data = payload && typeof payload === "object" ? payload : {};
+  logOperationalBlock_(label, Object.assign({
+    runtimeVersion: clean_(CONFIG.VERSION || ""),
+    deployVersion: Number(CONFIG.DEPLOY_VERSION_NUMBER || 0),
+    applicantId: clean_(ctx.applicantId || data.applicantId || ""),
+    idempotencyKey: clean_(idempotencyKey || data.idempotencyKey || ""),
+    sendDecision: clean_(data.sendDecision || ""),
+    result: clean_(data.result || "")
+  }, data));
+}
+
 function dispatchApplicantMessage_(context, builtMessage, opts) {
   var ctx = context || {};
   var message = builtMessage || {};
   var options = opts && typeof opts === "object" ? opts : {};
   var actorEmail = clean_(options.actorEmail || ctx.actorEmail || (typeof getCallerEmail_ === "function" ? getCallerEmail_() : "") || "");
-  if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true) {
+  var manualProbe = options.manualSingleSendProbe === true;
+  if (!manualProbe && (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true)) {
     var dispatchBlockCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "PRODUCTION_EMAIL_SENDS_DISABLED";
     if (isSystemStabilizationModeActive_()) logOperationalBlock_("SYSTEM_STABILIZATION_MODE_ACTIVE", {
       action: "dispatch_applicant_message",
@@ -6956,6 +6980,23 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
       messageType: clean_(ctx.messageType || ""),
       effectiveEmail: clean_(ctx.effectiveEmail || ""),
       subject: clean_(message.subject || ""),
+      debugId: clean_(ctx.debugId || options.debugId || newDebugId_())
+    };
+  }
+  if (manualProbe && isManualSingleSendProbeEnabled_() !== true) {
+    logManualSendProbe_("MANUAL_SEND_PROBE_BLOCKED", ctx, "", {
+      sendDecision: "BLOCK",
+      result: "BLOCKED",
+      blockCode: "MANUAL_SINGLE_SENDS_DISABLED"
+    });
+    return {
+      ok: false,
+      result: "BLOCKED",
+      blockCode: "MANUAL_SINGLE_SENDS_DISABLED",
+      blockReason: "Manual single-send probe is disabled.",
+      applicantId: clean_(ctx.applicantId || ""),
+      messageType: clean_(ctx.messageType || ""),
+      effectiveEmail: clean_(ctx.effectiveEmail || ""),
       debugId: clean_(ctx.debugId || options.debugId || newDebugId_())
     };
   }
@@ -6987,8 +7028,54 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
     };
   }
   var idempotencyKey = computeEmailIdempotencyKey_(ctx, options);
+  if (manualProbe) {
+    var recipientCount = countEmailRecipients_(ctx.effectiveEmail);
+    logManualSendProbe_("MANUAL_SEND_PROBE_BEGIN", ctx, idempotencyKey, {
+      sendDecision: "EVALUATE",
+      result: "BEGIN",
+      recipientCount: recipientCount,
+      cooldownSource: "CacheService.getScriptCache"
+    });
+    if (recipientCount !== 1) {
+      logManualSendProbe_("MANUAL_SEND_PROBE_BLOCKED", ctx, idempotencyKey, {
+        sendDecision: "BLOCK",
+        result: "BLOCKED",
+        blockCode: "INVALID_RECIPIENT_COUNT",
+        recipientCount: recipientCount
+      });
+      return {
+        ok: false,
+        result: "BLOCKED",
+        blockCode: "INVALID_RECIPIENT_COUNT",
+        blockReason: "Manual probe requires exactly one recipient.",
+        applicantId: clean_(ctx.applicantId || ""),
+        messageType: clean_(ctx.messageType || ""),
+        effectiveEmail: clean_(ctx.effectiveEmail || ""),
+        debugId: clean_(ctx.debugId || options.debugId || newDebugId_())
+      };
+    }
+  }
   var processed = wasEmailAlreadyProcessed_(ctx, idempotencyKey);
   if (processed.alreadyProcessed) {
+    if (manualProbe) {
+      logManualSendProbe_("MANUAL_SEND_PROBE_REPLAY_BLOCK", ctx, idempotencyKey, {
+        sendDecision: "BLOCK",
+        result: "BLOCKED",
+        blockCode: "ALREADY_PROCESSED",
+        durableMatch: processed.durableMatch === true,
+        cacheMatch: processed.cacheMatch === true,
+        legacyInviteSent: processed.legacyInviteSent === true
+      });
+      setManualSendProbeStatus_({
+        applicantId: clean_(ctx.applicantId || ""),
+        messageType: clean_(ctx.messageType || ""),
+        recipient: clean_(ctx.effectiveEmail || ""),
+        result: "BLOCKED",
+        blockCode: "ALREADY_PROCESSED",
+        sentAt: new Date().toISOString(),
+        idempotencyKey: idempotencyKey
+      });
+    }
     recordEmailProcessingResult_(ctx, idempotencyKey, {
       label: "EMAIL_IDEMPOTENCY_SUPPRESSED",
       result: "BLOCKED",
@@ -7012,9 +7099,26 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
     applicantId: clean_(ctx.applicantId || ""),
     requestId: requestId,
     batchId: batchId,
-    batchLabel: batchId
+    batchLabel: batchId,
+    manualSingleSendProbe: manualProbe
   });
   if (!sendRes.ok) {
+    if (manualProbe) {
+      logManualSendProbe_("MANUAL_SEND_PROBE_RESULT", ctx, idempotencyKey, {
+        sendDecision: "SEND",
+        result: "FAILED",
+        blockCode: clean_(sendRes.error || "SEND_FAILED")
+      });
+      setManualSendProbeStatus_({
+        applicantId: clean_(ctx.applicantId || ""),
+        messageType: clean_(ctx.messageType || ""),
+        recipient: clean_(ctx.effectiveEmail || ""),
+        result: "FAILED",
+        blockCode: clean_(sendRes.error || "SEND_FAILED"),
+        sentAt: new Date().toISOString(),
+        idempotencyKey: idempotencyKey
+      });
+    }
     recordApplicantContactOutcome_(ctx, "FAILED", {
       actorEmail: actorEmail,
       batchLabel: clean_(options.batchLabel || ctx.batchLabel || ""),
@@ -7067,6 +7171,23 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
     label: "EMAIL_PROCESSING_RESULT",
     result: "SENT"
   });
+  if (manualProbe) {
+    logManualSendProbe_("MANUAL_SEND_PROBE_RESULT", ctx, idempotencyKey, {
+      sendDecision: "SEND",
+      result: "SENT",
+      recipientCount: 1,
+      cooldownSource: "CacheService.getScriptCache"
+    });
+    setManualSendProbeStatus_({
+      applicantId: clean_(ctx.applicantId || ""),
+      messageType: clean_(ctx.messageType || ""),
+      recipient: clean_(ctx.effectiveEmail || ""),
+      result: "SENT",
+      blockCode: "",
+      sentAt: now.toISOString(),
+      idempotencyKey: idempotencyKey
+    });
+  }
   recordApplicantContactOutcome_(ctx, "SENT", {
     actorEmail: actorEmail,
     batchLabel: clean_(options.batchLabel || ctx.batchLabel || ""),
@@ -7893,7 +8014,28 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
 
 function sendApplicantMessage_(applicantId, messageType, opts) {
   var options = opts && typeof opts === "object" ? opts : {};
-  if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true) {
+  var manualProbe = options.manualSingleSendProbe === true;
+  if (manualProbe && isManualSingleSendProbeEnabled_() !== true) {
+    var manualDisabledRequestId = clean_(options.debugId || newDebugId_());
+    logManualSendProbe_("MANUAL_SEND_PROBE_BLOCKED", { applicantId: applicantId, messageType: messageType }, "", {
+      sendDecision: "BLOCK",
+      result: "BLOCKED",
+      blockCode: "MANUAL_SINGLE_SENDS_DISABLED"
+    });
+    return {
+      ok: true,
+      action: "send",
+      result: "BLOCKED",
+      eligible: false,
+      blockCode: "MANUAL_SINGLE_SENDS_DISABLED",
+      blockReason: "Manual single-send probe is disabled.",
+      applicantId: clean_(applicantId || ""),
+      messageType: clean_(messageType || ""),
+      effectiveEmail: "",
+      debugId: manualDisabledRequestId
+    };
+  }
+  if (!manualProbe && (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true)) {
     var requestId = clean_(options.debugId || newDebugId_());
     var blockCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "PRODUCTION_EMAIL_SENDS_DISABLED";
     if (isSystemStabilizationModeActive_()) logOperationalBlock_("SYSTEM_STABILIZATION_MODE_ACTIVE", {

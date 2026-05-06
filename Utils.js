@@ -1312,6 +1312,27 @@ function isSystemStabilizationModeActive_() {
   return CONFIG && CONFIG.SYSTEM_STABILIZATION_MODE === true;
 }
 
+function isManualSingleSendProbeEnabled_() {
+  return CONFIG
+    && CONFIG.ENABLE_CONTROLLED_MANUAL_SEND_PROBE === true
+    && CONFIG.ENABLE_MANUAL_SINGLE_SENDS === true;
+}
+
+function isBatchSendEnabled_() {
+  return CONFIG
+    && CONFIG.SYSTEM_STABILIZATION_MODE !== true
+    && CONFIG.ENABLE_BATCH_SENDS === true
+    && CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS === true;
+}
+
+function isTriggerSendEnabled_() {
+  return CONFIG
+    && CONFIG.SYSTEM_STABILIZATION_MODE !== true
+    && CONFIG.ENABLE_TRIGGER_SENDS === true
+    && CONFIG.ENABLE_TRIGGER_EMAIL_SENDS === true
+    && CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS === true;
+}
+
 function logOperationalBlock_(label, payload) {
   var tag = safeStr_(label || "OPERATION_BLOCKED");
   var data = payload && typeof payload === "object" ? payload : {};
@@ -1407,6 +1428,39 @@ function clearCommunicationCooldownState_(applicantId, messageType) {
     });
     return { ok: false, key: key, cleared: false, error: safeStr_(err && err.message ? err.message : err) };
   }
+}
+
+function manualSendProbeStatusCacheKey_() {
+  return "MANUAL_SEND_PROBE_LAST";
+}
+
+function maskEmailForOps_(email) {
+  var value = safeStr_(email || "");
+  var at = value.indexOf("@");
+  if (at <= 1) return value ? "***" : "";
+  var local = value.slice(0, at);
+  var domain = value.slice(at + 1);
+  return local.charAt(0) + "***@" + domain;
+}
+
+function getManualSendProbeStatus_() {
+  try {
+    var raw = CacheService.getScriptCache().get(manualSendProbeStatusCacheKey_());
+    return raw ? JSON.parse(raw) : null;
+  } catch (_err) {
+    return null;
+  }
+}
+
+function setManualSendProbeStatus_(status) {
+  var payload = status && typeof status === "object" ? Object.assign({}, status) : {};
+  payload.recordedAt = payload.recordedAt || new Date().toISOString();
+  if (payload.recipient) payload.maskedRecipient = maskEmailForOps_(payload.recipient);
+  delete payload.recipient;
+  try {
+    CacheService.getScriptCache().put(manualSendProbeStatusCacheKey_(), JSON.stringify(payload), 86400);
+  } catch (_err) {}
+  return payload;
 }
 
 function isEphemeralCommunicationProperty_(key) {
