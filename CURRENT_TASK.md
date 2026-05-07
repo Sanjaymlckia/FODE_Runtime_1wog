@@ -2,7 +2,7 @@
 
 ## Current Objective
 
-Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and complete r138 Manual Single-Send Reactivation Probe.
+Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and complete r140 Preview Timeout Containment.
 
 ## Current Issue
 
@@ -33,6 +33,37 @@ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative
 - Admin `?view=admin` HTML includes manual probe mode, last manual send, last manual recipient, last manual result, idempotency active, and explicit manual send confirmation wiring: PASS.
 - CLI execution of `admin_getOperationalSafetyStatus` remains blocked by Apps Script execution permissions.
 - Manual browser/operator acceptance still required: one controlled manual send, replay attempt, post-send property count, `COMM_LAST::* = 0`, and no automation activity.
+- r138 manual acceptance completed and finalized with tag `staging-as138`.
+- r139 is preview-only validation.
+- No live batch sends are authorized.
+- No trigger activation is authorized.
+- Automated stage runner remains frozen.
+- Replay-safe batch preview validation is in progress.
+- r139 Apps Script version `139` created with description `r139: manual batch preview validation`.
+- Admin deployment pinned to `@139`.
+- Student deployment pinned to `@139`.
+- Admin whoami: `r139 / 139`, mismatch `false`.
+- Student whoami: `r139 / 139`, mismatch `false`.
+- Admin `?view=admin` HTML includes preview diagnostics fields for selected stage, candidate count, blocked count, already processed, limit applied, preview batch ID, and replay protection: PASS.
+- CLI execution of `admin_previewStageBatch` remains blocked by Apps Script execution permissions.
+- Manual browser/operator acceptance still required: same preview twice with matching candidate count/order/replay summary, no emails, no sheet mutation, no trigger activity, `COMM_LAST::* = 0`, and bounded property count.
+- r140 fixes preview timeout caused by r139 deterministic row-2 scan risk and the stale 20-second preview client timeout.
+- r140 preview is bounded/read-only and may use the existing stage cursor as a non-mutating start hint.
+- r140 preview scans at most `BATCH_PREVIEW_SCAN_ROW_CAP` rows and may return `partial=true` with `partialReason=PREVIEW_WINDOW_EXHAUSTED`.
+- r140 Apps Script version `140` created with description `r140: preview timeout containment`.
+- Admin deployment pinned to `@140`.
+- Student deployment pinned to `@140`.
+- Admin whoami: `r140 / 140`, mismatch `false`.
+- Student whoami: `r140 / 140`, mismatch `false`.
+- Admin `?view=admin` HTML includes `STAGE_BATCH_PREVIEW_TIMEOUT_MS`, rows scanned, scan window, and partial reason diagnostics: PASS.
+- Manual browser/operator acceptance still required: `INVITE_PENDING` preview size 10 twice, no timeout, same window/order/count, no emails, no sheet mutation, no trigger activity, `COMM_LAST::* = 0`, and bounded property count.
+- r141 local preview fallback fix in progress: preview-only scan can continue across subsequent read-only bounded windows when the first window returns zero candidates.
+- r141 local fix must not write cursor, Script Properties, sheet rows, triggers, or emails.
+- r141 local fix is not deployed; no Apps Script push/version/deploy is authorized in this CIS.
+- Batch sends remain frozen.
+- Trigger sends remain frozen.
+- Automated stage runner remains frozen.
+- No live batch send, trigger activation, sheet mutation, or email send is authorized in r140.
 - r137 Apps Script version `137` created with description `r137: email state architecture hardening`.
 - Admin deployment pinned to `@137`.
 - Student deployment pinned to `@137`.
@@ -272,7 +303,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-r138 manual/browser acceptance only: run one controlled manual send, retry the same action for replay blocking, verify `COMM_LAST::* = 0`, verify total properties remain bounded, then commit/tag only if accepted. Do not enable batch sends, triggers, or automation.
+r141 local-only validation: review the preview fallback diff, confirm local checks pass, then wait for explicit authorization before any clasp push/version/deploy. Do not enable batch sends, triggers, or automation.
 
 ## Cautions
 
@@ -286,4 +317,4 @@ r138 manual/browser acceptance only: run one controlled manual send, retry the s
 - No commit/tag until all acceptance evidence is confirmed.
 - Treat live `whoami` as runtime truth.
 - Rollback prefers repinning Admin and Student to r124; if a trigger was installed, remove or disable the `automatedStageBatchRunner` trigger.
-- r138 rollback target is Admin and Student repin to `@137`; verify whoami returns `r137 / 137`, mismatch `false`.
+- r141 is not deployed. Runtime rollback is not expected; if later deployed and rejected, repin Admin and Student to the last accepted baseline and verify whoami.

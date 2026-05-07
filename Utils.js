@@ -1325,6 +1325,10 @@ function isBatchSendEnabled_() {
     && CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS === true;
 }
 
+function isBatchPreviewModeEnabled_() {
+  return CONFIG && CONFIG.ENABLE_BATCH_PREVIEW_MODE === true;
+}
+
 function isTriggerSendEnabled_() {
   return CONFIG
     && CONFIG.SYSTEM_STABILIZATION_MODE !== true
@@ -1461,6 +1465,23 @@ function setManualSendProbeStatus_(status) {
     CacheService.getScriptCache().put(manualSendProbeStatusCacheKey_(), JSON.stringify(payload), 86400);
   } catch (_err) {}
   return payload;
+}
+
+function buildScriptPropertyRegressionGuard_() {
+  var summary = typeof getPropertyInventorySummary_ === "function" ? getPropertyInventorySummary_() : null;
+  var total = Number(summary && summary.totalPropertyCount || 0);
+  var commLast = Number(summary && summary.commLastCount || 0);
+  var expected = Math.max(0, Number(CONFIG.EXPECTED_SCRIPT_PROPERTY_COUNT_AFTER_CLEANUP || 0));
+  var warning = "";
+  if (commLast > 0) warning = "COMM_LAST_PROPERTY_REGRESSION";
+  else if (expected && total > expected) warning = "SCRIPT_PROPERTY_COUNT_GREW";
+  return {
+    ok: !warning,
+    warning: warning,
+    totalPropertyCount: total,
+    commLastCount: commLast,
+    expectedPropertyCount: expected
+  };
 }
 
 function isEphemeralCommunicationProperty_(key) {

@@ -3184,6 +3184,7 @@ function admin_getOperationalSafetyStatus(payload) {
       productionSendsEnabled: productionSendsEnabled,
       manualProbeMode: manualProbeEnabled,
       manualSendEnabled: manualProbeEnabled,
+      batchPreviewMode: isBatchPreviewModeEnabled_() === true,
       batchSendEnabled: batchSendsEnabled,
       triggerSendsEnabled: triggerSendsEnabled,
       automatedStageRunnerEnabled: automatedRunnerEnabled,
@@ -3445,6 +3446,43 @@ function stageBatchCandidateHash_(candidateIds) {
   return normalized.join("|");
 }
 
+function stageBatchPreviewLog_(label, payload) {
+  var data = payload && typeof payload === "object" ? payload : {};
+  logOperationalBlock_(label, Object.assign({
+    runtimeVersion: clean_(CONFIG.VERSION || ""),
+    deployVersion: Number(CONFIG.DEPLOY_VERSION_NUMBER || 0)
+  }, data));
+}
+
+function buildBatchPreviewIdempotencySummary_(cohort, messageType, batchId) {
+  var candidates = Array.isArray(cohort && cohort.candidates) ? cohort.candidates : [];
+  var alreadyProcessedCount = Number(cohort && cohort.alreadySentExcluded || 0);
+  var replaySamples = [];
+  candidates.forEach(function (candidate) {
+    var ctx = {
+      applicantId: clean_(candidate && candidate.applicantId || ""),
+      messageType: clean_(messageType || ""),
+      rowObj: candidate && candidate.rowObj ? candidate.rowObj : {},
+      emailStatus: clean_(candidate && candidate.emailStatus || ""),
+      batchLabel: ""
+    };
+    var key = typeof computeEmailIdempotencyKey_ === "function" ? computeEmailIdempotencyKey_(ctx, { batchLabel: "" }) : "";
+    var replay = typeof wasEmailAlreadyProcessed_ === "function" ? wasEmailAlreadyProcessed_(ctx, key) : { alreadyProcessed: false };
+    if (replay && replay.alreadyProcessed) {
+      alreadyProcessedCount++;
+      if (replaySamples.length < 10) replaySamples.push(ctx.applicantId);
+    }
+  });
+  return {
+    active: true,
+    batchId: clean_(batchId || ""),
+    candidateCount: candidates.length,
+    alreadyProcessedCount: alreadyProcessedCount,
+    replayBlockedCount: alreadyProcessedCount,
+    replayApplicantIdsSample: replaySamples
+  };
+}
+
 function stageBatchShouldExcludeFailedDefault_(rowObj, messageType) {
   // Production invite batches skip prior hard failures for the same message type until an explicit retry flow is used.
   var normalizedType = normalizeApplicantMessageType_(messageType || "");
@@ -3558,9 +3596,11 @@ function stageBatchPreviewResponse_(data) {
     debugId: clean_(src.debugId || src.requestId || adminDebugId_()),
     stage: clean_(src.stage || ""),
     messageType: clean_(src.messageType || ""),
+    batchId: clean_(src.batchId || ""),
     count: Number(src.count != null ? src.count : src.eligible || 0),
     clientElapsedMs: Number(src.clientElapsedMs || 0),
     previewLimit: Number(src.previewLimit || src.limit || 0),
+    limit: Number(src.limit || src.previewLimit || 0),
     requestedOffset: Number(src.requestedOffset || 0),
     offset: Number(src.offset || 0),
     offsetApplied: src.offsetApplied === true,
@@ -3572,10 +3612,24 @@ function stageBatchPreviewResponse_(data) {
     candidateIds: candidateIds,
     candidateCount: Number(src.candidateCount != null ? src.candidateCount : candidateIds.length),
     candidateHash: clean_(src.candidateHash || ""),
+    firstScannedRow: Number(src.firstScannedRow || src.scanStartRow || 0),
+    scanStartRow: Number(src.scanStartRow || 0),
+    scanEndRow: Number(src.scanEndRow || 0),
+    rowsScanned: Number(src.rowsScanned || src.scanned || 0),
+    scanCap: Number(src.scanCap || 0),
+    windowsScanned: Number(src.windowsScanned || 0),
+    fallbackContinuationUsed: src.fallbackContinuationUsed === true,
+    requestedLimit: Number(src.requestedLimit || src.previewLimit || src.limit || 0),
+    partial: src.partial === true,
+    partialReason: clean_(src.partialReason || ""),
     totalInStage: Number(src.totalInStage || 0),
     eligibleUnsentFound: Number(src.eligibleUnsentFound || 0),
     eligible: Number(src.eligible || src.count || 0),
     blocked: Number(src.blocked || 0),
+    blockedCount: Number(src.blockedCount != null ? src.blockedCount : src.blocked || 0),
+    alreadyProcessedCount: Number(src.alreadyProcessedCount || 0),
+    idempotencySummary: src.idempotencySummary && typeof src.idempotencySummary === "object" ? src.idempotencySummary : {},
+    propertyGuard: src.propertyGuard && typeof src.propertyGuard === "object" ? src.propertyGuard : {},
     alreadySentExcluded: Number(src.alreadySentExcluded || 0),
     failedExcluded: Number(src.failedExcluded || 0),
     blockedByReason: src.blockedByReason || {},
@@ -3690,14 +3744,25 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
   var previewEarlyStop = options.previewEarlyStop === true;
   var previewEligibleBuffer = Math.max(0, Math.min(10, Math.floor(Number(options.previewEligibleBuffer || 2))));
   var previewEligibleTarget = previewEarlyStop ? Math.max(batchLimit, batchLimit + previewEligibleBuffer) : 0;
+  var deterministicPreview = options.deterministicPreview === true;
   var eligibleCountBounded = false;
   var lastRow = values.length;
   var savedCursor = Math.max(2, getStageCursor_(normalizedStage, messageType));
   var cursor = savedCursor > lastRow ? 2 : savedCursor;
   var nextCursor = cursor;
   var scanned = 0;
+  var scanStartRow = cursor;
+  var scanEndRow = 0;
+  var previewScanCap = deterministicPreview ? Math.max(1, Math.floor(Number(CONFIG.BATCH_PREVIEW_SCAN_ROW_CAP || 500))) : 0;
+  var windowsScanned = 0;
+  var fallbackContinuationUsed = false;
+  var scanStoppedBySafetyCap = false;
+  var scanWrapped = false;
+  var maxRowsToScan = deterministicPreview ? Math.max(0, lastRow - 1) : 0;
+  var rowsVisited = 0;
   var timeBudgetMs = Math.max(1, Number(CONFIG.SCAN_TIME_BUDGET_MS || 240000));
   var scanStoppedByTimeBudget = false;
+  var scanStoppedByCap = false;
   if (!headers.length || values.length < 2 || !normalizedStage) {
     var emptyCohort = {
       stage: normalizedStage,
@@ -3723,91 +3788,137 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
     emptyCohort.emptyReason = stageBatchEmptyReason_(emptyCohort);
     return emptyCohort;
   }
-  for (var r = cursor - 1; r < values.length; r++) {
-    if (new Date().getTime() - startedAtMs > timeBudgetMs) {
-      scanStoppedByTimeBudget = true;
-      Logger.log("AUTO_STAGE_RUN_TIMEOUT_NEAR");
-      break;
-    }
-    var hydrateStartedAtMs = new Date().getTime();
-    var row = values[r] || [];
-    var rowObj = {};
-    for (var c = 0; c < headers.length; c++) {
-      var h = clean_(headers[c]);
-      if (h) rowObj[h] = row[c];
-    }
-    phaseTimings.rowHydrationMs += new Date().getTime() - hydrateStartedAtMs;
-    scanned++;
-    nextCursor = r + 2;
-    var applicantId = clean_(rowObj.ApplicantID || "");
-    if (!applicantId) continue;
-    if (clean_(rowObj.Email_Status || "").toUpperCase() === "SENT") {
-      continue;
-    }
-    var candidateStartedAtMs = new Date().getTime();
-    var snapshot = stageAggregationSnapshot_(rowObj);
-    phaseTimings.candidateSelectionMs += new Date().getTime() - candidateStartedAtMs;
-    if (clean_(snapshot.stage || "").toUpperCase() !== normalizedStage) continue;
-    totalInStage++;
-    var filterStartedAtMs = new Date().getTime();
-    if (!messageType) {
-      phaseTimings.eligibilityFilteringMs += new Date().getTime() - filterStartedAtMs;
-      continue;
-    }
-    if (stageBatchShouldExcludePriorSuccessDefault_(rowObj, normalizedStage, messageType)) {
-      alreadySentExcluded++;
-      phaseTimings.eligibilityFilteringMs += new Date().getTime() - filterStartedAtMs;
-      continue;
-    }
-    if (inviteStatefulFlow && stageBatchShouldExcludeFailedDefault_(rowObj, messageType)) {
-      failedExcluded++;
-      phaseTimings.eligibilityFilteringMs += new Date().getTime() - filterStartedAtMs;
-      continue;
-    }
-    phaseTimings.eligibilityFilteringMs += new Date().getTime() - filterStartedAtMs;
-    var resolved = resolveApplicantMessageContextFromRow_(rowObj, r + 1, sh, messageType, {
-      action: "stageBatchCollect",
-      actorEmail: actorEmail,
-      actorRole: actorRole,
-      debugId: debugId,
-      applicantId: applicantId,
-      requestId: requestId,
-      previewMetrics: phaseTimings,
-      portalSecretLookup: portalSecretLookup,
-      cooldownLookup: cooldownLookup,
-      skipPortalUrlBuild: !!portalSecretLookup
-    });
-    if (resolved && resolved.eligible) {
-      eligibleUnsentTotal++;
-      if (candidates.length < batchLimit) {
-        candidates.push({
-          applicantId: applicantId,
-          rowNumber: Number(resolved.rowNumber || (r + 1) || 0),
-          effectiveEmail: clean_(resolved.effectiveEmail || "")
-        });
-      }
-      if (candidates.length >= batchLimit || (previewEligibleTarget > 0 && eligibleUnsentTotal >= previewEligibleTarget)) {
-        eligibleCountBounded = true;
-        nextCursor = r + 2;
+  var windowStartIndex = cursor - 1;
+  while (windowStartIndex >= 1 && windowStartIndex < values.length) {
+    windowsScanned++;
+    if (windowsScanned > 1) fallbackContinuationUsed = true;
+    var windowRowsScanned = 0;
+    var windowEndIndex = scanWrapped ? Math.min(values.length, cursor - 1) : values.length;
+    var r = windowStartIndex;
+    for (; r < windowEndIndex; r++) {
+      if (deterministicPreview && previewScanCap > 0 && windowRowsScanned >= previewScanCap) {
+        scanStoppedByCap = true;
         break;
       }
+      if (deterministicPreview && rowsVisited >= maxRowsToScan) {
+        scanStoppedBySafetyCap = true;
+        break;
+      }
+      if (new Date().getTime() - startedAtMs > timeBudgetMs) {
+        scanStoppedByTimeBudget = true;
+        Logger.log("AUTO_STAGE_RUN_TIMEOUT_NEAR");
+        break;
+      }
+      var hydrateStartedAtMs = new Date().getTime();
+      var row = values[r] || [];
+      var rowObj = {};
+      for (var c = 0; c < headers.length; c++) {
+        var h = clean_(headers[c]);
+        if (h) rowObj[h] = row[c];
+      }
+      phaseTimings.rowHydrationMs += new Date().getTime() - hydrateStartedAtMs;
+      scanned++;
+      rowsVisited++;
+      windowRowsScanned++;
+      scanEndRow = r + 1;
+      nextCursor = r + 2;
+      var applicantId = clean_(rowObj.ApplicantID || "");
+      if (!applicantId) continue;
+      if (clean_(rowObj.Email_Status || "").toUpperCase() === "SENT") {
+        continue;
+      }
+      var candidateStartedAtMs = new Date().getTime();
+      var snapshot = stageAggregationSnapshot_(rowObj);
+      phaseTimings.candidateSelectionMs += new Date().getTime() - candidateStartedAtMs;
+      if (clean_(snapshot.stage || "").toUpperCase() !== normalizedStage) continue;
+      totalInStage++;
+      var filterStartedAtMs = new Date().getTime();
+      if (!messageType) {
+        phaseTimings.eligibilityFilteringMs += new Date().getTime() - filterStartedAtMs;
+        continue;
+      }
+      if (stageBatchShouldExcludePriorSuccessDefault_(rowObj, normalizedStage, messageType)) {
+        alreadySentExcluded++;
+        phaseTimings.eligibilityFilteringMs += new Date().getTime() - filterStartedAtMs;
+        continue;
+      }
+      if (inviteStatefulFlow && stageBatchShouldExcludeFailedDefault_(rowObj, messageType)) {
+        failedExcluded++;
+        phaseTimings.eligibilityFilteringMs += new Date().getTime() - filterStartedAtMs;
+        continue;
+      }
+      phaseTimings.eligibilityFilteringMs += new Date().getTime() - filterStartedAtMs;
+      var resolved = resolveApplicantMessageContextFromRow_(rowObj, r + 1, sh, messageType, {
+        action: "stageBatchCollect",
+        actorEmail: actorEmail,
+        actorRole: actorRole,
+        debugId: debugId,
+        applicantId: applicantId,
+        requestId: requestId,
+        previewMetrics: phaseTimings,
+        portalSecretLookup: portalSecretLookup,
+        cooldownLookup: cooldownLookup,
+        skipPortalUrlBuild: !!portalSecretLookup
+      });
+      if (resolved && resolved.eligible) {
+        eligibleUnsentTotal++;
+        if (candidates.length < batchLimit) {
+          candidates.push({
+            applicantId: applicantId,
+            rowNumber: Number(resolved.rowNumber || (r + 1) || 0),
+            effectiveEmail: clean_(resolved.effectiveEmail || ""),
+            rowObj: rowObj,
+            emailStatus: clean_(rowObj.Email_Status || "")
+          });
+        }
+        if (candidates.length >= batchLimit || (previewEligibleTarget > 0 && eligibleUnsentTotal >= previewEligibleTarget)) {
+          eligibleCountBounded = true;
+          nextCursor = r + 2;
+          break;
+        }
+        continue;
+      }
+      blockedTotal++;
+      incrementStageBatchReason_(blockedByReason, resolved && (resolved.blockCode || resolved.code || "BLOCKED"));
+      pushStageBatchSample_(blockedApplicantIdsSample, applicantId);
+    }
+    if (!deterministicPreview) break;
+    if (candidates.length > 0 || scanStoppedByTimeBudget || scanStoppedBySafetyCap) break;
+    if (r < windowEndIndex) {
+      windowStartIndex = r;
       continue;
     }
-    blockedTotal++;
-    incrementStageBatchReason_(blockedByReason, resolved && (resolved.blockCode || resolved.code || "BLOCKED"));
-    pushStageBatchSample_(blockedApplicantIdsSample, applicantId);
+    if (!scanWrapped && cursor > 2) {
+      scanWrapped = true;
+      windowStartIndex = 1;
+      continue;
+    }
+    break;
   }
   if (nextCursor > lastRow) nextCursor = 2;
-  setStageCursor_(normalizedStage, messageType, nextCursor);
-  Logger.log("AUTO_STAGE_CURSOR_UPDATE " + JSON.stringify({
-    stage: normalizedStage,
-    messageType: messageType,
-    nextCursor: nextCursor,
-    scanned: scanned,
-    found: candidates.length,
-    timeBudgetMs: timeBudgetMs,
-    scanStoppedByTimeBudget: scanStoppedByTimeBudget
-  }));
+  if (!deterministicPreview) {
+    setStageCursor_(normalizedStage, messageType, nextCursor);
+    Logger.log("AUTO_STAGE_CURSOR_UPDATE " + JSON.stringify({
+      stage: normalizedStage,
+      messageType: messageType,
+      nextCursor: nextCursor,
+      scanned: scanned,
+      found: candidates.length,
+      timeBudgetMs: timeBudgetMs,
+      scanStoppedByTimeBudget: scanStoppedByTimeBudget,
+      scanStoppedByCap: scanStoppedByCap,
+      windowsScanned: windowsScanned,
+      fallbackContinuationUsed: fallbackContinuationUsed
+    }));
+  }
+  var partial = deterministicPreview && candidates.length < batchLimit && (scanStoppedByCap || scanStoppedBySafetyCap || scanStoppedByTimeBudget || nextCursor > lastRow || candidates.length > 0);
+  var partialReason = "";
+  if (partial) {
+    if (scanStoppedByTimeBudget) partialReason = "PREVIEW_TIME_BUDGET_EXHAUSTED";
+    else if (scanStoppedBySafetyCap) partialReason = "PREVIEW_SAFETY_CAP_REACHED";
+    else if (candidates.length > 0) partialReason = "PREVIEW_CANDIDATES_FOUND_BELOW_LIMIT";
+    else partialReason = "PREVIEW_WINDOW_EXHAUSTED";
+  }
   var cohort = {
     stage: normalizedStage,
     messageType: messageType,
@@ -3828,9 +3939,20 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
     candidates: candidates,
     eligibleCountBounded: eligibleCountBounded,
     scanCursor: cursor,
+    firstScannedRow: scanStartRow,
+    scanStartRow: scanStartRow,
+    scanEndRow: scanEndRow,
+    rowsScanned: scanned,
+    scanCap: previewScanCap,
+    windowsScanned: windowsScanned,
+    fallbackContinuationUsed: fallbackContinuationUsed,
     nextCursor: nextCursor,
     scanned: scanned,
     scanStoppedByTimeBudget: scanStoppedByTimeBudget,
+    scanStoppedByCap: scanStoppedByCap,
+    scanStoppedBySafetyCap: scanStoppedBySafetyCap,
+    partial: partial,
+    partialReason: partialReason,
     elapsedMs: new Date().getTime() - startedAtMs,
     phaseTimings: phaseTimings
   };
@@ -3858,12 +3980,64 @@ function admin_previewStageBatch(payload) {
       if (!isAdmin_(adminEmail)) throw new Error("Access denied");
       requireSuperAdmin_(adminEmail);
       var p = payload && typeof payload === "object" ? payload : {};
+      var propertyGuard = buildScriptPropertyRegressionGuard_();
+      if (!propertyGuard.ok) {
+        stageBatchPreviewLog_("MANUAL_BATCH_PREVIEW_BLOCKED", {
+          batchId: "",
+          stage: clean_(p.stage || ""),
+          candidateCount: 0,
+          limit: Number(p.limit || 0),
+          replaySummary: {},
+          blockCode: propertyGuard.warning,
+          propertyGuard: propertyGuard
+        });
+        return stageBatchPreviewFinalizeForRpc_(stageBatchPreviewResponse_({
+          ok: false,
+          message: "Batch preview blocked by property regression guard.",
+          blockCode: propertyGuard.warning,
+          blockReason: propertyGuard.warning,
+          requestId: requestId,
+          debugId: dbgId,
+          stage: clean_(p.stage || ""),
+          count: 0,
+          previewLimit: Number(p.limit || 0),
+          propertyGuard: propertyGuard
+        }));
+      }
+      if (isBatchPreviewModeEnabled_() !== true) {
+        stageBatchPreviewLog_("MANUAL_BATCH_PREVIEW_BLOCKED", {
+          batchId: "",
+          stage: clean_(p.stage || ""),
+          candidateCount: 0,
+          limit: Number(p.limit || 0),
+          replaySummary: {},
+          blockCode: "BATCH_PREVIEW_MODE_DISABLED"
+        });
+        return stageBatchPreviewFinalizeForRpc_(stageBatchPreviewResponse_({
+          ok: false,
+          message: "Batch preview mode is disabled.",
+          blockCode: "BATCH_PREVIEW_MODE_DISABLED",
+          blockReason: "Batch preview mode is disabled.",
+          requestId: requestId,
+          debugId: dbgId,
+          stage: clean_(p.stage || ""),
+          count: 0,
+          previewLimit: Number(p.limit || 0)
+        }));
+      }
       var actor = resolveAdminCommActor_(p);
       stage = normalizeStageBatchStage_(p.stage || "");
-      limitMeta = stageBatchLimitMeta_(p.limit);
+      var limitMeta = stageBatchLimitMeta_(p.limit);
       limit = limitMeta.effective;
       requestedOffset = clampStageBatchOffset_(p.offset);
       messageType = getBatchMessageTypeForStage_(stage);
+      stageBatchPreviewLog_("MANUAL_BATCH_PREVIEW_BEGIN", {
+        batchId: "",
+        stage: stage,
+        candidateCount: 0,
+        limit: limit,
+        replaySummary: {}
+      });
       if (!stage) {
         var invalidOut = stageBatchPreviewResponse_({
           ok: false,
@@ -3901,11 +4075,14 @@ function admin_previewStageBatch(payload) {
         portalSecretLookup: previewPortalSecretLookup && previewPortalSecretLookup.ok ? previewPortalSecretLookup : null,
         cooldownLookup: previewCooldownLookup && previewCooldownLookup.ok ? previewCooldownLookup : null,
         previewEarlyStop: true,
-        previewEligibleBuffer: 2
+        previewEligibleBuffer: 2,
+        deterministicPreview: true
       });
       var candidateIds = stageBatchCandidateIds_(cohort);
       var candidateCount = candidateIds.length;
       var candidateHash = stageBatchCandidateHash_(candidateIds);
+      var batchId = ["BATCH_PREVIEW", stage, messageType, String(limit), candidateHash].join("::");
+      var idempotencySummary = buildBatchPreviewIdempotencySummary_(cohort, messageType, batchId);
       var writtenAt = new Date().toISOString();
       var assemblyStartedAtMs = new Date().getTime();
       var emptyReason = clean_(cohort.emptyReason || "");
@@ -3915,6 +4092,7 @@ function admin_previewStageBatch(payload) {
         warning: limitMeta.warning,
         stage: stage,
         priority: priority,
+        batchId: batchId,
         requestId: requestId,
         debugId: dbgId,
         messageType: messageType,
@@ -3934,6 +4112,19 @@ function admin_previewStageBatch(payload) {
         candidateIds: candidateIds,
         candidateCount: candidateCount,
         candidateHash: candidateHash,
+        firstScannedRow: Number(cohort.firstScannedRow || cohort.scanStartRow || 0),
+        scanStartRow: Number(cohort.scanStartRow || 0),
+        scanEndRow: Number(cohort.scanEndRow || 0),
+        rowsScanned: Number(cohort.rowsScanned || cohort.scanned || 0),
+        scanCap: Number(cohort.scanCap || 0),
+        windowsScanned: Number(cohort.windowsScanned || 0),
+        fallbackContinuationUsed: cohort.fallbackContinuationUsed === true,
+        requestedLimit: limit,
+        partial: cohort.partial === true,
+        partialReason: clean_(cohort.partialReason || ""),
+        limit: Number(cohort.limit || limit),
+        idempotencySummary: idempotencySummary,
+        alreadyProcessedCount: Number(idempotencySummary.alreadyProcessedCount || 0),
         count: Number((cohort.candidates || []).length || 0),
         eligible: Number((cohort.candidates || []).length || 0),
         blocked: Number(cohort.blockedTotal || 0),
@@ -3966,16 +4157,48 @@ function admin_previewStageBatch(payload) {
           writtenAt: writtenAt,
           candidateIds: candidateIds,
           candidateCount: candidateCount,
-          candidateHash: candidateHash
+          candidateHash: candidateHash,
+          batchId: batchId,
+          idempotencySummary: idempotencySummary
         });
       }
       out.elapsedMs = Math.max(Number(out.elapsedMs || 0), new Date().getTime() - startedAtMs);
       out.phaseTimings = phaseTimings;
       out.message = out.count > 0
-        ? (cohort.eligibleCountBounded === true
+        ? (cohort.partial === true && clean_(cohort.partialReason || "") === "PREVIEW_CANDIDATES_FOUND_BELOW_LIMIT"
+          ? "Partial preview ready. Candidates found below requested limit."
+          : (cohort.partial === true
+          ? "Partial preview ready. Scan window exhausted before requested limit."
+          : (cohort.eligibleCountBounded === true
           ? "Preview ready. Eligible unsent count shown is bounded to the preview window, not a full-stage total."
-          : "Preview ready.")
+          : "Preview ready.")))
         : (out.emptyReason || "No eligible unsent invite candidates found under current rules.");
+      stageBatchPreviewLog_("MANUAL_BATCH_PREVIEW_RESULT", {
+        batchId: batchId,
+        stage: stage,
+        candidateCount: candidateCount,
+        limit: limit,
+        replaySummary: idempotencySummary,
+        blockedCount: Number(out.blocked || 0),
+        alreadyProcessedCount: Number(idempotencySummary.alreadyProcessedCount || 0),
+        firstScannedRow: Number(out.firstScannedRow || out.scanStartRow || 0),
+        rowsScanned: Number(out.rowsScanned || 0),
+        scanStartRow: Number(out.scanStartRow || 0),
+        scanEndRow: Number(out.scanEndRow || 0),
+        windowsScanned: Number(out.windowsScanned || 0),
+        fallbackContinuationUsed: out.fallbackContinuationUsed === true,
+        partial: out.partial === true,
+        partialReason: clean_(out.partialReason || "")
+      });
+      if (Number(idempotencySummary.alreadyProcessedCount || 0) > 0) {
+        stageBatchPreviewLog_("MANUAL_BATCH_PREVIEW_REPLAY", {
+          batchId: batchId,
+          stage: stage,
+          candidateCount: candidateCount,
+          limit: limit,
+          replaySummary: idempotencySummary
+        });
+      }
       return typeof previewRpcTerminalSummary_ === "function" ? previewRpcTerminalSummary_(stageBatchPreviewFinalizeForRpc_(out)) : stageBatchPreviewFinalizeForRpc_(out);
     } catch (e) {
       var errorOut = stageBatchPreviewResponse_({
@@ -3991,6 +4214,8 @@ function admin_previewStageBatch(payload) {
         offsetIgnored: requestedOffset > 0,
         elapsedMs: new Date().getTime() - startedAtMs,
         phaseTimings: phaseTimings,
+        blockCode: "PREVIEW_BACKEND_ERROR",
+        blockReason: "PREVIEW_BACKEND_ERROR",
         error: String(e && e.message ? e.message : e || "Preview failed.")
       });
       return typeof previewRpcTerminalSummary_ === "function" ? previewRpcTerminalSummary_(stageBatchPreviewFinalizeForRpc_(errorOut)) : stageBatchPreviewFinalizeForRpc_(errorOut);
@@ -4009,7 +4234,7 @@ function admin_sendStageBatch(payload) {
       requireSuperAdmin_(adminEmail);
       var p = payload && typeof payload === "object" ? payload : {};
       if (isBatchSendEnabled_() !== true) {
-        var blockCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "BATCH_SENDS_DISABLED";
+        var blockCode = "BATCH_SENDS_DISABLED_PREVIEW_ONLY_MODE";
         if (isSystemStabilizationModeActive_()) logOperationalBlock_("SYSTEM_STABILIZATION_MODE_ACTIVE", {
           action: "send_stage_batch",
           requestId: requestId,
@@ -4022,7 +4247,7 @@ function admin_sendStageBatch(payload) {
           actorEmail: clean_(adminEmail || "")
         });
         return adminCommBlockedResult_("send_stage_batch", blockCode, requestId, {
-          blockReason: "Stage batch sends are disabled during stabilization."
+          blockReason: "Batch sends are disabled in preview-only mode."
         });
       }
       var actor = resolveAdminCommActor_(p);

@@ -498,6 +498,24 @@
         <div id="stageBatchInlineNote" class="muted" style="font-size:12px;">Standard production stage sends automatically use the next eligible unsent records. Diagnostic offset is ignored unless a separate diagnostic flow is introduced.</div>
       </div>
       <div id="stageBatchSummary" class="sendSummary hidden"></div>
+      <div id="stageBatchPreviewDiagnostics" class="sendSummary hidden">
+        <div style="font-weight:800;">Preview Diagnostics</div>
+        <div class="commMeta">
+          <div class="box"><div class="k">Selected Stage</div><div class="v" id="diagPreviewStage">-</div></div>
+          <div class="box"><div class="k">Preview Candidate Count</div><div class="v" id="diagPreviewCandidateCount">-</div></div>
+          <div class="box"><div class="k">Blocked Count</div><div class="v" id="diagPreviewBlockedCount">-</div></div>
+          <div class="box"><div class="k">Already Processed</div><div class="v" id="diagPreviewAlreadyProcessed">-</div></div>
+          <div class="box"><div class="k">Limit Applied</div><div class="v" id="diagPreviewLimit">-</div></div>
+          <div class="box"><div class="k">Rows Scanned</div><div class="v" id="diagPreviewRowsScanned">-</div></div>
+          <div class="box"><div class="k">Scan Window</div><div class="v" id="diagPreviewScanWindow">-</div></div>
+          <div class="box"><div class="k">Scan Cap</div><div class="v" id="diagPreviewScanCap">-</div></div>
+          <div class="box"><div class="k">Elapsed</div><div class="v" id="diagPreviewElapsed">-</div></div>
+          <div class="box"><div class="k">Partial</div><div class="v" id="diagPreviewPartial">-</div></div>
+          <div class="box"><div class="k">Partial Reason</div><div class="v" id="diagPreviewPartialReason">-</div></div>
+          <div class="box"><div class="k">Preview Batch ID</div><div class="v" id="diagPreviewBatchId">-</div></div>
+          <div class="box"><div class="k">Replay Protection Active</div><div class="v" id="diagPreviewReplayActive">-</div></div>
+        </div>
+      </div>
     </div>
 
     <div id="reviewQueuesPanel" class="card queue-panel">
@@ -1639,6 +1657,34 @@ function onStageSelected(stageIndex){
   renderBatchPanel();
   search();
 }
+function renderBatchPreviewDiagnostics_(res){
+  var panel = document.getElementById("stageBatchPreviewDiagnostics");
+  if (!panel) return;
+  var isPreview = res && (String(res.action || "") === "preview_stage_batch" || batchState.action === "preview");
+  if (!isPreview) {
+    panel.classList.add("hidden");
+    return;
+  }
+  var summary = res.idempotencySummary && typeof res.idempotencySummary === "object" ? res.idempotencySummary : {};
+  function set(id, value){
+    var el = document.getElementById(id);
+    if (el) el.textContent = value === null || value === undefined || value === "" ? "-" : String(value);
+  }
+  set("diagPreviewStage", res.stage || batchState.selectedStage || "-");
+  set("diagPreviewCandidateCount", Number(res.candidateCount != null ? res.candidateCount : res.count || 0));
+  set("diagPreviewBlockedCount", Number(res.blockedCount != null ? res.blockedCount : res.blocked || 0));
+  set("diagPreviewAlreadyProcessed", Number(res.alreadyProcessedCount != null ? res.alreadyProcessedCount : summary.alreadyProcessedCount || 0));
+  set("diagPreviewLimit", Number(res.limit || res.previewLimit || 0));
+  set("diagPreviewRowsScanned", Number(res.rowsScanned || 0));
+  set("diagPreviewScanWindow", Number(res.rowsScanned || 0) > 0 ? (String(Number(res.scanStartRow || 0)) + "-" + String(Number(res.scanEndRow || 0))) : "-");
+  set("diagPreviewScanCap", Number(res.scanCap || 0));
+  set("diagPreviewElapsed", Number(res.elapsedMs || 0) ? (String(Math.round(Number(res.elapsedMs || 0) / 100) / 10) + "s") : "-");
+  set("diagPreviewPartial", res.partial === true ? "YES" : "NO");
+  set("diagPreviewPartialReason", res.partialReason || "-");
+  set("diagPreviewBatchId", res.batchId || summary.batchId || "-");
+  set("diagPreviewReplayActive", summary.active === true ? "YES" : "NO");
+  panel.classList.remove("hidden");
+}
 function renderStageBatchSummary_(res){
   var box = document.getElementById("stageBatchSummary");
   if (!box) return;
@@ -1646,6 +1692,7 @@ function renderStageBatchSummary_(res){
     box.classList.add("hidden");
     box.classList.remove("err");
     box.innerHTML = "";
+    renderBatchPreviewDiagnostics_(null);
     return;
   }
   var parts = [];
@@ -1688,9 +1735,10 @@ function renderStageBatchSummary_(res){
     if (Number(res.count || 0) > 0) parts.push('<div style="font-weight:800;">Batch Preview</div>');
     else parts.push('<div style="font-weight:800;">Batch Preview Complete</div>');
     parts.push('<div style="margin-top:6px;">Stage: ' + esc(String(res.stage || "")) + ' | Message: ' + esc(String(res.messageType || "(none)")) + ' | Count: ' + esc(String(Number(res.count || 0))) + '</div>');
+    if (res.batchId) parts.push('<div style="margin-top:6px;">Batch ID: ' + esc(String(res.batchId || "")) + '</div>');
     parts.push('<div style="margin-top:6px;">Request ID: ' + esc(String(res.requestId || "")) + ' | Client Elapsed: ' + esc(String(Number(res.clientElapsedMs || 0))) + ' ms | Server Elapsed: ' + esc(String(Number(res.elapsedMs || 0))) + ' ms</div>');
     parts.push('<div style="margin-top:6px;">Message: ' + esc(String(res.message || "Preview ready.")) + '</div>');
-    parts.push('<div style="margin-top:6px;">Eligible Unsent Found: ' + esc(String(Number(res.eligibleUnsentFound || 0))) + ' | Blocked: ' + esc(String(Number(res.blocked || 0))) + ' | Already SENT Excluded: ' + esc(String(Number(res.alreadySentExcluded || 0))) + ' | Failed Excluded: ' + esc(String(Number(res.failedExcluded || 0))) + '</div>');
+    parts.push('<div style="margin-top:6px;">Eligible Unsent Found: ' + esc(String(Number(res.eligibleUnsentFound || 0))) + ' | Blocked: ' + esc(String(Number(res.blocked || 0))) + ' | Already Processed: ' + esc(String(Number(res.alreadyProcessedCount || 0))) + ' | Already SENT Excluded: ' + esc(String(Number(res.alreadySentExcluded || 0))) + ' | Failed Excluded: ' + esc(String(Number(res.failedExcluded || 0))) + '</div>');
     parts.push('<div style="margin-top:6px;">Selection Mode: next eligible unsent records' + (res.offsetIgnored ? ' | Diagnostic Offset Ignored: YES' : ' | Diagnostic Offset Ignored: NO') + '</div>');
     if (!Number(res.count || 0) && res.emptyReason) parts.push('<div style="margin-top:6px;">Reason: ' + esc(String(res.emptyReason || "")) + '</div>');
     if (blockedList) parts.push('<div style="margin-top:6px;">Blocked By Reason: ' + blockedList + '</div>');
@@ -1709,6 +1757,7 @@ function renderStageBatchSummary_(res){
   box.classList.remove("hidden");
   box.classList.toggle("err", !!(res && res.ok === false));
   box.innerHTML = parts.join("");
+  renderBatchPreviewDiagnostics_(res);
 }
 
 function renderBatchPanel(){
@@ -1783,6 +1832,7 @@ function bindStageBatchControls_(){
   }
   renderBatchPanel();
 }
+var STAGE_BATCH_PREVIEW_TIMEOUT_MS = 180000;
 function previewStageBatchUi_(){
   var stage = batchState.selectedStage;
   var limit = getStageBatchLimitUi_();
@@ -1792,7 +1842,7 @@ function previewStageBatchUi_(){
   var requestSeq = batchState.previewRequestSeq;
   var clientRequestId = "preview-client-" + String(Date.now()) + "-" + String(requestSeq);
   var requestStartedAtMs = Date.now();
-  var timeoutMs = 20000;
+  var timeoutMs = STAGE_BATCH_PREVIEW_TIMEOUT_MS;
   console.log("[StageBatchPreview] start", { requestId: clientRequestId, stage: stage, limit: limit, offset: offset, timeoutMs: timeoutMs });
   resetBatchPreviewState_(false);
   batchState.previewActiveSeq = requestSeq;
@@ -1808,14 +1858,15 @@ function previewStageBatchUi_(){
     batchState.previewActiveSeq = 0;
     batchState.busy = false;
     var clientElapsedMs = Date.now() - requestStartedAtMs;
+    var elapsedSeconds = Math.round(clientElapsedMs / 100) / 10;
     batchState.previewClientElapsedMs = clientElapsedMs;
     resetBatchPreviewState_(false);
     batchState.action = "preview";
     batchState.result = {
       ok: false,
       action: "preview_stage_batch",
-      message: "Preview timed out.",
-      error: "Preview timed out.",
+      message: "Preview timed out after " + String(elapsedSeconds) + " seconds.",
+      error: "PREVIEW_TIMEOUT_CLIENT",
       emptyReason: "",
       elapsedMs: 0,
       clientElapsedMs: clientElapsedMs,
@@ -1823,6 +1874,8 @@ function previewStageBatchUi_(){
       stage: stage,
       messageType: batchState.messageType || "",
       count: 0,
+      blockCode: "PREVIEW_TIMEOUT_CLIENT",
+      blockReason: "Preview timed out after " + String(elapsedSeconds) + " seconds.",
       previewLimit: limit,
       requestedOffset: offset,
       offsetIgnored: offset > 0
