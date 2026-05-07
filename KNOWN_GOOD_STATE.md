@@ -43,3 +43,37 @@
 - Admin portal loads.
 - Student portal loads.
 - Admin runtime badge matches `whoami` after Ctrl+F5.
+
+## r147 Stable Operational Baseline
+
+Date locked: 2026-05-07
+
+Runtime identity:
+
+- Runtime version: `r147 / 147`
+- Apps Script platform version: `145`
+- Git commit: `e69256e` (`r147: harden bounce correlation safety`)
+- Expected Script ID: `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`
+- Admin whoami: `r147 / 147`, mismatch `false`, Script ID matches expected
+- Student whoami: `r147 / 147`, mismatch `false`, Script ID matches expected
+
+Canonical URLs:
+
+- Admin: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec`
+- Student: `https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec`
+
+Operational notes:
+
+- Bounce scan mode: `SAFE_WITH_AMBIGUOUS_QUEUE`
+- Ambiguous DSNs are skipped safely.
+- Bounce correlation prefers explicit applicant-id tokens and unique recipient matches.
+- Bounce visibility is repaired.
+- Trigger visibility is repaired.
+- Automation is verified operational.
+- Trigger cadence is currently operator-controlled.
+- No CRM dependency is required for the admissions workflow.
+
+Rollback anchor:
+
+- Use tag `baseline-r147` after this governance baseline commit is pushed.
+- Rollback should prefer deployment repin first, followed by Admin and Student `?view=whoami` verification.

@@ -10,7 +10,13 @@
 - r147 keeps send-path, batch-send, trigger cadence, automation, and eligibility logic unchanged.
 - r147 Safe Bounce Correlation is deployed to live Admin and Student runtimes.
 - Live runtime truth from canonical `?view=whoami`: Admin `r147 / 147`, mismatch `false`; Student `r147 / 147`, mismatch `false`.
+- Apps Script platform version: `145`.
+- Latest stable runtime commit: `e69256e` (`r147: harden bounce correlation safety`).
 - Canonical Admin and Student URLs are preserved as `https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec`.
+- r147 bounce correlation is hardened and validated.
+- Trigger visibility is repaired.
+- Bounce visibility is repaired.
+- Automation is operational.
 - Trigger cadence is currently operator-controlled; no cadence change is authorized by this CIS.
 - Admin bounce UI now surfaces matched, ambiguous, and unmatched bounce scan results plus latest bounce reason/classification.
 - Manual bounce scan remains gated to matched-unique writeback only; ambiguous DSNs must be skipped.
@@ -170,7 +176,10 @@
 
 ## Files In Scope
 
+- `ARCHITECTURE_ROADMAP_NO_CRM.md`
 - `CURRENT_TASK.md`
+- `KNOWN_GOOD_STATE.md`
+- `RELEASE_LOG.md`
 
 ## Current Authority
 
@@ -183,6 +192,8 @@
 - Baseline: `r128 / 128` live before r129 release.
 - Admin runtime: `r147 / 147`, mismatch `false`.
 - Student runtime: `r147 / 147`, mismatch `false`.
+- Apps Script platform version: `145`.
+- Latest stable runtime commit: `e69256e` (`r147: harden bounce correlation safety`).
 - Canonical Admin URL preserved: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec`.
 - Canonical Student URL preserved: `https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec`.
 
@@ -310,7 +321,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-Architecture roadmap / no-CRM strategy, unless the user redirects. Do not run manual sends, batch sends, automatedStageBatchRunner, trigger mutation, cadence changes, clasp, deploy, sheet/Drive/Gmail mutation, git tag, or source edits without a new CIS.
+Architecture/no-CRM/refactor planning, unless the user redirects. Do not run manual sends, batch sends, automatedStageBatchRunner, trigger mutation, cadence changes, clasp, deploy, sheet/Drive/Gmail mutation, git tag, or source edits without a new CIS.
 
 ## Cautions
 
