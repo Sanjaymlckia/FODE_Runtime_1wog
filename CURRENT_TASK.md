@@ -2,13 +2,16 @@
 
 ## Current Objective
 
- Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and complete r147 Safe Bounce Correlation.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo after r147 Safe Bounce Correlation deployment.
 
 ## Current Issue
 
 - r147 hardens bounce correlation to prefer explicit applicant-id tokens and unique recipient matches, while skipping ambiguous DSNs.
 - r147 keeps send-path, batch-send, trigger cadence, automation, and eligibility logic unchanged.
-- r147 local source is prepared for a controlled release; live runtime remains the previously accepted `r146 / 146` until repin.
+- r147 Safe Bounce Correlation is deployed to live Admin and Student runtimes.
+- Live runtime truth from canonical `?view=whoami`: Admin `r147 / 147`, mismatch `false`; Student `r147 / 147`, mismatch `false`.
+- Canonical Admin and Student URLs are preserved as `https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec`.
+- Trigger cadence is currently operator-controlled; no cadence change is authorized by this CIS.
 - Admin bounce UI now surfaces matched, ambiguous, and unmatched bounce scan results plus latest bounce reason/classification.
 - Manual bounce scan remains gated to matched-unique writeback only; ambiguous DSNs must be skipped.
 - CLI execution of `admin_runBounceScan` remains blocked by Apps Script execution permissions from this session.
@@ -167,12 +170,7 @@
 
 ## Files In Scope
 
-- `Admin.js`
-- `AdminUI.html`
-- `Code.js`
-- `Config.js`
 - `CURRENT_TASK.md`
-- `Utils.js`
 
 ## Current Authority
 
@@ -183,8 +181,10 @@
 - Any legacy references to other local checkout paths are historical only.
 - Script ID: `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`
 - Baseline: `r128 / 128` live before r129 release.
-- Admin deployment: `@129` live.
-- Student deployment: `@129` live.
+- Admin runtime: `r147 / 147`, mismatch `false`.
+- Student runtime: `r147 / 147`, mismatch `false`.
+- Canonical Admin URL preserved: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec`.
+- Canonical Student URL preserved: `https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec`.
 
 ## r125 Acceptance State
 
@@ -310,7 +310,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-r146 browser/operator verification: open canonical Admin `?view=admin`, confirm Runtime `r146 / 146`, gates remain ON, Property Health is populated, Bounce visibility fields are populated or show explicit no-bounce state, and Trigger Installed is `YES`, `NO`, or `UNKNOWN` according to Trigger Inspection. Do not run manual sends, batch sends, automatedStageBatchRunner, trigger mutation, or cadence changes.
+Architecture roadmap / no-CRM strategy, unless the user redirects. Do not run manual sends, batch sends, automatedStageBatchRunner, trigger mutation, cadence changes, clasp, deploy, sheet/Drive/Gmail mutation, git tag, or source edits without a new CIS.
 
 ## Cautions
 
