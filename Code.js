@@ -8512,8 +8512,15 @@ function buildBounceRowLookup_(ctx) {
   var corrected = {};
   var raw = {};
   var crm = {};
+  var applicantId = {};
   function add(map, email, rowNumber, rowObj) {
     var key = clean_(email || "").toLowerCase();
+    if (!key) return;
+    map[key] = map[key] || [];
+    map[key].push({ rowNumber: rowNumber, row: rowObj });
+  }
+  function addApplicantId(map, id, rowNumber, rowObj) {
+    var key = clean_(id || "").toUpperCase();
     if (!key) return;
     map[key] = map[key] || [];
     map[key].push({ rowNumber: rowNumber, row: rowObj });
@@ -8524,27 +8531,144 @@ function buildBounceRowLookup_(ctx) {
     add(corrected, rowObj.Parent_Email_Corrected, rowNumber, rowObj);
     add(raw, rowObj.Parent_Email, rowNumber, rowObj);
     add(crm, rowObj.CRM_Email, rowNumber, rowObj);
+    addApplicantId(applicantId, rowObj.ApplicantID, rowNumber, rowObj);
   }
   return {
+    applicantId: applicantId,
     corrected: corrected,
     raw: raw,
     crm: crm
   };
 }
 
-function findBounceApplicantMatch_(lookup, email) {
-  var key = clean_(email || "").toLowerCase();
-  if (!key) return null;
-  var corrected = lookup && lookup.corrected ? lookup.corrected[key] : null;
-  if (corrected && corrected.length === 1) return corrected[0];
-  if (corrected && corrected.length > 1) return null;
-  var raw = lookup && lookup.raw ? lookup.raw[key] : null;
-  if (raw && raw.length === 1) return raw[0];
-  if (raw && raw.length > 1) return null;
-  var crm = lookup && lookup.crm ? lookup.crm[key] : null;
-  if (crm && crm.length === 1) return crm[0];
-  if (crm && crm.length > 1) return null;
-  return null;
+function normalizeBounceApplicantId_(value) {
+  return clean_(value || "").toUpperCase();
+}
+
+function collectBounceLookupMatches_(lookupMaps, values, normalizeKeyFn) {
+  var maps = Array.isArray(lookupMaps) ? lookupMaps : [];
+  var seenRows = {};
+  var ambiguous = [];
+  var matchedValues = [];
+  var seenValues = {};
+  var normalizeKey = typeof normalizeKeyFn === "function" ? normalizeKeyFn : function (v) { return clean_(v || "").toLowerCase(); };
+  for (var i = 0; i < (Array.isArray(values) ? values : []).length; i++) {
+    var value = normalizeKey(values[i]);
+    if (!value || seenValues[value]) continue;
+    seenValues[value] = true;
+    var matchedThisValue = false;
+    for (var m = 0; m < maps.length; m++) {
+      var map = maps[m] || {};
+      var rows = map[value] || [];
+      if (!rows.length) continue;
+      matchedThisValue = true;
+      if (rows.length !== 1) {
+        ambiguous.push({
+          value: value,
+          matchCount: rows.length
+        });
+        continue;
+      }
+      var match = rows[0];
+      if (match && Number(match.rowNumber || 0) > 0) {
+        seenRows[String(match.rowNumber)] = match;
+        matchedValues.push(value);
+      }
+    }
+    if (!matchedThisValue) {
+      // no-op; caller decides whether this should be treated as a miss or ambiguity.
+    }
+  }
+  return {
+    rows: Object.keys(seenRows).map(function (k) { return seenRows[k]; }),
+    matchedValues: matchedValues,
+    ambiguous: ambiguous
+  };
+}
+
+function resolveBounceApplicantMatch_(lookup, emailMatches, applicantIdMatches) {
+  var applicantIds = Array.isArray(applicantIdMatches) ? applicantIdMatches : [];
+  var emails = Array.isArray(emailMatches) ? emailMatches : [];
+  var idOutcome = collectBounceLookupMatches_(
+    [lookup && lookup.applicantId ? lookup.applicantId : {}],
+    applicantIds,
+    normalizeBounceApplicantId_
+  );
+  if (applicantIds.length) {
+    if (idOutcome.ambiguous.length > 0) {
+      return {
+        status: "MATCH_AMBIGUOUS",
+        matchType: "APPLICANT_ID",
+        reason: "Multiple rows matched the applicant ID token(s).",
+        applicantIds: applicantIds.slice(0),
+        matchedValues: idOutcome.matchedValues.slice(0),
+        ambiguous: idOutcome.ambiguous.slice(0, 10),
+        row: null
+      };
+    }
+    if (idOutcome.rows.length === 1) {
+      return {
+        status: "MATCHED_UNIQUE",
+        matchType: "APPLICANT_ID",
+        reason: "",
+        applicantIds: applicantIds.slice(0),
+        matchedValues: idOutcome.matchedValues.slice(0),
+        ambiguous: [],
+        row: idOutcome.rows[0],
+        rowNumber: Number(idOutcome.rows[0].rowNumber || 0)
+      };
+    }
+    return {
+      status: "NO_MATCH",
+      matchType: "APPLICANT_ID",
+      reason: "Applicant ID token did not resolve to a unique row.",
+      applicantIds: applicantIds.slice(0),
+      matchedValues: [],
+      ambiguous: [],
+      row: null
+    };
+  }
+  var emailOutcome = collectBounceLookupMatches_(
+    [
+      lookup && lookup.corrected ? lookup.corrected : {},
+      lookup && lookup.raw ? lookup.raw : {},
+      lookup && lookup.crm ? lookup.crm : {}
+    ],
+    emails,
+    function (v) { return clean_(v || "").toLowerCase(); }
+  );
+  if (emailOutcome.ambiguous.length > 0) {
+    return {
+      status: "MATCH_AMBIGUOUS",
+      matchType: "EMAIL",
+      reason: "Multiple recipient email candidates matched.",
+      applicantIds: [],
+      matchedValues: emailOutcome.matchedValues.slice(0),
+      ambiguous: emailOutcome.ambiguous.slice(0, 10),
+      row: null
+    };
+  }
+  if (emailOutcome.rows.length === 1) {
+    return {
+      status: "MATCHED_UNIQUE",
+      matchType: "EMAIL",
+      reason: "",
+      applicantIds: [],
+      matchedValues: emailOutcome.matchedValues.slice(0),
+      ambiguous: [],
+      row: emailOutcome.rows[0],
+      rowNumber: Number(emailOutcome.rows[0].rowNumber || 0)
+    };
+  }
+  return {
+    status: "NO_MATCH",
+    matchType: "EMAIL",
+    reason: "No unique email candidate matched.",
+    applicantIds: [],
+    matchedValues: [],
+    ambiguous: [],
+    row: null
+  };
 }
 
 function normalizeBounceClassification_(value) {
@@ -8630,10 +8754,13 @@ function ingestRecentBounces_(opts) {
   var cacheDirty = false;
   var lookbackDays = Math.max(1, Math.floor(Number(CONFIG.BOUNCE_INGESTION_LOOKBACK_DAYS || 14)));
   var maxMessages = Math.max(1, Math.floor(Number(CONFIG.BOUNCE_INGESTION_MAX_MESSAGES || 200)));
-  var query = '(from:(mailer-daemon@google.com OR mailer-daemon@googlemail.com OR "Mail Delivery Subsystem") OR subject:("Delivery Status Notification" OR "Undeliverable" OR "Failure Notice")) newer_than:' + lookbackDays + 'd';
+  var query = '(from:(mailer-daemon@google.com OR mailer-daemon@googlemail.com OR "Mail Delivery Subsystem") OR subject:("Delivery Status Notification" OR "Delivery Status Notification (Failure)" OR "Undeliverable" OR "Failure Notice" OR "Address not found")) newer_than:' + lookbackDays + 'd';
   var threads = GmailApp.search(query, 0, 200);
   var scanned = 0;
   var matched = 0;
+  var matchedUnique = 0;
+  var ambiguous = 0;
+  var unmatched = 0;
   var updated = 0;
   var countsByClassification = {
     NONE: 0,
@@ -8642,6 +8769,12 @@ function ingestRecentBounces_(opts) {
     INVALID: 0,
     BLOCKED: 0
   };
+  var latestBounceAt = "";
+  var latestBounceReason = "";
+  var latestBounceClassification = "";
+  var latestBounceApplicantId = "";
+  var ambiguousSamples = [];
+  var unmatchedSamples = [];
   var nowIso = new Date().toISOString();
   outer:
   for (var t = 0; t < threads.length; t++) {
@@ -8663,21 +8796,51 @@ function ingestRecentBounces_(opts) {
       }
       scanned++;
       var emailMatches = campaignExtractBounceEmails_(blob);
-      var email = emailMatches.length ? clean_(emailMatches[0] || "").toLowerCase() : "";
+      var applicantIdMatches = campaignExtractApplicantIds_(blob);
       var bounce = classifyBounceResult_(subject, plainBody, campaignExtractBounceReason_(plainBody, subject));
       var classification = normalizeBounceClassification_(bounce && bounce.classification || "NONE");
       countsByClassification[classification] = Number(countsByClassification[classification] || 0) + 1;
-      var matchedRow = findBounceApplicantMatch_(lookup, email);
-      if (matchedRow) {
+      latestBounceAt = clean_(msg.getDate && msg.getDate() ? msg.getDate().toISOString() : nowIso);
+      latestBounceReason = clean_(bounce && bounce.reason || "");
+      latestBounceClassification = classification;
+      if (applicantIdMatches.length === 1) latestBounceApplicantId = normalizeBounceApplicantId_(applicantIdMatches[0] || "");
+      var match = resolveBounceApplicantMatch_(lookup, emailMatches, applicantIdMatches);
+      if (match && match.status === "MATCHED_UNIQUE" && match.row) {
         matched++;
-        var patch = applyBounceStateToRow_(matchedRow.row, classification, bounce && bounce.reason || "");
+        matchedUnique++;
+        var matchedRow = match.row;
+        var patch = applyBounceStateToRow_(matchedRow.row || matchedRow, classification, bounce && bounce.reason || "");
         if (Object.keys(patch).length) {
-          applyPatch_(sh, matchedRow.rowNumber, patch);
+          applyPatch_(sh, Number(match.rowNumber || matchedRow.rowNumber || 0), patch);
           updated++;
           matchedRow.row.Email_Bounce_Flag = Object.prototype.hasOwnProperty.call(patch, 'Email_Bounce_Flag') ? patch.Email_Bounce_Flag : matchedRow.row.Email_Bounce_Flag;
           matchedRow.row.Email_Bounce_Reason = Object.prototype.hasOwnProperty.call(patch, 'Email_Bounce_Reason') ? patch.Email_Bounce_Reason : matchedRow.row.Email_Bounce_Reason;
           matchedRow.row.Email_Status = Object.prototype.hasOwnProperty.call(patch, 'Email_Status') ? patch.Email_Status : matchedRow.row.Email_Status;
           matchedRow.row.Email_Next_Action_Date = Object.prototype.hasOwnProperty.call(patch, 'Email_Next_Action_Date') ? patch.Email_Next_Action_Date : matchedRow.row.Email_Next_Action_Date;
+        }
+      } else if (match && match.status === "MATCH_AMBIGUOUS") {
+        ambiguous++;
+        if (ambiguousSamples.length < 10) {
+          ambiguousSamples.push({
+            matchType: clean_(match.matchType || ""),
+            applicantIds: Array.isArray(match.applicantIds) ? match.applicantIds.slice(0, 10) : [],
+            matchedValues: Array.isArray(match.matchedValues) ? match.matchedValues.slice(0, 10) : [],
+            reason: clean_(match.reason || ""),
+            classification: classification,
+            subject: subject
+          });
+        }
+      } else {
+        unmatched++;
+        if (unmatchedSamples.length < 10) {
+          unmatchedSamples.push({
+            matchType: clean_(match && match.matchType || ""),
+            applicantIds: Array.isArray(applicantIdMatches) ? applicantIdMatches.slice(0, 10) : [],
+            emails: Array.isArray(emailMatches) ? emailMatches.slice(0, 10) : [],
+            reason: clean_(match && match.reason || "NO_MATCH"),
+            classification: classification,
+            subject: subject
+          });
         }
       }
       if (msgId) {
@@ -8693,11 +8856,20 @@ function ingestRecentBounces_(opts) {
     result: "COMPLETE",
     scanned: scanned,
     matched: matched,
+    matchedUnique: matchedUnique,
+    ambiguous: ambiguous,
+    unmatched: unmatched,
     updated: updated,
     countsByClassification: countsByClassification,
     lookbackDays: lookbackDays,
     maxMessages: maxMessages,
-    source: clean_(options.source || "MANUAL")
+    source: clean_(options.source || "MANUAL"),
+    latestBounceAt: latestBounceAt,
+    latestBounceReason: latestBounceReason,
+    latestBounceClassification: latestBounceClassification,
+    latestBounceApplicantId: latestBounceApplicantId,
+    ambiguousSamples: ambiguousSamples,
+    unmatchedSamples: unmatchedSamples
   };
   campaignLog_("CAMPAIGN_BOUNCE_SUMMARY", summary);
   return summary;

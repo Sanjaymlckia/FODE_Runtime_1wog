@@ -554,6 +554,7 @@
         <button id="btnScanBounces" class="btn small" type="button" onclick="runBounceScanUi_()">Scan Bounces</button>
       </div>
       <div id="msg" class="muted" style="margin-top:10px;"></div>
+      <div id="bounceScanSummary" class="sendSummary hidden" style="margin-top:10px;"></div>
     </div>
 
     <div class="card">
@@ -880,15 +881,26 @@
       if (isBounceScanBusy) return;
       setBounceScanBusy_(true);
       setMsg("msg", "Scanning Gmail bounces...");
+      var summaryBox = document.getElementById("bounceScanSummary");
       google.script.run
         .withSuccessHandler(function(res){
           setBounceScanBusy_(false);
           var data = (res && typeof res === "object") ? res : {};
           var summary = "Bounce scan complete: scanned=" + String(Number(data.scanned || 0))
-            + " | matched=" + String(Number(data.matched || 0))
-            + " | updated=" + String(Number(data.updated || 0));
+            + " | matchedUnique=" + String(Number(data.matchedUnique != null ? data.matchedUnique : data.matched || 0))
+            + " | ambiguous=" + String(Number(data.ambiguous || 0))
+            + " | unmatched=" + String(Number(data.unmatched || 0))
+            + " | updated=" + String(Number(data.updated || 0))
+            + " | latestAt=" + String(data.latestBounceAt || "-")
+            + " | latestReason=" + String(data.latestBounceReason || "-")
+            + " | latestClassification=" + String(data.latestBounceClassification || "-")
+            + (data.latestBounceApplicantId ? " | latestApplicantId=" + String(data.latestBounceApplicantId) : "");
           setMsg("msg", summary);
           setMsg("mMsg", summary);
+          if (summaryBox) {
+            summaryBox.textContent = summary;
+            summaryBox.classList.remove("hidden");
+          }
           if (String(document.getElementById("qApplicantId").value || "").trim()
             || String(document.getElementById("qEmail").value || "").trim()
             || (lastSearchResults && lastSearchResults.length)) {
@@ -898,8 +910,13 @@
         .withFailureHandler(function(err){
           setBounceScanBusy_(false);
           var msg = err && err.message ? err.message : err;
-          setMsg("msg", "Bounce scan error: " + msg);
-          setMsg("mMsg", "Bounce scan error: " + msg);
+          var text = "Bounce scan error: " + msg;
+          setMsg("msg", text);
+          setMsg("mMsg", text);
+          if (summaryBox) {
+            summaryBox.textContent = text;
+            summaryBox.classList.remove("hidden");
+          }
         })
         .admin_runBounceScan();
     }

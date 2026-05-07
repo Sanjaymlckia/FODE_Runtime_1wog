@@ -2,20 +2,17 @@
 
 ## Current Objective
 
- Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and complete r146 Bounce Visibility + Trigger Visibility Repair.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and complete r147 Safe Bounce Correlation.
 
 ## Current Issue
 
-- r146 repairs bounce visibility and trigger visibility without changing send-path, batch-send, trigger cadence, automation, or eligibility logic.
-- r146 Apps Script platform version `144` created with description `r146: surface bounce and trigger visibility`.
-- Admin deployment pinned to platform version `144`.
-- Student deployment pinned to platform version `144`.
-- Admin whoami: `r146 / 146`, mismatch `false`, script ID `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
-- Student whoami: `r146 / 146`, mismatch `false`, script ID `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
-- Admin `?view=admin` HTML includes trigger inspection/count fields, bounce summary fields, and applicant bounce detail fields: PASS.
-- CLI execution of `admin_getOperationalSafetyStatus` remains blocked by Apps Script execution permissions.
-- Manual browser/operator confirmation of populated r146 Admin panel values remains required.
-- Manual bounce scan was not run; existing scan performs matched sheet writeback and processed-ID property writeback, and DSN recipient selection is not precise enough for unattended execution.
+- r147 hardens bounce correlation to prefer explicit applicant-id tokens and unique recipient matches, while skipping ambiguous DSNs.
+- r147 keeps send-path, batch-send, trigger cadence, automation, and eligibility logic unchanged.
+- r147 local source is prepared for a controlled release; live runtime remains the previously accepted `r146 / 146` until repin.
+- Admin bounce UI now surfaces matched, ambiguous, and unmatched bounce scan results plus latest bounce reason/classification.
+- Manual bounce scan remains gated to matched-unique writeback only; ambiguous DSNs must be skipped.
+- CLI execution of `admin_runBounceScan` remains blocked by Apps Script execution permissions from this session.
+- Manual browser/operator confirmation of bounce scan output remains required before final release closure.
 - Stabilization phase active.
 - Trigger freeze active.
 - Production email freeze active.
