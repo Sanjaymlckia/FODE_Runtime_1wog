@@ -3140,6 +3140,45 @@ function propertyHealthLevel_(summary) {
   return "HEALTHY";
 }
 
+function getBounceVisibilitySummary_() {
+  var ctx = campaignGetContext_();
+  var headers = ctx.headers || [];
+  var values = ctx.values || [];
+  var out = {
+    ok: true,
+    source: "sheet_existing_fields",
+    totalRows: Math.max(0, values.length - 1),
+    bouncedRows: 0,
+    bounceFlagRows: 0,
+    hardBounceRows: 0,
+    temporaryBounceRows: 0,
+    retryScheduledRows: 0,
+    lastBounceReason: "",
+    lastBounceRow: null
+  };
+  for (var r = 1; r < values.length; r++) {
+    var rowNumber = r + 1;
+    var rowObj = campaignRowObjectFromValues_(headers, values[r]);
+    var status = normalizeEmailStatus_(rowObj.Email_Status || "");
+    var flag = clean_(rowObj.Email_Bounce_Flag || "").toUpperCase();
+    var reason = clean_(rowObj.Email_Bounce_Reason || "");
+    var nextAction = clean_(rowObj.Email_Next_Action_Date || "");
+    var isFlagged = isCampaignBounceFlagTrue_(rowObj.Email_Bounce_Flag);
+    var isBounced = status === "BOUNCED" || isFlagged || !!reason;
+    if (!isBounced) continue;
+    out.bouncedRows++;
+    if (isFlagged) out.bounceFlagRows++;
+    if (status === "BOUNCED" || flag === "YES" || /^HARD:|^INVALID:|^BLOCKED:/i.test(reason)) out.hardBounceRows++;
+    if (/^TEMPORARY:/i.test(reason)) out.temporaryBounceRows++;
+    if (nextAction) out.retryScheduledRows++;
+    if (reason) {
+      out.lastBounceReason = reason;
+      out.lastBounceRow = rowNumber;
+    }
+  }
+  return out;
+}
+
 function admin_getOperationalSafetyStatus(payload) {
   var adminEmail = typeof getCallerEmail_ === "function" ? clean_(getCallerEmail_() || "") : "";
   if (typeof isAdmin_ === "function" && !isAdmin_(adminEmail)) throw new Error("Access denied");
@@ -3151,6 +3190,16 @@ function admin_getOperationalSafetyStatus(payload) {
     triggerStatus = typeof getAutomatedStageRunnerStatus_ === "function" ? getAutomatedStageRunnerStatus_() : null;
   } catch (triggerErr) {
     triggerStatus = { ok: false, triggerCount: null, error: clean_(triggerErr && triggerErr.message ? triggerErr.message : triggerErr) };
+  }
+  var bounceVisibility = null;
+  try {
+    bounceVisibility = getBounceVisibilitySummary_();
+  } catch (bounceErr) {
+    bounceVisibility = {
+      ok: false,
+      source: "sheet_existing_fields",
+      error: clean_(bounceErr && bounceErr.message ? bounceErr.message : bounceErr)
+    };
   }
   var propertySummary = getPropertyInventorySummary_();
   var lastRun = triggerStatus && triggerStatus.lastRun && typeof triggerStatus.lastRun === "object" ? triggerStatus.lastRun : null;
@@ -3196,10 +3245,12 @@ function admin_getOperationalSafetyStatus(payload) {
       lastBlockedReason: lastBlockedReason
     },
     trigger: {
-      installed: !!(triggerStatus && Number(triggerStatus.triggerCount || 0) > 0),
+      installed: !!(triggerStatus && triggerStatus.triggerInspection && triggerStatus.triggerInspection.ok === true && Number(triggerStatus.triggerCount || 0) > 0),
       triggerCount: triggerStatus ? triggerStatus.triggerCount : null,
       functionName: clean_(triggerStatus && triggerStatus.functionName || ""),
-      inspectionOk: !!(triggerStatus && triggerStatus.triggerInspection && triggerStatus.triggerInspection.ok)
+      inspectionOk: !!(triggerStatus && triggerStatus.triggerInspection && triggerStatus.triggerInspection.ok),
+      inspectionCode: clean_(triggerStatus && triggerStatus.triggerInspection && triggerStatus.triggerInspection.error && triggerStatus.triggerInspection.error.code || ""),
+      inspectionMessage: clean_(triggerStatus && triggerStatus.triggerInspection && triggerStatus.triggerInspection.error && triggerStatus.triggerInspection.error.message || triggerStatus && triggerStatus.error || "")
     },
     automation: {
       lastRun: clean_(lastRun && (lastRun.writtenAt || lastRun.timestamp || lastRun.startedAt) || ""),
@@ -3225,6 +3276,7 @@ function admin_getOperationalSafetyStatus(payload) {
       idempotencyActive: true,
       lastIdempotencyKey: clean_(manualStatus.idempotencyKey || "")
     },
+    bounceVisibility: bounceVisibility,
     cooldown: {
       source: "CacheService.getScriptCache",
       ttlSeconds: Number(CONFIG.COMMUNICATION_COOLDOWN_CACHE_TTL_SECONDS || 3600),

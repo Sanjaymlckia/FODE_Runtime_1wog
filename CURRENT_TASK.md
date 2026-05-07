@@ -2,10 +2,20 @@
 
 ## Current Objective
 
-Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and complete r140 Preview Timeout Containment.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo and complete r146 Bounce Visibility + Trigger Visibility Repair.
 
 ## Current Issue
 
+- r146 repairs bounce visibility and trigger visibility without changing send-path, batch-send, trigger cadence, automation, or eligibility logic.
+- r146 Apps Script platform version `144` created with description `r146: surface bounce and trigger visibility`.
+- Admin deployment pinned to platform version `144`.
+- Student deployment pinned to platform version `144`.
+- Admin whoami: `r146 / 146`, mismatch `false`, script ID `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
+- Student whoami: `r146 / 146`, mismatch `false`, script ID `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
+- Admin `?view=admin` HTML includes trigger inspection/count fields, bounce summary fields, and applicant bounce detail fields: PASS.
+- CLI execution of `admin_getOperationalSafetyStatus` remains blocked by Apps Script execution permissions.
+- Manual browser/operator confirmation of populated r146 Admin panel values remains required.
+- Manual bounce scan was not run; existing scan performs matched sheet writeback and processed-ID property writeback, and DSN recipient selection is not precise enough for unattended execution.
 - Stabilization phase active.
 - Trigger freeze active.
 - Production email freeze active.
@@ -303,7 +313,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-r141 local-only validation: review the preview fallback diff, confirm local checks pass, then wait for explicit authorization before any clasp push/version/deploy. Do not enable batch sends, triggers, or automation.
+r146 browser/operator verification: open canonical Admin `?view=admin`, confirm Runtime `r146 / 146`, gates remain ON, Property Health is populated, Bounce visibility fields are populated or show explicit no-bounce state, and Trigger Installed is `YES`, `NO`, or `UNKNOWN` according to Trigger Inspection. Do not run manual sends, batch sends, automatedStageBatchRunner, trigger mutation, or cadence changes.
 
 ## Cautions
 

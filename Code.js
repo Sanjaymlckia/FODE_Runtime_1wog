@@ -8630,7 +8630,7 @@ function ingestRecentBounces_(opts) {
   var cacheDirty = false;
   var lookbackDays = Math.max(1, Math.floor(Number(CONFIG.BOUNCE_INGESTION_LOOKBACK_DAYS || 14)));
   var maxMessages = Math.max(1, Math.floor(Number(CONFIG.BOUNCE_INGESTION_MAX_MESSAGES || 200)));
-  var query = 'from:(mailer-daemon@google.com OR mailer-daemon@googlemail.com) newer_than:' + lookbackDays + 'd';
+  var query = '(from:(mailer-daemon@google.com OR mailer-daemon@googlemail.com OR "Mail Delivery Subsystem") OR subject:("Delivery Status Notification" OR "Undeliverable" OR "Failure Notice")) newer_than:' + lookbackDays + 'd';
   var threads = GmailApp.search(query, 0, 200);
   var scanned = 0;
   var matched = 0;

@@ -436,6 +436,8 @@
         <div class="box"><div class="k">Production Sends</div><div class="v" id="opsProductionSends">loading...</div></div>
         <div class="box"><div class="k">Trigger Sends</div><div class="v" id="opsTriggerSends">loading...</div></div>
         <div class="box"><div class="k">Trigger Installed</div><div class="v" id="opsTriggerInstalled">loading...</div></div>
+        <div class="box"><div class="k">Trigger Inspection</div><div class="v" id="opsTriggerInspection">loading...</div></div>
+        <div class="box"><div class="k">Trigger Count</div><div class="v" id="opsTriggerCount">loading...</div></div>
         <div class="box"><div class="k">Last Automation Run</div><div class="v" id="opsLastAutomationRun">loading...</div></div>
         <div class="box"><div class="k">Last Batch ID</div><div class="v" id="opsLastBatchId">loading...</div></div>
         <div class="box"><div class="k">Last Batch Result</div><div class="v" id="opsLastBatchResult">loading...</div></div>
@@ -466,6 +468,10 @@
         <div class="box"><div class="k">Last Manual Recipient</div><div class="v" id="opsLastManualRecipient">loading...</div></div>
         <div class="box"><div class="k">Last Manual Result</div><div class="v" id="opsLastManualResult">loading...</div></div>
         <div class="box"><div class="k">Idempotency Active</div><div class="v" id="opsIdempotencyActive">loading...</div></div>
+        <div class="box"><div class="k">Bounced Rows</div><div class="v" id="opsBounceRows">loading...</div></div>
+        <div class="box"><div class="k">Hard Bounces</div><div class="v" id="opsHardBounces">loading...</div></div>
+        <div class="box"><div class="k">Temporary Bounces</div><div class="v" id="opsTemporaryBounces">loading...</div></div>
+        <div class="box"><div class="k">Last Bounce Reason</div><div class="v" id="opsLastBounceReason">loading...</div></div>
       </div>
     </div>
 
@@ -644,6 +650,9 @@
           <div class="box"><div class="k">Applicant ID</div><div class="v" id="commApplicantId">&mdash;</div></div>
           <div class="box"><div class="k">Effective Email</div><div class="v" id="commEffectiveEmail">&mdash;</div></div>
           <div class="box"><div class="k">Email Status</div><div class="v" id="commEmailStatus">&mdash;</div></div>
+          <div class="box"><div class="k">Bounce Flag</div><div class="v" id="commBounceFlag">&mdash;</div></div>
+          <div class="box"><div class="k">Bounce Reason</div><div class="v" id="commBounceReason">&mdash;</div></div>
+          <div class="box"><div class="k">Next Action Date</div><div class="v" id="commNextActionDate">&mdash;</div></div>
           <div class="box"><div class="k">Last Contacted At</div><div class="v" id="commLastContactedAt">&mdash;</div></div>
           <div class="box"><div class="k">Last Contact Type</div><div class="v" id="commLastContactType">&mdash;</div></div>
           <div class="box"><div class="k">Last Contact By</div><div class="v" id="commLastContactBy">&mdash;</div></div>
@@ -1135,6 +1144,9 @@
         commApplicantId: d.ApplicantID,
         commEffectiveEmail: d.Effective_Email || d.Parent_Email_Corrected || d.Parent_Email || "",
         commEmailStatus: d.Email_Status,
+        commBounceFlag: d.Email_Bounce_Flag,
+        commBounceReason: d.Email_Bounce_Reason,
+        commNextActionDate: d.Email_Next_Action_Date,
         commLastContactedAt: d.Last_Contacted_At,
         commLastContactType: d.Last_Contact_Type,
         commLastContactBy: d.Last_Contact_By,
@@ -3763,12 +3775,17 @@ function renderStageDashboard_(items, emptyMessage){
       var automation = data.automation || {};
       var propertyHealth = data.propertyHealth || {};
       var manualProbe = data.manualProbe || {};
+      var bounceVisibility = data.bounceVisibility || {};
       setOpsValue_("opsRuntimeVersion", runtime.version || "-");
       setOpsValue_("opsDeployVersion", runtime.deployVersion || "-");
       setOpsValue_("opsStabilizationMode", gates.stabilizationMode === true);
       setOpsValue_("opsProductionSends", gates.productionSendsEnabled === true);
       setOpsValue_("opsTriggerSends", gates.triggerSendsEnabled === true);
-      setOpsValue_("opsTriggerInstalled", trigger.installed === true ? "YES" : "NO");
+      var triggerInstalled = "UNKNOWN";
+      if (trigger.inspectionOk === true) triggerInstalled = Number(trigger.triggerCount || 0) > 0 ? "YES" : "NO";
+      setOpsValue_("opsTriggerInstalled", triggerInstalled);
+      setOpsValue_("opsTriggerInspection", trigger.inspectionOk === true ? "OK" : (trigger.inspectionCode || "UNKNOWN"));
+      setOpsValue_("opsTriggerCount", trigger.inspectionOk === true ? Number(trigger.triggerCount || 0) : "UNKNOWN");
       setOpsValue_("opsLastAutomationRun", automation.lastRun || "-");
       setOpsValue_("opsLastBatchId", automation.lastBatchId || "-");
       setOpsValue_("opsLastBatchResult", automation.lastBatchResult || "-");
@@ -3787,6 +3804,10 @@ function renderStageDashboard_(items, emptyMessage){
       setOpsValue_("opsLastManualRecipient", manualProbe.lastManualRecipient || "-");
       setOpsValue_("opsLastManualResult", manualProbe.lastManualResult || "-");
       setOpsValue_("opsIdempotencyActive", manualProbe.idempotencyActive === true ? "YES" : "NO");
+      setOpsValue_("opsBounceRows", bounceVisibility.ok === false ? "UNKNOWN" : Number(bounceVisibility.bouncedRows || 0));
+      setOpsValue_("opsHardBounces", bounceVisibility.ok === false ? "UNKNOWN" : Number(bounceVisibility.hardBounceRows || 0));
+      setOpsValue_("opsTemporaryBounces", bounceVisibility.ok === false ? "UNKNOWN" : Number(bounceVisibility.temporaryBounceRows || 0));
+      setOpsValue_("opsLastBounceReason", bounceVisibility.ok === false ? (bounceVisibility.error || "UNKNOWN") : (bounceVisibility.lastBounceReason || "No bounced rows"));
     }
     function fetchOperationalSafetyStatus_(){
       google.script.run
