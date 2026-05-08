@@ -2,7 +2,7 @@
 
 ## Current Objective
 
- Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo after r148 Invalid Email WhatsApp Fallback Export Queue deployment.
+ Maintain `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo after r148 Invalid Email WhatsApp Fallback Export Queue deployment.
 
 ## Current Issue
 
@@ -195,9 +195,9 @@
 ## Current Authority
 
 - GitHub repo: `Sanjaymlckia/FODE_Runtime_1wog`
-- Local repo: `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog`
-- Home-machine authoritative repo: `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog`
-- Active authoritative local repo for this session: `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog`
+- Local repo: `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog`
+- Home-machine authoritative repo: `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog`
+- Active authoritative local repo for this session: `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog`
 - Any legacy references to other local checkout paths are historical only.
 - Script ID: `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`
 - Baseline: `r128 / 128` live before r129 release.
