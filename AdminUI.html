@@ -475,6 +475,39 @@
       </div>
     </div>
 
+    <div id="whatsappFallbackPanel" class="card queue-panel">
+      <h3>WhatsApp Fallback Queue</h3>
+      <div class="muted" style="margin-bottom:10px;">CSV export only. This does not send WhatsApp, SMS, or email. Review every row and use individual links or a broadcast list; do not create applicant groups.</div>
+      <div class="commControls">
+        <div class="field" style="max-width:160px;">
+          <label>Batch size</label>
+          <select id="waFallbackLimit">
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
+            <option value="30">30</option>
+          </select>
+        </div>
+        <div class="field" style="max-width:240px;">
+          <label>Filter</label>
+          <select id="waFallbackFilter">
+            <option value="ALL_FALLBACK" selected>All fallback candidates</option>
+            <option value="INVALID_EMAIL">Invalid or missing email</option>
+            <option value="BOUNCED">Bounced email</option>
+            <option value="BLOCKED">Blocked contact result</option>
+          </select>
+        </div>
+        <button id="btnWaFallbackExport" class="btn small ok" type="button" onclick="exportWhatsAppFallbackCsv_()">Export CSV</button>
+      </div>
+      <div class="commMeta" style="margin-top:10px;">
+        <div class="box"><div class="k">Batch Label</div><div class="v" id="waFallbackBatchLabel">&mdash;</div></div>
+        <div class="box"><div class="k">Scanned</div><div class="v" id="waFallbackScanned">&mdash;</div></div>
+        <div class="box"><div class="k">Exported</div><div class="v" id="waFallbackExported">&mdash;</div></div>
+        <div class="box"><div class="k">Invalid Phone</div><div class="v" id="waFallbackInvalidPhone">&mdash;</div></div>
+        <div class="box"><div class="k">Skipped Duplicate Phone</div><div class="v" id="waFallbackSkippedDuplicate">&mdash;</div></div>
+      </div>
+      <div id="waFallbackMsg" class="muted" style="margin-top:10px;"></div>
+    </div>
+
     <div id="stageDashboardPanel" class="card queue-panel">
       <h3>Stage Dashboard</h3>
       <div id="stageFilterMeta" class="stageDashboardMeta">Click a stage to filter the applicant table.</div>
@@ -3714,6 +3747,64 @@ function renderStageDashboard_(items, emptyMessage){
           }
         });
       }, { message: "Preparing CSV export..." });
+    }
+
+    function setWhatsAppFallbackSummary_(summary){
+      var s = summary || {};
+      setOpsValue_("waFallbackBatchLabel", s.batchLabel || "-");
+      setOpsValue_("waFallbackScanned", Number(s.scanned || 0));
+      setOpsValue_("waFallbackExported", Number(s.exported || 0));
+      setOpsValue_("waFallbackInvalidPhone", Number(s.invalidPhone || 0));
+      setOpsValue_("waFallbackSkippedDuplicate", Number(s.skippedDuplicatePhone || 0));
+    }
+
+    function exportWhatsAppFallbackCsv_(){
+      if (!IS_SUPER) {
+        setMsg("waFallbackMsg", "SUPER admin required.");
+        return;
+      }
+      var limitEl = document.getElementById("waFallbackLimit");
+      var filterEl = document.getElementById("waFallbackFilter");
+      var limit = Number(limitEl && limitEl.value || 20);
+      var filter = String(filterEl && filterEl.value || "ALL_FALLBACK");
+      setMsg("waFallbackMsg", "Preparing WhatsApp fallback CSV. No messages will be sent.");
+      run_("admin_exportWhatsAppFallbackCsv", {
+        limit: limit,
+        filter: filter,
+        startRow: 2
+      }, function(res){
+        handleApiResult_({
+          res: res,
+          targetId: "waFallbackMsg",
+          fallbackError: "Could not export WhatsApp fallback queue",
+          onOk: function(detail){
+            var data = detail || {};
+            var csv = String(data.csv || "");
+            var filename = String(data.filename || "fode-whatsapp-fallback.csv");
+            var summary = data.summary || {};
+            setWhatsAppFallbackSummary_(summary);
+            if (!csv) {
+              setMsg("waFallbackMsg", "Error: Empty CSV content.");
+              return;
+            }
+            var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            setMsg("waFallbackMsg",
+              "Export complete: scanned=" + Number(summary.scanned || 0)
+              + ", exported=" + Number(summary.exported || 0)
+              + ", invalidPhone=" + Number(summary.invalidPhone || 0)
+              + ", skippedDuplicatePhone=" + Number(summary.skippedDuplicatePhone || 0)
+              + ", batch=" + String(summary.batchLabel || ""));
+          }
+        });
+      }, { message: "Preparing WhatsApp fallback CSV..." });
     }
 
     setRoleUi();

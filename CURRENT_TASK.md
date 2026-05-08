@@ -2,10 +2,21 @@
 
 ## Current Objective
 
- Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo after r147 Safe Bounce Correlation deployment.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo after r148 Invalid Email WhatsApp Fallback Export Queue deployment.
 
 ## Current Issue
 
+- r148 adds a SUPER-admin, read-only WhatsApp fallback CSV export queue for invalid/missing/bounced/blocked email records with valid PNG mobile numbers.
+- r148 does not send WhatsApp, SMS, or email; it only returns CSV content for operator review/download.
+- r148 does not change send-path, email eligibility, bounce writeback, trigger cadence, automation, Books/CRM integration, Sheet schema, or Drive files.
+- PortalUrl uses existing active portal secrets only via the canonical student portal builder. Missing existing secrets leave `PortalUrl` blank and set `PortalUrlStatus = MISSING_SECRET`.
+- r148 Apps Script platform version `146` created with description `r148: add WhatsApp fallback export queue`.
+- Admin deployment pinned to platform version `146`.
+- Student deployment pinned to platform version `146`.
+- Admin whoami: `r148 / 148`, mismatch `false`, script ID `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
+- Student whoami: `r148 / 148`, mismatch `false`, script ID `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
+- Admin `?view=admin` HTML includes WhatsApp Fallback Queue controls, no-send/no-group warnings, and `admin_exportWhatsAppFallbackCsv`: PASS.
+- Browser/operator acceptance remains required before git push: export batch size 20, inspect first 5 CSV rows, confirm `675XXXXXXXX` phones, link/message correctness, no automatic send, and no row mutation.
 - r147 hardens bounce correlation to prefer explicit applicant-id tokens and unique recipient matches, while skipping ambiguous DSNs.
 - r147 keeps send-path, batch-send, trigger cadence, automation, and eligibility logic unchanged.
 - r147 Safe Bounce Correlation is deployed to live Admin and Student runtimes.
@@ -176,10 +187,10 @@
 
 ## Files In Scope
 
-- `ARCHITECTURE_ROADMAP_NO_CRM.md`
+- `Admin.js`
+- `AdminUI.html`
+- `Config.js`
 - `CURRENT_TASK.md`
-- `KNOWN_GOOD_STATE.md`
-- `RELEASE_LOG.md`
 
 ## Current Authority
 
@@ -190,10 +201,10 @@
 - Any legacy references to other local checkout paths are historical only.
 - Script ID: `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`
 - Baseline: `r128 / 128` live before r129 release.
-- Admin runtime: `r147 / 147`, mismatch `false`.
-- Student runtime: `r147 / 147`, mismatch `false`.
-- Apps Script platform version: `145`.
-- Latest stable runtime commit: `e69256e` (`r147: harden bounce correlation safety`).
+- Admin runtime: `r148 / 148`, mismatch `false`.
+- Student runtime: `r148 / 148`, mismatch `false`.
+- Apps Script platform version: `146`.
+- Latest local runtime commit pending browser acceptance/git push: `r148: add WhatsApp fallback export queue`.
 - Canonical Admin URL preserved: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec`.
 - Canonical Student URL preserved: `https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec`.
 
@@ -321,7 +332,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-Architecture/no-CRM/refactor planning, unless the user redirects. Do not run manual sends, batch sends, automatedStageBatchRunner, trigger mutation, cadence changes, clasp, deploy, sheet/Drive/Gmail mutation, git tag, or source edits without a new CIS.
+r148 browser/operator acceptance: open canonical Admin `?view=admin`, use WhatsApp Fallback Queue with batch size `20`, export CSV, inspect first 5 rows, confirm PNG phones normalize to `675XXXXXXXX`, `WhatsAppLink` opens WhatsApp Web/Business Web, `MessageText` is non-sensitive and includes `PortalUrl` only when `PortalUrlStatus = READY`, no automatic send occurs, and no row mutation occurs. Do not git push r148 until browser/operator acceptance passes.
 
 ## Cautions
 

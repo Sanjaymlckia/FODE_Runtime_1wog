@@ -1827,6 +1827,209 @@ function buildCsvLine_(cells) {
   }).join(",");
 }
 
+function normalizeWhatsAppFallbackLimit_(limit) {
+  var n = Math.floor(Number(limit || 20));
+  if ([10, 20, 30].indexOf(n) >= 0) return n;
+  if (n > 0 && n <= 50) return n;
+  return 20;
+}
+
+function normalizeWhatsAppFallbackFilter_(filter) {
+  var f = clean_(filter || "ALL_FALLBACK").toUpperCase();
+  return ["ALL_FALLBACK", "INVALID_EMAIL", "BOUNCED", "BLOCKED"].indexOf(f) >= 0 ? f : "ALL_FALLBACK";
+}
+
+function normalizePngWhatsAppPhone_(value) {
+  var raw = clean_(value || "");
+  var digits = raw.replace(/\D/g, "");
+  if (!digits) return { ok: false, raw: raw, normalized: "", code: "INVALID_PHONE" };
+  if (digits.indexOf("675") === 0) digits = digits.slice(3);
+  if (digits.length !== 8) return { ok: false, raw: raw, normalized: "", code: "INVALID_PHONE" };
+  if (!/^[78]\d{7}$/.test(digits)) return { ok: false, raw: raw, normalized: "", code: "INVALID_PHONE" };
+  return { ok: true, raw: raw, normalized: "675" + digits, code: "OK" };
+}
+
+function getWhatsAppFallbackPhoneRaw_(rowObj) {
+  var row = rowObj || {};
+  return clean_(row.Parent_Phone || row.Parent_Mobile || row.Phone_Number || row.Mobile || row.Phone || "");
+}
+
+function getWhatsAppFallbackStudentName_(rowObj) {
+  var row = rowObj || {};
+  return clean_(row.StudentName || row.Student_Name || row.Full_Name || ((clean_(row.First_Name || "") + " " + clean_(row.Last_Name || "")).trim()));
+}
+
+function getWhatsAppFallbackParentName_(rowObj) {
+  var row = rowObj || {};
+  return clean_(row.ParentName || row.Parent_Name || row.Parent_Full_Name || row.Parent || "");
+}
+
+function getWhatsAppFallbackEmailIssue_(rowObj) {
+  var row = rowObj || {};
+  var status = normalizeEmailStatus_(row.Email_Status || "");
+  var bounceFlag = isCampaignBounceFlagTrue_(row.Email_Bounce_Flag);
+  var lastResult = clean_(row.Last_Contact_Result || "").toUpperCase();
+  var emailRaw = clean_(row.Parent_Email || "");
+  var emailCorrected = clean_(row.Parent_Email_Corrected || "");
+  var effective = emailCorrected || emailRaw;
+  var validEffective = typeof isValidEmail_ === "function" ? isValidEmail_(effective) : stageAggregationIsValidEmail_(effective);
+  if (status === "BOUNCED" || bounceFlag) return "BOUNCED";
+  if (lastResult === "BLOCKED") return "BLOCKED";
+  if (!effective) return "MISSING_EMAIL";
+  if (!validEffective) return "INVALID_EMAIL";
+  return "";
+}
+
+function isWhatsAppFallbackCandidate_(rowObj, filter) {
+  var issue = getWhatsAppFallbackEmailIssue_(rowObj);
+  if (!issue) return false;
+  var f = normalizeWhatsAppFallbackFilter_(filter);
+  if (f === "ALL_FALLBACK") return true;
+  if (f === "INVALID_EMAIL") return issue === "MISSING_EMAIL" || issue === "INVALID_EMAIL";
+  if (f === "BOUNCED") return issue === "BOUNCED";
+  if (f === "BLOCKED") return issue === "BLOCKED";
+  return false;
+}
+
+function buildWhatsAppFallbackPortalInfo_(applicantId, portalLookup) {
+  var id = clean_(applicantId || "");
+  if (!id) return { status: "MISSING_APPLICANT_ID", url: "" };
+  var lookup = portalLookup && portalLookup.byApplicantId ? portalLookup.byApplicantId : {};
+  var rec = lookup[id] || lookup[id.toLowerCase()] || null;
+  if (!rec) return { status: "MISSING_SECRET", url: "" };
+  if (portalLookup && portalLookup.hasStatus === true && clean_(rec.status || "") !== "Active") {
+    return { status: "MISSING_SECRET", url: "" };
+  }
+  var secret = clean_(rec.secretPlain || rec.secret || rec.secretHash || "");
+  if (!secret) return { status: "MISSING_SECRET", url: "" };
+  try {
+    return { status: "READY", url: buildStudentPortalUrl_(id, secret) };
+  } catch (_err) {
+    return { status: "PORTAL_URL_ERROR", url: "" };
+  }
+}
+
+function buildWhatsAppFallbackMessage_(studentName, applicantId, portalInfo) {
+  var parts = [
+    "Hello, this is FODE Admissions.",
+    "We are trying to contact you about your FODE application for " + clean_(studentName || "the student") + " (" + clean_(applicantId || "") + ").",
+    "The email address we have may not be working."
+  ];
+  if (portalInfo && portalInfo.status === "READY" && clean_(portalInfo.url || "")) {
+    parts.push("Please use your secure student portal link to continue: " + clean_(portalInfo.url || ""));
+  } else {
+    parts.push("Please reply here and we will assist you with portal access.");
+  }
+  return parts.join(" ");
+}
+
+function buildWhatsAppFallbackBatchLabel_() {
+  var tz = Session.getScriptTimeZone() || "GMT";
+  return "WA-FODE-" + Utilities.formatDate(new Date(), tz, "yyyyMMdd") + "-BATCH-001";
+}
+
+function admin_exportWhatsAppFallbackCsv(payload) {
+  return withEnvelope_("admin_exportWhatsAppFallbackCsv", function () {
+    var adminEmail = getCallerEmail_();
+    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    requireSuperAdmin_(adminEmail);
+    var p = payload && typeof payload === "object" ? payload : {};
+    var limit = normalizeWhatsAppFallbackLimit_(p.limit || p.batchSize || 20);
+    var filter = normalizeWhatsAppFallbackFilter_(p.filter || "ALL_FALLBACK");
+    var startRow = Math.max(2, Math.floor(Number(p.startRow || 2)));
+    var batchLabel = buildWhatsAppFallbackBatchLabel_();
+    var sh = openDataSheet_();
+    var values = sh.getDataRange().getValues();
+    var headers = values && values.length ? values[0] : [];
+    var portalLookup = typeof buildPortalSecretPreviewLookup_ === "function"
+      ? buildPortalSecretPreviewLookup_()
+      : { ok: false, byApplicantId: {} };
+    if (!portalLookup || portalLookup.ok !== true) portalLookup = { ok: false, byApplicantId: {} };
+    var rows = [[
+      "BatchLabel", "ApplicantID", "StudentName", "ParentName", "PhoneRaw", "PhoneNormalized",
+      "EmailRaw", "EmailCorrected", "EmailIssue", "Stage", "LastContactResult", "BounceFlag",
+      "BounceReason", "PortalUrlStatus", "PortalUrl", "MessageText", "WhatsAppLink", "OperatorNotes"
+    ]];
+    var summary = {
+      scanned: 0,
+      exported: 0,
+      invalidPhone: 0,
+      skipped: 0,
+      skippedDuplicatePhone: 0,
+      batchLabel: batchLabel,
+      limit: limit,
+      filter: filter,
+      startRow: startRow
+    };
+    var seenPhone = {};
+    for (var r = Math.max(1, startRow - 1); r < values.length; r++) {
+      summary.scanned++;
+      var rowObj = campaignRowObjectFromValues_(headers, values[r]);
+      if (!isWhatsAppFallbackCandidate_(rowObj, filter)) continue;
+      var phoneRaw = getWhatsAppFallbackPhoneRaw_(rowObj);
+      var phone = normalizePngWhatsAppPhone_(phoneRaw);
+      if (!phone.ok) {
+        summary.invalidPhone++;
+        continue;
+      }
+      if (seenPhone[phone.normalized]) {
+        summary.skippedDuplicatePhone++;
+        summary.skipped++;
+        continue;
+      }
+      seenPhone[phone.normalized] = true;
+      var applicantId = clean_(rowObj.ApplicantID || "");
+      if (!applicantId) {
+        summary.skipped++;
+        continue;
+      }
+      var studentName = getWhatsAppFallbackStudentName_(rowObj);
+      var parentName = getWhatsAppFallbackParentName_(rowObj);
+      var emailIssue = getWhatsAppFallbackEmailIssue_(rowObj);
+      var portalInfo = buildWhatsAppFallbackPortalInfo_(applicantId, portalLookup);
+      var messageText = buildWhatsAppFallbackMessage_(studentName, applicantId, portalInfo);
+      var waLink = "https://wa.me/" + phone.normalized + "?text=" + encodeURIComponent(messageText);
+      var stage = "";
+      try {
+        stage = clean_(stageAggregationSnapshot_(rowObj).stage || "");
+      } catch (_stageErr) {
+        stage = clean_(rowObj.Comm_Stage || rowObj.Stage || "");
+      }
+      rows.push([
+        batchLabel,
+        applicantId,
+        studentName,
+        parentName,
+        phoneRaw,
+        phone.normalized,
+        clean_(rowObj.Parent_Email || ""),
+        clean_(rowObj.Parent_Email_Corrected || ""),
+        emailIssue,
+        stage,
+        clean_(rowObj.Last_Contact_Result || ""),
+        clean_(rowObj.Email_Bounce_Flag || ""),
+        clean_(rowObj.Email_Bounce_Reason || ""),
+        portalInfo.status,
+        portalInfo.url,
+        messageText,
+        waLink,
+        "Operator review required. Use individual link or broadcast list; do not create applicant groups."
+      ]);
+      summary.exported++;
+      if (summary.exported >= limit) break;
+    }
+    var csv = rows.map(function (row) { return buildCsvLine_(row); }).join("\n");
+    var filename = "fode-whatsapp-fallback-" + batchLabel + ".csv";
+    return {
+      detail: {
+        filename: filename,
+        csv: csv,
+        summary: summary
+      }
+    };
+  });
+}
+
 function buildQueueRow_(rowNumber, applicantId, name, extra) {
   var out = {
     rowNumber: Number(rowNumber || 0),
