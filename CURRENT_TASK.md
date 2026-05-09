@@ -2,19 +2,18 @@
 
 ## Current Objective
 
- Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S4A Live CRM Leakage Trace, with r148 still the documented runtime baseline.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S4A Live CRM Leakage Trace, with r149 now deployed as the live tracing baseline.
 
 ## Current Issue
 
-- r148 adds a SUPER-admin, read-only WhatsApp fallback CSV export queue for invalid/missing/bounced/blocked email records with valid PNG mobile numbers.
-- r148 does not send WhatsApp, SMS, or email; it only returns CSV content for operator review/download.
-- r148 does not change send-path, email eligibility, bounce writeback, trigger cadence, automation, Books/CRM integration, Sheet schema, or Drive files.
+- r149 deploys S4A outbound CRM leakage tracing only.
+- r149 preserves the existing send-path, eligibility, bounce, trigger, Books, CRM, schema, and Drive behavior except for redacted forensic trace logging.
 - PortalUrl uses existing active portal secrets only via the canonical student portal builder. Missing existing secrets leave `PortalUrl` blank and set `PortalUrlStatus = MISSING_SECRET`.
-- r148 Apps Script platform version `146` created with description `r148: add WhatsApp fallback export queue`.
-- Admin deployment pinned to platform version `146`.
-- Student deployment pinned to platform version `146`.
-- Admin whoami: `r148 / 148`, mismatch `false`, script ID `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
-- Student whoami: `r148 / 148`, mismatch `false`, script ID `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
+- r149 Apps Script platform version `147` created with description `r149: S4A CRM leakage trace`.
+- Admin deployment pinned to platform version `147`.
+- Student deployment pinned to platform version `147`.
+- Admin whoami: `r149 / 149`, mismatch `false`, script ID `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
+- Student whoami: `r149 / 149`, mismatch `false`, script ID `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
 - Admin `?view=admin` HTML includes WhatsApp Fallback Queue controls, no-send/no-group warnings, and `admin_exportWhatsAppFallbackCsv`: PASS.
 - Browser/operator acceptance remains required before git push: export batch size 20, inspect first 5 CSV rows, confirm `675XXXXXXXX` phones, link/message correctness, no automatic send, and no row mutation.
 - S1 stabilization baseline audit active.
@@ -34,7 +33,11 @@
 - S4A adds outbound forensic tracing and redacted destination logging only.
 - No CRM removal is authorized in S4A.
 - A second unknown webhook or automation source is suspected until the outbound trace is closed.
-- Next step depends on S4A trace findings and operator-side webhook inventory checks.
+- Controlled FD test submission on r149 created row `FODE_Data!2905`, applicant `FODE-26-002929`, folder `1dbyqD9PsRdpoY_ArRw3YrejQS1HXWddW`, and copied four test files into Drive.
+- Controlled FD test row committed with `FormID = S4A-FD-20260509182546`, `correlation_id = S4A-20260509182546`, `CRM_Response = blank`, `Contact_ID = blank`, `Deal_ID = blank`, and `CRM_Invoice_Triggered = blank`.
+- This narrows the remaining CRM leakage away from the base FD intake path and toward payment/invoice transition logic or an external automation source.
+- `clasp logs --json` remains unavailable because the GCP project ID is not set, and direct `clasp run` verification of trigger/runtime status remains blocked by script execution permissions.
+- Next step depends on S4A payment/invoice-path trace findings and operator-side webhook inventory checks.
 - Trigger deleted by operator.
 - No trigger recreation is authorized in S1 or S2B.
 - No code mutation performed in S2C.
@@ -222,10 +225,10 @@
 - Any legacy references to other local checkout paths are historical only.
 - Script ID: `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`
 - Baseline: `r128 / 128` live before r129 release.
-- Admin runtime: `r148 / 148`, mismatch `false`.
-- Student runtime: `r148 / 148`, mismatch `false`.
-- Apps Script platform version: `146`.
-- Latest local runtime commit pending browser acceptance/git push: `r148: add WhatsApp fallback export queue`.
+- Admin runtime: `r149 / 149`, mismatch `false`.
+- Student runtime: `r149 / 149`, mismatch `false`.
+- Apps Script platform version: `147`.
+- Latest local runtime commit pending release closure/git push: `stabilization: add S4A outbound CRM leakage tracing`.
 - Canonical Admin URL preserved: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec`.
 - Canonical Student URL preserved: `https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec`.
 
