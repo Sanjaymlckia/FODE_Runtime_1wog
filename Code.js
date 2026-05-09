@@ -4118,8 +4118,18 @@ function isPaymentVerified_(record) {
 
 function isPaymentVerifiedDerived_(row) {
   row = row || {};
-  if (derivePaymentBadge_(row) === "Verified") return true;
-  return clean_(row.Payment_Verified).toLowerCase() === "yes";
+  var paymentBadge = derivePaymentBadge_(row);
+  var paymentVerified = paymentBadge === "Verified";
+  try {
+    logOperationalBlock_("PAYMENT_CANONICAL_RECEIPT_STATUS", {
+      applicantId: clean_(row.ApplicantID || ""),
+      receiptStatus: clean_(row.Receipt_Status || ""),
+      paymentBadge: paymentBadge,
+      compatibilityRaw: clean_(row.Payment_Verified || ""),
+      derived: paymentVerified
+    });
+  } catch (_logErr) {}
+  return paymentVerified;
 }
 
 function isPaymentFreezeActive_(row) {
@@ -7729,6 +7739,28 @@ function automatedStageBatchRunner() {
   return runAutomatedStageBatchWithLock_({ source: "TRIGGER" });
 }
 
+function stabilizationTriggerMutationBlocked_(fnName, action) {
+  var functionName = clean_(fnName || getAutomatedStageRunnerTriggerFunctionName_() || "automatedStageBatchRunner");
+  var actionName = clean_(action || "trigger_mutation");
+  logOperationalBlock_("STABILIZATION_TRIGGER_BLOCK", {
+    action: actionName,
+    functionName: functionName
+  });
+  return {
+    ok: false,
+    created: false,
+    removed: 0,
+    functionName: functionName,
+    triggerCount: null,
+    removedDuplicates: 0,
+    cadenceMinutes: 10,
+    error: {
+      code: "STABILIZATION_DISABLED",
+      message: "Trigger mutation is disabled during stabilization."
+    }
+  };
+}
+
 function runAutomatedStageBatchScheduled() {
   return automatedStageRunnerFinalize_({
     ok: true,
@@ -7773,123 +7805,12 @@ function inspectAutomatedStageRunnerTriggers_() {
 
 function ensureAutomatedStageRunnerTrigger_() {
   var fnName = getAutomatedStageRunnerTriggerFunctionName_();
-  var lastResult = readAutomatedStageRunnerLastResult_();
-  var lastSource = clean_(lastResult && lastResult.source || "").toUpperCase();
-  var lastOutcome = clean_(lastResult && lastResult.result || "").toUpperCase();
-  var lastElapsedMs = Number(lastResult && lastResult.elapsedMs || 0);
-  if (!(lastResult && lastResult.ok === true && lastOutcome === "COMPLETE" && (lastSource === "ADMIN" || lastSource === "MANUAL") && lastElapsedMs > 0 && lastElapsedMs < 60000)) {
-    return {
-      ok: false,
-      created: false,
-      functionName: fnName,
-      triggerCount: null,
-      removedDuplicates: 0,
-      cadenceMinutes: 10,
-      error: {
-        code: "MANUAL_RUN_UNDER_60S_REQUIRED",
-        message: "Run the automation manually and confirm it completes under 60 seconds before installing a trigger."
-      },
-      lastRun: lastResult
-    };
-  }
-  var inspection = inspectAutomatedStageRunnerTriggers_();
-  if (!inspection.ok) {
-    return {
-      ok: false,
-      created: false,
-      functionName: fnName,
-      triggerCount: null,
-      removedDuplicates: 0,
-      cadenceMinutes: 10,
-      error: inspection.error
-    };
-  }
-  try {
-    var triggers = ScriptApp.getProjectTriggers();
-    var existing = [];
-    for (var i = 0; i < triggers.length; i++) {
-      var trigger = triggers[i];
-      if (clean_(trigger.getHandlerFunction() || "") === fnName) existing.push(trigger);
-    }
-    var removedDuplicates = 0;
-    for (var j = 1; j < existing.length; j++) {
-      ScriptApp.deleteTrigger(existing[j]);
-      removedDuplicates++;
-    }
-    if (existing.length) {
-      return {
-        ok: true,
-        created: false,
-        functionName: fnName,
-        triggerCount: 1,
-        removedDuplicates: removedDuplicates,
-        cadenceMinutes: 10
-      };
-    }
-    ScriptApp.newTrigger(fnName).timeBased().everyMinutes(10).create();
-    return {
-      ok: true,
-      created: true,
-      functionName: fnName,
-      triggerCount: 1,
-      removedDuplicates: removedDuplicates,
-      cadenceMinutes: 10
-    };
-  } catch (err) {
-    return {
-      ok: false,
-      created: false,
-      functionName: fnName,
-      triggerCount: null,
-      removedDuplicates: 0,
-      cadenceMinutes: 10,
-      error: {
-        code: "TRIGGER_API_UNAVAILABLE",
-        message: String((err && err.message) || err || "Trigger APIs are unavailable in this execution context.")
-      }
-    };
-  }
+  return stabilizationTriggerMutationBlocked_(fnName, "ensure_automated_stage_runner_trigger");
 }
 
 function removeAutomatedStageRunnerTrigger_() {
   var fnName = getAutomatedStageRunnerTriggerFunctionName_();
-  var inspection = inspectAutomatedStageRunnerTriggers_();
-  if (!inspection.ok) {
-    return {
-      ok: false,
-      functionName: fnName,
-      removed: 0,
-      cadenceMinutes: 10,
-      error: inspection.error
-    };
-  }
-  try {
-    var triggers = ScriptApp.getProjectTriggers();
-    var removed = 0;
-    for (var i = 0; i < triggers.length; i++) {
-      var trigger = triggers[i];
-      if (clean_(trigger.getHandlerFunction() || "") !== fnName) continue;
-      ScriptApp.deleteTrigger(trigger);
-      removed++;
-    }
-    return {
-      ok: true,
-      functionName: fnName,
-      removed: removed,
-      cadenceMinutes: 10
-    };
-  } catch (err) {
-    return {
-      ok: false,
-      functionName: fnName,
-      removed: 0,
-      cadenceMinutes: 10,
-      error: {
-        code: "TRIGGER_API_UNAVAILABLE",
-        message: String((err && err.message) || err || "Trigger APIs are unavailable in this execution context.")
-      }
-    };
-  }
+  return stabilizationTriggerMutationBlocked_(fnName, "remove_automated_stage_runner_trigger");
 }
 
 function getAutomatedStageRunnerStatus_() {

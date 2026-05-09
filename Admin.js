@@ -747,8 +747,8 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
   setCell_(sh, rowNumber, idx, "Doc_Last_Verified_By", adminEmail || "admin");
   var finalRowObj = getRowObject_(sh, rowNumber);
   var actions = runVerificationAutomations_(sh, rowNumber, idx, priorRowObj, finalRowObj, dbgId);
-  var beforeVerified = (clean_(priorRowObj["Payment_Verified"]) === "Yes");
-  var afterVerified = (clean_(finalRowObj["Payment_Verified"]) === "Yes");
+  var beforeVerified = isPaymentVerifiedDerived_(priorRowObj) === true;
+  var afterVerified = isPaymentVerifiedDerived_(finalRowObj) === true;
   var transition = (!beforeVerified && afterVerified);
   var workflowWarnings = [];
   if (transition && CONFIG.EMAIL_ENABLE_PAYMENT_VERIFIED_TRIGGERS === true) {
@@ -971,8 +971,8 @@ function admin_setPaymentVerified_impl_(payload, dbgId) {
   var finalRowObj = getRowObject_(sh, rowNumber);
   var actions = runVerificationAutomations_(sh, rowNumber, idx, priorRowObj, finalRowObj, dbgId);
 
-  var beforeVerified = (clean_(priorRowObj["Payment_Verified"]) === "Yes");
-  var afterVerified = (clean_(finalRowObj["Payment_Verified"]) === "Yes");
+  var beforeVerified = isPaymentVerifiedDerived_(priorRowObj) === true;
+  var afterVerified = isPaymentVerifiedDerived_(finalRowObj) === true;
   var transitionToYes = (!beforeVerified && afterVerified);
   var workflowWarnings = [];
   var crm = { attempted: false, ok: true, debugId: "", dryRun: CONFIG.CRM_PUSH_DRY_RUN === true };
@@ -1007,86 +1007,77 @@ function admin_setPaymentVerified_impl_(payload, dbgId) {
 }
 
 function triggerCrmDealForFode_(rowObj, rowNumber, sh, idx) {
-  if (CONFIG.ENABLE_FODE_CRM_PIPELINE !== true) {
-    return { attempted: false, ok: true, enabled: false, reason: "FEATURE_FLAG_DISABLED" };
-  }
+  logOperationalBlock_("STABILIZATION_CRM_WRITE_BLOCK", {
+    action: "trigger_crm_deal_for_fode",
+    rowNumber: Number(rowNumber || 0),
+    applicantId: clean_((rowObj || {}).ApplicantID || "")
+  });
+  logAdminEvent_("STABILIZATION_CRM_WRITE_BLOCK", {
+    action: "trigger_crm_deal_for_fode",
+    rowNumber: Number(rowNumber || 0),
+    applicantId: clean_((rowObj || {}).ApplicantID || "")
+  });
   var row = rowObj || {};
   return {
     attempted: false,
     ok: true,
-    enabled: true,
-    shouldCreateDeal: typeof shouldCreateFodeCrmDeal_ === 'function' ? shouldCreateFodeCrmDeal_(row) : false,
+    enabled: false,
+    blocked: true,
+    reason: "STABILIZATION_DISABLED",
+    shouldCreateDeal: false,
     rowNumber: Number(rowNumber || 0)
   };
 }
 
 function syncFodeCrmStage_(rowObj, rowNumber, sh, idx) {
-  if (CONFIG.ENABLE_FODE_CRM_PIPELINE !== true) {
-    return { attempted: false, ok: true, enabled: false, reason: "FEATURE_FLAG_DISABLED" };
-  }
+  logOperationalBlock_("STABILIZATION_CRM_WRITE_BLOCK", {
+    action: "sync_fode_crm_stage",
+    rowNumber: Number(rowNumber || 0),
+    applicantId: clean_((rowObj || {}).ApplicantID || "")
+  });
+  logAdminEvent_("STABILIZATION_CRM_WRITE_BLOCK", {
+    action: "sync_fode_crm_stage",
+    rowNumber: Number(rowNumber || 0),
+    applicantId: clean_((rowObj || {}).ApplicantID || "")
+  });
   var row = rowObj || {};
   return {
     attempted: false,
     ok: true,
-    enabled: true,
-    crmStage: typeof deriveFodeCrmStageFromRow_ === 'function' ? clean_(deriveFodeCrmStageFromRow_(row) || "") : "",
-    shouldCreateInvoice: typeof shouldCreateFodeCrmInvoice_ === 'function' ? shouldCreateFodeCrmInvoice_(row) : false,
+    enabled: false,
+    blocked: true,
+    reason: "STABILIZATION_DISABLED",
+    crmStage: "",
+    shouldCreateInvoice: false,
     rowNumber: Number(rowNumber || 0)
   };
 }
 
 function crm_syncOnPaymentVerified_(rowNumber, sh, idx) {
-  var dbgId = newDebugId_();
-  var sheet = sh || openDataSheet_();
-  var map = idx || headerIndex_(sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]);
-  var rowObj = getRowObject_(sheet, rowNumber);
-  var applicantId = clean_(rowObj.ApplicantID || "");
+  var rowObj = {};
   try {
-    var stableFormId = ensureStableFormId_(rowObj, sheet, rowNumber, map);
-    if (stableFormId) rowObj.FormID = stableFormId;
-    var payload = buildCrmPayloadFromRow_(rowObj);
-    payload.formId = clean_(stableFormId || payload.formId || "");
-
-    var token = getZohoToken_();
-    var contactRes = upsertZohoContact_(token, payload);
-    var dealRes = upsertZohoDeal_(token, payload, payload.folderUrl || "", contactRes.id);
-
-    var patch = {};
-    if (map.Contact_ID) patch.Contact_ID = clean_(contactRes.id || "");
-    if (map.Deal_ID) patch.Deal_ID = clean_(dealRes.id || "");
-    var crmResponseObj = {
-      ok: true,
-      dbgId: dbgId,
-      formId: payload.formId || "",
-      contactId: clean_(contactRes.id || ""),
-      dealId: clean_(dealRes.id || "")
-    };
-    if (map.CRM_Response) patch.CRM_Response = JSON.stringify(crmResponseObj);
-    if (Object.keys(patch).length) applyPatch_(sheet, rowNumber, patch);
-
-    log_(openLogSheet_(), "ZOHO_OK", JSON.stringify({
-      dbgId: dbgId,
-      applicantId: applicantId,
-      rowNumber: rowNumber,
-      contactId: clean_(contactRes.id || ""),
-      dealId: clean_(dealRes.id || "")
-    }));
-    return { attempted: true, ok: true, debugId: dbgId, contactId: clean_(contactRes.id || ""), dealId: clean_(dealRes.id || "") };
-  } catch (e) {
-    var errMsg = "ERROR: " + String(e && e.message ? e.message : e);
-    try {
-      if (map.CRM_Response) {
-        applyPatch_(sheet, rowNumber, { CRM_Response: errMsg });
-      }
-    } catch (writeErr) {}
-    log_(openLogSheet_(), "ZOHO_ERROR", JSON.stringify({
-      dbgId: dbgId,
-      applicantId: applicantId,
-      rowNumber: rowNumber,
-      message: String(e && e.message ? e.message : e)
-    }));
-    return { attempted: true, ok: false, debugId: dbgId, error: errMsg };
-  }
+    var sheet = sh || openDataSheet_();
+    if (sheet) rowObj = getRowObject_(sheet, rowNumber) || {};
+  } catch (_sheetErr) {}
+  var applicantId = clean_(rowObj.ApplicantID || "");
+  logOperationalBlock_("STABILIZATION_CRM_WRITE_BLOCK", {
+    action: "crm_sync_on_payment_verified",
+    rowNumber: Number(rowNumber || 0),
+    applicantId: applicantId
+  });
+  logAdminEvent_("STABILIZATION_CRM_WRITE_BLOCK", {
+    action: "crm_sync_on_payment_verified",
+    rowNumber: Number(rowNumber || 0),
+    applicantId: applicantId
+  });
+  return {
+    attempted: false,
+    ok: true,
+    blocked: true,
+    reason: "STABILIZATION_DISABLED",
+    debugId: newDebugId_(),
+    applicantId: applicantId
+  };
 }
 
 /******************** ADMIN HELPERS ********************/
@@ -3508,6 +3499,10 @@ function admin_installAutomatedStageRunnerTrigger(payload) {
     var adminEmail = getActiveUserEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
     requireSuperAdmin_(adminEmail);
+    logOperationalBlock_("STABILIZATION_TRIGGER_BLOCK", {
+      action: "admin_install_automated_stage_runner_trigger",
+      actor: clean_(adminEmail || "")
+    });
     return ensureAutomatedStageRunnerTrigger_();
   });
 }
@@ -3517,6 +3512,10 @@ function admin_removeAutomatedStageRunnerTrigger(payload) {
     var adminEmail = getActiveUserEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
     requireSuperAdmin_(adminEmail);
+    logOperationalBlock_("STABILIZATION_TRIGGER_BLOCK", {
+      action: "admin_remove_automated_stage_runner_trigger",
+      actor: clean_(adminEmail || "")
+    });
     return removeAutomatedStageRunnerTrigger_();
   });
 }

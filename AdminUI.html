@@ -2318,8 +2318,8 @@ function renderStageDashboard_(items, emptyMessage){
       return [
         "Portal Submitted: " + workflowYesNo_(r.Portal_Submitted),
         "Docs Verified: " + workflowYesNo_(r.Docs_Verified),
-        "Payment Received: " + workflowYesNo_(r.Payment_Received),
-        "Payment Verified: " + workflowYesNo_(r.Payment_Verified),
+        "Payment Evidence Uploaded: " + workflowYesNo_(r.Payment_Received),
+        "Payment Verified (compatibility mirror): " + workflowYesNo_(r.Payment_Verified),
         "Enrolled Confirmed: " + workflowEnrolledLabel_(r)
       ].join(" | ");
     }
@@ -2336,7 +2336,8 @@ function renderStageDashboard_(items, emptyMessage){
       }
       var verifiedRaw = r.Payment_Verified;
       var isVerified = verifiedRaw === true || String(verifiedRaw || "").trim().toLowerCase() === "yes";
-      if (isVerified) return { label: "Verified", cls: "badge badge-success" };
+      if (String(r.Receipt_Status || "").trim().toLowerCase() === "verified") return { label: "Verified", cls: "badge badge-success" };
+      if (isVerified) return { label: "Verified (compat)", cls: "badge badge-success" };
       if (String(r.Fee_Receipt_File || "").trim()) return { label: "Pending", cls: "badge badge-warning" };
       return { label: "Not Uploaded", cls: "badge badge-muted" };
     }
@@ -3185,8 +3186,8 @@ function renderStageDashboard_(items, emptyMessage){
         : (paymentBadge === "Rejected" ? "Payment Rejected" : "Payment Pending");
       document.getElementById("mWorkflowPortalSubmitted").textContent = "Portal Submitted: " + workflowYesNo_(d.Portal_Submitted);
       document.getElementById("mWorkflowDocsVerified").textContent = "Docs Verified: " + workflowYesNo_(d.Docs_Verified);
-      document.getElementById("mWorkflowPaymentReceived").textContent = "Payment Received: " + workflowYesNo_(d.Payment_Received);
-      document.getElementById("mWorkflowPaymentVerified").textContent = "Payment Verified: " + workflowYesNo_(d.Payment_Verified);
+      document.getElementById("mWorkflowPaymentReceived").textContent = "Payment Evidence Uploaded: " + workflowYesNo_(d.Payment_Received);
+      document.getElementById("mWorkflowPaymentVerified").textContent = "Payment Verified (compatibility mirror): " + workflowYesNo_(d.Payment_Verified);
       document.getElementById("mWorkflowEnrolledConfirmed").textContent = "Enrolled Confirmed: " + workflowEnrolledLabel_(d);
       var overrideTag = document.getElementById("mOverallOverride");
       if (overrideTag) {
@@ -3266,7 +3267,7 @@ function renderStageDashboard_(items, emptyMessage){
                 return `<option value="${s}" ${s===x.status?"selected":""} ${isDisabled}>${s}</option>`;
               }).join("")}
             </select>
-            ${x.statusField === "Receipt_Status" ? '<div class="muted" style="font-size:12px;margin-top:6px;">Payment is confirmed when Receipt status is set to Verified.</div>' : ''}
+            ${x.statusField === "Receipt_Status" ? '<div class="muted" style="font-size:12px;margin-top:6px;">Canonical payment authority: Receipt status. Payment_Verified is compatibility-only.</div>' : ''}
           </div>
           <div>
             <label>Comment</label>

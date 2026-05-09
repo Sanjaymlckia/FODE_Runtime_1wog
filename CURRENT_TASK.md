@@ -2,7 +2,7 @@
 
 ## Current Objective
 
- Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S2C Code Dependency Audit, with r148 still the documented runtime baseline.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S3A Controlled Stabilization Patch, with r148 still the documented runtime baseline.
 
 ## Current Issue
 
@@ -23,6 +23,8 @@
 - S2B scope is small controlled stabilization work only.
 - S2C code dependency audit active.
 - S2C code dependency audit completed as read-only documentation work.
+- S3A controlled stabilization patch active.
+- S3A hard-disables trigger mutation and CRM write paths without schema change or deployment action.
 - Trigger deleted by operator.
 - No trigger recreation is authorized in S1 or S2B.
 - No code mutation performed in S2C.
@@ -341,7 +343,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-S2C read-only code dependency audit completed for CRM, payment state, triggerless workflow, and email workflow. Next proposed phase: S3A controlled patch plan. Preserve runtime as read-only and do not perform deploy actions, runtime mutation, schema mutation, CRM deletion, or trigger recreation in this CIS lineage. r148 browser/operator acceptance remains pending.
+Complete S3A controlled stabilization patch validation, preserve runtime as undeployed local source only, and do not perform deploy actions, schema mutation, CRM deletion, sheet mutation, or trigger recreation in this CIS lineage. r148 browser/operator acceptance remains pending until a later authorized runtime phase.
 
 ## Cautions
 
