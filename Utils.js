@@ -265,6 +265,15 @@ function urlFetchJson_(url, opts) {
   };
   if (cfg.contentType) fetchOpts.contentType = cfg.contentType;
   if (payload !== undefined) fetchOpts.payload = payload;
+  logS4aOutboundTrace_("S4A_OUTBOUND_TRACE", {
+    sourceFunction: safeStr_(cfg.sourceFunction || "urlFetchJson_"),
+    configKeyName: safeStr_(cfg.configKeyName || ""),
+    destinationHost: redactUrlForLog_(url),
+    applicantId: safeStr_(cfg.applicantId || ""),
+    formId: safeStr_(cfg.formId || ""),
+    operationType: safeStr_(cfg.operationType || method || "fetch"),
+    timestamp: new Date().toISOString()
+  });
   var resp = UrlFetchApp.fetch(url, fetchOpts);
   var status = Number(resp.getResponseCode() || 0);
   var text = String(resp.getContentText() || "");
@@ -284,7 +293,10 @@ function driveApiGet_(path, params) {
   return urlFetchJson_(url, {
     method: "get",
     headers: oauthHeaders_(),
-    muteHttpExceptions: true
+    muteHttpExceptions: true,
+    sourceFunction: "driveApiGet_",
+    configKeyName: "DRIVE_API_BASE",
+    operationType: "drive_api_get"
   });
 }
 
@@ -296,7 +308,10 @@ function driveApiPost_(path, body, params) {
     headers: oauthHeaders_(),
     contentType: "application/json",
     payload: JSON.stringify(body || {}),
-    muteHttpExceptions: true
+    muteHttpExceptions: true,
+    sourceFunction: "driveApiPost_",
+    configKeyName: "DRIVE_API_BASE",
+    operationType: "drive_api_post"
   });
 }
 
@@ -439,6 +454,24 @@ function getZohoToken_() {
   }
 
   var endpoint = clean_(CONFIG.ZOHO_OAUTH_BASE || "https://accounts.zoho.com/oauth/v2") + "/token";
+  logS4aOutboundTrace_("S4A_OUTBOUND_TRACE", {
+    sourceFunction: "getZohoToken_",
+    configKeyName: "ZOHO_OAUTH_BASE",
+    destinationHost: redactUrlForLog_(endpoint),
+    applicantId: "",
+    formId: "",
+    operationType: "zoho_token_refresh",
+    timestamp: new Date().toISOString()
+  });
+  logS4aOutboundTrace_("S4A_CRM_SUSPECT_PATH", {
+    sourceFunction: "getZohoToken_",
+    configKeyName: "ZOHO_OAUTH_BASE",
+    destinationHost: redactUrlForLog_(endpoint),
+    applicantId: "",
+    formId: "",
+    operationType: "zoho_token_refresh",
+    timestamp: new Date().toISOString()
+  });
   var resp = UrlFetchApp.fetch(endpoint, {
     method: "post",
     muteHttpExceptions: true,
@@ -476,6 +509,24 @@ function upsertZohoContact_(token, payloadRowObj) {
     duplicate_check_fields: ["Email", "Phone"]
   };
   var endpoint = clean_(CONFIG.ZOHO_API_BASE || "https://www.zohoapis.com/crm/v2") + "/Contacts/upsert";
+  logS4aOutboundTrace_("S4A_OUTBOUND_TRACE", {
+    sourceFunction: "upsertZohoContact_",
+    configKeyName: "ZOHO_API_BASE",
+    destinationHost: redactUrlForLog_(endpoint),
+    applicantId: clean_(p.applicantId || ""),
+    formId: clean_(p.formId || ""),
+    operationType: "zoho_contact_upsert",
+    timestamp: new Date().toISOString()
+  });
+  logS4aOutboundTrace_("S4A_CRM_SUSPECT_PATH", {
+    sourceFunction: "upsertZohoContact_",
+    configKeyName: "ZOHO_API_BASE",
+    destinationHost: redactUrlForLog_(endpoint),
+    applicantId: clean_(p.applicantId || ""),
+    formId: clean_(p.formId || ""),
+    operationType: "zoho_contact_upsert",
+    timestamp: new Date().toISOString()
+  });
   var res = UrlFetchApp.fetch(endpoint, {
     method: "post",
     muteHttpExceptions: true,
@@ -522,6 +573,24 @@ function upsertZohoDeal_(token, payloadRowObj, folderUrl, contactId) {
     duplicate_check_fields: duplicateField && dedupeValue ? [duplicateField] : ["Deal_Name"]
   };
   var endpoint = clean_(CONFIG.ZOHO_API_BASE || "https://www.zohoapis.com/crm/v2") + "/Deals/upsert";
+  logS4aOutboundTrace_("S4A_OUTBOUND_TRACE", {
+    sourceFunction: "upsertZohoDeal_",
+    configKeyName: "ZOHO_API_BASE",
+    destinationHost: redactUrlForLog_(endpoint),
+    applicantId: applicantId,
+    formId: stableFormId,
+    operationType: "zoho_deal_upsert",
+    timestamp: new Date().toISOString()
+  });
+  logS4aOutboundTrace_("S4A_CRM_SUSPECT_PATH", {
+    sourceFunction: "upsertZohoDeal_",
+    configKeyName: "ZOHO_API_BASE",
+    destinationHost: redactUrlForLog_(endpoint),
+    applicantId: applicantId,
+    formId: stableFormId,
+    operationType: "zoho_deal_upsert",
+    timestamp: new Date().toISOString()
+  });
   var res = UrlFetchApp.fetch(endpoint, {
     method: "post",
     muteHttpExceptions: true,
@@ -1308,6 +1377,14 @@ function safeStr_(v) {
   return String(v === null || v === undefined ? "" : v).trim();
 }
 
+function redactUrlForLog_(url) {
+  var raw = safeStr_(url || "");
+  if (!raw) return "";
+  var match = raw.match(/^(https?):\/\/([^\/?#:]+)(?::\d+)?/i);
+  if (!match) return "";
+  return String(match[1] || "").toLowerCase() + "://" + String(match[2] || "").toLowerCase();
+}
+
 function isSystemStabilizationModeActive_() {
   return CONFIG && CONFIG.SYSTEM_STABILIZATION_MODE === true;
 }
@@ -1396,6 +1473,10 @@ function logOperationalBlock_(label, payload) {
   var line = tag + " " + JSON.stringify(data);
   try { console.log(line); } catch (_consoleErr) {}
   try { Logger.log(line); } catch (_loggerErr) {}
+}
+
+function logS4aOutboundTrace_(eventName, payload) {
+  logOperationalBlock_(safeStr_(eventName || "S4A_OUTBOUND_TRACE"), payload && typeof payload === "object" ? payload : {});
 }
 
 function systemStabilizationBlockResult_(action, code, requestId, extra) {

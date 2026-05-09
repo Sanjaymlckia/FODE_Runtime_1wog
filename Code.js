@@ -4466,6 +4466,15 @@ function shouldCreateFodeCrmDeal_(rowObj) {
 
 function shouldCreateFodeCrmInvoice_(rowObj) {
   var row = rowObj || {};
+  logS4aOutboundTrace_("S4A_CRM_SUSPECT_PATH", {
+    sourceFunction: "shouldCreateFodeCrmInvoice_",
+    configKeyName: "INVOICE_WEBHOOK_URL",
+    destinationHost: redactUrlForLog_(clean_(CONFIG.INVOICE_WEBHOOK_URL || "")),
+    applicantId: clean_(row.ApplicantID || ""),
+    formId: clean_(row.FormID || row.FD_FormID || ""),
+    operationType: "crm_invoice_eligibility_check",
+    timestamp: new Date().toISOString()
+  });
   if (!clean_(row.Deal_ID || "")) return false;
   if (clean_(row.CRM_Invoice_Triggered || "")) return false;
   var stage = deriveFodeCrmStageFromRow_(row);
@@ -4779,6 +4788,15 @@ function canonicalizeFdIntakeFiles_(payload, applicantFolder, logSheet, context)
       var rawUrl = clean_(rawUrls[u]);
       if (!rawUrl) continue;
       try {
+        logS4aOutboundTrace_("S4A_OUTBOUND_TRACE", {
+          sourceFunction: "activationFileCanonicalize",
+          configKeyName: "",
+          destinationHost: redactUrlForLog_(rawUrl),
+          applicantId: applicantId,
+          formId: clean_(out.FormID || out.FD_FormID || ""),
+          operationType: "remote_file_fetch",
+          timestamp: new Date().toISOString()
+        });
         var response = UrlFetchApp.fetch(rawUrl, { muteHttpExceptions: true });
         var responseCode = Number(response && response.getResponseCode ? response.getResponseCode() : 0);
         if (responseCode != 200) {

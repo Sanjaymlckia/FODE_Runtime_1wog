@@ -1250,6 +1250,18 @@ function triggerInvoiceWebhook_(rowObj, debugId) {
   }
   var url = safeStr_(CONFIG.INVOICE_WEBHOOK_URL || "");
   if (!url) return { ok: false, code: "INVOICE_WEBHOOK_URL_MISSING", message: "Invoice webhook URL is not configured" };
+  var tracePayload = {
+    sourceFunction: "triggerInvoiceWebhook_",
+    configKeyName: "INVOICE_WEBHOOK_URL",
+    destinationHost: redactUrlForLog_(url),
+    applicantId: safeStr_(row.ApplicantID || ""),
+    formId: safeStr_(row.FormID || row.FD_FormID || ""),
+    operationType: "invoice_webhook",
+    timestamp: new Date().toISOString()
+  };
+  logS4aOutboundTrace_("S4A_OUTBOUND_TRACE", tracePayload);
+  logS4aOutboundTrace_("S4A_INVOICE_WEBHOOK_TRACE", tracePayload);
+  logS4aOutboundTrace_("S4A_CRM_SUSPECT_PATH", tracePayload);
   var payload = {
     applicantId: safeStr_(row.ApplicantID),
     firstName: safeStr_(row.First_Name),
@@ -1691,6 +1703,15 @@ function handlePaymentVerifiedEmailTriggers_(rowObj, debugId) {
 function handleInvoiceTrigger_(sh, rowNumber, idx, rowObj, debugId) {
   var row = rowObj || {};
   var applicantId = safeStr_(row.ApplicantID);
+  logS4aOutboundTrace_("S4A_CRM_SUSPECT_PATH", {
+    sourceFunction: "handleInvoiceTrigger_",
+    configKeyName: "INVOICE_WEBHOOK_URL",
+    destinationHost: redactUrlForLog_(safeStr_(CONFIG.INVOICE_WEBHOOK_URL || "")),
+    applicantId: applicantId,
+    formId: safeStr_(row.FormID || row.FD_FormID || ""),
+    operationType: "invoice_trigger_gate",
+    timestamp: new Date().toISOString()
+  });
   if (hasValue_(row.CRM_Invoice_Triggered)) {
     logAdminEvent_("INVOICE_TRIGGER_SKIPPED_ALREADY", { applicantId: applicantId, debugId: debugId });
     return { status: "skipped", reason: "already_triggered" };
@@ -1748,6 +1769,15 @@ function runVerificationAutomations_(sh, rowNumber, idx, beforeRowObj, afterRowO
     var payBefore = isYes_(beforeRow.Payment_Verified) || isPaymentVerifiedDerived_(beforeRow) === true;
     var payAfter = isYes_(afterRow.Payment_Verified) || isPaymentVerifiedDerived_(afterRow) === true;
     if (!payBefore && payAfter) {
+      logS4aOutboundTrace_("S4A_CRM_SUSPECT_PATH", {
+        sourceFunction: "runVerificationAutomations_",
+        configKeyName: "INVOICE_WEBHOOK_URL",
+        destinationHost: redactUrlForLog_(safeStr_(CONFIG.INVOICE_WEBHOOK_URL || "")),
+        applicantId: applicantId,
+        formId: safeStr_(afterRow.FormID || afterRow.FD_FormID || ""),
+        operationType: "payment_verified_invoice_handoff_check",
+        timestamp: new Date().toISOString()
+      });
       // Payment verified email workflow is triggered explicitly in save handlers.
       actions.paymentVerifiedEmails = "handled_in_save_handler";
       var invRes = handleInvoiceTrigger_(sh, rowNumber, idx, afterRow, debugId);

@@ -2,7 +2,7 @@
 
 ## Current Objective
 
- Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S3B Email & Queue Safety Hardening, with r148 still the documented runtime baseline.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S4A Live CRM Leakage Trace, with r148 still the documented runtime baseline.
 
 ## Current Issue
 
@@ -29,7 +29,12 @@
 - S3B retains triggerless, manual-first operator posture.
 - S3B hard-disables unattended workflow email sends and adds shared send idempotency normalization without schema change.
 - S3B performs no schema migration, deployment action, or runtime mutation.
-- Next proposed phase after S3B: S3C intake integrity diagnostics or S4 CRM quarantine.
+- S4A live CRM leakage trace active.
+- S4A purpose is to trace the remaining live CRM/webhook leakage path without removing CRM code or changing schema.
+- S4A adds outbound forensic tracing and redacted destination logging only.
+- No CRM removal is authorized in S4A.
+- A second unknown webhook or automation source is suspected until the outbound trace is closed.
+- Next step depends on S4A trace findings and operator-side webhook inventory checks.
 - Trigger deleted by operator.
 - No trigger recreation is authorized in S1 or S2B.
 - No code mutation performed in S2C.
