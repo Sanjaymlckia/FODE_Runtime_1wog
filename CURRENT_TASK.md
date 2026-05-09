@@ -2,7 +2,7 @@
 
 ## Current Objective
 
- Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S4C CRM Quarantine and Legacy Isolation, with r149 still serving as the live stabilization baseline.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S5A Canonical Intake and Operations Architecture documentation, with r149 still serving as the live stabilization baseline.
 
 ## Current Issue
 
@@ -49,8 +49,14 @@
 - S4C quarantines direct Zoho token/upsert helpers, preserves `CRM_Invoice_Triggered` as a legacy compatibility marker only, and blocks invoice webhook handoff behind explicit stabilization logging.
 - S4C updates Admin UI wording so CRM is not presented as an active workflow authority.
 - S4C performs no sheet mutation, no column rename, no data migration, no Books integration, no trigger recreation, and no deploy.
+- S5A canonical intake and operations architecture active.
+- S5A is documentation and operational authority formalization only.
+- S5A replaces CRM-centric assumptions with a Books-native operational model while keeping CRM quarantined as a compatibility layer only.
+- S5A defines canonical intake lifecycle states, operational authority ownership, communication stages, finance direction, policy alignment, agentic document review limits, and incomplete intake recovery.
+- S5A explicitly keeps `CRM` quarantined, `Sheet` authoritative for intake, `Drive` authoritative for documents, `Admin` authoritative for payment verification, and `Books` authoritative for finance direction.
+- S5A performs no Apps Script deployment, no runtime mutation, no schema mutation, no trigger mutation, no webhook edits, and no CRM unquarantine.
 - `clasp logs --json` remains unavailable because the GCP project ID is not set, and direct `clasp run` verification of trigger/runtime status remains blocked by script execution permissions.
-- Next proposed phase is `S5 Books-native finance architecture`.
+- Next proposed phase remains documentation-driven Books-native finance architecture, subject to a future CIS for implementation.
 - Trigger deleted by operator.
 - No trigger recreation is authorized in S1 or S2B.
 - No code mutation performed in S2C.
@@ -369,7 +375,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-Preserve r149 as the live stabilization baseline with CRM legacy quarantine enabled. Do not deploy from this CIS. Use the new quarantine boundary and compatibility notes to design `S5 Books-native finance architecture` without reviving CRM-era authority, schema mutation, trigger recreation, or external finance handoff.
+Preserve r149 as the live stabilization baseline with CRM legacy quarantine enabled. Use the S5A operational model to formalize intake, authority, communication, and finance direction without reviving CRM-era authority, schema mutation, trigger recreation, or external finance handoff.
 
 ## Cautions
 
