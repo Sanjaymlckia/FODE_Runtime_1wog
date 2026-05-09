@@ -2,7 +2,7 @@
 
 ## Current Objective
 
- Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S4A Live CRM Leakage Trace, with r149 now deployed as the live tracing baseline.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S4B Payment / Invoice CRM Leakage Trace, with r149 still serving as the live tracing baseline.
 
 ## Current Issue
 
@@ -33,11 +33,21 @@
 - S4A adds outbound forensic tracing and redacted destination logging only.
 - No CRM removal is authorized in S4A.
 - A second unknown webhook or automation source is suspected until the outbound trace is closed.
+- S4B payment / invoice CRM leakage trace active.
+- S4B purpose is to verify whether the remaining CRM leakage is triggered by payment verification or invoice handoff using the clean S4A test applicant only.
+- S4B authorizes no code change, no schema change, no deploy, no trigger recreation, no CRM deletion, no Books integration, and no bulk/send actions.
 - Controlled FD test submission on r149 created row `FODE_Data!2905`, applicant `FODE-26-002929`, folder `1dbyqD9PsRdpoY_ArRw3YrejQS1HXWddW`, and copied four test files into Drive.
 - Controlled FD test row committed with `FormID = S4A-FD-20260509182546`, `correlation_id = S4A-20260509182546`, `CRM_Response = blank`, `Contact_ID = blank`, `Deal_ID = blank`, and `CRM_Invoice_Triggered = blank`.
 - This narrows the remaining CRM leakage away from the base FD intake path and toward payment/invoice transition logic or an external automation source.
+- S4B preflight completed against live `r149 / 149` Admin and Student runtimes and production row `FODE_Data!2905`; `CRM_Response`, `Contact_ID`, `Deal_ID`, `CRM_Invoice_Triggered`, `Invoice_Approved`, `Invoice_Sent_At`, `Receipt_Status`, `Payment_Verified`, and `Registration_Complete` were all still blank before any payment action.
+- No code mutation was performed in S4B.
+- No controlled payment/receipt verification action was executed from this session because no interactive Admin browser surface or CRM search connector was available to complete the live trace safely.
+- S4B therefore did not confirm or disprove payment/invoice-path leakage in this session; the remaining suspect set stays at payment/invoice transition logic or external automation.
 - `clasp logs --json` remains unavailable because the GCP project ID is not set, and direct `clasp run` verification of trigger/runtime status remains blocked by script execution permissions.
-- Next step depends on S4A payment/invoice-path trace findings and operator-side webhook inventory checks.
+- Next proposed phase is:
+  - `S4C external automation inventory` if CRM appears outside runtime fields during operator rerun.
+  - `S4C invoice webhook quarantine` if the invoice path fires during operator rerun.
+  - `S5 intake integrity diagnostics` if the controlled payment verification produces no leakage.
 - Trigger deleted by operator.
 - No trigger recreation is authorized in S1 or S2B.
 - No code mutation performed in S2C.
@@ -356,7 +366,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-Complete S3A controlled stabilization patch validation, preserve runtime as undeployed local source only, and do not perform deploy actions, schema mutation, CRM deletion, sheet mutation, or trigger recreation in this CIS lineage. r148 browser/operator acceptance remains pending until a later authorized runtime phase.
+Re-run S4B from an operator-capable session with interactive Admin UI access and CRM search access. In the canonical Admin UI, perform exactly one minimum payment/receipt verification action on applicant `FODE-26-002929`, note the exact click time, then re-read row `FODE_Data!2905`, compare any visible `S4A_*` traces, and choose `S4C external automation inventory`, `S4C invoice webhook quarantine`, or `S5 intake integrity diagnostics` from the observed result.
 
 ## Cautions
 
