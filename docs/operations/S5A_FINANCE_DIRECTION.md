@@ -37,3 +37,7 @@ Scope: finance authority and policy direction
 - Do not re-enable CRM invoice authority.
 - Keep future automation rollback-safe and manually overridable.
 
+## Roadmap Cross-Reference
+
+- The unified operations platform roadmap places Books-native finance as a shared canonical layer for future product overlays.
+- CRM remains quarantined until a future CIS explicitly authorizes any finance implementation work.

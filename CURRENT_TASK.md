@@ -2,7 +2,7 @@
 
 ## Current Objective
 
- Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S5A Canonical Intake and Operations Architecture documentation, with r149 still serving as the live stabilization baseline.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S5A Canonical Intake and Operations Architecture documentation plus the unified operations platform roadmap update, with r149 still serving as the live stabilization baseline.
 
 ## Current Issue
 
@@ -55,8 +55,12 @@
 - S5A defines canonical intake lifecycle states, operational authority ownership, communication stages, finance direction, policy alignment, agentic document review limits, and incomplete intake recovery.
 - S5A explicitly keeps `CRM` quarantined, `Sheet` authoritative for intake, `Drive` authoritative for documents, `Admin` authoritative for payment verification, and `Books` authoritative for finance direction.
 - S5A performs no Apps Script deployment, no runtime mutation, no schema mutation, no trigger mutation, no webhook edits, and no CRM unquarantine.
+- A future roadmap phase has been added for a unified operations platform refactor serving FODE, KIA, and MLC with product-specific overlays.
+- The roadmap is documentation-only and sits after FODE stabilization but before any large-scale Books integration rollout.
+- CRM remains quarantined as a compatibility layer only.
+- Books implementation remains future CIS only.
 - `clasp logs --json` remains unavailable because the GCP project ID is not set, and direct `clasp run` verification of trigger/runtime status remains blocked by script execution permissions.
-- Next proposed phase remains documentation-driven Books-native finance architecture, subject to a future CIS for implementation.
+- Next proposed phase remains documentation-driven Books-native finance architecture and the future unified operations platform workstream, subject to future CIS authorization.
 - Trigger deleted by operator.
 - No trigger recreation is authorized in S1 or S2B.
 - No code mutation performed in S2C.
@@ -375,7 +379,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-Preserve r149 as the live stabilization baseline with CRM legacy quarantine enabled. Use the S5A operational model to formalize intake, authority, communication, and finance direction without reviving CRM-era authority, schema mutation, trigger recreation, or external finance handoff.
+Preserve r149 as the live stabilization baseline with CRM legacy quarantine enabled. Use the S5A operational model and new unified operations roadmap to formalize intake, authority, communication, finance direction, and product overlays without reviving CRM-era authority, schema mutation, trigger recreation, or external finance handoff.
 
 ## Cautions
 

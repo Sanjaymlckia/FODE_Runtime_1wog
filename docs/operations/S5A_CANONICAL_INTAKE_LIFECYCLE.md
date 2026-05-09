@@ -99,3 +99,7 @@ Scope: documentation-only operational model
 - `CRM_Invoice_Triggered` is legacy compatibility only.
 - No lifecycle state should imply CRM authority.
 
+## Roadmap Cross-Reference
+
+- The future unified operations platform roadmap should reuse these lifecycle states as shared primitives rather than reintroducing CRM-centric flow control.
+- Product overlays may add product-specific transitions, but the core lifecycle remains governed by the same canonical states.

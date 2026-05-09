@@ -38,3 +38,8 @@ Scope: authority and ownership model
 - Finance logic belongs to the Books-native future design, not CRM.
 - Communication execution belongs to approved workflow paths with explicit logging.
 
+## Roadmap Cross-Reference
+
+- The unified operations platform roadmap should treat this map as the canonical authority model for shared primitives.
+- Future product overlays must not change the authority order:
+  Sheet, Drive, Admin, Books, then quarantined CRM compatibility.
