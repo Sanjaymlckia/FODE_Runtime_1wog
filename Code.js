@@ -4273,6 +4273,17 @@ function sendEmailBestEffort_(toEmail, subject, body, logLabel, meta) {
   }
   try {
     if (!to) throw new Error("Missing recipient email");
+    var unattendedBlock = blockUnattendedEmailSendIfNeeded_(clean_(payload.templateType || lbl || subject || ""), to, {
+      action: clean_(payload.action || "send_email_best_effort"),
+      sendSource: clean_(payload.sendSource || payload.source || ""),
+      unattended: payload.unattended === true,
+      applicantId: clean_(payload.applicantId || ""),
+      rowObj: payload.rowObj && typeof payload.rowObj === "object" ? payload.rowObj : {},
+      debugId: clean_(payload.debugId || dbgId || "")
+    });
+    if (unattendedBlock.blocked) {
+      return { ok: false, debugId: dbgId, to: to, error: unattendedBlock.blockCode, blocked: true };
+    }
     MailApp.sendEmail({
       to: to,
       subject: String(subject || ""),
@@ -4339,7 +4350,12 @@ function sendDocsVerifiedPaymentRequiredEmail_(rowObj, rowNumber, actorEmail) {
     rowNumber: rowNum,
     by: clean_(actorEmail || ""),
     recipient: recipient,
-    feeQuote: quote
+    feeQuote: quote,
+    rowObj: row,
+    templateType: "docs_verified_payment_required",
+    sendSource: "DOCS_VERIFIED_WORKFLOW",
+    unattended: true,
+    action: "docs_verified_payment_required_email"
   });
   sendRes.portalUrl = portalUrl;
   sendRes.feeQuote = quote;
@@ -4378,7 +4394,12 @@ function notifyAdminPaymentReceiptUploaded_(rowObj, rowNumber, opts) {
     applicantId: applicantId,
     rowNumber: Number(rowNumber || 0) || "",
     source: clean_(opts.source || ""),
-    adminUrl: adminUrl
+    adminUrl: adminUrl,
+    rowObj: row,
+    templateType: "payment_receipt_alert",
+    sendSource: "PAYMENT_RECEIPT_WORKFLOW",
+    unattended: true,
+    action: "payment_receipt_alert_email"
   });
 }
 
@@ -6110,6 +6131,17 @@ function campaignSendEmailGmail_(toEmail, subject, body, meta) {
   }
   if (!to) return { ok: false, error: "Missing recipient email" };
   if (!alias) return { ok: false, error: "Missing campaign Gmail alias" };
+  var unattendedBlock = blockUnattendedEmailSendIfNeeded_(clean_(trace.templateType || trace.messageType || subject || ""), to, {
+    action: "campaign_send_email",
+    sendSource: clean_(trace.sendSource || ""),
+    unattended: trace.unattended === true,
+    applicantId: clean_(trace.applicantId || ""),
+    rowObj: trace.rowObj && typeof trace.rowObj === "object" ? trace.rowObj : {},
+    debugId: clean_(trace.requestId || trace.debugId || "")
+  });
+  if (unattendedBlock.blocked) {
+    return { ok: false, error: unattendedBlock.blockCode, blocked: true, to: to, from: alias, replyTo: replyTo };
+  }
   campaignLog_("GMAIL_ALIAS_LOOKUP_BEGIN", traceBase);
   try {
     var aliases = GmailApp.getAliases();
@@ -6896,10 +6928,13 @@ function buildApplicantMessage_(context) {
 function computeEmailIdempotencyKey_(context, opts) {
   var ctx = context && typeof context === "object" ? context : {};
   var options = opts && typeof opts === "object" ? opts : {};
-  var applicantId = clean_(ctx.applicantId || options.applicantId || "");
-  var messageType = clean_(ctx.messageType || options.messageType || "").toLowerCase();
-  var batchId = clean_(options.batchId || options.batchLabel || ctx.batchLabel || "");
-  return ["EMAIL", applicantId, messageType, batchId].join("::");
+  return buildSendIdempotencyKey_(ctx.rowObj || {}, clean_(ctx.messageType || options.messageType || ""), clean_(ctx.effectiveEmail || options.recipient || ""), {
+    applicantId: clean_(ctx.applicantId || options.applicantId || ""),
+    batchId: clean_(options.batchId || options.batchLabel || ctx.batchLabel || ""),
+    batchLabel: clean_(options.batchLabel || ctx.batchLabel || ""),
+    sendSource: clean_(options.sendSource || ctx.sendSource || ""),
+    recipient: clean_(ctx.effectiveEmail || options.recipient || "")
+  });
 }
 
 function wasEmailAlreadyProcessed_(context, idempotencyKey) {
@@ -7110,7 +7145,11 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
     requestId: requestId,
     batchId: batchId,
     batchLabel: batchId,
-    manualSingleSendProbe: manualProbe
+    manualSingleSendProbe: manualProbe,
+    templateType: clean_(ctx.messageType || ""),
+    sendSource: clean_(options.sendSource || ctx.sendSource || ""),
+    unattended: options.unattended === true || ctx.unattended === true,
+    rowObj: ctx.rowObj && typeof ctx.rowObj === "object" ? ctx.rowObj : {}
   });
   if (!sendRes.ok) {
     if (manualProbe) {
@@ -7636,7 +7675,9 @@ function runAutomatedStageBatchChunk_(opts) {
       actorEmail: actor.actorEmail,
       actorRole: actor.actorRole,
       batchLabel: batchLabel,
-      debugId: requestId
+      debugId: requestId,
+      sendSource: "AUTOMATED_STAGE_RUNNER",
+      unattended: true
     });
     var resultType = clean_(sendResult && sendResult.result || "").toUpperCase();
     if (resultType === "SENT") {
@@ -8831,7 +8872,11 @@ function campaign_sendLegacyFollowups_(limit) {
     var attemptCount = Number(baseState.attemptCount || 0);
     if (attemptCount < 1 || attemptCount >= 3) continue;
     selected++;
-    var sendRes = sendApplicantMessage_(clean_(state.applicantId || ""), "reminder", { batchLabel: batchLabel });
+    var sendRes = sendApplicantMessage_(clean_(state.applicantId || ""), "reminder", {
+      batchLabel: batchLabel,
+      sendSource: "CAMPAIGN_FOLLOWUP_WORKFLOW",
+      unattended: true
+    });
     if (sendRes.result === "SENT") sent++;
     else skipped.push({ applicantId: clean_(state.applicantId || ""), rowNumber: rowNumber, reason: clean_(sendRes.blockCode || sendRes.code || sendRes.error || "SEND_FAILED") });
   }

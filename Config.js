@@ -88,6 +88,7 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   SYSTEM_STABILIZATION_MODE: false,
   ENABLE_CONTROLLED_MANUAL_SEND_PROBE: true,
   ENABLE_MANUAL_SINGLE_SENDS: true,
+  ENABLE_UNATTENDED_EMAIL_SENDS: false,
   ENABLE_BATCH_PREVIEW_MODE: true,
   ENABLE_BATCH_SENDS: true,
   ENABLE_TRIGGER_SENDS: true,

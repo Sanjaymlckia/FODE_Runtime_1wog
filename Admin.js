@@ -1163,7 +1163,16 @@ function sendQuoteEmail_(rowObj, debugId) {
     "Minerva Learning Centers Ltd"
   ].join("\n");
   var cc = safeStr_(CONFIG.EMAIL_ADMIN_ALERTS_TO || "");
-  var sent = adminSendEmail_(to, subject, body, { cc: cc });
+  var sent = adminSendEmail_(to, subject, body, {
+    cc: cc,
+    templateType: "docs_verified_quote_email",
+    sendSource: "DOCS_VERIFIED_WORKFLOW",
+    unattended: true,
+    applicantId: applicantId,
+    rowObj: row,
+    debugId: debugId,
+    action: "docs_verified_quote_email"
+  });
   if (!sent.ok) {
     logAdminEvent_("QUOTE_EMAIL_FAILED", {
       applicantId: applicantId,
@@ -1214,7 +1223,16 @@ function sendPaymentEmail_(rowObj, debugId) {
     "Minerva Learning Centers Ltd"
   ].join("\n");
   var cc = joinEmails_(CONFIG.INTERNAL_FINANCE_EMAILS || []);
-  var sent = adminSendEmail_(to, subject, body, { cc: cc });
+  var sent = adminSendEmail_(to, subject, body, {
+    cc: cc,
+    templateType: "payment_verified_notice",
+    sendSource: "INVOICE_TRIGGER_PAYMENT_NOTICE",
+    unattended: true,
+    applicantId: applicantId,
+    rowObj: row,
+    debugId: debugId,
+    action: "invoice_trigger_payment_notice_email"
+  });
   if (!sent.ok) return { ok: false, status: "failed", code: "EMAIL_SEND_FAILED", message: safeStr_(sent.error || "Payment email failed") };
   logAdminEvent_("PAYMENT_CONFIRM_EMAIL_SENT", { applicantId: applicantId, to: to, cc: cc, debugId: debugId });
   return { ok: true, status: "sent" };
@@ -4732,7 +4750,9 @@ function admin_sendStageBatch(payload) {
           actorEmail: actor.actorEmail,
           actorRole: actor.actorRole,
           batchLabel: batchLabel,
-          debugId: requestId
+          debugId: requestId,
+          sendSource: "ADMIN_STAGE_BATCH",
+          unattended: false
         });
         stageBatchLogSummary_("STAGE_SEND_CANDIDATE_END", {
           requestId: requestId,

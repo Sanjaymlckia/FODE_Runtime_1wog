@@ -1337,6 +1337,59 @@ function isTriggerSendEnabled_() {
     && CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS === true;
 }
 
+function normalizeSendRecipient_(recipient) {
+  return String(recipient == null ? "" : recipient)
+    .split(/[;,]/)
+    .map(function(part) { return safeStr_(part || "").toLowerCase(); })
+    .filter(function(part) { return !!part; })
+    .sort()
+    .join(",");
+}
+
+function buildSendIdempotencyKey_(row, templateType, recipient, context) {
+  var rowObj = row && typeof row === "object" ? row : {};
+  var ctx = context && typeof context === "object" ? context : {};
+  var applicantId = safeStr_(ctx.applicantId || rowObj.ApplicantID || (typeof SCHEMA !== "undefined" ? rowObj[SCHEMA.APPLICANT_ID] : "") || "");
+  var formId = safeStr_(ctx.formId || rowObj.FormID || rowObj.FD_FormID || "");
+  var stableIdentity = applicantId || formId || safeStr_(ctx.identity || "UNKNOWN");
+  var normalizedTemplate = safeStr_(templateType || ctx.templateType || ctx.messageType || ctx.logLabel || ctx.action || "UNKNOWN").toLowerCase();
+  var normalizedRecipient = normalizeSendRecipient_(recipient || ctx.recipient || ctx.effectiveEmail || rowObj.Parent_Email_Corrected || rowObj.Parent_Email || "");
+  var normalizedContext = safeStr_(ctx.batchId || ctx.batchLabel || ctx.sendSource || ctx.source || ctx.scope || "DEFAULT").toLowerCase();
+  return ["EMAIL", stableIdentity || "UNKNOWN", normalizedTemplate || "unknown", normalizedRecipient || "no_recipient", normalizedContext || "default"].join("::");
+}
+
+function isUnattendedEmailSource_(source) {
+  var normalized = safeStr_(source || "").toUpperCase();
+  return /TRIGGER|AUTOMATED|AUTO_|RUNNER|SCHEDULE|SCHEDULER|WORKFLOW|FOLLOWUP/.test(normalized);
+}
+
+function blockUnattendedEmailSendIfNeeded_(templateType, recipient, context) {
+  var ctx = context && typeof context === "object" ? context : {};
+  var source = safeStr_(ctx.sendSource || ctx.source || ctx.action || "");
+  var unattended = ctx.unattended === true || isUnattendedEmailSource_(source);
+  if (!unattended) return { blocked: false };
+  if (CONFIG && CONFIG.ENABLE_UNATTENDED_EMAIL_SENDS === true) {
+    return { blocked: false, reauthorized: true };
+  }
+  var rowObj = ctx.rowObj && typeof ctx.rowObj === "object" ? ctx.rowObj : {};
+  var idempotencyKey = buildSendIdempotencyKey_(rowObj, templateType, recipient, ctx);
+  logOperationalBlock_("STABILIZATION_UNATTENDED_SEND_BLOCK", {
+    action: safeStr_(ctx.action || "email_send"),
+    source: source || "UNATTENDED",
+    applicantId: safeStr_(ctx.applicantId || rowObj.ApplicantID || ""),
+    recipient: normalizeSendRecipient_(recipient || ""),
+    templateType: safeStr_(templateType || ctx.templateType || ctx.messageType || ctx.logLabel || ""),
+    debugId: safeStr_(ctx.debugId || ctx.requestId || ""),
+    idempotencyKey: idempotencyKey
+  });
+  return {
+    blocked: true,
+    blockCode: "STABILIZATION_UNATTENDED_SEND_BLOCK",
+    blockReason: "Unattended email sends are disabled during stabilization.",
+    idempotencyKey: idempotencyKey
+  };
+}
+
 function logOperationalBlock_(label, payload) {
   var tag = safeStr_(label || "OPERATION_BLOCKED");
   var data = payload && typeof payload === "object" ? payload : {};
@@ -1806,10 +1859,18 @@ function handlePaymentVerifiedTrigger_(rowObj, debugId) {
         + clean_(row["First_Name"] || "") + " " + clean_(row["Last_Name"] || "")
         + " (ApplicantID: " + applicantId + ").\n\n"
         + "Next steps: Please stand by for enrolment/access instructions.";
-      MailApp.sendEmail(parentEmail, clean_(CONFIG.PAYVER_STUDENT_SUBJECT || "Payment Verified - FODE"), body, {
+      var studentSend = adminSendEmail_(parentEmail, clean_(CONFIG.PAYVER_STUDENT_SUBJECT || "Payment Verified - FODE"), body, {
         replyTo: clean_(CONFIG.EMAIL_REPLY_TO || ""),
-        name: clean_(CONFIG.EMAIL_FROM_NAME || "FODE Admissions")
+        name: clean_(CONFIG.EMAIL_FROM_NAME || "FODE Admissions"),
+        templateType: "payment_verified_student",
+        sendSource: "PAYMENT_VERIFIED_WORKFLOW",
+        unattended: true,
+        applicantId: applicantId,
+        rowObj: row,
+        debugId: debugId,
+        action: "payment_verified_student_email"
       });
+      if (!studentSend.ok) throw new Error(clean_(studentSend.error || "Payment verified student email failed"));
     } else {
       warnings.push("No parent email");
       logAdminEvent_("PAYVER_EMAIL_SKIPPED_NO_EMAIL", { applicantId: applicantId, debugId: debugId });
@@ -1822,10 +1883,18 @@ function handlePaymentVerifiedTrigger_(rowObj, debugId) {
       + "Phone: " + clean_(row["Parent_Phone"] || "") + "\n"
       + "Email: " + (parentEmail || clean_(row["Parent_Email_Corrected"] || "") || clean_(row["Parent_Email"] || "") || "") + "\n\n"
       + "Action: Release access / proceed to next steps.";
-    MailApp.sendEmail(clean_(CONFIG.EMAIL_RELEASE_ADMIN_TO || ""), clean_(CONFIG.PAYVER_ADMIN_SUBJECT || "Payment Verified - Release Access"), adminBody, {
+    var adminSend = adminSendEmail_(clean_(CONFIG.EMAIL_RELEASE_ADMIN_TO || ""), clean_(CONFIG.PAYVER_ADMIN_SUBJECT || "Payment Verified - Release Access"), adminBody, {
       replyTo: clean_(CONFIG.EMAIL_REPLY_TO || ""),
-      name: clean_(CONFIG.EMAIL_FROM_NAME || "FODE Admissions")
+      name: clean_(CONFIG.EMAIL_FROM_NAME || "FODE Admissions"),
+      templateType: "payment_verified_admin_release",
+      sendSource: "PAYMENT_VERIFIED_WORKFLOW",
+      unattended: true,
+      applicantId: applicantId,
+      rowObj: row,
+      debugId: debugId,
+      action: "payment_verified_admin_release_email"
     });
+    if (!adminSend.ok) throw new Error(clean_(adminSend.error || "Payment verified admin release email failed"));
 
     if (CONFIG.CRM_PUSH_DRY_RUN === true) {
       var crmPayload = {
@@ -1892,6 +1961,25 @@ function adminSendEmail_(to, subject, body, opts) {
 
   if (!toEmail) {
     return { ok: false, error: "Missing recipient email", from: fromAddr, replyTo: replyTo, cc: cc };
+  }
+
+  var unattendedBlock = blockUnattendedEmailSendIfNeeded_(safeStr_(o.templateType || subj || ""), toEmail, {
+    action: safeStr_(o.action || "admin_send_email"),
+    sendSource: safeStr_(o.sendSource || ""),
+    unattended: o.unattended === true,
+    applicantId: safeStr_(o.applicantId || ""),
+    rowObj: o.rowObj && typeof o.rowObj === "object" ? o.rowObj : {},
+    debugId: safeStr_(o.debugId || "")
+  });
+  if (unattendedBlock.blocked) {
+    return {
+      ok: false,
+      error: unattendedBlock.blockCode,
+      blocked: true,
+      from: fromAddr,
+      replyTo: replyTo,
+      cc: cc
+    };
   }
 
   try {
