@@ -80,6 +80,7 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   CRM_PIPELINE_FODE: "FODE Admissions",
   CRM_STAGE_PAYMENT_VERIFIED: "Payment Verified",
   ENABLE_FODE_CRM_PIPELINE: false,
+  ENABLE_CRM_LEGACY_QUARANTINE: true,
   FODE_CRM_PIPELINE_NAME: "FODE",
   MAX_STAGE_BATCH_SIZE: 30,
   DEFAULT_STAGE_BATCH_SIZE: 30,
@@ -182,6 +183,7 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   DOCS_FOLLOWUP_SHOW_IN_QUEUES: true,
   QUOTE_EMAIL_ENABLED: true,
   INVOICE_TRIGGER_ENABLED: false,
+  ENABLE_INVOICE_WEBHOOK_HANDOFF: false,
   INVOICE_TRIGGER_MODE: "LOG_ONLY", // "LOG_ONLY" | "WEBHOOK"
   INVOICE_WEBHOOK_URL: "",
   INTERNAL_FINANCE_EMAILS: [

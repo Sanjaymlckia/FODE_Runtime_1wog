@@ -2,7 +2,7 @@
 
 ## Current Objective
 
- Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S4B Payment / Invoice CRM Leakage Trace, with r149 still serving as the live tracing baseline.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S4C CRM Quarantine and Legacy Isolation, with r149 still serving as the live stabilization baseline.
 
 ## Current Issue
 
@@ -43,11 +43,14 @@
 - No code mutation was performed in S4B.
 - No controlled payment/receipt verification action was executed from this session because no interactive Admin browser surface or CRM search connector was available to complete the live trace safely.
 - S4B therefore did not confirm or disprove payment/invoice-path leakage in this session; the remaining suspect set stays at payment/invoice transition logic or external automation.
+- S4C CRM quarantine and legacy isolation active.
+- S4C implements explicit CRM legacy quarantine without schema mutation or deploy action.
+- S4C confirms `ENABLE_FODE_CRM_PIPELINE = false`, `ENABLE_CRM_LEGACY_QUARANTINE = true`, `ENABLE_INVOICE_WEBHOOK_HANDOFF = false`, and `ENABLE_UNATTENDED_EMAIL_SENDS = false`.
+- S4C quarantines direct Zoho token/upsert helpers, preserves `CRM_Invoice_Triggered` as a legacy compatibility marker only, and blocks invoice webhook handoff behind explicit stabilization logging.
+- S4C updates Admin UI wording so CRM is not presented as an active workflow authority.
+- S4C performs no sheet mutation, no column rename, no data migration, no Books integration, no trigger recreation, and no deploy.
 - `clasp logs --json` remains unavailable because the GCP project ID is not set, and direct `clasp run` verification of trigger/runtime status remains blocked by script execution permissions.
-- Next proposed phase is:
-  - `S4C external automation inventory` if CRM appears outside runtime fields during operator rerun.
-  - `S4C invoice webhook quarantine` if the invoice path fires during operator rerun.
-  - `S5 intake integrity diagnostics` if the controlled payment verification produces no leakage.
+- Next proposed phase is `S5 Books-native finance architecture`.
 - Trigger deleted by operator.
 - No trigger recreation is authorized in S1 or S2B.
 - No code mutation performed in S2C.
@@ -366,7 +369,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-Re-run S4B from an operator-capable session with interactive Admin UI access and CRM search access. In the canonical Admin UI, perform exactly one minimum payment/receipt verification action on applicant `FODE-26-002929`, note the exact click time, then re-read row `FODE_Data!2905`, compare any visible `S4A_*` traces, and choose `S4C external automation inventory`, `S4C invoice webhook quarantine`, or `S5 intake integrity diagnostics` from the observed result.
+Preserve r149 as the live stabilization baseline with CRM legacy quarantine enabled. Do not deploy from this CIS. Use the new quarantine boundary and compatibility notes to design `S5 Books-native finance architecture` without reviving CRM-era authority, schema mutation, trigger recreation, or external finance handoff.
 
 ## Cautions
 

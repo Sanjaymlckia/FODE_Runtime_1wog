@@ -4466,6 +4466,9 @@ function shouldCreateFodeCrmDeal_(rowObj) {
 
 function shouldCreateFodeCrmInvoice_(rowObj) {
   var row = rowObj || {};
+  // `CRM_Invoice_Triggered` is retained as a legacy compatibility marker only.
+  if (CONFIG.ENABLE_CRM_LEGACY_QUARANTINE === true) return false;
+  if (CONFIG.ENABLE_INVOICE_WEBHOOK_HANDOFF !== true) return false;
   logS4aOutboundTrace_("S4A_CRM_SUSPECT_PATH", {
     sourceFunction: "shouldCreateFodeCrmInvoice_",
     configKeyName: "INVOICE_WEBHOOK_URL",

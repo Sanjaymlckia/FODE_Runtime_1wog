@@ -144,3 +144,12 @@ Rationale:
 2. Explicitly isolate CRM write functions behind a quarantine boundary in documentation first.
 3. Audit invoice-trigger and Books-adjacent paths separately from CRM removal.
 4. Remove dormant CRM writes only after non-CRM dependencies are proven absent under a future CIS.
+
+## S4C Quarantine Update
+
+- Intake path is clean: the controlled S4A applicant reached the sheet and Drive without populating `CRM_Response`, `Contact_ID`, `Deal_ID`, or `CRM_Invoice_Triggered`.
+- Payment/invoice boundary is now treated as a legacy finance-handoff seam, not as a live CRM authority.
+- CRM write helpers are now quarantined under `ENABLE_CRM_LEGACY_QUARANTINE = true`.
+- Invoice webhook handoff is explicitly disabled under `ENABLE_INVOICE_WEBHOOK_HANDOFF = false`.
+- `CRM_Invoice_Triggered` remains preserved as a compatibility marker only until a Books-native finance status replaces it.
+- Next design step is Books-native finance architecture, not CRM reactivation.

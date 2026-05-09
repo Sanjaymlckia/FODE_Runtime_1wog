@@ -1007,6 +1007,14 @@ function admin_setPaymentVerified_impl_(payload, dbgId) {
 }
 
 function triggerCrmDealForFode_(rowObj, rowNumber, sh, idx) {
+  var quarantine = assertCrmLegacyQuarantined_({
+    action: "trigger_crm_deal_for_fode",
+    sourceFunction: "triggerCrmDealForFode_",
+    applicantId: clean_((rowObj || {}).ApplicantID || ""),
+    formId: clean_((rowObj || {}).FormID || (rowObj || {}).FD_FormID || ""),
+    rowNumber: Number(rowNumber || 0),
+    operationType: "crm_deal_trigger"
+  });
   logOperationalBlock_("STABILIZATION_CRM_WRITE_BLOCK", {
     action: "trigger_crm_deal_for_fode",
     rowNumber: Number(rowNumber || 0),
@@ -1023,13 +1031,21 @@ function triggerCrmDealForFode_(rowObj, rowNumber, sh, idx) {
     ok: true,
     enabled: false,
     blocked: true,
-    reason: "STABILIZATION_DISABLED",
+    reason: quarantine && quarantine.code ? quarantine.code : "STABILIZATION_DISABLED",
     shouldCreateDeal: false,
     rowNumber: Number(rowNumber || 0)
   };
 }
 
 function syncFodeCrmStage_(rowObj, rowNumber, sh, idx) {
+  var quarantine = assertCrmLegacyQuarantined_({
+    action: "sync_fode_crm_stage",
+    sourceFunction: "syncFodeCrmStage_",
+    applicantId: clean_((rowObj || {}).ApplicantID || ""),
+    formId: clean_((rowObj || {}).FormID || (rowObj || {}).FD_FormID || ""),
+    rowNumber: Number(rowNumber || 0),
+    operationType: "crm_stage_sync"
+  });
   logOperationalBlock_("STABILIZATION_CRM_WRITE_BLOCK", {
     action: "sync_fode_crm_stage",
     rowNumber: Number(rowNumber || 0),
@@ -1046,7 +1062,7 @@ function syncFodeCrmStage_(rowObj, rowNumber, sh, idx) {
     ok: true,
     enabled: false,
     blocked: true,
-    reason: "STABILIZATION_DISABLED",
+    reason: quarantine && quarantine.code ? quarantine.code : "STABILIZATION_DISABLED",
     crmStage: "",
     shouldCreateInvoice: false,
     rowNumber: Number(rowNumber || 0)
@@ -1060,6 +1076,14 @@ function crm_syncOnPaymentVerified_(rowNumber, sh, idx) {
     if (sheet) rowObj = getRowObject_(sheet, rowNumber) || {};
   } catch (_sheetErr) {}
   var applicantId = clean_(rowObj.ApplicantID || "");
+  var quarantine = assertCrmLegacyQuarantined_({
+    action: "crm_sync_on_payment_verified",
+    sourceFunction: "crm_syncOnPaymentVerified_",
+    applicantId: applicantId,
+    formId: clean_(rowObj.FormID || rowObj.FD_FormID || ""),
+    rowNumber: Number(rowNumber || 0),
+    operationType: "crm_payment_verified_sync"
+  });
   logOperationalBlock_("STABILIZATION_CRM_WRITE_BLOCK", {
     action: "crm_sync_on_payment_verified",
     rowNumber: Number(rowNumber || 0),
@@ -1074,7 +1098,7 @@ function crm_syncOnPaymentVerified_(rowNumber, sh, idx) {
     attempted: false,
     ok: true,
     blocked: true,
-    reason: "STABILIZATION_DISABLED",
+    reason: quarantine && quarantine.code ? quarantine.code : "STABILIZATION_DISABLED",
     debugId: newDebugId_(),
     applicantId: applicantId
   };
@@ -1240,6 +1264,21 @@ function sendPaymentEmail_(rowObj, debugId) {
 
 function triggerInvoiceWebhook_(rowObj, debugId) {
   var row = rowObj || {};
+  if (CONFIG.ENABLE_INVOICE_WEBHOOK_HANDOFF !== true) {
+    var blockPayload = {
+      applicantId: safeStr_(row.ApplicantID || ""),
+      formId: safeStr_(row.FormID || row.FD_FormID || ""),
+      debugId: safeStr_(debugId || ""),
+      destinationHost: redactUrlForLog_(safeStr_(CONFIG.INVOICE_WEBHOOK_URL || ""))
+    };
+    logOperationalBlock_("INVOICE_WEBHOOK_QUARANTINE_BLOCK", blockPayload);
+    logAdminEvent_("INVOICE_WEBHOOK_QUARANTINE_BLOCK", blockPayload);
+    return {
+      ok: false,
+      code: "INVOICE_WEBHOOK_QUARANTINED",
+      message: "Invoice webhook handoff is quarantined during stabilization."
+    };
+  }
   var mode = safeStr_(CONFIG.INVOICE_TRIGGER_MODE || "LOG_ONLY") || "LOG_ONLY";
   if (mode === "LOG_ONLY") {
     logAdminEvent_("INVOICE_TRIGGER_LOG_ONLY", { applicantId: safeStr_(row.ApplicantID), debugId: debugId });
@@ -1703,6 +1742,7 @@ function handlePaymentVerifiedEmailTriggers_(rowObj, debugId) {
 function handleInvoiceTrigger_(sh, rowNumber, idx, rowObj, debugId) {
   var row = rowObj || {};
   var applicantId = safeStr_(row.ApplicantID);
+  // `CRM_Invoice_Triggered` remains a legacy compatibility marker until a Books-native finance status replaces it.
   logS4aOutboundTrace_("S4A_CRM_SUSPECT_PATH", {
     sourceFunction: "handleInvoiceTrigger_",
     configKeyName: "INVOICE_WEBHOOK_URL",

@@ -81,6 +81,14 @@
   - intake itself did not populate `CRM_Response`, `Contact_ID`, `Deal_ID`, or `CRM_Invoice_Triggered`
   - the strongest remaining candidates are payment/invoice transition logic or an external automation source
 
+## S4C Quarantine Update
+
+- Subsequent S4C stabilization treats the payment/invoice boundary as a legacy finance-handoff seam, not a live CRM authority.
+- CRM write helpers are explicitly quarantined behind `ENABLE_CRM_LEGACY_QUARANTINE = true`.
+- Invoice webhook handoff is explicitly disabled behind `ENABLE_INVOICE_WEBHOOK_HANDOFF = false`.
+- `CRM_Invoice_Triggered` remains preserved as a compatibility-only marker until a Books-native finance status replaces it.
+- Next design direction after S4C is Books-native finance architecture.
+
 ## Recommended Next Step
 
 - Operator or a session with interactive Admin browser access should:

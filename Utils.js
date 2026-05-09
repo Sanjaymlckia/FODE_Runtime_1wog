@@ -441,6 +441,13 @@ function logPortalUploadError_(dbgId, applicantId, fieldName, msg, extraObj) {
 }
 
 function getZohoToken_() {
+  assertCrmLegacyQuarantined_({
+    action: "get_zoho_token",
+    sourceFunction: "getZohoToken_",
+    configKeyName: "ENABLE_CRM_LEGACY_QUARANTINE",
+    operationType: "zoho_token_refresh",
+    throwOnBlock: true
+  });
   var props = PropertiesService.getScriptProperties();
   var cached = clean_(props.getProperty("ZOHO_ACCESS_TOKEN") || "");
   var expMs = Number(props.getProperty("ZOHO_ACCESS_TOKEN_EXP_MS") || 0);
@@ -498,6 +505,15 @@ function getZohoToken_() {
 
 function upsertZohoContact_(token, payloadRowObj) {
   var p = payloadRowObj || {};
+  assertCrmLegacyQuarantined_({
+    action: "upsert_zoho_contact",
+    sourceFunction: "upsertZohoContact_",
+    configKeyName: "ENABLE_CRM_LEGACY_QUARANTINE",
+    applicantId: clean_(p.applicantId || ""),
+    formId: clean_(p.formId || ""),
+    operationType: "zoho_contact_upsert",
+    throwOnBlock: true
+  });
   var data = {
     First_Name: clean_(p.firstName || ""),
     Last_Name: clean_(p.lastName || p.fullName || "Unknown"),
@@ -547,6 +563,15 @@ function upsertZohoContact_(token, payloadRowObj) {
 
 function upsertZohoDeal_(token, payloadRowObj, folderUrl, contactId) {
   var p = payloadRowObj || {};
+  assertCrmLegacyQuarantined_({
+    action: "upsert_zoho_deal",
+    sourceFunction: "upsertZohoDeal_",
+    configKeyName: "ENABLE_CRM_LEGACY_QUARANTINE",
+    applicantId: clean_(p.applicantId || ""),
+    formId: clean_(p.formId || ""),
+    operationType: "zoho_deal_upsert",
+    throwOnBlock: true
+  });
   var duplicateField = clean_(CONFIG.DEAL_DUPLICATE_FIELD || "FormID");
   var stableFormId = clean_(p.formId || "");
   var applicantId = clean_(p.applicantId || "");
@@ -1473,6 +1498,39 @@ function logOperationalBlock_(label, payload) {
   var line = tag + " " + JSON.stringify(data);
   try { console.log(line); } catch (_consoleErr) {}
   try { Logger.log(line); } catch (_loggerErr) {}
+}
+
+function isCrmLegacyQuarantined_() {
+  return !!(CONFIG && CONFIG.ENABLE_CRM_LEGACY_QUARANTINE === true);
+}
+
+function assertCrmLegacyQuarantined_(context) {
+  if (!isCrmLegacyQuarantined_()) return { blocked: false };
+  var ctx = context && typeof context === "object" ? context : {};
+  var payload = {
+    action: safeStr_(ctx.action || ctx.sourceFunction || "crm_legacy_path"),
+    sourceFunction: safeStr_(ctx.sourceFunction || ""),
+    configKeyName: safeStr_(ctx.configKeyName || "ENABLE_CRM_LEGACY_QUARANTINE"),
+    applicantId: safeStr_(ctx.applicantId || ""),
+    formId: safeStr_(ctx.formId || ""),
+    rowNumber: Number(ctx.rowNumber || 0),
+    operationType: safeStr_(ctx.operationType || "crm_legacy_quarantine"),
+    reason: "CRM legacy pipeline is quarantined during stabilization."
+  };
+  logOperationalBlock_("CRM_LEGACY_QUARANTINE_BLOCK", payload);
+  try { logAdminEvent_("CRM_LEGACY_QUARANTINE_BLOCK", payload); } catch (_adminLogErr) {}
+  if (ctx.throwOnBlock === true) {
+    var err = new Error("CRM_LEGACY_QUARANTINED");
+    err.code = "CRM_LEGACY_QUARANTINED";
+    err.details = payload;
+    throw err;
+  }
+  return {
+    blocked: true,
+    code: "CRM_LEGACY_QUARANTINED",
+    message: payload.reason,
+    details: payload
+  };
 }
 
 function logS4aOutboundTrace_(eventName, payload) {

@@ -4,6 +4,15 @@ Date: 2026-05-09
 Scope: outbound-path trace and forensic instrumentation only
 Method: local source inspection plus redacted trace logging
 
+## S4C Quarantine Follow-Up
+
+- S4A established that base FD intake did not create direct CRM artifacts for the controlled test applicant.
+- S4C converts that finding into an explicit quarantine boundary:
+  - CRM legacy write helpers are blocked behind `ENABLE_CRM_LEGACY_QUARANTINE = true`
+  - invoice webhook handoff is blocked behind `ENABLE_INVOICE_WEBHOOK_HANDOFF = false`
+- `CRM_Invoice_Triggered` remains in schema as a legacy compatibility marker only.
+- Current direction after S4C is Books-native finance design rather than CRM-era finance recovery.
+
 ## Summary
 
 - The direct Zoho CRM write functions are still present in source but remain dormant behind the stabilization no-op boundary.

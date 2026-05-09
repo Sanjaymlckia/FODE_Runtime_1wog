@@ -2319,7 +2319,7 @@ function renderStageDashboard_(items, emptyMessage){
         "Portal Submitted: " + workflowYesNo_(r.Portal_Submitted),
         "Docs Verified: " + workflowYesNo_(r.Docs_Verified),
         "Payment Evidence Uploaded: " + workflowYesNo_(r.Payment_Received),
-        "Payment Verified (compatibility mirror): " + workflowYesNo_(r.Payment_Verified),
+        "Payment Verified (legacy compatibility mirror): " + workflowYesNo_(r.Payment_Verified),
         "Enrolled Confirmed: " + workflowEnrolledLabel_(r)
       ].join(" | ");
     }
@@ -3187,7 +3187,7 @@ function renderStageDashboard_(items, emptyMessage){
       document.getElementById("mWorkflowPortalSubmitted").textContent = "Portal Submitted: " + workflowYesNo_(d.Portal_Submitted);
       document.getElementById("mWorkflowDocsVerified").textContent = "Docs Verified: " + workflowYesNo_(d.Docs_Verified);
       document.getElementById("mWorkflowPaymentReceived").textContent = "Payment Evidence Uploaded: " + workflowYesNo_(d.Payment_Received);
-      document.getElementById("mWorkflowPaymentVerified").textContent = "Payment Verified (compatibility mirror): " + workflowYesNo_(d.Payment_Verified);
+      document.getElementById("mWorkflowPaymentVerified").textContent = "Payment Verified (legacy compatibility mirror): " + workflowYesNo_(d.Payment_Verified);
       document.getElementById("mWorkflowEnrolledConfirmed").textContent = "Enrolled Confirmed: " + workflowEnrolledLabel_(d);
       var overrideTag = document.getElementById("mOverallOverride");
       if (overrideTag) {
@@ -3394,7 +3394,7 @@ function renderStageDashboard_(items, emptyMessage){
             if (res.actions && typeof res.actions === "object") {
               var qStatus = String(res.actions.quoteEmail || "skipped");
               var iStatus = String(res.actions.invoice || "skipped");
-              actionSummary = " | Quote email: " + qStatus + " | Invoice trigger: " + iStatus;
+              actionSummary = " | Quote email: " + qStatus + " | Legacy finance handoff: " + iStatus;
               if (iStatus === "failed") {
                 actionSummary += (res.actions.invoiceCode ? (" (" + String(res.actions.invoiceCode) + ")") : "");
               }
@@ -3402,7 +3402,7 @@ function renderStageDashboard_(items, emptyMessage){
             setMsg("mMsg", "Saved. Debug: " + (res.debugId || "(none)") + actionSummary);
             try { console.log("[SAVE] ok", { reqId: reqId, debugId: res.debugId || "", code: res.code || "" }); } catch (_e) {}
             if (res.actions && typeof res.actions === "object") {
-              setMsg("msg", "Quote email: " + String(res.actions.quoteEmail || "skipped") + " | Invoice trigger: " + String(res.actions.invoice || "skipped"));
+              setMsg("msg", "Quote email: " + String(res.actions.quoteEmail || "skipped") + " | Legacy finance handoff: " + String(res.actions.invoice || "skipped"));
               if (String(res.actions.invoice || "") === "failed" && res.debugId) {
                 console.warn("[SAVE] invoice action failed", { debugId: res.debugId, actions: res.actions });
               }
