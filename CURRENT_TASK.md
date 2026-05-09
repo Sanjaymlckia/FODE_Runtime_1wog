@@ -2,7 +2,7 @@
 
 ## Current Objective
 
- Maintain `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo after r148 Invalid Email WhatsApp Fallback Export Queue deployment.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S1 Stabilization Baseline Audit and after r148 Invalid Email WhatsApp Fallback Export Queue deployment.
 
 ## Current Issue
 
@@ -17,6 +17,10 @@
 - Student whoami: `r148 / 148`, mismatch `false`, script ID `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
 - Admin `?view=admin` HTML includes WhatsApp Fallback Queue controls, no-send/no-group warnings, and `admin_exportWhatsAppFallbackCsv`: PASS.
 - Browser/operator acceptance remains required before git push: export batch size 20, inspect first 5 CSV rows, confirm `675XXXXXXXX` phones, link/message correctness, no automatic send, and no row mutation.
+- S1 stabilization baseline audit active.
+- S1 scope is documentation-only baseline creation before CRM cleanup or workflow refactors.
+- Trigger deleted by operator.
+- No trigger recreation is authorized in S1.
 - r147 hardens bounce correlation to prefer explicit applicant-id tokens and unique recipient matches, while skipping ambiguous DSNs.
 - r147 keeps send-path, batch-send, trigger cadence, automation, and eligibility logic unchanged.
 - r147 Safe Bounce Correlation is deployed to live Admin and Student runtimes.
@@ -195,9 +199,9 @@
 ## Current Authority
 
 - GitHub repo: `Sanjaymlckia/FODE_Runtime_1wog`
-- Local repo: `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog`
-- Home-machine authoritative repo: `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog`
-- Active authoritative local repo for this session: `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog`
+- Local repo: `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog`
+- Home-machine authoritative repo: `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog`
+- Active authoritative local repo for this session: `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog`
 - Any legacy references to other local checkout paths are historical only.
 - Script ID: `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`
 - Baseline: `r128 / 128` live before r129 release.
@@ -332,7 +336,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-r148 browser/operator acceptance: open canonical Admin `?view=admin`, use WhatsApp Fallback Queue with batch size `20`, export CSV, inspect first 5 rows, confirm PNG phones normalize to `675XXXXXXXX`, `WhatsAppLink` opens WhatsApp Web/Business Web, `MessageText` is non-sensitive and includes `PortalUrl` only when `PortalUrlStatus = READY`, no automatic send occurs, and no row mutation occurs. Do not git push r148 until browser/operator acceptance passes.
+Complete S1 stabilization baseline audit docs, preserve runtime as read-only, keep trigger state dormant/deleted, and do not perform CRM cleanup, workflow refactors, deployment actions, or trigger recreation in this CIS. r148 browser/operator acceptance remains pending after S1.
 
 ## Cautions
 
@@ -347,3 +351,38 @@ r148 browser/operator acceptance: open canonical Admin `?view=admin`, use WhatsA
 - Treat live `whoami` as runtime truth.
 - Rollback prefers repinning Admin and Student to r124; if a trigger was installed, remove or disable the `automatedStageBatchRunner` trigger.
 - r141 is not deployed. Runtime rollback is not expected; if later deployed and rejected, repin Admin and Student to the last accepted baseline and verify whoami.
+
+## Handoff Update - 2026-05-08 14:32:01
+
+- Machine: DESKTOP-9J8KA0T
+- Project: FODE_RUNTIME
+- Path: C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog
+- Current status: Status:
+- Next exact step: Office session stabilized FODE repo authority to C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog. r148 deployed; browser/operator acceptance still pending. No runtime changes pending.
+- Risks/blockers:
+- Files modified: Next exact step:
+- Release state: At home, open CodexHub, select FODE Runtime, confirm CURRENT_TASK.md, git status, and continue r148 browser/operator acceptance. Do not push until acceptance passes.
+
+### Git Status
+
+```text
+## main...origin/main [ahead 1]
+```
+
+## Handoff Update - 2026-05-08 14:33:43
+
+- Machine: DESKTOP-9J8KA0T
+- Project: FODE_RUNTIME
+- Path: C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog
+- Current status: Status:
+- Next exact step: Office session stabilized FODE repo authority to C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog. r148 deployed; browser/operator acceptance still pending. No runtime changes pending.
+- Risks/blockers:
+- Files modified: Next exact step:
+- Release state: At home, open CodexHub, select FODE Runtime, confirm CURRENT_TASK.md, git status, and continue r148 browser/operator acceptance. Do not push until acceptance passes.
+
+### Git Status
+
+```text
+## main...origin/main [ahead 1]
+ M CURRENT_TASK.md
+```
