@@ -2,7 +2,7 @@
 
 ## Current Objective
 
- Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S2B Semantic Stabilization and Rollback Verification, with r148 still the documented runtime baseline.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S2C Code Dependency Audit, with r148 still the documented runtime baseline.
 
 ## Current Issue
 
@@ -21,8 +21,11 @@
 - S1 scope is documentation-only baseline creation before CRM cleanup or workflow refactors.
 - S2B semantic stabilization and rollback verification active.
 - S2B scope is small controlled stabilization work only.
+- S2C code dependency audit active.
+- S2C code dependency audit completed as read-only documentation work.
 - Trigger deleted by operator.
 - No trigger recreation is authorized in S1 or S2B.
+- No code mutation performed in S2C.
 - r147 hardens bounce correlation to prefer explicit applicant-id tokens and unique recipient matches, while skipping ambiguous DSNs.
 - r147 keeps send-path, batch-send, trigger cadence, automation, and eligibility logic unchanged.
 - r147 Safe Bounce Correlation is deployed to live Admin and Student runtimes.
@@ -338,7 +341,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-Complete S2B rollback verification addendum and semantic stabilization planning docs, preserve runtime as read-only, keep trigger state dormant/deleted, and do not perform deploy actions, schema mutation, CRM deletion, or trigger recreation in this CIS. r148 browser/operator acceptance remains pending.
+S2C read-only code dependency audit completed for CRM, payment state, triggerless workflow, and email workflow. Next proposed phase: S3A controlled patch plan. Preserve runtime as read-only and do not perform deploy actions, runtime mutation, schema mutation, CRM deletion, or trigger recreation in this CIS lineage. r148 browser/operator acceptance remains pending.
 
 ## Cautions
 
