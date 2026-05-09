@@ -35,4 +35,4 @@ Source basis: `CURRENT_TASK.md`, `Config.js`, git metadata, and local runtime so
 ## Authority Note
 
 - Canonical repo authority for this CIS is `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog`
-- `CURRENT_TASK.md` contained stale `C:\GoogleDRIVE\...` authority references before this S1 audit update
+- Historical non-authoritative local path references were present before the S1 authority cleanup and should remain treated as stale

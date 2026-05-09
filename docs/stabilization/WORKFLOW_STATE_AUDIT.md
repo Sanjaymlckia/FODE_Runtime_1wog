@@ -88,6 +88,54 @@ Observed lifecycle:
   - one is derived from payment/token/runtime rules
 - CRM lifecycle markers remain mixed into operational workflow even though CRM sync is feature-flagged off
 
+## Semantic Authority Classification
+
+### Authoritative workflow fields
+
+- `Receipt_Status`
+- `Doc_Verification_Status`
+- `Portal_Access_Status`
+- `Portal_Submitted`
+- `PortalTokenIssuedAt`
+- `Email_Status`
+- `Email_Bounce_Flag`
+- `Email_Next_Action_Date`
+
+### Derived workflow fields
+
+- `Payment_Verified`
+- `Docs_Verified`
+- `Payment_Badge`
+- `PortalTokenAgeDays`
+- `PortalTokenExpired`
+- `Effective_Email`
+- `Payment_Received`
+- `Enrolled_Confirmed`
+
+### Contradictory workflow fields
+
+- `Receipt_Status` versus `Payment_Verified`
+- `Doc_Verification_Status` versus `Docs_Verified`
+- `Portal_Access_Status` versus computed portal lock state
+- `Parent_Email` versus `Parent_Email_Corrected` when send eligibility is evaluated
+
+### Deprecated CRM-era semantics
+
+- `Contact_ID`
+- `Deal_ID`
+- `CRM_Response`
+- CRM stage derivation paths that remain in source while `ENABLE_FODE_CRM_PIPELINE = false`
+
+### Payment-state conflicts
+
+- receipt verification is the richer operational signal, but compatibility code still mirrors `Payment_Verified`
+- invoice-trigger eligibility can depend on payment-derived stage logic, so payment truth is spread across more than one field family
+
+### Communication-state conflicts
+
+- communication readiness depends on both email-state fields and corrected/raw email precedence
+- bounce exclusion and retry eligibility are split across `Email_Status`, `Email_Bounce_Flag`, `Email_Bounce_Reason`, and `Email_Next_Action_Date`
+
 ## Proposed Canonical Lifecycle Model
 
 Proposal only. No runtime mutation is authorized.
@@ -111,6 +159,73 @@ Canonical field:
 
 Compatibility mirror to retain short-term:
 - `Payment_Verified`
+
+## Proposed Payment Lifecycle Mapping
+
+Proposal only. No schema mutation is authorized.
+
+| Proposed lifecycle | Existing field signals | Notes |
+| --- | --- | --- |
+| `NOT_STARTED` | no `Fee_Receipt_File`, blank `Receipt_Status`, blank/false `Payment_Verified` | No payment evidence yet |
+| `RECEIPT_UPLOADED` | `Fee_Receipt_File` present, `Receipt_Status` blank or pending | Evidence exists but not yet reviewed |
+| `UNDER_REVIEW` | `Receipt_Status` indicates pending/review state, `Payment_Verified` not yes | Human review in progress |
+| `VERIFIED` | `Receipt_Status = Verified` or derived payment badge = `Verified`; `Payment_Verified` usually mirrored to `Yes` | Canonical paid state |
+| `REJECTED` | `Receipt_Status = Rejected` or equivalent negative review state | Payment evidence reviewed and rejected |
+| `WAIVED` | no current canonical field | Future semantic state only; would require explicit authorization later |
+
+## Triggerless Workflow Review
+
+### Code assumptions expecting triggers
+
+- trigger status/inspection is still surfaced in `admin_getOperationalSafetyStatus()`
+- `getAutomatedStageRunnerStatus_()` assumes trigger inspection remains observable even when no trigger is installed
+- source still contains install/remove code paths and `everyMinutes(10)` cadence assumptions
+
+### Queue paths depending on automation
+
+- stage batch preview and send flows still model cohorts as part of an automation family
+- preview/send parity logic assumes a cached preview snapshot before send
+- queue panels and runtime safety panels continue to expose trigger and automation state even in manual-only operation
+
+### Admin actions safe for manual operation
+
+- WhatsApp fallback CSV export queue
+- review queues and record review actions
+- preview-only batch review flows
+- manual single-send probe controls where separately authorized
+- document verification and portal access review actions
+
+### Hidden scheduled behavior assumptions
+
+- trigger cadence remains encoded as 10 minutes in helper functions
+- last-run status and daily counters remain part of operational safety output
+- preview/send messaging still references automation lineage even when the trigger is deleted
+
+## Intake Integrity Findings
+
+### Attachment persistence risks
+
+- upload flow writes file URLs into `*_File` fields and appends `File_Log`, but Drive/file success and sheet write success are still separate steps
+- rollback of code does not roll back Drive artifacts already created
+
+### Folder-without-file scenarios
+
+- source explicitly allows applicant folder creation before a successful final file write
+- `Folder_Url` can therefore exist even when a particular required file is missing
+- delete flow can remove a URL from the sheet without always trashing the Drive file if folder lineage cannot be proven
+
+### FD upload assumptions
+
+- activation/intake paths assume folder creation, canonical file normalization, and row verification happen in sequence
+- some helper flows still depend on payload/header combinations such as `FormID`/`FD_FormID`
+- multipart portal upload handling assumes browser-submitted form payload integrity and can fail with empty postdata or missing identifiers
+
+### Required future integrity checks
+
+- periodic audit for `Folder_Url` present but required `*_File` fields missing
+- periodic audit for `*_File` URLs that no longer resolve to Drive files in the applicant folder chain
+- intake/activation audit for rows missing `PortalTokenHash` or `PortalTokenIssuedAt`
+- cross-check for payment receipt file presence versus `Receipt_Status` and `Payment_Verified` divergence
 
 ### Portal
 

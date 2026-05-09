@@ -98,3 +98,49 @@ Scope: Source-only inventory of CRM and adjacent invoice-trigger logic
   - dormant Zoho CRM sync code
   - invoice/Books-adjacent workflow markers
   - shared identity fields such as `FormID`
+
+## CRM Quarantine Plan
+
+### Safe to ignore immediately
+
+- `Contact_ID`
+- `Deal_ID`
+- `CRM_Response`
+- `getZohoToken_()`
+- `upsertZohoContact_()`
+- `upsertZohoDeal_()`
+- `triggerCrmDealForFode_()`
+- `syncFodeCrmStage_()`
+- `crm_syncOnPaymentVerified_()`
+
+Rationale:
+- these fields and functions are either direct CRM write artifacts or hard-gated by `ENABLE_FODE_CRM_PIPELINE = false`
+
+### Requiring temporary compatibility
+
+- `FormID`
+- `FD_FormID`
+- `CRM_Invoice_Triggered`
+- any shared payload builder or stage-derivation helper still feeding non-CRM logic
+
+Rationale:
+- these still participate in identity, invoice gating, or transitional logic beyond pure CRM writes
+
+### CRM write paths to disable later
+
+- `crm_syncOnPaymentVerified_()`
+- any caller that could re-enable or invoke Zoho token refresh and upsert paths
+- residual admin save workflows that retain CRM sync result handling for compatibility
+
+### CRM reads that currently influence runtime logic
+
+- `FormID` as stable dedupe/handoff identity
+- stage derivation helpers feeding invoice or downstream gating decisions
+- `CRM_Invoice_Triggered` replay-avoidance logic
+
+### Quarantine sequencing recommendation
+
+1. Preserve compatibility fields and shared identity semantics.
+2. Explicitly isolate CRM write functions behind a quarantine boundary in documentation first.
+3. Audit invoice-trigger and Books-adjacent paths separately from CRM removal.
+4. Remove dormant CRM writes only after non-CRM dependencies are proven absent under a future CIS.

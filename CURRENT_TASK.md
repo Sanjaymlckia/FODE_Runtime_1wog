@@ -2,7 +2,7 @@
 
 ## Current Objective
 
- Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S1 Stabilization Baseline Audit and after r148 Invalid Email WhatsApp Fallback Export Queue deployment.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S2B Semantic Stabilization and Rollback Verification, with r148 still the documented runtime baseline.
 
 ## Current Issue
 
@@ -19,8 +19,10 @@
 - Browser/operator acceptance remains required before git push: export batch size 20, inspect first 5 CSV rows, confirm `675XXXXXXXX` phones, link/message correctness, no automatic send, and no row mutation.
 - S1 stabilization baseline audit active.
 - S1 scope is documentation-only baseline creation before CRM cleanup or workflow refactors.
+- S2B semantic stabilization and rollback verification active.
+- S2B scope is small controlled stabilization work only.
 - Trigger deleted by operator.
-- No trigger recreation is authorized in S1.
+- No trigger recreation is authorized in S1 or S2B.
 - r147 hardens bounce correlation to prefer explicit applicant-id tokens and unique recipient matches, while skipping ambiguous DSNs.
 - r147 keeps send-path, batch-send, trigger cadence, automation, and eligibility logic unchanged.
 - r147 Safe Bounce Correlation is deployed to live Admin and Student runtimes.
@@ -336,7 +338,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-Complete S1 stabilization baseline audit docs, preserve runtime as read-only, keep trigger state dormant/deleted, and do not perform CRM cleanup, workflow refactors, deployment actions, or trigger recreation in this CIS. r148 browser/operator acceptance remains pending after S1.
+Complete S2B rollback verification addendum and semantic stabilization planning docs, preserve runtime as read-only, keep trigger state dormant/deleted, and do not perform deploy actions, schema mutation, CRM deletion, or trigger recreation in this CIS. r148 browser/operator acceptance remains pending.
 
 ## Cautions
 
@@ -356,9 +358,9 @@ Complete S1 stabilization baseline audit docs, preserve runtime as read-only, ke
 
 - Machine: DESKTOP-9J8KA0T
 - Project: FODE_RUNTIME
-- Path: C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog
+- Path: E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog
 - Current status: Status:
-- Next exact step: Office session stabilized FODE repo authority to C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog. r148 deployed; browser/operator acceptance still pending. No runtime changes pending.
+- Next exact step: Office session stabilized FODE repo authority to E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog. r148 deployed; browser/operator acceptance still pending. No runtime changes pending.
 - Risks/blockers:
 - Files modified: Next exact step:
 - Release state: At home, open CodexHub, select FODE Runtime, confirm CURRENT_TASK.md, git status, and continue r148 browser/operator acceptance. Do not push until acceptance passes.
@@ -373,9 +375,9 @@ Complete S1 stabilization baseline audit docs, preserve runtime as read-only, ke
 
 - Machine: DESKTOP-9J8KA0T
 - Project: FODE_RUNTIME
-- Path: C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog
+- Path: E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog
 - Current status: Status:
-- Next exact step: Office session stabilized FODE repo authority to C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog. r148 deployed; browser/operator acceptance still pending. No runtime changes pending.
+- Next exact step: Office session stabilized FODE repo authority to E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog. r148 deployed; browser/operator acceptance still pending. No runtime changes pending.
 - Risks/blockers:
 - Files modified: Next exact step:
 - Release state: At home, open CodexHub, select FODE Runtime, confirm CURRENT_TASK.md, git status, and continue r148 browser/operator acceptance. Do not push until acceptance passes.
