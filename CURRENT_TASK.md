@@ -84,7 +84,7 @@
 - Review-open ownership stamping was removed.
 - Admin/superadmin identity validation completed against the canonical admin identity path.
 - Current source identity set is 6 admin emails plus 1 superadmin; future admin identity rationalisation is a separate task.
-- No deployment has been performed for this candidate.
+- r153 deployment completed for queue aging and safe handled ownership.
 - r151 deployment completed, but browser acceptance failed because the S5C email UI displayed `Email sent to 0 admin recipient(s): `.
 - The failure cause was a UI response-shape mismatch: `AdminUI.html` onOk read `res.detail`, while `admin_emailWhatsAppFallbackCsv` returned `recipientCount` and `recipients` at top level.
 - r152 deployment is now live after fixing the S5C email UI payload handling.
