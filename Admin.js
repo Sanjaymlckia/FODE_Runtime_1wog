@@ -1972,9 +1972,32 @@ function isWhatsAppFallbackCandidate_(rowObj, filter) {
   return false;
 }
 
+function resolveWhatsAppFallbackAdminRecipients_() {
+  var sources = [
+    { key: "WHATSAPP_FALLBACK_ADMIN_RECIPIENTS", value: CONFIG.WHATSAPP_FALLBACK_ADMIN_RECIPIENTS || "" },
+    { key: "EMAIL_RELEASE_ADMIN_TO", value: CONFIG.EMAIL_RELEASE_ADMIN_TO || "" },
+    { key: "EMAIL_ADMIN_ALERTS_TO", value: CONFIG.EMAIL_ADMIN_ALERTS_TO || "" }
+  ];
+  for (var i = 0; i < sources.length; i++) {
+    var source = sources[i];
+    var raw = clean_(source.value || "");
+    if (!raw) continue;
+    var recipients = parseCsvEmails_(raw).split(",").map(function (v) { return clean_(v || ""); }).filter(function (v) { return !!v; });
+    if (recipients.length) {
+      return {
+        source: source.key,
+        recipients: recipients
+      };
+    }
+  }
+  return {
+    source: "NONE",
+    recipients: []
+  };
+}
+
 function getWhatsAppFallbackAdminRecipients_() {
-  var raw = clean_(CONFIG.WHATSAPP_FALLBACK_ADMIN_RECIPIENTS || CONFIG.EMAIL_RELEASE_ADMIN_TO || CONFIG.EMAIL_ADMIN_ALERTS_TO || "");
-  return parseCsvEmails_(raw).split(",").map(function (v) { return clean_(v || ""); }).filter(function (v) { return !!v; });
+  return resolveWhatsAppFallbackAdminRecipients_().recipients;
 }
 
 function buildWhatsAppFallbackPortalInfo_(applicantId, portalLookup) {
@@ -2263,10 +2286,18 @@ function admin_emailWhatsAppFallbackCsv(payload) {
     if (!snapshot || !clean_(snapshot.csv || "")) {
       throw new Error("No cached WhatsApp fallback CSV found. Export the CSV first.");
     }
-    var recipients = getWhatsAppFallbackAdminRecipients_();
+    var recipientResolution = resolveWhatsAppFallbackAdminRecipients_();
+    var recipients = recipientResolution.recipients || [];
+    var recipientSource = clean_(recipientResolution.source || "NONE");
     if (!recipients.length) {
       throw new Error("No admin recipients configured for WhatsApp fallback CSV email.");
     }
+    logAdminEvent_("S5C_WHATSAPP_FALLBACK_EMAIL_RECIPIENTS", {
+      batchLabel: snapshot.batchLabel || batchLabel || "",
+      recipientCount: recipients.length,
+      recipients: recipients.join(","),
+      recipientSource: recipientSource
+    });
     var subject = buildWhatsAppFallbackEmailSubject_(snapshot.batchLabel || batchLabel);
     var body = buildWhatsAppFallbackEmailBody_(snapshot);
     var blob = Utilities.newBlob(String(snapshot.csv || ""), "text/csv", clean_(snapshot.filename || ("fode-whatsapp-fallback-" + (snapshot.batchLabel || batchLabel || "batch") + ".csv")));
@@ -2284,24 +2315,35 @@ function admin_emailWhatsAppFallbackCsv(payload) {
       logAdminEvent_("WHATSAPP_CSV_ADMIN_EMAIL_FAILED", {
         batchLabel: snapshot.batchLabel || batchLabel || "",
         recipients: recipients.join(","),
+        recipientCount: recipients.length,
+        recipientSource: recipientSource,
         error: clean_(sent.error || "WhatsApp fallback CSV email failed")
       });
       return {
         ok: false,
         code: "WHATSAPP_CSV_ADMIN_EMAIL_FAILED",
-        message: clean_(sent.error || "WhatsApp fallback CSV email failed")
+        message: clean_(sent.error || "WhatsApp fallback CSV email failed"),
+        recipientCount: recipients.length,
+        recipients: recipients.join(","),
+        recipientSource: recipientSource,
+        sent: false
       };
     }
     logAdminEvent_("WHATSAPP_CSV_ADMIN_EMAIL_SENT", {
       batchLabel: snapshot.batchLabel || batchLabel || "",
       recipients: recipients.join(","),
+      recipientCount: recipients.length,
+      recipientSource: recipientSource,
       filename: clean_(snapshot.filename || ""),
       summary: snapshot.summary || {}
     });
     return {
       ok: true,
       batchLabel: snapshot.batchLabel || batchLabel || "",
+      recipientCount: recipients.length,
       recipients: recipients.join(","),
+      recipientSource: recipientSource,
+      sent: !!(sent && sent.ok),
       filename: clean_(snapshot.filename || "")
     };
   });

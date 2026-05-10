@@ -2,20 +2,22 @@
 
 ## Current Objective
 
- Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S5C WhatsApp Admin CSV workflow and r150 release closure.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S5C WhatsApp Admin CSV workflow and release closure.
 
 ## Current Issue
 
-- r150 release is live after repinning both canonical deployments to Apps Script platform version `148` from `clasp version "r150: WhatsApp fallback admin CSV workflow"`.
-- r150 preserves the existing send-path, eligibility, bounce, trigger, Books, CRM, schema, and Drive behavior except for the S5C WhatsApp fallback CSV/admin-email workflow and existing redacted forensic trace logging.
-- PortalUrl uses existing active portal secrets only via the canonical student portal builder. Missing existing secrets leave `PortalUrl` blank and set `PortalUrlStatus = MISSING_SECRET`.
-- r150 Apps Script platform version `148` created with description `r150: WhatsApp fallback admin CSV workflow`.
-- Admin deployment pinned to platform version `148`.
-- Student deployment pinned to platform version `148`.
-- Admin whoami: `r150 / 150`, mismatch `false`, script ID `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
-- Student whoami: `r150 / 150`, mismatch `false`, script ID `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
-- Admin `?view=admin` HTML includes WhatsApp Fallback Queue controls, no-send/no-group warnings, `admin_exportWhatsAppFallbackCsv`, and `admin_emailWhatsAppFallbackCsv`: PASS.
-- Browser/operator click-through acceptance for CSV export and admin-email send remains blocked in this session because no interactive browser automation surface is available here.
+- r152 operational acceptance: PASS.
+- Browser acceptance: PASS.
+- Email delivery: PASS, found in Gmail All Mail with attachment.
+- Inbox-label absence is Gmail routing/classification, not runtime failure.
+- Admin whoami: `r152 / 152`, mismatch `false`.
+- Student whoami: `r152 / 152`, mismatch `false`.
+- Admin UI badge: `Runtime r152 | Deploy 152`.
+- S5C email UI now reports `Email sent to 1 admin recipient(s): fode@kundu.ac`.
+- r152 commit/tag already completed: commit `d4d0f28`, tag `staging-as152`.
+- No rollback was required.
+- Remaining separate issue: `Admin.js` dirty state must be investigated before the next release.
+- VCF utility production testing remains parked until business WhatsApp phone access.
 - S1 stabilization baseline audit active.
 - S1 scope is documentation-only baseline creation before CRM cleanup or workflow refactors.
 - S2B semantic stabilization and rollback verification active.
