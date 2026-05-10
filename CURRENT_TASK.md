@@ -2,20 +2,20 @@
 
 ## Current Objective
 
- Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S5C WhatsApp Admin CSV workflow, with r149 still serving as the live stabilization baseline.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S5C WhatsApp Admin CSV workflow and r150 release closure.
 
 ## Current Issue
 
-- r149 deploys S4A outbound CRM leakage tracing only.
-- r149 preserves the existing send-path, eligibility, bounce, trigger, Books, CRM, schema, and Drive behavior except for redacted forensic trace logging.
+- r150 release is live after repinning both canonical deployments to Apps Script platform version `148` from `clasp version "r150: WhatsApp fallback admin CSV workflow"`.
+- r150 preserves the existing send-path, eligibility, bounce, trigger, Books, CRM, schema, and Drive behavior except for the S5C WhatsApp fallback CSV/admin-email workflow and existing redacted forensic trace logging.
 - PortalUrl uses existing active portal secrets only via the canonical student portal builder. Missing existing secrets leave `PortalUrl` blank and set `PortalUrlStatus = MISSING_SECRET`.
-- r149 Apps Script platform version `147` created with description `r149: S4A CRM leakage trace`.
-- Admin deployment pinned to platform version `147`.
-- Student deployment pinned to platform version `147`.
-- Admin whoami: `r149 / 149`, mismatch `false`, script ID `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
-- Student whoami: `r149 / 149`, mismatch `false`, script ID `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
-- Admin `?view=admin` HTML includes WhatsApp Fallback Queue controls, no-send/no-group warnings, and `admin_exportWhatsAppFallbackCsv`: PASS.
-- Browser/operator acceptance remains required before git push: export batch size 20, inspect first 5 CSV rows, confirm `675XXXXXXXX` phones, link/message correctness, no automatic send, and no row mutation.
+- r150 Apps Script platform version `148` created with description `r150: WhatsApp fallback admin CSV workflow`.
+- Admin deployment pinned to platform version `148`.
+- Student deployment pinned to platform version `148`.
+- Admin whoami: `r150 / 150`, mismatch `false`, script ID `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
+- Student whoami: `r150 / 150`, mismatch `false`, script ID `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
+- Admin `?view=admin` HTML includes WhatsApp Fallback Queue controls, no-send/no-group warnings, `admin_exportWhatsAppFallbackCsv`, and `admin_emailWhatsAppFallbackCsv`: PASS.
+- Browser/operator click-through acceptance for CSV export and admin-email send remains blocked in this session because no interactive browser automation surface is available here.
 - S1 stabilization baseline audit active.
 - S1 scope is documentation-only baseline creation before CRM cleanup or workflow refactors.
 - S2B semantic stabilization and rollback verification active.
@@ -68,8 +68,27 @@
 - S5C keeps the existing criteria-based WhatsApp fallback queue as the primary selector and adds configurable export sizing, manual admin CSV email, and ready-to-use WhatsApp operator assistance.
 - S5C sets default batch size to 20 and hard caps export size at 100 server-side.
 - S5C adds CSV email to configured admin recipients only, with manual click-only activation and no unattended WhatsApp sending.
+- S5C admin-email recipient configuration is being simplified to the collaborative inbox target `fode@kundu.ac` with deterministic recipient observability in the Admin UI.
+- S5C email observability now reports `recipientCount`, `recipients`, `recipientSource`, and `sent`, with `S5C_WHATSAPP_FALLBACK_EMAIL_RECIPIENTS` logged server-side before send.
+- S5C WhatsApp fallback admin email target is simplified to `fode@kundu.ac` only.
 - S5C preserves CRM quarantine, introduces no trigger change, introduces no schema change, and leaves Books implementation future-only.
 - S5C scanned-document automation remains a future design item.
+- r151 deployment completed, but browser acceptance failed because the S5C email UI displayed `Email sent to 0 admin recipient(s): `.
+- The failure cause was a UI response-shape mismatch: `AdminUI.html` onOk read `res.detail`, while `admin_emailWhatsAppFallbackCsv` returned `recipientCount` and `recipients` at top level.
+- r152 deployment is now live after fixing the S5C email UI payload handling.
+- Admin and Student whoami both report `r152 / 152`, mismatch `false`.
+- Browser acceptance now passes for the S5C email UI: the Admin UI reports `Email sent to 1 admin recipient(s): fode@kundu.ac`.
+- Intended release set for the r152 fix remains `Config.js`, `AdminUI.html`, and `CURRENT_TASK.md`.
+- Local utility repo created at `D:\CODEX_PROJECTS\S5C_WHATSAPP_TOOLS`.
+- Queue folder created at `E:\Gdrive\01 SANJAY\Codex_Sync\S5C_WhatsApp_Fallback`.
+- Dry-run and sample execute test passed for the local CSV-to-VCF utility.
+- Production test using actual S5C CSVs is parked until operator has business WhatsApp phone access.
+- r150 Apps Script platform version `148` was created from `clasp version "r150: WhatsApp fallback admin CSV workflow"`.
+- Both canonical deployments were repinned to platform version `148` and live runtime now reports `r150 / 150` with mismatch `false` for both Admin and Student.
+- Browser/operator click-through acceptance for CSV export and admin-email send remains blocked in this session because no interactive browser automation surface is available here.
+- CRM remains quarantined and triggerless posture remains intact.
+- No deployment has been performed for these latest S5C email observability changes.
+- Current live runtime remains `r150` until repin/versioning is done for any new deployment.
 - `clasp logs --json` remains unavailable because the GCP project ID is not set, and direct `clasp run` verification of trigger/runtime status remains blocked by script execution permissions.
 - Next proposed phase remains documentation-driven Books-native finance architecture and the future unified operations platform workstream, subject to future CIS authorization.
 - Trigger deleted by operator.
@@ -390,7 +409,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-Preserve r149 as the live stabilization baseline with CRM legacy quarantine enabled. Use the S5A operational model, S5B semantics review, S5C WhatsApp workflow, and unified operations roadmap to formalize intake, authority, communication, finance direction, and product overlays without reviving CRM-era authority, schema mutation, trigger recreation, or external finance handoff.
+Complete browser/operator click-through acceptance for the r150 WhatsApp fallback admin CSV workflow if an interactive Admin UI surface becomes available. Until then, preserve the r150 live runtime state, keep CRM quarantined, and do not commit/push/tag release metadata prematurely.
 
 ## Cautions
 

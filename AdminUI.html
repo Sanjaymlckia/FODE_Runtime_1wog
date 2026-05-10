@@ -3822,20 +3822,20 @@ function renderStageDashboard_(items, emptyMessage){
         return;
       }
       setMsg("waFallbackMsg", "Emailing WhatsApp fallback CSV to configured admin recipients...");
-      run_("admin_emailWhatsAppFallbackCsv", {
-        batchLabel: batchLabel
-      }, function(res){
-        handleApiResult_({
-          res: res,
-          targetId: "waFallbackMsg",
-          fallbackError: "Could not email WhatsApp fallback CSV",
-          onOk: function(detail){
-            var data = detail || {};
-            setMsg("waFallbackMsg", "Email sent to admins for batch " + String(data.batchLabel || batchLabel) + " (" + String(data.recipients || "") + ").");
-          }
-        });
-      }, { message: "Emailing WhatsApp fallback CSV to admins..." });
-    }
+        run_("admin_emailWhatsAppFallbackCsv", {
+          batchLabel: batchLabel
+        }, function(res){
+          handleApiResult_({
+            res: res,
+            targetId: "waFallbackMsg",
+            fallbackError: "Could not email WhatsApp fallback CSV",
+            onOk: function(detail, res){
+            var payload = detail || res || {};
+            setMsg("waFallbackMsg", "Email sent to " + Number(payload.recipientCount || 0) + " admin recipient(s): " + String(payload.recipients || ""));
+            }
+          });
+        }, { message: "Emailing WhatsApp fallback CSV to admins..." });
+      }
 
     setRoleUi();
     function renderRuntimeStopState_(reason){
