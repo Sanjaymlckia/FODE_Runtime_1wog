@@ -190,6 +190,36 @@
       border-color: rgba(56,189,248,.48);
       color: #ddf5ff;
     }
+    .slaTag{
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:800;
+      border:1px solid rgba(120,170,235,.45);
+      background: var(--tagBg);
+      color: var(--tagText);
+    }
+    .slaTag.green{
+      background: rgba(34,197,94,.2);
+      border-color: rgba(34,197,94,.45);
+      color: #d6ffe6;
+    }
+    .slaTag.orange{
+      background: rgba(249,115,22,.2);
+      border-color: rgba(249,115,22,.48);
+      color: #fff1e6;
+    }
+    .slaTag.red{
+      background: rgba(239,68,68,.2);
+      border-color: rgba(239,68,68,.48);
+      color: #ffe0e0;
+    }
+    .slaTag.unknown{
+      background: rgba(148,163,184,.14);
+      border-color: rgba(148,163,184,.3);
+      color: #d6deea;
+    }
     .badge{
       display:inline-block;
       padding:2px 8px;
@@ -2318,6 +2348,7 @@ function renderStageDashboard_(items, emptyMessage){
         "Docs Verified: " + workflowYesNo_(r.Docs_Verified),
         "Payment Evidence Uploaded: " + workflowYesNo_(r.Payment_Received),
         "Payment Verified (legacy compatibility mirror): " + workflowYesNo_(r.Payment_Verified),
+        "Handled By: " + String(r.Handled_By || "-"),
         "Enrolled Confirmed: " + workflowEnrolledLabel_(r)
       ].join(" | ");
     }
@@ -2338,6 +2369,29 @@ function renderStageDashboard_(items, emptyMessage){
       if (isVerified) return { label: "Verified (compat)", cls: "badge badge-success" };
       if (String(r.Fee_Receipt_File || "").trim()) return { label: "Pending", cls: "badge badge-warning" };
       return { label: "Not Uploaded", cls: "badge badge-muted" };
+    }
+
+    function queueReceivedText_(row){
+      var r = row || {};
+      return String(r.receivedDisplay || r.receivedAt || "-").trim() || "-";
+    }
+
+    function queueReceivedTitle_(row){
+      var r = row || {};
+      var source = String(r.receivedSource || "").trim();
+      var iso = String(r.receivedAt || "").trim();
+      var parts = [];
+      if (source) parts.push("Source: " + source);
+      if (iso) parts.push("Timestamp: " + iso);
+      return parts.join(" | ") || "Received timestamp unavailable";
+    }
+
+    function queueAgeBadge_(row){
+      var r = row || {};
+      var band = String(r.ageBand || "unknown").trim().toLowerCase();
+      var cls = band === "green" ? "slaTag green" : band === "orange" ? "slaTag orange" : band === "red" ? "slaTag red" : "slaTag unknown";
+      var label = String(r.ageLabel || "-").trim() || "-";
+      return { cls: cls, label: label, title: queueReceivedTitle_(r) };
     }
 
     function renderQueueSection(containerId, title, rows, totalCount){
@@ -2379,7 +2433,7 @@ function renderStageDashboard_(items, emptyMessage){
           html += "<button class='btn small accent' type='button' data-action='queue-docs-send-selected' " + ((isDocsSendBusy || selectedCount === 0) ? "disabled" : "") + ">" + (isDocsSendBusy ? "Sending..." : "Send Quote to Selected") + "</button>";
           html += "<span class='muted' style='font-size:12px;'>" + String(selectedCount) + " selected</span>";
           html += "</div>";
-          html += "<table class='queue-table'><tr><th style='width:30px;'></th><th>Applicant</th><th>Name</th><th>Workflow</th><th>Docs Follow-Up</th><th>Action</th></tr>";
+          html += "<table class='queue-table'><tr><th style='width:30px;'></th><th>Applicant</th><th>Name</th><th>Workflow</th><th>Received</th><th>Age</th><th>Docs Follow-Up</th><th>Action</th></tr>";
           pageRows.forEach(function(row){
             var rowNumber = Number(row && row.rowNumber || 0);
             var applicantId = String((row && (row.ApplicantID || row.applicantId)) || "");
@@ -2401,17 +2455,21 @@ function renderStageDashboard_(items, emptyMessage){
             var statusText = isSent ? "Sent" : (eligible ? "Ready" : "Not ready");
             var statusClass = isSent ? "statusTag sent" : (eligible ? "statusTag ready" : "statusTag off");
             var sendTitle = isSent ? "Already sent." : (eligible ? "Send docs quote email now." : "All required documents must be Verified first.");
+            var receivedText = queueReceivedText_(row);
+            var ageBadge = queueAgeBadge_(row);
             html += "<tr>";
             html += "<td><input type='checkbox' data-action='docs-select-row' data-row-number='" + esc(String(Number.isFinite(rowNumber) ? rowNumber : "")) + "' data-applicant-id='" + esc(applicantId) + "' data-eligible='" + (canSendQuote ? "1" : "0") + "' " + checkChecked + " " + checkDisabled + "></td>";
             html += "<td>" + esc(applicantId) + "</td>";
             html += "<td>" + esc(nameDisplay) + "</td>";
             html += "<td class='muted' style='font-size:12px;'>" + esc(workflowSummaryText_(row)) + "</td>";
+            html += "<td title='" + esc(queueReceivedTitle_(row)) + "'>" + esc(receivedText) + "</td>";
+            html += "<td><span class='" + esc(ageBadge.cls) + "' title='" + esc(ageBadge.title) + "'>" + esc(ageBadge.label) + "</span></td>";
             html += "<td><span class='" + statusClass + "'>" + esc(statusText) + "</span></td>";
             html += "<td><button class='btn small' data-action='send-docs-single' data-applicant-id='" + esc(applicantId) + "' data-row-number='" + esc(String(Number.isFinite(rowNumber) ? rowNumber : "")) + "' title='" + esc(sendTitle) + "' " + (canSendQuote && !isDocsSendBusy ? "" : "disabled ") + ">Send Quote</button> <button class='btn small' data-action='queue-review' data-applicant-id='" + esc(applicantId) + "' data-row-number='" + esc(String(Number.isFinite(rowNumber) ? rowNumber : "")) + "' title='" + esc(reviewTitle) + "' " + (canReview ? "" : "disabled ") + ">Review</button></td>";
             html += "</tr>";
           });
         } else if (queueKey === "queuePayments") {
-          html += "<table class='queue-table'><tr><th>Applicant</th><th>Name</th><th>Workflow</th><th>Payment</th><th>Action</th></tr>";
+          html += "<table class='queue-table'><tr><th>Applicant</th><th>Name</th><th>Workflow</th><th>Received</th><th>Age</th><th>Payment</th><th>Action</th></tr>";
           pageRows.forEach(function(row){
             var rowNumber = Number(row && row.rowNumber || 0);
             var applicantId = String(row && row.applicantId || "");
@@ -2422,16 +2480,20 @@ function renderStageDashboard_(items, emptyMessage){
             var canReview = !!applicantId || (Number.isFinite(rowNumber) && rowNumber >= 2);
             var reviewTitle = canReview ? "Open review" : ("RowNumber missing - cannot review." + (dbg ? (" (dbg: " + dbg + ")") : ""));
             var paymentBadge = paymentBadgeFromRow_(row);
+            var receivedText = queueReceivedText_(row);
+            var ageBadge = queueAgeBadge_(row);
             html += "<tr>";
             html += "<td>" + esc(applicantId) + "</td>";
             html += "<td>" + esc(nameDisplay) + "</td>";
             html += "<td class='muted' style='font-size:12px;'>" + esc(workflowSummaryText_(row)) + "</td>";
+            html += "<td title='" + esc(queueReceivedTitle_(row)) + "'>" + esc(receivedText) + "</td>";
+            html += "<td><span class='" + esc(ageBadge.cls) + "' title='" + esc(ageBadge.title) + "'>" + esc(ageBadge.label) + "</span></td>";
             html += "<td><span class='" + esc(paymentBadge.cls) + "'>" + esc(paymentBadge.label) + "</span></td>";
             html += "<td><button class='btn small' data-action='queue-review' data-applicant-id='" + esc(applicantId) + "' data-row-number='" + esc(String(Number.isFinite(rowNumber) ? rowNumber : "")) + "' title='" + esc(reviewTitle) + "' " + (canReview ? "" : "disabled ") + ">Review</button></td>";
             html += "</tr>";
           });
         } else {
-          html += "<table class='queue-table'><tr><th>Applicant</th><th>Name</th><th>Workflow</th><th>Action</th></tr>";
+          html += "<table class='queue-table'><tr><th>Applicant</th><th>Name</th><th>Workflow</th><th>Received</th><th>Age</th><th>Action</th></tr>";
           pageRows.forEach(function(row){
             var rowNumber = Number(row && row.rowNumber || 0);
             var applicantId = String(row && row.applicantId || "");
@@ -2441,10 +2503,14 @@ function renderStageDashboard_(items, emptyMessage){
             var dbg = String(row && row.debugId || "");
             var canReview = !!applicantId || (Number.isFinite(rowNumber) && rowNumber >= 2);
             var reviewTitle = canReview ? "Open review" : ("RowNumber missing - cannot review." + (dbg ? (" (dbg: " + dbg + ")") : ""));
+            var receivedText = queueReceivedText_(row);
+            var ageBadge = queueAgeBadge_(row);
             html += "<tr>";
             html += "<td>" + esc(applicantId) + "</td>";
             html += "<td>" + esc(nameDisplay) + "</td>";
             html += "<td class='muted' style='font-size:12px;'>" + esc(workflowSummaryText_(row)) + "</td>";
+            html += "<td title='" + esc(queueReceivedTitle_(row)) + "'>" + esc(receivedText) + "</td>";
+            html += "<td><span class='" + esc(ageBadge.cls) + "' title='" + esc(ageBadge.title) + "'>" + esc(ageBadge.label) + "</span></td>";
             html += "<td><button class='btn small' data-action='queue-review' data-applicant-id='" + esc(applicantId) + "' data-row-number='" + esc(String(Number.isFinite(rowNumber) ? rowNumber : "")) + "' title='" + esc(reviewTitle) + "' " + (canReview ? "" : "disabled ") + ">Review</button></td>";
             html += "</tr>";
           });

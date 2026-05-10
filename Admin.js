@@ -353,6 +353,10 @@ function admin_getApplicantDetail(payload) {
       Docs_Verified: idx.Docs_Verified ? clean_(row[idx.Docs_Verified - 1]) : "",
       Payment_Verified: idx.Payment_Verified ? clean_(row[idx.Payment_Verified - 1]) : "",
       Registration_Complete: idx.Registration_Complete ? clean_(row[idx.Registration_Complete - 1]) : "",
+      Handled_By: idx.Handled_By ? clean_(row[idx.Handled_By - 1]) : "",
+      Handled_At: idx.Handled_At ? clean_(row[idx.Handled_At - 1]) : "",
+      Enrolled_By: idx.Enrolled_By ? clean_(row[idx.Enrolled_By - 1]) : "",
+      Enrolled_At: idx.Enrolled_At ? clean_(row[idx.Enrolled_At - 1]) : "",
       Fee_Receipt_File: idx.Fee_Receipt_File ? clean_(row[idx.Fee_Receipt_File - 1]) : "",
       Portal_Access_Status: clean_(row[idx.Portal_Access_Status - 1]) || "Open",
       Doc_Verification_Status: clean_(row[idx.Doc_Verification_Status - 1]) || "Pending",
@@ -747,6 +751,11 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
   setCell_(sh, rowNumber, idx, "Doc_Last_Verified_By", adminEmail || "admin");
   var finalRowObj = getRowObject_(sh, rowNumber);
   var actions = runVerificationAutomations_(sh, rowNumber, idx, priorRowObj, finalRowObj, dbgId);
+  captureOperatorAttribution_(sh, rowNumber, idx, {
+    action: "DOCS_UPDATE",
+    operatorEmail: adminEmail,
+    rowObj: finalRowObj
+  });
   var beforeVerified = isPaymentVerifiedDerived_(priorRowObj) === true;
   var afterVerified = isPaymentVerifiedDerived_(finalRowObj) === true;
   var transition = (!beforeVerified && afterVerified);
@@ -830,6 +839,11 @@ function admin_setOverallStatus(payload) {
   patch[SCHEMA.DOC_LAST_VERIFIED_AT] = new Date();
   patch[SCHEMA.DOC_LAST_VERIFIED_BY] = adminEmail || "admin";
   applyPatch_(sh, rowNumber, patch);
+  captureOperatorAttribution_(sh, rowNumber, idx, {
+    action: "OVERALL_STATUS",
+    operatorEmail: adminEmail,
+    rowObj: rowObj
+  });
 
   log_(openLogSheet_(), "ADMIN_OVERALL_STATUS", "row=" + rowNumber + " action=" + finalStatus + " requested=" + requested + " by=" + (adminEmail || "admin") + " reason=" + (reason || "-"));
   return {
@@ -872,6 +886,11 @@ function admin_setPortalAccess(payload) {
   setCell_(sh, rowNumber, idx, "Portal_Access_Status", status);
   setCell_(sh, rowNumber, idx, "Doc_Last_Verified_At", new Date());
   setCell_(sh, rowNumber, idx, "Doc_Last_Verified_By", adminEmail || "admin");
+  captureOperatorAttribution_(sh, rowNumber, idx, {
+    action: "PORTAL_ACCESS",
+    operatorEmail: adminEmail,
+    rowObj: rowObj
+  });
 
   log_(openLogSheet_(), "ADMIN_PORTAL_ACCESS", "row=" + rowNumber + " status=" + status + " by=" + (adminEmail || "admin"));
   var refreshed = getRowObject_(sh, rowNumber);
@@ -969,6 +988,11 @@ function admin_setPaymentVerified_impl_(payload, dbgId) {
   setCell_(sh, rowNumber, idx, "Doc_Last_Verified_At", new Date());
   setCell_(sh, rowNumber, idx, "Doc_Last_Verified_By", adminEmail || "admin");
   var finalRowObj = getRowObject_(sh, rowNumber);
+  captureOperatorAttribution_(sh, rowNumber, idx, {
+    action: "PAYMENT_VERIFY",
+    operatorEmail: adminEmail,
+    rowObj: finalRowObj
+  });
   var actions = runVerificationAutomations_(sh, rowNumber, idx, priorRowObj, finalRowObj, dbgId);
 
   var beforeVerified = isPaymentVerifiedDerived_(priorRowObj) === true;
@@ -1499,6 +1523,12 @@ function admin_sendDocsFollowupEmails(payload) {
         continue;
       }
 
+      var idx = headerIndex_(sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0]);
+      captureOperatorAttribution_(sh, rowNumber, idx, {
+        action: "SEND_QUOTE",
+        operatorEmail: adminEmail,
+        rowObj: rowObj
+      });
       var key = buildDocsFollowupKey_(CONFIG.DATA_MODE, applicantId);
       var ts = nowIso_();
       PropertiesService.getScriptProperties().setProperty(key, ts);
@@ -2392,6 +2422,90 @@ function parseTime_(v) {
   return Number.isFinite(t) ? t : 0;
 }
 
+function resolveOperatorIdentity_() {
+  var active = "";
+  try { active = clean_(getActiveUserEmail_() || ""); } catch (_activeErr) {}
+  var caller = "";
+  try { caller = clean_(typeof getCallerEmail_ === "function" ? getCallerEmail_() : ""); } catch (_callerErr) {}
+  return clean_(active || caller || "admin");
+}
+
+function captureOperatorAttribution_(sh, rowNumber, idx, opts) {
+  var o = (opts && typeof opts === "object") ? opts : {};
+  var row = (o.rowObj && typeof o.rowObj === "object") ? o.rowObj : null;
+  var action = clean_(o.action || "");
+  var operator = clean_(o.operatorEmail || resolveOperatorIdentity_() || "admin");
+  var out = {
+    handledSet: false,
+    enrolledSet: false,
+    operatorEmail: operator
+  };
+
+  if (!sh || !idx || !rowNumber || rowNumber < 2) return out;
+  if (!row) row = getRowObject_(sh, rowNumber) || {};
+
+  if (idx.Handled_By && idx.Handled_At && !clean_(row.Handled_By || "")) {
+    setCell_(sh, rowNumber, idx, "Handled_By", operator);
+    setCell_(sh, rowNumber, idx, "Handled_At", new Date());
+    out.handledSet = true;
+    logAdminEvent_("ATTRIBUTION_HANDLED_SET", {
+      rowNumber: rowNumber,
+      action: action,
+      operatorEmail: operator
+    });
+    try { row.Handled_By = operator; row.Handled_At = new Date().toISOString(); } catch (_handledRowErr) {}
+  }
+
+  return out;
+}
+
+function getQueueSlaBand_(ageDays) {
+  var n = Number(ageDays);
+  if (!Number.isFinite(n) || n < 0) return "unknown";
+  if (n <= 3) return "green";
+  if (n <= 7) return "orange";
+  return "red";
+}
+
+function formatQueueTimestampDisplay_(value) {
+  var ts = parseTime_(value);
+  if (!(ts > 0)) return "";
+  return Utilities.formatDate(new Date(ts), Session.getScriptTimeZone() || "GMT", "yyyy-MM-dd HH:mm");
+}
+
+function pickQueueReceivedInfo_(rowObj) {
+  var row = rowObj || {};
+  var candidates = [
+    { key: "PortalTokenIssuedAt", value: row.PortalTokenIssuedAt || "" },
+    { key: "PortalLastUpdateAt", value: row.PortalLastUpdateAt || "" },
+    { key: "adapter_timestamp", value: row.adapter_timestamp || row.adapterTimestamp || "" },
+    { key: "Timestamp", value: row.Timestamp || row.timestamp || "" },
+    { key: "Created_At", value: row.Created_At || row.createdAt || row.created_at || "" }
+  ];
+  for (var i = 0; i < candidates.length; i++) {
+    var candidate = candidates[i];
+    var ts = parseTime_(candidate.value);
+    if (!(ts > 0)) continue;
+    var ageDays = Math.max(0, Math.floor((Date.now() - ts) / (24 * 60 * 60 * 1000)));
+    return {
+      source: candidate.key,
+      receivedAt: new Date(ts).toISOString(),
+      receivedDisplay: formatQueueTimestampDisplay_(candidate.value),
+      ageDays: ageDays,
+      ageLabel: ageDays + " day(s)",
+      ageBand: getQueueSlaBand_(ageDays)
+    };
+  }
+  return {
+    source: "NONE",
+    receivedAt: "",
+    receivedDisplay: "",
+    ageDays: null,
+    ageLabel: "-",
+    ageBand: "unknown"
+  };
+}
+
 function hasStudentActivity_(row) {
   var r = row || {};
   var lastUpdateRaw = r.PortalLastUpdateAt;
@@ -2717,6 +2831,7 @@ function admin_getReviewQueues(payload) {
         var docsFollowupEligibleBase = CONFIG.DOCS_FOLLOWUP_ENABLE === true && docsVerifiedForFollowup && hasValidEmailForFollowup;
         var docsFollowupSentAt = getDocsFollowupSentAt_(rowObj);
         var eligibleDocsFollowUp = docsFollowupEligibleBase && !safeStr_(docsFollowupSentAt || "");
+        var receivedInfo = pickQueueReceivedInfo_(rowObj);
         var qItem = {
           rowNumber: r + 1,
           applicantId: applicantId,
@@ -2727,6 +2842,16 @@ function admin_getReviewQueues(payload) {
           effectiveEmail: effectiveEmail,
           portalLastUpdateAt: rowObj.PortalLastUpdateAt || "",
           portalTokenIssuedAt: rowObj.PortalTokenIssuedAt || "",
+          receivedAt: receivedInfo.receivedAt,
+          receivedDisplay: receivedInfo.receivedDisplay,
+          receivedSource: receivedInfo.source,
+          ageDays: receivedInfo.ageDays,
+          ageLabel: receivedInfo.ageLabel,
+          ageBand: receivedInfo.ageBand,
+          Handled_By: clean_(rowObj.Handled_By || ""),
+          Handled_At: clean_(rowObj.Handled_At || ""),
+          Enrolled_By: clean_(rowObj.Enrolled_By || ""),
+          Enrolled_At: clean_(rowObj.Enrolled_At || ""),
           docsFollowupEligibleBase: !!docsFollowupEligibleBase,
           eligibleDocsFollowUp: !!eligibleDocsFollowUp,
           docsFollowupSentAt: safeStr_(docsFollowupSentAt || "")
@@ -2826,6 +2951,16 @@ function admin_getReviewQueues(payload) {
             parentEmail: clean_(it.parentEmail || ""),
             correctedEmail: clean_(it.correctedEmail || ""),
             effectiveEmail: clean_(it.effectiveEmail || ""),
+            receivedAt: clean_(it.receivedAt || ""),
+            receivedDisplay: clean_(it.receivedDisplay || ""),
+            receivedSource: clean_(it.receivedSource || ""),
+            ageDays: (it.ageDays === null || it.ageDays === undefined || it.ageDays === "") ? "" : Number(it.ageDays),
+            ageLabel: clean_(it.ageLabel || ""),
+            ageBand: clean_(it.ageBand || ""),
+            Handled_By: clean_(it.Handled_By || ""),
+            Handled_At: clean_(it.Handled_At || ""),
+            Enrolled_By: clean_(it.Enrolled_By || ""),
+            Enrolled_At: clean_(it.Enrolled_At || ""),
             docsFollowupEligibleBase: !!it.docsFollowupEligibleBase,
             eligibleDocsFollowUp: !!it.eligibleDocsFollowUp,
             docsFollowupSentAt: safeStr_(it.docsFollowupSentAt || ""),

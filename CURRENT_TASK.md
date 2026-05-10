@@ -18,6 +18,8 @@
 - No rollback was required.
 - Remaining separate issue: `Admin.js` dirty state must be investigated before the next release.
 - VCF utility production testing remains parked until business WhatsApp phone access.
+- Admin queue aging display-only update is local only and has not been deployed yet.
+- The queue aging change is display-only and does not alter sheet data, attribution, verification, CRM, or Books logic.
 - S1 stabilization baseline audit active.
 - S1 scope is documentation-only baseline creation before CRM cleanup or workflow refactors.
 - S2B semantic stabilization and rollback verification active.
@@ -75,6 +77,14 @@
 - S5C WhatsApp fallback admin email target is simplified to `fode@kundu.ac` only.
 - S5C preserves CRM quarantine, introduces no trigger change, introduces no schema change, and leaves Books implementation future-only.
 - S5C scanned-document automation remains a future design item.
+- Handled ownership capture remains local only and has not been deployed yet.
+- Operator attribution capture remains write-once for `Handled_By` and `Handled_At` only.
+- `Enrolled_By` and `Enrolled_At` are intentionally deferred until a future CIS adds a true `Registration_Complete` transition hook.
+- Attribution logging marker in the live code path is `ATTRIBUTION_HANDLED_SET`.
+- Review-open ownership stamping was removed.
+- Admin/superadmin identity validation completed against the canonical admin identity path.
+- Current source identity set is 6 admin emails plus 1 superadmin; future admin identity rationalisation is a separate task.
+- No deployment has been performed for this candidate.
 - r151 deployment completed, but browser acceptance failed because the S5C email UI displayed `Email sent to 0 admin recipient(s): `.
 - The failure cause was a UI response-shape mismatch: `AdminUI.html` onOk read `res.detail`, while `admin_emailWhatsAppFallbackCsv` returned `recipientCount` and `recipients` at top level.
 - r152 deployment is now live after fixing the S5C email UI payload handling.
