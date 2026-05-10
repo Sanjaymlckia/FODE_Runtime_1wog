@@ -2,7 +2,7 @@
 
 ## Current Objective
 
- Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S5A Canonical Intake and Operations Architecture documentation plus the unified operations platform roadmap update, with r149 still serving as the live stabilization baseline.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S5B Lifecycle Semantics Review, with r149 still serving as the live stabilization baseline.
 
 ## Current Issue
 
@@ -59,6 +59,11 @@
 - The roadmap is documentation-only and sits after FODE stabilization but before any large-scale Books integration rollout.
 - CRM remains quarantined as a compatibility layer only.
 - Books implementation remains future CIS only.
+- S5B lifecycle semantics review active.
+- S5B refines lifecycle meanings before any implementation work and keeps state semantics stable across FODE, KIA, and MLC.
+- S5B distinguishes received, reviewed, verified, approved, activated, and enrolled without introducing a runtime state engine.
+- S5B confirms `PAYMENT_RECEIVED` is not `PAYMENT_VERIFIED`, `ELIGIBLE_FOR_ENROLMENT` is not `PORTAL_ACTIVE`, and `PORTAL_ACTIVE` is not `ENROLLED`.
+- S5B keeps CRM quarantined, Books implementation forbidden, and lifecycle semantics documentation-only.
 - `clasp logs --json` remains unavailable because the GCP project ID is not set, and direct `clasp run` verification of trigger/runtime status remains blocked by script execution permissions.
 - Next proposed phase remains documentation-driven Books-native finance architecture and the future unified operations platform workstream, subject to future CIS authorization.
 - Trigger deleted by operator.
@@ -379,7 +384,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-Preserve r149 as the live stabilization baseline with CRM legacy quarantine enabled. Use the S5A operational model and new unified operations roadmap to formalize intake, authority, communication, finance direction, and product overlays without reviving CRM-era authority, schema mutation, trigger recreation, or external finance handoff.
+Preserve r149 as the live stabilization baseline with CRM legacy quarantine enabled. Use the S5A operational model, S5B semantics review, and unified operations roadmap to formalize intake, authority, communication, finance direction, and product overlays without reviving CRM-era authority, schema mutation, trigger recreation, or external finance handoff.
 
 ## Cautions
 

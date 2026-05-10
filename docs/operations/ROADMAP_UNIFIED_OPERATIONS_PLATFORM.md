@@ -73,4 +73,4 @@ Unified Operations Platform Refactor
 - S5A canonical lifecycle and authority model: `docs/operations/S5A_CANONICAL_INTAKE_LIFECYCLE.md`
 - S5A authority map: `docs/operations/S5A_OPERATIONAL_AUTHORITY_MAP.md`
 - S5A finance direction: `docs/operations/S5A_FINANCE_DIRECTION.md`
-
+- S5B lifecycle semantics review: `docs/operations/S5B_LIFECYCLE_SEMANTICS_REVIEW.md`
