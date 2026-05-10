@@ -2,7 +2,7 @@
 
 ## Current Objective
 
- Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S5B Lifecycle Semantics Review, with r149 still serving as the live stabilization baseline.
+ Maintain `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog` as the authoritative FODE Runtime repo during S5C WhatsApp Admin CSV workflow, with r149 still serving as the live stabilization baseline.
 
 ## Current Issue
 
@@ -64,6 +64,12 @@
 - S5B distinguishes received, reviewed, verified, approved, activated, and enrolled without introducing a runtime state engine.
 - S5B confirms `PAYMENT_RECEIVED` is not `PAYMENT_VERIFIED`, `ELIGIBLE_FOR_ENROLMENT` is not `PORTAL_ACTIVE`, and `PORTAL_ACTIVE` is not `ENROLLED`.
 - S5B keeps CRM quarantined, Books implementation forbidden, and lifecycle semantics documentation-only.
+- S5C WhatsApp admin CSV workflow active/completed in this CIS.
+- S5C keeps the existing criteria-based WhatsApp fallback queue as the primary selector and adds configurable export sizing, manual admin CSV email, and ready-to-use WhatsApp operator assistance.
+- S5C sets default batch size to 20 and hard caps export size at 100 server-side.
+- S5C adds CSV email to configured admin recipients only, with manual click-only activation and no unattended WhatsApp sending.
+- S5C preserves CRM quarantine, introduces no trigger change, introduces no schema change, and leaves Books implementation future-only.
+- S5C scanned-document automation remains a future design item.
 - `clasp logs --json` remains unavailable because the GCP project ID is not set, and direct `clasp run` verification of trigger/runtime status remains blocked by script execution permissions.
 - Next proposed phase remains documentation-driven Books-native finance architecture and the future unified operations platform workstream, subject to future CIS authorization.
 - Trigger deleted by operator.
@@ -384,7 +390,7 @@ Manual UI send of 10 reached the backend, but the Admin client timed out at 20 s
 
 ## Next Exact Step
 
-Preserve r149 as the live stabilization baseline with CRM legacy quarantine enabled. Use the S5A operational model, S5B semantics review, and unified operations roadmap to formalize intake, authority, communication, finance direction, and product overlays without reviving CRM-era authority, schema mutation, trigger recreation, or external finance handoff.
+Preserve r149 as the live stabilization baseline with CRM legacy quarantine enabled. Use the S5A operational model, S5B semantics review, S5C WhatsApp workflow, and unified operations roadmap to formalize intake, authority, communication, finance direction, and product overlays without reviving CRM-era authority, schema mutation, trigger recreation, or external finance handoff.
 
 ## Cautions
 

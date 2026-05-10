@@ -2081,6 +2081,10 @@ function adminSendEmail_(to, subject, body, opts) {
   var bcc = safeStr_(o.bcc || "");
   var htmlBody = safeStr_(o.htmlBody || "");
   var fromName = safeStr_(o.name || CONFIG.EMAIL_FROM_NAME || "");
+  var attachments = [];
+  if (o.attachments) {
+    attachments = Array.isArray(o.attachments) ? o.attachments.filter(function (item) { return !!item; }) : [o.attachments];
+  }
 
   if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true) {
     var blockCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "PRODUCTION_EMAIL_SENDS_DISABLED";
@@ -2129,6 +2133,7 @@ function adminSendEmail_(to, subject, body, opts) {
       if (cc) mailOpts.cc = cc;
       if (bcc) mailOpts.bcc = bcc;
       if (htmlBody) mailOpts.htmlBody = htmlBody;
+      if (attachments.length) mailOpts.attachments = attachments;
       MailApp.sendEmail(toEmail, subj, textBody, mailOpts);
     } else {
       var gmailOpts = {};
@@ -2137,6 +2142,7 @@ function adminSendEmail_(to, subject, body, opts) {
       if (cc) gmailOpts.cc = cc;
       if (bcc) gmailOpts.bcc = bcc;
       if (htmlBody) gmailOpts.htmlBody = htmlBody;
+      if (attachments.length) gmailOpts.attachments = attachments;
       var senderMode = safeStr_(o.senderMode || CONFIG.EMAIL_SENDER_MODE || "DEFAULT").toUpperCase();
       if (senderMode === "ALIAS" && fromAddr) gmailOpts.from = fromAddr;
       GmailApp.sendEmail(toEmail, subj, textBody, gmailOpts);

@@ -130,6 +130,10 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   EMAIL_ADMIN_ALERTS_TO: "fode@kundu.ac",
   EMAIL_ENABLE_PAYMENT_VERIFIED_TRIGGERS: true,
   EMAIL_RELEASE_ADMIN_TO: "sanja@minervacenters.com,ict@minervacenters.com",
+  WHATSAPP_FALLBACK_DEFAULT_LIMIT: 20,
+  WHATSAPP_FALLBACK_MAX_LIMIT: 100,
+  WHATSAPP_FALLBACK_ADMIN_RECIPIENTS: "sanja@minervacenters.com,ict@minervacenters.com",
+  WHATSAPP_FALLBACK_MESSAGE_TEMPLATE: "Hello, this is FODE Admissions. We are following up on your application (ApplicantID: {{ApplicantID}}). Please check your email or contact us if you need help completing your application.",
   EMAIL_FROM_NAME: "FODE Admissions",
   EMAIL_PROVIDER: "MAILAPP", // "MAILAPP" | "GMAILAPP"
   EMAIL_SENDER_MODE: "ALIAS", // "DEFAULT" | "ALIAS"
