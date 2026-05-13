@@ -379,8 +379,9 @@ function admin_getApplicantDetail(payload) {
         statusField: m.status,
         commentField: m.comment,
         required: m.required !== false,
+        rawValue: rawValue,
         url: url,
-        hasFile: resolvedUrls.length > 0 || /^https?:\/\//i.test(url),
+        hasFile: hasUploadEvidence_(rawValue, m.file),
         status: normalizeDocStatus_(clean_(row[idx[m.status] - 1]) || "Pending"),
         comment: clean_(row[idx[m.comment] - 1])
       };
@@ -396,7 +397,7 @@ function admin_getApplicantDetail(payload) {
     var canOverride = canOverrideOverall_(adminEmail);
     var isSuperAdminCaller = canBypassPaymentFreeze_(adminEmail);
     var isOverridden = !!(canOverride && overallStored && overallStored !== overallComputed);
-    detailObj.Payment_Received = (nonEmpty_(clean_(detailObj.Fee_Receipt_File || "")) || nonEmpty_(clean_(detailObj.Receipt_Status || ""))) ? "Yes" : "No";
+    detailObj.Payment_Received = hasUploadEvidence_(detailObj.Fee_Receipt_File, "Fee_Receipt_File") ? "Yes" : "No";
     detailObj.Docs_Verified = clean_(detailObj.Docs_Verified || "") === "Yes" ? "Yes" : "No";
     detailObj.Portal_Submitted = (nonEmpty_(clean_(detailObj.Portal_Submitted || "")) && clean_(detailObj.Portal_Submitted || "") !== "No") ? "Yes" : "No";
     detailObj.Payment_Verified = clean_(detailObj.Payment_Verified || "") === "Yes" ? "Yes" : "No";
@@ -421,7 +422,7 @@ function admin_getApplicantDetail(payload) {
     detailObj.Doc_Verification_Status = String(detailObj.Doc_Verification_Status || "Pending");
     detailObj._docs = (detailObj._docs || []).map(function (d) {
       d.url = asStringUrl_(d.url);
-      d.hasFile = /^https?:\/\//i.test(d.url);
+      d.hasFile = hasUploadEvidence_(d.rawValue || d.url, d.file);
       return d;
     });
 
@@ -2410,7 +2411,7 @@ function hasAnyRequiredDoc_(rowObj) {
     "Passport_Photo_File"
   ];
   for (var i = 0; i < required.length; i++) {
-    if (nonEmpty_(row[required[i]])) return true;
+    if (hasUploadEvidence_(row[required[i]], required[i])) return true;
   }
   return false;
 }
@@ -2544,7 +2545,7 @@ function hasMandatoryDocIssue_(rowObj, idx) {
   for (var i = 0; i < mappings.length; i++) {
     var m = mappings[i];
     if (idx && (!idx[m.file] || !idx[m.status])) continue;
-    var hasFile = clean_(row[m.file] || "");
+    var hasFile = hasUploadEvidence_(row[m.file], m.file);
     var status = clean_(row[m.status] || "");
     if (hasFile && normalizeDocStatus_(status || "Pending") !== "Verified") return true;
   }
@@ -2594,7 +2595,7 @@ function deriveOperationalPipelineStage_(rowObj) {
   var docsVerified = clean_(row.Docs_Verified || "") === "Yes" || computeDocVerificationStatus_(row) === "Verified";
   var paymentVerified = clean_(row.Payment_Verified || "") === "Yes";
   var registrationComplete = clean_(row.Registration_Complete || "") === "Yes";
-  var receiptPresent = nonEmpty_(row.Fee_Receipt_File || "") || nonEmpty_(row.Receipt_Status || "");
+  var receiptPresent = hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File");
   var emailStatus = normalizeEmailStatus_(row.Email_Status || "");
   var lastContact = clean_(row.Last_Contact_Result || "").toUpperCase();
 
@@ -3016,7 +3017,7 @@ function admin_getReviewQueues(payload) {
         var portalSubmittedRaw = clean_(rowObj.Portal_Submitted || "");
         var portalSubmitted = nonEmpty_(portalSubmittedRaw) && portalSubmittedRaw !== "No";
         var docsVerified = docsVerifiedRaw === "Yes";
-        var paymentEvidencePresent = nonEmpty_(receiptUrl) || nonEmpty_(clean_(rowObj.Receipt_Status || ""));
+        var paymentEvidencePresent = hasUploadEvidence_(rowObj.Fee_Receipt_File, "Fee_Receipt_File");
         var paymentReceived = paymentEvidencePresent;
         var paymentVerified = paymentVerifiedRaw;
         var enrolledConfirmed = paymentVerified;

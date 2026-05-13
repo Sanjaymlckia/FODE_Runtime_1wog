@@ -2392,6 +2392,48 @@ function normalizeToUrlList_(cellValue, fieldName) {
   return out;
 }
 
+function isEmptyUploadPlaceholder_(value) {
+  if (value === null || value === undefined) return true;
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value === "object") return Object.keys(value).length === 0;
+  var s = clean_(value);
+  if (!s) return true;
+  var n = s.toLowerCase().replace(/\s+/g, "");
+  return n === "[]" || n === "{}" || n === "null" || n === "undefined" || n === "none" || n === "n/a" || n === "notuploaded" || n === "nofile";
+}
+
+function hasUploadEvidence_(value, fieldName) {
+  if (isEmptyUploadPlaceholder_(value)) return false;
+  if (normalizeToUrlList_(value, fieldName).length > 0) return true;
+
+  if (Array.isArray(value)) {
+    for (var i = 0; i < value.length; i++) {
+      if (hasUploadEvidence_(value[i], fieldName)) return true;
+    }
+    return false;
+  }
+
+  if (typeof value === "object") {
+    var keys = ["id", "fileId", "url", "fileUrl", "webViewLink", "webContentLink", "link", "driveUrl"];
+    for (var k = 0; k < keys.length; k++) {
+      if (Object.prototype.hasOwnProperty.call(value, keys[k]) && !isEmptyUploadPlaceholder_(value[keys[k]])) return true;
+    }
+    return false;
+  }
+
+  var raw = clean_(value);
+  if (extractDriveFileIdFromUrlToken_(raw)) return true;
+  if ((raw.charAt(0) === "[" && raw.charAt(raw.length - 1) === "]") || (raw.charAt(0) === "{" && raw.charAt(raw.length - 1) === "}")) {
+    try {
+      return hasUploadEvidence_(JSON.parse(raw), fieldName);
+    } catch (_jsonErr) {
+      return false;
+    }
+  }
+
+  return false;
+}
+
 function appendUrlToCell_(existingValue, newUrl) {
   var url = clean_(newUrl);
   if (!url) return clean_(existingValue);

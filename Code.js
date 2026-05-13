@@ -6841,8 +6841,7 @@ function deriveApplicantLifecycleStage_(rowObj) {
   var docsVerified = computeDocVerificationStatus_(row) === "Verified" || clean_(row.Docs_Verified || "") === "Yes";
   var paymentBadge = derivePaymentBadge_(row);
   var paymentVerified = paymentBadge === "Verified" || clean_(row.Payment_Verified || "") === "Yes";
-  var receiptStatus = clean_(row.Receipt_Status || "");
-  var receiptEvidencePresent = !!receiptStatus || !!clean_(row.Fee_Receipt_File || "");
+  var receiptEvidencePresent = hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File");
   var attemptCount = campaignAttemptCount_(row);
   var nextActionTs = parseTime_(row.Email_Next_Action_Date || "");
   var now = new Date();
