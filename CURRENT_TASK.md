@@ -49,3 +49,13 @@
 - Keep `Enrolled_By` / `Enrolled_At` deferred until a future CIS explicitly authorizes the transition hook.
 - Do not reopen the resolved S5C email UI issue unless a regression appears.
 - Do not rely on stale historical handoff blocks for current runtime truth.
+
+## PASS 1 Operational Hardening In Progress
+
+- Target release candidate: `r154 / 154`.
+- Scope: operational dashboard, email observability, WhatsApp fallback visibility, duplicate intake protection, trigger/runtime telemetry, and pipeline counts.
+- Files in scope: `AdminUI.html`, `Admin.js`, `Code.js`, `Utils.js`, `Config.js`, `CURRENT_TASK.md`.
+- Current accepted runtime remains `r153 / 153` until release acceptance completes.
+- Local validation: `node --check` passed for `Admin.js`, `Code.js`, `Utils.js`, and `Config.js`; `git diff --check` passed via preflight.
+- Release blocked before Apps Script version creation: `clasp push` and `clasp push -f` both failed with `ENOENT: no such file or directory, scandir ''`.
+- Do not proceed to `clasp version`, deployment repin, browser acceptance, git commit, tag, or push until the clasp rootDir blocker is explicitly resolved.

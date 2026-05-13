@@ -2537,8 +2537,12 @@ function normalizeEmailStatus_(value) {
   var allowed = {
     NEW: true,
     READY: true,
+    SEND_ATTEMPT: true,
     SENT: true,
+    FAILED: true,
     BOUNCED: true,
+    SUPPRESSED: true,
+    FALLBACK_PENDING: true,
     RESPONDED: true,
     DO_NOT_CONTACT: true
   };

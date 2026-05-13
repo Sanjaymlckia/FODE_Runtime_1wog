@@ -1985,6 +1985,7 @@ function getWhatsAppFallbackEmailIssue_(rowObj) {
   var effective = emailCorrected || emailRaw;
   var validEffective = typeof isValidEmail_ === "function" ? isValidEmail_(effective) : stageAggregationIsValidEmail_(effective);
   if (status === "BOUNCED" || bounceFlag) return "BOUNCED";
+  if (status === "FAILED" || status === "FALLBACK_PENDING" || lastResult === "FAILED") return "FAILED_EMAIL";
   if (lastResult === "BLOCKED") return "BLOCKED";
   if (!effective) return "MISSING_EMAIL";
   if (!validEffective) return "INVALID_EMAIL";
@@ -2565,6 +2566,160 @@ function isQueueCandidateRow_(rowObj) {
 
 function getDashboardCacheKey_(adminEmail) {
   return "ADMIN_DASHBOARD::" + clean_(adminEmail || "").toLowerCase();
+}
+
+function getOperationalMetricsCacheKey_(adminEmail) {
+  return "ADMIN_OPS_METRICS::" + clean_(adminEmail || "").toLowerCase();
+}
+
+function isSameLocalDate_(value, now) {
+  var ts = parseTime_(value);
+  if (!(ts > 0)) return false;
+  var tz = Session.getScriptTimeZone() || "GMT";
+  return Utilities.formatDate(new Date(ts), tz, "yyyy-MM-dd") === Utilities.formatDate(now || new Date(), tz, "yyyy-MM-dd");
+}
+
+function deriveOperationalPipelineStage_(rowObj) {
+  var row = rowObj || {};
+  var raw = clean_(row.Pipeline_Stage || row.Operational_Stage || row.CRM_Stage || row.Stage || "");
+  var normalized = raw.toLowerCase();
+  if (normalized === "new to mlckia") return "New To MLCKIA";
+  if (normalized === "contacted") return "Contacted";
+  if (normalized === "documents pending") return "Documents Pending";
+  if (normalized === "payment pending") return "Payment Pending";
+  if (normalized === "enrolled") return "Enrolled";
+  if (normalized === "closed lost") return "Closed Lost";
+
+  var portalSubmitted = nonEmpty_(row.Portal_Submitted || "") && clean_(row.Portal_Submitted || "") !== "No";
+  var docsVerified = clean_(row.Docs_Verified || "") === "Yes" || computeDocVerificationStatus_(row) === "Verified";
+  var paymentVerified = clean_(row.Payment_Verified || "") === "Yes";
+  var registrationComplete = clean_(row.Registration_Complete || "") === "Yes";
+  var receiptPresent = nonEmpty_(row.Fee_Receipt_File || "") || nonEmpty_(row.Receipt_Status || "");
+  var emailStatus = normalizeEmailStatus_(row.Email_Status || "");
+  var lastContact = clean_(row.Last_Contact_Result || "").toUpperCase();
+
+  if (/closed|lost|withdraw/i.test(raw)) return "Closed Lost";
+  if (registrationComplete || paymentVerified) return "Enrolled";
+  if (docsVerified || receiptPresent) return "Payment Pending";
+  if (portalSubmitted) return "Documents Pending";
+  if (emailStatus === "SENT" || emailStatus === "SEND_ATTEMPT" || lastContact) return "Contacted";
+  return "New To MLCKIA";
+}
+
+function buildDuplicateSignatureMetrics_(rowObj) {
+  var row = rowObj || {};
+  var first = clean_(row.First_Name || "").toLowerCase().replace(/\s+/g, " ").trim();
+  var last = clean_(row.Last_Name || "").toLowerCase().replace(/\s+/g, " ").trim();
+  var name = clean_(row.StudentName || row.Student_Name || row.Full_Name || ((first + " " + last).trim())).toLowerCase().replace(/\s+/g, " ").trim();
+  var dob = toIsoDateInput_(row.Date_Of_Birth || row.DOB || "") || clean_(row.Date_Of_Birth || row.DOB || "").toLowerCase();
+  return {
+    applicantId: clean_(row.ApplicantID || "").toLowerCase(),
+    parentContact: clean_(row.Parent_Email_Corrected || row.Parent_Email || "").toLowerCase() + "::" + clean_(row.Parent_Phone || row.Parent_Mobile || row.Phone_Number || row.Mobile || row.Phone || "").replace(/\D/g, ""),
+    studentDob: name && dob ? (name + "::" + dob) : "",
+    portalToken: clean_(row.PortalTokenHash || "").toLowerCase()
+  };
+}
+
+function countDuplicateRisk_(signatureCounts) {
+  var risk = 0;
+  Object.keys(signatureCounts || {}).forEach(function (key) {
+    if (Number(signatureCounts[key] || 0) > 1) risk++;
+  });
+  return risk;
+}
+
+function buildOperationalDashboardMetrics_() {
+  var now = new Date();
+  var startedAt = now.getTime();
+  var sheet = openDataSheet_();
+  var values = sheet.getDataRange().getValues();
+  var headers = values && values.length ? values[0] : [];
+  var rows = Math.max(0, (values || []).length - 1);
+  var pipelineCounts = {
+    "New To MLCKIA": 0,
+    "Contacted": 0,
+    "Documents Pending": 0,
+    "Payment Pending": 0,
+    "Enrolled": 0,
+    "Closed Lost": 0
+  };
+  var emailStates = {
+    SEND_ATTEMPT: 0,
+    SENT: 0,
+    FAILED: 0,
+    BOUNCED: 0,
+    SUPPRESSED: 0,
+    FALLBACK_PENDING: 0
+  };
+  var signatureCounts = {};
+  var out = {
+    ok: true,
+    formsReceivedToday: 0,
+    pendingIntakeReview: 0,
+    docsPending: 0,
+    paymentPending: 0,
+    emailSentToday: 0,
+    emailFailures: 0,
+    whatsappFallbackQueue: 0,
+    queueBacklog: 0,
+    duplicateRisk: 0,
+    pipelineCounts: pipelineCounts,
+    emailStates: emailStates,
+    scannedRows: rows,
+    scanDurationMs: 0
+  };
+  for (var r = 1; r < values.length; r++) {
+    var rowObj = campaignRowObjectFromValues_(headers, values[r]);
+    if (!clean_(rowObj.ApplicantID || "")) continue;
+    if (isSameLocalDate_(rowObj.Timestamp || rowObj.timestamp || rowObj.adapter_timestamp || rowObj.Created_At || rowObj.PortalTokenIssuedAt || "", now)) out.formsReceivedToday++;
+    var pipeline = deriveOperationalPipelineStage_(rowObj);
+    if (Object.prototype.hasOwnProperty.call(pipelineCounts, pipeline)) pipelineCounts[pipeline]++;
+    var emailStatus = normalizeEmailStatus_(rowObj.Email_Status || "");
+    if (emailStatus && Object.prototype.hasOwnProperty.call(emailStates, emailStatus)) emailStates[emailStatus]++;
+    if (isSameLocalDate_(rowObj.Email_Last_Sent_At || rowObj.Last_Contacted_At || "", now)) out.emailSentToday++;
+    var lastResult = clean_(rowObj.Last_Contact_Result || "").toUpperCase();
+    if (lastResult === "FAILED") emailStates.FAILED++;
+    if (lastResult === "SUPPRESSED") emailStates.SUPPRESSED++;
+    if (emailStatus === "FAILED" || emailStatus === "BOUNCED" || lastResult === "FAILED") out.emailFailures++;
+    if (isWhatsAppFallbackCandidate_(rowObj, "ALL_FALLBACK") || emailStatus === "FALLBACK_PENDING") {
+      out.whatsappFallbackQueue++;
+    }
+    if (isQueueCandidateRow_(rowObj)) out.queueBacklog++;
+    if (pipeline === "Documents Pending") out.docsPending++;
+    if (pipeline === "Payment Pending") out.paymentPending++;
+    if (pipeline !== "Enrolled" && pipeline !== "Closed Lost") out.pendingIntakeReview++;
+
+    var sig = buildDuplicateSignatureMetrics_(rowObj);
+    ["applicantId", "parentContact", "studentDob", "portalToken"].forEach(function (key) {
+      var value = clean_(sig[key] || "");
+      if (key === "parentContact" && value.indexOf("::") <= 0) return;
+      if (key === "parentContact" && (!value.split("::")[0] || !value.split("::")[1])) return;
+      if (!value) return;
+      var compound = key + "::" + value;
+      signatureCounts[compound] = Number(signatureCounts[compound] || 0) + 1;
+    });
+  }
+  out.duplicateRisk = countDuplicateRisk_(signatureCounts);
+  out.scanDurationMs = new Date().getTime() - startedAt;
+  return out;
+}
+
+function admin_getOperationalDashboardMetrics(payload) {
+  var adminEmail = getCallerEmail_();
+  if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+  var p = payload && typeof payload === "object" ? payload : {};
+  var force = p.force === 1 || p.force === true;
+  var cache = CacheService.getUserCache();
+  var cacheKey = getOperationalMetricsCacheKey_(adminEmail);
+  if (!force) {
+    try {
+      var cached = cache.get(cacheKey);
+      if (cached) return JSON.parse(cached);
+    } catch (_cacheReadErr) {}
+  }
+  var out = buildOperationalDashboardMetrics_();
+  try { cache.put(cacheKey, JSON.stringify(out), 60); } catch (_cacheWriteErr) {}
+  return out;
 }
 
 function sliceQueueByOffset_(rows, offset, limit) {
@@ -3911,6 +4066,13 @@ function admin_getOperationalSafetyStatus(payload) {
     },
     automation: {
       lastRun: clean_(lastRun && (lastRun.writtenAt || lastRun.timestamp || lastRun.startedAt) || ""),
+      lastSuccessfulRun: clean_(lastRun && lastRun.lastSuccessfulRun || ""),
+      lastFailedRun: clean_(lastRun && lastRun.lastFailedRun || ""),
+      consecutiveFailures: Number(lastRun && lastRun.consecutiveFailures || 0),
+      queueScanDurationMs: Number(lastRun && lastRun.elapsedMs || 0),
+      batchSizeUsed: Number(lastRun && (lastRun.effectiveRunSize || lastRun.batchSize || 0) || 0),
+      dailySendCount: Number(triggerStatus && triggerStatus.sentToday || lastRun && lastRun.dailyUsedAfter || 0),
+      dailyCapRemaining: Math.max(0, Number(triggerStatus && triggerStatus.dailyCap || 0) - Number(triggerStatus && triggerStatus.sentToday || 0)),
       lastBatchId: clean_(lastRun && (lastRun.batchId || lastRun.batchLabel || lastRun.requestId || lastRun.debugId) || ""),
       lastBatchResult: clean_(lastRun && (lastRun.result || lastRun.blockCode || lastRun.message || "") || "")
     },

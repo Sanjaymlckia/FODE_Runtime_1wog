@@ -260,6 +260,23 @@ function doPost(e) {
       dataSheet: clean_(dataSheet.getName() || "")
     });
 
+    activationStage = "DUPLICATE_CHECK";
+    var duplicateCheck = findPotentialIntakeDuplicate_(dataSheet, payload);
+    if (duplicateCheck && duplicateCheck.duplicate === true) {
+      activationCode = "DUPLICATE_INTAKE_REVIEW_REQUIRED";
+      logActivation_(logSheet, "DUPLICATE_INTAKE_BLOCKED", {
+        correlation_id: correlationId,
+        matches: duplicateCheck.matches || []
+      });
+      return jsonOut_({
+        status: "duplicate_review_required",
+        ok: false,
+        code: activationCode,
+        message: "Potential duplicate intake found. Operator review required before creating another applicant.",
+        matches: duplicateCheck.matches || []
+      });
+    }
+
     activationStage = "APPLICANTID_PREPARE";
     var applicantIdState = scanApplicantIdState_(dataSheet);
     applicantId = clean_(applicantIdState.applicantId || "");
@@ -4919,6 +4936,79 @@ function buildActivatedIntakeRow_(sheet, payload, folderUrl, applicantId, tokenS
   return row;
 }
 
+function normalizeDuplicateKey_(value) {
+  return clean_(value || "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function normalizeDuplicatePhoneKey_(value) {
+  return clean_(value || "").replace(/\D/g, "");
+}
+
+function normalizeDuplicateDobKey_(value) {
+  return toIsoDateInput_(value) || normalizeDuplicateKey_(value);
+}
+
+function buildIntakeDuplicateCandidate_(payload) {
+  var p = payload || {};
+  var first = normalizeDuplicateKey_(p.First_Name || p.Student_First_Name || "");
+  var last = normalizeDuplicateKey_(p.Last_Name || p.Student_Last_Name || "");
+  var full = normalizeDuplicateKey_(p.StudentName || p.Student_Name || p.Full_Name || ((first + " " + last).trim()));
+  var dob = normalizeDuplicateDobKey_(p.Date_Of_Birth || p.DOB || "");
+  return {
+    applicantId: normalizeDuplicateKey_(p.ApplicantID || p.id || ""),
+    parentEmail: normalizeDuplicateKey_(p.Parent_Email_Corrected || p.Parent_Email || p.email || ""),
+    parentPhone: normalizeDuplicatePhoneKey_(p.Parent_Phone || p.Parent_Mobile || p.Phone_Number || p.Mobile || p.Phone || ""),
+    parentContact: normalizeDuplicateKey_(p.Parent_Email_Corrected || p.Parent_Email || p.email || "") + "::" + normalizeDuplicatePhoneKey_(p.Parent_Phone || p.Parent_Mobile || p.Phone_Number || p.Mobile || p.Phone || ""),
+    studentDob: full && dob ? (full + "::" + dob) : "",
+    portalToken: normalizeDuplicateKey_(p.PortalTokenHash || p.Portal_Token || p.s || "")
+  };
+}
+
+function findPotentialIntakeDuplicate_(sheet, payload) {
+  var sh = sheet;
+  if (!sh) return { duplicate: false, matches: [] };
+  var candidate = buildIntakeDuplicateCandidate_(payload);
+  var values = sh.getDataRange().getValues();
+  if (!values || values.length < 2) return { duplicate: false, matches: [] };
+  var headers = values[0].map(function (h) { return clean_(h); });
+  var matches = [];
+  for (var r = 1; r < values.length; r++) {
+    var rowObj = {};
+    for (var c = 0; c < headers.length; c++) {
+      if (headers[c]) rowObj[headers[c]] = values[r][c];
+    }
+    var first = normalizeDuplicateKey_(rowObj.First_Name || "");
+    var last = normalizeDuplicateKey_(rowObj.Last_Name || "");
+    var existing = {
+      applicantId: normalizeDuplicateKey_(rowObj.ApplicantID || ""),
+      parentEmail: normalizeDuplicateKey_(rowObj.Parent_Email_Corrected || rowObj.Parent_Email || ""),
+      parentPhone: normalizeDuplicatePhoneKey_(rowObj.Parent_Phone || rowObj.Parent_Mobile || rowObj.Phone_Number || rowObj.Mobile || rowObj.Phone || ""),
+      parentContact: normalizeDuplicateKey_(rowObj.Parent_Email_Corrected || rowObj.Parent_Email || "") + "::" + normalizeDuplicatePhoneKey_(rowObj.Parent_Phone || rowObj.Parent_Mobile || rowObj.Phone_Number || rowObj.Mobile || rowObj.Phone || ""),
+      studentDob: normalizeDuplicateKey_(rowObj.StudentName || rowObj.Student_Name || rowObj.Full_Name || ((first + " " + last).trim())),
+      dob: normalizeDuplicateDobKey_(rowObj.Date_Of_Birth || rowObj.DOB || ""),
+      portalToken: normalizeDuplicateKey_(rowObj.PortalTokenHash || "")
+    };
+    var reasons = [];
+    if (candidate.applicantId && existing.applicantId && candidate.applicantId === existing.applicantId) reasons.push("ApplicantID");
+    if (candidate.parentEmail && candidate.parentPhone && existing.parentEmail && existing.parentPhone && candidate.parentContact === existing.parentContact) reasons.push("Parent_Email + Parent_Phone");
+    if (candidate.studentDob && existing.studentDob && existing.dob && candidate.studentDob === (existing.studentDob + "::" + existing.dob)) reasons.push("Student name + DOB");
+    if (candidate.portalToken && existing.portalToken && candidate.portalToken === existing.portalToken) reasons.push("existing portal token");
+    if (reasons.length) {
+      matches.push({
+        rowNumber: r + 1,
+        applicantId: clean_(rowObj.ApplicantID || ""),
+        reasons: reasons
+      });
+      if (matches.length >= 5) break;
+    }
+  }
+  return {
+    duplicate: matches.length > 0,
+    candidate: candidate,
+    matches: matches
+  };
+}
+
 function insertActivatedRowAt_(sheet, targetRow, rowArray) {
   var rowNum = Number(targetRow || 0);
   if (!rowNum || rowNum < 2) throw new Error("Invalid targetRow for activation commit");
@@ -6946,6 +7036,32 @@ function buildApplicantMessage_(context) {
   return { ok: false, code: "UNKNOWN_MESSAGE_TYPE", subject: "", body: "" };
 }
 
+function markApplicantEmailPipelineState_(context, state, extra) {
+  var ctx = context || {};
+  var more = extra && typeof extra === "object" ? extra : {};
+  if (!ctx.sheet || !ctx.rowNumber) return false;
+  var status = normalizeEmailStatus_(state || "");
+  if (!status) return false;
+  var nowIso = clean_(more.at || new Date().toISOString());
+  var currentAttempt = campaignAttemptCount_(ctx.rowObj);
+  var patch = {
+    Email_Status: status,
+    Email_Attempt_Count: Math.max(0, currentAttempt + (more.incrementAttempt === false ? 0 : 1))
+  };
+  if (status === "SEND_ATTEMPT" || status === "SENT") patch.Email_Last_Sent_At = nowIso;
+  if (status === "FAILED" || status === "FALLBACK_PENDING") patch.Email_Next_Action_Date = nowIso;
+  applyPatch_(ctx.sheet, ctx.rowNumber, patch);
+  try {
+    if (ctx.rowObj && typeof ctx.rowObj === "object") {
+      ctx.rowObj.Email_Status = status;
+      ctx.rowObj.Email_Attempt_Count = patch.Email_Attempt_Count;
+      if (patch.Email_Last_Sent_At) ctx.rowObj.Email_Last_Sent_At = patch.Email_Last_Sent_At;
+      if (patch.Email_Next_Action_Date) ctx.rowObj.Email_Next_Action_Date = patch.Email_Next_Action_Date;
+    }
+  } catch (_rowMirrorErr) {}
+  return true;
+}
+
 function computeEmailIdempotencyKey_(context, opts) {
   var ctx = context && typeof context === "object" ? context : {};
   var options = opts && typeof opts === "object" ? opts : {};
@@ -7147,6 +7263,14 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
       result: "BLOCKED",
       blockCode: "ALREADY_PROCESSED"
     });
+    markApplicantEmailPipelineState_(ctx, "SUPPRESSED", {
+      incrementAttempt: false
+    });
+    recordApplicantContactOutcome_(ctx, "SUPPRESSED", {
+      actorEmail: actorEmail,
+      batchLabel: clean_(options.batchLabel || ctx.batchLabel || ""),
+      subject: clean_(message.subject || "")
+    });
     return {
       ok: false,
       result: "BLOCKED",
@@ -7161,6 +7285,14 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
   }
   var requestId = clean_(ctx.debugId || options.debugId || newDebugId_());
   var batchId = clean_(options.batchLabel || ctx.batchLabel || "");
+  markApplicantEmailPipelineState_(ctx, "SEND_ATTEMPT", {
+    incrementAttempt: true
+  });
+  recordApplicantContactOutcome_(ctx, "SEND_ATTEMPT", {
+    actorEmail: actorEmail,
+    batchLabel: clean_(options.batchLabel || ctx.batchLabel || ""),
+    subject: clean_(message.subject || "")
+  });
   var sendRes = campaignSendEmailGmail_(ctx.effectiveEmail, message.subject, message.body, {
     applicantId: clean_(ctx.applicantId || ""),
     requestId: requestId,
@@ -7194,6 +7326,9 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
       batchLabel: clean_(options.batchLabel || ctx.batchLabel || ""),
       subject: clean_(message.subject || "")
     });
+    markApplicantEmailPipelineState_(ctx, "FALLBACK_PENDING", {
+      incrementAttempt: false
+    });
     return {
       ok: false,
       result: "FAILED",
@@ -7207,7 +7342,7 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
     };
   }
   var now = new Date();
-  var nextAttempt = campaignAttemptCount_(ctx.rowObj) + 1;
+  var nextAttempt = Math.max(1, campaignAttemptCount_(ctx.rowObj));
   var patch = {
     Email_Status: "SENT",
     Email_Last_Sent_At: now.toISOString(),
@@ -7411,6 +7546,12 @@ function automatedStageRunnerFinalize_(summary) {
   var out = summary && typeof summary === "object" ? summary : {};
   var nowIso = new Date().toISOString();
   out.writtenAt = clean_(out.writtenAt || nowIso);
+  var previous = readAutomatedStageRunnerLastResult_();
+  var failed = out.ok === false || clean_(out.result || "").toUpperCase() === "ERROR";
+  var previousFailures = Number(previous && previous.consecutiveFailures || 0);
+  out.lastSuccessfulRun = failed ? clean_(previous && previous.lastSuccessfulRun || "") : out.writtenAt;
+  out.lastFailedRun = failed ? out.writtenAt : clean_(previous && previous.lastFailedRun || "");
+  out.consecutiveFailures = failed ? previousFailures + 1 : 0;
   try {
     var props = PropertiesService.getScriptProperties();
     props.setProperty(automatedStageRunnerLastRunKey_(), out.writtenAt);
