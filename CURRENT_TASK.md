@@ -32,6 +32,8 @@
 - Admin identity rationalisation remains deferred as a separate task.
 - Future enrolment transition hook for `Enrolled_By` / `Enrolled_At` remains deferred.
 - Books-native architecture work remains later-phase work and is not part of the current release.
+- Batch feedback/custom email is deferred to a separate CIS. It must include preview count, explicit confirmation, per-applicant result logging, daily cap handling, and no automatic sending.
+- AI-assisted document quality scan is deferred. If added later, it must be advisory only for file type, clarity, likely wrong document, passport photo suitability, unreadable scans, missing files, and related quality flags; it must not auto-reject, auto-send, or override Admin review.
 
 ## Known Governance Notes
 

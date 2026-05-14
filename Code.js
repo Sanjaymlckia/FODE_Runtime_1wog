@@ -6393,7 +6393,7 @@ function communicationBlockReason_(code, messageType) {
 }
 
 function communicationRequiresPortalUrl_(messageType) {
-  return ["legacy_invite", "reminder", "docs_missing", "payment_followup"].indexOf(clean_(messageType || "")) >= 0;
+  return ["legacy_invite", "reminder", "application_feedback", "docs_missing", "payment_followup"].indexOf(clean_(messageType || "")) >= 0;
 }
 
 function isValidEffectiveEmail_(email) {
@@ -6416,9 +6416,99 @@ function communicationFamilyForMessageType_(messageType) {
   var normalizedType = normalizeApplicantMessageType_(messageType || "");
   if (normalizedType === "legacy_invite") return "invite";
   if (normalizedType === "reminder") return "reminder";
+  if (normalizedType === "application_feedback") return "application_feedback";
+  if (normalizedType === "custom_email") return "custom_email";
   if (normalizedType === "docs_missing") return "docs_followup";
   if (normalizedType === "payment_followup") return "payment_followup";
   return "";
+}
+
+function buildApplicantFullName_(rowObj) {
+  var row = rowObj || {};
+  var first = clean_(row.First_Name || row.FirstName || "");
+  var last = clean_(row.Last_Name || row.LastName || "");
+  var full = clean_([first, last].filter(function (part) { return !!part; }).join(" "));
+  if (full) return full;
+  return clean_(row.Student_Name || row.Full_Name || row.Applicant_Name || "");
+}
+
+function buildParentOrApplicantName_(rowObj) {
+  var row = rowObj || {};
+  var direct = clean_(
+    row.Parent_or_Applicant_Name
+    || row.Parent_Name
+    || row.Parent_Full_Name
+    || row.Guardian_Name
+    || row.Guardian_Full_Name
+    || row.Parent_Guardian_Name
+    || ""
+  );
+  if (direct) return direct;
+  var parentFirst = clean_(row.Parent_First_Name || row.Guardian_First_Name || "");
+  var parentLast = clean_(row.Parent_Last_Name || row.Guardian_Last_Name || "");
+  var parentFull = clean_([parentFirst, parentLast].filter(function (part) { return !!part; }).join(" "));
+  if (parentFull) return parentFull;
+  return buildApplicantFullName_(row) || "Parent/Guardian";
+}
+
+function feedbackStatusNeedsAttention_(status) {
+  var normalized = clean_(status || "").toLowerCase();
+  return normalized === "rejected" || normalized === "fraudulent";
+}
+
+function buildApplicationFeedbackIssues_(rowObj) {
+  var row = rowObj || {};
+  var docs = Array.isArray(CONFIG.DOC_FIELDS) ? CONFIG.DOC_FIELDS : [];
+  var issues = [];
+  docs.forEach(function (doc) {
+    if (!doc || !doc.file || !doc.status || !doc.comment) return;
+    var label = clean_(doc.label || doc.file || "");
+    var rawFile = row[doc.file];
+    var hasFile = hasUploadEvidence_(rawFile, doc.file);
+    var status = clean_(row[doc.status] || "");
+    var comment = clean_(row[doc.comment] || "");
+    var issueText = "";
+    if (!hasFile) issueText = "Cannot verify; no file uploaded.";
+    else if (comment) issueText = comment;
+    else if (feedbackStatusNeedsAttention_(status)) issueText = "Status marked " + status + ".";
+    if (!issueText) return;
+    issues.push("- " + label + ": " + issueText);
+  });
+  if (!issues.length) {
+    issues.push("- Please review the application details and upload any missing or corrected documents requested by the office.");
+  }
+  return issues.join("\n");
+}
+
+function buildApplicationFeedbackEmailBody_(context) {
+  var ctx = context || {};
+  var row = ctx.rowObj || {};
+  var parentOrApplicantName = buildParentOrApplicantName_(row);
+  var applicantName = buildApplicantFullName_(row) || "the applicant";
+  var feedbackList = buildApplicationFeedbackIssues_(row);
+  return [
+    "Dear " + parentOrApplicantName + ",",
+    "",
+    "Thank you for submitting your FODE KIA Online Application.",
+    "",
+    "We have reviewed the information and documents submitted for " + applicantName + " (Applicant ID: " + String(ctx.applicantId || "") + "). Some items require correction or resubmission before we can continue processing the application.",
+    "",
+    "Please review the notes below:",
+    "",
+    feedbackList,
+    "",
+    "To correct or upload the required documents, please log in to the student portal using the link below:",
+    "",
+    String(ctx.portalUrl || ""),
+    "",
+    "After updating the documents, please submit the portal again or notify our office so we can continue the review.",
+    "",
+    "If you need assistance, please contact us using the contact details provided in your application communication.",
+    "",
+    "Regards,",
+    "",
+    "FODE KIA Admissions Team"
+  ].join("\n");
 }
 
 function deriveCommunicationState_(rowObj, messageType, opts) {
@@ -7016,6 +7106,20 @@ function buildApplicantMessage_(context) {
       ok: true,
       subject: "Reminder: Complete Your FODE KIA Online Application",
       body: buildReminderEmailBody_(ctx)
+    };
+  }
+  if (type === "application_feedback") {
+    return {
+      ok: true,
+      subject: "Application Feedback - Action Required for Your FODE KIA Application",
+      body: buildApplicationFeedbackEmailBody_(ctx)
+    };
+  }
+  if (type === "custom_email") {
+    return {
+      ok: true,
+      subject: "",
+      body: ""
     };
   }
   if (type === "docs_missing") {
@@ -8107,6 +8211,11 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
     return blocked;
   }
   var built = buildApplicantMessage_(context);
+  var previewRecipient = clean_(options.editedRecipient || context.effectiveEmail || "");
+  var hasEditedSubject = typeof options.editedSubject === "string" && !!clean_(options.editedSubject || "");
+  var hasEditedBody = typeof options.editedBody === "string" && !!clean_(options.editedBody || "");
+  var previewSubject = hasEditedSubject ? String(options.editedSubject) : String(built.subject || "");
+  var previewBody = hasEditedBody ? String(options.editedBody) : String(built.body || "");
   var preview = {
     ok: true,
     action: "preview",
@@ -8116,19 +8225,21 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
     blockReason: "",
     applicantId: clean_(context.applicantId || ""),
     messageType: clean_(context.messageType || ""),
-    effectiveEmail: clean_(context.effectiveEmail || ""),
+    effectiveEmail: previewRecipient,
     portalUrl: clean_(context.portalUrl || ""),
-    subject: clean_(built.subject || ""),
-    body: String(built.body || ""),
+    subject: previewSubject,
+    body: previewBody,
     debugId: clean_(context.debugId || newDebugId_())
   };
   campaignLog_("COMM_PREVIEW", {
     applicantId: preview.applicantId,
     messageType: preview.messageType,
+    recipient: preview.effectiveEmail,
     actorEmail: clean_(context.actorEmail || options.actorEmail || ""),
     actorRole: clean_(context.actorRole || options.actorRole || ""),
     blockCode: "",
     result: "PREVIEW",
+    subject: clean_(preview.subject || ""),
     debugId: preview.debugId,
     batchLabel: clean_(options.batchLabel || "")
   });
@@ -8221,10 +8332,51 @@ function sendApplicantMessage_(applicantId, messageType, opts) {
     return blocked;
   }
   var built = buildApplicantMessage_(context);
+  var editedRecipient = clean_(options.editedRecipient || context.effectiveEmail || "");
+  var editedSubject = typeof options.editedSubject === "string" ? String(options.editedSubject) : String(built.subject || "");
+  var editedBody = typeof options.editedBody === "string" ? String(options.editedBody) : String(built.body || "");
+  context.effectiveEmail = editedRecipient;
+  built.subject = editedSubject;
+  built.body = editedBody;
+  if (!context.effectiveEmail) {
+    context.eligible = false;
+    context.blockCode = "NO_EFFECTIVE_EMAIL";
+    context.blockReason = communicationBlockReason_("NO_EFFECTIVE_EMAIL", context.messageType);
+  } else if (isValidEffectiveEmail_(context.effectiveEmail) !== true) {
+    context.eligible = false;
+    context.blockCode = "INVALID_EMAIL";
+    context.blockReason = "Applicant does not have a valid email address.";
+  } else if (!clean_(built.subject || "")) {
+    context.eligible = false;
+    context.blockCode = "MISSING_SUBJECT";
+    context.blockReason = "Email subject is required.";
+  } else if (!clean_(built.body || "")) {
+    context.eligible = false;
+    context.blockCode = "MISSING_BODY";
+    context.blockReason = "Email body is required.";
+  }
+  if (!context.eligible) {
+    return {
+      ok: true,
+      action: "send",
+      result: "BLOCKED",
+      eligible: false,
+      blockCode: clean_(context.blockCode || ""),
+      blockReason: clean_(context.blockReason || ""),
+      applicantId: clean_(context.applicantId || applicantId || ""),
+      messageType: clean_(context.messageType || messageType || ""),
+      effectiveEmail: clean_(context.effectiveEmail || ""),
+      subject: clean_(built.subject || ""),
+      debugId: clean_(context.debugId || newDebugId_())
+    };
+  }
   var dispatched = dispatchApplicantMessage_(context, built, options);
   campaignLog_(dispatched.result === "SENT" ? "COMM_SENT" : "COMM_FAILED", {
     applicantId: clean_(context.applicantId || applicantId || ""),
     messageType: clean_(context.messageType || messageType || ""),
+    recipient: clean_(context.effectiveEmail || ""),
+    subject: clean_(built.subject || ""),
+    bodySnippet: clean_(String(built.body || "").replace(/\s+/g, " ").slice(0, 120)),
     actorEmail: clean_(context.actorEmail || options.actorEmail || ""),
     actorRole: clean_(context.actorRole || options.actorRole || ""),
     blockCode: clean_(dispatched.blockCode || dispatched.code || ""),

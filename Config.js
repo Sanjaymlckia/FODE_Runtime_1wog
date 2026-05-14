@@ -173,6 +173,8 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   COMMUNICATION_ALLOWED_MESSAGE_TYPES: [
     "legacy_invite",
     "reminder",
+    "application_feedback",
+    "custom_email",
     "docs_missing",
     "payment_followup"
   ],

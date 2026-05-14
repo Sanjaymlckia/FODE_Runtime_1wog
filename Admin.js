@@ -5451,7 +5451,10 @@ function admin_previewApplicantMessage(payload) {
       actorEmail: actor.actorEmail,
       actorRole: actor.actorRole,
       batchLabel: clean_(p.batchLabel || ""),
-      debugId: clean_(p.debugId || dbgId)
+      debugId: clean_(p.debugId || dbgId),
+      editedRecipient: clean_(p.recipient || ""),
+      editedSubject: String(p.subject || ""),
+      editedBody: String(p.body || "")
     });
   });
 }
@@ -5490,7 +5493,10 @@ function admin_sendApplicantMessage(payload) {
       actorRole: actor.actorRole,
       batchLabel: clean_(p.batchLabel || ""),
       debugId: clean_(p.debugId || dbgId),
-      manualSingleSendProbe: true
+      manualSingleSendProbe: true,
+      editedRecipient: clean_(p.recipient || ""),
+      editedSubject: String(p.subject || ""),
+      editedBody: String(p.body || "")
     });
   });
 }

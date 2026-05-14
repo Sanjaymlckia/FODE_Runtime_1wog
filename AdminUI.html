@@ -770,11 +770,35 @@
             <select id="commMessageType">
               <option value="legacy_invite">Legacy Invite</option>
               <option value="reminder">Reminder</option>
+              <option value="application_feedback">Application Feedback</option>
+              <option value="custom_email">Custom Email</option>
             </select>
           </div>
           <button id="btnCommPreview" class="btn small" type="button" onclick="previewApplicantMessageUi_()">Preview</button>
           <button id="btnCommSend" class="btn small ok" type="button" onclick="sendApplicantMessageUi_()" disabled>Send</button>
           <div id="commInlineNote" class="muted" style="font-size:12px;"></div>
+        </div>
+        <div id="commEditablePanel" class="box hidden" style="margin-top:10px;background:#f8fbff;border-color:#d7e6ff;">
+          <div style="font-weight:800;margin-bottom:8px;">Editable Email Draft</div>
+          <div class="row">
+            <div class="field" style="flex:1 1 320px;">
+              <label>Recipient Email</label>
+              <input id="commRecipient" type="email" placeholder="parent@example.com">
+            </div>
+            <div class="field" style="flex:1 1 320px;">
+              <label>Email Subject</label>
+              <input id="commSubject" type="text" placeholder="Email subject">
+            </div>
+          </div>
+          <div class="field" style="margin-top:8px;">
+            <label>Email Body</label>
+            <textarea id="commBody" rows="14" placeholder="Email body"></textarea>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <button id="btnCommGenerateEditable" class="btn small" type="button" onclick="previewApplicantMessageUi_()">Generate / Preview Email</button>
+            <button id="btnCommInsertPortalLink" class="btn small" type="button" onclick="insertPortalLinkIntoCommBody_()">Insert Portal Link</button>
+            <button id="btnCommSendEdited" class="btn small ok" type="button" onclick="sendApplicantMessageUi_()" disabled>Send Edited Email</button>
+          </div>
         </div>
         <div id="commResult" class="commResultBox hidden"></div>
       </div>
@@ -957,6 +981,7 @@
       previewApplicantId: "",
       previewMessageType: "",
       selectedMessageType: "legacy_invite",
+      portalUrl: "",
       result: null,
       busy: false
     };
@@ -1170,6 +1195,7 @@
       communicationsState.applicantId = String(applicantId || communicationsState.applicantId || "");
       communicationsState.previewApplicantId = "";
       communicationsState.previewMessageType = "";
+      communicationsState.portalUrl = "";
       if (!preserveResult) communicationsState.result = null;
       communicationsState.busy = false;
     }
@@ -1189,12 +1215,95 @@
     }
     function communicationsDisableReason_(detail){
       var d = detail || currentDetail || {};
+      var selectedType = getSelectedCommMessageType_();
       var effectiveEmail = String(d.Effective_Email || d.Parent_Email_Corrected || d.Parent_Email || "").trim();
       if (!effectiveEmail) return "Effective email is missing.";
       if (String(d.Email_Status || "").trim() === "DO_NOT_CONTACT") return "This applicant is marked Do Not Contact.";
       if (isCommBounceFlagTrue_(d.Email_Bounce_Flag)) return "This applicant email is marked bounced.";
-      if (commPortalSubmittedActive_(d)) return "Portal already submitted for this applicant.";
+      if ((selectedType === "legacy_invite" || selectedType === "reminder") && commPortalSubmittedActive_(d)) return "Portal already submitted for this applicant.";
       return "";
+    }
+    function isEditableCommType_(messageType){
+      var t = String(messageType || "").trim();
+      return t === "application_feedback" || t === "custom_email";
+    }
+    function getCommEditableFields_(){
+      return {
+        recipient: document.getElementById("commRecipient"),
+        subject: document.getElementById("commSubject"),
+        body: document.getElementById("commBody")
+      };
+    }
+    function getCommEditablePayload_(){
+      var fields = getCommEditableFields_();
+      return {
+        recipient: String((fields.recipient && fields.recipient.value) || "").trim(),
+        subject: String((fields.subject && fields.subject.value) || ""),
+        body: String((fields.body && fields.body.value) || "")
+      };
+    }
+    function setCommEditableDraft_(res, messageType){
+      var fields = getCommEditableFields_();
+      var result = res && typeof res === "object" ? res : {};
+      if (fields.recipient) fields.recipient.value = String(result.effectiveEmail || (currentDetail && (currentDetail.Effective_Email || currentDetail.Parent_Email_Corrected || currentDetail.Parent_Email)) || "");
+      if (fields.subject) fields.subject.value = String(result.subject || "");
+      if (fields.body) fields.body.value = String(result.body || "");
+      communicationsState.portalUrl = String(result.portalUrl || communicationsState.portalUrl || "");
+      if (messageType === "custom_email" && !String(result.subject || "")) {
+        if (fields.subject) fields.subject.placeholder = "Enter subject";
+        if (fields.body) fields.body.placeholder = "Enter custom email body";
+      }
+    }
+    function renderCommEditablePanel_(){
+      var panel = document.getElementById("commEditablePanel");
+      var generateBtn = document.getElementById("btnCommGenerateEditable");
+      var insertBtn = document.getElementById("btnCommInsertPortalLink");
+      var sendBtn = document.getElementById("btnCommSendEdited");
+      var selectedType = getSelectedCommMessageType_();
+      var isEditable = isEditableCommType_(selectedType);
+      var previewReady = communicationsState.previewApplicantId === String((currentDetail && currentDetail.ApplicantID) || "") && communicationsState.previewMessageType === selectedType && communicationsState.result && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
+      if (panel) panel.classList.toggle("hidden", !isEditable);
+      if (generateBtn) generateBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy;
+      if (insertBtn) insertBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy;
+      if (sendBtn) sendBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy || !previewReady;
+    }
+    function requestPortalLinkForComm_(onDone){
+      var done = typeof onDone === "function" ? onDone : function(){};
+      if (communicationsState.portalUrl) {
+        done(communicationsState.portalUrl);
+        return;
+      }
+      if (!currentRowNumber || !currentDetail) {
+        done("");
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(function(res){
+          var url = String((res && (res.link || res.url || res.portalUrl)) || "").trim();
+          if (url) communicationsState.portalUrl = url;
+          done(url);
+        })
+        .withFailureHandler(function(){
+          done("");
+        })
+        .admin_getPortalLink({ rowNumber: currentRowNumber, applicantId: String(currentDetail.ApplicantID || "") });
+    }
+    function insertPortalLinkIntoCommBody_(){
+      if (communicationsState.busy) return;
+      var fields = getCommEditableFields_();
+      if (!fields.body) return;
+      requestPortalLinkForComm_(function(url){
+        if (!url) {
+          alert("No portal link is available for this applicant.");
+          return;
+        }
+        var current = String(fields.body.value || "");
+        var insertText = String(url);
+        if (current && !/\n$/.test(current)) insertText = "\n" + insertText;
+        var start = typeof fields.body.selectionStart === "number" ? fields.body.selectionStart : current.length;
+        var end = typeof fields.body.selectionEnd === "number" ? fields.body.selectionEnd : current.length;
+        fields.body.value = current.slice(0, start) + insertText + current.slice(end);
+      });
     }
     function renderCommunicationsDerived_(detail){
       var box = document.getElementById("commDerivedMeta");
@@ -1326,21 +1435,31 @@
       if (!previewBtn || !sendBtn || !selectEl || !noteEl) return;
       var detail = currentDetail || {};
       var selectedType = getSelectedCommMessageType_();
+      var editableType = isEditableCommType_(selectedType);
       var disableReason = communicationsDisableReason_(detail);
       var previewReady = communicationsState.previewApplicantId === String(detail.ApplicantID || "") && communicationsState.previewMessageType === selectedType && communicationsState.result && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
       var controlsDisabled = !currentRowNumber || isUiBusy || communicationsState.busy || !!disableReason;
       selectEl.disabled = !currentRowNumber || isUiBusy || communicationsState.busy;
-      previewBtn.disabled = controlsDisabled;
-      sendBtn.disabled = controlsDisabled || !previewReady;
+      previewBtn.disabled = editableType ? true : controlsDisabled;
+      sendBtn.disabled = editableType ? true : (controlsDisabled || !previewReady);
       previewBtn.textContent = communicationsState.busy ? "Working..." : "Preview";
       sendBtn.textContent = communicationsState.busy ? "Sending..." : "Send";
       noteEl.textContent = communicationsState.busy ? (previewReady ? "Sending..." : "Loading preview...") : (disableReason || (previewReady ? "Preview ready. You may send this message." : "Preview is required before send."));
+      renderCommEditablePanel_();
     }
     function resetCommunicationsForSelection_(preserveResult){
       communicationsState.previewApplicantId = "";
       communicationsState.previewMessageType = "";
+      communicationsState.portalUrl = "";
       if (!preserveResult) communicationsState.result = null;
       renderCommunicationsResult_(communicationsState.result);
+      if (isEditableCommType_(getSelectedCommMessageType_()) && !preserveResult) {
+        setCommEditableDraft_({
+          effectiveEmail: String((currentDetail && (currentDetail.Effective_Email || currentDetail.Parent_Email_Corrected || currentDetail.Parent_Email)) || ""),
+          subject: "",
+          body: ""
+        }, getSelectedCommMessageType_());
+      }
       updateCommunicationsUi_();
     }
     function onCommunicationsMessageTypeChange_(){
@@ -1400,13 +1519,17 @@
       if (!currentDetail || communicationsState.busy) return;
       var applicantId = String(currentDetail.ApplicantID || "").trim();
       var messageType = getSelectedCommMessageType_();
+      var payload = { applicantId: applicantId, messageType: messageType };
+      if (isEditableCommType_(messageType)) Object.assign(payload, getCommEditablePayload_());
       communicationsState.result = null;
       updateCommunicationsUi_();
-      runCommunicationsAction_("admin_previewApplicantMessage", { applicantId: applicantId, messageType: messageType }, function(res){
+      runCommunicationsAction_("admin_previewApplicantMessage", payload, function(res){
         communicationsState.result = res && typeof res === "object" ? res : { ok: false, result: "FAILED", blockReason: "Invalid preview response.", debugId: "" };
         if (communicationsState.result.eligible === true && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW") {
           communicationsState.previewApplicantId = applicantId;
           communicationsState.previewMessageType = messageType;
+          communicationsState.portalUrl = String(communicationsState.result.portalUrl || "");
+          if (isEditableCommType_(messageType)) setCommEditableDraft_(communicationsState.result, messageType);
         } else {
           communicationsState.previewApplicantId = "";
           communicationsState.previewMessageType = "";
@@ -1420,8 +1543,12 @@
       var messageType = getSelectedCommMessageType_();
       var previewReady = communicationsState.previewApplicantId === applicantId && communicationsState.previewMessageType === messageType && communicationsState.result && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
       if (!previewReady) return;
-      if (!window.confirm("Send " + messageType.replaceAll("_", " ") + " to this applicant now?")) return;
-      runCommunicationsAction_("admin_sendApplicantMessage", { applicantId: applicantId, messageType: messageType, confirmManualSingleSend: true }, function(res){
+      var payload = { applicantId: applicantId, messageType: messageType, confirmManualSingleSend: true };
+      if (isEditableCommType_(messageType)) Object.assign(payload, getCommEditablePayload_());
+      var recipientForConfirm = String((payload.recipient || communicationsState.result.effectiveEmail || "")).trim();
+      var messageTypeLabel = messageType === "application_feedback" ? "Application Feedback" : (messageType === "custom_email" ? "Custom Email" : messageType.replaceAll("_", " "));
+      if (!window.confirm("You are about to send " + messageTypeLabel + " to " + recipientForConfirm + ". Continue?")) return;
+      runCommunicationsAction_("admin_sendApplicantMessage", payload, function(res){
         communicationsState.result = res && typeof res === "object" ? res : { ok: false, result: "FAILED", blockReason: "Invalid send response.", debugId: "" };
         renderCommunicationsResult_(communicationsState.result);
         if (String(communicationsState.result.result || "").toUpperCase() === "SENT") {
@@ -3329,6 +3456,7 @@ function renderStageDashboard_(items, emptyMessage){
       requestCommunicationsDerived_(d);
       renderCommunicationsResult_(incomingApplicantId !== previousApplicantId ? null : communicationsState.result);
       updateCommunicationsUi_();
+      renderCommEditablePanel_();
       var commTypeEl = document.getElementById("commMessageType");
       if (commTypeEl) commTypeEl.onchange = onCommunicationsMessageTypeChange_;
       document.getElementById("overallStatus").value = d.Overall_Status_Stored || overallComputed || "Pending";
