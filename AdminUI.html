@@ -348,6 +348,29 @@
       border: 1px solid rgba(148,163,184,.18);
       background: rgba(11,18,32,.45);
     }
+    .commEditablePanel{
+      margin-top:10px;
+      background: rgba(8,18,32,.96);
+      border-color: rgba(148,163,184,.34);
+      color: var(--text);
+      box-shadow: inset 0 0 0 1px rgba(148,163,184,.10);
+    }
+    .commEditablePanelTitle{
+      font-weight:800;
+      margin-bottom:8px;
+      color:#f4f9ff;
+    }
+    .commEditablePanel input,
+    .commEditablePanel textarea{
+      background: var(--fieldBg);
+      color: var(--text);
+      border-color: var(--fieldBorder);
+    }
+    .commEditablePanel input::placeholder,
+    .commEditablePanel textarea::placeholder{
+      color: var(--muted);
+      opacity:1;
+    }
     .k{ font-size:12px; color:var(--muted); }
     .modal .k{ color:#d7e6ff; }
     .modal label{ color:#e4f0ff; }
@@ -774,12 +797,12 @@
               <option value="custom_email">Custom Email</option>
             </select>
           </div>
-          <button id="btnCommPreview" class="btn small" type="button" onclick="previewApplicantMessageUi_()">Preview</button>
+          <button id="btnCommPreview" class="btn small" type="button" onclick="previewApplicantMessageUi_('top_preview')">Preview</button>
           <button id="btnCommSend" class="btn small ok" type="button" onclick="sendApplicantMessageUi_()" disabled>Send</button>
           <div id="commInlineNote" class="muted" style="font-size:12px;"></div>
         </div>
-        <div id="commEditablePanel" class="box hidden" style="margin-top:10px;background:#f8fbff;border-color:#d7e6ff;">
-          <div style="font-weight:800;margin-bottom:8px;">Editable Email Draft</div>
+        <div id="commEditablePanel" class="box commEditablePanel hidden">
+          <div class="commEditablePanelTitle">Editable Email Draft</div>
           <div class="row">
             <div class="field" style="flex:1 1 320px;">
               <label>Recipient Email</label>
@@ -795,12 +818,13 @@
             <textarea id="commBody" rows="14" placeholder="Email body"></textarea>
           </div>
           <div class="row" style="margin-top:8px;">
-            <button id="btnCommGenerateEditable" class="btn small" type="button" onclick="previewApplicantMessageUi_()">Generate / Preview Email</button>
+            <button id="btnCommGenerateEditable" class="btn small" type="button" onclick="previewApplicantMessageUi_('editable_preview')">Generate / Preview Email</button>
             <button id="btnCommInsertPortalLink" class="btn small" type="button" onclick="insertPortalLinkIntoCommBody_()">Insert Portal Link</button>
             <button id="btnCommSendEdited" class="btn small ok" type="button" onclick="sendApplicantMessageUi_()" disabled>Send Edited Email</button>
           </div>
         </div>
         <div id="commResult" class="commResultBox hidden"></div>
+        <div id="commDebug" class="commResultBox hidden" style="margin-top:8px;"></div>
       </div>
 
       <div id="overallLockInfo" class="box hidden" style="background:#eef6ff;border-color:#bfd8ff;">
@@ -983,7 +1007,10 @@
       selectedMessageType: "legacy_invite",
       portalUrl: "",
       result: null,
-      busy: false
+      busy: false,
+      lastPreviewButton: "",
+      lastPayload: null,
+      lastRawResponse: null
     };
     let commDerivedRequestId = 0;
     // Session-only fallback for "Sent" state when no persistent sent field is present in payload.
@@ -997,6 +1024,13 @@
         return;
       }
       el.textContent = txt || "";
+    }
+    function resafeJson_(value){
+      try {
+        return JSON.parse(JSON.stringify(value == null ? null : value));
+      } catch (_e) {
+        return value;
+      }
     }
     function setBounceScanBusy_(busy){
       isBounceScanBusy = !!busy;
@@ -1419,13 +1453,41 @@
         if (res.subject) parts.push('<div style="margin-top:6px;"><strong>Subject:</strong> ' + esc(res.subject) + '</div>');
       }
       if (resultType === "FAILED") {
-        var detail = String(res.error || res.message || res.code || "Send failed.").trim();
+        var detail = String(res.error || res.message || res.blockReason || res.code || "Send failed.").trim();
         parts.push('<div style="margin-top:6px;">' + esc(detail) + '</div>');
       }
       if (resultType !== "BLOCKED" && res.blockCode) parts.push('<div class="muted" style="margin-top:6px;font-size:12px;">Code: ' + esc(res.blockCode) + '</div>');
       if (resultType !== "BLOCKED" && res.debugId) parts.push('<div class="muted" style="margin-top:6px;font-size:12px;">Debug ID: ' + esc(res.debugId) + '</div>');
       box.className = cls;
       box.innerHTML = parts.join("");
+    }
+    function renderCommunicationsDebug_(){
+      var box = document.getElementById("commDebug");
+      if (!box) return;
+      var payload = communicationsState.lastPayload || null;
+      var raw = communicationsState.lastRawResponse || null;
+      if (!payload && !raw) {
+        box.className = "commResultBox hidden";
+        box.innerHTML = "";
+        return;
+      }
+      var summary = {
+        button: String(communicationsState.lastPreviewButton || ""),
+        selectedMessageType: getSelectedCommMessageType_(),
+        payload: payload,
+        response: raw,
+        responseOk: raw && typeof raw === "object" ? raw.ok : null,
+        responseError: raw && typeof raw === "object" ? (raw.error || "") : "",
+        responseMessage: raw && typeof raw === "object" ? (raw.message || "") : "",
+        responseBlockReason: raw && typeof raw === "object" ? (raw.blockReason || "") : "",
+        responseSubject: raw && typeof raw === "object" ? (raw.subject || raw.emailSubject || "") : "",
+        responseBodySample: raw && typeof raw === "object" ? String(raw.body || raw.emailBody || "").slice(0, 240) : "",
+        nestedPreview: raw && typeof raw === "object" ? (raw.preview || null) : null,
+        nestedMessage: raw && typeof raw === "object" ? ((raw.message && typeof raw.message === "object") ? raw.message : null) : null,
+        nestedEmail: raw && typeof raw === "object" ? ((raw.email && typeof raw.email === "object") ? raw.email : null) : null
+      };
+      box.className = "commResultBox";
+      box.innerHTML = '<div style="font-weight:800;">Preview Diagnostics</div><pre class="commPreviewBody" style="white-space:pre-wrap;">' + esc(JSON.stringify(summary, null, 2)) + '</pre>';
     }
     function updateCommunicationsUi_(){
       var previewBtn = document.getElementById("btnCommPreview");
@@ -1446,12 +1508,14 @@
       sendBtn.textContent = communicationsState.busy ? "Sending..." : "Send";
       noteEl.textContent = communicationsState.busy ? (previewReady ? "Sending..." : "Loading preview...") : (disableReason || (previewReady ? "Preview ready. You may send this message." : "Preview is required before send."));
       renderCommEditablePanel_();
+      renderCommunicationsDebug_();
     }
     function resetCommunicationsForSelection_(preserveResult){
       communicationsState.previewApplicantId = "";
       communicationsState.previewMessageType = "";
       communicationsState.portalUrl = "";
       if (!preserveResult) communicationsState.result = null;
+      if (!preserveResult) communicationsState.lastRawResponse = null;
       renderCommunicationsResult_(communicationsState.result);
       if (isEditableCommType_(getSelectedCommMessageType_()) && !preserveResult) {
         setCommEditableDraft_({
@@ -1476,6 +1540,19 @@
           if (reqId !== lastRequestId) return;
           communicationsState.busy = false;
           setUiBusy_(false);
+          if (!res || typeof res !== "object" || res.ok !== true) {
+            communicationsState.result = {
+              ok: false,
+              result: "FAILED",
+              blockCode: String((res && res.code) || ""),
+              blockReason: String((res && (res.error || res.message)) || "Server error"),
+              error: String((res && (res.error || res.message)) || "Server error"),
+              debugId: String((res && res.debugId) || "")
+            };
+            renderCommunicationsResult_(communicationsState.result);
+            updateCommunicationsUi_();
+            return;
+          }
           if (typeof onOk === "function") onOk(res);
           updateCommunicationsUi_();
         })
@@ -1515,15 +1592,19 @@
         })
         .admin_getApplicantDetail_json({ rowNumber: currentRowNumber, applicantId: (currentDetail && currentDetail.ApplicantID) || "" });
     }
-    function previewApplicantMessageUi_(){
+    function previewApplicantMessageUi_(buttonSource){
       if (!currentDetail || communicationsState.busy) return;
       var applicantId = String(currentDetail.ApplicantID || "").trim();
       var messageType = getSelectedCommMessageType_();
       var payload = { applicantId: applicantId, messageType: messageType };
       if (isEditableCommType_(messageType)) Object.assign(payload, getCommEditablePayload_());
+      communicationsState.lastPreviewButton = String(buttonSource || "");
+      communicationsState.lastPayload = resafeJson_(payload);
+      communicationsState.lastRawResponse = null;
       communicationsState.result = null;
       updateCommunicationsUi_();
       runCommunicationsAction_("admin_previewApplicantMessage", payload, function(res){
+        communicationsState.lastRawResponse = resafeJson_(res);
         communicationsState.result = res && typeof res === "object" ? res : { ok: false, result: "FAILED", blockReason: "Invalid preview response.", debugId: "" };
         if (communicationsState.result.eligible === true && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW") {
           communicationsState.previewApplicantId = applicantId;
@@ -1535,6 +1616,7 @@
           communicationsState.previewMessageType = "";
         }
         renderCommunicationsResult_(communicationsState.result);
+        renderCommunicationsDebug_();
       });
     }
     function sendApplicantMessageUi_(){
