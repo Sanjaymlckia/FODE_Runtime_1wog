@@ -35,6 +35,34 @@ The runtime verifier checks Admin and Student `?view=whoami` endpoints for:
 - canonical `/macros/s/` URLs
 - `mismatch=false`
 
+## Release Guard
+
+Before any Apps Script version is created, run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-remote-config-before-version.ps1
+```
+
+Only proceed to `clasp version` if the script prints:
+
+```text
+SAFE TO RUN clasp version
+```
+
+The release guard:
+- reads local `Config.js`
+- checks `.clasp.json` `scriptId`
+- refuses any remote check folder inside the repo root
+- pulls remote Apps Script source into an external folder only
+- compares remote and local `VERSION` / `DEPLOY_VERSION_NUMBER`
+- exits nonzero on mismatch or pull failure
+
+It does not:
+- run `clasp version`
+- repin deployments
+- edit Apps Script source
+- edit `Config.js`
+
 ## Safety
 
 These scripts are read-only.

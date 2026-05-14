@@ -2,21 +2,26 @@
 
 ## Current Runtime Truth
 
-- Live runtime: `r153 / 153`
-- Admin whoami: `r153 / 153`, mismatch `false`
-- Student whoami: `r153 / 153`, mismatch `false`
-- VERSION: `r153`
-- DEPLOY_VERSION_NUMBER: `153`
+- Live runtime: `r161 / 161`
+- Admin whoami: `r161 / 161`, mismatch `false`
+- Student whoami: `r161 / 161`, mismatch `false`
 - Current accepted tag: `staging-as153`
-- Git status: clean
-- No pending deployment
-- Current live feature set:
+- Git status: release metadata not finalized
+- Browser acceptance remains pending for the Admin communications preview workflow.
+- Current live feature set includes:
   - queue aging
   - Received/Age/SLA indicators in the admin queue UI
   - safe write-once `Handled_By` and `Handled_At`
+  - Admin preview diagnostics for communications preview investigation
 - Deferred fields stay deferred:
   - `Enrolled_By`
   - `Enrolled_At`
+- Known UI issue:
+  - for `Application Feedback` and `Custom Email`, the old top `Preview` / `Send` buttons remain confusing; a future CIS should hide or disable them or clearly direct staff to the editable panel buttons
+- Release invariant is now governed by `AGENTS.md` and `tools/verify-remote-config-before-version.ps1`
+- Browser acceptance via Chrome extension is allowed only as narrow acceptance evidence, not as a coding or debug loop
+- Next exact step:
+  - before any future Apps Script version, run `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-remote-config-before-version.ps1`
 
 ## Accepted Release State
 
@@ -114,3 +119,62 @@
 - Canonical Admin and Student deployments were repinned to Apps Script platform version `155`; contaminated `@93`, recovery `@100`, and `@HEAD` deployments were not modified.
 - Runtime verification passed: Admin and Student whoami both report `VERSION=r155`, `DEPLOY_VERSION_NUMBER=155`, expected scriptId, and `mismatch=false`.
 - Browser acceptance remains pending because the Browser control tool is unavailable in this session. Do not commit, push, tag, or mark `staging-as155` accepted until Admin browser checks pass, including `FODE-26-002013` showing `Payment Evidence Uploaded: No`.
+
+## r156 Editable Applicant Feedback Emails Release In Progress
+
+- Feature source is the committed change `feat: add editable applicant feedback emails`.
+- `Config.js` identity was bumped to `VERSION: "r156"` and `DEPLOY_VERSION_NUMBER: 156` before Apps Script version creation.
+- Identity readback confirmed `VERSION: "r156"` and `DEPLOY_VERSION_NUMBER: 156`.
+- Local validation passed: `node --check Admin.js`, `node --check Code.js`, `node --check Config.js`, and `git diff --check`.
+- `clasp push` succeeded.
+- Apps Script platform version `156` was created with description `r156: editable applicant feedback emails`.
+- Canonical Admin deployment `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ` and canonical Student deployment `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv` were repinned to Apps Script platform version `156`.
+- Runtime verification passed: Admin and Student `?view=whoami` both report `VERSION=r156`, `DEPLOY_VERSION_NUMBER=156`, expected scriptId `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`, and `mismatch=false`.
+- Browser acceptance is still incomplete in this session because authenticated Admin UI interaction could not be exercised with the available tools.
+- Do not commit release metadata, push git, or tag `staging-as156` until the Admin browser acceptance matrix is completed and passes.
+
+## r157 Bugfix Release Failed Identity Gate
+
+- `r156` passed runtime identity but failed browser acceptance for Applicant Feedback preview and editable panel readability.
+- `r157` target scope is limited to:
+  - `Code.js` preview-default fix so blank edited subject/body do not override generated defaults
+  - `AdminUI.html` dark-theme editable panel styling fix
+- No new feature work, schema changes, batch email, or AI scan are part of `r157`.
+- `clasp push` succeeded.
+- Apps Script platform version `157` was created with description `r157: fix applicant feedback preview and styling`.
+- Canonical Admin deployment `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ` and canonical Student deployment `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv` were repinned to Apps Script platform version `157`.
+- Identity gate failed: after repin, both Admin and Student `?view=whoami` still reported `VERSION=r156` and `DEPLOY_VERSION_NUMBER=156`.
+- Do not browser-accept, commit, push git, or tag `staging-as157`.
+- Next required action is to correct the platform/version-content mismatch under release discipline, then repin and re-verify live `whoami`.
+
+## r158 Trust Reset In Progress
+
+- Remote source pull from scriptId `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90` confirmed `Config.js` was already `r157 / 157`, so the r157 failure was narrowed to the Apps Script version/deployment chain rather than local or remote source mismatch.
+- Corrective action: create a fresh `r158 / 158` Apps Script version after bumping local and remote source identity, then repin canonical Admin and Student deployments and re-verify live `whoami` before any browser acceptance.
+
+## r159 Release Chain Repair Failed Before Version Creation
+
+- Local `Config.js` has been bumped to `VERSION: "r159"` and `DEPLOY_VERSION_NUMBER: 159`.
+- Pre-version identity readback confirmed local `Config.js` is `r159 / 159`.
+- `.clasp.json` still targets the expected scriptId `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
+- `clasp push` returned `Skipping push.` despite the local `Config.js` identity change.
+- Controlled `clasp push --force` failed with `A file with this name already exists in the current project: appsscript`.
+- Isolated remote pull from the target script still shows `.codex_tmp_remote_pull/Config.js` at `VERSION: "r157"` and `DEPLOY_VERSION_NUMBER: 157`.
+- Hard release gate failed: remote source was not proven `r159 / 159`, so no `clasp version` was created for `r159`.
+- Canonical Admin and Student deployments remain pinned to Apps Script platform version `158`; no repin or browser acceptance was attempted in this CIS.
+- Next required action is to diagnose why `clasp push` is skipping or force-push is colliding on `appsscript.json`, then repeat the remote-proof gate under a new CIS before any version creation.
+
+## r160 Admin Communications Preview Handling Deployed, Browser Acceptance Pending
+
+- Local `Config.js` was bumped to `VERSION: "r160"` and `DEPLOY_VERSION_NUMBER: 160`.
+- Pre-version identity readback confirmed local `Config.js` is `r160 / 160`.
+- `clasp push` succeeded and pushed 8 Apps Script source files.
+- External remote pull outside the repo confirmed remote `Config.js` is `r160 / 160` before version creation.
+- Apps Script platform version `160` was created with description `r160: fix admin communications preview handling`.
+- Canonical Admin deployment `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ` and canonical Student deployment `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv` were repinned to Apps Script platform version `160`.
+- Live whoami verification passed:
+  - Admin reports `VERSION=r160`, `DEPLOY_VERSION_NUMBER=160`, expected scriptId, `mismatch=false`
+  - Student reports `VERSION=r160`, `DEPLOY_VERSION_NUMBER=160`, expected scriptId, `mismatch=false`
+- Browser acceptance is still pending in this session because authenticated Admin UI interaction could not be exercised with the available tools.
+- No live email was sent.
+- Do not commit, push git, or tag until the Admin browser acceptance matrix is completed and passes.
