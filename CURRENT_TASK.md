@@ -2,17 +2,27 @@
 
 ## Current Runtime Truth
 
-- Live runtime: `r161 / 161`
-- Admin whoami: `r161 / 161`, mismatch `false`
-- Student whoami: `r161 / 161`, mismatch `false`
+- Live runtime: `r162 / 162`
+- Admin whoami: `r162 / 162`, mismatch `false`
+- Student whoami: `r162 / 162`, mismatch `false`
+- Current release candidate: `r162 / 162`
 - Current accepted tag: `staging-as153`
 - Git status: release metadata not finalized
-- Browser acceptance remains pending for the Admin communications preview workflow.
+- Browser acceptance remains pending for the Admin communications preview workflow and the applicant review status overlay UI.
 - Current live feature set includes:
   - queue aging
   - Received/Age/SLA indicators in the admin queue UI
   - safe write-once `Handled_By` and `Handled_At`
   - Admin preview diagnostics for communications preview investigation
+- r162 scope:
+  - applicant review status overlay UI
+  - editable-message cooldown explanation
+  - clearer separation of applicant stage, communication status, and send eligibility
+  - hide or redirect legacy top Preview/Send controls for editable message types
+- Expected changed files:
+  - `AdminUI.html`
+  - `Config.js`
+  - `CURRENT_TASK.md`
 - Deferred fields stay deferred:
   - `Enrolled_By`
   - `Enrolled_At`
@@ -21,7 +31,19 @@
 - Release invariant is now governed by `AGENTS.md` and `tools/verify-remote-config-before-version.ps1`
 - Browser acceptance via Chrome extension is allowed only as narrow acceptance evidence, not as a coding or debug loop
 - Next exact step:
-  - before any future Apps Script version, run `powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-remote-config-before-version.ps1`
+  - perform manual Admin browser acceptance for r162
+  - verify Applicant Stage, Communication Status, and Send Eligibility overlay values
+  - verify cooldown banner and editable-panel-only guidance for `Application Feedback` / `Custom Email`
+  - verify legacy Invite/Reminder behavior remains unchanged
+- Acceptance checklist:
+  - Admin whoami = `r162 / 162`
+  - Student whoami = `r162 / 162`
+  - applicant review shows separate Applicant Stage, Communication Status, and Send Eligibility
+  - cooldown banner explains blocked follow-up for `Application Feedback`
+  - editable message types direct staff to the lower email panel
+  - legacy Invite/Reminder flow remains unchanged
+- Rollback note:
+  - repin Admin and Student deployments to the previous known-good r161 Apps Script platform version before considering source rollback
 
 ## Accepted Release State
 

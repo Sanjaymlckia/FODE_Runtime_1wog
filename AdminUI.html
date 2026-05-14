@@ -371,6 +371,72 @@
       color: var(--muted);
       opacity:1;
     }
+    .applicant-status-strip{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:10px;
+      margin:12px 0 8px;
+    }
+    .applicant-status-card{
+      border:1px solid rgba(148,163,184,.24);
+      border-radius:12px;
+      padding:12px 14px;
+      background:rgba(8,18,32,.96);
+      box-shadow:inset 0 0 0 1px rgba(148,163,184,.08);
+    }
+    .applicant-status-card--stage{ border-color:rgba(96,165,250,.38); }
+    .applicant-status-card--comm{ border-color:rgba(34,197,94,.34); }
+    .applicant-status-card--eligibility{ border-color:rgba(245,158,11,.34); }
+    .applicant-status-label{
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:.03em;
+      text-transform:uppercase;
+      color:#b9cbe0;
+    }
+    .applicant-status-value{
+      margin-top:6px;
+      font-size:15px;
+      font-weight:800;
+      color:#f4f9ff;
+      line-height:1.35;
+    }
+    .applicant-helper-note{
+      margin-top:6px;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid rgba(96,165,250,.22);
+      background:rgba(11,18,32,.78);
+      color:#d8e6f6;
+      font-size:13px;
+      line-height:1.45;
+    }
+    .communication-cooldown-banner{
+      margin-top:10px;
+      padding:12px 14px;
+      border-radius:12px;
+      border:1px solid rgba(245,158,11,.40);
+      background:rgba(120,53,15,.28);
+      color:#fde7c3;
+    }
+    .communication-cooldown-banner.hidden{ display:none; }
+    .communication-cooldown-banner__title{
+      font-weight:800;
+      color:#fbbf24;
+    }
+    .communication-cooldown-banner__body{
+      margin-top:6px;
+      color:#fde7c3;
+      line-height:1.45;
+    }
+    .legacy-editable-warning{
+      display:none;
+      margin-top:8px;
+      color:#fbbf24;
+      font-size:12px;
+      font-weight:700;
+    }
+    .legacy-editable-warning.active{ display:block; }
     .k{ font-size:12px; color:var(--muted); }
     .modal .k{ color:#d7e6ff; }
     .modal label{ color:#e4f0ff; }
@@ -771,6 +837,22 @@
         <div id="dirtyWarn" class="dirtyWarn hidden">⚠ Unsaved changes — click "Save Document Statuses"</div>
       </div>
 
+      <div id="applicantStatusStrip" class="applicant-status-strip hidden">
+        <div class="applicant-status-card applicant-status-card--stage">
+          <div class="applicant-status-label">Applicant Stage</div>
+          <div id="applicantStageValue" class="applicant-status-value">&mdash;</div>
+        </div>
+        <div class="applicant-status-card applicant-status-card--comm">
+          <div class="applicant-status-label">Communication Status</div>
+          <div id="communicationStatusValue" class="applicant-status-value">&mdash;</div>
+        </div>
+        <div class="applicant-status-card applicant-status-card--eligibility">
+          <div class="applicant-status-label">Send Eligibility</div>
+          <div id="sendEligibilityValue" class="applicant-status-value">&mdash;</div>
+        </div>
+      </div>
+      <div id="applicantHelperNote" class="applicant-helper-note hidden"></div>
+
       <div class="box" id="communicationsCard" style="margin-top:12px;">
         <div style="font-weight:900;">Communications</div>
         <div class="commMeta">
@@ -779,7 +861,7 @@
           <div class="box"><div class="k">Email Status</div><div class="v" id="commEmailStatus">&mdash;</div></div>
           <div class="box"><div class="k">Bounce Flag</div><div class="v" id="commBounceFlag">&mdash;</div></div>
           <div class="box"><div class="k">Bounce Reason</div><div class="v" id="commBounceReason">&mdash;</div></div>
-          <div class="box"><div class="k">Next Action Date</div><div class="v" id="commNextActionDate">&mdash;</div></div>
+          <div class="box"><div class="k">Next Eligible Send</div><div class="v" id="commNextActionDate">&mdash;</div></div>
           <div class="box"><div class="k">Last Contacted At</div><div class="v" id="commLastContactedAt">&mdash;</div></div>
           <div class="box"><div class="k">Last Contact Type</div><div class="v" id="commLastContactType">&mdash;</div></div>
           <div class="box"><div class="k">Last Contact By</div><div class="v" id="commLastContactBy">&mdash;</div></div>
@@ -800,6 +882,11 @@
           <button id="btnCommPreview" class="btn small" type="button" onclick="previewApplicantMessageUi_('top_preview')">Preview</button>
           <button id="btnCommSend" class="btn small ok" type="button" onclick="sendApplicantMessageUi_()" disabled>Send</button>
           <div id="commInlineNote" class="muted" style="font-size:12px;"></div>
+        </div>
+        <div id="legacyEditableWarning" class="legacy-editable-warning">Use the editable email panel below for this message type.</div>
+        <div id="commCooldownBanner" class="communication-cooldown-banner hidden">
+          <div id="commCooldownBannerTitle" class="communication-cooldown-banner__title"></div>
+          <div id="commCooldownBannerBody" class="communication-cooldown-banner__body"></div>
         </div>
         <div id="commEditablePanel" class="box commEditablePanel hidden">
           <div class="commEditablePanelTitle">Editable Email Draft</div>
@@ -1295,11 +1382,12 @@
       var sendBtn = document.getElementById("btnCommSendEdited");
       var selectedType = getSelectedCommMessageType_();
       var isEditable = isEditableCommType_(selectedType);
+      var eligibility = deriveSendEligibility(currentDetail || {});
       var previewReady = communicationsState.previewApplicantId === String((currentDetail && currentDetail.ApplicantID) || "") && communicationsState.previewMessageType === selectedType && communicationsState.result && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
       if (panel) panel.classList.toggle("hidden", !isEditable);
       if (generateBtn) generateBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy;
       if (insertBtn) insertBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy;
-      if (sendBtn) sendBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy || !previewReady;
+      if (sendBtn) sendBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy || !previewReady || eligibility.active;
     }
     function requestPortalLinkForComm_(onDone){
       var done = typeof onDone === "function" ? onDone : function(){};
@@ -1420,6 +1508,7 @@
         var el = document.getElementById(id);
         if (el) el.textContent = formatCommValue_(map[id]);
       });
+      renderApplicantStatusOverlay_(d);
       renderCommunicationsDerived_(d);
     }
     function renderCommunicationsResult_(result){
@@ -1489,25 +1578,91 @@
       box.className = "commResultBox";
       box.innerHTML = '<div style="font-weight:800;">Preview Diagnostics</div><pre class="commPreviewBody" style="white-space:pre-wrap;">' + esc(JSON.stringify(summary, null, 2)) + '</pre>';
     }
+    function renderApplicantStatusOverlay_(detail){
+      var strip = document.getElementById("applicantStatusStrip");
+      var helper = document.getElementById("applicantHelperNote");
+      var stageEl = document.getElementById("applicantStageValue");
+      var commEl = document.getElementById("communicationStatusValue");
+      var eligibilityEl = document.getElementById("sendEligibilityValue");
+      var d = detail || currentDetail || {};
+      if (!strip || !helper || !stageEl || !commEl || !eligibilityEl || !d || !d.ApplicantID) {
+        if (strip) strip.classList.add("hidden");
+        if (helper) helper.classList.add("hidden");
+        return;
+      }
+      var commStatus = deriveCommunicationStatus(d);
+      var eligibility = deriveSendEligibility(d);
+      stageEl.textContent = deriveApplicantDisplayStage(d);
+      commEl.textContent = commStatus || "—";
+      eligibilityEl.textContent = eligibility.text;
+      strip.classList.remove("hidden");
+      if (isApplicantPendingDocsOrPayment_(d)) {
+        var note = "Portal submitted, but required documents or payment evidence are still missing or unverified.";
+        if (commStatus === "Feedback Sent — Response Awaited") {
+          note += " Follow-up feedback was already sent and a response is awaited.";
+        }
+        helper.textContent = note;
+        helper.classList.remove("hidden");
+      } else {
+        helper.textContent = "";
+        helper.classList.add("hidden");
+      }
+    }
+    function renderCommunicationCooldownBanner_(detail){
+      var wrap = document.getElementById("commCooldownBanner");
+      var titleEl = document.getElementById("commCooldownBannerTitle");
+      var bodyEl = document.getElementById("commCooldownBannerBody");
+      if (!wrap || !titleEl || !bodyEl) return;
+      var d = detail || currentDetail || {};
+      var selectedType = getSelectedCommMessageType_();
+      var editableFeedback = selectedType === "application_feedback";
+      var eligibility = deriveSendEligibility(d);
+      var resultType = String((communicationsState.result && communicationsState.result.result) || "").trim().toUpperCase();
+      var blockedReason = String((communicationsState.result && (communicationsState.result.blockReason || communicationsState.result.error || communicationsState.result.message)) || "").trim();
+      if (editableFeedback && eligibility.active) {
+        titleEl.textContent = "Feedback Sent — Response Awaited | Cooldown Active";
+        bodyEl.textContent = "A recent application feedback message was already sent. Follow-up is blocked until " + eligibility.formatted + ".";
+        wrap.classList.remove("hidden");
+        return;
+      }
+      if (editableFeedback && (resultType === "BLOCKED" || resultType === "FAILED") && blockedReason) {
+        titleEl.textContent = "Application Feedback Preview Blocked";
+        bodyEl.textContent = blockedReason;
+        wrap.classList.remove("hidden");
+        return;
+      }
+      wrap.classList.add("hidden");
+      titleEl.textContent = "";
+      bodyEl.textContent = "";
+    }
     function updateCommunicationsUi_(){
       var previewBtn = document.getElementById("btnCommPreview");
       var sendBtn = document.getElementById("btnCommSend");
       var selectEl = document.getElementById("commMessageType");
       var noteEl = document.getElementById("commInlineNote");
+      var warningEl = document.getElementById("legacyEditableWarning");
       if (!previewBtn || !sendBtn || !selectEl || !noteEl) return;
       var detail = currentDetail || {};
       var selectedType = getSelectedCommMessageType_();
       var editableType = isEditableCommType_(selectedType);
       var disableReason = communicationsDisableReason_(detail);
+      var eligibility = deriveSendEligibility(detail);
       var previewReady = communicationsState.previewApplicantId === String(detail.ApplicantID || "") && communicationsState.previewMessageType === selectedType && communicationsState.result && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
       var controlsDisabled = !currentRowNumber || isUiBusy || communicationsState.busy || !!disableReason;
       selectEl.disabled = !currentRowNumber || isUiBusy || communicationsState.busy;
       previewBtn.disabled = editableType ? true : controlsDisabled;
       sendBtn.disabled = editableType ? true : (controlsDisabled || !previewReady);
+      previewBtn.style.display = editableType ? "none" : "";
+      sendBtn.style.display = editableType ? "none" : "";
+      if (warningEl) warningEl.classList.toggle("active", editableType);
       previewBtn.textContent = communicationsState.busy ? "Working..." : "Preview";
       sendBtn.textContent = communicationsState.busy ? "Sending..." : "Send";
-      noteEl.textContent = communicationsState.busy ? (previewReady ? "Sending..." : "Loading preview...") : (disableReason || (previewReady ? "Preview ready. You may send this message." : "Preview is required before send."));
+      noteEl.textContent = communicationsState.busy
+        ? (previewReady ? "Sending..." : "Loading preview...")
+        : (disableReason || (editableType && eligibility.active ? eligibility.text : (previewReady ? "Preview ready. You may send this message." : "Preview is required before send.")));
       renderCommEditablePanel_();
+      renderCommunicationCooldownBanner_(detail);
+      renderApplicantStatusOverlay_(detail);
       renderCommunicationsDebug_();
     }
     function resetCommunicationsForSelection_(preserveResult){
@@ -1623,6 +1778,19 @@
       if (!currentDetail || communicationsState.busy) return;
       var applicantId = String(currentDetail.ApplicantID || "").trim();
       var messageType = getSelectedCommMessageType_();
+      var eligibility = deriveSendEligibility(currentDetail || {});
+      if (isEditableCommType_(messageType) && eligibility.active) {
+        communicationsState.result = {
+          ok: true,
+          result: "BLOCKED",
+          blockCode: "COOLDOWN_ACTIVE",
+          blockReason: "A recent message was already sent. Follow-up is blocked until " + eligibility.formatted + "."
+        };
+        renderCommunicationsResult_(communicationsState.result);
+        renderCommunicationCooldownBanner_(currentDetail);
+        updateCommunicationsUi_();
+        return;
+      }
       var previewReady = communicationsState.previewApplicantId === applicantId && communicationsState.previewMessageType === messageType && communicationsState.result && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
       if (!previewReady) return;
       var payload = { applicantId: applicantId, messageType: messageType, confirmManualSingleSend: true };
@@ -2583,6 +2751,61 @@ function renderStageDashboard_(items, emptyMessage){
     }
     function workflowYesNo_(value){
       return String(value || "").trim().toLowerCase() === "yes" ? "Yes" : "No";
+    }
+    function formatApplicantDateTime(value){
+      var raw = String(value == null ? "" : value).trim();
+      if (!raw) return "—";
+      var dt = new Date(raw);
+      if (isNaN(dt.getTime())) return raw;
+      try {
+        return dt.toLocaleString();
+      } catch (_e) {
+        return raw;
+      }
+    }
+    function isApplicantPendingDocsOrPayment_(detail){
+      var d = detail || {};
+      var portalSubmitted = workflowYesNo_(d.Portal_Submitted) === "Yes";
+      var docsVerified = workflowYesNo_(d.Docs_Verified) === "Yes";
+      var paymentEvidenceUploaded = workflowYesNo_(d.Payment_Received) === "Yes";
+      var paymentVerified = workflowYesNo_(d.Payment_Verified) === "Yes" || d.Payment_Verified_Bool === true || d.paymentVerified === true;
+      return portalSubmitted && (!docsVerified || !paymentEvidenceUploaded || !paymentVerified);
+    }
+    function deriveApplicantDisplayStage(detail){
+      var d = detail || {};
+      if (isApplicantPendingDocsOrPayment_(d)) return "Documents / Payment Evidence Pending";
+      return String(d.Comm_Stage || d.Stage || d.Overall_Status || d.Payment_Badge || "—").trim() || "—";
+    }
+    function deriveCommunicationStatus(detail){
+      var d = detail || {};
+      var lastType = String(d.Last_Contact_Type || "").trim().toLowerCase();
+      var emailStatus = String(d.Email_Status || "").trim().toUpperCase();
+      if (lastType === "application_feedback" && emailStatus === "SENT" && isApplicantPendingDocsOrPayment_(d)) {
+        return "Feedback Sent — Response Awaited";
+      }
+      if (lastType === "application_feedback") return "Recent feedback sent";
+      return "No recent feedback sent";
+    }
+    function deriveSendEligibility(detail){
+      var d = detail || {};
+      var nextEligible = String(d.Email_Next_Action_Date || "").trim();
+      if (nextEligible) {
+        var nextDt = new Date(nextEligible);
+        if (!isNaN(nextDt.getTime()) && nextDt.getTime() > Date.now()) {
+          return {
+            active: true,
+            raw: nextEligible,
+            formatted: formatApplicantDateTime(nextEligible),
+            text: "Cooldown Active until " + formatApplicantDateTime(nextEligible)
+          };
+        }
+      }
+      return {
+        active: false,
+        raw: nextEligible,
+        formatted: nextEligible ? formatApplicantDateTime(nextEligible) : "—",
+        text: "Ready to Send"
+      };
     }
 
     function workflowEnrolledLabel_(row){
