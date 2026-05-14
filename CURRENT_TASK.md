@@ -2,23 +2,24 @@
 
 ## Current Runtime Truth
 
-- Live runtime: `r162 / 162`
-- Admin whoami: `r162 / 162`, mismatch `false`
-- Student whoami: `r162 / 162`, mismatch `false`
-- Current release candidate: `r162 / 162`
+- Live runtime: `r163 / 163`
+- Admin whoami: `r163 / 163`, mismatch `false`
+- Student whoami: `r163 / 163`, mismatch `false`
+- Current release candidate: `r163 / 163`
 - Current accepted tag: `staging-as153`
-- Git status: release metadata not finalized
-- Browser acceptance remains pending for the Admin communications preview workflow and the applicant review status overlay UI.
+- Git status: source released to Apps Script; browser acceptance and git finalization not yet complete
+- Browser acceptance remains pending for the Admin communications preview workflow, applicant review status overlay UI, and the r163 semantic cleanup.
 - Current live feature set includes:
   - queue aging
   - Received/Age/SLA indicators in the admin queue UI
   - safe write-once `Handled_By` and `Handled_At`
   - Admin preview diagnostics for communications preview investigation
-- r162 scope:
-  - applicant review status overlay UI
-  - editable-message cooldown explanation
-  - clearer separation of applicant stage, communication status, and send eligibility
-  - hide or redirect legacy top Preview/Send controls for editable message types
+- r163 scope:
+  - semantic cleanup only, not layout redesign
+  - rename Stage Dashboard to Operational Pipeline Dashboard
+  - rename Lifecycle & Eligibility to Eligibility Diagnostics
+  - clarify `PORTAL_SUBMITTED` user-facing communication status text
+  - keep raw internal codes available only as diagnostics
 - Expected changed files:
   - `AdminUI.html`
   - `Config.js`
@@ -31,19 +32,20 @@
 - Release invariant is now governed by `AGENTS.md` and `tools/verify-remote-config-before-version.ps1`
 - Browser acceptance via Chrome extension is allowed only as narrow acceptance evidence, not as a coding or debug loop
 - Next exact step:
-  - perform manual Admin browser acceptance for r162
-  - verify Applicant Stage, Communication Status, and Send Eligibility overlay values
-  - verify cooldown banner and editable-panel-only guidance for `Application Feedback` / `Custom Email`
-  - verify legacy Invite/Reminder behavior remains unchanged
+  - perform manual Admin browser acceptance for the r163 semantic cleanup
+  - if acceptance passes, commit `AdminUI.html`, `Config.js`, and `CURRENT_TASK.md`, push, and tag `staging-as163`
+  - if acceptance fails, do not tag; repin Admin and Student to the previous known-good r162 Apps Script platform version before considering source rollback
 - Acceptance checklist:
-  - Admin whoami = `r162 / 162`
-  - Student whoami = `r162 / 162`
-  - applicant review shows separate Applicant Stage, Communication Status, and Send Eligibility
-  - cooldown banner explains blocked follow-up for `Application Feedback`
-  - editable message types direct staff to the lower email panel
+  - Admin whoami = `r163 / 163`
+  - Student whoami = `r163 / 163`
+  - Operational Pipeline Dashboard heading is visible
+  - Eligibility Diagnostics heading is visible
+  - `PORTAL_SUBMITTED` shows a clearer user-facing communication status
+  - raw internal codes are labeled as diagnostics
+  - r162 overlay remains intact
   - legacy Invite/Reminder flow remains unchanged
 - Rollback note:
-  - repin Admin and Student deployments to the previous known-good r161 Apps Script platform version before considering source rollback
+  - repin Admin and Student deployments to the previous known-good r162 Apps Script platform version before considering source rollback
 
 ## Accepted Release State
 

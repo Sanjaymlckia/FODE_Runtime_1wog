@@ -668,7 +668,7 @@
     </div>
 
     <div id="stageDashboardPanel" class="card queue-panel">
-      <h3>Stage Dashboard</h3>
+      <h3>Operational Pipeline Dashboard</h3>
       <div id="stageFilterMeta" class="stageDashboardMeta">Click a stage to filter the applicant table.</div>
       <div id="stageDashboardCards" class="stageCards"></div>
     </div>
@@ -1434,9 +1434,9 @@
       var rows = [];
       if (d.Comm_Stage) rows.push({ label: "Stage", value: d.Comm_Stage });
       if (d.Comm_Stage) rows.push({ label: "Priority", html: renderPriorityBadge_(mapStagePriorityUi_(d.Comm_Stage)) });
-      if (d.Comm_Status) rows.push({ label: "Comm Status", value: d.Comm_Status });
+      if (d.Comm_Status) rows.push({ label: "Comm Status", value: formatCommunicationDisplayStatus_(d.Comm_Status) });
       if (d.Comm_Can_Send_Now === true || d.Comm_Can_Send_Now === false) rows.push({ label: "Can Send Now", value: d.Comm_Can_Send_Now ? "YES" : "NO" });
-      if (d.Comm_Block_Code) rows.push({ label: "Code", value: d.Comm_Block_Code });
+      if (d.Comm_Block_Code) rows.push({ label: "Raw Code", value: d.Comm_Block_Code });
       if (d.Comm_Block_Reason) rows.push({ label: "Reason", value: d.Comm_Block_Reason });
       if (d.Comm_Recommended_Message_Type) rows.push({ label: "Recommended Message", value: d.Comm_Recommended_Message_Type });
       if (d.Comm_Awaiting_Response === true || d.Comm_Awaiting_Response === false) rows.push({ label: "Awaiting Response", value: d.Comm_Awaiting_Response ? "YES" : "NO" });
@@ -1445,7 +1445,7 @@
         box.innerHTML = "";
         return;
       }
-      var parts = ['<div style="font-weight:800;margin-bottom:6px;color:#f4f9ff;">Lifecycle & Eligibility</div>'];
+      var parts = ['<div style="font-weight:800;margin-bottom:6px;color:#f4f9ff;">Eligibility Diagnostics</div>'];
       rows.forEach(function(row){
         parts.push('<div style="margin-top:4px;"><span style="color:#b9cbe0;">' + esc(row.label) + ':</span> <span style="color:#f4f9ff;">' + (row.html || esc(row.value)) + '</span></div>');
       });
@@ -2806,6 +2806,12 @@ function renderStageDashboard_(items, emptyMessage){
         formatted: nextEligible ? formatApplicantDateTime(nextEligible) : "—",
         text: "Ready to Send"
       };
+    }
+    function formatCommunicationDisplayStatus_(code){
+      var raw = String(code == null ? "" : code).trim();
+      if (!raw) return "—";
+      if (raw === "PORTAL_SUBMITTED") return "Portal Submitted — invite resend not required";
+      return raw;
     }
 
     function workflowEnrolledLabel_(row){
