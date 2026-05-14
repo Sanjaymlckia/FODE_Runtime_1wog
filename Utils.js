@@ -634,6 +634,705 @@ function upsertZohoDeal_(token, payloadRowObj, folderUrl, contactId) {
   return { id: id, response: parsed };
 }
 
+function getZohoBooksConfig_() {
+  return {
+    enabled: CONFIG.ENABLE_ZOHO_BOOKS_INTEGRATION === true,
+    dryRun: CONFIG.ENABLE_ZOHO_BOOKS_DRY_RUN !== false,
+    draftInvoiceCreateEnabled: CONFIG.ENABLE_ZOHO_BOOKS_DRAFT_INVOICE_CREATE === true,
+    organizationId: clean_(CONFIG.ZOHO_BOOKS_ORGANIZATION_ID || ""),
+    organizationName: clean_(CONFIG.ZOHO_BOOKS_ORGANIZATION_NAME || ""),
+    defaultCurrency: clean_(CONFIG.ZOHO_BOOKS_DEFAULT_CURRENCY || "PGK"),
+    portalSource: clean_(CONFIG.ZOHO_BOOKS_PORTAL_SOURCE || "FODE Portal"),
+    institution: clean_(CONFIG.ZOHO_BOOKS_INSTITUTION || "KIA"),
+    billingPrefix: clean_(CONFIG.FODE_BILLING_REFERENCE_PREFIX || "FODE"),
+    billingYear: clean_(CONFIG.FODE_BILLING_REFERENCE_YEAR || ""),
+    firstTestMode: clean_(CONFIG.ZOHO_BOOKS_FIRST_TEST_MODE || "DRAFT_ONLY"),
+    apiBase: clean_(CONFIG.ZOHO_BOOKS_API_BASE || "https://www.zohoapis.com/books/v3")
+  };
+}
+
+function assertZohoBooksEnabledForWrite_() {
+  var cfg = getZohoBooksConfig_();
+  if (cfg.enabled !== true) throw new Error("WRITE_DISABLED");
+  if (cfg.draftInvoiceCreateEnabled !== true) throw new Error("WRITE_DISABLED");
+  if (!cfg.organizationId) throw new Error("BOOKS_ORG_NOT_CONFIGURED");
+  return cfg;
+}
+
+function getZohoBooksAccessToken_() {
+  var props = PropertiesService.getScriptProperties();
+  var cached = clean_(props.getProperty("ZOHO_BOOKS_ACCESS_TOKEN") || props.getProperty("ZOHO_ACCESS_TOKEN") || "");
+  var expMs = Number(props.getProperty("ZOHO_BOOKS_ACCESS_TOKEN_EXP_MS") || props.getProperty("ZOHO_ACCESS_TOKEN_EXP_MS") || 0);
+  if (cached && expMs > (Date.now() + 60 * 1000)) return { ok: true, token: cached };
+
+  var refreshToken = clean_(props.getProperty("ZOHO_BOOKS_REFRESH_TOKEN") || props.getProperty("ZOHO_REFRESH_TOKEN") || "");
+  var clientId = clean_(props.getProperty("ZOHO_BOOKS_CLIENT_ID") || props.getProperty("ZOHO_CLIENT_ID") || "");
+  var clientSecret = clean_(props.getProperty("ZOHO_BOOKS_CLIENT_SECRET") || props.getProperty("ZOHO_CLIENT_SECRET") || "");
+  if (!refreshToken || !clientId || !clientSecret) {
+    return { ok: false, code: "TOKEN_NOT_CONFIGURED", message: "Zoho Books OAuth script properties are not configured." };
+  }
+
+  var endpoint = clean_(CONFIG.ZOHO_OAUTH_BASE || "https://accounts.zoho.com/oauth/v2") + "/token";
+  var resp = UrlFetchApp.fetch(endpoint, {
+    method: "post",
+    muteHttpExceptions: true,
+    payload: {
+      refresh_token: refreshToken,
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: "refresh_token"
+    }
+  });
+  var code = Number(resp.getResponseCode() || 0);
+  var body = String(resp.getContentText() || "");
+  var parsed;
+  try { parsed = JSON.parse(body || "{}"); } catch (_e) { parsed = {}; }
+  if (code < 200 || code >= 300 || !clean_(parsed.access_token || "")) {
+    return { ok: false, code: "PREAUTH_REQUIRED", message: "Zoho Books token refresh failed (" + code + ")." };
+  }
+  var accessToken = clean_(parsed.access_token);
+  var expiresIn = Number(parsed.expires_in || parsed.expires_in_sec || 3600);
+  props.setProperty("ZOHO_BOOKS_ACCESS_TOKEN", accessToken);
+  props.setProperty("ZOHO_BOOKS_ACCESS_TOKEN_EXP_MS", String(Date.now() + Math.max(120, expiresIn - 60) * 1000));
+  return { ok: true, token: accessToken };
+}
+
+function firstNonEmptyBooksField_(record, names) {
+  var r = record || {};
+  var list = Array.isArray(names) ? names : [];
+  for (var i = 0; i < list.length; i++) {
+    var key = String(list[i] || "");
+    var value = safeStr_(r[key] || "");
+    if (value) return value;
+  }
+  return "";
+}
+
+function buildFodeBillingReference_(record) {
+  var cfg = getZohoBooksConfig_();
+  var applicantId = safeStr_((record || {}).ApplicantID || (record || {}).applicantId || "");
+  var prefix = cfg.billingPrefix || "FODE";
+  var year = cfg.billingYear || "26";
+  var suffix = "";
+  var m = applicantId.match(/(\d+)$/);
+  if (m && m[1]) {
+    suffix = String(parseInt(m[1], 10) || 0);
+  }
+  if (!suffix || suffix === "0") suffix = safeStr_((record || {})._rowNumber || "");
+  suffix = suffix ? suffix.padStart(4, "0") : "0000";
+  return prefix + "-" + year + "-" + suffix;
+}
+
+function resolveFodePayerFromRecord_(record) {
+  var row = record || {};
+  var sponsorName = firstNonEmptyBooksField_(row, [
+    "Sponsor_Name", "Sponsor_Organisation", "Sponsor_Organization", "Organisation_Name",
+    "Organization_Name", "Company_Name", "Employer_Name", "TVET_Payer_Name"
+  ]);
+  var sponsorEmail = firstNonEmptyBooksField_(row, [
+    "Sponsor_Email", "Organisation_Email", "Organization_Email", "Company_Email", "TVET_Payer_Email"
+  ]);
+  var sponsorPhone = firstNonEmptyBooksField_(row, [
+    "Sponsor_Phone", "Organisation_Phone", "Organization_Phone", "Company_Phone", "TVET_Payer_Phone"
+  ]);
+  if (sponsorName || sponsorEmail || sponsorPhone) {
+    return {
+      payerType: "sponsor",
+      contactKind: "business",
+      name: sponsorName || sponsorEmail || sponsorPhone,
+      companyName: sponsorName || "",
+      email: sponsorEmail,
+      phone: sponsorPhone,
+      sourceField: sponsorName ? "Sponsor_Name" : (sponsorEmail ? "Sponsor_Email" : "Sponsor_Phone")
+    };
+  }
+
+  var parentName = firstNonEmptyBooksField_(row, ["Parent_Full_Name", "Parent_Name", "ParentName", "Guardian_Name", "Parent"]);
+  var parentEmail = safeStr_(pickParentEmail_(row) || "");
+  var parentPhone = firstNonEmptyBooksField_(row, ["Parent_Phone", "Parent_Mobile", "Phone_Number", "Mobile", "Phone"]);
+  if (parentName || parentEmail || parentPhone) {
+    return {
+      payerType: "parent_guardian",
+      contactKind: "individual",
+      name: parentName || parentEmail || parentPhone,
+      companyName: "",
+      email: parentEmail,
+      phone: parentPhone,
+      relationship: firstNonEmptyBooksField_(row, ["Relationship_To_Student"]),
+      sourceField: parentName ? "Parent_Full_Name" : (parentEmail ? "Parent_Email" : "Parent_Phone")
+    };
+  }
+
+  var studentName = (typeof rowStudentName_ === "function" ? rowStudentName_(row) : (safeStr_(row.First_Name || "") + " " + safeStr_(row.Last_Name || "")).trim()) || "";
+  return {
+    payerType: "student_self",
+    contactKind: "individual",
+    name: studentName || safeStr_(row.ApplicantID || ""),
+    companyName: "",
+    email: firstNonEmptyBooksField_(row, ["Student_Email", "Email"]),
+    phone: firstNonEmptyBooksField_(row, ["Student_Phone", "Phone_Number", "Phone"]),
+    sourceField: "Student"
+  };
+}
+
+function buildFodePayerKey_(record) {
+  var payer = record && record.payerType ? record : resolveFodePayerFromRecord_(record);
+  return [
+    safeStr_(payer.payerType || "unknown").toLowerCase(),
+    safeStr_(payer.name || "").toLowerCase(),
+    safeStr_(payer.email || "").toLowerCase(),
+    safeStr_(payer.phone || "").replace(/\D/g, "")
+  ].join("::");
+}
+
+function buildZohoBooksContactPayload_(record, payer) {
+  var row = record || {};
+  var p = payer || resolveFodePayerFromRecord_(row);
+  var payload = {
+    contact_name: safeStr_(p.name || ""),
+    company_name: safeStr_(p.companyName || ""),
+    contact_type: p.contactKind === "business" ? "customer" : "customer",
+    customer_sub_type: p.contactKind === "business" ? "business" : "individual",
+    currency_code: clean_(CONFIG.ZOHO_BOOKS_DEFAULT_CURRENCY || "PGK"),
+    email: safeStr_(p.email || ""),
+    phone: safeStr_(p.phone || ""),
+    notes: [
+      "Source: " + safeStr_(CONFIG.ZOHO_BOOKS_PORTAL_SOURCE || "FODE Portal"),
+      "Institution: " + safeStr_(CONFIG.ZOHO_BOOKS_INSTITUTION || "KIA"),
+      "ApplicantID: " + safeStr_(row.ApplicantID || ""),
+      "Student: " + ((typeof rowStudentName_ === "function" ? rowStudentName_(row) : "") || "")
+    ].join("\n")
+  };
+  if (p.contactKind !== "business") payload.company_name = "";
+  return payload;
+}
+
+function getFodeGradeCode_(record) {
+  var row = record || {};
+  var raw = firstNonEmptyBooksField_(row, ["Program_Applied_For", "Grade_Applying_For", "Program", "Type"]);
+  var m = raw.match(/(\d{1,2})/);
+  if (!m || !m[1]) return "";
+  return String(parseInt(m[1], 10) || 0).padStart(2, "0");
+}
+
+function parseZohoBooksRate_(value) {
+  var raw = safeStr_(value || "");
+  var n = Number(raw.replace(/[^0-9.]/g, ""));
+  return n > 0 ? n : 0;
+}
+
+function normalizeZohoBooksItemText_(value) {
+  return safeStr_(value || "")
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+function getZohoBooksStaticItemCatalog_() {
+  return [
+    { itemId: "7934774000000112434", itemName: "07 – KIA – Tuition Fee", description: "Grade 7", rate: 10850, account: "Tuition Fees – School", productType: "service", source: "1", institution: "KIA" },
+    { itemId: "7934774000000112445", itemName: "08 – KIA – Tuition Fee", description: "Grade 8", rate: 10850, account: "Tuition Fees – School", productType: "service", source: "1", institution: "KIA" },
+    { itemId: "7934774000000112456", itemName: "09 – KIA – Tuition Fee", description: "Grade 9", rate: 12850, account: "Tuition Fees – School", productType: "service", source: "1", institution: "KIA" },
+    { itemId: "7934774000000112467", itemName: "10 – KIA – Tuition Fee", description: "Grade 10", rate: 12850, account: "Tuition Fees – School", productType: "service", source: "1", institution: "KIA" },
+    { itemId: "7934774000000112478", itemName: "11 – KIA – Tuition Fee", description: "Grade 11", rate: 14350, account: "Tuition Fees – School", productType: "service", source: "1", institution: "KIA" },
+    { itemId: "7934774000000112489", itemName: "12 – KIA – Tuition Fee", description: "Grade 12", rate: 14850, account: "Tuition Fees – School", productType: "service", source: "1", institution: "KIA" },
+    { itemId: "7934774000000112993", itemName: "FD07 – Mathematics", description: "Grade 7 FODE – Mathematics", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113004", itemName: "FD07 – English", description: "Grade 7 FODE – English", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113015", itemName: "FD07 – Science", description: "Grade 7 FODE – Science", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113026", itemName: "FD07 – Social Science", description: "Grade 7 FODE – Social Science", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113037", itemName: "FD07 – Business Studies", description: "Grade 7 FODE – Business Studies", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113048", itemName: "FD07 – ICT", description: "Grade 7 FODE – ICT", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113059", itemName: "FD08 – Mathematics", description: "Grade 8 FODE – Mathematics", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113070", itemName: "FD08 – English", description: "Grade 8 FODE – English", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113081", itemName: "FD08 – Science", description: "Grade 8 FODE – Science", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113092", itemName: "FD08 – Social Science", description: "Grade 8 FODE – Social Science", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113103", itemName: "FD08 – Business Studies", description: "Grade 8 FODE – Business Studies", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113114", itemName: "FD08 – ICT", description: "Grade 8 FODE – ICT", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113125", itemName: "FD09 – Mathematics", description: "Grade 9 FODE – Mathematics", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113136", itemName: "FD09 – English", description: "Grade 9 FODE – English", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113147", itemName: "FD09 – Science", description: "Grade 9 FODE – Science", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113158", itemName: "FD09 – Social Science", description: "Grade 9 FODE – Social Science", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113169", itemName: "FD09 – Business Studies", description: "Grade 9 FODE – Business Studies", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113180", itemName: "FD09 – ICT", description: "Grade 9 FODE – ICT", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113191", itemName: "FD10 – Mathematics", description: "Grade 10 FODE – Mathematics", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113202", itemName: "FD10 – English", description: "Grade 10 FODE – English", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113213", itemName: "FD10 – Science", description: "Grade 10 FODE – Science", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113224", itemName: "FD10 – Social Science", description: "Grade 10 FODE – Social Science", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113235", itemName: "FD10 – Business Studies", description: "Grade 10 FODE – Business Studies", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113246", itemName: "FD10 – ICT", description: "Grade 10 FODE – ICT", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113257", itemName: "FD11 – Accounting", description: "Grade 11 FODE – Accounting", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113268", itemName: "FD11 – Business Studies", description: "Grade 11 FODE – Business Studies", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113279", itemName: "FD11 – Economics", description: "Grade 11 FODE – Economics", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113290", itemName: "FD11 – Physics", description: "Grade 11 FODE – Physics", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113301", itemName: "FD11 – Chemistry", description: "Grade 11 FODE – Chemistry", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113312", itemName: "FD11 – Biology", description: "Grade 11 FODE – Biology", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113323", itemName: "FD11 – History", description: "Grade 11 FODE – History", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113334", itemName: "FD11 – Geography", description: "Grade 11 FODE – Geography", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113345", itemName: "FD11 – Language & Literature", description: "Grade 11 FODE – Language & Literature", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113356", itemName: "FD11 – Advanced Mathematics", description: "Grade 11 FODE – Advanced Mathematics", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113367", itemName: "FD11 – General Mathematics", description: "Grade 11 FODE – General Mathematics", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113378", itemName: "FD12 – Business Studies", description: "Grade 12 FODE – Business Studies", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113389", itemName: "FD12 – Science", description: "Grade 12 FODE – Science", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113400", itemName: "FD12 – Humanities", description: "Grade 12 FODE – Humanities", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113411", itemName: "FD12 – Language & Literature", description: "Grade 12 FODE – Language & Literature", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113422", itemName: "FD12 – Advanced Mathematics", description: "Grade 12 FODE – Advanced Mathematics", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000113433", itemName: "FD12 – General Mathematics", description: "Grade 12 FODE – General Mathematics", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "2", institution: "FODE" },
+    { itemId: "7934774000000502038", itemName: "FD12 – Physics", description: "Grade 12 FODE – Physics", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "1", institution: "FODE" },
+    { itemId: "7934774000000502043", itemName: "FD12 – Chemistry", description: "Grade 12 FODE – Chemistry", rate: 450, account: "Tuition Fees – FODE", productType: "goods", source: "1", institution: "FODE" },
+    { itemId: "7934774000000121295", itemName: "Registration KIA", description: "", rate: 1000, account: "Sales", productType: "goods", source: "1", institution: "KIA" },
+    { itemId: "7934774000000121306", itemName: "Registration FODE (Full)", description: "", rate: 1000, account: "Sales", productType: "goods", source: "1", institution: "FODE" },
+    { itemId: "7934774000000121317", itemName: "Registration FODE (No Tablet)", description: "", rate: 600, account: "Sales", productType: "goods", source: "1", institution: "FODE" }
+  ];
+}
+
+function findZohoBooksCatalogItemsByName_(itemName, institution) {
+  var target = normalizeZohoBooksItemText_(itemName);
+  var inst = safeStr_(institution || "").toUpperCase();
+  return getZohoBooksStaticItemCatalog_().filter(function (item) {
+    if (inst && safeStr_(item.institution || "").toUpperCase() !== inst) return false;
+    return normalizeZohoBooksItemText_(item.itemName) === target;
+  });
+}
+
+function buildZohoBooksItemCandidate_(record) {
+  var row = record || {};
+  var subjectsRaw = safeStr_(row.Subjects_Selected_Canonical || row.Subjects_Selected || "");
+  var subjects = subjectsRaw ? subjectsRaw.split(",").map(function (s) { return safeStr_(s); }).filter(function (s) { return !!s; }) : [];
+  var gradeCode = getFodeGradeCode_(row);
+  var registrationComplete = safeStr_(row.Registration_Complete || "") === "Yes";
+  var amountRaw = safeStr_(row.Fee_Total_Kina || row.Total_Fee_Kina || row.Total_Fee || "");
+  var amount = parseZohoBooksRate_(amountRaw);
+  var amountValid = !!(amount > 0);
+  var typeRaw = safeStr_(row.Type || "");
+  var isKia = /kia/i.test(typeRaw) || /kia/i.test(safeStr_(row.Program_Applied_For || row.Program || ""));
+  var desiredName = "";
+  var desiredInstitution = isKia ? "KIA" : "FODE";
+  var category = "";
+  var confidence = "low";
+
+  if (!isKia && subjects.length === 1 && gradeCode) {
+    desiredName = "FD" + gradeCode + " – " + subjects[0];
+    category = "subject_fee";
+    confidence = "high";
+  } else if (!isKia && !subjects.length && registrationComplete) {
+    desiredName = amountValid && amount <= 600 ? "Registration FODE (No Tablet)" : "Registration FODE (Full)";
+    category = "registration_fee";
+    confidence = "medium";
+  } else if (isKia && gradeCode) {
+    desiredName = gradeCode + " – KIA – Tuition Fee";
+    category = "kia_tuition";
+    confidence = "medium";
+  }
+
+  if (desiredName) {
+    var matches = findZohoBooksCatalogItemsByName_(desiredName, desiredInstitution);
+    if (matches.length === 1) {
+      var matched = matches[0];
+      var amountMismatch = amountValid && Number(matched.rate || 0) > 0 && Number(matched.rate || 0) !== Number(amount || 0);
+      return {
+        status: "CATALOG_MATCH",
+        itemId: safeStr_(matched.itemId || ""),
+        itemName: safeStr_(matched.itemName || ""),
+        description: safeStr_(matched.description || ""),
+        account: safeStr_(matched.account || ""),
+        itemCategory: category,
+        quantity: 1,
+        rate: Number(matched.rate || 0),
+        amount: amountValid ? amount : Number(matched.rate || 0),
+        sourceAmount: amountValid ? amount : 0,
+        amountMismatch: amountMismatch,
+        amountMismatchText: amountMismatch ? ("Source amount " + String(amount) + " differs from catalog rate " + String(matched.rate)) : "",
+        matchConfidence: confidence,
+        catalogMatched: true,
+        liveDiscoveryConfirmed: false,
+        warning: "Matched against local Item.csv catalogue only. Live Zoho Books item discovery must confirm before write."
+      };
+    }
+    if (matches.length > 1) {
+      return {
+        status: "ITEM_NOT_RESOLVED",
+        itemId: "",
+        itemName: "",
+        description: "",
+        account: "",
+        itemCategory: category,
+        quantity: 0,
+        rate: 0,
+        amount: amountValid ? amount : 0,
+        sourceAmount: amountValid ? amount : 0,
+        amountMismatch: false,
+        amountMismatchText: "",
+        matchConfidence: "none",
+        catalogMatched: false,
+        liveDiscoveryConfirmed: false,
+        warning: "Multiple Item.csv catalogue matches were found for " + desiredName + "."
+      };
+    }
+  }
+  return {
+    status: "ITEM_NOT_RESOLVED",
+    itemId: "",
+    itemName: "",
+    description: "",
+    account: "",
+    itemCategory: "",
+    quantity: 0,
+    rate: 0,
+    amount: amountValid ? amount : 0,
+    sourceAmount: amountValid ? amount : 0,
+    amountMismatch: false,
+    amountMismatchText: "",
+    matchConfidence: "none",
+    catalogMatched: false,
+    liveDiscoveryConfirmed: false,
+    warning: subjects.length > 1
+      ? "Multiple subjects selected; a single invoice item could not be resolved confidently."
+      : "No confident FODE item could be resolved from the current record."
+  };
+}
+
+function parseFodeSelectedSubjectsV2_(record) {
+  var row = record || {};
+  var subjectsRaw = safeStr_(row.Subjects_Selected_Canonical || row.Subjects_Selected || "");
+  return subjectsRaw ? subjectsRaw.split(",").map(function (s) { return safeStr_(s); }).filter(function (s) { return !!s; }) : [];
+}
+
+function shouldIncludeFodeRegistrationLineV2_(record, sourceAmount, subjectTotal) {
+  var row = record || {};
+  if (safeStr_(row.Registration_Complete || "") !== "Yes") return false;
+  if (!(sourceAmount > 0)) return true;
+  return sourceAmount > subjectTotal;
+}
+
+function buildZohoBooksResolvedLineItemsV2_(record) {
+  var row = record || {};
+  var subjects = parseFodeSelectedSubjectsV2_(row);
+  var gradeCode = getFodeGradeCode_(row);
+  var amount = parseZohoBooksRate_(safeStr_(row.Fee_Total_Kina || row.Total_Fee_Kina || row.Total_Fee || ""));
+  var isKia = /kia/i.test(safeStr_(row.Type || "")) || /kia/i.test(safeStr_(row.Program_Applied_For || row.Program || ""));
+  var out = {
+    lineItems: [],
+    unresolvedSubjects: [],
+    warnings: [],
+    sourceAmount: amount > 0 ? amount : 0,
+    calculatedAmount: 0,
+    amountMismatch: false,
+    amountMismatchText: "",
+    includesRegistration: false,
+    institution: isKia ? "KIA" : "FODE"
+  };
+
+  if (isKia && gradeCode) {
+    var kiaName = gradeCode + " â€“ KIA â€“ Tuition Fee";
+    var kiaMatches = findZohoBooksCatalogItemsByName_(kiaName, "KIA");
+    if (kiaMatches.length === 1) {
+      var kia = kiaMatches[0];
+      out.lineItems.push({
+        itemId: safeStr_(kia.itemId || ""),
+        itemName: safeStr_(kia.itemName || ""),
+        description: safeStr_(kia.description || ""),
+        account: safeStr_(kia.account || ""),
+        itemCategory: "kia_tuition",
+        quantity: 1,
+        rate: Number(kia.rate || 0),
+        amount: Number(kia.rate || 0),
+        matchConfidence: "high",
+        catalogMatched: true,
+        liveDiscoveryConfirmed: false
+      });
+      out.calculatedAmount += Number(kia.rate || 0);
+    } else {
+      out.warnings.push("KIA tuition item could not be resolved confidently.");
+    }
+  } else {
+    for (var i = 0; i < subjects.length; i++) {
+      var subjectName = subjects[i];
+      var desiredName = "FD" + gradeCode + " â€“ " + subjectName;
+      var matches = findZohoBooksCatalogItemsByName_(desiredName, "FODE");
+      if (matches.length === 1) {
+        var matched = matches[0];
+        out.lineItems.push({
+          itemId: safeStr_(matched.itemId || ""),
+          itemName: safeStr_(matched.itemName || ""),
+          description: safeStr_(matched.description || ""),
+          account: safeStr_(matched.account || ""),
+          itemCategory: "subject_fee",
+          quantity: 1,
+          rate: Number(matched.rate || 0),
+          amount: Number(matched.rate || 0),
+          subject: subjectName,
+          matchConfidence: "high",
+          catalogMatched: true,
+          liveDiscoveryConfirmed: false
+        });
+        out.calculatedAmount += Number(matched.rate || 0);
+      } else {
+        out.unresolvedSubjects.push(subjectName);
+      }
+    }
+    if (shouldIncludeFodeRegistrationLineV2_(row, out.sourceAmount, out.calculatedAmount)) {
+      var registrationName = out.sourceAmount > 0 && out.sourceAmount <= (out.calculatedAmount + 600)
+        ? "Registration FODE (No Tablet)"
+        : "Registration FODE (Full)";
+      var regMatches = findZohoBooksCatalogItemsByName_(registrationName, "FODE");
+      if (regMatches.length === 1) {
+        var reg = regMatches[0];
+        out.lineItems.push({
+          itemId: safeStr_(reg.itemId || ""),
+          itemName: safeStr_(reg.itemName || ""),
+          description: safeStr_(reg.description || ""),
+          account: safeStr_(reg.account || ""),
+          itemCategory: "registration_fee",
+          quantity: 1,
+          rate: Number(reg.rate || 0),
+          amount: Number(reg.rate || 0),
+          matchConfidence: "medium",
+          catalogMatched: true,
+          liveDiscoveryConfirmed: false
+        });
+        out.calculatedAmount += Number(reg.rate || 0);
+        out.includesRegistration = true;
+      } else {
+        out.warnings.push("Registration line was indicated by source context but could not be resolved confidently.");
+      }
+    }
+  }
+
+  if (out.sourceAmount > 0 && out.calculatedAmount > 0 && out.sourceAmount !== out.calculatedAmount) {
+    out.amountMismatch = true;
+    out.amountMismatchText = "Source amount " + String(out.sourceAmount) + " differs from calculated line total " + String(out.calculatedAmount) + ".";
+  }
+  return out;
+}
+
+function buildZohoBooksDraftInvoicePayload_(record, payer, booksContact) {
+  var row = record || {};
+  var p = payer || resolveFodePayerFromRecord_(row);
+  var item = buildZohoBooksItemCandidate_(row);
+  var resolved = buildZohoBooksResolvedLineItemsV2_(row);
+  var billingReference = buildFodeBillingReference_(row);
+  var studentName = (typeof rowStudentName_ === "function" ? rowStudentName_(row) : (safeStr_(row.First_Name || "") + " " + safeStr_(row.Last_Name || "")).trim()) || "";
+  var lineDescription = [
+    "FODE billing reference: " + billingReference,
+    "Student: " + studentName,
+    "ApplicantID: " + safeStr_(row.ApplicantID || ""),
+    "Payer: " + safeStr_(p.name || "")
+  ].join(" | ");
+  var payload = {
+    customer_id: safeStr_(booksContact && booksContact.contact_id || booksContact && booksContact.id || row.Books_Contact_ID || ""),
+    currency_code: clean_(CONFIG.ZOHO_BOOKS_DEFAULT_CURRENCY || "PGK"),
+    reference_number: billingReference,
+    notes: [
+      "Source: " + safeStr_(CONFIG.ZOHO_BOOKS_PORTAL_SOURCE || "FODE Portal"),
+      "Institution: " + safeStr_(CONFIG.ZOHO_BOOKS_INSTITUTION || "KIA"),
+      "ApplicantID: " + safeStr_(row.ApplicantID || ""),
+      "Student: " + studentName,
+      "Program: " + safeStr_(row.Program_Applied_For || row.Program || "")
+    ].join("\n"),
+    line_items: (Array.isArray(resolved.lineItems) && resolved.lineItems.length ? resolved.lineItems : [{
+      itemId: safeStr_(item.itemId || ""),
+      itemName: safeStr_(item.itemName || ""),
+      description: lineDescription,
+      rate: Number(item.rate || 0),
+      quantity: Number(item.quantity || 0)
+    }]).map(function (line) {
+      return {
+        item_id: safeStr_(line.itemId || ""),
+        name: safeStr_(line.itemName || ""),
+        description: safeStr_(line.description || "") || lineDescription,
+        rate: Number(line.rate || 0),
+        quantity: Number(line.quantity || 1)
+      };
+    })
+  };
+  return payload;
+}
+
+function hashZohoBooksPayload_(payload) {
+  var raw = JSON.stringify(payload == null ? {} : payload);
+  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw, Utilities.Charset.UTF_8);
+  return digest.map(function (b) {
+    var v = (b < 0 ? b + 256 : b).toString(16);
+    return v.length === 1 ? "0" + v : v;
+  }).join("");
+}
+
+function zohoBooksApiRequest_(method, path, payload, options) {
+  var cfg = getZohoBooksConfig_();
+  if (!cfg.organizationId) {
+    return { ok: false, code: "BOOKS_ORG_NOT_CONFIGURED", message: "Zoho Books organization is not configured." };
+  }
+  var tokenRes = getZohoBooksAccessToken_();
+  if (!tokenRes.ok) return tokenRes;
+
+  var opts = options && typeof options === "object" ? options : {};
+  var query = opts.query && typeof opts.query === "object" ? opts.query : {};
+  query.organization_id = cfg.organizationId;
+  var pairs = [];
+  Object.keys(query).forEach(function (key) {
+    if (query[key] === undefined || query[key] === null || query[key] === "") return;
+    pairs.push(encodeURIComponent(key) + "=" + encodeURIComponent(String(query[key])));
+  });
+  var endpoint = cfg.apiBase.replace(/\/+$/, "") + "/" + String(path || "").replace(/^\/+/, "") + (pairs.length ? ("?" + pairs.join("&")) : "");
+  var fetchOpts = {
+    method: String(method || "get").toLowerCase(),
+    muteHttpExceptions: true,
+    headers: {
+      Authorization: "Zoho-oauthtoken " + tokenRes.token
+    }
+  };
+  if (payload !== undefined && payload !== null) {
+    fetchOpts.contentType = "application/json";
+    fetchOpts.payload = JSON.stringify(payload);
+  }
+  try {
+    var resp = UrlFetchApp.fetch(endpoint, fetchOpts);
+    var status = Number(resp.getResponseCode() || 0);
+    var text = String(resp.getContentText() || "");
+    var parsed;
+    try { parsed = JSON.parse(text || "{}"); } catch (_e) { parsed = {}; }
+    if (status < 200 || status >= 300) {
+      return {
+        ok: false,
+        code: "BOOKS_API_HTTP_" + String(status || 0),
+        message: safeStr_(parsed.message || "Zoho Books API request failed."),
+        status: status,
+        response: parsed
+      };
+    }
+    return { ok: true, status: status, response: parsed };
+  } catch (e) {
+    return { ok: false, code: "BOOKS_API_FETCH_FAILED", message: safeStr_(e && e.message || e) };
+  }
+}
+
+function zohoBooksDiscoverCustomFields_(moduleName) {
+  var moduleKey = safeStr_(moduleName || "").toLowerCase();
+  if (!moduleKey) return { ok: false, code: "MODULE_REQUIRED", message: "Module name is required." };
+  var res = zohoBooksApiRequest_("get", "settings/customfields", null, { query: { module: moduleKey } });
+  if (!res.ok) return res;
+  return {
+    ok: true,
+    moduleName: moduleKey,
+    customFields: Array.isArray(res.response && res.response.customfields) ? res.response.customfields : []
+  };
+}
+
+function zohoBooksDiscoverItems_() {
+  var res = zohoBooksApiRequest_("get", "items", null, { query: { per_page: 200 } });
+  if (!res.ok) return res;
+  return { ok: true, items: Array.isArray(res.response && res.response.items) ? res.response.items : [] };
+}
+
+function zohoBooksDiscoverAccounts_() {
+  var res = zohoBooksApiRequest_("get", "chartofaccounts", null, { query: { per_page: 200 } });
+  if (!res.ok) return res;
+  return { ok: true, accounts: Array.isArray(res.response && res.response.chartofaccounts) ? res.response.chartofaccounts : [] };
+}
+
+function zohoBooksFindContact_(payer) {
+  var p = payer || {};
+  var email = safeStr_(p.email || "");
+  var phone = safeStr_(p.phone || "");
+  if (!email && !phone) {
+    return { ok: true, matches: [], code: "NO_CONTACT_SEARCH_KEY" };
+  }
+  var res = zohoBooksApiRequest_("get", "contacts", null, { query: { email: email, phone: phone, contact_type: "customer" } });
+  if (!res.ok) return res;
+  var contacts = Array.isArray(res.response && res.response.contacts) ? res.response.contacts : [];
+  return { ok: true, matches: contacts };
+}
+
+function zohoBooksCreateOrUpdateContact_(record, payer) {
+  var row = record || {};
+  if (safeStr_(row.Books_Contact_ID || "")) {
+    return { ok: true, reused: true, contact_id: safeStr_(row.Books_Contact_ID || ""), contact_name: safeStr_(row.Books_Contact_Name || "") };
+  }
+  var lookup = zohoBooksFindContact_(payer);
+  if (!lookup.ok) return lookup;
+  var matches = Array.isArray(lookup.matches) ? lookup.matches : [];
+  if (matches.length > 1) {
+    return { ok: false, code: "AMBIGUOUS_CONTACT_MATCH", message: "Multiple Zoho Books contacts matched the payer.", matches: matches };
+  }
+  if (matches.length === 1) {
+    return {
+      ok: true,
+      reused: true,
+      matchedByLookup: true,
+      contact_id: safeStr_(matches[0].contact_id || matches[0].contactId || ""),
+      contact_name: safeStr_(matches[0].contact_name || matches[0].contactName || "")
+    };
+  }
+  if (getZohoBooksConfig_().enabled !== true || getZohoBooksConfig_().draftInvoiceCreateEnabled !== true) {
+    return {
+      ok: true,
+      writeDisabled: true,
+      code: "WRITE_DISABLED",
+      wouldCreate: true,
+      contactPayload: buildZohoBooksContactPayload_(row, payer)
+    };
+  }
+  var createRes = zohoBooksApiRequest_("post", "contacts", buildZohoBooksContactPayload_(row, payer));
+  if (!createRes.ok) return createRes;
+  var contact = createRes.response && createRes.response.contact ? createRes.response.contact : {};
+  return {
+    ok: true,
+    created: true,
+    contact_id: safeStr_(contact.contact_id || ""),
+    contact_name: safeStr_(contact.contact_name || "")
+  };
+}
+
+function zohoBooksFindInvoiceByFodeReference_(fodeReference) {
+  var ref = safeStr_(fodeReference || "");
+  if (!ref) return { ok: false, code: "REFERENCE_REQUIRED", message: "FODE reference is required." };
+  var res = zohoBooksApiRequest_("get", "invoices", null, { query: { reference_number: ref } });
+  if (!res.ok) return res;
+  var invoices = Array.isArray(res.response && res.response.invoices) ? res.response.invoices : [];
+  return { ok: true, matches: invoices };
+}
+
+function zohoBooksCreateDraftInvoice_(record, booksContact) {
+  var row = record || {};
+  if (safeStr_(row.Books_Invoice_ID || "")) {
+    return { ok: true, code: "ALREADY_PROCESSED", invoice_id: safeStr_(row.Books_Invoice_ID || ""), invoice_number: safeStr_(row.Books_Invoice_Number || "") };
+  }
+  var ref = buildFodeBillingReference_(row);
+  var existing = zohoBooksFindInvoiceByFodeReference_(ref);
+  if (!existing.ok && existing.code !== "TOKEN_NOT_CONFIGURED" && existing.code !== "PREAUTH_REQUIRED") return existing;
+  var matches = existing.ok ? (Array.isArray(existing.matches) ? existing.matches : []) : [];
+  if (matches.length) {
+    var invoice = matches[0] || {};
+    return {
+      ok: true,
+      code: "ALREADY_PROCESSED",
+      invoice_id: safeStr_(invoice.invoice_id || ""),
+      invoice_number: safeStr_(invoice.invoice_number || ""),
+      invoice_status: safeStr_(invoice.status || "")
+    };
+  }
+  if (getZohoBooksConfig_().enabled !== true || getZohoBooksConfig_().draftInvoiceCreateEnabled !== true) {
+    return { ok: false, code: "WRITE_DISABLED", message: "Live draft invoice creation is disabled." };
+  }
+  var payload = buildZohoBooksDraftInvoicePayload_(row, resolveFodePayerFromRecord_(row), booksContact);
+  var createRes = zohoBooksApiRequest_("post", "invoices", payload);
+  if (!createRes.ok) return createRes;
+  var invoiceOut = createRes.response && createRes.response.invoice ? createRes.response.invoice : {};
+  return {
+    ok: true,
+    code: "DRAFT_INVOICE_OK",
+    invoice_id: safeStr_(invoiceOut.invoice_id || ""),
+    invoice_number: safeStr_(invoiceOut.invoice_number || ""),
+    invoice_status: safeStr_(invoiceOut.status || "draft")
+  };
+}
+
+function redactZohoBooksPayloadForUi_(payload) {
+  var json = JSON.stringify(payload == null ? null : payload);
+  if (!json) return null;
+  return JSON.parse(json.replace(/"Authorization":"[^"]+"/g, '"Authorization":"[REDACTED]"'));
+}
+
 function getCurrentWebAppUrl_() {
   try {
     var svc = ScriptApp.getService();

@@ -2,28 +2,29 @@
 
 ## Current Runtime Truth
 
-- Live runtime: `r163 / 163`
-- Admin whoami: `r163 / 163`, mismatch `false`
-- Student whoami: `r163 / 163`, mismatch `false`
-- Current release candidate: `r163 / 163`
-- Current accepted tag: `staging-as153`
-- Git status: source released to Apps Script; browser acceptance and git finalization not yet complete
-- Browser acceptance remains pending for the Admin communications preview workflow, applicant review status overlay UI, and the r163 semantic cleanup.
+- Live runtime: `r164 / 164`
+- Admin whoami: `r164 / 164`, mismatch `false`
+- Student whoami: `r164 / 164`, mismatch `false`
+- Current source baseline: `e0249cd`
+- Current accepted tag: `staging-as163`
+- Git status: `r164` accepted for dry-run/preflight deployment; git finalization in progress
+- Browser acceptance for `r163` is accepted; `r164` browser acceptance is now accepted for preflight deployment only.
 - Current live feature set includes:
   - queue aging
   - Received/Age/SLA indicators in the admin queue UI
   - safe write-once `Handled_By` and `Handled_At`
   - Admin preview diagnostics for communications preview investigation
-- r163 scope:
-  - semantic cleanup only, not layout redesign
-  - rename Stage Dashboard to Operational Pipeline Dashboard
-  - rename Lifecycle & Eligibility to Eligibility Diagnostics
-  - clarify `PORTAL_SUBMITTED` user-facing communication status text
-  - keep raw internal codes available only as diagnostics
+- Current CIS scope:
+  - FODE Portal -> KIA Zoho Books preflight and dry-run invoice preview
+  - CRM remains untouched and out of the billing trigger path
+  - draft-only readiness; no auto-send, no payment recording, no bulk posting, and no live Books writes
 - Expected changed files:
+  - `Utils.js`
+  - `Admin.js`
   - `AdminUI.html`
   - `Config.js`
   - `CURRENT_TASK.md`
+  - `docs/Zoho_Books/Item.csv`
 - Deferred fields stay deferred:
   - `Enrolled_By`
   - `Enrolled_At`
@@ -32,20 +33,29 @@
 - Release invariant is now governed by `AGENTS.md` and `tools/verify-remote-config-before-version.ps1`
 - Browser acceptance via Chrome extension is allowed only as narrow acceptance evidence, not as a coding or debug loop
 - Next exact step:
-  - perform manual Admin browser acceptance for the r163 semantic cleanup
-  - if acceptance passes, commit `AdminUI.html`, `Config.js`, and `CURRENT_TASK.md`, push, and tag `staging-as163`
-  - if acceptance fails, do not tag; repin Admin and Student to the previous known-good r162 Apps Script platform version before considering source rollback
+  - finalize git for accepted `r164` with the Zoho Books dry-run/preflight source
+  - next CIS must address sheet write-back column readiness and Zoho Books OAuth configuration before payload preview/write testing
+  - keep all Books write flags disabled until a later write-authorized CIS explicitly changes them
 - Acceptance checklist:
-  - Admin whoami = `r163 / 163`
-  - Student whoami = `r163 / 163`
-  - Operational Pipeline Dashboard heading is visible
-  - Eligibility Diagnostics heading is visible
-  - `PORTAL_SUBMITTED` shows a clearer user-facing communication status
-  - raw internal codes are labeled as diagnostics
-  - r162 overlay remains intact
-  - legacy Invite/Reminder flow remains unchanged
+  - only allowed files changed
+  - CRM trigger/source files untouched
+  - Books write flags default to false
+  - preflight reports token/header/discovery state clearly
+  - preview returns payer, student, item, amount, FODE reference, payloads, and idempotency status
+  - create endpoint returns `WRITE_DISABLED` while live write flags remain false
+  - Admin and Student `whoami` must match the intended release identity before browser testing
+  - no tokens or secrets exposed in UI or logs
+  - no Books contact, invoice, payment, or email side effect occurs during acceptance
+- r164 browser acceptance result:
+  - PASS for dry-run/preflight deployment
+  - Admin runtime badge shows `r164 / 164`
+  - Zoho Books dry-run panel is visible
+  - Preflight returns `PREAUTH_REQUIRED`
+  - live draft invoice creation remains disabled by config flags
+  - required Books write-back fields are reported missing, which blocks preview/write readiness
+  - no Books contact, invoice, payment, or invoice email was created
 - Rollback note:
-  - repin Admin and Student deployments to the previous known-good r162 Apps Script platform version before considering source rollback
+  - preferred rollback is deployment repin to the accepted `r163 / 163` runtime first, then revert source only if needed
 
 ## Accepted Release State
 
@@ -60,7 +70,7 @@
 - VCF production test remains parked until business WhatsApp phone access is available.
 - Admin identity rationalisation remains deferred as a separate task.
 - Future enrolment transition hook for `Enrolled_By` / `Enrolled_At` remains deferred.
-- Books-native architecture work remains later-phase work and is not part of the current release.
+- Books-native architecture work is now limited to dry-run/preflight only in the current CIS; no live Books writes are authorized.
 - Batch feedback/custom email is deferred to a separate CIS. It must include preview count, explicit confirmation, per-applicant result logging, daily cap handling, and no automatic sending.
 - AI-assisted document quality scan is deferred. If added later, it must be advisory only for file type, clarity, likely wrong document, passport photo suitability, unreadable scans, missing files, and related quality flags; it must not auto-reject, auto-send, or override Admin review.
 

@@ -7,9 +7,9 @@
  */
 var CONFIG = {
   // Versioning (change control)
-  VERSION: "r163",
+  VERSION: "r164",
 CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alignment",
-  DEPLOY_VERSION_NUMBER: 163,
+  DEPLOY_VERSION_NUMBER: 164,
 BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
 
   // STAGING/PROD data mode routing (working sheet)
@@ -75,6 +75,18 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   DEPLOYMENT_ID_STUDENT: "AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv",
   ZOHO_API_BASE: "https://www.zohoapis.com/crm/v2",
   ZOHO_OAUTH_BASE: "https://accounts.zoho.com/oauth/v2",
+  ZOHO_BOOKS_API_BASE: "https://www.zohoapis.com/books/v3",
+  ENABLE_ZOHO_BOOKS_INTEGRATION: false,
+  ENABLE_ZOHO_BOOKS_DRY_RUN: true,
+  ENABLE_ZOHO_BOOKS_DRAFT_INVOICE_CREATE: false,
+  ZOHO_BOOKS_ORGANIZATION_ID: "908427349",
+  ZOHO_BOOKS_ORGANIZATION_NAME: "Kundu International Academy",
+  ZOHO_BOOKS_DEFAULT_CURRENCY: "PGK",
+  ZOHO_BOOKS_PORTAL_SOURCE: "FODE Portal",
+  ZOHO_BOOKS_INSTITUTION: "KIA",
+  FODE_BILLING_REFERENCE_PREFIX: "FODE",
+  FODE_BILLING_REFERENCE_YEAR: "26",
+  ZOHO_BOOKS_FIRST_TEST_MODE: "DRAFT_ONLY",
   DEAL_STAGE: "Qualification",
   DEAL_DUPLICATE_FIELD: "FormID",
   CRM_PIPELINE_FODE: "FODE Admissions",

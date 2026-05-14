@@ -1,0 +1,56 @@
+Item ID,Item Name,Description,Rate,Account,Account Code,Tax Name,Tax Percentage,Tax Type,Purchase Tax Name,Purchase Tax Percentage,Purchase Tax Type,Product Type,Source,Reference ID,Last Sync Time,Status,Usage unit,Unit Name,Purchase Rate,Purchase Account,Purchase Account Code,Purchase Description,Vendor,Item Type,Sellable,Purchasable,Track Inventory
+7934774000000112434,07 – KIA – Tuition Fee,Grade 7,PGK 10850.00,Tuition Fees – School,,,,,,,,service,1,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000112445,08 – KIA – Tuition Fee,Grade 8,PGK 10850.00,Tuition Fees – School,,,,,,,,service,1,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000112456,09 – KIA – Tuition Fee,Grade 9,PGK 12850.00,Tuition Fees – School,,,,,,,,service,1,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000112467,10 – KIA – Tuition Fee,Grade 10,PGK 12850.00,Tuition Fees – School,,,,,,,,service,1,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000112478,11 – KIA – Tuition Fee,Grade 11,PGK 14350.00,Tuition Fees – School,,,,,,,,service,1,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000112489,12 – KIA – Tuition Fee,Grade 12,PGK 14850.00,Tuition Fees – School,,,,,,,,service,1,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000112993,FD07 – Mathematics,Grade 7 FODE – Mathematics,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113004,FD07 – English,Grade 7 FODE – English,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113015,FD07 – Science,Grade 7 FODE – Science,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113026,FD07 – Social Science,Grade 7 FODE – Social Science,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113037,FD07 – Business Studies,Grade 7 FODE – Business Studies,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113048,FD07 – ICT,Grade 7 FODE – ICT,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113059,FD08 – Mathematics,Grade 8 FODE – Mathematics,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113070,FD08 – English,Grade 8 FODE – English,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113081,FD08 – Science,Grade 8 FODE – Science,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113092,FD08 – Social Science,Grade 8 FODE – Social Science,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113103,FD08 – Business Studies,Grade 8 FODE – Business Studies,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113114,FD08 – ICT,Grade 8 FODE – ICT,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113125,FD09 – Mathematics,Grade 9 FODE – Mathematics,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113136,FD09 – English,Grade 9 FODE – English,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113147,FD09 – Science,Grade 9 FODE – Science,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113158,FD09 – Social Science,Grade 9 FODE – Social Science,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113169,FD09 – Business Studies,Grade 9 FODE – Business Studies,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113180,FD09 – ICT,Grade 9 FODE – ICT,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113191,FD10 – Mathematics,Grade 10 FODE – Mathematics,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113202,FD10 – English,Grade 10 FODE – English,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113213,FD10 – Science,Grade 10 FODE – Science,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113224,FD10 – Social Science,Grade 10 FODE – Social Science,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113235,FD10 – Business Studies,Grade 10 FODE – Business Studies,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113246,FD10 – ICT,Grade 10 FODE – ICT,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113257,FD11 – Accounting,Grade 11 FODE – Accounting,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113268,FD11 – Business Studies,Grade 11 FODE – Business Studies,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113279,FD11 – Economics,Grade 11 FODE – Economics,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113290,FD11 – Physics,Grade 11 FODE – Physics,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113301,FD11 – Chemistry,Grade 11 FODE – Chemistry,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113312,FD11 – Biology,Grade 11 FODE – Biology,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113323,FD11 – History,Grade 11 FODE – History,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113334,FD11 – Geography,Grade 11 FODE – Geography,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113345,FD11 – Language & Literature,Grade 11 FODE – Language & Literature,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113356,FD11 – Advanced Mathematics,Grade 11 FODE – Advanced Mathematics,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113367,FD11 – General Mathematics,Grade 11 FODE – General Mathematics,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113378,FD12 – Business Studies,Grade 12 FODE – Business Studies,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113389,FD12 – Science,Grade 12 FODE – Science,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113400,FD12 – Humanities,Grade 12 FODE – Humanities,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113411,FD12 – Language & Literature,Grade 12 FODE – Language & Literature,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113422,FD12 – Advanced Mathematics,Grade 12 FODE – Advanced Mathematics,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000113433,FD12 – General Mathematics,Grade 12 FODE – General Mathematics,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,2,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000121295,Registration KIA,,PGK 1000.00,Sales,,,,,,,,goods,1,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000121306,Registration FODE (Full),,PGK 1000.00,Sales,,,,,,,,goods,1,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000121317,Registration FODE (No Tablet),,PGK 600.00,Sales,,,,,,,,goods,1,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000121328,Uniform,,PGK 480.00,Sales,,,,,,,,goods,1,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000121339,Transport One Way per term,,PGK 500.00,Sales,,,,,,,,goods,1,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000121350,Transport Pick n Drop per term,,PGK 900.00,Sales,,,,,,,,goods,1,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000502038,FD12 – Physics,Grade 12 FODE – Physics,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,1,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
+7934774000000502043,FD12 – Chemistry,Grade 12 FODE – Chemistry,PGK 450.00,Tuition Fees – FODE,,,,,,,,goods,1,,,Active,,,PGK 0.00,,,,,Sales,true,false,false
