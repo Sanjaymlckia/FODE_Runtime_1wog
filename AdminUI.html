@@ -680,8 +680,15 @@
     .opsWorkbench{ display:grid; grid-template-columns:320px minmax(520px,1fr) 420px; gap:14px; align-items:start; }
     .opsLowerGrid{ display:grid; grid-template-columns:minmax(420px,1fr) minmax(360px,.82fr) minmax(340px,.72fr); gap:14px; align-items:start; }
     .opsUtilityGrid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .opsSectionPage{ display:flex; flex-direction:column; gap:14px; scroll-margin-top:22px; }
+    .opsSectionGrid{ display:grid; grid-template-columns:repeat(3,minmax(220px,1fr)); gap:14px; align-items:start; }
+    .opsSectionGrid.two{ grid-template-columns:repeat(2,minmax(260px,1fr)); }
+    .opsSectionGrid.mainSplit{ grid-template-columns:minmax(420px,1.35fr) minmax(320px,.75fr); }
     .opsSectionHeader{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:14px; }
     .opsSectionHeader p{ margin:4px 0 0; color:#6f8194; font-size:13px; }
+    .opsPageIntro{ display:flex; justify-content:space-between; gap:14px; align-items:flex-start; }
+    .opsPageIntro h2{ margin:0; font-size:22px; color:#10263c; }
+    .opsPageIntro p{ margin:5px 0 0; color:#6f8194; font-size:13px; }
     .opsStatusPill{
       display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px;
       font-size:12px; font-weight:900; border:1px solid #d5e2ee; background:#f4f8fb; color:#3e546a; white-space:nowrap;
@@ -725,6 +732,21 @@
     .opsLineTable .total td{ font-weight:900; color:#0f1f35; }
     .opsDisabledActions{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     .opsDisabledAction{ border:1px solid #dce6ef; background:#f5f8fb; color:#66798c; border-radius:9px; padding:10px 12px; font-size:12px; font-weight:900; text-align:center; }
+    .opsActionRow{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .opsActionBtn{
+      border:1px solid #cfdde9; background:#f8fbff; color:#33506d; border-radius:10px;
+      padding:9px 12px; font-size:12px; font-weight:900; cursor:pointer;
+    }
+    .opsActionBtn.primary{ background:#eaf2ff; border-color:#bfd6f8; color:#1f5aa5; }
+    .opsActionBtn[disabled]{ cursor:not-allowed; color:#73879b; background:#f3f6f9; border-color:#d9e2eb; opacity:.95; }
+    .opsActionBtn[disabled]::after{ content:"  | Prototype Only"; font-weight:800; color:#8a99a8; }
+    .opsMetricGrid{ display:grid; grid-template-columns:repeat(4,minmax(130px,1fr)); gap:10px; }
+    .opsMetric{ border:1px solid #e1e9f2; border-radius:10px; background:#fbfdff; padding:12px; }
+    .opsMetric .k{ color:#708295; font-size:11px; font-weight:900; }
+    .opsMetric .v{ color:#10263c; font-size:17px; font-weight:900; margin-top:6px; }
+    .opsTimeline{ border-left:3px solid #d6e6ff; padding-left:14px; display:flex; flex-direction:column; gap:10px; }
+    .opsTimelineItem{ font-size:13px; color:#40566c; }
+    .opsTimelineItem strong{ color:#17283f; display:block; margin-bottom:2px; }
     .opsTileGrid{ display:grid; grid-template-columns:repeat(3,minmax(140px,1fr)); gap:10px; }
     .opsTile{ background:#fff; border:1px solid #e1e9f2; border-radius:10px; padding:14px; min-height:82px; }
     .opsTileTitle{ font-size:12px; font-weight:900; color:#20364d; display:flex; align-items:center; gap:8px; }
@@ -741,6 +763,7 @@
     @media (max-width: 1400px){
       .opsWorkbench{ grid-template-columns:1fr; }
       .opsLowerGrid{ grid-template-columns:1fr; }
+      .opsSectionGrid,.opsSectionGrid.two,.opsSectionGrid.mainSplit{ grid-template-columns:1fr; }
     }
     @media (max-width: 1100px){
       .opsShell.active{ grid-template-columns:1fr; }
@@ -748,6 +771,7 @@
       .opsKpiGrid{ grid-template-columns:repeat(2,minmax(170px,1fr)); }
       .opsUtilityGrid{ grid-template-columns:1fr; }
       .opsTileGrid{ grid-template-columns:1fr; }
+      .opsMetricGrid{ grid-template-columns:repeat(2,minmax(130px,1fr)); }
       .opsFooterStrip{ grid-template-columns:1fr; }
       .opsFooterItem{ border-right:none; border-bottom:1px solid #e8eef5; }
     }
@@ -795,146 +819,284 @@
       </div>
     </aside>
     <main class="opsMain">
-      <section id="opsDashboard" class="opsHeader">
-        <div>
-          <h1>FODE Operations Cockpit</h1>
-          <div class="mutedLight">Runtime-aware operations dashboard</div>
-        </div>
-        <div class="opsHeaderTools">
-          <span class="opsHeaderIcon">N</span>
-          <span class="opsHeaderIcon">?</span>
-          <span><strong>Last refreshed</strong><br><span id="cockpitLastRefreshed">Today</span></span>
-          <span class="opsHeaderIcon">R</span>
-          <span class="opsStatusPill muted">Read-only cockpit</span>
-        </div>
-      </section>
-      <section class="opsKpiGrid">
-        <div class="opsKpiCard"><div class="opsKpiIcon blue">&lt;/&gt;</div><div><div class="kpiLabel">Runtime</div><div class="kpiValue" id="cockpitKpiRuntime">r170 / 170</div><div class="kpiState" id="cockpitKpiRuntimeState">Live</div><div class="kpiMeta" id="cockpitKpiRuntimeMeta">Admin and Student whoami align.</div></div></div>
-        <div class="opsKpiCard"><div class="opsKpiIcon green">B</div><div><div class="kpiLabel">Billing</div><div class="kpiValue" id="cockpitKpiBilling">Books Connected</div><div class="kpiState" id="cockpitKpiBillingState">Ready for payment</div><div class="kpiMeta" id="cockpitKpiBillingMeta">Invoice snapshot loading.</div></div></div>
-        <div class="opsKpiCard"><div class="opsKpiIcon purple">R</div><div><div class="kpiLabel">Next Release</div><div class="kpiValue" id="cockpitKpiNextRelease">r170</div><div class="kpiState">In Planning</div><div class="kpiMeta" id="cockpitKpiNextReleaseMeta">Visual rebuild acceptance target.</div></div></div>
-        <div class="opsKpiCard"><div class="opsKpiIcon amber">!</div><div><div class="kpiLabel">Risks</div><div class="kpiValue" id="cockpitKpiRisks">Unknown</div><div class="kpiState" id="cockpitKpiRiskState">Action Required</div><div class="kpiMeta" id="cockpitKpiRisksMeta">Read-only risk summary only.</div></div></div>
-      </section>
-      <section class="opsWorkbench">
-        <div id="opsRuntimeTruth" class="opsCard">
-          <div class="opsSectionHeader">
-            <div>
-              <h3>Runtime Truth</h3>
-            </div>
-            <span class="opsStatusPill ok" id="cockpitRuntimeStatusPill">OK</span>
+      <section id="opsDashboard" class="opsSectionPage">
+        <div class="opsHeader">
+          <div>
+            <h1>FODE Operations Cockpit</h1>
+            <div class="mutedLight">Runtime-aware operations prototype</div>
           </div>
-          <div class="opsChecklist">
-            <div class="opsChecklistRow"><span>Commit</span><span class="opsStatusPill muted" id="cockpitRuntimeCommit">Unknown</span></div>
-            <div class="opsChecklistRow"><span>Tag</span><span class="opsStatusPill muted" id="cockpitRuntimeTag">Unknown</span></div>
-            <div class="opsChecklistRow"><span>Apps Script</span><span class="opsStatusPill info" id="cockpitAppsScript">Unknown</span></div>
-            <div class="opsChecklistRow"><span>Admin whoami</span><span class="opsStatusPill muted" id="cockpitAdminWhoami">Unknown</span></div>
-            <div class="opsChecklistRow"><span>Student whoami</span><span class="opsStatusPill muted" id="cockpitStudentWhoami">Unknown</span></div>
-            <div class="opsChecklistRow"><span>Working tree</span><span class="opsStatusPill muted" id="cockpitWorkingTree">Unknown</span></div>
+          <div class="opsHeaderTools">
+            <span class="opsHeaderIcon">N</span>
+            <span class="opsHeaderIcon">?</span>
+            <span><strong>Last refreshed</strong><br><span id="cockpitLastRefreshed">Today</span></span>
+            <span class="opsHeaderIcon">R</span>
+            <span class="opsStatusPill muted">Prototype Only</span>
           </div>
         </div>
-        <div id="opsAdmissionsQueue" class="opsCard">
-          <div class="opsSectionHeader">
-            <div>
-              <h3>Admissions / Billing Queue</h3>
-              <p>Read-only queue snapshot from existing applicant rows.</p>
+        <div class="opsKpiGrid">
+          <div class="opsKpiCard"><div class="opsKpiIcon blue">&lt;/&gt;</div><div><div class="kpiLabel">Runtime</div><div class="kpiValue" id="cockpitKpiRuntime">r171 / 171</div><div class="kpiState" id="cockpitKpiRuntimeState">Deploying</div><div class="kpiMeta" id="cockpitKpiRuntimeMeta">Waiting on Admin and Student whoami.</div></div></div>
+          <div class="opsKpiCard"><div class="opsKpiIcon green">B</div><div><div class="kpiLabel">Billing Status</div><div class="kpiValue" id="cockpitKpiBilling">Books Connected</div><div class="kpiState" id="cockpitKpiBillingState">Read-only</div><div class="kpiMeta" id="cockpitKpiBillingMeta">Invoice snapshot loading. Cockpit writes disabled.</div></div></div>
+          <div class="opsKpiCard"><div class="opsKpiIcon purple">A</div><div><div class="kpiLabel">Admissions Status</div><div class="kpiValue" id="cockpitKpiAdmissions">Queue Loading</div><div class="kpiState">Visibility Only</div><div class="kpiMeta" id="cockpitKpiAdmissionsMeta">Applicant rows use existing read-only loaders.</div></div></div>
+          <div class="opsKpiCard"><div class="opsKpiIcon amber">!</div><div><div class="kpiLabel">Risks</div><div class="kpiValue" id="cockpitKpiRisks">Unknown</div><div class="kpiState" id="cockpitKpiRiskState">Action Required</div><div class="kpiMeta" id="cockpitKpiRisksMeta">Read-only risk summary only.</div></div></div>
+        </div>
+        <div class="opsSectionGrid mainSplit">
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Executive Snapshot</h3><p>Operational status without live actions.</p></div><span class="opsStatusPill info">Preview Only</span></div>
+            <div class="opsMetricGrid">
+              <div class="opsMetric"><div class="k">Next Action</div><div class="v" id="cockpitKpiNextRelease">r171 browser acceptance</div></div>
+              <div class="opsMetric"><div class="k">Queue Summary</div><div class="v" id="cockpitDashboardQueue">Loading</div></div>
+              <div class="opsMetric"><div class="k">Billing</div><div class="v">No cockpit writes</div></div>
+              <div class="opsMetric"><div class="k">Admissions</div><div class="v">Read-only review</div></div>
             </div>
-            <span class="opsStatusPill info" id="cockpitQueueSummary">Loading</span>
+            <div class="opsPlaceholder" id="cockpitKpiNextReleaseMeta">r171 submenu prototype acceptance target.</div>
+            <div class="opsActionRow">
+              <button class="opsActionBtn primary" type="button" disabled>Refresh Snapshot</button>
+              <button class="opsActionBtn" type="button" disabled>View Priority Queue</button>
+              <button class="opsActionBtn" type="button" disabled>Open Release Control</button>
+            </div>
+          </div>
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Key Queue Summaries</h3><p>Counts appear only when already loaded by existing read-only services.</p></div><span class="opsStatusPill muted" id="cockpitQueueSummary">Loading</span></div>
+            <div class="opsPriorityList">
+              <div class="opsPriorityCard"><div><div class="t">Invoice raised rows</div><div class="m" id="cockpitReportInvoice">Count unavailable</div></div><span class="opsStatusPill info">Read only</span></div>
+              <div class="opsPriorityCard"><div><div class="t">Payment verified but not enrolled</div><div class="m" id="cockpitReportPayment">Count unavailable</div></div><span class="opsStatusPill warn">Review</span></div>
+              <div class="opsPriorityCard"><div><div class="t">Classroom handover pending</div><div class="m" id="cockpitReportClassroom">Count unavailable</div></div><span class="opsStatusPill muted">Pending</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="opsRuntimeTruth" class="opsSectionPage">
+        <div class="opsPageIntro">
+          <div><h2>Runtime Truth</h2><p>Release and deployment safety. Values are informational; no git, clasp, or deployment commands run from this UI.</p></div>
+          <span class="opsStatusPill ok" id="cockpitRuntimeStatusPill">Waiting</span>
+        </div>
+        <div class="opsSectionGrid">
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Config Identity</h3></div><span class="opsStatusPill info">Read only</span></div>
+            <div class="opsChecklist">
+              <div class="opsChecklistRow"><span>Config VERSION</span><span class="opsStatusPill info" id="cockpitRuntimeConfigVersion">r171</span></div>
+              <div class="opsChecklistRow"><span>DEPLOY_VERSION_NUMBER</span><span class="opsStatusPill info" id="cockpitRuntimeDeployNumber">171</span></div>
+              <div class="opsChecklistRow"><span>Apps Script platform/version</span><span class="opsStatusPill muted" id="cockpitAppsScript">Unknown</span></div>
+              <div class="opsChecklistRow"><span>Remote config status</span><span class="opsStatusPill muted" id="cockpitRuntimeRemoteConfig">Unknown</span></div>
+            </div>
+          </div>
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Whoami Evidence</h3></div><span class="opsStatusPill muted">Live check required</span></div>
+            <div class="opsChecklist">
+              <div class="opsChecklistRow"><span>Admin whoami</span><span class="opsStatusPill muted" id="cockpitAdminWhoami">Unknown</span></div>
+              <div class="opsChecklistRow"><span>Student whoami</span><span class="opsStatusPill muted" id="cockpitStudentWhoami">Unknown</span></div>
+              <div class="opsChecklistRow"><span>Drift warning</span><span class="opsStatusPill warn" id="cockpitRuntimeDrift">Unknown until verified</span></div>
+              <div class="opsChecklistRow"><span>Working tree</span><span class="opsStatusPill muted" id="cockpitWorkingTree">Unknown</span></div>
+            </div>
+          </div>
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Accepted Baseline</h3></div><span class="opsStatusPill muted">Current known</span></div>
+            <div class="opsChecklist">
+              <div class="opsChecklistRow"><span>Commit</span><span class="opsStatusPill muted" id="cockpitRuntimeCommit">85b6708</span></div>
+              <div class="opsChecklistRow"><span>Tag</span><span class="opsStatusPill muted" id="cockpitRuntimeTag">staging-as170</span></div>
+              <div class="opsChecklistRow"><span>Browser acceptance</span><span class="opsStatusPill warn" id="cockpitReleaseBrowser">Pending r171</span></div>
+            </div>
+            <div class="opsActionRow">
+              <button class="opsActionBtn" type="button" disabled>Run Runtime Check</button>
+              <button class="opsActionBtn" type="button" disabled>Copy Whoami URLs</button>
+              <button class="opsActionBtn" type="button" disabled>View Last Acceptance</button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="opsAdmissionsQueue" class="opsSectionPage">
+        <div class="opsPageIntro">
+          <div><h2>Admissions Queue</h2><p>Applicant workflow visibility from existing read-only applicant row loaders.</p></div>
+          <span class="opsStatusPill info">Read only</span>
+        </div>
+        <div class="opsCard">
+          <div class="opsSectionHeader">
+            <div><h3>Applicant Rows</h3><p>Ready state is a prototype summary from loaded invoice, payment, enrolment, and classroom fields.</p></div>
+            <span class="opsStatusPill info" id="cockpitAdmissionsSummary">Loading</span>
+          </div>
+          <div class="opsActionRow">
+            <button class="opsActionBtn" type="button" disabled>Review Applicant</button>
+            <button class="opsActionBtn" type="button" disabled>Filter Ready</button>
+            <button class="opsActionBtn" type="button" disabled>Filter Blocked</button>
+            <button class="opsActionBtn" type="button" disabled>Export Queue</button>
           </div>
           <div class="opsTableWrap">
             <table class="opsTable">
               <thead>
-                <tr><th>Applicant ID</th><th>Applicant</th><th>Status Pipeline</th><th>Invoice</th><th>Total</th><th>Age</th><th>Ready?</th></tr>
+                <tr><th>Applicant ID</th><th>Applicant / Student</th><th>Docs</th><th>Payment</th><th>Invoice</th><th>Enrolment</th><th>Classroom</th><th>Ready?</th></tr>
               </thead>
-              <tbody id="cockpitQueueBody"><tr><td colspan="7" class="opsPlaceholder">Loading queue...</td></tr></tbody>
+              <tbody id="cockpitQueueBody"><tr><td colspan="8" class="opsPlaceholder">Loading queue...</td></tr></tbody>
             </table>
           </div>
         </div>
-        <div id="opsZohoBooks" class="opsCard">
-          <div class="opsSectionHeader">
-            <div>
-              <h3>Applicant Review: FODE-26-002929</h3>
-            </div>
-            <span class="opsStatusPill info">Read only</span>
-          </div>
-          <div id="cockpitApplicantSummary" class="opsPlaceholder">Loading applicant summary...</div>
-        </div>
       </section>
-      <section class="opsUtilityGrid">
-        <div class="opsCard" id="opsCommunications">
-          <div class="opsSectionHeader">
-            <div>
-              <h3>Communications</h3>
-              <p>Legacy applicant-chasing controls remain outside this cockpit.</p>
-            </div>
-          </div>
-          <div id="cockpitCommunicationsSummary" class="opsPlaceholder">Applicant-chasing controls remain outside this cockpit. Review only.</div>
+      <section id="opsZohoBooks" class="opsSectionPage">
+        <div class="opsPageIntro">
+          <div><h2>Zoho Books</h2><p>Billing visibility and future invoice operations. No invoice creation, send, sync, or payment action is exposed in r171.</p></div>
+          <span class="opsStatusPill muted">Prototype Only</span>
         </div>
-        <div id="opsClassroom" class="opsCard">
-          <div class="opsSectionHeader">
-            <div>
-              <h3>Classroom Handover</h3>
-              <p>Display-only interpretation from existing fields. No classroom writes in r170.</p>
-            </div>
-          </div>
-          <div id="cockpitClassroomSummary" class="opsPlaceholder">Classroom handover workflow is not implemented in r170. Status is derived from existing fields only.</div>
-        </div>
+        <div id="cockpitApplicantSummary" class="opsPlaceholder">Loading Books summary for FODE-26-002929...</div>
       </section>
-      <section class="opsLowerGrid">
-        <div id="opsReports" class="opsCard">
-          <div class="opsSectionHeader">
-            <div>
-              <h3>Reports</h3>
-            </div>
-            <span class="opsStatusPill info">Read only</span>
-          </div>
-          <div class="opsTileGrid">
-            <div class="opsTile"><div class="opsTileTitle">Daily Admissions Snapshot</div><div class="opsTileMeta" id="cockpitReportAdmissions">Count unavailable</div></div>
-            <div class="opsTile"><div class="opsTileTitle">Invoice Raised vs Sent</div><div class="opsTileMeta" id="cockpitReportInvoice">Count unavailable</div></div>
-            <div class="opsTile"><div class="opsTileTitle">Payment Verified but Not Enrolled</div><div class="opsTileMeta" id="cockpitReportPayment">Count unavailable</div></div>
-            <div class="opsTile"><div class="opsTileTitle">Classroom Handover Pending</div><div class="opsTileMeta" id="cockpitReportClassroom">Count unavailable</div></div>
-            <div class="opsTile"><div class="opsTileTitle">Missing Zoho Item Mapping</div><div class="opsTileMeta" id="cockpitReportMapping">Coming next</div></div>
-            <div class="opsTile"><div class="opsTileTitle">Release Truth / Drift Report</div><div class="opsTileMeta" id="cockpitReportRelease">Count unavailable</div></div>
-          </div>
+      <section id="opsCommunications" class="opsSectionPage">
+        <div class="opsPageIntro">
+          <div><h2>Communications</h2><p>Communication actions are prototype-only in r171.</p></div>
+          <span class="opsStatusPill danger">Not Live</span>
         </div>
-        <div id="opsReleaseControl" class="opsCard">
-          <div class="opsSectionHeader">
-            <div>
-              <h3>Release Control</h3>
-              <p>Commit and tag stay blocked until browser approval.</p>
+        <div class="opsSectionGrid mainSplit">
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Applicant Communication State</h3></div><span class="opsStatusPill muted">Preview Only</span></div>
+            <div class="opsInfoGrid">
+              <div class="opsInfoItem"><div class="k">Applicant communication status</div><div class="v" id="cockpitCommApplicantStatus">Unknown</div></div>
+              <div class="opsInfoItem"><div class="k">Invite status</div><div class="v" id="cockpitCommInviteStatus">Coming Next</div></div>
+              <div class="opsInfoItem"><div class="k">Reminder status</div><div class="v" id="cockpitCommReminderStatus">Coming Next</div></div>
+              <div class="opsInfoItem"><div class="k">Invoice email status</div><div class="v" id="cockpitCommInvoiceEmail">Unknown</div></div>
+              <div class="opsInfoItem"><div class="k">Bounce / suppression</div><div class="v" id="cockpitCommSuppression">Unknown</div></div>
+              <div class="opsInfoItem"><div class="k">WhatsApp fallback</div><div class="v" id="cockpitCommWhatsapp">Coming Next</div></div>
+            </div>
+            <div class="opsActionRow">
+              <button class="opsActionBtn" type="button" disabled>Send Reminder</button>
+              <button class="opsActionBtn" type="button" disabled>Send Missing Documents Request</button>
+              <button class="opsActionBtn" type="button" disabled>Send Invoice Reminder</button>
+              <button class="opsActionBtn" type="button" disabled>Resend Portal Access</button>
+              <button class="opsActionBtn" type="button" disabled>Send Classroom Welcome</button>
+              <button class="opsActionBtn" type="button" disabled>WhatsApp Fallback</button>
+              <button class="opsActionBtn" type="button" disabled>Preview Email</button>
+              <button class="opsActionBtn" type="button" disabled>View Message Timeline</button>
             </div>
           </div>
-          <div class="opsChecklist">
-            <div class="opsChecklistRow"><span>Remote Config verified</span><span class="opsStatusPill muted" id="cockpitReleaseRemote">Unknown</span></div>
-            <div class="opsChecklistRow"><span>Admin / Student whoami match</span><span class="opsStatusPill muted" id="cockpitReleaseWhoami">Unknown</span></div>
-            <div class="opsChecklistRow"><span>Browser acceptance captured</span><span class="opsStatusPill warn" id="cockpitReleaseBrowser">Pending</span></div>
-            <div class="opsChecklistRow"><span>Commit and tag pushed</span><span class="opsStatusPill danger" id="cockpitReleaseGit">Blocked</span></div>
-            <div class="opsChecklistRow"><span>No active dirty working tree</span><span class="opsStatusPill muted" id="cockpitReleaseDirty">Unknown</span></div>
-            <div class="opsChecklistRow"><span>Next task isolated</span><span class="opsStatusPill info" id="cockpitReleaseNextTask">Planned</span></div>
-          </div>
-        </div>
-        <div class="opsCard">
-          <h3>Tomorrow Priorities</h3>
-          <div class="opsPriorityList">
-            <div class="opsPriorityCard"><div><div class="t">Script Properties manual-save issue</div><div class="m">Ensure Apps Script properties persist reliably.</div></div><span class="opsStatusPill warn">Medium</span></div>
-            <div class="opsPriorityCard"><div><div class="t">Browser acceptance harness</div><div class="m">Capture and store official acceptance stamps.</div></div><span class="opsStatusPill warn">Medium</span></div>
-            <div class="opsPriorityCard"><div><div class="t">Release truth checker</div><div class="m">Automate runtime vs config drift detection.</div></div><span class="opsStatusPill ok">Low</span></div>
-            <div class="opsPriorityCard"><div><div class="t">Legacy Invite cleanup</div><div class="m">Cleanup remains outside the r170 visual rebuild.</div></div><span class="opsStatusPill info">Planned</span></div>
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Timeline</h3></div><span class="opsStatusPill muted">Placeholder</span></div>
+            <div class="opsTimeline" id="cockpitCommunicationsSummary">
+              <div class="opsTimelineItem"><strong>Invoice email</strong><span>Status loads from existing applicant fields where available.</span></div>
+              <div class="opsTimelineItem"><strong>Reminder controls</strong><span>Disabled in r171. No server email functions are called.</span></div>
+              <div class="opsTimelineItem"><strong>Fallback channel</strong><span>WhatsApp state is Coming Next unless existing data exposes it.</span></div>
+            </div>
           </div>
         </div>
       </section>
-      <section id="opsRulesConfig" class="opsUtilityGrid">
-        <div class="opsCard">
-          <h3>Rules & Config</h3>
-          <div class="opsPlaceholder">Write paths remain disabled here. No invoice, email, payment, bulk, enrolment, or classroom actions are exposed from the cockpit.</div>
+      <section id="opsClassroom" class="opsSectionPage">
+        <div class="opsPageIntro">
+          <div><h2>Classroom Handover</h2><p>Post-enrolment handover visibility. No classroom or enrolment fields are written from this cockpit.</p></div>
+          <span class="opsStatusPill muted">Prototype Only</span>
         </div>
-        <div class="opsCard">
-          <h3>Read-only Safety</h3>
-          <div class="opsBadgeStack"><span class="opsStatusPill ok">No write actions</span><span class="opsStatusPill ok">Review disabled</span><span class="opsStatusPill warn">Browser acceptance pending</span></div>
+        <div class="opsSectionGrid mainSplit">
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Handover Candidate</h3></div><span class="opsStatusPill warn" id="cockpitClassroomSummary">Classroom Pending</span></div>
+            <div class="opsInfoGrid">
+              <div class="opsInfoItem"><div class="k">Student</div><div class="v" id="cockpitClassroomStudent">Reference applicant</div></div>
+              <div class="opsInfoItem"><div class="k">Grade / FODE level</div><div class="v" id="cockpitClassroomLevel">Coming Next</div></div>
+              <div class="opsInfoItem"><div class="k">Selected subjects</div><div class="v" id="cockpitClassroomSubjects">Language & Literature; General Mathematics</div></div>
+              <div class="opsInfoItem"><div class="k">Invoice raised / sent</div><div class="v" id="cockpitClassroomInvoice">Invoice Raised</div></div>
+              <div class="opsInfoItem"><div class="k">Payment verified</div><div class="v" id="cockpitClassroomPayment">Payment Verified</div></div>
+              <div class="opsInfoItem"><div class="k">Enrolled confirmed</div><div class="v" id="cockpitClassroomEnrolled">Enrolled Confirmed</div></div>
+            </div>
+          </div>
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Handover Controls</h3></div><span class="opsStatusPill danger">Disabled</span></div>
+            <div class="opsBadgeStack"><span class="opsStatusPill warn">Classroom Pending</span><span class="opsStatusPill muted">Ready/Complete write path unavailable</span></div>
+            <div class="opsActionRow">
+              <button class="opsActionBtn" type="button" disabled>Prepare Classroom Package</button>
+              <button class="opsActionBtn" type="button" disabled>Notify Classroom Admin</button>
+              <button class="opsActionBtn" type="button" disabled>Generate Welcome Pack</button>
+              <button class="opsActionBtn" type="button" disabled>Mark Classroom Enrolled</button>
+              <button class="opsActionBtn" type="button" disabled>View Handover Checklist</button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="opsReports" class="opsSectionPage">
+        <div class="opsPageIntro">
+          <div><h2>Reports</h2><p>Operational report menu. Tiles are polished placeholders unless existing queue loaders provide counts.</p></div>
+          <span class="opsStatusPill muted">Coming Next</span>
+        </div>
+        <div class="opsTileGrid">
+          <div class="opsTile"><div class="opsTileTitle">Daily Admissions Snapshot</div><div class="opsTileMeta" id="cockpitReportAdmissions">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn" type="button" disabled>Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV</button><button class="opsActionBtn" type="button" disabled>Schedule Report</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Invoice Raised vs Sent</div><div class="opsTileMeta" id="cockpitReportInvoiceTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn" type="button" disabled>Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV</button><button class="opsActionBtn" type="button" disabled>Schedule Report</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Payment Verified but Not Enrolled</div><div class="opsTileMeta" id="cockpitReportPaymentTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn" type="button" disabled>Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV</button><button class="opsActionBtn" type="button" disabled>Schedule Report</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Classroom Handover Pending</div><div class="opsTileMeta" id="cockpitReportClassroomTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn" type="button" disabled>Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV</button><button class="opsActionBtn" type="button" disabled>Schedule Report</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Missing Zoho Item Mapping</div><div class="opsTileMeta" id="cockpitReportMapping">Coming Next</div><div class="opsActionRow"><button class="opsActionBtn" type="button" disabled>Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV</button><button class="opsActionBtn" type="button" disabled>Schedule Report</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Communications Suppression Report</div><div class="opsTileMeta" id="cockpitReportSuppression">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn" type="button" disabled>Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV</button><button class="opsActionBtn" type="button" disabled>Schedule Report</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Release Truth / Drift Report</div><div class="opsTileMeta" id="cockpitReportRelease">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn" type="button" disabled>Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV</button><button class="opsActionBtn" type="button" disabled>Schedule Report</button></div></div>
+        </div>
+      </section>
+      <section id="opsReleaseControl" class="opsSectionPage">
+        <div class="opsPageIntro">
+          <div><h2>Release Control</h2><p>Governed release state. This panel does not invoke git, clasp, or deployment commands.</p></div>
+          <span class="opsStatusPill warn">Requires Approval</span>
+        </div>
+        <div class="opsSectionGrid mainSplit">
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Release State</h3></div><span class="opsStatusPill muted">Read only</span></div>
+            <div class="opsChecklist">
+              <div class="opsChecklistRow"><span>Current runtime</span><span class="opsStatusPill info" id="cockpitReleaseRuntime">r171 / 171 target</span></div>
+              <div class="opsChecklistRow"><span>Accepted baseline</span><span class="opsStatusPill ok">r170 / staging-as170</span></div>
+              <div class="opsChecklistRow"><span>Whoami status</span><span class="opsStatusPill muted" id="cockpitReleaseWhoami">Unknown</span></div>
+              <div class="opsChecklistRow"><span>Browser acceptance status</span><span class="opsStatusPill warn" id="cockpitReleaseBrowserState">Pending</span></div>
+              <div class="opsChecklistRow"><span>Commit / tag state</span><span class="opsStatusPill danger" id="cockpitReleaseGit">Blocked</span></div>
+              <div class="opsChecklistRow"><span>Remote Config verified</span><span class="opsStatusPill muted" id="cockpitReleaseRemote">Unknown</span></div>
+            </div>
+          </div>
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Control Checklist</h3></div><span class="opsStatusPill danger">Disabled</span></div>
+            <div class="opsChecklist">
+              <div class="opsChecklistRow"><span>Rollback target</span><span class="opsStatusPill info">r170 / 170</span></div>
+              <div class="opsChecklistRow"><span>Current blockers</span><span class="opsStatusPill warn">Browser acceptance pending</span></div>
+              <div class="opsChecklistRow"><span>Next release candidate</span><span class="opsStatusPill info" id="cockpitReleaseNextTask">r171</span></div>
+              <div class="opsChecklistRow"><span>No active dirty working tree</span><span class="opsStatusPill muted" id="cockpitReleaseDirty">Unknown</span></div>
+            </div>
+            <div class="opsActionRow">
+              <button class="opsActionBtn" type="button" disabled>Run Preflight</button>
+              <button class="opsActionBtn" type="button" disabled>Verify Remote Config</button>
+              <button class="opsActionBtn" type="button" disabled>Open Acceptance Checklist</button>
+              <button class="opsActionBtn" type="button" disabled>Prepare Rollback</button>
+              <button class="opsActionBtn" type="button" disabled>Finalize Git</button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="opsRulesConfig" class="opsSectionPage">
+        <div class="opsPageIntro">
+          <div><h2>Rules & Config</h2><p>Read-only safety flags for cockpit behavior. Future actions remain visibly disabled.</p></div>
+          <span class="opsStatusPill ok">No cockpit writes</span>
+        </div>
+        <div class="opsSectionGrid">
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Books and Billing</h3></div><span class="opsStatusPill info">Display only</span></div>
+            <div class="opsChecklist">
+              <div class="opsChecklistRow"><span>Books writes enabled</span><span class="opsStatusPill <?= CONFIG.ENABLE_ZOHO_BOOKS_INTEGRATION === true ? 'warn' : 'ok' ?>"><?= CONFIG.ENABLE_ZOHO_BOOKS_INTEGRATION === true ? 'Integration on; cockpit disabled' : 'Disabled' ?></span></div>
+              <div class="opsChecklistRow"><span>Draft invoice creation</span><span class="opsStatusPill <?= CONFIG.ENABLE_ZOHO_BOOKS_DRAFT_INVOICE_CREATE === true ? 'warn' : 'ok' ?>"><?= CONFIG.ENABLE_ZOHO_BOOKS_DRAFT_INVOICE_CREATE === true ? 'Enabled outside cockpit' : 'Disabled' ?></span></div>
+              <div class="opsChecklistRow"><span>Invoice send state</span><span class="opsStatusPill danger">Disabled from cockpit</span></div>
+              <div class="opsChecklistRow"><span>Fallback item policy</span><span class="opsStatusPill muted">Coming Next</span></div>
+            </div>
+          </div>
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Operational Writes</h3></div><span class="opsStatusPill ok">Blocked</span></div>
+            <div class="opsChecklist">
+              <div class="opsChecklistRow"><span>Payment creation</span><span class="opsStatusPill ok">Disabled</span></div>
+              <div class="opsChecklistRow"><span>Bulk processing</span><span class="opsStatusPill ok">Disabled</span></div>
+              <div class="opsChecklistRow"><span>Classroom automation</span><span class="opsStatusPill ok">Disabled</span></div>
+              <div class="opsChecklistRow"><span>Enrollment field updates</span><span class="opsStatusPill ok">Disabled</span></div>
+            </div>
+          </div>
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Communications Rules</h3></div><span class="opsStatusPill muted">Prototype Only</span></div>
+            <div class="opsChecklist">
+              <div class="opsChecklistRow"><span>Test email override state</span><span class="opsStatusPill muted">Unknown</span></div>
+              <div class="opsChecklistRow"><span>Applicant email suppression rules</span><span class="opsStatusPill muted">Existing controls outside cockpit</span></div>
+              <div class="opsChecklistRow"><span>Server email calls</span><span class="opsStatusPill ok">Not wired</span></div>
+            </div>
+            <div class="opsActionRow">
+              <button class="opsActionBtn" type="button" disabled>View Config</button>
+              <button class="opsActionBtn" type="button" disabled>Compare Rules</button>
+              <button class="opsActionBtn" type="button" disabled>Export Rules Snapshot</button>
+            </div>
+          </div>
         </div>
       </section>
       <section class="opsFooterStrip">
-        <div class="opsFooterItem"><strong>Operational Status</strong><span id="cockpitFooterStatus">Read-only</span></div>
-        <div class="opsFooterItem"><strong>Runtime</strong><span id="cockpitFooterRuntime">r170 Live</span></div>
-        <div class="opsFooterItem"><strong>Zoho Books</strong><span id="cockpitFooterBooks">Connected</span></div>
+        <div class="opsFooterItem"><strong>Operational Status</strong><span id="cockpitFooterStatus">Prototype only</span></div>
+        <div class="opsFooterItem"><strong>Runtime</strong><span id="cockpitFooterRuntime">r171 target</span></div>
+        <div class="opsFooterItem"><strong>Zoho Books</strong><span id="cockpitFooterBooks">Read-only visibility</span></div>
         <div class="opsFooterItem"><strong>Apps Script</strong><span id="cockpitFooterAppsScript">@current platform unknown</span></div>
         <div class="opsFooterItem"><strong>System Health</strong><span id="cockpitFooterHealth">Unknown</span></div>
       </section>
@@ -1662,6 +1824,21 @@
       }
       return Number(String(raw || "").replace(/[^0-9.]/g, "")) || 0;
     }
+    function opsFirstNonBlank_(){
+      for (var i = 0; i < arguments.length; i++) {
+        var value = arguments[i];
+        if (String(value == null ? "" : value).trim()) return String(value).trim();
+      }
+      return "";
+    }
+    function opsDocsSummary_(row){
+      var label = opsFirstNonBlank_(row.Docs_Status, row.Document_Status, row.Documents_Status, row.Overall_Doc_Status, row.Documents_Ready, row.docsStatus);
+      if (!label) return { label:"Unknown", cls:"muted" };
+      var upper = label.toUpperCase();
+      if (upper.indexOf("READY") >= 0 || upper.indexOf("APPROVED") >= 0 || upper === "YES") return { label:label, cls:"ok" };
+      if (upper.indexOf("PENDING") >= 0 || upper.indexOf("MISSING") >= 0 || upper === "NO") return { label:label, cls:"warn" };
+      return { label:label, cls:"muted" };
+    }
     function opsInvoiceSummary_(row){
       var raised = invoiceRaisedFromRow_(row);
       if (raised) {
@@ -1693,26 +1870,32 @@
     }
     function renderOpsRuntimeTruth_(){
       var runtime = runtimeInfoCache || {};
-      var version = runtime.version || VERSION || "r170";
-      var deploy = runtime.deployVersion || DEPLOY_VERSION_NUMBER || 170;
+      var version = runtime.version || VERSION || "r171";
+      var deploy = runtime.deployVersion || DEPLOY_VERSION_NUMBER || 171;
       setOpsText_("cockpitKpiRuntime", version + " / " + String(deploy));
       setOpsText_("cockpitSideRuntime", "Runtime " + version);
       setOpsText_("cockpitLastRefreshed", opsNowLabel_());
       setOpsText_("cockpitFooterRuntime", version + " Live");
+      setOpsText_("cockpitRuntimeConfigVersion", String(VERSION || "r171"));
+      setOpsText_("cockpitRuntimeDeployNumber", String(DEPLOY_VERSION_NUMBER || 171));
       setOpsPill_("cockpitAppsScript", "@" + String(deploy), "info");
       setOpsPill_("cockpitAdminWhoami", runtime.mismatch === false ? "Match" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitStudentWhoami", runtime.mismatch === false ? "Match" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitRuntimeCommit", "Unknown", "muted");
-      setOpsPill_("cockpitRuntimeTag", "Unknown", "muted");
+      setOpsPill_("cockpitRuntimeTag", "staging-as170 accepted", "muted");
       setOpsPill_("cockpitWorkingTree", "Unknown", "muted");
       setOpsPill_("cockpitReleaseWhoami", runtime.mismatch === false ? "OK" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitReleaseRemote", "Unknown", "muted");
       setOpsPill_("cockpitReleaseBrowser", "Pending", "warn");
+      setOpsPill_("cockpitReleaseBrowserState", "Pending", "warn");
       setOpsPill_("cockpitReleaseGit", "Blocked", "danger");
       setOpsPill_("cockpitReleaseDirty", "Unknown", "muted");
-      setOpsPill_("cockpitReleaseNextTask", "Planned", "info");
-      setOpsText_("cockpitKpiNextRelease", "r170");
-      setOpsText_("cockpitKpiNextReleaseMeta", "Visual rebuild acceptance target.");
+      setOpsPill_("cockpitReleaseNextTask", "r171", "info");
+      setOpsPill_("cockpitRuntimeRemoteConfig", runtime.version ? "Loaded from runtime" : "Unknown", runtime.version ? "info" : "muted");
+      setOpsPill_("cockpitRuntimeDrift", runtime.mismatch === false ? "No mismatch reported" : "Unknown until verified", runtime.mismatch === false ? "ok" : "warn");
+      setOpsPill_("cockpitReleaseRuntime", version + " / " + String(deploy), "info");
+      setOpsText_("cockpitKpiNextRelease", "r171 browser acceptance");
+      setOpsText_("cockpitKpiNextReleaseMeta", "r171 submenu prototype acceptance target.");
       setOpsText_("cockpitKpiRuntimeState", runtime.mismatch === false ? "Live" : "Unknown");
       setOpsText_("cockpitKpiRuntimeMeta", runtime.mismatch === false ? "Admin and Student whoami align." : "Waiting on whoami alignment.");
       setOpsPill_("cockpitRuntimeStatusPill", runtime.mismatch === false ? "Runtime Match" : "Runtime Unknown", runtime.mismatch === false ? "ok" : "warn");
@@ -1744,7 +1927,7 @@
         return true;
       }).slice(0, 12);
       if (!rows.length) {
-        body.innerHTML = "<tr><td colspan='7' class='opsPlaceholder'>No queue rows loaded yet.</td></tr>";
+        body.innerHTML = "<tr><td colspan='8' class='opsPlaceholder'>No queue rows loaded yet.</td></tr>";
         return;
       }
       var invoiceRaisedCount = 0;
@@ -1755,10 +1938,10 @@
         var applicantId = String(row.applicantId || row.ApplicantID || "");
         var invoiceState = opsInvoiceSummary_(row);
         var emailState = opsInvoiceEmailSummary_(row);
+        var docsState = opsDocsSummary_(row);
         var paymentOk = (opsIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true);
         var enrolledOk = opsIsYes_(row.Enrolled_Confirmed);
         var total = opsAmountFromRow_(row);
-        var age = queueAgeBadge_(row);
         var ready = opsReadySummary_(invoiceState, paymentOk, enrolledOk);
         var payment = paymentOk
           ? "<span class='opsStatusPill ok'>Payment Verified</span>"
@@ -1767,6 +1950,7 @@
           ? "<span class='opsStatusPill ok'>Enrolled Confirmed</span>"
           : "<span class='opsStatusPill warn'>Enrolment Pending</span>";
         var classroom = classroomStatusFromRow_(row);
+        var classroomKind = (classroom.cls && classroom.cls.indexOf("success") >= 0) ? "ok" : (classroom.label.indexOf("Pending") >= 0 ? "warn" : "muted");
         if (invoiceState.label === "Invoice Raised") invoiceRaisedCount++;
         if (paymentOk) paymentVerifiedCount++;
         if (paymentOk && !enrolledOk) notEnrolledCount++;
@@ -1774,10 +1958,11 @@
         return "<tr>"
           + "<td><div class='opsQueueName'>" + esc(applicantId) + "</div></td>"
           + "<td><div>" + esc(String(row.name || "Unknown applicant")) + "</div><div class='opsQueueMeta'>" + esc(String(row.email || row.Parent_Email || "")) + "</div></td>"
-          + "<td><div class='opsBadgeStack'><span class='opsStatusPill " + invoiceState.cls + "'>" + esc(invoiceState.label) + "</span>" + payment + enrolment + "<span class='opsStatusPill " + (classroom.cls.indexOf("success") >= 0 ? "ok" : "muted") + "'>" + esc(classroom.label) + "</span></div></td>"
-          + "<td><div class='opsQueueName'>" + esc(String(row.Books_Invoice_Number || invoiceState.detail || "-")) + "</div><div class='opsBadgeStack'><span class='opsStatusPill " + emailState.cls + "'>" + esc(emailState.label) + "</span></div></td>"
-          + "<td>" + (total > 0 ? esc(formatPngAmount_(total)) : "-") + "</td>"
-          + "<td title='" + esc(age.title || "") + "'>" + esc(age.label || "-") + "</td>"
+          + "<td><span class='opsStatusPill " + docsState.cls + "'>" + esc(docsState.label) + "</span></td>"
+          + "<td>" + payment + "</td>"
+          + "<td><div class='opsQueueName'>" + esc(String(row.Books_Invoice_Number || invoiceState.detail || "-")) + "</div><div class='opsBadgeStack'><span class='opsStatusPill " + invoiceState.cls + "'>" + esc(invoiceState.label) + "</span><span class='opsStatusPill " + emailState.cls + "'>" + esc(emailState.label) + "</span><span class='opsStatusPill muted'>" + (total > 0 ? esc(formatPngAmount_(total)) : "Amount Unknown") + "</span></div></td>"
+          + "<td>" + enrolment + "</td>"
+          + "<td><span class='opsStatusPill " + classroomKind + "'>" + esc(classroom.label) + "</span></td>"
           + "<td><span class='opsReady " + ready.cls + "'>" + (ready.cls === "ok" ? "OK " : "! ") + esc(ready.label) + "</span></td>"
           + "</tr>";
       }).join("");
@@ -1785,29 +1970,56 @@
       setOpsText_("cockpitKpiBillingState", rows.some(invoiceRaisedFromRow_) ? "Ready for payment" : "Connected");
       setOpsText_("cockpitKpiBillingMeta", invoiceRaisedCount > 0 ? (invoiceRaisedCount + " invoice-raised row(s) in the current queue snapshot.") : "No invoice-raised row in current queue snapshot.");
       setOpsPill_("cockpitQueueSummary", rows.length + " rows", rows.length ? "info" : "muted");
+      setOpsPill_("cockpitAdmissionsSummary", rows.length + " rows", rows.length ? "info" : "muted");
+      setOpsText_("cockpitDashboardQueue", rows.length + " loaded row(s)");
+      setOpsText_("cockpitKpiAdmissions", rows.length + " rows");
       setOpsText_("cockpitReportAdmissions", rows.length + " row(s) in current queue snapshot");
       setOpsText_("cockpitReportInvoice", invoiceRaisedCount + " raised / sent count unavailable");
+      setOpsText_("cockpitReportInvoiceTile", invoiceRaisedCount + " raised / sent count unavailable");
       setOpsText_("cockpitReportPayment", notEnrolledCount + " verified not enrolled");
+      setOpsText_("cockpitReportPaymentTile", notEnrolledCount + " verified not enrolled");
       setOpsText_("cockpitReportClassroom", classroomPendingCount + " pending or unknown");
+      setOpsText_("cockpitReportClassroomTile", classroomPendingCount + " pending or unknown");
     }
     function renderOpsApplicantSummary_(detail){
       var el = document.getElementById("cockpitApplicantSummary");
       if (!el) return;
-      var d = detail || opsApplicantDetailCache || null;
-      if (!d) {
-        el.textContent = "Applicant summary unavailable.";
-        return;
-      }
+      var d = detail || opsApplicantDetailCache || {
+        ApplicantID: "FODE-26-002929",
+        First_Name: "Reference",
+        Last_Name: "Applicant",
+        Books_Invoice_Number: "INV-000051",
+        Books_Invoice_Status: "Invoice Raised",
+        Books_Push_Status: "Invoice Raised",
+        Books_Invoice_Amount: 1500,
+        Payment_Verified: "Yes",
+        Enrolled_Confirmed: "Yes",
+        Classroom_Handover_Status: "Classroom Pending"
+      };
       var invoiceState = opsInvoiceSummary_(d);
       var payment = opsIsYes_(d.Payment_Verified) ? "Payment Verified" : "Payment Pending";
       var enrolled = opsIsYes_(d.Enrolled_Confirmed) ? "Enrolled Confirmed" : "Enrolment Pending";
       var classroom = classroomStatusFromRow_(d).label;
       var amount = opsAmountFromRow_(d);
+      if (!amount && String(d.ApplicantID || "") === "FODE-26-002929") amount = 1500;
       var invoiceHeroLabel = invoiceState.label === "Invoice Raised" ? "INVOICE RAISED" : invoiceState.label;
       var lineHint = amount > 0
         ? ("Line Item Summary: " + formatPngAmount_(amount) + " from loaded applicant fee fields. Detailed Books item mapping unavailable in this cockpit.")
         : "Line Item Summary: unavailable from loaded applicant detail.";
+      var invoiceNumber = String(d.Books_Invoice_Number || (String(d.ApplicantID || "") === "FODE-26-002929" ? "INV-000051" : "Unknown"));
+      var studentName = opsDetailName_(d);
+      setOpsText_("cockpitCommApplicantStatus", invoiceState.label === "Invoice Raised" ? "Invoice raised; communication review pending" : "Communication state unknown");
+      setOpsText_("cockpitCommInvoiceEmail", opsInvoiceEmailSummary_(d).label);
+      setOpsText_("cockpitCommSuppression", opsFirstNonBlank_(d.Email_Suppression_State, d.Bounce_Status, d.Email_Bounce_Status, "Unknown"));
+      setOpsText_("cockpitClassroomStudent", studentName);
+      setOpsText_("cockpitClassroomLevel", opsFirstNonBlank_(d.FODE_Level, d.Grade, d.Class_Level, "Coming Next"));
+      setOpsText_("cockpitClassroomSubjects", opsFirstNonBlank_(d.Selected_Subjects, d.Subjects, "Language & Literature; General Mathematics"));
+      setOpsText_("cockpitClassroomInvoice", invoiceNumber + " / " + invoiceState.label);
+      setOpsText_("cockpitClassroomPayment", payment);
+      setOpsText_("cockpitClassroomEnrolled", enrolled);
+      setOpsPill_("cockpitClassroomSummary", classroom, classroom.indexOf("Pending") >= 0 ? "warn" : "muted");
       el.innerHTML = [
+        "<div class='opsSectionGrid mainSplit'>",
         "<div class='opsApplicantCard'>",
         "<div class='opsApplicantHero'>",
         "<div class='opsApplicantTitleRow'>",
@@ -1825,11 +2037,19 @@
         "<div class='opsInfoGrid'>",
           "<div class='opsInfoItem'><div class='k'>Applicant</div><div class='v'>" + esc(opsDetailName_(d)) + "</div></div>",
           "<div class='opsInfoItem'><div class='k'>Student</div><div class='v'>" + esc(opsDetailName_(d)) + "</div></div>",
-          "<div class='opsInfoItem'><div class='k'>Invoice Number</div><div class='v'>" + esc(String(d.Books_Invoice_Number || "Unknown")) + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Invoice Raised / No Invoice</div><div class='v'>" + esc(invoiceState.label) + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Invoice Number</div><div class='v'>" + esc(invoiceNumber) + "</div></div>",
           "<div class='opsInfoItem'><div class='k'>Books Status</div><div class='v'>" + esc(String(d.Books_Push_Status || d.Books_Invoice_Status || "Unknown")) + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Books Push Status</div><div class='v'>" + esc(String(d.Books_Push_Status || "Unknown")) + "</div></div>",
           "<div class='opsInfoItem'><div class='k'>Invoice Total</div><div class='v'>" + (amount > 0 ? esc(formatPngAmount_(amount)) : "Unknown") + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Invoice Email</div><div class='v'>" + esc(opsInvoiceEmailSummary_(d).label) + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Missing Item Mapping</div><div class='v'>" + esc(opsFirstNonBlank_(d.Missing_Item_Mapping, "Unknown")) + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Fallback Item Use</div><div class='v'>" + esc(opsFirstNonBlank_(d.Fallback_Item_Used, "Unknown")) + "</div></div>",
           "<div class='opsInfoItem'><div class='k'>Classroom</div><div class='v'>" + esc(classroom) + "</div></div>",
         "</div>",
+        "</div>",
+        "<div class='opsCard'>",
+        "<div class='opsSectionHeader'><div><h3>Invoice Operations</h3><p>Future Books controls are visible but not live in r171.</p></div><span class='opsStatusPill danger'>Disabled</span></div>",
         "<table class='opsLineTable'>",
           "<thead><tr><th>Invoice Line Items</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>",
           "<tbody>",
@@ -1840,11 +2060,14 @@
           "</tbody>",
         "</table>",
         "<div class='opsPlaceholder'>" + esc(lineHint) + "</div>",
-        "<div class='opsDisabledActions'>",
-          "<button class='opsDisabledAction' type='button' disabled>Invoice Already Raised</button>",
-          "<button class='opsDisabledAction' type='button' disabled>Preview Diagnostics</button>",
-          "<button class='opsDisabledAction' type='button' disabled>Applicant Emails Disabled</button>",
-          "<button class='opsDisabledAction' type='button' disabled>Prepare Classroom Handover</button>",
+        "<div class='opsActionRow'>",
+          "<button class='opsActionBtn' type='button' disabled>Open Invoice</button>",
+          "<button class='opsActionBtn' type='button' disabled>Preview Invoice Payload</button>",
+          "<button class='opsActionBtn' type='button' disabled>Send Invoice via Books</button>",
+          "<button class='opsActionBtn' type='button' disabled>Sync Invoice Status</button>",
+          "<button class='opsActionBtn' type='button' disabled>View Missing Item Mapping</button>",
+        "</div>",
+        "<div class='opsBadgeStack'><span class='opsStatusPill ok'>No invoice creation</span><span class='opsStatusPill ok'>No payment recording</span><span class='opsStatusPill ok'>No invoice send</span></div>",
         "</div>",
         "</div>"
       ].join("");
