@@ -511,6 +511,7 @@ function resolveDoGetHandler_(view, isAdminDeployment) {
   if (route === "driveprobe") return doGet_driveProbe_;
   if (route === "portalsmoke") return doGet_portalSmoke_;
   if (route === "uploadsmoke") return doGet_uploadSmoke_;
+  if (route === "ops") return renderAdminApp_;
   if (route === "admin") return renderAdminApp_;
   if (!route) return isAdminDeployment ? renderAdminApp_ : renderPortalAppFromDoGet_;
   return isAdminDeployment ? renderAdminApp_ : renderPortalAppFromDoGet_;

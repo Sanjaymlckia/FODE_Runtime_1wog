@@ -2,48 +2,52 @@
 
 ## Current Runtime Truth
 
-- Live runtime before this continuation: `r168 / 168`
-- Admin and Student are currently pinned to an earlier r168 platform version created before the latest fallback/test-email changes.
-- Current local source is uncommitted r168 work for Zoho Books item catalog refresh, fallback line logic, and controlled test invoice/email.
+- Intended release in progress: `r169 / 169`
+- Local source is uncommitted r169 work for a read-only Operations Cockpit shell.
+- Live runtime must not be treated as r169 until Admin and Student `?view=whoami` both pass after repin.
 
 ## Current Scope Boundary
 
-- CIS scope is limited to `r168` Zoho Books UI finalization after draft invoice raise.
+- CIS scope is limited to `r169` read-only Operations Cockpit shell.
 - Allowed files only:
   - `Config.js`
-  - `Utils.js`
   - `Admin.js`
   - `AdminUI.html`
+  - `Utils.js` only if needed for shared status helpers
   - `CURRENT_TASK.md`
 - No `appsscript.json`, `.clasp.json`, Sheets structure/manual edits, or Drive edits.
-- `docs/Zoho_Books` files may be read as reference only.
-- No payment creation, no bulk Books processing, no auto paid/enrolled updates, and no CRM changes.
-- Invoice sending remains disabled except the controlled forced-recipient test email path.
-- No new invoice may be created for `FODE-26-002929`; UI must present invoice-raised state and duplicate block clearly.
+- No Zoho Books write-path changes.
+- No invoice creation, email send, payment creation, bulk processing, or paid/enrolled/registration-complete updates.
+- Applicant Review behavior must not regress.
 
 ## Architecture Decision
 
-- FODE invoices are multi-line invoices.
-- Include `Registration FODE (No Tablet)` once by default.
-- Exclude tablet/full registration unless a separate explicit rule is approved later.
-- Each selected FDxx subject must become one Zoho Books invoice line item.
-- Use the refreshed catalog in `docs/Zoho_Books` as the current reference for deterministic grade-specific mapping.
-- Source/payment amount is comparison-only unless explicitly configured authoritative.
-- If an exact subject item is missing and a configured generic fallback subject-fee item exists, preview may return `READY_WITH_FALLBACK`.
-- If no exact item and no configured fallback item exist, preview must return `BLOCKED_ITEM_MAPPING`.
+- The new cockpit is a read-only shell on the existing Admin template.
+- `?view=ops` is the intended cockpit entry.
+- Runtime truth, queue state, applicant badges, and lifecycle indicators must reuse existing row fields and existing loaders.
+- The cockpit exposes `Review` only. No new write actions are allowed in r169.
+- Placeholder or `Unknown` is preferred over guessed counts.
 
 ## Next Exact Step
 
-- r168 browser acceptance passed on Apps Script platform version `174`.
-- Finalize git commit, push, and tag for `staging-as168`.
-- r169 follow-up:
-  - suppress/disable Legacy Invite and Send controls when `Can Send Now = NO`
-  - suppress/de-emphasize applicant-chasing send controls when applicant is already portal-submitted, enrolled, or complete
+- Push r169 source and verify remote `Config.js` is `r169 / 169` before `clasp version`.
+- Create Apps Script version:
+  - `r169: read-only operations cockpit shell`
+- Repin Admin and Student.
+- Verify Admin and Student `?view=whoami` report `r169 / 169`, `mismatch=false`.
+- Browser acceptance:
+  - Admin normal view still loads
+  - `?view=ops` loads
+  - cockpit remains read-only
+  - `FODE-26-002929` shows invoice raised state if row fields exist
+  - queue rows show invoice/payment/enrolled/classroom badges
+- Do not commit, tag, or push git metadata until browser acceptance passes.
 
 ## Validation Status
 
-- r168 lifecycle/status hydration browser acceptance passed.
-- Persistent invoice-email sent tracking is still not backed by a dedicated stored field; UI currently shows `UNKNOWN` unless a sent status is known in-session.
+- Local `node --check Admin.js` passed.
+- Local `node --check Utils.js` passed.
+- `git diff --check` passed.
 
 ## Governance Notes
 

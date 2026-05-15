@@ -618,6 +618,65 @@
       border:0;
       background:#000;
     }
+    .hiddenView{ display:none !important; }
+    .opsShell{
+      display:none;
+      min-height:100vh;
+      background:#eef3f8;
+      color:#102030;
+    }
+    .opsShell.active{ display:grid; grid-template-columns:260px 1fr; }
+    .opsSidebar{
+      background:#10263c;
+      color:#eef6ff;
+      padding:24px 18px;
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+    }
+    .opsSidebarTitle{ font-size:20px; font-weight:900; }
+    .opsSidebarSub{ font-size:12px; color:#b8c9dc; }
+    .opsNav{ display:flex; flex-direction:column; gap:8px; }
+    .opsNav a{
+      color:#e8f0f8; text-decoration:none; padding:10px 12px; border-radius:12px;
+      background:rgba(255,255,255,.04); font-size:13px; font-weight:700;
+    }
+    .opsNav a:hover{ background:rgba(255,255,255,.1); }
+    .opsMain{ padding:24px; display:flex; flex-direction:column; gap:18px; }
+    .opsHeader{
+      display:flex; justify-content:space-between; gap:16px; align-items:flex-start;
+    }
+    .opsHeader h1{ margin:0; font-size:28px; color:#10263c; }
+    .opsHeader .mutedLight{ color:#5b7187; font-size:13px; }
+    .opsKpiGrid{ display:grid; grid-template-columns:repeat(4,minmax(170px,1fr)); gap:14px; }
+    .opsCard{
+      background:#fff; border:1px solid #d7e2ee; border-radius:18px; padding:16px;
+      box-shadow:0 10px 24px rgba(16,38,60,.06);
+    }
+    .opsCard h3{ margin:0 0 8px 0; font-size:15px; color:#20364d; }
+    .opsCard .kpiLabel{ font-size:12px; color:#64778b; text-transform:uppercase; letter-spacing:.04em; }
+    .opsCard .kpiValue{ margin-top:6px; font-size:24px; font-weight:900; color:#10263c; }
+    .opsSectionGrid{ display:grid; grid-template-columns:2fr 1fr; gap:16px; }
+    .opsMiniGrid{ display:grid; grid-template-columns:repeat(2,minmax(160px,1fr)); gap:12px; }
+    .opsMiniBox{ background:#f6f9fc; border:1px solid #e3ebf4; border-radius:14px; padding:12px; }
+    .opsMiniBox .k{ color:#708295; font-size:11px; text-transform:uppercase; }
+    .opsMiniBox .v{ color:#10263c; font-size:14px; font-weight:800; margin-top:6px; }
+    .opsTable{ width:100%; border-collapse:collapse; font-size:13px; }
+    .opsTable th,.opsTable td{ text-align:left; padding:10px 8px; border-bottom:1px solid #e3ebf4; vertical-align:top; }
+    .opsTable th{ color:#5e7287; font-size:12px; text-transform:uppercase; letter-spacing:.03em; }
+    .opsPlaceholder{ color:#6f8194; font-size:13px; }
+    .opsTileGrid{ display:grid; grid-template-columns:repeat(3,minmax(180px,1fr)); gap:12px; }
+    .opsTile{ background:#f6f9fc; border:1px solid #e3ebf4; border-radius:14px; padding:14px; }
+    .opsTileTitle{ font-size:13px; font-weight:800; color:#20364d; }
+    .opsTileMeta{ margin-top:6px; font-size:12px; color:#708295; }
+    .opsChecklist{ display:flex; flex-direction:column; gap:8px; }
+    .opsChecklistRow{ display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid #e3ebf4; font-size:13px; }
+    @media (max-width: 1100px){
+      .opsShell.active{ grid-template-columns:1fr; }
+      .opsKpiGrid{ grid-template-columns:repeat(2,minmax(170px,1fr)); }
+      .opsSectionGrid{ grid-template-columns:1fr; }
+      .opsTileGrid{ grid-template-columns:1fr; }
+    }
     @media (max-width: 900px){
       .kv{ grid-template-columns:1fr; }
       .doc{ grid-template-columns:1fr; }
@@ -626,6 +685,113 @@
 </head>
 
 <body>
+  <div id="opsCockpitShell" class="opsShell">
+    <aside class="opsSidebar">
+      <div>
+        <div class="opsSidebarTitle">Operations Cockpit</div>
+        <div class="opsSidebarSub">Read-only shell for runtime truth, queues, release state, and next priorities.</div>
+      </div>
+      <nav class="opsNav">
+        <a href="#opsDashboard">Dashboard</a>
+        <a href="#opsRuntimeTruth">Runtime Truth</a>
+        <a href="#opsAdmissionsQueue">Admissions Queue</a>
+        <a href="#opsZohoBooks">Zoho Books</a>
+        <a href="#opsCommunications">Communications</a>
+        <a href="#opsClassroom">Classroom Handover</a>
+        <a href="#opsReports">Reports</a>
+        <a href="#opsReleaseControl">Release Control</a>
+        <a href="#opsRulesConfig">Rules & Config</a>
+      </nav>
+    </aside>
+    <main class="opsMain">
+      <section id="opsDashboard" class="opsHeader">
+        <div>
+          <h1>FODE Operations Cockpit</h1>
+          <div class="mutedLight">Status-first read-only cockpit. Review is the only action exposed here in r169.</div>
+        </div>
+        <div class="mutedLight">Signed in as: <?= USER_EMAIL ?></div>
+      </section>
+      <section class="opsKpiGrid">
+        <div class="opsCard"><div class="kpiLabel">Runtime</div><div class="kpiValue" id="cockpitKpiRuntime">Unknown</div></div>
+        <div class="opsCard"><div class="kpiLabel">Billing</div><div class="kpiValue" id="cockpitKpiBilling">Unknown</div></div>
+        <div class="opsCard"><div class="kpiLabel">Next Release</div><div class="kpiValue" id="cockpitKpiNextRelease">Planned</div></div>
+        <div class="opsCard"><div class="kpiLabel">Risks</div><div class="kpiValue" id="cockpitKpiRisks">Unknown</div></div>
+      </section>
+      <section id="opsRuntimeTruth" class="opsSectionGrid">
+        <div class="opsCard">
+          <h3>Runtime Truth</h3>
+          <div class="opsMiniGrid">
+            <div class="opsMiniBox"><div class="k">Config Version</div><div class="v" id="cockpitRuntimeVersion">Unknown</div></div>
+            <div class="opsMiniBox"><div class="k">Deploy Version</div><div class="v" id="cockpitDeployVersion">Unknown</div></div>
+            <div class="opsMiniBox"><div class="k">Admin whoami</div><div class="v" id="cockpitAdminWhoami">Unknown</div></div>
+            <div class="opsMiniBox"><div class="k">Student whoami</div><div class="v" id="cockpitStudentWhoami">Unknown</div></div>
+            <div class="opsMiniBox"><div class="k">Accepted Baseline</div><div class="v" id="cockpitAcceptedBaseline">Unknown</div></div>
+            <div class="opsMiniBox"><div class="k">Git / Tag</div><div class="v" id="cockpitGitTag">Unknown</div></div>
+          </div>
+        </div>
+        <div class="opsCard" id="opsReleaseControl">
+          <h3>Release Control</h3>
+          <div class="opsChecklist">
+            <div class="opsChecklistRow"><span>Remote Config verified</span><span id="cockpitReleaseRemote">Unknown</span></div>
+            <div class="opsChecklistRow"><span>Admin / Student whoami match</span><span id="cockpitReleaseWhoami">Unknown</span></div>
+            <div class="opsChecklistRow"><span>Browser acceptance captured</span><span id="cockpitReleaseBrowser">Unknown</span></div>
+            <div class="opsChecklistRow"><span>Commit and tag pushed</span><span id="cockpitReleaseGit">Unknown</span></div>
+            <div class="opsChecklistRow"><span>No active dirty working tree</span><span id="cockpitReleaseDirty">Unknown</span></div>
+            <div class="opsChecklistRow"><span>Next task isolated</span><span id="cockpitReleaseNextTask">Unknown</span></div>
+          </div>
+        </div>
+      </section>
+      <section id="opsAdmissionsQueue" class="opsCard">
+        <h3>Admissions / Billing Queue</h3>
+        <table class="opsTable">
+          <thead>
+            <tr><th>Applicant</th><th>Name</th><th>Invoice</th><th>Payment</th><th>Enrolment</th><th>Classroom</th><th>Action</th></tr>
+          </thead>
+          <tbody id="cockpitQueueBody"><tr><td colspan="7" class="opsPlaceholder">Loading queue…</td></tr></tbody>
+        </table>
+      </section>
+      <section id="opsZohoBooks" class="opsSectionGrid">
+        <div class="opsCard">
+          <h3>Applicant Review Preview</h3>
+          <div id="cockpitApplicantSummary" class="opsPlaceholder">Loading applicant summary…</div>
+        </div>
+        <div class="opsCard" id="opsCommunications">
+          <h3>Communications</h3>
+          <div id="cockpitCommunicationsSummary" class="opsPlaceholder">Applicant-chasing controls remain outside this cockpit. Review only.</div>
+        </div>
+      </section>
+      <section id="opsClassroom" class="opsCard">
+        <h3>Classroom Handover</h3>
+        <div id="cockpitClassroomSummary" class="opsPlaceholder">Classroom handover workflow is not implemented in r169. Status is derived from existing fields only.</div>
+      </section>
+      <section id="opsReports" class="opsCard">
+        <h3>Reports</h3>
+        <div class="opsTileGrid">
+          <div class="opsTile"><div class="opsTileTitle">Daily Admissions Snapshot</div><div class="opsTileMeta">Count unavailable</div></div>
+          <div class="opsTile"><div class="opsTileTitle">Invoice Raised vs Sent</div><div class="opsTileMeta">Coming next</div></div>
+          <div class="opsTile"><div class="opsTileTitle">Payment Verified but Not Enrolled</div><div class="opsTileMeta">Coming next</div></div>
+          <div class="opsTile"><div class="opsTileTitle">Classroom Handover Pending</div><div class="opsTileMeta">Coming next</div></div>
+          <div class="opsTile"><div class="opsTileTitle">Missing Zoho Item Mapping</div><div class="opsTileMeta">Coming next</div></div>
+          <div class="opsTile"><div class="opsTileTitle">Release Truth / Drift Report</div><div class="opsTileMeta">Count unavailable</div></div>
+        </div>
+      </section>
+      <section id="opsRulesConfig" class="opsSectionGrid">
+        <div class="opsCard">
+          <h3>Rules & Config</h3>
+          <div class="opsPlaceholder">Write paths remain disabled here. No invoice, email, payment, or bulk actions are exposed from the cockpit.</div>
+        </div>
+        <div class="opsCard">
+          <h3>Parked / Tomorrow</h3>
+          <div class="opsChecklist">
+            <div class="opsChecklistRow"><span>Script Properties manual-save issue</span><span>Pending</span></div>
+            <div class="opsChecklistRow"><span>Browser acceptance harness</span><span>Pending</span></div>
+            <div class="opsChecklistRow"><span>Release truth checker</span><span>Pending</span></div>
+            <div class="opsChecklistRow"><span>Legacy Invite cleanup</span><span>Planned</span></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
   <div class="wrap">
     <div class="topbar">
       <div class="brand">
@@ -1175,6 +1341,7 @@
     const BUILD_VERSION = <?!= JSON.stringify(String(BUILD_VERSION || "")) ?>;
     const BUILD_RENDERED_AT = <?!= JSON.stringify(String(BUILD_RENDERED_AT || "")) ?>;
     const BUILD_SCRIPT_ID = <?!= JSON.stringify(String(BUILD_SCRIPT_ID || "")) ?>;
+    const INITIAL_ADMIN_VIEW = <?!= JSON.stringify(String(INITIAL_ADMIN_VIEW || "admin")) ?>;
     const CFG_WEBAPP_URL_ADMIN = <?!= JSON.stringify(String((CONFIG && CONFIG.WEBAPP_URL_ADMIN) || "")) ?>;
     const CFG_WEBAPP_URL_STUDENT = <?!= JSON.stringify(String((CONFIG && CONFIG.WEBAPP_URL_STUDENT) || "")) ?>;
     const CFG_WEBAPP_URL_STUDENT_EXEC = <?!= JSON.stringify(String((CONFIG && (CONFIG.WEBAPP_URL_STUDENT_EXEC || CONFIG.WEBAPP_URL_STUDENT)) || "")) ?>;
@@ -1263,6 +1430,7 @@
       emailResult: null,
       secretSetupBusy: false
     };
+    let opsApplicantDetailCache = null;
     function formatPngAmount_(value){
       var n = Number(value || 0);
       if (!isFinite(n)) n = 0;
@@ -1276,6 +1444,115 @@
       var amount = Number(preview.calculatedAmount || preview.amount || 0);
       if (amount > 0) parts.push(formatPngAmount_(amount));
       return parts.join(" — ");
+    }
+    function updateOpsVisibility_(){
+      var opsActive = String(INITIAL_ADMIN_VIEW || "").toLowerCase() === "ops";
+      var shell = document.getElementById("opsCockpitShell");
+      var wrap = document.querySelector(".wrap");
+      if (shell) shell.classList.toggle("active", opsActive);
+      if (wrap) wrap.classList.toggle("hiddenView", opsActive);
+    }
+    function setOpsText_(id, value){
+      var el = document.getElementById(id);
+      if (el) el.textContent = String(value == null || value === "" ? "Unknown" : value);
+    }
+    function renderOpsRuntimeTruth_(){
+      var runtime = runtimeInfoCache || {};
+      setOpsText_("cockpitKpiRuntime", (runtime.version || VERSION || "Unknown") + " / " + String(runtime.deployVersion || DEPLOY_VERSION_NUMBER || "Unknown"));
+      setOpsText_("cockpitRuntimeVersion", runtime.version || VERSION || "Unknown");
+      setOpsText_("cockpitDeployVersion", runtime.deployVersion || DEPLOY_VERSION_NUMBER || "Unknown");
+      setOpsText_("cockpitAdminWhoami", runtime.mismatch === false ? "Match" : "Unknown");
+      setOpsText_("cockpitStudentWhoami", runtime.mismatch === false ? "Match" : "Unknown");
+      setOpsText_("cockpitAcceptedBaseline", "staging-as168");
+      setOpsText_("cockpitGitTag", "Unknown");
+      setOpsText_("cockpitReleaseWhoami", runtime.mismatch === false ? "Ready" : "Unknown");
+      setOpsText_("cockpitReleaseRemote", "Unknown");
+      setOpsText_("cockpitReleaseBrowser", "Unknown");
+      setOpsText_("cockpitReleaseGit", "Unknown");
+      setOpsText_("cockpitReleaseDirty", "Unknown");
+      setOpsText_("cockpitReleaseNextTask", "Unknown");
+    }
+    function renderOpsSafetyStatus_(data){
+      var runtime = data && data.runtime ? data.runtime : {};
+      var propertyHealth = data && data.propertyHealth ? data.propertyHealth : {};
+      setOpsText_("cockpitReleaseRemote", runtime.version ? "Verified" : "Unknown");
+      setOpsText_("cockpitReleaseWhoami", runtime.mismatch === false ? "Match" : "Unknown");
+      setOpsText_("cockpitKpiRisks", propertyHealth.warning ? "1" : "Unknown");
+      setOpsText_("cockpitKpiBilling", "Books Connected");
+    }
+    function renderOpsQueue_(){
+      var body = document.getElementById("cockpitQueueBody");
+      if (!body) return;
+      var all = []
+        .concat(queueDataState.docs || [], queueDataState.awaitingPayment || [], queueDataState.payments || [], queueDataState.anomalies || [], queueDataState.paidApproved || []);
+      var seen = {};
+      var rows = all.filter(function(row){
+        var key = String((row && row.applicantId) || "");
+        if (!key || seen[key]) return false;
+        seen[key] = true;
+        return true;
+      }).slice(0, 12);
+      if (!rows.length) {
+        body.innerHTML = "<tr><td colspan='7' class='opsPlaceholder'>No queue rows loaded yet.</td></tr>";
+        return;
+      }
+      body.innerHTML = rows.map(function(row){
+        var invoice = invoiceRaisedFromRow_(row)
+          ? ("<span class='badge badge-success'>Invoice Raised</span><div class='muted' style='font-size:12px;margin-top:4px;'>" + esc(String(row.Books_Invoice_Number || "")) + "</div>")
+          : "<span class='badge badge-muted'>No Invoice</span>";
+        var payment = (workflowIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true)
+          ? "<span class='badge badge-success'>Payment Verified</span>"
+          : "<span class='badge badge-warning'>Payment Pending</span>";
+        var enrolment = workflowIsYes_(row.Enrolled_Confirmed)
+          ? "<span class='badge badge-success'>Enrolled Confirmed</span>"
+          : "<span class='badge badge-warning'>Enrolment Pending</span>";
+        var classroom = classroomStatusFromRow_(row);
+        return "<tr>"
+          + "<td>" + esc(String(row.applicantId || row.ApplicantID || "")) + "</td>"
+          + "<td>" + esc(String(row.name || "")) + "</td>"
+          + "<td>" + invoice + "</td>"
+          + "<td>" + payment + "</td>"
+          + "<td>" + enrolment + "</td>"
+          + "<td><span class='" + classroom.cls + "'>" + esc(classroom.label) + "</span></td>"
+          + "<td><button class='btn small' type='button' onclick='review(" + Number(row.rowNumber || 0) + ", " + JSON.stringify(String(row.applicantId || row.ApplicantID || "")) + ")'>Review</button></td>"
+          + "</tr>";
+      }).join("");
+      setOpsText_("cockpitKpiBilling", rows.some(invoiceRaisedFromRow_) ? "Invoice Raised / Books Connected" : "Books Connected");
+    }
+    function renderOpsApplicantSummary_(detail){
+      var el = document.getElementById("cockpitApplicantSummary");
+      if (!el) return;
+      var d = detail || opsApplicantDetailCache || null;
+      if (!d) {
+        el.textContent = "Applicant summary unavailable.";
+        return;
+      }
+      var invoiceBadge = invoiceRaisedFromRow_(d) ? "<span class='badge badge-success'>Invoice Raised</span>" : "<span class='badge badge-muted'>No Invoice</span>";
+      var payment = workflowIsYes_(d.Payment_Verified) ? "Payment Verified" : "Payment Pending";
+      var enrolled = workflowIsYes_(d.Enrolled_Confirmed) ? "Enrolled Confirmed" : "Enrolment Pending";
+      var classroom = classroomStatusFromRow_(d).label;
+      var amountRaw = String(d.Fee_Total_Kina || d.Total_Fee_Kina || d.Total_Fee || "").trim();
+      var amount = Number(String(amountRaw).replace(/[^0-9.]/g, "")) || 0;
+      el.innerHTML = [
+        "<div style='font-weight:900;font-size:16px;color:#10263c;'>" + esc(String(d.ApplicantID || "")) + "</div>",
+        "<div style='margin-top:8px;'>" + invoiceBadge + " <span class='badge badge-success'>" + esc(payment) + "</span> <span class='badge badge-success'>" + esc(enrolled) + "</span> <span class='badge badge-muted'>" + esc(classroom) + "</span></div>",
+        "<div style='margin-top:10px;font-size:13px;color:#334a62;'>Invoice Number: " + esc(String(d.Books_Invoice_Number || "Unknown")) + "</div>",
+        "<div style='margin-top:4px;font-size:13px;color:#334a62;'>Books Push Status: " + esc(String(d.Books_Push_Status || "Unknown")) + "</div>",
+        "<div style='margin-top:4px;font-size:13px;color:#334a62;'>Invoice Total: " + (amount > 0 ? esc(formatPngAmount_(amount)) : "Unknown") + "</div>"
+      ].join("");
+    }
+    function fetchOpsApplicantSummary_(){
+      if (String(INITIAL_ADMIN_VIEW || "").toLowerCase() !== "ops") return;
+      google.script.run
+        .withSuccessHandler(function(res){
+          var detail = normalizeDetailResponse_(res);
+          opsApplicantDetailCache = detail || null;
+          renderOpsApplicantSummary_(detail || null);
+        })
+        .withFailureHandler(function(){
+          renderOpsApplicantSummary_(null);
+        })
+        .admin_getApplicantDetail_json({ applicantId: "FODE-26-002929" });
     }
     function renderBooksLineSummary_(preview){
       var box = document.getElementById("booksLineSummary");
@@ -3702,6 +3979,7 @@ function renderStageDashboard_(items, emptyMessage){
       renderQueueSection("queuePayments", "Payments to Verify", d.payments, counts.payments);
       renderQueueSection("queueAnomalies", "Payment-First Anomalies", d.anomalies, counts.anomalies);
       renderQueueSection("queuePaidApproved", "Enrolled / Confirmed", d.paidApproved, counts.paidApproved);
+      renderOpsQueue_();
     }
 
     function initQueuePanelEvents_(){
@@ -4422,6 +4700,7 @@ function renderStageDashboard_(items, emptyMessage){
       renderCommunicationsResult_(incomingApplicantId !== previousApplicantId ? null : communicationsState.result);
       updateCommunicationsUi_();
       renderCommEditablePanel_();
+      renderOpsApplicantSummary_(d);
       if (incomingApplicantId !== String((booksPreviewState.preview && booksPreviewState.preview.sourceApplicantId) || "").trim()) {
         booksPreviewState.preview = buildBooksPreviewHydrationFromDetail_(d);
         booksPreviewState.createResult = null;
@@ -5048,6 +5327,7 @@ function renderStageDashboard_(items, emptyMessage){
       }
 
     setRoleUi();
+    updateOpsVisibility_();
     function renderRuntimeStopState_(reason){
       var line = document.getElementById("runtimeInfoLine");
       var badge = document.getElementById("versionBadge");
@@ -5077,6 +5357,7 @@ function renderStageDashboard_(items, emptyMessage){
       line.textContent = "Runtime: " + String(info.version || "-")
         + " | Deploy: " + String(Number(info.deployVersion || 0));
       line.title = String(info.timestamp || "");
+      renderOpsRuntimeTruth_();
     }
     function fetchRuntimeInfo_(){
       google.script.run
@@ -5203,6 +5484,7 @@ function renderStageDashboard_(items, emptyMessage){
       setOpsValue_("opsHardBounces", bounceVisibility.ok === false ? "UNKNOWN" : Number(bounceVisibility.hardBounceRows || 0));
       setOpsValue_("opsTemporaryBounces", bounceVisibility.ok === false ? "UNKNOWN" : Number(bounceVisibility.temporaryBounceRows || 0));
       setOpsValue_("opsLastBounceReason", bounceVisibility.ok === false ? (bounceVisibility.error || "UNKNOWN") : (bounceVisibility.lastBounceReason || "No bounced rows"));
+      renderOpsSafetyStatus_(data);
     }
     function fetchOperationalSafetyStatus_(){
       google.script.run
@@ -5227,6 +5509,7 @@ function renderStageDashboard_(items, emptyMessage){
         bindStageBatchControls_();
         loadStageDashboard();
         loadReviewQueues();
+        fetchOpsApplicantSummary_();
       });
     } else {
       fetchRuntimeInfo_();
@@ -5237,6 +5520,7 @@ function renderStageDashboard_(items, emptyMessage){
       bindStageBatchControls_();
         loadStageDashboard();
         loadReviewQueues();
+        fetchOpsApplicantSummary_();
     }
     setActionButtonsEnabled(false);
     var resultsBody = document.getElementById("tbody");

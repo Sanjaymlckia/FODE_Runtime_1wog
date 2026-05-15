@@ -110,10 +110,11 @@ function renderAdminApp_(e) {
   t.BUILD_VERSION = CONFIG.VERSION;
   t.BUILD_RENDERED_AT = new Date().toISOString();
   t.BUILD_SCRIPT_ID = ScriptApp.getScriptId();
+  t.INITIAL_ADMIN_VIEW = String((e && e.parameter && e.parameter.view) || "admin");
   t.STUDENT_URL_READY = isStudentUrlConfigured_();
   t.STUDENT_URL_WARNING = getStudentUrlWarning_();
   return t.evaluate()
-    .setTitle((CONFIG.BRAND && CONFIG.BRAND.name ? CONFIG.BRAND.name : "FODE Admin") + " - Document Verification")
+    .setTitle((CONFIG.BRAND && CONFIG.BRAND.name ? CONFIG.BRAND.name : "FODE Admin") + (String((e && e.parameter && e.parameter.view) || "").toLowerCase() === "ops" ? " - Operations Cockpit" : " - Document Verification"))
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
