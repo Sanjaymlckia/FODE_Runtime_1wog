@@ -2,19 +2,19 @@
 
 ## Current Runtime Truth
 
-- Intended release in progress: `r169 / 169`
-- Local source is uncommitted r169 work for a read-only Operations Cockpit shell.
-- Live runtime must not be treated as r169 until Admin and Student `?view=whoami` both pass after repin.
+- Accepted release: `r170 / 170`
+- Local source is r170 Operations Cockpit visual rebuild against the saved mockup and read-only data refinement.
+- Browser/product acceptance passed for r170 platform version 178.
+- Live runtime now reports r170 / 170 for Admin and Student `?view=whoami` after repin to Apps Script platform version 178.
 
 ## Current Scope Boundary
 
-- CIS scope is limited to `r169` read-only Operations Cockpit shell.
+- CIS scope is limited to `r170` Operations Cockpit visual rebuild using `docs/ChatGPT Image May 15, 2026, 09_19_06 PM.png` as the product reference.
 - Allowed files only:
-  - `Config.js`
-  - `Admin.js`
   - `AdminUI.html`
-  - `Utils.js` only if needed for shared status helpers
   - `CURRENT_TASK.md`
+  - `Admin.js` only if absolutely required for read-only data binding
+- `Config.js` may be inspected for unchanged identity confirmation only; do not modify it.
 - No `appsscript.json`, `.clasp.json`, Sheets structure/manual edits, or Drive edits.
 - No Zoho Books write-path changes.
 - No invoice creation, email send, payment creation, bulk processing, or paid/enrolled/registration-complete updates.
@@ -22,32 +22,59 @@
 
 ## Architecture Decision
 
-- The new cockpit is a read-only shell on the existing Admin template.
-- `?view=ops` is the intended cockpit entry.
+- The cockpit remains a read-only shell on the existing Admin template.
+- `?view=ops` remains the cockpit entry.
 - Runtime truth, queue state, applicant badges, and lifecycle indicators must reuse existing row fields and existing loaders.
-- The cockpit exposes `Review` only. No new write actions are allowed in r169.
-- Placeholder or `Unknown` is preferred over guessed counts.
+- The cockpit exposes `Review` only. No new write actions are allowed in r170.
+- Placeholder, `Unknown`, or `Coming next` is preferred over guessed counts.
+
+## Completed Release Steps
+
+- Pushed r170 source with `clasp push`.
+- Verified remote `Config.js` outside the clasp source root:
+  - `VERSION: "r170"`
+  - `DEPLOY_VERSION_NUMBER: 170`
+- Created Apps Script platform version 178:
+  - `r170: operations cockpit visual rebuild`
+- Repinned Admin and Student deployments to platform version 178.
+- Verified Admin and Student `?view=whoami` report `r170 / 170`, `mismatch=false`.
+
+## Browser Acceptance
+
+- Passed for r170 platform version 178.
+- Admin base URL loads and shows `r170 / 170`.
+- Student portal token route loads and shows `r170`.
+- Admin `?view=ops` loads the visually rebuilt Operations Cockpit.
+- Cockpit remains read-only.
+- No invoice, email, payment, bulk, enrolment, or classroom write actions are exposed.
+- Menu links are present and usable enough for r170; section inconsistency is accepted as r171 polish.
 
 ## Next Exact Step
 
-- Push r169 source and verify remote `Config.js` is `r169 / 169` before `clasp version`.
-- Create Apps Script version:
-  - `r169: read-only operations cockpit shell`
-- Repin Admin and Student.
-- Verify Admin and Student `?view=whoami` report `r169 / 169`, `mismatch=false`.
-- Browser acceptance:
-  - Admin normal view still loads
-  - `?view=ops` loads
-  - cockpit remains read-only
-  - `FODE-26-002929` shows invoice raised state if row fields exist
-  - queue rows show invoice/payment/enrolled/classroom badges
-- Do not commit, tag, or push git metadata until browser acceptance passes.
+- Git finalization for r170:
+  - Commit `AdminUI.html`, `CURRENT_TASK.md`, `Config.js`, and saved mockup image.
+  - Push commit.
+  - Tag `staging-as170`.
+  - Push tag.
 
 ## Validation Status
 
 - Local `node --check Admin.js` passed.
-- Local `node --check Utils.js` passed.
 - `git diff --check` passed.
+- r170 cockpit visual rebuild updated locally in `AdminUI.html`; browser acceptance passed.
+- Saved mockup exists at `docs/ChatGPT Image May 15, 2026, 09_19_06 PM.png` and was inspected before the rebuild.
+- Admin and Student deployments repinned to Apps Script platform version 178.
+- Admin and Student whoami passed for `r170 / 170`, `mismatch=false`.
+- Admin `?view=ops` HTTP payload contains the rebuilt cockpit shell labels; browser visual acceptance passed by user evidence.
+- Admin base URL returned Apps Script shell content containing FODE/Admin/Document markers.
+- Student `?view=portal` route returned Apps Script shell content; user browser evidence confirms token route loads and shows r170.
+
+## r171 Follow-ups
+
+- Tighten sidebar/menu section behavior.
+- Ensure each menu item has a clear target section/state.
+- Improve queue/reference applicant consistency.
+- Replace safe `Unknown` values with real data where available.
 
 ## Governance Notes
 
