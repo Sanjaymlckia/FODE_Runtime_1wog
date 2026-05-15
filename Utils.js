@@ -635,11 +635,22 @@ function upsertZohoDeal_(token, payloadRowObj, folderUrl, contactId) {
 }
 
 function getZohoBooksConfig_() {
+  var props = null;
+  try {
+    props = PropertiesService.getScriptProperties();
+  } catch (_e) {
+    props = null;
+  }
+  var propOrgId = props ? clean_(props.getProperty("ZOHO_BOOKS_ORGANIZATION_ID") || "") : "";
+  var propApiDomain = props ? clean_(props.getProperty("ZOHO_BOOKS_API_DOMAIN") || "") : "";
+  var apiBase = propApiDomain
+    ? propApiDomain.replace(/\/+$/, "") + "/books/v3"
+    : clean_(CONFIG.ZOHO_BOOKS_API_BASE || "https://www.zohoapis.com/books/v3");
   return {
     enabled: CONFIG.ENABLE_ZOHO_BOOKS_INTEGRATION === true,
     dryRun: CONFIG.ENABLE_ZOHO_BOOKS_DRY_RUN !== false,
     draftInvoiceCreateEnabled: CONFIG.ENABLE_ZOHO_BOOKS_DRAFT_INVOICE_CREATE === true,
-    organizationId: clean_(CONFIG.ZOHO_BOOKS_ORGANIZATION_ID || ""),
+    organizationId: propOrgId || clean_(CONFIG.ZOHO_BOOKS_ORGANIZATION_ID || ""),
     organizationName: clean_(CONFIG.ZOHO_BOOKS_ORGANIZATION_NAME || ""),
     defaultCurrency: clean_(CONFIG.ZOHO_BOOKS_DEFAULT_CURRENCY || "PGK"),
     portalSource: clean_(CONFIG.ZOHO_BOOKS_PORTAL_SOURCE || "FODE Portal"),
@@ -647,8 +658,19 @@ function getZohoBooksConfig_() {
     billingPrefix: clean_(CONFIG.FODE_BILLING_REFERENCE_PREFIX || "FODE"),
     billingYear: clean_(CONFIG.FODE_BILLING_REFERENCE_YEAR || ""),
     firstTestMode: clean_(CONFIG.ZOHO_BOOKS_FIRST_TEST_MODE || "DRAFT_ONLY"),
-    apiBase: clean_(CONFIG.ZOHO_BOOKS_API_BASE || "https://www.zohoapis.com/books/v3")
+    apiBase: apiBase
   };
+}
+
+function getZohoBooksOAuthBase_() {
+  var accountsUrl = "";
+  try {
+    accountsUrl = clean_(PropertiesService.getScriptProperties().getProperty("ZOHO_BOOKS_ACCOUNTS_URL") || "");
+  } catch (_e) {
+    accountsUrl = "";
+  }
+  if (accountsUrl) return accountsUrl.replace(/\/+$/, "") + "/oauth/v2";
+  return clean_(CONFIG.ZOHO_OAUTH_BASE || "https://accounts.zoho.com/oauth/v2").replace(/\/+$/, "");
 }
 
 function assertZohoBooksEnabledForWrite_() {
@@ -672,7 +694,7 @@ function getZohoBooksAccessToken_() {
     return { ok: false, code: "TOKEN_NOT_CONFIGURED", message: "Zoho Books OAuth script properties are not configured." };
   }
 
-  var endpoint = clean_(CONFIG.ZOHO_OAUTH_BASE || "https://accounts.zoho.com/oauth/v2") + "/token";
+  var endpoint = getZohoBooksOAuthBase_() + "/token";
   var resp = UrlFetchApp.fetch(endpoint, {
     method: "post",
     muteHttpExceptions: true,
@@ -933,6 +955,94 @@ function findZohoBooksCatalogItemsByName_(itemName, institution) {
   });
 }
 
+function buildZohoBooksLiveItemsByName_(itemsResult) {
+  var liveByName = {};
+  if (!itemsResult || itemsResult.ok !== true || !Array.isArray(itemsResult.items)) return liveByName;
+  itemsResult.items.forEach(function (item) {
+    var key = normalizeZohoBooksItemText_(item && item.name || "");
+    if (!key) return;
+    if (!liveByName[key]) liveByName[key] = [];
+    liveByName[key].push(item);
+  });
+  return liveByName;
+}
+
+function buildZohoBooksItemDisplayName_(prefix, label) {
+  return safeStr_(prefix || "") + " - " + safeStr_(label || "");
+}
+
+function normalizeFodeSelectedSubjectLabel_(value) {
+  var raw = safeStr_(value || "")
+    .replace(/\s+/g, " ")
+    .replace(/\s*&\s*/g, " & ")
+    .trim();
+  if (!raw) return "";
+  var key = raw.toLowerCase();
+  var aliases = {
+    "language and literature": "Language & Literature",
+    "lang and literature": "Language & Literature",
+    "lang & literature": "Language & Literature",
+    "advanced math": "Advanced Mathematics",
+    "general math": "General Mathematics",
+    "social studies": "Social Science",
+    "computer studies": "ICT",
+    "information communication technology": "ICT"
+  };
+  return aliases[key] || raw;
+}
+
+function resolveZohoBooksCatalogLineItem_(itemName, institution, category, subjectName, liveByName) {
+  var matches = findZohoBooksCatalogItemsByName_(itemName, institution);
+  if (matches.length !== 1) {
+    return {
+      ok: false,
+      code: matches.length > 1 ? "AMBIGUOUS_CATALOG_MATCH" : "CATALOG_ITEM_MISSING",
+      itemName: itemName,
+      subject: safeStr_(subjectName || ""),
+      message: matches.length > 1
+        ? ("Multiple Item.csv matches found for " + itemName + ".")
+        : ("Item.csv match not found for " + itemName + ".")
+    };
+  }
+  var matched = matches[0];
+  var liveMatches = [];
+  if (liveByName && Object.keys(liveByName).length) {
+    liveMatches = liveByName[normalizeZohoBooksItemText_(itemName)] || [];
+    if (liveMatches.length !== 1) {
+      return {
+        ok: false,
+        code: liveMatches.length > 1 ? "AMBIGUOUS_LIVE_MATCH" : "LIVE_ITEM_MISSING",
+        itemName: itemName,
+        subject: safeStr_(subjectName || ""),
+        message: liveMatches.length > 1
+          ? ("Multiple live Zoho Books items matched " + itemName + ".")
+          : ("Live Zoho Books item not found for " + itemName + ".")
+      };
+    }
+  }
+  var liveMatched = liveMatches.length === 1 ? liveMatches[0] : null;
+  var rate = Number((liveMatched && (liveMatched.rate || 0)) || matched.rate || 0);
+  return {
+    ok: true,
+    code: liveMatched ? "LIVE_MATCH" : "CATALOG_MATCH",
+    itemName: itemName,
+    lineItem: {
+      itemId: safeStr_((liveMatched && (liveMatched.item_id || liveMatched.itemId)) || matched.itemId || ""),
+      itemName: safeStr_((liveMatched && liveMatched.name) || matched.itemName || ""),
+      description: safeStr_(matched.description || ""),
+      account: safeStr_(matched.account || ""),
+      itemCategory: safeStr_(category || ""),
+      quantity: 1,
+      rate: rate,
+      amount: rate,
+      subject: safeStr_(subjectName || ""),
+      matchConfidence: "high",
+      catalogMatched: true,
+      liveDiscoveryConfirmed: !!liveMatched
+    }
+  };
+}
+
 function buildZohoBooksItemCandidate_(record) {
   var row = record || {};
   var subjectsRaw = safeStr_(row.Subjects_Selected_Canonical || row.Subjects_Selected || "");
@@ -1032,32 +1142,63 @@ function buildZohoBooksItemCandidate_(record) {
 
 function parseFodeSelectedSubjectsV2_(record) {
   var row = record || {};
-  var subjectsRaw = safeStr_(row.Subjects_Selected_Canonical || row.Subjects_Selected || "");
-  return subjectsRaw ? subjectsRaw.split(",").map(function (s) { return safeStr_(s); }).filter(function (s) { return !!s; }) : [];
+  var canonical = safeStr_(row.Subjects_Selected_Canonical || "");
+  var fallback = safeStr_(row.Subjects_Selected || "");
+  var subjectsRaw = canonical || fallback;
+  if (!subjectsRaw) return [];
+  var normalizedRaw = subjectsRaw
+    .replace(/\r\n/g, "\n")
+    .replace(/[|;/]+/g, ",")
+    .replace(/\n+/g, ",");
+  var seen = {};
+  return normalizedRaw.split(",").map(function (s) {
+    return normalizeFodeSelectedSubjectLabel_(s);
+  }).filter(function (s) {
+    if (!s) return false;
+    var key = s.toLowerCase();
+    if (seen[key]) return false;
+    seen[key] = true;
+    return true;
+  });
 }
 
 function shouldIncludeFodeRegistrationLineV2_(record, sourceAmount, subjectTotal) {
   var row = record || {};
   if (safeStr_(row.Registration_Complete || "") !== "Yes") return false;
-  if (!(sourceAmount > 0)) return true;
-  return sourceAmount > subjectTotal;
+  if (!parseFodeSelectedSubjectsV2_(row).length) return true;
+  var explicitYesFields = [
+    "Registration_Fee_Included",
+    "Include_Registration_Fee",
+    "Include_Registration",
+    "Registration_Item_Required",
+    "Books_Include_Registration"
+  ];
+  for (var i = 0; i < explicitYesFields.length; i++) {
+    var value = safeStr_(row[explicitYesFields[i]] || "").toLowerCase();
+    if (value === "yes" || value === "true" || value === "1") return true;
+  }
+  return false;
 }
 
-function buildZohoBooksResolvedLineItemsV2_(record) {
+function buildZohoBooksResolvedLineItemsV2_(record, options) {
   var row = record || {};
+  var opts = options && typeof options === "object" ? options : {};
   var subjects = parseFodeSelectedSubjectsV2_(row);
   var gradeCode = getFodeGradeCode_(row);
   var amount = parseZohoBooksRate_(safeStr_(row.Fee_Total_Kina || row.Total_Fee_Kina || row.Total_Fee || ""));
   var isKia = /kia/i.test(safeStr_(row.Type || "")) || /kia/i.test(safeStr_(row.Program_Applied_For || row.Program || ""));
+  var liveByName = buildZohoBooksLiveItemsByName_(opts.liveItemsResult);
   var out = {
     lineItems: [],
     unresolvedSubjects: [],
+    unresolvedSubjectDetails: [],
     warnings: [],
     sourceAmount: amount > 0 ? amount : 0,
     calculatedAmount: 0,
     amountMismatch: false,
     amountMismatchText: "",
     includesRegistration: false,
+    registrationIncluded: false,
     institution: isKia ? "KIA" : "FODE"
   };
 
@@ -1144,11 +1285,85 @@ function buildZohoBooksResolvedLineItemsV2_(record) {
   return out;
 }
 
-function buildZohoBooksDraftInvoicePayload_(record, payer, booksContact) {
+function buildZohoBooksResolvedLineItemsV3_(record, options) {
   var row = record || {};
+  var opts = options && typeof options === "object" ? options : {};
+  var subjects = parseFodeSelectedSubjectsV2_(row);
+  var gradeCode = getFodeGradeCode_(row);
+  var amount = parseZohoBooksRate_(safeStr_(row.Fee_Total_Kina || row.Total_Fee_Kina || row.Total_Fee || ""));
+  var isKia = /kia/i.test(safeStr_(row.Type || "")) || /kia/i.test(safeStr_(row.Program_Applied_For || row.Program || ""));
+  var liveByName = buildZohoBooksLiveItemsByName_(opts.liveItemsResult);
+  var out = {
+    lineItems: [],
+    unresolvedSubjects: [],
+    unresolvedSubjectDetails: [],
+    warnings: [],
+    sourceAmount: amount > 0 ? amount : 0,
+    calculatedAmount: 0,
+    amountMismatch: false,
+    amountMismatchText: "",
+    includesRegistration: false,
+    registrationIncluded: false,
+    institution: isKia ? "KIA" : "FODE"
+  };
+
+  if (isKia && gradeCode) {
+    var kiaName = buildZohoBooksItemDisplayName_(gradeCode, "KIA - Tuition Fee");
+    var kiaResolved = resolveZohoBooksCatalogLineItem_(kiaName, "KIA", "kia_tuition", "", liveByName);
+    if (kiaResolved.ok) {
+      out.lineItems.push(kiaResolved.lineItem);
+      out.calculatedAmount += Number(kiaResolved.lineItem.amount || 0);
+    } else {
+      out.warnings.push(kiaResolved.message || "KIA tuition item could not be resolved confidently.");
+    }
+  } else {
+    for (var i = 0; i < subjects.length; i++) {
+      var subjectName = subjects[i];
+      var desiredName = buildZohoBooksItemDisplayName_("FD" + gradeCode, subjectName);
+      var resolvedSubject = resolveZohoBooksCatalogLineItem_(desiredName, "FODE", "subject_fee", subjectName, liveByName);
+      if (resolvedSubject.ok) {
+        out.lineItems.push(resolvedSubject.lineItem);
+        out.calculatedAmount += Number(resolvedSubject.lineItem.amount || 0);
+      } else {
+        out.unresolvedSubjects.push(subjectName);
+        out.unresolvedSubjectDetails.push({
+          subject: subjectName,
+          desiredItemName: desiredName,
+          code: resolvedSubject.code || "ITEM_NOT_RESOLVED",
+          message: resolvedSubject.message || ("Subject could not be resolved: " + subjectName)
+        });
+      }
+    }
+    if (shouldIncludeFodeRegistrationLineV2_(row, out.sourceAmount, out.calculatedAmount)) {
+      var registrationName = out.sourceAmount > 0 && out.sourceAmount <= (out.calculatedAmount + 600)
+        ? "Registration FODE (No Tablet)"
+        : "Registration FODE (Full)";
+      var resolvedRegistration = resolveZohoBooksCatalogLineItem_(registrationName, "FODE", "registration_fee", "", liveByName);
+      if (resolvedRegistration.ok) {
+        resolvedRegistration.lineItem.matchConfidence = "medium";
+        out.lineItems.push(resolvedRegistration.lineItem);
+        out.calculatedAmount += Number(resolvedRegistration.lineItem.amount || 0);
+        out.includesRegistration = true;
+        out.registrationIncluded = true;
+      } else {
+        out.warnings.push(resolvedRegistration.message || "Registration line was indicated by source context but could not be resolved confidently.");
+      }
+    }
+  }
+
+  if (out.sourceAmount > 0 && out.calculatedAmount > 0 && out.sourceAmount !== out.calculatedAmount) {
+    out.amountMismatch = true;
+    out.amountMismatchText = "Source amount " + String(out.sourceAmount) + " differs from calculated line total " + String(out.calculatedAmount) + ".";
+  }
+  return out;
+}
+
+function buildZohoBooksDraftInvoicePayload_(record, payer, booksContact, options) {
+  var row = record || {};
+  var opts = options && typeof options === "object" ? options : {};
   var p = payer || resolveFodePayerFromRecord_(row);
   var item = buildZohoBooksItemCandidate_(row);
-  var resolved = buildZohoBooksResolvedLineItemsV2_(row);
+  var resolved = buildZohoBooksResolvedLineItemsV3_(row, opts);
   var billingReference = buildFodeBillingReference_(row);
   var studentName = (typeof rowStudentName_ === "function" ? rowStudentName_(row) : (safeStr_(row.First_Name || "") + " " + safeStr_(row.Last_Name || "")).trim()) || "";
   var lineDescription = [

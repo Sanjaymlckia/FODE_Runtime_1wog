@@ -493,6 +493,102 @@ function canWriteZohoBooksForAdmin_(email) {
   return getZohoBooksWriteAdminEmails_().indexOf(e) >= 0;
 }
 
+function getZohoBooksOAuthSetupAllowedKeys_() {
+  return [
+    "ZOHO_BOOKS_CLIENT_ID",
+    "ZOHO_BOOKS_CLIENT_SECRET",
+    "ZOHO_BOOKS_REFRESH_TOKEN",
+    "ZOHO_BOOKS_ACCOUNTS_URL",
+    "ZOHO_BOOKS_API_DOMAIN",
+    "ZOHO_BOOKS_ORGANIZATION_ID"
+  ];
+}
+
+function admin_setZohoBooksOAuthProperties(payload) {
+  return withEnvelope_("admin_setZohoBooksOAuthProperties", function (dbgId) {
+    var adminEmail = getCallerEmail_();
+    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    requireSuperAdmin_(adminEmail);
+    if (CONFIG.ENABLE_ZOHO_BOOKS_SECRET_SETUP !== true) {
+      return err_("SECRET_SETUP_DISABLED", "Temporary Zoho Books secret setup is disabled.", dbgId);
+    }
+
+    var p = payload && typeof payload === "object" ? payload : {};
+    var wrapped = p.properties && typeof p.properties === "object";
+    if (wrapped) {
+      var outerRejected = Object.keys(p).filter(function (key) { return key !== "properties"; });
+      if (outerRejected.length) {
+        return err_("INVALID_PROPERTY_KEY", "Only the approved Zoho Books OAuth properties wrapper is accepted.", dbgId, {
+          rejectedKeys: outerRejected
+        });
+      }
+    }
+    var values = wrapped ? p.properties : p;
+    var allowed = getZohoBooksOAuthSetupAllowedKeys_();
+    var allowedMap = {};
+    allowed.forEach(function (key) { allowedMap[key] = true; });
+
+    var submittedKeys = Object.keys(values || {});
+    if (!submittedKeys.length) {
+      return err_("NO_PROPERTIES_SUBMITTED", "No Zoho Books OAuth properties were submitted.", dbgId);
+    }
+    var rejected = submittedKeys.filter(function (key) { return !allowedMap[key]; });
+    if (rejected.length) {
+      return err_("INVALID_PROPERTY_KEY", "Only approved Zoho Books OAuth property keys are accepted.", dbgId, {
+        rejectedKeys: rejected
+      });
+    }
+
+    var missing = allowed.filter(function (key) {
+      return !Object.prototype.hasOwnProperty.call(values, key) || !clean_(values[key]);
+    });
+    if (missing.length) {
+      return err_("MISSING_PROPERTY_VALUES", "All approved Zoho Books OAuth properties are required for setup.", dbgId, {
+        missingKeys: missing
+      });
+    }
+
+    var fixed = {
+      ZOHO_BOOKS_ACCOUNTS_URL: "https://accounts.zoho.com",
+      ZOHO_BOOKS_API_DOMAIN: "https://www.zohoapis.com",
+      ZOHO_BOOKS_ORGANIZATION_ID: "908427349"
+    };
+    var fixedKeys = Object.keys(fixed);
+    for (var i = 0; i < fixedKeys.length; i++) {
+      var fixedKey = fixedKeys[i];
+      if (clean_(values[fixedKey]) !== fixed[fixedKey]) {
+        return err_("INVALID_PROPERTY_VALUE", "A fixed Zoho Books setup property did not match the approved value.", dbgId, {
+          key: fixedKey
+        });
+      }
+    }
+
+    var props = PropertiesService.getScriptProperties();
+    var savedKeys = [];
+    var valueLengths = {};
+    allowed.forEach(function (key) {
+      var value = clean_(values[key]);
+      props.setProperty(key, value);
+      savedKeys.push(key);
+      valueLengths[key] = value.length;
+    });
+
+    var tokenStatus = getZohoBooksTokenReadiness_();
+    return ok_({
+      status: tokenStatus && tokenStatus.ok === true ? "TOKEN_READY" : "TOKEN_NOT_READY",
+      savedKeys: savedKeys,
+      valueLengths: valueLengths,
+      tokenStatus: tokenStatus && typeof tokenStatus === "object" ? {
+        ok: tokenStatus.ok === true,
+        code: safeStr_(tokenStatus.code || ""),
+        message: safeStr_(tokenStatus.message || ""),
+        tokenSource: safeStr_(tokenStatus.tokenSource || ""),
+        requiredScopes: tokenStatus.requiredScopes || []
+      } : { ok: false, code: "TOKEN_STATUS_UNAVAILABLE" }
+    }, dbgId);
+  });
+}
+
 function findZohoBooksApplicantRow_(sheet, payload) {
   var p = payload || {};
   var rowNumber = Number(p.rowNumber || p.row || 0);
@@ -624,7 +720,9 @@ function buildZohoBooksPreviewResult_(rowObj, options) {
   var payerKey = buildFodePayerKey_(payer);
   var billingReference = buildFodeBillingReference_(row);
   var itemCandidate = buildZohoBooksItemCandidate_(row);
-  var resolvedItems = buildZohoBooksResolvedLineItemsV2_(row);
+  var resolvedItems = buildZohoBooksResolvedLineItemsV3_(row, {
+    liveItemsResult: opts.itemsDiscovery && opts.itemsDiscovery.ok === true ? opts.itemsDiscovery : null
+  });
   var amountRaw = safeStr_(row.Fee_Total_Kina || row.Total_Fee_Kina || row.Total_Fee || itemCandidate.amount || "");
   var amount = Number(String(amountRaw).replace(/[^0-9.]/g, ""));
   var contactPayload = buildZohoBooksContactPayload_(row, payer);
@@ -654,7 +752,9 @@ function buildZohoBooksPreviewResult_(rowObj, options) {
     contact_id: safeStr_(contactLookup.matches[0].contact_id || contactLookup.matches[0].contactId || ""),
     contact_name: safeStr_(contactLookup.matches[0].contact_name || contactLookup.matches[0].contactName || "")
   } : null);
-  var invoicePayload = buildZohoBooksDraftInvoicePayload_(row, payer, booksContact);
+  var invoicePayload = buildZohoBooksDraftInvoicePayload_(row, payer, booksContact, {
+    liveItemsResult: opts.itemsDiscovery && opts.itemsDiscovery.ok === true ? opts.itemsDiscovery : null
+  });
   var safeToPush = missingFields.length === 0
     && (idempotencyStatus === "READY" || idempotencyStatus === "REMOTE_CHECK_UNAVAILABLE")
     && safeStr_(row.Books_Push_Status || "") === "READY";
@@ -687,9 +787,11 @@ function buildZohoBooksPreviewResult_(rowObj, options) {
     selectedItemAmountMismatchText: safeStr_(resolvedItems.amountMismatchText || itemCandidate.amountMismatchText || ""),
     selectedLineItems: redactZohoBooksPayloadForUi_(resolvedItems.lineItems || []),
     unresolvedSubjects: resolvedItems.unresolvedSubjects || [],
+    unresolvedSubjectDetails: resolvedItems.unresolvedSubjectDetails || [],
     calculatedAmount: Number(resolvedItems.calculatedAmount || 0),
     sourceAmount: Number(resolvedItems.sourceAmount || 0),
     includesRegistration: resolvedItems.includesRegistration === true,
+    registrationIncluded: resolvedItems.registrationIncluded === true,
     amount: amount > 0 ? amount : Number(resolvedItems.calculatedAmount || itemCandidate.amount || 0),
     contactPayloadPreview: redactZohoBooksPayloadForUi_(contactPayload),
     invoicePayloadPreview: redactZohoBooksPayloadForUi_(invoicePayload),
@@ -755,12 +857,16 @@ function admin_previewZohoBooksFodePayload(payload) {
     var invoiceLookup = safeStr_(ctx.rowObj.Books_Invoice_ID || "")
       ? { ok: true, code: "LOCAL_INVOICE_ID", matches: [{ invoice_id: safeStr_(ctx.rowObj.Books_Invoice_ID || ""), invoice_number: safeStr_(ctx.rowObj.Books_Invoice_Number || "") }] }
       : zohoBooksFindInvoiceByFodeReference_(buildFodeBillingReference_(ctx.rowObj));
+    var tokenStatus = getZohoBooksTokenReadiness_();
+    var itemsDiscovery = tokenStatus.ok === true ? zohoBooksDiscoverItems_() : tokenStatus;
     var preview = buildZohoBooksPreviewResult_(ctx.rowObj, {
       contactLookup: contactLookup,
-      invoiceLookup: invoiceLookup
+      invoiceLookup: invoiceLookup,
+      itemsDiscovery: itemsDiscovery
     });
     preview.fieldReadiness = evaluateZohoBooksHeaderReadiness_(ctx.headers);
-    preview.tokenStatus = getZohoBooksTokenReadiness_();
+    preview.tokenStatus = tokenStatus;
+    preview.itemsDiscovery = itemsDiscovery;
     preview.debugId = dbgId;
     return preview;
   });

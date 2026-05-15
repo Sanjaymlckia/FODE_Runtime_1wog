@@ -7,9 +7,9 @@
  */
 var CONFIG = {
   // Versioning (change control)
-  VERSION: "r165",
+  VERSION: "r166",
 CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alignment",
-  DEPLOY_VERSION_NUMBER: 165,
+  DEPLOY_VERSION_NUMBER: 166,
 BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
 
   // STAGING/PROD data mode routing (working sheet)
@@ -78,6 +78,7 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   ZOHO_BOOKS_API_BASE: "https://www.zohoapis.com/books/v3",
   ENABLE_ZOHO_BOOKS_INTEGRATION: false,
   ENABLE_ZOHO_BOOKS_DRY_RUN: true,
+  ENABLE_ZOHO_BOOKS_SECRET_SETUP: false,
   ENABLE_ZOHO_BOOKS_DRAFT_INVOICE_CREATE: false,
   ZOHO_BOOKS_ORGANIZATION_ID: "908427349",
   ZOHO_BOOKS_ORGANIZATION_NAME: "Kundu International Academy",

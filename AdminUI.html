@@ -962,6 +962,28 @@
       <div id="booksDryRunCard" class="box booksDryRunPanel">
         <div class="booksDryRunTitle">Zoho Books FODE Preview / Dry Run</div>
         <div class="booksDryRunNote">No invoice will be created unless live write flags are enabled.</div>
+        <? if (IS_SUPER && CONFIG && CONFIG.ENABLE_ZOHO_BOOKS_SECRET_SETUP === true) { ?>
+        <div id="booksSecretSetupPanel" class="box booksDryRunPanel" style="margin-top:10px;">
+          <div class="booksDryRunTitle">Temporary Zoho Books Secret Setup</div>
+          <div class="booksDryRunNote">Temporary Zoho Books secret setup. Values are stored in Script Properties. Values are never displayed back.</div>
+          <div class="row" style="margin-top:10px;">
+            <div class="field" style="flex:1 1 260px;">
+              <label>Client ID</label>
+              <input id="booksClientId" type="password" autocomplete="off">
+            </div>
+            <div class="field" style="flex:1 1 260px;">
+              <label>Client Secret</label>
+              <input id="booksClientSecret" type="password" autocomplete="off">
+            </div>
+            <div class="field" style="flex:1 1 260px;">
+              <label>Refresh Token</label>
+              <input id="booksRefreshToken" type="password" autocomplete="off">
+            </div>
+            <button id="btnBooksSecretSetup" class="btn small danger" type="button" onclick="saveZohoBooksSecretsUi_()">Save OAuth Properties</button>
+          </div>
+          <div id="booksSecretSetupResult" class="booksDryRunPayload hidden"></div>
+        </div>
+        <? } ?>
         <div class="row" style="margin-top:10px;">
           <div class="field" style="flex:1 1 260px;">
             <label>ApplicantID / Row Selector</label>
@@ -1174,7 +1196,8 @@
       busy: false,
       preflight: null,
       preview: null,
-      createResult: null
+      createResult: null,
+      secretSetupBusy: false
     };
     let commDerivedRequestId = 0;
     // Session-only fallback for "Sent" state when no persistent sent field is present in payload.
@@ -1819,9 +1842,11 @@
           currentBooksInvoiceStatus: preview.currentBooksInvoiceStatus || "",
           idempotencyStatus: preview.idempotencyStatus || "",
           unresolvedSubjects: preview.unresolvedSubjects || [],
+          unresolvedSubjectDetails: preview.unresolvedSubjectDetails || [],
           calculatedAmount: preview.calculatedAmount || 0,
           sourceAmount: preview.sourceAmount || 0,
           includesRegistration: preview.includesRegistration === true,
+          registrationIncluded: preview.registrationIncluded === true,
           selectedLineItems: preview.selectedLineItems || [],
           selectedItem: {
             itemId: preview.selectedItemId || "",
@@ -1873,6 +1898,72 @@
           renderZohoBooksPreviewUi_();
         })
         .admin_preflightZohoBooks({});
+    }
+    function saveZohoBooksSecretsUi_(){
+      if (booksPreviewState.secretSetupBusy) return;
+      var clientIdEl = document.getElementById("booksClientId");
+      var clientSecretEl = document.getElementById("booksClientSecret");
+      var refreshTokenEl = document.getElementById("booksRefreshToken");
+      var resultEl = document.getElementById("booksSecretSetupResult");
+      var btn = document.getElementById("btnBooksSecretSetup");
+      var payload = {
+        properties: {
+          ZOHO_BOOKS_CLIENT_ID: String((clientIdEl && clientIdEl.value) || "").trim(),
+          ZOHO_BOOKS_CLIENT_SECRET: String((clientSecretEl && clientSecretEl.value) || "").trim(),
+          ZOHO_BOOKS_REFRESH_TOKEN: String((refreshTokenEl && refreshTokenEl.value) || "").trim(),
+          ZOHO_BOOKS_ACCOUNTS_URL: "https://accounts.zoho.com",
+          ZOHO_BOOKS_API_DOMAIN: "https://www.zohoapis.com",
+          ZOHO_BOOKS_ORGANIZATION_ID: "908427349"
+        }
+      };
+      booksPreviewState.secretSetupBusy = true;
+      if (btn) btn.disabled = true;
+      if (resultEl) {
+        resultEl.textContent = "Saving approved key names only...";
+        resultEl.classList.remove("hidden");
+      }
+      google.script.run
+        .withSuccessHandler(function(res){
+          booksPreviewState.secretSetupBusy = false;
+          if (btn) btn.disabled = false;
+          if (clientIdEl) clientIdEl.value = "";
+          if (clientSecretEl) clientSecretEl.value = "";
+          if (refreshTokenEl) refreshTokenEl.value = "";
+          var safe = res && typeof res === "object" ? {
+            ok: res.ok === true,
+            status: res.status || "",
+            savedKeys: res.savedKeys || [],
+            valueLengths: res.valueLengths || {},
+            tokenStatus: res.tokenStatus ? {
+              ok: res.tokenStatus.ok === true,
+              code: res.tokenStatus.code || "",
+              message: res.tokenStatus.message || "",
+              tokenSource: res.tokenStatus.tokenSource || ""
+            } : null,
+            debugId: res.debugId || ""
+          } : { ok: false, code: "INVALID_SECRET_SETUP_RESPONSE" };
+          if (resultEl) {
+            resultEl.textContent = "Zoho Books OAuth setup result\n" + JSON.stringify(safe, null, 2);
+            resultEl.classList.remove("hidden");
+          }
+          preflightZohoBooksUi_();
+        })
+        .withFailureHandler(function(err){
+          booksPreviewState.secretSetupBusy = false;
+          if (btn) btn.disabled = false;
+          if (clientIdEl) clientIdEl.value = "";
+          if (clientSecretEl) clientSecretEl.value = "";
+          if (refreshTokenEl) refreshTokenEl.value = "";
+          if (resultEl) {
+            resultEl.textContent = "Zoho Books OAuth setup failed\n" + JSON.stringify({
+              ok: false,
+              code: "SECRET_SETUP_FAILED",
+              message: String((err && err.message) || err || "Setup failed.")
+            }, null, 2);
+            resultEl.classList.remove("hidden");
+          }
+        })
+        .admin_setZohoBooksOAuthProperties(payload);
     }
     function previewZohoBooksPayloadUi_(){
       if (booksPreviewState.busy) return;
