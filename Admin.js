@@ -552,8 +552,68 @@ function evaluateZohoBooksHeaderReadiness_(headers) {
     required: required,
     present: present,
     missing: missing,
+    status: missing.length ? "COLUMN_MISSING" : "COLUMN_READY",
     writeBlocked: missing.length > 0
   };
+}
+
+function findSimilarZohoBooksHeaders_(headers, required) {
+  var list = Array.isArray(headers) ? headers : [];
+  var need = Array.isArray(required) ? required : [];
+  function norm(s) {
+    return safeStr_(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  }
+  var out = {};
+  need.forEach(function (key) {
+    if (!key) return;
+    var target = norm(key);
+    var exact = safeStr_(key);
+    var matches = [];
+    list.forEach(function (header) {
+      var raw = safeStr_(header);
+      if (!raw || raw === exact) return;
+      if (norm(raw) === target) matches.push(raw);
+    });
+    if (matches.length) out[exact] = matches;
+  });
+  return out;
+}
+
+function ensureZohoBooksHeaders_(sheet) {
+  var sh = sheet;
+  if (!sh) {
+    return { ok: false, code: "SHEET_NOT_CONFIRMED", message: "Main data sheet is not available." };
+  }
+  var expectedName = clean_(CONFIG.SHEET_NAME_WORKING || CONFIG.SHEET_TAB_WORKING || "");
+  var actualName = clean_(sh.getName ? sh.getName() : "");
+  if (!expectedName || !actualName || actualName !== expectedName) {
+    return {
+      ok: false,
+      code: "SHEET_NOT_CONFIRMED",
+      message: "Target sheet could not be confirmed safely.",
+      expectedSheetName: expectedName,
+      actualSheetName: actualName
+    };
+  }
+  var lastCol = Math.max(1, Number(sh.getLastColumn() || 1));
+  var headers = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+  var readinessBefore = evaluateZohoBooksHeaderReadiness_(headers);
+  var missing = readinessBefore.missing.slice();
+  var added = [];
+  if (missing.length) {
+    sh.getRange(1, lastCol + 1, 1, missing.length).setValues([missing]);
+    added = missing.slice();
+    SpreadsheetApp.flush();
+  }
+  var finalHeaders = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  var readinessAfter = evaluateZohoBooksHeaderReadiness_(finalHeaders);
+  readinessAfter.added = added;
+  readinessAfter.alreadyPresent = readinessBefore.present.slice();
+  readinessAfter.similarNonExact = findSimilarZohoBooksHeaders_(finalHeaders, readinessAfter.required);
+  readinessAfter.sheetName = actualName;
+  readinessAfter.sheetConfirmed = true;
+  readinessAfter.status = readinessAfter.missing.length ? "COLUMN_MISSING" : "COLUMN_READY";
+  return { ok: true, headers: finalHeaders, readiness: readinessAfter };
 }
 
 function buildZohoBooksPreviewResult_(rowObj, options) {
@@ -655,13 +715,15 @@ function admin_preflightZohoBooks(payload) {
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
     var cfg = getZohoBooksConfig_();
     var sh = openDataSheet_();
-    var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-    var fieldReadiness = evaluateZohoBooksHeaderReadiness_(headers);
-    var tokenStatus = getZohoBooksAccessToken_();
+    var headerEnsure = ensureZohoBooksHeaders_(sh);
+    if (!headerEnsure.ok) return headerEnsure;
+    var fieldReadiness = headerEnsure.readiness;
+    var tokenStatus = getZohoBooksTokenReadiness_();
     var contactFields = tokenStatus.ok ? zohoBooksDiscoverCustomFields_("contacts") : tokenStatus;
     var invoiceFields = tokenStatus.ok ? zohoBooksDiscoverCustomFields_("invoices") : tokenStatus;
     var items = tokenStatus.ok ? zohoBooksDiscoverItems_() : tokenStatus;
     var accounts = tokenStatus.ok ? zohoBooksDiscoverAccounts_() : tokenStatus;
+    var itemCatalogStatus = tokenStatus.ok ? compareZohoBooksItemCatalogToDiscovery_(items) : tokenStatus;
     return {
       config: cfg,
       tokenStatus: tokenStatus,
@@ -670,6 +732,7 @@ function admin_preflightZohoBooks(payload) {
       invoiceCustomFields: invoiceFields,
       itemsDiscovery: items,
       accountsDiscovery: accounts,
+      itemCatalogStatus: itemCatalogStatus,
       writeEnabled: cfg.enabled === true && cfg.draftInvoiceCreateEnabled === true,
       writeAdminAuthorized: canWriteZohoBooksForAdmin_(adminEmail),
       debugId: dbgId
@@ -697,6 +760,7 @@ function admin_previewZohoBooksFodePayload(payload) {
       invoiceLookup: invoiceLookup
     });
     preview.fieldReadiness = evaluateZohoBooksHeaderReadiness_(ctx.headers);
+    preview.tokenStatus = getZohoBooksTokenReadiness_();
     preview.debugId = dbgId;
     return preview;
   });

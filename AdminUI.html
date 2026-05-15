@@ -1792,11 +1792,16 @@
 
       if (banner) {
         var lines = [];
+        if (preflight && preflight.fieldReadiness && preflight.fieldReadiness.status) lines.push("Columns: " + String(preflight.fieldReadiness.status));
         if (preflight && preflight.tokenStatus && preflight.tokenStatus.ok !== true) lines.push("Token: " + String(preflight.tokenStatus.code || preflight.tokenStatus.message || "PREAUTH_REQUIRED"));
+        if (preflight && preflight.tokenStatus && preflight.tokenStatus.ok === true) lines.push("Token: " + String(preflight.tokenStatus.code || "TOKEN_READY"));
+        if (preflight && preflight.itemCatalogStatus && preflight.itemCatalogStatus.code) lines.push("Item Catalog: " + String(preflight.itemCatalogStatus.code));
         if (preview && preview.currentBooksInvoiceId) lines.push("ALREADY_PROCESSED: Books_Invoice_ID already exists.");
         if (preview && preview.currentBooksPushStatus && preview.currentBooksPushStatus !== "READY") lines.push("Current Books_Push_Status: " + String(preview.currentBooksPushStatus));
+        if (preview && preview.tokenStatus && preview.tokenStatus.ok !== true) lines.push("Preview Token: " + String(preview.tokenStatus.code || preview.tokenStatus.message || "PREAUTH_REQUIRED"));
         if (preview && preview.selectedItemWarning) lines.push(preview.selectedItemWarning);
         if (createResult && createResult.message) lines.push(String(createResult.message));
+        lines.push("No invoice will be created unless live write flags are enabled.");
         if (!liveWriteEnabled) lines.push("Live draft invoice creation is disabled by config flags.");
         banner.textContent = lines.join(" ");
         banner.classList.toggle("hidden", !lines.length);
@@ -1806,6 +1811,7 @@
         var missingSummary = preview ? {
           missingFields: preview.missingFields || [],
           fieldReadiness: preview.fieldReadiness || (preflight && preflight.fieldReadiness) || null,
+          tokenStatus: preview.tokenStatus || (preflight && preflight.tokenStatus) || null,
           currentBooksPushStatus: preview.currentBooksPushStatus || "",
           currentBooksContactId: preview.currentBooksContactId || "",
           currentBooksInvoiceId: preview.currentBooksInvoiceId || "",
@@ -1832,6 +1838,9 @@
         } : (preflight ? {
           fieldReadiness: preflight.fieldReadiness || null,
           tokenStatus: preflight.tokenStatus || null,
+          itemCatalogStatus: preflight.itemCatalogStatus || null,
+          contactCustomFields: preflight.contactCustomFields && preflight.contactCustomFields.ok === true ? { count: (preflight.contactCustomFields.customFields || []).length } : preflight.contactCustomFields,
+          invoiceCustomFields: preflight.invoiceCustomFields && preflight.invoiceCustomFields.ok === true ? { count: (preflight.invoiceCustomFields.customFields || []).length } : preflight.invoiceCustomFields,
           itemsDiscovery: preflight.itemsDiscovery && preflight.itemsDiscovery.ok === true ? { count: (preflight.itemsDiscovery.items || []).length } : preflight.itemsDiscovery,
           accountsDiscovery: preflight.accountsDiscovery && preflight.accountsDiscovery.ok === true ? { count: (preflight.accountsDiscovery.accounts || []).length } : preflight.accountsDiscovery
         } : null);

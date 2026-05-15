@@ -2,29 +2,30 @@
 
 ## Current Runtime Truth
 
-- Live runtime: `r164 / 164`
-- Admin whoami: `r164 / 164`, mismatch `false`
-- Student whoami: `r164 / 164`, mismatch `false`
+- Live runtime: `r165 / 165`
+- Admin whoami: `r165 / 165`, mismatch `false`
+- Student whoami: `r165 / 165`, mismatch `false`
 - Current source baseline: `e0249cd`
-- Current accepted tag: `staging-as163`
-- Git status: `r164` accepted for dry-run/preflight deployment; git finalization in progress
-- Browser acceptance for `r163` is accepted; `r164` browser acceptance is now accepted for preflight deployment only.
+- Current accepted tag: `staging-as164`
+- Git status: `r165` accepted for column readiness and safe OAuth preflight; git finalization in progress
+- Browser acceptance for `r164` is accepted; `r165` browser acceptance is now accepted for column readiness and safe OAuth preflight while all Books writes remain disabled.
 - Current live feature set includes:
   - queue aging
   - Received/Age/SLA indicators in the admin queue UI
   - safe write-once `Handled_By` and `Handled_At`
   - Admin preview diagnostics for communications preview investigation
 - Current CIS scope:
-  - FODE Portal -> KIA Zoho Books preflight and dry-run invoice preview
+  - FODE Portal -> KIA Zoho Books column readiness and OAuth preflight
   - CRM remains untouched and out of the billing trigger path
   - draft-only readiness; no auto-send, no payment recording, no bulk posting, and no live Books writes
 - Expected changed files:
+  - `Config.js`
   - `Utils.js`
   - `Admin.js`
   - `AdminUI.html`
-  - `Config.js`
   - `CURRENT_TASK.md`
-  - `docs/Zoho_Books/Item.csv`
+  - `docs/Zoho_Books/Item.csv` only if minor correction is required
+  - `docs/Zoho_Books/r165_preflight_notes.md` only if explicit OAuth/column notes are needed
 - Deferred fields stay deferred:
   - `Enrolled_By`
   - `Enrolled_At`
@@ -33,26 +34,40 @@
 - Release invariant is now governed by `AGENTS.md` and `tools/verify-remote-config-before-version.ps1`
 - Browser acceptance via Chrome extension is allowed only as narrow acceptance evidence, not as a coding or debug loop
 - Next exact step:
-  - finalize git for accepted `r164` with the Zoho Books dry-run/preflight source
-  - next CIS must address sheet write-back column readiness and Zoho Books OAuth configuration before payload preview/write testing
-  - keep all Books write flags disabled until a later write-authorized CIS explicitly changes them
+  - finalize git for accepted `r165`
+  - next CIS must configure Zoho Books OAuth/token readiness
+  - after OAuth is ready, re-run live discovery and dry-run payload confirmation against Books
+  - keep all Books write flags disabled until a later explicitly authorized write CIS
 - Acceptance checklist:
   - only allowed files changed
   - CRM trigger/source files untouched
   - Books write flags default to false
-  - preflight reports token/header/discovery state clearly
-  - preview returns payer, student, item, amount, FODE reference, payloads, and idempotency status
+  - preflight reports column readiness, token readiness, and discovery state clearly
+  - preview returns payer, student, line items, amount reconciliation, FODE reference, and idempotency status
   - create endpoint returns `WRITE_DISABLED` while live write flags remain false
   - Admin and Student `whoami` must match the intended release identity before browser testing
   - no tokens or secrets exposed in UI or logs
   - no Books contact, invoice, payment, or email side effect occurs during acceptance
-- r164 browser acceptance result:
-  - PASS for dry-run/preflight deployment
-  - Admin runtime badge shows `r164 / 164`
+- r164 accepted blocker carried into r165:
+  - the required Books write-back fields were missing
+  - OAuth was not yet configured for read-only Books discovery
+  - payload preview readiness remained blocked until those two gaps were addressed
+- r165 deployment state:
+  - `Config.js` identity bumped to `r165 / 165`
+  - remote Config proof passed after controlled `clasp push --force`
+  - Apps Script version `165` created
+  - canonical Admin and Student deployments repinned to `@165`
+  - Admin and Student `whoami` both report `r165 / 165`, mismatch `false`
+  - `clasp run` is permission-blocked for this project, so live preflight/preview verification must be completed via authenticated Admin browser acceptance
+- r165 browser acceptance result:
+  - PASS for column readiness and safe OAuth preflight
+  - runtime badge shows `r165 / 165`
   - Zoho Books dry-run panel is visible
-  - Preflight returns `PREAUTH_REQUIRED`
-  - live draft invoice creation remains disabled by config flags
-  - required Books write-back fields are reported missing, which blocks preview/write readiness
+  - `Create Draft Invoice` remains blocked by config flags
+  - preflight reports `Columns: COLUMN_READY`
+  - preflight reports `Token: PREAUTH_REQUIRED`
+  - item catalog/live discovery remains blocked by `PREAUTH_REQUIRED`
+  - required Books write-back fields are present
   - no Books contact, invoice, payment, or invoice email was created
 - Rollback note:
   - preferred rollback is deployment repin to the accepted `r163 / 163` runtime first, then revert source only if needed

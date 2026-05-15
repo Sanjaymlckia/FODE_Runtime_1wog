@@ -663,7 +663,7 @@ function getZohoBooksAccessToken_() {
   var props = PropertiesService.getScriptProperties();
   var cached = clean_(props.getProperty("ZOHO_BOOKS_ACCESS_TOKEN") || props.getProperty("ZOHO_ACCESS_TOKEN") || "");
   var expMs = Number(props.getProperty("ZOHO_BOOKS_ACCESS_TOKEN_EXP_MS") || props.getProperty("ZOHO_ACCESS_TOKEN_EXP_MS") || 0);
-  if (cached && expMs > (Date.now() + 60 * 1000)) return { ok: true, token: cached };
+  if (cached && expMs > (Date.now() + 60 * 1000)) return { ok: true, code: "TOKEN_READY", token: cached, tokenSource: "cache" };
 
   var refreshToken = clean_(props.getProperty("ZOHO_BOOKS_REFRESH_TOKEN") || props.getProperty("ZOHO_REFRESH_TOKEN") || "");
   var clientId = clean_(props.getProperty("ZOHO_BOOKS_CLIENT_ID") || props.getProperty("ZOHO_CLIENT_ID") || "");
@@ -688,13 +688,52 @@ function getZohoBooksAccessToken_() {
   var parsed;
   try { parsed = JSON.parse(body || "{}"); } catch (_e) { parsed = {}; }
   if (code < 200 || code >= 300 || !clean_(parsed.access_token || "")) {
-    return { ok: false, code: "PREAUTH_REQUIRED", message: "Zoho Books token refresh failed (" + code + ")." };
+    var errorCode = clean_(parsed.error || parsed.code || "");
+    var errorText = (errorCode + " " + clean_(parsed.error_description || parsed.message || "")).toLowerCase();
+    var safeCode = /scope/.test(errorText) ? "TOKEN_SCOPE_INSUFFICIENT" : (/invalid|expired|revoked|grant/.test(errorText) ? "PREAUTH_REQUIRED" : "TOKEN_REFRESH_FAILED");
+    return { ok: false, code: safeCode, message: "Zoho Books token refresh failed (" + code + ")." };
   }
   var accessToken = clean_(parsed.access_token);
   var expiresIn = Number(parsed.expires_in || parsed.expires_in_sec || 3600);
   props.setProperty("ZOHO_BOOKS_ACCESS_TOKEN", accessToken);
   props.setProperty("ZOHO_BOOKS_ACCESS_TOKEN_EXP_MS", String(Date.now() + Math.max(120, expiresIn - 60) * 1000));
-  return { ok: true, token: accessToken };
+  return { ok: true, code: "TOKEN_READY", token: accessToken, tokenSource: "refresh" };
+}
+
+function getZohoBooksTokenReadiness_() {
+  var res = getZohoBooksAccessToken_();
+  if (!res || typeof res !== "object") {
+    return { ok: false, code: "TOKEN_REFRESH_FAILED", message: "Zoho Books token readiness could not be determined." };
+  }
+  if (res.ok !== true) {
+    return {
+      ok: false,
+      code: safeStr_(res.code || "TOKEN_REFRESH_FAILED"),
+      message: safeStr_(res.message || "Zoho Books token readiness failed."),
+      requiredScopes: [
+        "ZohoBooks.fullaccess.all",
+        "ZohoBooks.settings.READ",
+        "ZohoBooks.contacts.READ",
+        "ZohoBooks.invoices.READ",
+        "ZohoBooks.items.READ",
+        "ZohoBooks.chartofaccounts.READ"
+      ]
+    };
+  }
+  return {
+    ok: true,
+    code: "TOKEN_READY",
+    message: "Zoho Books token is ready for read-only discovery.",
+    tokenSource: safeStr_(res.tokenSource || ""),
+    requiredScopes: [
+      "ZohoBooks.fullaccess.all",
+      "ZohoBooks.settings.READ",
+      "ZohoBooks.contacts.READ",
+      "ZohoBooks.invoices.READ",
+      "ZohoBooks.items.READ",
+      "ZohoBooks.chartofaccounts.READ"
+    ]
+  };
 }
 
 function firstNonEmptyBooksField_(record, names) {
@@ -1192,10 +1231,12 @@ function zohoBooksApiRequest_(method, path, payload, options) {
     var parsed;
     try { parsed = JSON.parse(text || "{}"); } catch (_e) { parsed = {}; }
     if (status < 200 || status >= 300) {
+      var apiMessage = safeStr_(parsed.message || "Zoho Books API request failed.");
+      var safeCode = status === 401 ? "PREAUTH_REQUIRED" : (status === 403 ? "TOKEN_SCOPE_INSUFFICIENT" : "BOOKS_API_HTTP_" + String(status || 0));
       return {
         ok: false,
-        code: "BOOKS_API_HTTP_" + String(status || 0),
-        message: safeStr_(parsed.message || "Zoho Books API request failed."),
+        code: safeCode,
+        message: apiMessage,
         status: status,
         response: parsed
       };
@@ -1222,6 +1263,48 @@ function zohoBooksDiscoverItems_() {
   var res = zohoBooksApiRequest_("get", "items", null, { query: { per_page: 200 } });
   if (!res.ok) return res;
   return { ok: true, items: Array.isArray(res.response && res.response.items) ? res.response.items : [] };
+}
+
+function compareZohoBooksItemCatalogToDiscovery_(itemsResult) {
+  if (!itemsResult || itemsResult.ok !== true) return itemsResult;
+  var liveItems = Array.isArray(itemsResult.items) ? itemsResult.items : [];
+  var staticItems = getZohoBooksStaticItemCatalog_();
+  var liveByName = {};
+  liveItems.forEach(function (item) {
+    var key = normalizeZohoBooksItemText_(item && item.name || "");
+    if (!key) return;
+    if (!liveByName[key]) liveByName[key] = [];
+    liveByName[key].push(item);
+  });
+  var missingInLive = [];
+  var rateMismatch = [];
+  staticItems.forEach(function (item) {
+    var key = normalizeZohoBooksItemText_(item.itemName || "");
+    var matches = liveByName[key] || [];
+    if (!matches.length) {
+      missingInLive.push(safeStr_(item.itemName || ""));
+      return;
+    }
+    var matched = matches[0] || {};
+    var liveRate = Number(matched.rate || 0);
+    var expectedRate = Number(item.rate || 0);
+    if (liveRate !== expectedRate) {
+      rateMismatch.push({
+        itemName: safeStr_(item.itemName || ""),
+        catalogRate: expectedRate,
+        liveRate: liveRate
+      });
+    }
+  });
+  return {
+    ok: true,
+    code: (!missingInLive.length && !rateMismatch.length) ? "ITEM_CATALOG_MATCH" : "ITEM_CATALOG_MISMATCH",
+    catalogCount: staticItems.length,
+    liveCount: liveItems.length,
+    missingInLive: missingInLive,
+    rateMismatch: rateMismatch,
+    writeBlocked: !!(missingInLive.length || rateMismatch.length)
+  };
 }
 
 function zohoBooksDiscoverAccounts_() {
