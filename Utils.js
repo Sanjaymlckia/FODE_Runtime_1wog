@@ -650,6 +650,10 @@ function getZohoBooksConfig_() {
     enabled: CONFIG.ENABLE_ZOHO_BOOKS_INTEGRATION === true,
     dryRun: CONFIG.ENABLE_ZOHO_BOOKS_DRY_RUN !== false,
     draftInvoiceCreateEnabled: CONFIG.ENABLE_ZOHO_BOOKS_DRAFT_INVOICE_CREATE === true,
+    testInvoiceEmailSendEnabled: CONFIG.ENABLE_ZOHO_BOOKS_TEST_INVOICE_EMAIL_SEND === true,
+    paymentCreateEnabled: CONFIG.ENABLE_ZOHO_BOOKS_PAYMENT_CREATE === true,
+    invoiceSendEnabled: CONFIG.ENABLE_ZOHO_BOOKS_INVOICE_SEND === true,
+    bulkPushEnabled: CONFIG.ENABLE_ZOHO_BOOKS_BULK_PUSH === true,
     organizationId: propOrgId || clean_(CONFIG.ZOHO_BOOKS_ORGANIZATION_ID || ""),
     organizationName: clean_(CONFIG.ZOHO_BOOKS_ORGANIZATION_NAME || ""),
     defaultCurrency: clean_(CONFIG.ZOHO_BOOKS_DEFAULT_CURRENCY || "PGK"),
@@ -658,7 +662,11 @@ function getZohoBooksConfig_() {
     billingPrefix: clean_(CONFIG.FODE_BILLING_REFERENCE_PREFIX || "FODE"),
     billingYear: clean_(CONFIG.FODE_BILLING_REFERENCE_YEAR || ""),
     firstTestMode: clean_(CONFIG.ZOHO_BOOKS_FIRST_TEST_MODE || "DRAFT_ONLY"),
-    apiBase: apiBase
+    fodeRegistrationItemName: clean_(CONFIG.ZOHO_BOOKS_FODE_DEFAULT_REGISTRATION_ITEM || "Registration FODE (No Tablet)"),
+    fodeSubjectFallbackItemName: clean_(CONFIG.ZOHO_BOOKS_FODE_SUBJECT_FALLBACK_ITEM || ""),
+    testEmailRecipient: clean_(CONFIG.ZOHO_BOOKS_TEST_EMAIL_RECIPIENT || ""),
+    apiBase: apiBase,
+    testApplicantIds: Array.isArray(CONFIG.ZOHO_BOOKS_TEST_APPLICANT_IDS) ? CONFIG.ZOHO_BOOKS_TEST_APPLICANT_IDS.slice() : []
   };
 }
 
@@ -679,6 +687,17 @@ function assertZohoBooksEnabledForWrite_() {
   if (cfg.draftInvoiceCreateEnabled !== true) throw new Error("WRITE_DISABLED");
   if (!cfg.organizationId) throw new Error("BOOKS_ORG_NOT_CONFIGURED");
   return cfg;
+}
+
+function isZohoBooksTestApplicantAllowed_(record) {
+  var row = record || {};
+  var applicantId = safeStr_(row.ApplicantID || row.applicantId || "");
+  var allowed = getZohoBooksConfig_().testApplicantIds || [];
+  if (!applicantId || !allowed.length) return false;
+  for (var i = 0; i < allowed.length; i++) {
+    if (safeStr_(allowed[i]) === applicantId) return true;
+  }
+  return false;
 }
 
 function getZohoBooksAccessToken_() {
@@ -868,12 +887,54 @@ function buildZohoBooksContactPayload_(record, payer) {
   return payload;
 }
 
-function getFodeGradeCode_(record) {
+function extractFodeGradeCodeFromText_(value) {
+  var raw = safeStr_(value || "");
+  if (!raw) return "";
+  var fdMatch = raw.match(/FD\s*0?(\d{1,2})/i);
+  if (fdMatch && fdMatch[1]) return String(parseInt(fdMatch[1], 10) || 0).padStart(2, "0");
+  var gradeMatch = raw.match(/(?:grade|g)\s*0?(\d{1,2})/i);
+  if (gradeMatch && gradeMatch[1]) return String(parseInt(gradeMatch[1], 10) || 0).padStart(2, "0");
+  var plainMatch = raw.match(/\b(7|8|9|10|11|12)\b/);
+  if (plainMatch && plainMatch[1]) return String(parseInt(plainMatch[1], 10) || 0).padStart(2, "0");
+  return "";
+}
+
+function getFodeGradeLevelDiagnostics_(record) {
   var row = record || {};
-  var raw = firstNonEmptyBooksField_(row, ["Program_Applied_For", "Grade_Applying_For", "Program", "Type"]);
-  var m = raw.match(/(\d{1,2})/);
-  if (!m || !m[1]) return "";
-  return String(parseInt(m[1], 10) || 0).padStart(2, "0");
+  var rawSubjects = safeStr_(row.Subjects_Selected_Canonical || row.Subjects_Selected || "");
+  var candidates = [
+    { field: "Grade_Applying_For", value: safeStr_(row.Grade_Applying_For || "") },
+    { field: "Upgrade_Grade_Stream", value: safeStr_(row.Upgrade_Grade_Stream || "") },
+    { field: "Program_Applied_For", value: safeStr_(row.Program_Applied_For || "") },
+    { field: "Program", value: safeStr_(row.Program || "") },
+    { field: "Type", value: safeStr_(row.Type || "") },
+    { field: "Program_Summary", value: safeStr_(row.Program_Summary || "") },
+    { field: "Subjects_Selected_Canonical", value: rawSubjects }
+  ];
+  for (var i = 0; i < candidates.length; i++) {
+    var candidate = candidates[i];
+    var code = extractFodeGradeCodeFromText_(candidate.value);
+    if (code) {
+      return {
+        gradeCode: code,
+        gradeLevelKey: "FD" + code,
+        sourceField: candidate.field,
+        sourceValue: candidate.value,
+        candidates: candidates
+      };
+    }
+  }
+  return {
+    gradeCode: "",
+    gradeLevelKey: "",
+    sourceField: "",
+    sourceValue: "",
+    candidates: candidates
+  };
+}
+
+function getFodeGradeCode_(record) {
+  return getFodeGradeLevelDiagnostics_(record).gradeCode || "";
 }
 
 function parseZohoBooksRate_(value) {
@@ -973,6 +1034,8 @@ function buildZohoBooksItemDisplayName_(prefix, label) {
 
 function normalizeFodeSelectedSubjectLabel_(value) {
   var raw = safeStr_(value || "")
+    .replace(/^FD\d{2}\s*[-–:]\s*/i, "")
+    .replace(/^FD\d{2}\s+/i, "")
     .replace(/\s+/g, " ")
     .replace(/\s*&\s*/g, " & ")
     .trim();
@@ -989,6 +1052,116 @@ function normalizeFodeSelectedSubjectLabel_(value) {
     "information communication technology": "ICT"
   };
   return aliases[key] || raw;
+}
+
+function getZohoBooksFodeSubjectLabelOverrides_() {
+  var src = CONFIG.ZOHO_BOOKS_FODE_SUBJECT_LABEL_OVERRIDES;
+  return src && typeof src === "object" ? src : {};
+}
+
+function isZohoBooksSourceAmountAuthoritative_() {
+  return CONFIG.ZOHO_BOOKS_SOURCE_AMOUNT_AUTHORITATIVE === true;
+}
+
+function getZohoBooksFodeRegistrationItemName_() {
+  return safeStr_(CONFIG.ZOHO_BOOKS_FODE_DEFAULT_REGISTRATION_ITEM || "Registration FODE (No Tablet)");
+}
+
+function getZohoBooksFodeSubjectFallbackItemName_() {
+  return safeStr_(CONFIG.ZOHO_BOOKS_FODE_SUBJECT_FALLBACK_ITEM || "");
+}
+
+function getZohoBooksTestEmailRecipient_() {
+  return safeStr_(CONFIG.ZOHO_BOOKS_TEST_EMAIL_RECIPIENT || "");
+}
+
+function getZohoBooksCatalogLabelsForPrefix_(prefix) {
+  var target = safeStr_(prefix || "").toUpperCase();
+  var labels = {};
+  getZohoBooksStaticItemCatalog_().forEach(function (item) {
+    var itemName = safeStr_(item && item.itemName || "");
+    var m = itemName.match(/^(FD\d{2})\s+[–-]\s+(.+)$/);
+    if (!m || safeStr_(m[1] || "").toUpperCase() !== target) return;
+    labels[safeStr_(m[2] || "").toLowerCase()] = safeStr_(m[2] || "");
+  });
+  return labels;
+}
+
+function buildZohoBooksSubjectNameCandidates_(gradeKey, mappedLabel) {
+  var prefix = safeStr_(gradeKey || "").toUpperCase();
+  var label = safeStr_(mappedLabel || "");
+  var names = [];
+  function pushName(name) {
+    var cleanName = safeStr_(name || "");
+    if (!cleanName) return;
+    if (names.indexOf(cleanName) === -1) names.push(cleanName);
+  }
+  pushName(buildZohoBooksItemDisplayName_(prefix, label));
+  if (/^FD1[12]$/.test(prefix) && /^mathematics$/i.test(label)) {
+    pushName(buildZohoBooksItemDisplayName_(prefix, "General Mathematics"));
+  }
+  return names;
+}
+
+function mapFodeSubjectToBooksLabel_(gradeCode, subjectName) {
+  var gradeKey = "FD" + safeStr_(gradeCode || "");
+  var normalized = normalizeFodeSelectedSubjectLabel_(subjectName);
+  var normalizedKey = safeStr_(normalized || "").toLowerCase();
+  var overrides = getZohoBooksFodeSubjectLabelOverrides_();
+  var gradeOverrides = overrides[gradeKey] && typeof overrides[gradeKey] === "object" ? overrides[gradeKey] : {};
+  var catalogLabels = getZohoBooksCatalogLabelsForPrefix_(gradeKey);
+  var mapped = safeStr_(gradeOverrides[normalized] || gradeOverrides[subjectName] || "");
+  if (mapped) {
+    var configuredNameCandidates = buildZohoBooksSubjectNameCandidates_(gradeKey, mapped);
+    return {
+      ok: true,
+      rawSubject: safeStr_(subjectName || ""),
+      normalizedSubject: normalized,
+      mappedLabel: mapped,
+      normalizedSubjectCode: buildZohoBooksItemDisplayName_(gradeKey, mapped),
+      mappingSource: "config_override",
+      desiredItemName: configuredNameCandidates[0] || buildZohoBooksItemDisplayName_(gradeKey, mapped),
+      desiredItemNames: configuredNameCandidates
+    };
+  }
+  if (catalogLabels[normalizedKey]) {
+    var catalogNameCandidates = buildZohoBooksSubjectNameCandidates_(gradeKey, catalogLabels[normalizedKey]);
+    return {
+      ok: true,
+      rawSubject: safeStr_(subjectName || ""),
+      normalizedSubject: normalized,
+      mappedLabel: catalogLabels[normalizedKey],
+      normalizedSubjectCode: buildZohoBooksItemDisplayName_(gradeKey, catalogLabels[normalizedKey]),
+      mappingSource: "exact_catalog_label",
+      desiredItemName: catalogNameCandidates[0] || buildZohoBooksItemDisplayName_(gradeKey, catalogLabels[normalizedKey]),
+      desiredItemNames: catalogNameCandidates
+    };
+  }
+  if (/^FD1[12]$/.test(gradeKey) && normalizedKey === "mathematics") {
+    var mathCandidates = buildZohoBooksSubjectNameCandidates_(gradeKey, "Mathematics");
+    return {
+      ok: true,
+      rawSubject: safeStr_(subjectName || ""),
+      normalizedSubject: normalized,
+      mappedLabel: "Mathematics",
+      normalizedSubjectCode: buildZohoBooksItemDisplayName_(gradeKey, "Mathematics"),
+      mappingSource: "deterministic_math_alias",
+      desiredItemName: mathCandidates[0] || buildZohoBooksItemDisplayName_(gradeKey, "Mathematics"),
+      desiredItemNames: mathCandidates
+    };
+  }
+  return {
+    ok: false,
+    rawSubject: safeStr_(subjectName || ""),
+    normalizedSubject: normalized,
+    mappedLabel: "",
+    normalizedSubjectCode: buildZohoBooksItemDisplayName_(gradeKey, normalized),
+    mappingSource: "unmapped",
+    desiredItemName: buildZohoBooksItemDisplayName_(gradeKey, normalized),
+    desiredItemNames: [buildZohoBooksItemDisplayName_(gradeKey, normalized)],
+    code: "SUBJECT_LABEL_UNMAPPED",
+    message: "No deterministic Books label mapping exists for subject " + normalized + " in " + gradeKey + "."
+  };
 }
 
 function resolveZohoBooksCatalogLineItem_(itemName, institution, category, subjectName, liveByName) {
@@ -1021,14 +1194,14 @@ function resolveZohoBooksCatalogLineItem_(itemName, institution, category, subje
     }
   }
   var liveMatched = liveMatches.length === 1 ? liveMatches[0] : null;
-  var rate = Number((liveMatched && (liveMatched.rate || 0)) || matched.rate || 0);
+  var rate = Number(matched.rate || 0);
   return {
     ok: true,
     code: liveMatched ? "LIVE_MATCH" : "CATALOG_MATCH",
     itemName: itemName,
     lineItem: {
-      itemId: safeStr_((liveMatched && (liveMatched.item_id || liveMatched.itemId)) || matched.itemId || ""),
-      itemName: safeStr_((liveMatched && liveMatched.name) || matched.itemName || ""),
+      itemId: safeStr_(matched.itemId || ""),
+      itemName: safeStr_(matched.itemName || ""),
       description: safeStr_(matched.description || ""),
       account: safeStr_(matched.account || ""),
       itemCategory: safeStr_(category || ""),
@@ -1043,7 +1216,42 @@ function resolveZohoBooksCatalogLineItem_(itemName, institution, category, subje
   };
 }
 
+function resolveZohoBooksCatalogLineItemCandidates_(itemNames, institution, category, subjectName, liveByName) {
+  var names = Array.isArray(itemNames) ? itemNames : [itemNames];
+  var attempts = [];
+  for (var i = 0; i < names.length; i++) {
+    var candidateName = safeStr_(names[i] || "");
+    if (!candidateName) continue;
+    var resolved = resolveZohoBooksCatalogLineItem_(candidateName, institution, category, subjectName, liveByName);
+    attempts.push({
+      itemName: candidateName,
+      ok: resolved.ok === true,
+      code: safeStr_(resolved.code || ""),
+      message: safeStr_(resolved.message || "")
+    });
+    if (resolved.ok) {
+      resolved.attempts = attempts;
+      resolved.itemLookupKey = candidateName;
+      return resolved;
+    }
+  }
+  var last = attempts.length ? attempts[attempts.length - 1] : {};
+  return {
+    ok: false,
+    code: safeStr_(last.code || "CATALOG_ITEM_MISSING"),
+    itemName: safeStr_(last.itemName || ""),
+    subject: safeStr_(subjectName || ""),
+    message: safeStr_(last.message || "Item.csv match not found."),
+    attempts: attempts
+  };
+}
+
 function buildZohoBooksItemCandidate_(record) {
+  // Legacy helper only.
+  // Active FODE Books preview/create now requires buildZohoBooksResolvedLineItemsV3_()
+  // plus buildZohoBooksDraftInvoicePayload_(), which fail closed when multi-line
+  // subject resolution is incomplete. Do not use this helper to drive draft invoice
+  // payloads for the active FODE Books path.
   var row = record || {};
   var subjectsRaw = safeStr_(row.Subjects_Selected_Canonical || row.Subjects_Selected || "");
   var subjects = subjectsRaw ? subjectsRaw.split(",").map(function (s) { return safeStr_(s); }).filter(function (s) { return !!s; }) : [];
@@ -1162,10 +1370,30 @@ function parseFodeSelectedSubjectsV2_(record) {
   });
 }
 
+function getFodeSelectedSubjectsDiagnostics_(record) {
+  var row = record || {};
+  var canonical = safeStr_(row.Subjects_Selected_Canonical || "");
+  var fallback = safeStr_(row.Subjects_Selected || "");
+  var rawSource = canonical ? "Subjects_Selected_Canonical" : (fallback ? "Subjects_Selected" : "");
+  var rawValue = canonical || fallback;
+  var normalizedRaw = rawValue
+    ? rawValue.replace(/\r\n/g, "\n").replace(/[|;/]+/g, ",").replace(/\n+/g, ",")
+    : "";
+  var rawSubjects = normalizedRaw
+    ? normalizedRaw.split(",").map(function (s) { return safeStr_(s); }).filter(function (s) { return !!s; })
+    : [];
+  return {
+    sourceField: rawSource,
+    rawValue: rawValue,
+    rawSubjects: rawSubjects,
+    normalizedSubjects: parseFodeSelectedSubjectsV2_(row)
+  };
+}
+
 function shouldIncludeFodeRegistrationLineV2_(record, sourceAmount, subjectTotal) {
   var row = record || {};
+  if (parseFodeSelectedSubjectsV2_(row).length) return true;
   if (safeStr_(row.Registration_Complete || "") !== "Yes") return false;
-  if (!parseFodeSelectedSubjectsV2_(row).length) return true;
   var explicitYesFields = [
     "Registration_Fee_Included",
     "Include_Registration_Fee",
@@ -1288,8 +1516,10 @@ function buildZohoBooksResolvedLineItemsV2_(record, options) {
 function buildZohoBooksResolvedLineItemsV3_(record, options) {
   var row = record || {};
   var opts = options && typeof options === "object" ? options : {};
-  var subjects = parseFodeSelectedSubjectsV2_(row);
-  var gradeCode = getFodeGradeCode_(row);
+  var subjectDiag = getFodeSelectedSubjectsDiagnostics_(row);
+  var gradeDiag = getFodeGradeLevelDiagnostics_(row);
+  var subjects = subjectDiag.normalizedSubjects || [];
+  var gradeCode = safeStr_(gradeDiag.gradeCode || "");
   var amount = parseZohoBooksRate_(safeStr_(row.Fee_Total_Kina || row.Total_Fee_Kina || row.Total_Fee || ""));
   var isKia = /kia/i.test(safeStr_(row.Type || "")) || /kia/i.test(safeStr_(row.Program_Applied_For || row.Program || ""));
   var liveByName = buildZohoBooksLiveItemsByName_(opts.liveItemsResult);
@@ -1298,12 +1528,31 @@ function buildZohoBooksResolvedLineItemsV3_(record, options) {
     unresolvedSubjects: [],
     unresolvedSubjectDetails: [],
     warnings: [],
+    rawSelectedSubjectsSource: safeStr_(subjectDiag.sourceField || ""),
+    rawSelectedSubjectsValue: safeStr_(subjectDiag.rawValue || ""),
+    rawSelectedSubjects: subjectDiag.rawSubjects || [],
+    normalizedSelectedSubjects: subjectDiag.normalizedSubjects || [],
+    normalizedSelectedSubjectCodes: [],
+    detectedGradeCode: safeStr_(gradeDiag.gradeCode || ""),
+    detectedGradeLevelKey: safeStr_(gradeDiag.gradeLevelKey || ""),
+    detectedGradeSourceField: safeStr_(gradeDiag.sourceField || ""),
+    detectedGradeSourceValue: safeStr_(gradeDiag.sourceValue || ""),
+    detectedGradeCandidates: gradeDiag.candidates || [],
+    subjectMappings: [],
     sourceAmount: amount > 0 ? amount : 0,
     calculatedAmount: 0,
+    amountDifference: 0,
     amountMismatch: false,
     amountMismatchText: "",
     includesRegistration: false,
     registrationIncluded: false,
+    registrationReason: "",
+    fallbackItemName: getZohoBooksFodeSubjectFallbackItemName_(),
+    fallbackUsed: false,
+    fallbackMissingItems: [],
+    fallbackLineCount: 0,
+    exactLineCount: 0,
+    testEmailRecipient: getZohoBooksTestEmailRecipient_(),
     institution: isKia ? "KIA" : "FODE"
   };
 
@@ -1317,43 +1566,127 @@ function buildZohoBooksResolvedLineItemsV3_(record, options) {
       out.warnings.push(kiaResolved.message || "KIA tuition item could not be resolved confidently.");
     }
   } else {
+    if (!gradeCode && subjects.length) {
+      out.unresolvedSubjects = subjects.slice();
+      out.unresolvedSubjectDetails = subjects.map(function (subjectName) {
+        return {
+          subject: subjectName,
+          normalizedSubject: subjectName,
+          normalizedSubjectCode: "",
+          desiredItemName: "",
+          code: "BLOCKED_MISSING_GRADE_LEVEL",
+          message: "Applicant grade/FODE level could not be detected for subject mapping."
+        };
+      });
+      return out;
+    }
     for (var i = 0; i < subjects.length; i++) {
       var subjectName = subjects[i];
-      var desiredName = buildZohoBooksItemDisplayName_("FD" + gradeCode, subjectName);
-      var resolvedSubject = resolveZohoBooksCatalogLineItem_(desiredName, "FODE", "subject_fee", subjectName, liveByName);
-      if (resolvedSubject.ok) {
-        out.lineItems.push(resolvedSubject.lineItem);
-        out.calculatedAmount += Number(resolvedSubject.lineItem.amount || 0);
-      } else {
+      var mappedSubject = mapFodeSubjectToBooksLabel_(gradeCode, subjectName);
+      out.subjectMappings.push(mappedSubject);
+      out.normalizedSelectedSubjectCodes.push(safeStr_(mappedSubject.normalizedSubjectCode || ""));
+      if (!mappedSubject.ok) {
         out.unresolvedSubjects.push(subjectName);
         out.unresolvedSubjectDetails.push({
           subject: subjectName,
+          normalizedSubject: safeStr_(mappedSubject.normalizedSubject || ""),
+          normalizedSubjectCode: safeStr_(mappedSubject.normalizedSubjectCode || ""),
+          desiredItemName: safeStr_(mappedSubject.desiredItemName || ""),
+          code: mappedSubject.code || "ITEM_NOT_RESOLVED",
+          message: mappedSubject.message || ("Subject could not be mapped: " + subjectName),
+          matchMode: "unmapped"
+        });
+        continue;
+      }
+      var desiredName = safeStr_(mappedSubject.desiredItemName || "");
+      var desiredNames = Array.isArray(mappedSubject.desiredItemNames) && mappedSubject.desiredItemNames.length
+        ? mappedSubject.desiredItemNames.slice()
+        : [desiredName];
+      var resolvedSubject = resolveZohoBooksCatalogLineItemCandidates_(desiredNames, "FODE", "subject_fee", subjectName, liveByName);
+      if (resolvedSubject.ok) {
+        resolvedSubject.lineItem.subjectCode = "FD" + safeStr_(gradeCode || "");
+        resolvedSubject.lineItem.subjectNormalized = safeStr_(mappedSubject.normalizedSubject || "");
+        resolvedSubject.lineItem.itemLookupKey = safeStr_(resolvedSubject.itemLookupKey || desiredName);
+        resolvedSubject.lineItem.itemLookupCandidates = desiredNames;
+        resolvedSubject.lineItem.itemCode = safeStr_(mappedSubject.normalizedSubjectCode || resolvedSubject.itemLookupKey || desiredName);
+        resolvedSubject.lineItem.matchMode = "exact";
+        resolvedSubject.lineItem.fallbackUsed = false;
+        out.lineItems.push(resolvedSubject.lineItem);
+        out.calculatedAmount += Number(resolvedSubject.lineItem.amount || 0);
+        out.exactLineCount += 1;
+      } else {
+        var fallbackName = safeStr_(out.fallbackItemName || "");
+        if (fallbackName) {
+          var fallbackResolved = resolveZohoBooksCatalogLineItem_(fallbackName, "FODE", "subject_fee_fallback", subjectName, liveByName);
+          if (fallbackResolved.ok) {
+            fallbackResolved.lineItem.subjectCode = "FD" + safeStr_(gradeCode || "");
+            fallbackResolved.lineItem.subjectNormalized = safeStr_(mappedSubject.normalizedSubject || "");
+            fallbackResolved.lineItem.itemLookupKey = safeStr_(desiredName || "");
+            fallbackResolved.lineItem.itemLookupCandidates = desiredNames;
+            fallbackResolved.lineItem.itemCode = safeStr_(mappedSubject.normalizedSubjectCode || desiredName);
+            fallbackResolved.lineItem.description = "FODE subject fee - " + safeStr_(mappedSubject.normalizedSubjectCode || desiredName).replace(/\s+[â€“-]\s+/, " ") + " (specific Books item not yet configured)";
+            fallbackResolved.lineItem.matchMode = "fallback";
+            fallbackResolved.lineItem.fallbackUsed = true;
+            fallbackResolved.lineItem.fallbackItemName = fallbackName;
+            fallbackResolved.lineItem.missingItemKey = safeStr_(desiredName || "");
+            out.lineItems.push(fallbackResolved.lineItem);
+            out.calculatedAmount += Number(fallbackResolved.lineItem.amount || 0);
+            out.fallbackUsed = true;
+            out.fallbackLineCount += 1;
+            out.fallbackMissingItems.push(safeStr_(desiredName || ""));
+            out.subjectMappings[out.subjectMappings.length - 1].fallbackUsed = true;
+            out.subjectMappings[out.subjectMappings.length - 1].fallbackItemName = fallbackName;
+            out.subjectMappings[out.subjectMappings.length - 1].missingItemKey = safeStr_(desiredName || "");
+            continue;
+          }
+        }
+        out.unresolvedSubjects.push(subjectName);
+        out.unresolvedSubjectDetails.push({
+          subject: subjectName,
+          normalizedSubject: safeStr_(mappedSubject.normalizedSubject || ""),
+          normalizedSubjectCode: safeStr_(mappedSubject.normalizedSubjectCode || ""),
           desiredItemName: desiredName,
+          desiredItemNames: desiredNames,
           code: resolvedSubject.code || "ITEM_NOT_RESOLVED",
-          message: resolvedSubject.message || ("Subject could not be resolved: " + subjectName)
+          message: resolvedSubject.message || ("Subject could not be resolved: " + subjectName),
+          matchMode: "missing_exact_item",
+          fallbackItemName: safeStr_(fallbackName || ""),
+          lookupAttempts: resolvedSubject.attempts || []
         });
       }
     }
     if (shouldIncludeFodeRegistrationLineV2_(row, out.sourceAmount, out.calculatedAmount)) {
-      var registrationName = out.sourceAmount > 0 && out.sourceAmount <= (out.calculatedAmount + 600)
-        ? "Registration FODE (No Tablet)"
-        : "Registration FODE (Full)";
+      var registrationName = getZohoBooksFodeRegistrationItemName_();
       var resolvedRegistration = resolveZohoBooksCatalogLineItem_(registrationName, "FODE", "registration_fee", "", liveByName);
       if (resolvedRegistration.ok) {
         resolvedRegistration.lineItem.matchConfidence = "medium";
-        out.lineItems.push(resolvedRegistration.lineItem);
+        out.lineItems.unshift(resolvedRegistration.lineItem);
         out.calculatedAmount += Number(resolvedRegistration.lineItem.amount || 0);
         out.includesRegistration = true;
         out.registrationIncluded = true;
+        out.registrationReason = "default_fode_registration_line";
+        out.exactLineCount += 1;
       } else {
-        out.warnings.push(resolvedRegistration.message || "Registration line was indicated by source context but could not be resolved confidently.");
+        out.unresolvedSubjects.push(registrationName);
+        out.unresolvedSubjectDetails.push({
+          subject: "Registration",
+          normalizedSubject: "Registration",
+          normalizedSubjectCode: registrationName,
+          desiredItemName: registrationName,
+          code: resolvedRegistration.code || "ITEM_NOT_RESOLVED",
+          message: resolvedRegistration.message || "Registration line item could not be resolved confidently.",
+          matchMode: "missing_registration_item"
+        });
       }
     }
   }
 
   if (out.sourceAmount > 0 && out.calculatedAmount > 0 && out.sourceAmount !== out.calculatedAmount) {
+    out.amountDifference = Number(out.sourceAmount - out.calculatedAmount);
     out.amountMismatch = true;
     out.amountMismatchText = "Source amount " + String(out.sourceAmount) + " differs from calculated line total " + String(out.calculatedAmount) + ".";
+  } else {
+    out.amountDifference = Number(out.sourceAmount - out.calculatedAmount);
   }
   return out;
 }
@@ -1362,7 +1695,6 @@ function buildZohoBooksDraftInvoicePayload_(record, payer, booksContact, options
   var row = record || {};
   var opts = options && typeof options === "object" ? options : {};
   var p = payer || resolveFodePayerFromRecord_(row);
-  var item = buildZohoBooksItemCandidate_(row);
   var resolved = buildZohoBooksResolvedLineItemsV3_(row, opts);
   var billingReference = buildFodeBillingReference_(row);
   var studentName = (typeof rowStudentName_ === "function" ? rowStudentName_(row) : (safeStr_(row.First_Name || "") + " " + safeStr_(row.Last_Name || "")).trim()) || "";
@@ -1372,6 +1704,16 @@ function buildZohoBooksDraftInvoicePayload_(record, payer, booksContact, options
     "ApplicantID: " + safeStr_(row.ApplicantID || ""),
     "Payer: " + safeStr_(p.name || "")
   ].join(" | ");
+  if (!Array.isArray(resolved.lineItems) || !resolved.lineItems.length) {
+    return {
+      ok: false,
+      code: "BLOCKED_NO_LINE_ITEMS",
+      message: "Draft invoice payload requires resolved multi-line item mappings.",
+      readinessStatus: "BLOCKED_ITEM_MAPPING",
+      unresolvedSubjects: resolved.unresolvedSubjects || [],
+      unresolvedSubjectDetails: resolved.unresolvedSubjectDetails || []
+    };
+  }
   var payload = {
     customer_id: safeStr_(booksContact && booksContact.contact_id || booksContact && booksContact.id || row.Books_Contact_ID || ""),
     currency_code: clean_(CONFIG.ZOHO_BOOKS_DEFAULT_CURRENCY || "PGK"),
@@ -1383,13 +1725,7 @@ function buildZohoBooksDraftInvoicePayload_(record, payer, booksContact, options
       "Student: " + studentName,
       "Program: " + safeStr_(row.Program_Applied_For || row.Program || "")
     ].join("\n"),
-    line_items: (Array.isArray(resolved.lineItems) && resolved.lineItems.length ? resolved.lineItems : [{
-      itemId: safeStr_(item.itemId || ""),
-      itemName: safeStr_(item.itemName || ""),
-      description: lineDescription,
-      rate: Number(item.rate || 0),
-      quantity: Number(item.quantity || 0)
-    }]).map(function (line) {
+    line_items: resolved.lineItems.map(function (line) {
       return {
         item_id: safeStr_(line.itemId || ""),
         name: safeStr_(line.itemName || ""),
@@ -1399,7 +1735,52 @@ function buildZohoBooksDraftInvoicePayload_(record, payer, booksContact, options
       };
     })
   };
-  return payload;
+  return {
+    ok: true,
+    payload: payload,
+    calculatedAmount: Number(resolved.calculatedAmount || 0),
+    sourceAmount: Number(resolved.sourceAmount || 0),
+    amountDifference: Number(resolved.amountDifference || 0),
+    fallbackUsed: resolved.fallbackUsed === true,
+    fallbackMissingItems: resolved.fallbackMissingItems || [],
+    unresolvedSubjects: resolved.unresolvedSubjects || [],
+    unresolvedSubjectDetails: resolved.unresolvedSubjectDetails || []
+  };
+}
+
+function detectZohoBooksSourceAmount_(record, resolvedItems) {
+  var row = record || {};
+  var resolved = resolvedItems && typeof resolvedItems === "object" ? resolvedItems : {};
+  var directAmount = parseZohoBooksRate_(safeStr_(row.Fee_Total_Kina || row.Total_Fee_Kina || row.Total_Fee || ""));
+  if (directAmount > 0) {
+    return {
+      amount: directAmount,
+      source: "row_amount"
+    };
+  }
+  if (typeof computeFodeFeeQuote_ === "function") {
+    try {
+      var quote = computeFodeFeeQuote_(row) || {};
+      var totalK = Number(quote.totalK || 0);
+      if (totalK > 0) {
+        return {
+          amount: totalK,
+          source: "computed_quote"
+        };
+      }
+    } catch (_e) {}
+  }
+  var calcAmount = Number(resolved.calculatedAmount || 0);
+  if (calcAmount > 0) {
+    return {
+      amount: calcAmount,
+      source: "calculated_lines"
+    };
+  }
+  return {
+    amount: 0,
+    source: ""
+  };
 }
 
 function hashZohoBooksPayload_(payload) {
@@ -1590,8 +1971,9 @@ function zohoBooksFindInvoiceByFodeReference_(fodeReference) {
   return { ok: true, matches: invoices };
 }
 
-function zohoBooksCreateDraftInvoice_(record, booksContact) {
+function zohoBooksCreateDraftInvoice_(record, booksContact, options) {
   var row = record || {};
+  var opts = options && typeof options === "object" ? options : {};
   if (safeStr_(row.Books_Invoice_ID || "")) {
     return { ok: true, code: "ALREADY_PROCESSED", invoice_id: safeStr_(row.Books_Invoice_ID || ""), invoice_number: safeStr_(row.Books_Invoice_Number || "") };
   }
@@ -1612,7 +1994,17 @@ function zohoBooksCreateDraftInvoice_(record, booksContact) {
   if (getZohoBooksConfig_().enabled !== true || getZohoBooksConfig_().draftInvoiceCreateEnabled !== true) {
     return { ok: false, code: "WRITE_DISABLED", message: "Live draft invoice creation is disabled." };
   }
-  var payload = buildZohoBooksDraftInvoicePayload_(row, resolveFodePayerFromRecord_(row), booksContact);
+  var payloadResult = buildZohoBooksDraftInvoicePayload_(row, resolveFodePayerFromRecord_(row), booksContact, {
+    liveItemsResult: opts.liveItemsResult || null
+  });
+  if (!payloadResult || payloadResult.ok !== true || !payloadResult.payload) {
+    return {
+      ok: false,
+      code: safeStr_(payloadResult && payloadResult.code || "BLOCKED_NO_LINE_ITEMS"),
+      message: safeStr_(payloadResult && payloadResult.message || "Draft invoice payload requires resolved multi-line item mappings.")
+    };
+  }
+  var payload = payloadResult.payload;
   var createRes = zohoBooksApiRequest_("post", "invoices", payload);
   if (!createRes.ok) return createRes;
   var invoiceOut = createRes.response && createRes.response.invoice ? createRes.response.invoice : {};
@@ -1621,7 +2013,45 @@ function zohoBooksCreateDraftInvoice_(record, booksContact) {
     code: "DRAFT_INVOICE_OK",
     invoice_id: safeStr_(invoiceOut.invoice_id || ""),
     invoice_number: safeStr_(invoiceOut.invoice_number || ""),
-    invoice_status: safeStr_(invoiceOut.status || "draft")
+    invoice_status: safeStr_(invoiceOut.status || "draft"),
+    payload: payload
+  };
+}
+
+function zohoBooksSendTestInvoiceEmail_(invoiceId, record, options) {
+  var cfg = getZohoBooksConfig_();
+  if (cfg.enabled !== true || cfg.testInvoiceEmailSendEnabled !== true) {
+    return { ok: false, code: "WRITE_DISABLED", message: "Zoho Books controlled test invoice email send is disabled." };
+  }
+  var targetInvoiceId = safeStr_(invoiceId || "");
+  if (!targetInvoiceId) {
+    return { ok: false, code: "INVOICE_ID_REQUIRED", message: "Books invoice ID is required." };
+  }
+  var recipient = safeStr_(cfg.testEmailRecipient || "");
+  if (!recipient) {
+    return { ok: false, code: "TEST_EMAIL_RECIPIENT_MISSING", message: "Zoho Books test email recipient is not configured." };
+  }
+  var row = record || {};
+  var billingReference = buildFodeBillingReference_(row);
+  var payload = {
+    to_mail_ids: [recipient],
+    subject: "TEST/DUMMY FODE draft invoice - " + billingReference,
+    body: [
+      "This is a controlled test invoice email from the FODE Zoho Books staging workflow.",
+      "ApplicantID: " + safeStr_(row.ApplicantID || ""),
+      "Reference: " + billingReference,
+      "Recipient override: " + recipient
+    ].join("\n")
+  };
+  var sendRes = zohoBooksApiRequest_("post", "invoices/" + encodeURIComponent(targetInvoiceId) + "/email", payload);
+  if (!sendRes.ok) return sendRes;
+  return {
+    ok: true,
+    code: "TEST_INVOICE_EMAIL_SENT",
+    invoice_id: targetInvoiceId,
+    recipient: recipient,
+    payload: payload,
+    response: sendRes.response || {}
   };
 }
 

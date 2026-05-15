@@ -482,6 +482,62 @@
       max-height:320px;
       overflow:auto;
     }
+    .booksStatusBadge{
+      margin-top:10px;
+      padding:12px 14px;
+      border-radius:12px;
+      border:1px solid rgba(34,197,94,.35);
+      background:rgba(20,83,45,.28);
+      color:#dcfce7;
+    }
+    .booksStatusBadge.hidden{ display:none; }
+    .booksStatusBadgeTitle{
+      font-size:14px;
+      font-weight:900;
+      letter-spacing:.02em;
+    }
+    .booksStatusBadgeMeta{
+      margin-top:6px;
+      font-size:12px;
+      line-height:1.45;
+      color:#bbf7d0;
+    }
+    .booksLineSummary{
+      margin-top:10px;
+      padding:12px;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.18);
+      background:rgba(11,18,32,.45);
+      color:#dbeafe;
+    }
+    .booksLineSummary.hidden{ display:none; }
+    .booksLineSummaryTitle{
+      font-size:12px;
+      font-weight:800;
+      color:#bfdbfe;
+      margin-bottom:6px;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+    }
+    .booksLineSummaryRow{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding:4px 0;
+      font-size:13px;
+    }
+    .booksLineSummaryRow.total{
+      margin-top:6px;
+      padding-top:8px;
+      border-top:1px solid rgba(148,163,184,.16);
+      font-weight:800;
+      color:#f8fafc;
+    }
+    .booksActionHint{
+      margin-top:8px;
+      font-size:12px;
+      color:#b9cbe0;
+    }
     .k{ font-size:12px; color:var(--muted); }
     .modal .k{ color:#d7e6ff; }
     .modal label{ color:#e4f0ff; }
@@ -962,6 +1018,10 @@
       <div id="booksDryRunCard" class="box booksDryRunPanel">
         <div class="booksDryRunTitle">Zoho Books FODE Preview / Dry Run</div>
         <div class="booksDryRunNote">No invoice will be created unless live write flags are enabled.</div>
+        <div id="booksInvoiceRaisedBadge" class="booksStatusBadge hidden">
+          <div id="booksInvoiceRaisedTitle" class="booksStatusBadgeTitle"></div>
+          <div id="booksInvoiceRaisedMeta" class="booksStatusBadgeMeta"></div>
+        </div>
         <? if (IS_SUPER && CONFIG && CONFIG.ENABLE_ZOHO_BOOKS_SECRET_SETUP === true) { ?>
         <div id="booksSecretSetupPanel" class="box booksDryRunPanel" style="margin-top:10px;">
           <div class="booksDryRunTitle">Temporary Zoho Books Secret Setup</div>
@@ -992,7 +1052,9 @@
           <button id="btnBooksPreflight" class="btn small" type="button" onclick="preflightZohoBooksUi_()">Preflight</button>
           <button id="btnBooksPreview" class="btn small accent" type="button" onclick="previewZohoBooksPayloadUi_()">Preview Books Payload</button>
           <button id="btnBooksCreate" class="btn small ok" type="button" onclick="createZohoBooksDraftUi_()" disabled>Create Draft Invoice</button>
+          <button id="btnBooksSendTestEmail" class="btn small warn" type="button" onclick="sendZohoBooksTestInvoiceUi_()" disabled>Send Test Invoice Email</button>
         </div>
+        <div id="booksActionHint" class="booksActionHint"></div>
         <div id="booksDryRunBanner" class="booksDryRunBanner hidden"></div>
         <div class="booksDryRunGrid">
           <div class="box"><div class="k">Payer</div><div class="v" id="booksPayerSummary">&mdash;</div></div>
@@ -1002,6 +1064,7 @@
           <div class="box"><div class="k">FODE Reference</div><div class="v" id="booksReferenceSummary">&mdash;</div></div>
           <div class="box"><div class="k">Idempotency Status</div><div class="v" id="booksIdempotencySummary">&mdash;</div></div>
         </div>
+        <div id="booksLineSummary" class="booksLineSummary hidden"></div>
         <div id="booksMissingFields" class="booksDryRunPayload hidden"></div>
         <div id="booksContactPayload" class="booksDryRunPayload hidden"></div>
         <div id="booksInvoicePayload" class="booksDryRunPayload hidden"></div>
@@ -1197,8 +1260,40 @@
       preflight: null,
       preview: null,
       createResult: null,
+      emailResult: null,
       secretSetupBusy: false
     };
+    function formatPngAmount_(value){
+      var n = Number(value || 0);
+      if (!isFinite(n)) n = 0;
+      return "PGK " + n.toLocaleString("en-US");
+    }
+    function buildBooksInvoiceRaisedTitle_(preview){
+      if (!preview || !preview.invoiceRaised) return "";
+      var parts = ["INVOICE RAISED"];
+      if (preview.currentBooksInvoiceNumber) parts.push(preview.currentBooksInvoiceNumber);
+      if (preview.currentBooksInvoiceStatus) parts.push(preview.currentBooksInvoiceStatus);
+      var amount = Number(preview.calculatedAmount || preview.amount || 0);
+      if (amount > 0) parts.push(formatPngAmount_(amount));
+      return parts.join(" — ");
+    }
+    function renderBooksLineSummary_(preview){
+      var box = document.getElementById("booksLineSummary");
+      if (!box) return;
+      var items = preview && Array.isArray(preview.selectedLineItems) ? preview.selectedLineItems : [];
+      if (!items.length) {
+        box.textContent = "";
+        box.classList.add("hidden");
+        return;
+      }
+      var html = ['<div class="booksLineSummaryTitle">Line Item Summary</div>'];
+      items.forEach(function(line){
+        html.push('<div class="booksLineSummaryRow"><span>' + esc(String(line.itemName || line.name || line.description || "Line item")) + '</span><span>' + esc(formatPngAmount_(Number(line.amount || line.rate || 0))) + '</span></div>');
+      });
+      html.push('<div class="booksLineSummaryRow total"><span>Total</span><span>' + esc(formatPngAmount_(Number(preview.calculatedAmount || 0))) + '</span></div>');
+      box.innerHTML = html.join("");
+      box.classList.remove("hidden");
+    }
     let commDerivedRequestId = 0;
     // Session-only fallback for "Sent" state when no persistent sent field is present in payload.
     let docsFollowupSentRows = new Set();
@@ -1759,7 +1854,10 @@
       sendBtn.textContent = communicationsState.busy ? "Sending..." : "Send";
       noteEl.textContent = communicationsState.busy
         ? (previewReady ? "Sending..." : "Loading preview...")
-        : (disableReason || (editableType && eligibility.active ? eligibility.text : (previewReady ? "Preview ready. You may send this message." : "Preview is required before send.")));
+        : (disableReason
+          || ((workflowIsYes_(detail.Portal_Submitted) || workflowIsYes_(detail.Enrolled_Confirmed))
+            ? "Applicant already submitted/enrolled; applicant-chasing emails are not required."
+            : (editableType && eligibility.active ? eligibility.text : (previewReady ? "Preview ready. You may send this message." : "Preview is required before send."))));
       renderCommEditablePanel_();
       renderCommunicationCooldownBanner_(detail);
       renderApplicantStatusOverlay_(detail);
@@ -1780,8 +1878,96 @@
       var el = document.getElementById(id);
       if (el) el.textContent = String(value == null || value === "" ? "—" : value);
     }
+    function workflowIsYes_(value){
+      return String(value == null ? "" : value).trim().toUpperCase() === "YES";
+    }
+    function invoiceRaisedFromRow_(row){
+      return !!String((row && row.Books_Invoice_ID) || "").trim();
+    }
+    function invoiceEmailStatusFromRow_(row){
+      var explicit = String((row && row.Invoice_Email_Status) || "").trim().toUpperCase();
+      if (explicit === "SENT" || explicit === "TEST_EMAIL_SENT") return { label: "Sent", cls: "badge badge-success", value: explicit };
+      if (explicit === "NOT_SENT") return { label: "Not Sent", cls: "badge badge-warning", value: explicit };
+      return { label: "Unknown", cls: "badge badge-muted", value: explicit || "UNKNOWN" };
+    }
+    function classroomStatusFromRow_(row){
+      var classroomRaw = String((row && (row.Classroom_Status || row.Classroom_Handover_Status || row.Classroom_Enrolled)) || "").trim();
+      if (!classroomRaw) return { label: "Classroom Pending", cls: "badge badge-muted", value: "PENDING" };
+      var upper = classroomRaw.toUpperCase();
+      if (upper === "YES" || upper === "ENROLLED" || upper === "COMPLETE") return { label: "Classroom Enrolled", cls: "badge badge-success", value: upper };
+      return { label: "Classroom " + classroomRaw, cls: "badge badge-warning", value: upper };
+    }
+    function lifecycleStatusFromRow_(row){
+      var r = row || {};
+      var classroom = classroomStatusFromRow_(r);
+      if (classroom.value === "YES" || classroom.value === "ENROLLED" || classroom.value === "COMPLETE") return "Classroom Enrolled / Complete";
+      if (workflowIsYes_(r.Enrolled_Confirmed)) return "Enrolled / Classroom Handover Pending";
+      if (invoiceRaisedFromRow_(r)) return "Invoice Raised";
+      if (workflowIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true) return "Enrolment Ready (Payment Received)";
+      if (workflowIsYes_(r.Portal_Submitted)) return "Documents / Payment Evidence Pending";
+      return "Intake Received";
+    }
+    function renderLifecycleBadgesHtml_(row){
+      var r = row || {};
+      var invoice = invoiceRaisedFromRow_(r)
+        ? { label: "Invoice Raised", cls: "badge badge-success" }
+        : { label: "No Invoice", cls: "badge badge-muted" };
+      var payment = (workflowIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true)
+        ? { label: "Payment Verified", cls: "badge badge-success" }
+        : { label: "Payment Pending", cls: "badge badge-warning" };
+      var enrolment = workflowIsYes_(r.Enrolled_Confirmed)
+        ? { label: "Enrolled Confirmed", cls: "badge badge-success" }
+        : { label: "Enrolment Pending", cls: "badge badge-warning" };
+      var classroom = classroomStatusFromRow_(r);
+      var email = invoiceEmailStatusFromRow_(r);
+      var lifecycle = lifecycleStatusFromRow_(r);
+      return [
+        "<div class='muted' style='font-size:12px;margin-bottom:4px;'>" + esc(lifecycle) + "</div>",
+        "<span class='" + invoice.cls + "'>" + esc(invoice.label) + "</span>",
+        " <span class='" + email.cls + "'>" + esc("Invoice Email: " + email.label) + "</span>",
+        " <span class='" + payment.cls + "'>" + esc(payment.label) + "</span>",
+        " <span class='" + enrolment.cls + "'>" + esc(enrolment.label) + "</span>",
+        " <span class='" + classroom.cls + "'>" + esc(classroom.label) + "</span>"
+      ].join("");
+    }
+    function buildBooksPreviewHydrationFromDetail_(detail){
+      var d = detail || {};
+      var invoiceId = String(d.Books_Invoice_ID || "").trim();
+      var amountRaw = String(d.Fee_Total_Kina || d.Total_Fee_Kina || d.Total_Fee || "").trim();
+      var amount = Number(String(amountRaw).replace(/[^0-9.]/g, "")) || 0;
+      var invoiceRaised = !!invoiceId;
+      return {
+        sourceApplicantId: String(d.ApplicantID || "").trim(),
+        invoiceRaised: invoiceRaised,
+        currentBooksInvoiceId: invoiceId,
+        currentBooksInvoiceNumber: String(d.Books_Invoice_Number || "").trim(),
+        currentBooksInvoiceStatus: String(d.Books_Invoice_Status || "").trim(),
+        currentBooksPushStatus: String(d.Books_Push_Status || "").trim(),
+        currentBooksPushAt: String(d.Books_Last_Push_At || d.Books_Push_At || "").trim(),
+        currentBooksPushBy: String(d.Books_Push_By || "").trim(),
+        currentBooksLastError: String(d.Books_Last_Error || "").trim(),
+        calculatedAmount: amount,
+        sourceAmount: amount,
+        sourceAmountDetected: amount,
+        displayAmountDifference: 0,
+        amountDifference: 0,
+        readinessStatus: invoiceRaised ? "ALREADY_PUSHED" : "WRITE_DISABLED",
+        idempotencyStatus: invoiceRaised ? "ALREADY_PROCESSED" : "NOT_PREVIEWED",
+        effectiveBooksPushStatus: invoiceRaised ? "DRAFT_INVOICE_CREATED" : "",
+        testEmailRecipient: "sanjay@minervacenters.com",
+        liveWriteEnabled: true,
+        safe_to_push: false,
+        selectedLineItems: [],
+        selectedLineCount: 0
+      };
+    }
     function renderZohoBooksPreviewUi_(){
       var createBtn = document.getElementById("btnBooksCreate");
+      var sendTestBtn = document.getElementById("btnBooksSendTestEmail");
+      var actionHint = document.getElementById("booksActionHint");
+      var raisedBadge = document.getElementById("booksInvoiceRaisedBadge");
+      var raisedTitle = document.getElementById("booksInvoiceRaisedTitle");
+      var raisedMeta = document.getElementById("booksInvoiceRaisedMeta");
       var preflightBtn = document.getElementById("btnBooksPreflight");
       var previewBtn = document.getElementById("btnBooksPreview");
       var banner = document.getElementById("booksDryRunBanner");
@@ -1791,12 +1977,50 @@
       var preflight = booksPreviewState.preflight || null;
       var preview = booksPreviewState.preview || null;
       var createResult = booksPreviewState.createResult || null;
+      var emailResult = booksPreviewState.emailResult || null;
       var busy = !!booksPreviewState.busy;
       if (preflightBtn) preflightBtn.disabled = busy;
       if (previewBtn) previewBtn.disabled = busy || !getBooksLookupValue_();
       var liveWriteEnabled = !!(preview && preview.liveWriteEnabled) || !!(preflight && preflight.writeEnabled);
-      var canCreate = !!(preview && preview.safe_to_push && liveWriteEnabled && preview.currentBooksPushStatus === "READY" && !preview.currentBooksInvoiceId);
-      if (createBtn) createBtn.disabled = busy || !canCreate;
+      var invoiceRaised = !!(preview && (preview.invoiceRaised || preview.currentBooksInvoiceId));
+      var testEmailSent = !!(emailResult && emailResult.ok === true && String(emailResult.status || "") === "TEST_INVOICE_EMAIL_SENT");
+      var canCreate = !!(preview && preview.safe_to_push && liveWriteEnabled && !invoiceRaised && (preview.readinessStatus === "READY" || preview.readinessStatus === "READY_WITH_FALLBACK"));
+      if (createBtn) {
+        createBtn.disabled = busy || !canCreate;
+        createBtn.textContent = invoiceRaised ? "Invoice Already Raised" : "Create Draft Invoice";
+        createBtn.style.display = invoiceRaised ? "none" : "";
+      }
+      var canSendTestEmail = !!(preview && invoiceRaised && preview.testEmailRecipient && !testEmailSent);
+      if (sendTestBtn) {
+        sendTestBtn.disabled = busy || !canSendTestEmail;
+        sendTestBtn.style.display = invoiceRaised ? "" : "none";
+      }
+      if (actionHint) {
+        actionHint.textContent = !preview ? ""
+          : (!invoiceRaised
+            ? "Create draft invoice before sending test email."
+            : (testEmailSent
+              ? ("Test invoice email sent to " + String(preview.testEmailRecipient || "configured test recipient"))
+              : ("Send Test Invoice Email is limited to " + String(preview.testEmailRecipient || "configured test recipient") + ".")));
+      }
+      if (raisedBadge && raisedTitle && raisedMeta) {
+        if (invoiceRaised) {
+          var meta = [];
+          if (preview.currentBooksPushAt) meta.push("Raised at: " + String(preview.currentBooksPushAt));
+          if (preview.currentBooksPushBy) meta.push("Raised by: " + String(preview.currentBooksPushBy));
+          if (preview.currentBooksInvoiceId) meta.push("Books Invoice ID: " + String(preview.currentBooksInvoiceId));
+          meta.push("Idempotency: Duplicate blocked");
+          meta.push("Books Push Status: " + String(preview.currentBooksPushStatus || preview.effectiveBooksPushStatus || "DRAFT_INVOICE_CREATED"));
+          meta.push("Email Status: " + (testEmailSent ? "TEST_EMAIL_SENT" : "NOT_SENT"));
+          raisedTitle.textContent = buildBooksInvoiceRaisedTitle_(preview);
+          raisedMeta.textContent = meta.join(" | ");
+          raisedBadge.classList.remove("hidden");
+        } else {
+          raisedTitle.textContent = "";
+          raisedMeta.textContent = "";
+          raisedBadge.classList.add("hidden");
+        }
+      }
 
       setBooksSummaryValue_("booksPayerSummary", preview ? [preview.payerName, preview.payerType, preview.payerEmail || preview.payerPhone].filter(Boolean).join(" | ") : "");
       setBooksSummaryValue_("booksStudentSummary", preview ? preview.studentName : "");
@@ -1805,13 +2029,27 @@
         preview.selectedItemDescription || "",
         preview.selectedItemRate ? ("Rate: PGK " + String(preview.selectedItemRate)) : "",
         preview.selectedLineItems && preview.selectedLineItems.length ? ("Lines: " + String(preview.selectedLineItems.length)) : "",
+        typeof preview.exactLineCount === "number" ? ("Exact: " + String(preview.exactLineCount)) : "",
+        typeof preview.fallbackLineCount === "number" ? ("Fallback: " + String(preview.fallbackLineCount)) : "",
         preview.selectedItemMatchConfidence ? ("Confidence: " + String(preview.selectedItemMatchConfidence)) : "",
         preview.selectedItemLiveDiscoveryConfirmed === true ? "Live confirmed" : "Catalog only",
         preview.selectedItemAmountMismatchText || preview.selectedItemWarning || ""
       ].filter(Boolean).join(" | ") : "");
-      setBooksSummaryValue_("booksAmountSummary", preview && preview.amount ? ("PGK " + String(preview.amount)) : "");
+      var comparisonAmount = preview ? Number(preview.sourceAmountDetected || preview.sourceAmount || 0) : 0;
+      var displayDiff = preview ? Number(preview.displayAmountDifference != null ? preview.displayAmountDifference : (comparisonAmount - Number(preview.calculatedAmount || 0))) : 0;
+      setBooksSummaryValue_("booksAmountSummary", preview ? [
+        preview.calculatedAmount ? ("Calculated: " + formatPngAmount_(preview.calculatedAmount)) : "",
+        comparisonAmount ? ("Source: " + formatPngAmount_(comparisonAmount)) : "",
+        comparisonAmount ? ("Diff: " + formatPngAmount_(displayDiff)) : ""
+      ].filter(Boolean).join(" | ") : "");
       setBooksSummaryValue_("booksReferenceSummary", preview ? preview.proposedFodeBillingReference : "");
-      setBooksSummaryValue_("booksIdempotencySummary", preview ? preview.idempotencyStatus : "");
+      setBooksSummaryValue_("booksIdempotencySummary", preview ? [
+        invoiceRaised ? "Invoice Status: INVOICE RAISED" : ("Invoice Status: " + String(preview.readinessStatus || "")),
+        "Idempotency: " + (invoiceRaised ? "Duplicate blocked" : String(preview.idempotencyStatus || "")),
+        "Books Push Status: " + String(preview.currentBooksPushStatus || preview.effectiveBooksPushStatus || ""),
+        "Email Status: " + (testEmailSent ? "TEST_EMAIL_SENT" : "NOT_SENT")
+      ].filter(Boolean).join(" | ") : "");
+      renderBooksLineSummary_(preview);
 
       if (banner) {
         var lines = [];
@@ -1819,12 +2057,17 @@
         if (preflight && preflight.tokenStatus && preflight.tokenStatus.ok !== true) lines.push("Token: " + String(preflight.tokenStatus.code || preflight.tokenStatus.message || "PREAUTH_REQUIRED"));
         if (preflight && preflight.tokenStatus && preflight.tokenStatus.ok === true) lines.push("Token: " + String(preflight.tokenStatus.code || "TOKEN_READY"));
         if (preflight && preflight.itemCatalogStatus && preflight.itemCatalogStatus.code) lines.push("Item Catalog: " + String(preflight.itemCatalogStatus.code));
-        if (preview && preview.currentBooksInvoiceId) lines.push("ALREADY_PROCESSED: Books_Invoice_ID already exists.");
-        if (preview && preview.currentBooksPushStatus && preview.currentBooksPushStatus !== "READY") lines.push("Current Books_Push_Status: " + String(preview.currentBooksPushStatus));
+        if (preview && preview.currentBooksInvoiceId) lines.push("Invoice already raised in Zoho Books.");
+        if (preview && preview.readinessStatus && !invoiceRaised) lines.push("Readiness: " + String(preview.readinessStatus));
+        if (preview && preview.blockReason && !invoiceRaised) lines.push("Blocker: " + String(preview.blockReason));
+        if (preview && preview.fallbackUsed) lines.push("Fallback Item Used: " + String(preview.fallbackItemName || ""));
+        if (preview && preview.testEmailRecipient) lines.push("Test Email Override: " + String(preview.testEmailRecipient));
+        if (preview && preview.currentBooksPushStatus) lines.push("Current Books_Push_Status: " + String(preview.currentBooksPushStatus));
         if (preview && preview.tokenStatus && preview.tokenStatus.ok !== true) lines.push("Preview Token: " + String(preview.tokenStatus.code || preview.tokenStatus.message || "PREAUTH_REQUIRED"));
         if (preview && preview.selectedItemWarning) lines.push(preview.selectedItemWarning);
         if (createResult && createResult.message) lines.push(String(createResult.message));
-        lines.push("No invoice will be created unless live write flags are enabled.");
+        if (emailResult && emailResult.message) lines.push(String(emailResult.message));
+        lines.push("Draft invoice creation only. No payment, no bulk processing.");
         if (!liveWriteEnabled) lines.push("Live draft invoice creation is disabled by config flags.");
         banner.textContent = lines.join(" ");
         banner.classList.toggle("hidden", !lines.length);
@@ -1840,13 +2083,42 @@
           currentBooksInvoiceId: preview.currentBooksInvoiceId || "",
           currentBooksInvoiceNumber: preview.currentBooksInvoiceNumber || "",
           currentBooksInvoiceStatus: preview.currentBooksInvoiceStatus || "",
+          currentBooksPushAt: preview.currentBooksPushAt || "",
+          currentBooksPushBy: preview.currentBooksPushBy || "",
+          invoiceRaised: preview.invoiceRaised === true,
           idempotencyStatus: preview.idempotencyStatus || "",
+          readinessStatus: preview.readinessStatus || "",
+          blockReason: preview.blockReason || "",
           unresolvedSubjects: preview.unresolvedSubjects || [],
           unresolvedSubjectDetails: preview.unresolvedSubjectDetails || [],
+          rawSelectedSubjectsSource: preview.rawSelectedSubjectsSource || "",
+          rawSelectedSubjectsValue: preview.rawSelectedSubjectsValue || "",
+          rawSelectedSubjects: preview.rawSelectedSubjects || [],
+          detectedGradeCode: preview.detectedGradeCode || "",
+          detectedGradeLevelKey: preview.detectedGradeLevelKey || "",
+          detectedGradeSourceField: preview.detectedGradeSourceField || "",
+          detectedGradeSourceValue: preview.detectedGradeSourceValue || "",
+          detectedGradeCandidates: preview.detectedGradeCandidates || [],
+          normalizedSelectedSubjects: preview.normalizedSelectedSubjects || [],
+          normalizedSelectedSubjectCodes: preview.normalizedSelectedSubjectCodes || [],
+          subjectMappings: preview.subjectMappings || [],
+          fallbackUsed: preview.fallbackUsed === true,
+          fallbackItemName: preview.fallbackItemName || "",
+          fallbackMissingItems: preview.fallbackMissingItems || [],
+          exactLineCount: preview.exactLineCount || 0,
+          fallbackLineCount: preview.fallbackLineCount || 0,
+          selectedLineCount: preview.selectedLineCount || 0,
           calculatedAmount: preview.calculatedAmount || 0,
           sourceAmount: preview.sourceAmount || 0,
+          sourceAmountDetected: preview.sourceAmountDetected || 0,
+          sourceAmountSource: preview.sourceAmountSource || "",
+          amountDifference: preview.amountDifference || 0,
+          displayAmountDifference: preview.displayAmountDifference || 0,
           includesRegistration: preview.includesRegistration === true,
           registrationIncluded: preview.registrationIncluded === true,
+          registrationReason: preview.registrationReason || "",
+          testEmailRecipient: preview.testEmailRecipient || "",
+          emailUiStatus: testEmailSent ? "TEST_EMAIL_SENT" : "NOT_SENT",
           selectedLineItems: preview.selectedLineItems || [],
           selectedItem: {
             itemId: preview.selectedItemId || "",
@@ -1885,6 +2157,7 @@
       if (booksPreviewState.busy) return;
       booksPreviewState.busy = true;
       booksPreviewState.createResult = null;
+      booksPreviewState.emailResult = null;
       renderZohoBooksPreviewUi_();
       google.script.run
         .withSuccessHandler(function(res){
@@ -1971,6 +2244,7 @@
       if (!lookup) return;
       booksPreviewState.busy = true;
       booksPreviewState.createResult = null;
+      booksPreviewState.emailResult = null;
       renderZohoBooksPreviewUi_();
       var payload = /^\d+$/.test(lookup) ? { rowNumber: Number(lookup) } : { applicantId: lookup };
       google.script.run
@@ -1990,13 +2264,23 @@
       if (booksPreviewState.busy) return;
       var lookup = getBooksLookupValue_();
       if (!lookup) return;
+      var preview = booksPreviewState.preview || null;
+      if (!preview || (preview.readinessStatus !== "READY" && preview.readinessStatus !== "READY_WITH_FALLBACK")) return;
+      var previewApplicantId = String(preview.sourceApplicantId || "").trim();
+      if (!previewApplicantId || previewApplicantId !== String(lookup).trim()) return;
       booksPreviewState.busy = true;
       renderZohoBooksPreviewUi_();
-      var payload = /^\d+$/.test(lookup) ? { rowNumber: Number(lookup) } : { applicantId: lookup };
+      var payload = /^\d+$/.test(lookup)
+        ? { rowNumber: Number(lookup), previewApplicantId: previewApplicantId }
+        : { applicantId: lookup, previewApplicantId: previewApplicantId };
       google.script.run
         .withSuccessHandler(function(res){
           booksPreviewState.busy = false;
           booksPreviewState.createResult = res && typeof res === "object" ? res : { ok: false, code: "INVALID_CREATE_RESPONSE" };
+          if (booksPreviewState.createResult && booksPreviewState.createResult.ok === true) {
+            previewZohoBooksPayloadUi_();
+            return;
+          }
           renderZohoBooksPreviewUi_();
         })
         .withFailureHandler(function(err){
@@ -2005,6 +2289,32 @@
           renderZohoBooksPreviewUi_();
         })
         .admin_createZohoBooksFodeDraftInvoice(payload);
+    }
+    function sendZohoBooksTestInvoiceUi_(){
+      if (booksPreviewState.busy) return;
+      var lookup = getBooksLookupValue_();
+      if (!lookup) return;
+      var preview = booksPreviewState.preview || null;
+      if (!preview || !preview.currentBooksInvoiceId || !preview.testEmailRecipient) return;
+      var previewApplicantId = String(preview.sourceApplicantId || "").trim();
+      if (!previewApplicantId || previewApplicantId !== String(lookup).trim()) return;
+      booksPreviewState.busy = true;
+      renderZohoBooksPreviewUi_();
+      var payload = /^\d+$/.test(lookup)
+        ? { rowNumber: Number(lookup), previewApplicantId: previewApplicantId }
+        : { applicantId: lookup, previewApplicantId: previewApplicantId };
+      google.script.run
+        .withSuccessHandler(function(res){
+          booksPreviewState.busy = false;
+          booksPreviewState.emailResult = res && typeof res === "object" ? res : { ok: false, code: "INVALID_SEND_RESPONSE" };
+          renderZohoBooksPreviewUi_();
+        })
+        .withFailureHandler(function(err){
+          booksPreviewState.busy = false;
+          booksPreviewState.emailResult = { ok: false, code: "SEND_FAILED", message: String((err && err.message) || err || "Test invoice email send failed.") };
+          renderZohoBooksPreviewUi_();
+        })
+        .admin_sendZohoBooksTestInvoiceEmail(payload);
     }
     function resetCommunicationsForSelection_(preserveResult){
       communicationsState.previewApplicantId = "";
@@ -3254,7 +3564,7 @@ function renderStageDashboard_(items, emptyMessage){
           html += "<button class='btn small accent' type='button' data-action='queue-docs-send-selected' " + ((isDocsSendBusy || selectedCount === 0) ? "disabled" : "") + ">" + (isDocsSendBusy ? "Sending..." : "Send Quote to Selected") + "</button>";
           html += "<span class='muted' style='font-size:12px;'>" + String(selectedCount) + " selected</span>";
           html += "</div>";
-          html += "<table class='queue-table'><tr><th style='width:30px;'></th><th>Applicant</th><th>Name</th><th>Workflow</th><th>Received</th><th>Age</th><th>Docs Follow-Up</th><th>Action</th></tr>";
+          html += "<table class='queue-table'><tr><th style='width:30px;'></th><th>Applicant</th><th>Name</th><th>Workflow</th><th>Status</th><th>Received</th><th>Age</th><th>Docs Follow-Up</th><th>Action</th></tr>";
           pageRows.forEach(function(row){
             var rowNumber = Number(row && row.rowNumber || 0);
             var applicantId = String((row && (row.ApplicantID || row.applicantId)) || "");
@@ -3283,6 +3593,7 @@ function renderStageDashboard_(items, emptyMessage){
             html += "<td>" + esc(applicantId) + "</td>";
             html += "<td>" + esc(nameDisplay) + "</td>";
             html += "<td class='muted' style='font-size:12px;'>" + esc(workflowSummaryText_(row)) + "</td>";
+            html += "<td>" + renderLifecycleBadgesHtml_(row) + "</td>";
             html += "<td title='" + esc(queueReceivedTitle_(row)) + "'>" + esc(receivedText) + "</td>";
             html += "<td><span class='" + esc(ageBadge.cls) + "' title='" + esc(ageBadge.title) + "'>" + esc(ageBadge.label) + "</span></td>";
             html += "<td><span class='" + statusClass + "'>" + esc(statusText) + "</span></td>";
@@ -3290,7 +3601,7 @@ function renderStageDashboard_(items, emptyMessage){
             html += "</tr>";
           });
         } else if (queueKey === "queuePayments") {
-          html += "<table class='queue-table'><tr><th>Applicant</th><th>Name</th><th>Workflow</th><th>Received</th><th>Age</th><th>Payment</th><th>Action</th></tr>";
+          html += "<table class='queue-table'><tr><th>Applicant</th><th>Name</th><th>Workflow</th><th>Status</th><th>Received</th><th>Age</th><th>Payment</th><th>Action</th></tr>";
           pageRows.forEach(function(row){
             var rowNumber = Number(row && row.rowNumber || 0);
             var applicantId = String(row && row.applicantId || "");
@@ -3307,6 +3618,7 @@ function renderStageDashboard_(items, emptyMessage){
             html += "<td>" + esc(applicantId) + "</td>";
             html += "<td>" + esc(nameDisplay) + "</td>";
             html += "<td class='muted' style='font-size:12px;'>" + esc(workflowSummaryText_(row)) + "</td>";
+            html += "<td>" + renderLifecycleBadgesHtml_(row) + "</td>";
             html += "<td title='" + esc(queueReceivedTitle_(row)) + "'>" + esc(receivedText) + "</td>";
             html += "<td><span class='" + esc(ageBadge.cls) + "' title='" + esc(ageBadge.title) + "'>" + esc(ageBadge.label) + "</span></td>";
             html += "<td><span class='" + esc(paymentBadge.cls) + "'>" + esc(paymentBadge.label) + "</span></td>";
@@ -3314,7 +3626,7 @@ function renderStageDashboard_(items, emptyMessage){
             html += "</tr>";
           });
         } else {
-          html += "<table class='queue-table'><tr><th>Applicant</th><th>Name</th><th>Workflow</th><th>Received</th><th>Age</th><th>Action</th></tr>";
+          html += "<table class='queue-table'><tr><th>Applicant</th><th>Name</th><th>Workflow</th><th>Status</th><th>Received</th><th>Age</th><th>Action</th></tr>";
           pageRows.forEach(function(row){
             var rowNumber = Number(row && row.rowNumber || 0);
             var applicantId = String(row && row.applicantId || "");
@@ -3330,6 +3642,7 @@ function renderStageDashboard_(items, emptyMessage){
             html += "<td>" + esc(applicantId) + "</td>";
             html += "<td>" + esc(nameDisplay) + "</td>";
             html += "<td class='muted' style='font-size:12px;'>" + esc(workflowSummaryText_(row)) + "</td>";
+            html += "<td>" + renderLifecycleBadgesHtml_(row) + "</td>";
             html += "<td title='" + esc(queueReceivedTitle_(row)) + "'>" + esc(receivedText) + "</td>";
             html += "<td><span class='" + esc(ageBadge.cls) + "' title='" + esc(ageBadge.title) + "'>" + esc(ageBadge.label) + "</span></td>";
             html += "<td><button class='btn small' data-action='queue-review' data-applicant-id='" + esc(applicantId) + "' data-row-number='" + esc(String(Number.isFinite(rowNumber) ? rowNumber : "")) + "' title='" + esc(reviewTitle) + "' " + (canReview ? "" : "disabled ") + ">Review</button></td>";
@@ -4110,8 +4423,11 @@ function renderStageDashboard_(items, emptyMessage){
       updateCommunicationsUi_();
       renderCommEditablePanel_();
       if (incomingApplicantId !== String((booksPreviewState.preview && booksPreviewState.preview.sourceApplicantId) || "").trim()) {
-        booksPreviewState.preview = null;
+        booksPreviewState.preview = buildBooksPreviewHydrationFromDetail_(d);
         booksPreviewState.createResult = null;
+        booksPreviewState.emailResult = null;
+      } else if (!booksPreviewState.preview) {
+        booksPreviewState.preview = buildBooksPreviewHydrationFromDetail_(d);
       }
       syncBooksLookupFromDetail_();
       renderZohoBooksPreviewUi_();

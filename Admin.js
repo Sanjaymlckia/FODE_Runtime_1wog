@@ -353,11 +353,24 @@ function admin_getApplicantDetail(payload) {
       Docs_Verified: idx.Docs_Verified ? clean_(row[idx.Docs_Verified - 1]) : "",
       Payment_Verified: idx.Payment_Verified ? clean_(row[idx.Payment_Verified - 1]) : "",
       Registration_Complete: idx.Registration_Complete ? clean_(row[idx.Registration_Complete - 1]) : "",
+      Books_Contact_ID: idx.Books_Contact_ID ? clean_(row[idx.Books_Contact_ID - 1]) : "",
+      Books_Contact_Name: idx.Books_Contact_Name ? clean_(row[idx.Books_Contact_Name - 1]) : "",
+      Books_Invoice_ID: idx.Books_Invoice_ID ? clean_(row[idx.Books_Invoice_ID - 1]) : "",
+      Books_Invoice_Number: idx.Books_Invoice_Number ? clean_(row[idx.Books_Invoice_Number - 1]) : "",
+      Books_Invoice_Status: idx.Books_Invoice_Status ? clean_(row[idx.Books_Invoice_Status - 1]) : "",
+      Books_Push_Status: idx.Books_Push_Status ? clean_(row[idx.Books_Push_Status - 1]) : "",
+      Books_Push_At: idx.Books_Push_At ? clean_(row[idx.Books_Push_At - 1]) : "",
+      Books_Last_Push_At: idx.Books_Last_Push_At ? clean_(row[idx.Books_Last_Push_At - 1]) : "",
+      Books_Push_By: idx.Books_Push_By ? clean_(row[idx.Books_Push_By - 1]) : "",
+      Books_Last_Error: idx.Books_Last_Error ? clean_(row[idx.Books_Last_Error - 1]) : "",
       Handled_By: idx.Handled_By ? clean_(row[idx.Handled_By - 1]) : "",
       Handled_At: idx.Handled_At ? clean_(row[idx.Handled_At - 1]) : "",
       Enrolled_By: idx.Enrolled_By ? clean_(row[idx.Enrolled_By - 1]) : "",
       Enrolled_At: idx.Enrolled_At ? clean_(row[idx.Enrolled_At - 1]) : "",
       Fee_Receipt_File: idx.Fee_Receipt_File ? clean_(row[idx.Fee_Receipt_File - 1]) : "",
+      Fee_Total_Kina: idx.Fee_Total_Kina ? clean_(row[idx.Fee_Total_Kina - 1]) : "",
+      Total_Fee_Kina: idx.Total_Fee_Kina ? clean_(row[idx.Total_Fee_Kina - 1]) : "",
+      Total_Fee: idx.Total_Fee ? clean_(row[idx.Total_Fee - 1]) : "",
       Portal_Access_Status: clean_(row[idx.Portal_Access_Status - 1]) || "Open",
       Doc_Verification_Status: clean_(row[idx.Doc_Verification_Status - 1]) || "Pending",
       Doc_Last_Verified_At: row[idx.Doc_Last_Verified_At - 1],
@@ -405,6 +418,9 @@ function admin_getApplicantDetail(payload) {
     detailObj.Payment_Verified_Bool = detailObj.Payment_Verified === "Yes";
     detailObj.paymentVerified = detailObj.Payment_Verified === "Yes";
     detailObj.isPaymentVerified = detailObj.Payment_Verified === "Yes";
+    detailObj.invoiceRaised = !!clean_(detailObj.Books_Invoice_ID || "");
+    detailObj.Books_Last_Push_At = clean_(detailObj.Books_Last_Push_At || detailObj.Books_Push_At || "");
+    detailObj.Invoice_Email_Status = "UNKNOWN";
     detailObj.isSuperAdmin = !!isSuperAdminCaller;
     detailObj.Payment_Badge = paymentBadge;
     detailObj.Doc_Verification_Status_Computed = docStageComputed;
@@ -723,19 +739,24 @@ function buildZohoBooksPreviewResult_(rowObj, options) {
   var resolvedItems = buildZohoBooksResolvedLineItemsV3_(row, {
     liveItemsResult: opts.itemsDiscovery && opts.itemsDiscovery.ok === true ? opts.itemsDiscovery : null
   });
-  var amountRaw = safeStr_(row.Fee_Total_Kina || row.Total_Fee_Kina || row.Total_Fee || itemCandidate.amount || "");
-  var amount = Number(String(amountRaw).replace(/[^0-9.]/g, ""));
+  var amountInfo = detectZohoBooksSourceAmount_(row, resolvedItems);
+  var amount = Number(amountInfo.amount || 0);
   var contactPayload = buildZohoBooksContactPayload_(row, payer);
   var localContact = safeStr_(row.Books_Contact_ID || "");
   var localInvoice = safeStr_(row.Books_Invoice_ID || "");
+  var localInvoiceNumber = safeStr_(row.Books_Invoice_Number || "");
+  var localInvoiceStatus = safeStr_(row.Books_Invoice_Status || "");
+  var localPushAt = safeStr_(row.Books_Last_Push_At || row.Books_Push_At || "");
+  var localPushBy = safeStr_(row.Books_Push_By || "");
+  var invoiceRaised = !!(localInvoice || (invoiceLookup.ok && Array.isArray(invoiceLookup.matches) && invoiceLookup.matches.length));
   var missingFields = [];
   if (!safeStr_(payer.name || "")) missingFields.push("PAYER_NAME_MISSING");
+  if (!safeStr_(row.Student_Name || rowStudentName_(row))) missingFields.push("STUDENT_MISSING");
   if (!safeStr_(payer.email || "") && !safeStr_(payer.phone || "")) missingFields.push("PAYER_CONTACT_MISSING");
   if ((resolvedItems.unresolvedSubjects || []).length) missingFields.push("ITEM_NOT_RESOLVED");
   else if (!(resolvedItems.lineItems || []).length && !safeStr_(itemCandidate.itemName || "")) missingFields.push("ITEM_NOT_RESOLVED");
   if (!(amount > 0)) missingFields.push("AMOUNT_MISSING");
-  if (resolvedItems.amountMismatch === true) missingFields.push("AMOUNT_MISMATCH");
-  if (safeStr_(row.Books_Push_Status || "") !== "READY") missingFields.push("BOOKS_PUSH_STATUS_NOT_READY");
+  if (resolvedItems.amountMismatch === true && isZohoBooksSourceAmountAuthoritative_()) missingFields.push("AMOUNT_MISMATCH");
 
   var contactLookup = opts.contactLookup || { ok: true, code: "NOT_CHECKED", matches: [] };
   var invoiceLookup = opts.invoiceLookup || { ok: true, code: "NOT_CHECKED", matches: [] };
@@ -752,12 +773,43 @@ function buildZohoBooksPreviewResult_(rowObj, options) {
     contact_id: safeStr_(contactLookup.matches[0].contact_id || contactLookup.matches[0].contactId || ""),
     contact_name: safeStr_(contactLookup.matches[0].contact_name || contactLookup.matches[0].contactName || "")
   } : null);
-  var invoicePayload = buildZohoBooksDraftInvoicePayload_(row, payer, booksContact, {
+  var invoicePayloadResult = buildZohoBooksDraftInvoicePayload_(row, payer, booksContact, {
     liveItemsResult: opts.itemsDiscovery && opts.itemsDiscovery.ok === true ? opts.itemsDiscovery : null
   });
-  var safeToPush = missingFields.length === 0
+  var invoicePayload = invoicePayloadResult && invoicePayloadResult.ok === true ? invoicePayloadResult.payload : null;
+  var fallbackUsed = resolvedItems.fallbackUsed === true || invoicePayloadResult && invoicePayloadResult.fallbackUsed === true;
+  var currentPushStatus = safeStr_(row.Books_Push_Status || "");
+  var previewReady = missingFields.length === 0
     && (idempotencyStatus === "READY" || idempotencyStatus === "REMOTE_CHECK_UNAVAILABLE")
-    && safeStr_(row.Books_Push_Status || "") === "READY";
+    && isZohoBooksTestApplicantAllowed_(row);
+  var readinessStatus = "READY";
+  if (cfg.enabled !== true || cfg.draftInvoiceCreateEnabled !== true) readinessStatus = "WRITE_DISABLED";
+  else if (idempotencyStatus === "ALREADY_PROCESSED" || idempotencyStatus === "ALREADY_PROCESSED_REMOTE") readinessStatus = "ALREADY_PUSHED";
+  else if (!safeStr_(payer.name || "")) readinessStatus = "BLOCKED_MISSING_PAYER";
+  else if (!safeStr_(row.Student_Name || rowStudentName_(row))) readinessStatus = "BLOCKED_MISSING_STUDENT";
+  else if (!safeStr_(resolvedItems.detectedGradeCode || "") && (resolvedItems.normalizedSelectedSubjects || []).length) readinessStatus = "BLOCKED_MISSING_GRADE_LEVEL";
+  else if (!(amount > 0)) readinessStatus = "BLOCKED_MISSING_AMOUNT";
+  else if ((resolvedItems.unresolvedSubjects || []).length || !(resolvedItems.lineItems || []).length) readinessStatus = "BLOCKED_ITEM_MAPPING";
+  else if (!invoicePayload) readinessStatus = safeStr_(invoicePayloadResult && invoicePayloadResult.readinessStatus || "BLOCKED_ITEM_MAPPING");
+  else if (resolvedItems.amountMismatch === true && isZohoBooksSourceAmountAuthoritative_()) readinessStatus = "BLOCKED_AMOUNT_MISMATCH";
+  else if (!isZohoBooksTestApplicantAllowed_(row)) readinessStatus = "WRITE_DISABLED";
+  else if (fallbackUsed) readinessStatus = "READY_WITH_FALLBACK";
+  var safeToPush = readinessStatus === "READY" || readinessStatus === "READY_WITH_FALLBACK";
+  var effectivePushStatus = safeToPush ? "READY" : (readinessStatus === "ALREADY_PUSHED" ? "DRAFT_INVOICE_CREATED" : readinessStatus);
+  var blockReason = "";
+  if (!safeToPush) {
+    if (readinessStatus === "BLOCKED_ITEM_MAPPING" && Array.isArray(resolvedItems.unresolvedSubjectDetails) && resolvedItems.unresolvedSubjectDetails.length) {
+      blockReason = resolvedItems.unresolvedSubjectDetails.map(function (x) {
+        return safeStr_(x.normalizedSubjectCode || x.desiredItemName || x.subject || "");
+      }).filter(function (x) { return !!x; }).join(", ");
+    } else if (readinessStatus === "BLOCKED_MISSING_GRADE_LEVEL") {
+      blockReason = "Applicant grade/FODE level could not be detected.";
+    } else if (readinessStatus === "BLOCKED_AMOUNT_MISMATCH") {
+      blockReason = safeStr_(resolvedItems.amountMismatchText || "AMOUNT_MISMATCH");
+    } else {
+      blockReason = safeStr_(missingFields[0] || readinessStatus);
+    }
+  }
 
   return {
     ok: true,
@@ -773,36 +825,65 @@ function buildZohoBooksPreviewResult_(rowObj, options) {
     payerPhone: safeStr_(payer.phone || ""),
     payerKey: payerKey,
     proposedFodeBillingReference: billingReference,
-    selectedItemId: safeStr_(itemCandidate.itemId || ""),
-    selectedItemName: safeStr_(itemCandidate.itemName || ""),
-    selectedItemDescription: safeStr_(itemCandidate.description || ""),
-    selectedItemAccount: safeStr_(itemCandidate.account || ""),
-    selectedItemRate: Number(itemCandidate.rate || 0),
-    selectedItemStatus: safeStr_(itemCandidate.status || ""),
-    selectedItemWarning: safeStr_(itemCandidate.warning || ""),
+    selectedItemId: (resolvedItems.lineItems || []).length ? "" : safeStr_(itemCandidate.itemId || ""),
+    selectedItemName: (resolvedItems.lineItems || []).length ? "" : safeStr_(itemCandidate.itemName || ""),
+    selectedItemDescription: (resolvedItems.lineItems || []).length ? "" : safeStr_(itemCandidate.description || ""),
+    selectedItemAccount: (resolvedItems.lineItems || []).length ? "" : safeStr_(itemCandidate.account || ""),
+    selectedItemRate: (resolvedItems.lineItems || []).length ? 0 : Number(itemCandidate.rate || 0),
+    selectedItemStatus: (resolvedItems.lineItems || []).length ? "" : safeStr_(itemCandidate.status || ""),
+    selectedItemWarning: (resolvedItems.lineItems || []).length ? "" : safeStr_(itemCandidate.warning || ""),
     selectedItemMatchConfidence: safeStr_(itemCandidate.matchConfidence || ""),
     selectedItemCatalogMatched: itemCandidate.catalogMatched === true,
     selectedItemLiveDiscoveryConfirmed: itemCandidate.liveDiscoveryConfirmed === true,
     selectedItemAmountMismatch: resolvedItems.amountMismatch === true || itemCandidate.amountMismatch === true,
     selectedItemAmountMismatchText: safeStr_(resolvedItems.amountMismatchText || itemCandidate.amountMismatchText || ""),
     selectedLineItems: redactZohoBooksPayloadForUi_(resolvedItems.lineItems || []),
+    selectedLineCount: Array.isArray(resolvedItems.lineItems) ? resolvedItems.lineItems.length : 0,
+    rawSelectedSubjectsSource: safeStr_(resolvedItems.rawSelectedSubjectsSource || ""),
+    rawSelectedSubjectsValue: safeStr_(resolvedItems.rawSelectedSubjectsValue || ""),
+    rawSelectedSubjects: resolvedItems.rawSelectedSubjects || [],
+    detectedGradeCode: safeStr_(resolvedItems.detectedGradeCode || ""),
+    detectedGradeLevelKey: safeStr_(resolvedItems.detectedGradeLevelKey || ""),
+    detectedGradeSourceField: safeStr_(resolvedItems.detectedGradeSourceField || ""),
+    detectedGradeSourceValue: safeStr_(resolvedItems.detectedGradeSourceValue || ""),
+    detectedGradeCandidates: redactZohoBooksPayloadForUi_(resolvedItems.detectedGradeCandidates || []),
+    normalizedSelectedSubjects: resolvedItems.normalizedSelectedSubjects || [],
+    normalizedSelectedSubjectCodes: resolvedItems.normalizedSelectedSubjectCodes || [],
+    subjectMappings: redactZohoBooksPayloadForUi_(resolvedItems.subjectMappings || []),
     unresolvedSubjects: resolvedItems.unresolvedSubjects || [],
     unresolvedSubjectDetails: resolvedItems.unresolvedSubjectDetails || [],
+    fallbackUsed: fallbackUsed,
+    fallbackItemName: safeStr_(resolvedItems.fallbackItemName || ""),
+    fallbackMissingItems: resolvedItems.fallbackMissingItems || [],
+    exactLineCount: Number(resolvedItems.exactLineCount || 0),
+    fallbackLineCount: Number(resolvedItems.fallbackLineCount || 0),
     calculatedAmount: Number(resolvedItems.calculatedAmount || 0),
     sourceAmount: Number(resolvedItems.sourceAmount || 0),
+    sourceAmountDetected: Number(amount || 0),
+    sourceAmountSource: safeStr_(amountInfo.source || ""),
+    amountDifference: Number(resolvedItems.amountDifference || 0),
+    displayAmountDifference: Number((amount > 0 ? amount : Number(resolvedItems.sourceAmount || 0)) - Number(resolvedItems.calculatedAmount || 0)),
     includesRegistration: resolvedItems.includesRegistration === true,
     registrationIncluded: resolvedItems.registrationIncluded === true,
+    registrationReason: safeStr_(resolvedItems.registrationReason || ""),
+    testEmailRecipient: safeStr_(resolvedItems.testEmailRecipient || getZohoBooksTestEmailRecipient_() || ""),
     amount: amount > 0 ? amount : Number(resolvedItems.calculatedAmount || itemCandidate.amount || 0),
     contactPayloadPreview: redactZohoBooksPayloadForUi_(contactPayload),
-    invoicePayloadPreview: redactZohoBooksPayloadForUi_(invoicePayload),
+    invoicePayloadPreview: redactZohoBooksPayloadForUi_(invoicePayload || invoicePayloadResult || {}),
     missingFields: missingFields,
     idempotencyStatus: idempotencyStatus,
+    readinessStatus: readinessStatus,
+    blockReason: blockReason,
     safe_to_push: safeToPush,
-    currentBooksPushStatus: safeStr_(row.Books_Push_Status || ""),
+    currentBooksPushStatus: currentPushStatus,
+    effectiveBooksPushStatus: effectivePushStatus,
     currentBooksContactId: localContact,
     currentBooksInvoiceId: localInvoice,
-    currentBooksInvoiceNumber: safeStr_(row.Books_Invoice_Number || ""),
-    currentBooksInvoiceStatus: safeStr_(row.Books_Invoice_Status || ""),
+    currentBooksInvoiceNumber: localInvoiceNumber,
+    currentBooksInvoiceStatus: localInvoiceStatus,
+    currentBooksPushAt: localPushAt,
+    currentBooksPushBy: localPushBy,
+    invoiceRaised: invoiceRaised,
     currentBooksLastError: safeStr_(row.Books_Last_Error || ""),
     currentBooksLastPayloadHash: safeStr_(row.Books_Last_Payload_Hash || ""),
     contactLookup: contactLookup,
@@ -872,6 +953,42 @@ function admin_previewZohoBooksFodePayload(payload) {
   });
 }
 
+function buildZohoBooksWritebackPatch_(row, preview, contactRes, invoiceRes, actorEmail) {
+  var nowIso = new Date().toISOString();
+  var patch = {
+    Books_Push_Status: invoiceRes && invoiceRes.ok === true ? "DRAFT_INVOICE_CREATED" : "ERROR",
+    Books_Last_Error: invoiceRes && invoiceRes.ok === true ? "" : safeStr_(invoiceRes && invoiceRes.message || invoiceRes && invoiceRes.code || "BOOKS_WRITE_FAILED"),
+    Books_Last_Attempt_At: nowIso,
+    Books_Last_Payload_Hash: invoiceRes && invoiceRes.payload ? hashZohoBooksPayload_(invoiceRes.payload) : "",
+    FODE_Billing_Reference: buildFodeBillingReference_(row)
+  };
+  if (invoiceRes && invoiceRes.ok === true) {
+    patch.Books_Push_At = nowIso;
+    patch.Books_Push_By = safeStr_(actorEmail || "");
+    patch.Books_Invoice_ID = safeStr_(invoiceRes.invoice_id || "");
+    patch.Books_Invoice_Number = safeStr_(invoiceRes.invoice_number || "");
+    patch.Books_Invoice_Status = safeStr_(invoiceRes.invoice_status || "draft");
+  }
+  if (contactRes && contactRes.ok === true) {
+    patch.Books_Contact_ID = safeStr_(contactRes.contact_id || "");
+    patch.Books_Contact_Name = safeStr_(contactRes.contact_name || "");
+  }
+  return patch;
+}
+
+function applyZohoBooksWritebackPatch_(sheet, rowNumber, patch) {
+  var headerMap = headerIndex_(sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]);
+  var patchObj = {};
+  Object.keys(patch || {}).forEach(function (header) {
+    if (headerMap[header]) patchObj[header] = patch[header];
+  });
+  if (patchObj.Books_Push_At && headerMap.Books_Last_Push_At && !patchObj.Books_Last_Push_At) {
+    patchObj.Books_Last_Push_At = patchObj.Books_Push_At;
+  }
+  if (Object.keys(patchObj).length) applyPatch_(sheet, rowNumber, patchObj);
+  return patchObj;
+}
+
 function admin_createZohoBooksFodeDraftInvoice(payload) {
   return withEnvelope_("admin_createZohoBooksFodeDraftInvoice", function (dbgId) {
     var adminEmail = getCallerEmail_();
@@ -891,13 +1008,150 @@ function admin_createZohoBooksFodeDraftInvoice(payload) {
     if (!(rowNumber >= 2)) return err_("DETAIL_ROW_NOT_FOUND", "Could not locate applicant record.", dbgId);
     var ctx = buildZohoBooksRowObject_(sh, rowNumber);
     var row = ctx.rowObj;
-    if (safeStr_(row.Books_Push_Status || "") !== "READY") {
-      return err_("NOT_READY", "Books_Push_Status must be READY before draft invoice creation.", dbgId);
+    var lookupApplicantId = clean_(payload && payload.applicantId || "");
+    var previewApplicantId = clean_(payload && payload.previewApplicantId || "");
+    var effectiveApplicantId = clean_(row.ApplicantID || "");
+    if (lookupApplicantId && effectiveApplicantId && lookupApplicantId !== effectiveApplicantId) {
+      return err_("PREVIEW_APPLICANT_MISMATCH", "Create Draft Invoice must target the same applicant that was previewed.", dbgId);
     }
-    if (safeStr_(row.Books_Invoice_ID || "")) {
-      return err_("ALREADY_PROCESSED", "Books_Invoice_ID already exists for this applicant.", dbgId);
+    if (previewApplicantId && effectiveApplicantId && previewApplicantId !== effectiveApplicantId) {
+      return err_("PREVIEW_APPLICANT_MISMATCH", "Create Draft Invoice must target the same applicant that was previewed.", dbgId);
     }
-    return err_("WRITE_DISABLED", "Zoho Books live draft invoice creation remains disabled in this CIS.", dbgId);
+    var payer = resolveFodePayerFromRecord_(row);
+    var contactLookup = safeStr_(row.Books_Contact_ID || "")
+      ? { ok: true, code: "LOCAL_CONTACT_ID", matches: [{ contact_id: safeStr_(row.Books_Contact_ID || ""), contact_name: safeStr_(row.Books_Contact_Name || "") }] }
+      : zohoBooksFindContact_(payer);
+    var invoiceLookup = safeStr_(row.Books_Invoice_ID || "")
+      ? { ok: true, code: "LOCAL_INVOICE_ID", matches: [{ invoice_id: safeStr_(row.Books_Invoice_ID || ""), invoice_number: safeStr_(row.Books_Invoice_Number || "") }] }
+      : zohoBooksFindInvoiceByFodeReference_(buildFodeBillingReference_(row));
+    var tokenStatus = getZohoBooksTokenReadiness_();
+    var itemsDiscovery = tokenStatus.ok === true ? zohoBooksDiscoverItems_() : tokenStatus;
+    var preview = buildZohoBooksPreviewResult_(row, {
+      contactLookup: contactLookup,
+      invoiceLookup: invoiceLookup,
+      itemsDiscovery: itemsDiscovery
+    });
+    if (preview.readinessStatus === "WRITE_DISABLED") {
+      return err_("WRITE_DISABLED", "Zoho Books live draft invoice creation is disabled.", dbgId, {
+        readinessStatus: preview.readinessStatus,
+        idempotencyStatus: preview.idempotencyStatus
+      });
+    }
+    if (preview.readinessStatus === "ALREADY_PUSHED" || safeStr_(row.Books_Invoice_ID || "")) {
+      return err_("DRAFT_INVOICE_EXISTS", "A Zoho Books draft invoice already exists for this applicant.", dbgId, {
+        invoiceId: safeStr_(row.Books_Invoice_ID || preview.currentBooksInvoiceId || ""),
+        invoiceNumber: safeStr_(row.Books_Invoice_Number || preview.currentBooksInvoiceNumber || ""),
+        invoiceStatus: safeStr_(row.Books_Invoice_Status || preview.currentBooksInvoiceStatus || "")
+      });
+    }
+    if (preview.readinessStatus !== "READY" && preview.readinessStatus !== "READY_WITH_FALLBACK") {
+      return err_(preview.readinessStatus || "NOT_READY", "Preview must be READY before draft invoice creation.", dbgId, {
+        blockReason: preview.blockReason || "",
+        missingFields: preview.missingFields || [],
+        idempotencyStatus: preview.idempotencyStatus || ""
+      });
+    }
+    if (!isZohoBooksTestApplicantAllowed_(row)) {
+      return err_("WRITE_DISABLED", "Draft invoice creation is restricted to explicit Zoho Books test applicants.", dbgId);
+    }
+    var contactRes = zohoBooksCreateOrUpdateContact_(row, payer);
+    if (!contactRes.ok) {
+      var contactPatch = buildZohoBooksWritebackPatch_(row, preview, null, contactRes, adminEmail);
+      applyZohoBooksWritebackPatch_(sh, rowNumber, contactPatch);
+      return err_(safeStr_(contactRes.code || "CONTACT_CREATE_FAILED"), safeStr_(contactRes.message || "Zoho Books contact create/resolve failed."), dbgId, {
+        readinessStatus: preview.readinessStatus,
+        idempotencyStatus: preview.idempotencyStatus
+      });
+    }
+    var invoiceRes = zohoBooksCreateDraftInvoice_(row, {
+      contact_id: safeStr_(contactRes.contact_id || ""),
+      contact_name: safeStr_(contactRes.contact_name || "")
+    }, {
+      liveItemsResult: itemsDiscovery && itemsDiscovery.ok === true ? itemsDiscovery : null
+    });
+    if (invoiceRes.ok && safeStr_(invoiceRes.code || "") === "ALREADY_PROCESSED") {
+      return err_("DRAFT_INVOICE_EXISTS", "A Zoho Books draft invoice already exists for this applicant.", dbgId, {
+        contactId: safeStr_(contactRes.contact_id || ""),
+        contactName: safeStr_(contactRes.contact_name || ""),
+        invoiceId: safeStr_(invoiceRes.invoice_id || ""),
+        invoiceNumber: safeStr_(invoiceRes.invoice_number || ""),
+        invoiceStatus: safeStr_(invoiceRes.invoice_status || "")
+      });
+    }
+    if (!invoiceRes.ok) {
+      var invoiceErrorPatch = buildZohoBooksWritebackPatch_(row, preview, contactRes, invoiceRes, adminEmail);
+      applyZohoBooksWritebackPatch_(sh, rowNumber, invoiceErrorPatch);
+      return err_(safeStr_(invoiceRes.code || "BOOKS_CREATE_FAILED"), safeStr_(invoiceRes.message || "Zoho Books draft invoice creation failed."), dbgId, {
+        contactId: safeStr_(contactRes.contact_id || ""),
+        contactName: safeStr_(contactRes.contact_name || "")
+      });
+    }
+    var invoiceSuccessPatch = buildZohoBooksWritebackPatch_(row, preview, contactRes, invoiceRes, adminEmail);
+    var appliedPatch = applyZohoBooksWritebackPatch_(sh, rowNumber, invoiceSuccessPatch);
+    return ok_({
+      status: "DRAFT_INVOICE_CREATED",
+      message: "Zoho Books draft invoice created successfully.",
+      readinessStatus: preview.readinessStatus,
+      idempotencyStatus: "ALREADY_PUSHED",
+      contactId: safeStr_(contactRes.contact_id || ""),
+      contactName: safeStr_(contactRes.contact_name || ""),
+      invoiceId: safeStr_(invoiceRes.invoice_id || ""),
+      invoiceNumber: safeStr_(invoiceRes.invoice_number || ""),
+      invoiceStatus: safeStr_(invoiceRes.invoice_status || "draft"),
+      writeBackApplied: appliedPatch,
+      sourceApplicantId: effectiveApplicantId
+    }, dbgId);
+  });
+}
+
+function admin_sendZohoBooksTestInvoiceEmail(payload) {
+  return withEnvelope_("admin_sendZohoBooksTestInvoiceEmail", function (dbgId) {
+    var adminEmail = getCallerEmail_();
+    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    if (!canWriteZohoBooksForAdmin_(adminEmail)) {
+      return err_("ACCESS_DENIED", "SUPER admin or designated Zoho Books write admin required.", dbgId);
+    }
+    var cfg = getZohoBooksConfig_();
+    if (cfg.enabled !== true || cfg.testInvoiceEmailSendEnabled !== true) {
+      return err_("WRITE_DISABLED", "Controlled Zoho Books test invoice email send is disabled.", dbgId);
+    }
+    var sh = openDataSheet_();
+    var rowNumber = findZohoBooksApplicantRow_(sh, payload || {});
+    if (!(rowNumber >= 2)) return err_("DETAIL_ROW_NOT_FOUND", "Could not locate applicant record.", dbgId);
+    var ctx = buildZohoBooksRowObject_(sh, rowNumber);
+    var row = ctx.rowObj;
+    var lookupApplicantId = clean_(payload && payload.applicantId || "");
+    var previewApplicantId = clean_(payload && payload.previewApplicantId || "");
+    var effectiveApplicantId = clean_(row.ApplicantID || "");
+    if (lookupApplicantId && effectiveApplicantId && lookupApplicantId !== effectiveApplicantId) {
+      return err_("PREVIEW_APPLICANT_MISMATCH", "Test invoice email send must target the same applicant that was previewed.", dbgId);
+    }
+    if (previewApplicantId && effectiveApplicantId && previewApplicantId !== effectiveApplicantId) {
+      return err_("PREVIEW_APPLICANT_MISMATCH", "Test invoice email send must target the same applicant that was previewed.", dbgId);
+    }
+    if (!isZohoBooksTestApplicantAllowed_(row)) {
+      return err_("WRITE_DISABLED", "Test invoice email send is restricted to explicit Zoho Books test applicants.", dbgId);
+    }
+    var invoiceId = safeStr_(row.Books_Invoice_ID || "");
+    if (!invoiceId) {
+      return err_("DRAFT_INVOICE_REQUIRED", "A Zoho Books draft invoice must exist before test email send.", dbgId);
+    }
+    var sendRes = zohoBooksSendTestInvoiceEmail_(invoiceId, row, {});
+    if (!sendRes.ok) {
+      return err_(safeStr_(sendRes.code || "TEST_EMAIL_SEND_FAILED"), safeStr_(sendRes.message || "Controlled test invoice email send failed."), dbgId, {
+        invoiceId: invoiceId,
+        recipient: safeStr_(cfg.testEmailRecipient || "")
+      });
+    }
+    return ok_({
+      status: "TEST_INVOICE_EMAIL_SENT",
+      message: "Controlled Zoho Books test invoice email sent successfully.",
+      invoiceId: invoiceId,
+      invoiceNumber: safeStr_(row.Books_Invoice_Number || ""),
+      invoiceStatus: safeStr_(row.Books_Invoice_Status || ""),
+      recipient: safeStr_(sendRes.recipient || cfg.testEmailRecipient || ""),
+      sourceApplicantId: effectiveApplicantId
+    }, dbgId);
   });
 }
 
@@ -3463,6 +3717,15 @@ function admin_getReviewQueues(payload) {
         qItem.Enrolled_Confirmed = enrolledConfirmed ? "Yes" : "No";
         qItem.Fee_Receipt_File = receiptUrl;
         qItem.Registration_Complete = clean_(rowObj.Registration_Complete || "") === "Yes" ? "Yes" : "No";
+        qItem.Books_Invoice_ID = clean_(rowObj.Books_Invoice_ID || "");
+        qItem.Books_Invoice_Number = clean_(rowObj.Books_Invoice_Number || "");
+        qItem.Books_Invoice_Status = clean_(rowObj.Books_Invoice_Status || "");
+        qItem.Books_Push_Status = clean_(rowObj.Books_Push_Status || "");
+        qItem.Books_Push_At = clean_(rowObj.Books_Push_At || rowObj.Books_Last_Push_At || "");
+        qItem.Books_Push_By = clean_(rowObj.Books_Push_By || "");
+        qItem.Books_Last_Error = clean_(rowObj.Books_Last_Error || "");
+        qItem.Invoice_Email_Status = "UNKNOWN";
+        qItem.invoiceRaised = !!qItem.Books_Invoice_ID;
 
         debugRows.push({
           id: clean_(rowObj.ApplicantID || rowObj.ID || rowObj["Applicant ID"] || "unknown"),
@@ -3555,7 +3818,16 @@ function admin_getReviewQueues(payload) {
             Payment_Verified: clean_(it.Payment_Verified || ""),
             Enrolled_Confirmed: clean_(it.Enrolled_Confirmed || ""),
             Fee_Receipt_File: clean_(it.Fee_Receipt_File || ""),
-            Registration_Complete: clean_(it.Registration_Complete || "")
+            Registration_Complete: clean_(it.Registration_Complete || ""),
+            Books_Invoice_ID: clean_(it.Books_Invoice_ID || ""),
+            Books_Invoice_Number: clean_(it.Books_Invoice_Number || ""),
+            Books_Invoice_Status: clean_(it.Books_Invoice_Status || ""),
+            Books_Push_Status: clean_(it.Books_Push_Status || ""),
+            Books_Push_At: clean_(it.Books_Push_At || ""),
+            Books_Push_By: clean_(it.Books_Push_By || ""),
+            Books_Last_Error: clean_(it.Books_Last_Error || ""),
+            Invoice_Email_Status: clean_(it.Invoice_Email_Status || "UNKNOWN"),
+            invoiceRaised: !!it.invoiceRaised
           });
         });
       }

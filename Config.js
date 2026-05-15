@@ -7,9 +7,9 @@
  */
 var CONFIG = {
   // Versioning (change control)
-  VERSION: "r166",
+  VERSION: "r168",
 CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alignment",
-  DEPLOY_VERSION_NUMBER: 166,
+  DEPLOY_VERSION_NUMBER: 168,
 BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
 
   // STAGING/PROD data mode routing (working sheet)
@@ -76,10 +76,31 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   ZOHO_API_BASE: "https://www.zohoapis.com/crm/v2",
   ZOHO_OAUTH_BASE: "https://accounts.zoho.com/oauth/v2",
   ZOHO_BOOKS_API_BASE: "https://www.zohoapis.com/books/v3",
-  ENABLE_ZOHO_BOOKS_INTEGRATION: false,
+  ENABLE_ZOHO_BOOKS_INTEGRATION: true,
   ENABLE_ZOHO_BOOKS_DRY_RUN: true,
   ENABLE_ZOHO_BOOKS_SECRET_SETUP: false,
-  ENABLE_ZOHO_BOOKS_DRAFT_INVOICE_CREATE: false,
+  ENABLE_ZOHO_BOOKS_DRAFT_INVOICE_CREATE: true,
+  ENABLE_ZOHO_BOOKS_TEST_INVOICE_EMAIL_SEND: true,
+  ENABLE_ZOHO_BOOKS_PAYMENT_CREATE: false,
+  ENABLE_ZOHO_BOOKS_INVOICE_SEND: false,
+  ENABLE_ZOHO_BOOKS_BULK_PUSH: false,
+  ZOHO_BOOKS_SOURCE_AMOUNT_AUTHORITATIVE: false,
+  ZOHO_BOOKS_FODE_DEFAULT_REGISTRATION_ITEM: "Registration FODE (No Tablet)",
+  ZOHO_BOOKS_FODE_SUBJECT_FALLBACK_ITEM: "",
+  ZOHO_BOOKS_TEST_EMAIL_RECIPIENT: "sanjay@minervacenters.com",
+  ZOHO_BOOKS_FODE_SUBJECT_LABEL_OVERRIDES: {
+    FD11: {
+      "English": "Language & Literature",
+      "Mathematics": "Mathematics"
+    },
+    FD12: {
+      "English": "Language & Literature",
+      "Mathematics": "Mathematics"
+    }
+  },
+  ZOHO_BOOKS_TEST_APPLICANT_IDS: [
+    "FODE-26-002929"
+  ],
   ZOHO_BOOKS_ORGANIZATION_ID: "908427349",
   ZOHO_BOOKS_ORGANIZATION_NAME: "Kundu International Academy",
   ZOHO_BOOKS_DEFAULT_CURRENCY: "PGK",
