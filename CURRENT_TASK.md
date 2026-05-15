@@ -5,225 +5,64 @@
 - Live runtime: `r165 / 165`
 - Admin whoami: `r165 / 165`, mismatch `false`
 - Student whoami: `r165 / 165`, mismatch `false`
-- Current source baseline: `e0249cd`
-- Current accepted tag: `staging-as164`
-- Git status: `r165` accepted for column readiness and safe OAuth preflight; git finalization in progress
-- Browser acceptance for `r164` is accepted; `r165` browser acceptance is now accepted for column readiness and safe OAuth preflight while all Books writes remain disabled.
-- Current live feature set includes:
-  - queue aging
-  - Received/Age/SLA indicators in the admin queue UI
-  - safe write-once `Handled_By` and `Handled_At`
-  - Admin preview diagnostics for communications preview investigation
-- Current CIS scope:
-  - FODE Portal -> KIA Zoho Books column readiness and OAuth preflight
-  - CRM remains untouched and out of the billing trigger path
-  - draft-only readiness; no auto-send, no payment recording, no bulk posting, and no live Books writes
-- Expected changed files:
-  - `Config.js`
-  - `Utils.js`
-  - `Admin.js`
-  - `AdminUI.html`
-  - `CURRENT_TASK.md`
-  - `docs/Zoho_Books/Item.csv` only if minor correction is required
-  - `docs/Zoho_Books/r165_preflight_notes.md` only if explicit OAuth/column notes are needed
-- Deferred fields stay deferred:
-  - `Enrolled_By`
-  - `Enrolled_At`
-- Known UI issue:
-  - for `Application Feedback` and `Custom Email`, the old top `Preview` / `Send` buttons remain confusing; a future CIS should hide or disable them or clearly direct staff to the editable panel buttons
-- Release invariant is now governed by `AGENTS.md` and `tools/verify-remote-config-before-version.ps1`
-- Browser acceptance via Chrome extension is allowed only as narrow acceptance evidence, not as a coding or debug loop
-- Next exact step:
-  - finalize git for accepted `r165`
-  - next CIS must configure Zoho Books OAuth/token readiness
-  - after OAuth is ready, re-run live discovery and dry-run payload confirmation against Books
-  - keep all Books write flags disabled until a later explicitly authorized write CIS
-- Acceptance checklist:
-  - only allowed files changed
-  - CRM trigger/source files untouched
-  - Books write flags default to false
-  - preflight reports column readiness, token readiness, and discovery state clearly
-  - preview returns payer, student, line items, amount reconciliation, FODE reference, and idempotency status
-  - create endpoint returns `WRITE_DISABLED` while live write flags remain false
-  - Admin and Student `whoami` must match the intended release identity before browser testing
-  - no tokens or secrets exposed in UI or logs
-  - no Books contact, invoice, payment, or email side effect occurs during acceptance
-- r164 accepted blocker carried into r165:
-  - the required Books write-back fields were missing
-  - OAuth was not yet configured for read-only Books discovery
-  - payload preview readiness remained blocked until those two gaps were addressed
-- r165 deployment state:
-  - `Config.js` identity bumped to `r165 / 165`
-  - remote Config proof passed after controlled `clasp push --force`
-  - Apps Script version `165` created
-  - canonical Admin and Student deployments repinned to `@165`
-  - Admin and Student `whoami` both report `r165 / 165`, mismatch `false`
-  - `clasp run` is permission-blocked for this project, so live preflight/preview verification must be completed via authenticated Admin browser acceptance
-- r165 browser acceptance result:
-  - PASS for column readiness and safe OAuth preflight
-  - runtime badge shows `r165 / 165`
-  - Zoho Books dry-run panel is visible
-  - `Create Draft Invoice` remains blocked by config flags
-  - preflight reports `Columns: COLUMN_READY`
-  - preflight reports `Token: PREAUTH_REQUIRED`
-  - item catalog/live discovery remains blocked by `PREAUTH_REQUIRED`
-  - required Books write-back fields are present
-  - no Books contact, invoice, payment, or invoice email was created
-- Rollback note:
-  - preferred rollback is deployment repin to the accepted `r163 / 163` runtime first, then revert source only if needed
+- Source HEAD: `537f69734f9593869d3de3fb9abb6e2cc305617a`
+- HEAD commit: `release: r165 Zoho Books column readiness and OAuth preflight`
+- Accepted release tag: `staging-as165`
+- Local `staging-as165`: points to `537f69734f9593869d3de3fb9abb6e2cc305617a`
+- Remote `origin/staging-as165`: points to `537f69734f9593869d3de3fb9abb6e2cc305617a`
+- Git baseline before r166 work: clean
 
-## Accepted Release State
+## Accepted Baseline
 
-- `r150`: deployed and accepted baseline for the S5C workstream; later superseded.
-- `r151`: deployed but rejected at browser acceptance because the S5C email UI reported `Email sent to 0 admin recipient(s): `.
-- `r152`: deployed and accepted after fixing the email recipient payload handling.
-- `r152` confirmation: admin email delivery was found in Gmail All Mail; inbox absence was a routing/classification outcome, not a runtime failure.
-- `r153`: deployed and accepted current release; queue aging and safe handled ownership are live.
+- `r165` is the accepted current baseline for Zoho Books column readiness and OAuth preflight.
+- Browser acceptance for `r165` passed for column readiness and safe OAuth preflight.
+- Runtime badge showed `r165 / 165`.
+- Zoho Books dry-run panel was visible.
+- Preflight reported `Columns: COLUMN_READY`.
+- Preflight reported `Token: PREAUTH_REQUIRED`.
+- Item catalog/live discovery remained blocked by `PREAUTH_REQUIRED`.
+- `Create Draft Invoice` remained blocked by config flags.
+- No Books contact, invoice, payment, or invoice email was created.
 
-## Active Deferred Work
+## Current Scope Boundary
+
+- Books mode remains preflight/read-only only.
+- Books write flags remain disabled.
+- No auto-send, no payment recording, no bulk posting, and no live Books writes are authorized.
+- CRM remains excluded from the FODE billing trigger path.
+- No runtime/source logic change is authorized by this baseline reconciliation.
+- No Apps Script deployment, `clasp push`, or Apps Script version creation is authorized by this baseline reconciliation.
+
+## Property Diagnostics Note
+
+- Property pressure is currently unconfirmed, not disproven.
+- Live runtime diagnostics observed:
+  - Total Properties: `11`
+  - Estimated Size: `15882`
+  - `COMM_LAST` Count: `0`
+  - Health: `HEALTHY | SCRIPT_PROPERTY_COUNT_GREW`
+- Operational conclusion: the current active property inventory appears small and healthy relative to Apps Script quotas, but manual Script Properties persistence failure still requires controlled workaround or further diagnosis.
+
+## Next Exact Step
+
+- Start a new CIS for `r166` only after this baseline remains clean.
+- Intended `r166` work: temporary Super Admin-only Zoho Books secret setter, OAuth/token verification, read-only Books discovery, and Item.csv reconciliation.
+- Keep all Books write flags disabled during `r166` unless a later CIS explicitly authorizes writes.
+- Do not touch CRM files or CRM trigger/source logic for the FODE billing path.
+
+## Deferred Work
 
 - VCF production test remains parked until business WhatsApp phone access is available.
 - Admin identity rationalisation remains deferred as a separate task.
 - Future enrolment transition hook for `Enrolled_By` / `Enrolled_At` remains deferred.
-- Books-native architecture work is now limited to dry-run/preflight only in the current CIS; no live Books writes are authorized.
-- Batch feedback/custom email is deferred to a separate CIS. It must include preview count, explicit confirmation, per-applicant result logging, daily cap handling, and no automatic sending.
-- AI-assisted document quality scan is deferred. If added later, it must be advisory only for file type, clarity, likely wrong document, passport photo suitability, unreadable scans, missing files, and related quality flags; it must not auto-reject, auto-send, or override Admin review.
+- Batch feedback/custom email remains deferred. Any later CIS must include preview count, explicit confirmation, per-applicant result logging, daily cap handling, and no automatic sending.
+- AI-assisted document quality scan remains deferred. If added later, it must be advisory only and must not auto-reject, auto-send, or override Admin review.
 
 ## Known Governance Notes
 
-- `r152` S5C email observability is retained: the admin CSV email path now reports recipient count, recipient list, recipient source, and send result.
-- `r153` queue aging is deployed and current.
-- The write-once handled attribution path is intentional; do not convert it into a repeated-write path.
-- Historical handoff blocks referencing `r148`, `r149`, or `r150` as current runtime are stale and no longer authoritative.
-- `staging-as153` is the current accepted tag for the live runtime state.
-
-## Resume Instructions
-
-- Resume from `r153 / 153` and trust this file as the current authority.
-- Start with the VCF production test if phone access is available.
-- Otherwise continue with admin identity rationalisation, then the future enrolment transition hook.
-- Keep `Enrolled_By` / `Enrolled_At` deferred until a future CIS explicitly authorizes the transition hook.
-- Do not reopen the resolved S5C email UI issue unless a regression appears.
-- Do not rely on stale historical handoff blocks for current runtime truth.
-
-## PASS 1 Operational Hardening In Progress
-
-- Target release candidate: `r154 / 154`.
-- Scope: operational dashboard, email observability, WhatsApp fallback visibility, duplicate intake protection, trigger/runtime telemetry, and pipeline counts.
-- Files in scope: `AdminUI.html`, `Admin.js`, `Code.js`, `Utils.js`, `Config.js`, `CURRENT_TASK.md`.
-- Current accepted runtime remains `r153 / 153` until release acceptance completes.
-- Local validation: `node --check` passed for `Admin.js`, `Code.js`, `Utils.js`, and `Config.js`; `git diff --check` passed via preflight.
-- Release blocked before Apps Script version creation: `clasp push` and `clasp push -f` both failed with `ENOENT: no such file or directory, scandir ''`.
-- Do not proceed to `clasp version`, deployment repin, browser acceptance, git commit, tag, or push until the clasp rootDir blocker is explicitly resolved.
-- Continuation update: `.clasp.json` normalized to `rootDir:"."`; `clasp status` enumerated the expected project files and `clasp push` succeeded.
-- Apps Script version created: `153` with description `r154: PASS1 operational hardening`.
-- Canonical Admin and Student deployments repinned to Apps Script version `153`.
-- Runtime verification passed: Admin whoami and Student whoami both report `r154 / 154`, mismatch `false`.
-- Browser acceptance remains pending because in-app browser automation was unavailable in this session.
-
-## Entity Authority Audit In Progress
-
-- CIS priority: entity authority / orphan PortalSecrets risk supersedes dashboard semantics.
-- Known applicant under audit: `FODE-26-002013` / Anthony Makara / `mrova@airniugini.com.pg`.
-- Local code-path audit found Student portal rendering and upload/update paths require both a valid PortalSecrets token and a matching current admissions-sheet `ApplicantID` via `findPortalRowByIdSecret_`.
-- Local Admin review path (`admin_getApplicantDetail`) requires an admissions-sheet row and returns `DETAIL_ROW_NOT_FOUND` if the `ApplicantID` cannot be found.
-- Current sandbox cannot complete live row/count audit because `clasp run` cannot read local API credentials (`Could not read API credentials. Are you logged in locally?`).
-- Local `.gsheet` shortcut confirms PortalSecrets spreadsheet id `1HEJPtSov-iE5YTpSWWZ89YLIQAw4Eju9DDMG46HkTRc`; shortcut files do not contain row data.
-- No correction has been approved or performed. Do not delete/invalidate PortalSecrets rows or deploy guards until operator approves a correction option.
-
-## Sheet Authority Audit Findings
-
-- Live whoami verified Admin and Student canonical deployments report `r154 / 154`, scriptId `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`, mismatch `false`.
-- Runtime admissions config: `CONFIG.DATA_MODE=PROD`, spreadsheet id `1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4SalU`, working tab `FODE_Data`.
-- Local shortcut for runtime admissions sheet: `C:\GoogleDRIVE\2026 Enrolments and Policies\Forms FODE\FODE_Applications_2026.gsheet`.
-- Runtime admissions spreadsheet tabs observed: `FODE_Data` gid `0`, `Webhook_Log` gid `1463759150`, `Exam_Sites` gid `1695378500`.
-- Runtime PortalSecrets config: spreadsheet id `1HEJPtSov-iE5YTpSWWZ89YLIQAw4Eju9DDMG46HkTRc`, tab `PortalSecrets`, gid `0`.
-- Local shortcut for PortalSecrets: `C:\GoogleDRIVE\01 Corporate\03 Portal_Secret\FODE Portal Secrets 2026.gsheet`.
-- `FODE-26-002013` is present in runtime admissions `FODE_Data` row `2014` with Anthony Makara / `mrova@airniugini.com.pg`.
-- `FODE-26-002013` is present in runtime PortalSecrets `PortalSecrets` row `2002`, status `Active`.
-- This is not an orphan PortalSecrets case based on runtime-authoritative sheets.
-
-## r155 Upload Evidence Semantics Fix In Progress
-
-- Target release candidate: `r155: upload evidence semantics fix`.
-- Scope: prevent empty upload placeholders such as `[]`, `[ ]`, `{}`, `null`, `undefined`, `none`, and `not uploaded` from counting as uploaded evidence.
-- Code changes made in `Utils.js`, `Admin.js`, and `Code.js` only.
-- `hasUploadEvidence_` now centralizes upload evidence detection and requires a real Drive URL/file id or valid uploaded-file object/list.
-- Admin detail, review queue payment evidence, mandatory document issue detection, and lifecycle receipt evidence now use upload-specific evidence semantics instead of generic non-empty string checks.
-- Expected result for `FODE-26-002013`: `Fee_Receipt_File=[]` should display `Payment Evidence Uploaded: No` unless a valid receipt artifact exists.
-- Local validation passed: `node --check Admin.js`, `node --check Code.js`, `node --check Utils.js`, `node --check Config.js`, `git diff --check`, and `clasp status`.
-- Release blocked: `clasp push` failed with `Could not find script. Did you provide the correct scriptId? Are you logged in to the correct account with the script?`
-- `clasp login --status` reports an unknown user and failed access checks for `script.google.com`, `drive.google.com`, and Google Cloud/Developer Console.
-- Do not proceed to `clasp version`, deployment repin, browser acceptance, git commit, tag, or push until clasp authentication/account access is restored.
-
-## r155 Identity Correction In Progress
-
-- Canonical deployments were repinned to Apps Script platform version `154`, but live whoami still reported `VERSION=r154` and `DEPLOY_VERSION_NUMBER=154`.
-- Root cause: `Config.js` identity was not bumped before creating the r155 Apps Script platform version.
-- `Config.js` has been corrected to `VERSION: "r155"` and `DEPLOY_VERSION_NUMBER: 155`.
-- Local `AGENTS.md` now includes a mandatory Release Identity Gate requiring `Select-String -Path Config.js -Pattern "VERSION|DEPLOY_VERSION_NUMBER"` readback before `clasp version`.
-- Pre-version identity readback confirmed `VERSION: "r155"` and `DEPLOY_VERSION_NUMBER: 155`.
-- Local validation passed: `node --check Config.js`, `node --check Admin.js`, `node --check Code.js`, `node --check Utils.js`, `git diff --check`, and `clasp status`.
-- `clasp push` succeeded and Apps Script platform version `155` was created with `r155: upload evidence semantics fix identity correction`.
-- Canonical Admin and Student deployments were repinned to Apps Script platform version `155`; contaminated `@93`, recovery `@100`, and `@HEAD` deployments were not modified.
-- Runtime verification passed: Admin and Student whoami both report `VERSION=r155`, `DEPLOY_VERSION_NUMBER=155`, expected scriptId, and `mismatch=false`.
-- Browser acceptance remains pending because the Browser control tool is unavailable in this session. Do not commit, push, tag, or mark `staging-as155` accepted until Admin browser checks pass, including `FODE-26-002013` showing `Payment Evidence Uploaded: No`.
-
-## r156 Editable Applicant Feedback Emails Release In Progress
-
-- Feature source is the committed change `feat: add editable applicant feedback emails`.
-- `Config.js` identity was bumped to `VERSION: "r156"` and `DEPLOY_VERSION_NUMBER: 156` before Apps Script version creation.
-- Identity readback confirmed `VERSION: "r156"` and `DEPLOY_VERSION_NUMBER: 156`.
-- Local validation passed: `node --check Admin.js`, `node --check Code.js`, `node --check Config.js`, and `git diff --check`.
-- `clasp push` succeeded.
-- Apps Script platform version `156` was created with description `r156: editable applicant feedback emails`.
-- Canonical Admin deployment `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ` and canonical Student deployment `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv` were repinned to Apps Script platform version `156`.
-- Runtime verification passed: Admin and Student `?view=whoami` both report `VERSION=r156`, `DEPLOY_VERSION_NUMBER=156`, expected scriptId `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`, and `mismatch=false`.
-- Browser acceptance is still incomplete in this session because authenticated Admin UI interaction could not be exercised with the available tools.
-- Do not commit release metadata, push git, or tag `staging-as156` until the Admin browser acceptance matrix is completed and passes.
-
-## r157 Bugfix Release Failed Identity Gate
-
-- `r156` passed runtime identity but failed browser acceptance for Applicant Feedback preview and editable panel readability.
-- `r157` target scope is limited to:
-  - `Code.js` preview-default fix so blank edited subject/body do not override generated defaults
-  - `AdminUI.html` dark-theme editable panel styling fix
-- No new feature work, schema changes, batch email, or AI scan are part of `r157`.
-- `clasp push` succeeded.
-- Apps Script platform version `157` was created with description `r157: fix applicant feedback preview and styling`.
-- Canonical Admin deployment `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ` and canonical Student deployment `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv` were repinned to Apps Script platform version `157`.
-- Identity gate failed: after repin, both Admin and Student `?view=whoami` still reported `VERSION=r156` and `DEPLOY_VERSION_NUMBER=156`.
-- Do not browser-accept, commit, push git, or tag `staging-as157`.
-- Next required action is to correct the platform/version-content mismatch under release discipline, then repin and re-verify live `whoami`.
-
-## r158 Trust Reset In Progress
-
-- Remote source pull from scriptId `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90` confirmed `Config.js` was already `r157 / 157`, so the r157 failure was narrowed to the Apps Script version/deployment chain rather than local or remote source mismatch.
-- Corrective action: create a fresh `r158 / 158` Apps Script version after bumping local and remote source identity, then repin canonical Admin and Student deployments and re-verify live `whoami` before any browser acceptance.
-
-## r159 Release Chain Repair Failed Before Version Creation
-
-- Local `Config.js` has been bumped to `VERSION: "r159"` and `DEPLOY_VERSION_NUMBER: 159`.
-- Pre-version identity readback confirmed local `Config.js` is `r159 / 159`.
-- `.clasp.json` still targets the expected scriptId `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
-- `clasp push` returned `Skipping push.` despite the local `Config.js` identity change.
-- Controlled `clasp push --force` failed with `A file with this name already exists in the current project: appsscript`.
-- Isolated remote pull from the target script still shows `.codex_tmp_remote_pull/Config.js` at `VERSION: "r157"` and `DEPLOY_VERSION_NUMBER: 157`.
-- Hard release gate failed: remote source was not proven `r159 / 159`, so no `clasp version` was created for `r159`.
-- Canonical Admin and Student deployments remain pinned to Apps Script platform version `158`; no repin or browser acceptance was attempted in this CIS.
-- Next required action is to diagnose why `clasp push` is skipping or force-push is colliding on `appsscript.json`, then repeat the remote-proof gate under a new CIS before any version creation.
-
-## r160 Admin Communications Preview Handling Deployed, Browser Acceptance Pending
-
-- Local `Config.js` was bumped to `VERSION: "r160"` and `DEPLOY_VERSION_NUMBER: 160`.
-- Pre-version identity readback confirmed local `Config.js` is `r160 / 160`.
-- `clasp push` succeeded and pushed 8 Apps Script source files.
-- External remote pull outside the repo confirmed remote `Config.js` is `r160 / 160` before version creation.
-- Apps Script platform version `160` was created with description `r160: fix admin communications preview handling`.
-- Canonical Admin deployment `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ` and canonical Student deployment `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv` were repinned to Apps Script platform version `160`.
-- Live whoami verification passed:
-  - Admin reports `VERSION=r160`, `DEPLOY_VERSION_NUMBER=160`, expected scriptId, `mismatch=false`
-  - Student reports `VERSION=r160`, `DEPLOY_VERSION_NUMBER=160`, expected scriptId, `mismatch=false`
-- Browser acceptance is still pending in this session because authenticated Admin UI interaction could not be exercised with the available tools.
-- No live email was sent.
-- Do not commit, push git, or tag until the Admin browser acceptance matrix is completed and passes.
+- `AGENTS.md` governs release identity, remote-source verification, browser acceptance, and rollback discipline.
+- Live `whoami` is runtime truth; local source alone is not proof of live runtime.
+- Every release requires Admin whoami, Student whoami, and browser checks before acceptance.
+- Browser acceptance via Chrome extension is allowed only as narrow read-only acceptance evidence unless a separate CIS authorizes action.
+- Rollback preference remains deployment repin first, then source revert only if needed.
+- For `Application Feedback` and `Custom Email`, the old top `Preview` / `Send` buttons remain confusing; a future CIS should hide or disable them or clearly direct staff to the editable panel buttons.
