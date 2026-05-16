@@ -6625,7 +6625,7 @@ function buildOpsClassroomHandoverContext_(applicantId, dbgId) {
     "",
     "Operator action: review classroom package readiness and LMS/timetable provisioning.",
     "",
-    "This r172 cockpit action sends an internal notification only. It does not update classroom, enrolment, payment, or invoice fields.",
+    "This Ops cockpit action sends an internal notification only. It does not update classroom, enrolment, payment, or invoice fields.",
     "",
     "Debug ID: " + dbgId
   ].join("\n");

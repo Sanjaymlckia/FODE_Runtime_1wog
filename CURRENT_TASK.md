@@ -2,121 +2,94 @@
 
 ## Active CIS
 
-- Release target in progress: `r173 / 173`
-- Objective: Ops truth/safety correction, Safe Mode gating, and lifecycle/portal/fallback mapping.
-- Accepted live baseline: `r172 / 172`
-- Accepted baseline commit: `1125023`
-- Accepted baseline tag: `staging-as172`
+- Release candidate: `r174 Operator Console Usability`
+- Local candidate objective: make Ops Cockpit usable as a daily operator console while preserving existing write gates.
+- Accepted live baseline before editing:
+  - Commit: `609e513`
+  - Tag: `staging-as173`
+  - Apps Script version: `182`
+  - Runtime: `r173 / 173`
+  - Admin deployment: `@182`
+  - Student deployment: `@182`
+  - Git state before editing: `## main...origin/main`
 
-## Proven Baseline Before Editing
+## Baseline Verified Before Editing
 
-- Admin `?view=whoami`: `r172 / 172`, `mismatch=false`
-- Student `?view=whoami`: `r172 / 172`, `mismatch=false`
-- Script ID: `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`
-- Admin deployment: canonical staging deployment pinned to Apps Script `@180`
-- Student deployment: canonical staging deployment pinned to Apps Script `@180`
-- Admin `?view=ops` route loads
+- `git status -sb`: clean `## main...origin/main`
+- `git log --oneline -5`: latest `609e513 release: r173 ops safe-mode lifecycle mapping`
+- `clasp deployments`: canonical Admin and Student staging deployments pinned to `@182`
+- Admin `?view=whoami`: embedded payload showed `r173 / 173`, `mismatch=false`
+- Student `?view=whoami`: embedded payload showed `r173 / 173`, `mismatch=false`
 
 ## Allowed File Scope
 
 - `AdminUI.html`
-- `Admin.js`
-- `Config.js`
+- `Admin.js` only if required and justified
+- `Config.js` only after review approval for the release identity bump
 - `CURRENT_TASK.md`
-
-Audit artifacts may remain untracked:
-
-- `audits/r173/r173_ops_feature_audit.json`
-- `audits/r173/r173_ops_feature_audit.md`
-
-## Required r173 Scope
-
-- Correct misleading Ops labels and stale acceptance/runtime text.
-- Add explicit Safe Mode banner and approved-target gating for existing Ops live actions.
-- Separate Operator/Admin workflow surfaces from Super Admin/Governance surfaces.
-- Add lifecycle/stage cascade mapping.
-- Add Student Portal diagnostics mapping.
-- Add WhatsApp/contact fallback diagnostics mapping.
-
-## Explicitly Disabled In r173
-
-- Portal link reset
-- Portal lock/unlock
-- Parent email correction
-- Document status save
-- Overall status override
-- Payment verified write
-- Books draft invoice creation
-- Books test invoice email
-- Books payment/contact mutation
-- WhatsApp CSV export/email
-- Bounce scan write action
-- Docs bulk send
-- Stage batch preview/send
-- Token backfill apply
-- Classroom package generation
-- Mark classroom enrolled
 
 ## Local Implementation State
 
-- `Config.js` now contains the `OPS_SAFE_MODE_*` config block.
-- `Admin.js` now contains centralized Ops Safe Mode gating and deterministic diagnostics for Ops mutation actions.
-- `AdminUI.html` now:
-  - corrects misleading action-mode labels
-  - makes the Operator/Admin layer primary
-  - moves governance/runtime/release surfaces secondary
-  - adds lifecycle cascade mapping
-  - adds Student Portal diagnostics mapping
-  - adds WhatsApp/contact fallback diagnostics mapping
-- Local source only. No `clasp push`, version, repin, commit, or tag has been run for `r173`.
+- `AdminUI.html` locally updated for the r174 usability candidate:
+  - operator-first visual order
+  - responsive lifecycle stage cascade with inspect/filter behavior
+  - full-width applicant queue with selected-row highlight
+  - date applied, aging, and dummy/test markers
+  - applicant row right-click and long-press context menu
+  - Zoho Books filters with meaning, fields used, counts, records, and next action
+  - communications template quick look, custom draft controls, selected applicant context, and single-record preview/send gates
+  - Classroom Pending explanation and read/write impact notes
+  - WhatsApp/contact fallback explanation only
+  - Rules & Config setting classification
+  - System Health definitions and reason text
+- `CURRENT_TASK.md` updated for this r174 local candidate handoff.
+- `Admin.js` updated only to remove a stale `r172` label from the classroom handover preview text. No server logic or gates changed.
+- `Config.js` unchanged. Local source still reports `VERSION: "r173"` and `DEPLOY_VERSION_NUMBER: 173` until review approval.
 
-## r173 Acceptance Outcome
+## Explicitly Not Activated In r174 Local Candidate
 
-- Local `Config.js` was bumped to `r173 / 173`.
-- `clasp push` completed.
-- Remote-source verification outside the repo root passed for:
-  - `VERSION: "r173"`
-  - `DEPLOY_VERSION_NUMBER: 173`
-  - latest `AdminUI.html` row-selection acceptance fix
-- Apps Script versions created during r173 acceptance:
-  - `181`
-    - `r173: Ops truth/safety correction + safe-mode lifecycle mapping`
-  - `182`
-    - `r173: ops safe-mode lifecycle mapping with row-selection acceptance fix`
-- Canonical Admin and Student staging deployments are accepted on `@182`.
-- Live Admin `?view=whoami` passed:
-  - `r173 / 173`
-  - `mismatch=false`
-- Live Student `?view=whoami` passed:
-  - `r173 / 173`
-  - `mismatch=false`
-- Accepted operator evidence for r173:
-  - Ops loads with `r173 / 173`
-  - Safe Mode visible
-  - approved row identity `FODE-26-002929` visible
-  - approved row email visible
-  - test recipient override separated and visible
-  - applicant email sends shown as `Safe Test Only`
-  - classroom notify shown as `Safe Test Only`
-  - non-approved row `FODE-26-002928` selected and context updated
-  - non-approved row displayed `Not approved for Safe Mode send`
-  - no unintended email/write observed
-  - Books/payment/enrolment/WhatsApp/export writes remain disabled
-  - lifecycle, Student Portal diagnostics, and WhatsApp/contact fallback mapping visible
-- Owner accepted approved-row positive send based on configured Safe Mode state and prior known single-send/email behavior.
-- `r173` is accepted.
+- bulk send
+- stage batch send
+- docs bulk follow-up
+- Books draft invoice create
+- Books invoice send
+- Books payment creation
+- payment verified write
+- enrolment write
+- portal link reset
+- portal lock/unlock
+- parent email correction
+- document status save
+- overall status override
+- WhatsApp CSV export/email
+- token backfill apply
+- mark classroom enrolled
 
-## Finalization
+## Stop State
 
-- Final source finalization:
-  - `git add Admin.js AdminUI.html Config.js CURRENT_TASK.md audits/r173/r173_ops_feature_audit.json audits/r173/r173_ops_feature_audit.md`
-  - `git commit -m "release: r173 ops safe-mode lifecycle mapping"`
-  - `git push`
-  - `git tag staging-as173`
-  - `git push origin staging-as173`
+- Local implementation only.
+- No `clasp push`.
+- No `clasp version`.
+- No deployment repin.
+- No browser acceptance.
+- No tag.
+- Next required operator step: review local diff and approve or reject the r174 identity bump/release workflow.
+
+## Future Release Workflow After Review Approval Only
+
+1. Bump `Config.js` to `VERSION = "r174"` and `DEPLOY_VERSION_NUMBER = 174`.
+2. Run `Select-String -Path Config.js -Pattern "VERSION|DEPLOY_VERSION_NUMBER"` and `git diff -- Config.js`.
+3. Run `clasp push`.
+4. Verify remote source outside the repo contains `r174 / 174`.
+5. Create Apps Script version.
+6. Repin Admin and Student staging deployments.
+7. Verify Admin `whoami = r174 / 174`, `mismatch=false`.
+8. Verify Student `whoami = r174 / 174`, `mismatch=false`.
+9. Run browser acceptance.
+10. Commit/push/tag only after acceptance.
 
 ## Rollback
 
-- If a future rollback is required, repin Admin and Student back to accepted `r172 / 172` Apps Script `@180` first.
+- If future release acceptance fails after deployment, repin Admin and Student back to accepted `r173 / 173` Apps Script `@182`.
 - Verify Admin and Student `?view=whoami`.
-- Revert source only if needed after deployment rollback.
+- Do not tag a failed release.
