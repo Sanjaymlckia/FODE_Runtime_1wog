@@ -2,93 +2,139 @@
 
 ## Active CIS
 
-- Release target: `r171 / 171`
-- Objective: Operations Cockpit full submenu mockup implementation.
-- Baseline: `r170 / 170` accepted and finalized at commit `85b6708`, tag `staging-as170`.
-- Admin `?view=ops` must remain a read-only cockpit prototype.
+- Release target: `r172 / 172`
+- Objective: Operations Cockpit controlled live actions and operational workflow maturity.
+- Accepted baseline: `r171 / 171`
+- Baseline commit: `bd2e99442db5a7a88249072f5e765888dc294ab9`
+- Baseline tag: `staging-as171`
+
+## Required State Classification
+
+1. Live runtime truth:
+   - Admin `?view=whoami`: `r172 / 172`, `mismatch=false`
+   - Student `?view=whoami`: `r172 / 172`, `mismatch=false`
+2. Apps Script deployment truth:
+   - Admin deployment pinned to platform version `180`
+   - Student deployment pinned to platform version `180`
+3. Local `Config.js` truth:
+   - Finalized local target: `r172 / 172`
+4. Remote `Config.js` truth:
+   - `REMOTE VERSION: r172`
+   - `REMOTE DEPLOY_VERSION_NUMBER: 172`
+5. Git truth before finalization:
+   - HEAD currently at accepted `r171` baseline plus r172 release edits
+   - Latest accepted tag before finalization: `staging-as171`
+6. Dirty-state classification before finalization:
+   - `unfinalized deployed release`
+   - Not a failed release.
+   - Not unrelated drift.
 
 ## Current Source State
 
-- `Config.js` has been bumped locally to:
-  - `VERSION: "r171"`
-  - `DEPLOY_VERSION_NUMBER: 171`
-- `AdminUI.html` now gives every left sidebar item a distinct mockup section:
-  - Dashboard
-  - Runtime Truth
-  - Admissions Queue
-  - Zoho Books
-  - Communications
-  - Classroom Handover
-  - Reports
-  - Release Control
-  - Rules & Config
-- `Admin.js` has not been changed for this CIS.
+- `Config.js` target identity:
+  - `VERSION: "r172"`
+  - `DEPLOY_VERSION_NUMBER: 172`
+- `AdminUI.html` now matures the r171 cockpit without redesigning it:
+  - FODE Operations branding replaces CodexHub-dominant product branding.
+  - Refresh Snapshot is live and read-only.
+  - Admissions queue filtering is local/read-only.
+  - Communications section has single-applicant preview/send controls with preview and confirmation gates.
+  - Zoho Books has read-only invoice open/status controls only.
+  - Classroom Handover has internal-only handover preview and classroom admin notification.
+  - Reports open read-only in-page report panels; export/schedule remain disabled.
+  - Release Control shows guidance only and does not invoke git, clasp, deployment, or rollback commands.
+- `Admin.js` adds internal-only classroom handover preview/notification helpers.
 
 ## Safety Boundary
 
 - No `Code.js` changes.
 - No `Utils.js` changes.
 - No `appsscript.json` or `.clasp.json` changes.
-- No invoice creation, invoice send, payment recording, bulk processing, email sending, enrolment writes, classroom writes, or Zoho Books write enablement from the cockpit.
-- Future action buttons in the cockpit must remain disabled/prototype-only.
+- No sheet schema changes.
+- No Drive structure changes.
+- No hidden automation changes.
+- Bulk operations remain disabled.
+- Payment recording remains disabled.
+- Mark paid/enrolled/registration-complete remains disabled.
+- Classroom completion/write-back remains disabled.
+- Invoice creation, invoice send, and payment recording from cockpit remain disabled.
 
 ## Validation Completed Locally
 
 - `node --check Config.js` passed.
+- `node --check Admin.js` passed.
 - `git diff --check` passed.
 - Changed files at this checkpoint:
   - `Config.js`
   - `AdminUI.html`
+  - `Admin.js`
   - `CURRENT_TASK.md`
 
-## Release Finalization
+## Browser Acceptance Result
 
-- Browser acceptance has been accepted from operator evidence.
-- Finalization commands authorized:
-  - `git add Config.js AdminUI.html CURRENT_TASK.md`
-  - `git commit -m "release: r171 operations cockpit submenu prototype"`
-  - `git push`
-  - `git tag staging-as171`
-  - `git push origin staging-as171`
+- Manual browser acceptance passed using the dedicated FODE acceptance Chrome profile.
+- Accepted evidence:
+  - Admin base route loads correctly.
+  - Admin `?view=ops` loads correctly.
+  - Runtime shows `r172 / 172`.
+  - Admissions Queue Review functionality is reachable.
+  - Student portal functionality is reachable.
+  - Communications workflows are reachable where mapped.
+  - WhatsApp functionality is visible/reachable where mapped.
+  - Zoho Books status/actions are reachable where mapped.
+  - No bulk actions are enabled.
+  - No payment recording is enabled.
+  - No mark-paid/enrolled/completed actions are enabled.
+  - Student portal still works normally.
 
 ## Deployment Status
 
 - Source pushed with `clasp push`.
 - Remote `Config.js` was verified outside the clasp source root:
-  - `REMOTE VERSION: r171`
-  - `REMOTE DEPLOY_VERSION_NUMBER: 171`
+  - `REMOTE VERSION: r172`
+  - `REMOTE DEPLOY_VERSION_NUMBER: 172`
 - Apps Script platform version created:
-  - `179`
-  - `r171: operations cockpit submenu prototype`
-- Admin deployment repinned to platform version `179`.
-- Student deployment repinned to platform version `179`.
+  - `180`
+  - `r172: operations cockpit controlled live actions`
+- Admin deployment repinned to platform version `180`.
+- Student deployment repinned to platform version `180`.
 - Admin `?view=whoami` passed:
-  - `r171`
-  - `deployVersion 171`
+  - `r172`
+  - `deployVersion 172`
   - `mismatch=false`
 - Student `?view=whoami` passed:
-  - `r171`
-  - `deployVersion 171`
+  - `r172`
+  - `deployVersion 172`
   - `mismatch=false`
 - Read-only HTTP payload checks passed for:
   - Admin base route
   - Student portal route
-  - Admin `?view=ops` payload includes r171 cockpit labels and disabled prototype action labels
-- Browser acceptance accepted by operator evidence:
-  - Admin `?view=ops` loads distinct Dashboard, Runtime Truth, Admissions Queue, Zoho Books, Communications, Classroom Handover, Reports, Release Control, and Rules & Config sections.
-  - Future operational controls are visible but prototype/read-only.
-  - No live write actions were added.
-  - Admin base route remains intact.
-  - Student portal route remains intact.
-- Git finalization authorized.
+  - Admin `?view=ops` payload includes r172 controlled-action labels
+- Browser acceptance passed.
+- `r172` is accepted as the controlled live-actions baseline.
 
-## Browser Acceptance Target
+## Accepted Gaps
 
-- URL: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=ops`
-- PASS requires every sidebar item to show a distinct section and all unsafe actions to remain disabled/prototype-only.
+- Some Ops sections still require deeper operational parity mapping from legacy Admin.
+- Some buttons/routes remain partially populated and will continue maturing in future releases.
+
+## Future Enhancements
+
+- Continue expanding Ops parity against the legacy Admin surface in later controlled releases.
+- Mature partially populated buttons/routes only under future CIS-controlled work.
+
+## Deferred Work
+
+- Post-acceptance git finalization:
+  - `git add Config.js AdminUI.html Admin.js CURRENT_TASK.md`
+  - `git commit -m "release: r172 operations cockpit controlled live actions"`
+  - `git push`
+  - `git tag staging-as172`
+  - `git push origin staging-as172`
+  - `git status -sb`
 
 ## Rollback
 
-- Repin Admin and Student deployments to the accepted `r170 / 170` Apps Script version.
+- Repin Admin and Student deployments to the accepted `r171 / 171` runtime first.
 - Verify Admin and Student `?view=whoami`.
 - Revert source only if needed after deployment rollback.

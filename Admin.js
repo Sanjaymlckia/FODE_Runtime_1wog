@@ -6203,6 +6203,203 @@ function admin_sendApplicantMessage(payload) {
   });
 }
 
+function getOpsClassroomAdminRecipients_() {
+  var configured = Array.isArray(CONFIG.OPS_CLASSROOM_ADMIN_EMAILS) ? CONFIG.OPS_CLASSROOM_ADMIN_EMAILS : [];
+  var fallback = Array.isArray(CONFIG.INTERNAL_FINANCE_EMAILS) ? CONFIG.INTERNAL_FINANCE_EMAILS : [];
+  var src = configured.length ? configured : fallback;
+  var out = [];
+  var seen = {};
+  for (var i = 0; i < src.length; i++) {
+    var email = clean_(src[i] || "").toLowerCase();
+    if (!email || seen[email]) continue;
+    if (typeof isValidEmail_ === "function" && !isValidEmail_(email)) continue;
+    seen[email] = true;
+    out.push(email);
+  }
+  return out;
+}
+
+function buildOpsClassroomHandoverContext_(applicantId, dbgId) {
+  var id = clean_(applicantId || "");
+  if (!id) {
+    return {
+      ok: false,
+      result: "BLOCKED",
+      blockCode: "MISSING_APPLICANT_ID",
+      blockReason: "Applicant ID is required.",
+      applicantId: "",
+      debugId: dbgId
+    };
+  }
+  var sh = getWorkingSheet_();
+  var rowNumber = findRowByApplicantId_(sh, id);
+  if (!rowNumber) {
+    return {
+      ok: false,
+      result: "BLOCKED",
+      blockCode: "APPLICANT_NOT_FOUND",
+      blockReason: "Applicant was not found.",
+      applicantId: id,
+      debugId: dbgId
+    };
+  }
+  var rowObj = getRowObject_(sh, rowNumber);
+  rowObj._rowNumber = rowNumber;
+  var recipients = getOpsClassroomAdminRecipients_();
+  if (!recipients.length) {
+    return {
+      ok: false,
+      result: "BLOCKED",
+      blockCode: "NO_INTERNAL_CLASSROOM_RECIPIENT",
+      blockReason: "No internal classroom admin recipient is configured.",
+      applicantId: id,
+      debugId: dbgId
+    };
+  }
+  var firstName = clean_(rowObj.First_Name || rowObj.Student_First_Name || rowObj.name || "");
+  var lastName = clean_(rowObj.Last_Name || rowObj.Student_Last_Name || "");
+  var studentName = clean_((firstName + " " + lastName).trim() || rowObj.Student_Name || rowObj.Full_Name || id);
+  var paymentVerified = clean_(rowObj.Payment_Verified || "").toUpperCase() === "YES" || rowObj.Payment_Verified_Bool === true || rowObj.paymentVerified === true;
+  var enrolledConfirmed = clean_(rowObj.Enrolled_Confirmed || "").toUpperCase() === "YES";
+  if (!paymentVerified || !enrolledConfirmed) {
+    return {
+      ok: false,
+      result: "BLOCKED",
+      blockCode: "CLASSROOM_HANDOVER_NOT_READY",
+      blockReason: "Classroom notification requires payment verified and enrolled confirmed.",
+      applicantId: id,
+      rowNumber: rowNumber,
+      debugId: dbgId
+    };
+  }
+  var level = clean_(rowObj.FODE_Level || rowObj.Grade_Applying_For || rowObj.Upgrade_Grade_Stream || rowObj.Grade || "Unknown");
+  var subjects = clean_(rowObj.Subjects_Selected_Canonical || rowObj.Selected_Subjects || rowObj.Subjects || "Unknown");
+  var invoiceNumber = clean_(rowObj.Books_Invoice_Number || rowObj.Invoice_Number || "Unknown");
+  var invoiceStatus = clean_(rowObj.Books_Invoice_Status || rowObj.Invoice_Status || "Unknown");
+  var classroomStatus = clean_(rowObj.Classroom_Status || rowObj.Classroom_Handover_Status || "Classroom Pending");
+  var subject = "FODE classroom handover review: " + id + " - " + studentName;
+  var body = [
+    "FODE Classroom Handover Review",
+    "",
+    "Applicant ID: " + id,
+    "Student: " + studentName,
+    "Grade / FODE level: " + level,
+    "Selected subjects: " + subjects,
+    "Invoice: " + invoiceNumber + " / " + invoiceStatus,
+    "Payment verified: YES",
+    "Enrolled confirmed: YES",
+    "Classroom handover status: " + classroomStatus,
+    "",
+    "Operator action: review classroom package readiness and LMS/timetable provisioning.",
+    "",
+    "This r172 cockpit action sends an internal notification only. It does not update classroom, enrolment, payment, or invoice fields.",
+    "",
+    "Debug ID: " + dbgId
+  ].join("\n");
+  return {
+    ok: true,
+    result: "PREVIEW",
+    eligible: true,
+    applicantId: id,
+    rowNumber: rowNumber,
+    studentName: studentName,
+    recipients: recipients,
+    effectiveEmail: recipients.join(", "),
+    subject: subject,
+    body: body,
+    debugId: dbgId
+  };
+}
+
+function admin_previewOpsClassroomHandover(payload) {
+  return withEnvelope_("admin_previewOpsClassroomHandover", function (dbgId) {
+    var adminEmail = getCallerEmail_();
+    if (!isAdmin_(adminEmail)) return err_("ACCESS_DENIED", "Access denied", dbgId);
+    var p = payload && typeof payload === "object" ? payload : {};
+    if (Array.isArray(p.applicantIds) || Array.isArray(p.recipients)) {
+      return adminCommBlockedResult_("preview_classroom_handover", "BULK_NOT_ALLOWED", dbgId, {
+        blockReason: "Classroom handover preview accepts one applicant only."
+      });
+    }
+    var ctx = buildOpsClassroomHandoverContext_(p.applicantId, dbgId);
+    if (ctx.ok !== true) return adminCommBlockedResult_("preview_classroom_handover", ctx.blockCode, dbgId, ctx);
+    logAdminEvent_("OPS_CLASSROOM_HANDOVER_PREVIEW", {
+      operator: adminEmail,
+      applicantId: ctx.applicantId,
+      rowNumber: ctx.rowNumber,
+      recipients: ctx.effectiveEmail,
+      debugId: dbgId
+    });
+    return ctx;
+  });
+}
+
+function admin_notifyOpsClassroomAdmin(payload) {
+  return withEnvelope_("admin_notifyOpsClassroomAdmin", function (dbgId) {
+    var adminEmail = getCallerEmail_();
+    if (!isAdmin_(adminEmail)) return err_("ACCESS_DENIED", "Access denied", dbgId);
+    var p = payload && typeof payload === "object" ? payload : {};
+    if (Array.isArray(p.applicantIds) || Array.isArray(p.recipients) || Array.isArray(p.messages)) {
+      return adminCommBlockedResult_("notify_classroom_admin", "BULK_NOT_ALLOWED", dbgId, {
+        blockReason: "Classroom notification accepts one applicant only."
+      });
+    }
+    if (p.confirmInternalSingleSend !== true) {
+      return adminCommBlockedResult_("notify_classroom_admin", "CONFIRM_REQUIRED", dbgId, {
+        applicantId: clean_(p.applicantId || ""),
+        blockReason: "Preview and explicit internal single-send confirmation are required."
+      });
+    }
+    var ctx = buildOpsClassroomHandoverContext_(p.applicantId, dbgId);
+    if (ctx.ok !== true) return adminCommBlockedResult_("notify_classroom_admin", ctx.blockCode, dbgId, ctx);
+    var sent = adminSendEmail_(ctx.recipients.join(","), ctx.subject, ctx.body, {
+      replyTo: safeStr_(CONFIG.EMAIL_REPLY_TO || CONFIG.DOCS_FOLLOWUP_REPLY_TO || ""),
+      name: safeStr_(CONFIG.EMAIL_FROM_NAME || "FODE Admissions"),
+      senderMode: safeStr_(CONFIG.EMAIL_SENDER_MODE || "DEFAULT")
+    });
+    if (!sent || sent.ok !== true) {
+      logAdminEvent_("OPS_CLASSROOM_HANDOVER_NOTIFY", {
+        operator: adminEmail,
+        applicantId: ctx.applicantId,
+        rowNumber: ctx.rowNumber,
+        outcome: "FAILED",
+        error: safeStr_(sent && sent.error || "Email send failed"),
+        debugId: dbgId
+      });
+      return {
+        ok: true,
+        result: "FAILED",
+        eligible: false,
+        blockCode: "EMAIL_SEND_FAILED",
+        blockReason: safeStr_(sent && sent.error || "Email send failed"),
+        applicantId: ctx.applicantId,
+        effectiveEmail: ctx.effectiveEmail,
+        subject: ctx.subject,
+        debugId: dbgId
+      };
+    }
+    logAdminEvent_("OPS_CLASSROOM_HANDOVER_NOTIFY", {
+      operator: adminEmail,
+      applicantId: ctx.applicantId,
+      rowNumber: ctx.rowNumber,
+      outcome: "SENT",
+      recipients: ctx.effectiveEmail,
+      debugId: dbgId
+    });
+    return {
+      ok: true,
+      action: "notify_classroom_admin",
+      result: "SENT",
+      eligible: true,
+      applicantId: ctx.applicantId,
+      effectiveEmail: ctx.effectiveEmail,
+      subject: ctx.subject,
+      body: ctx.body,
+      debugId: dbgId
+    };
+  });
+}
+
 function admin_planApplicantBatch(payload) {
   return withEnvelope_("admin_planApplicantBatch", function (dbgId) {
     var adminEmail = getActiveUserEmail_();

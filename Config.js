@@ -7,9 +7,9 @@
  */
 var CONFIG = {
   // Versioning (change control)
-  VERSION: "r171",
+  VERSION: "r172",
 CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alignment",
-  DEPLOY_VERSION_NUMBER: 171,
+  DEPLOY_VERSION_NUMBER: 172,
 BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
 
   // STAGING/PROD data mode routing (working sheet)
@@ -227,6 +227,9 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   INVOICE_TRIGGER_MODE: "LOG_ONLY", // "LOG_ONLY" | "WEBHOOK"
   INVOICE_WEBHOOK_URL: "",
   INTERNAL_FINANCE_EMAILS: [
+    "sanjay@minervacenters.com"
+  ],
+  OPS_CLASSROOM_ADMIN_EMAILS: [
     "sanjay@minervacenters.com"
   ],
   PAYMENT_INSTRUCTIONS_TEXT: "<BANK DETAILS MODE A: literal bank instructions text>",
