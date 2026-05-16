@@ -778,6 +778,7 @@
     #opsStudentDiagnostics{ order:10; }
     #opsFallbackDiagnostics{ order:11; }
     #opsReleaseControl{ order:12; }
+    .opsFooterStrip{ order:13; }
     .opsStageCascade{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px; }
     .opsStageCard{ border:1px solid #dce6ef; background:#fff; border-radius:8px; padding:12px; text-align:left; cursor:pointer; min-height:178px; display:flex; flex-direction:column; gap:8px; }
     .opsStageCard:hover{ border-color:#a9c6ee; background:#f8fbff; }
@@ -1958,6 +1959,7 @@
       previewResult: null,
       classroomPreviewApplicantId: "",
       classroomPreviewResult: null,
+      previewDraftSignature: "",
       queueFilter: "",
       lifecycleStage: "",
       booksFilter: "all",
@@ -2773,6 +2775,9 @@
         body: String((document.getElementById("opsCustomBody") || {}).value || "")
       };
     }
+    function opsCustomEmailSignature_(){
+      return JSON.stringify(opsCustomEmailPayload_());
+    }
     function opsPreviewApplicantEmail_(messageType, label){
       var applicantId = opsApplicantId_();
       var msgType = String(messageType || "reminder").trim();
@@ -2788,10 +2793,12 @@
             opsActionState.previewApplicantId = applicantId;
             opsActionState.previewMessageType = msgType;
             opsActionState.previewResult = out;
+            opsActionState.previewDraftSignature = msgType === "custom_email" ? opsCustomEmailSignature_() : "";
           } else {
             opsActionState.previewApplicantId = "";
             opsActionState.previewMessageType = "";
             opsActionState.previewResult = out;
+            opsActionState.previewDraftSignature = "";
           }
           setOpsResult_("opsCommunicationResult", out, String(label || "Email") + " Preview");
         })
@@ -2818,6 +2825,15 @@
           applicantId: applicantId,
           blockCode:"PREVIEW_REQUIRED",
           blockReason:"Preview " + String(label || msgType) + " before sending. Recipient, subject, and body must be reviewed first."
+        }, "Send Blocked");
+        return;
+      }
+      if (msgType === "custom_email" && opsActionState.previewDraftSignature !== opsCustomEmailSignature_()) {
+        setOpsResult_("opsCommunicationResult", {
+          result:"BLOCKED",
+          applicantId: applicantId,
+          blockCode:"PREVIEW_STALE",
+          blockReason:"Custom email content changed after preview. Preview the final subject/body again before sending."
         }, "Send Blocked");
         return;
       }

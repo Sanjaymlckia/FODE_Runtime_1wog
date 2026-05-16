@@ -42,6 +42,9 @@
   - WhatsApp/contact fallback explanation only
   - Rules & Config setting classification
   - System Health definitions and reason text
+- Review hardening applied after `/review`:
+  - footer strip explicitly ordered after the operator sections
+  - custom email send is blocked if subject/body/recipient changed after preview
 - `CURRENT_TASK.md` updated for this r174 local candidate handoff.
 - `Admin.js` updated only to remove a stale `r172` label from the classroom handover preview text. No server logic or gates changed.
 - `Config.js` unchanged. Local source still reports `VERSION: "r173"` and `DEPLOY_VERSION_NUMBER: 173` until review approval.
