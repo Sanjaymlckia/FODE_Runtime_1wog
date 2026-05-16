@@ -6190,16 +6190,48 @@ function admin_sendApplicantMessage(payload) {
         blockReason: "Unsupported message type."
       });
     }
-    return sendApplicantMessage_(applicantId, messageType, {
+    var opsGate = runOpsSafeModeGate_("applicant_email_send", {
+      payload: p,
+      adminEmail: adminEmail,
+      applicantId: applicantId,
+      debugId: dbgId
+    });
+    if (opsGate && opsGate.ok !== true) {
+      return adminCommBlockedResult_("send", safeStr_(opsGate.blockCode || "OPS_SAFE_MODE_ACTION_BLOCKED"), dbgId, {
+        applicantId: applicantId,
+        messageType: requestedType,
+        blockReason: safeStr_(opsGate.blockReason || "Ops Safe Mode blocked this action."),
+        safeMode: opsGate.safeMode === true,
+        diagnosticsLabel: safeStr_(opsGate.diagnosticsLabel || "OPS_SAFE_MODE_ACTION_BLOCKED")
+      });
+    }
+    var opsRecipientOverride = opsGate && opsGate.safeMode === true
+      ? clean_(CONFIG.OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE || "")
+      : "";
+    var sendResult = sendApplicantMessage_(applicantId, messageType, {
       actorEmail: actor.actorEmail,
       actorRole: actor.actorRole,
       batchLabel: clean_(p.batchLabel || ""),
       debugId: clean_(p.debugId || dbgId),
       manualSingleSendProbe: true,
-      editedRecipient: clean_(p.recipient || ""),
+      editedRecipient: opsRecipientOverride || clean_(p.recipient || ""),
       editedSubject: String(p.subject || ""),
       editedBody: String(p.body || "")
     });
+    if (opsGate && opsGate.safeMode === true) {
+      logOpsSafeModeEvent_(String(sendResult && sendResult.result || "").toUpperCase() === "SENT"
+        ? "OPS_SAFE_MODE_ACTION_COMPLETED"
+        : "OPS_SAFE_MODE_ACTION_FAILED", {
+        actionType: "applicant_email_send",
+        operator: adminEmail,
+        applicantId: applicantId,
+        debugId: dbgId,
+        recipientOverride: opsRecipientOverride,
+        overrideApplied: !!opsRecipientOverride,
+        result: clean_(sendResult && sendResult.result || "")
+      });
+    }
+    return sendResult;
   });
 }
 
@@ -6217,6 +6249,307 @@ function getOpsClassroomAdminRecipients_() {
     out.push(email);
   }
   return out;
+}
+
+function isOpsSafeModeSource_(payload) {
+  var p = payload && typeof payload === "object" ? payload : {};
+  return clean_(p.sourceSurface || p.sourceView || "").toLowerCase() === "ops";
+}
+
+function logOpsSafeModeEvent_(label, payload) {
+  var eventLabel = clean_(label || "OPS_SAFE_MODE_ACTION_BLOCKED");
+  var body = payload && typeof payload === "object" ? payload : {};
+  body.label = eventLabel;
+  if (typeof logAdminEvent_ === "function") {
+    logAdminEvent_(eventLabel, body);
+    return;
+  }
+  try {
+    Logger.log(eventLabel + " " + JSON.stringify(body));
+  } catch (_opsLogErr) {}
+}
+
+function buildOpsSafeModeRowIdentity_(rowObj, rowNumber) {
+  var row = rowObj && typeof rowObj === "object" ? rowObj : {};
+  var first = clean_(row.First_Name || row.Student_First_Name || row.name || "");
+  var last = clean_(row.Last_Name || row.Student_Last_Name || "");
+  return {
+    applicantId: clean_(row.ApplicantID || ""),
+    rowNumber: Number(rowNumber || row._rowNumber || 0),
+    email: clean_(row.Effective_Email || row.Parent_Email_Corrected || row.Parent_Email || row.Email || "").toLowerCase(),
+    fullName: clean_((first + " " + last).trim() || row.Student_Name || row.Full_Name || "")
+  };
+}
+
+function findOpsSafeModeTargetMatches_(approvedTarget) {
+  var cfg = approvedTarget && typeof approvedTarget === "object" ? approvedTarget : {};
+  var applicantId = clean_(cfg.applicantId || "");
+  var email = clean_(cfg.rowEmail || cfg.email || "").toLowerCase();
+  var fullName = clean_(cfg.fullName || "");
+  var out = [];
+  if (applicantId) {
+    var shById = getWorkingSheet_();
+    var rowNumberById = findRowByApplicantId_(shById, applicantId);
+    if (rowNumberById) {
+      var rowObjById = getRowObject_(shById, rowNumberById);
+      rowObjById._rowNumber = rowNumberById;
+      out.push(buildOpsSafeModeRowIdentity_(rowObjById, rowNumberById));
+    }
+    return { priority: "applicantId", matches: out };
+  }
+  var sh = getWorkingSheet_();
+  var values = sh.getDataRange().getValues();
+  if (!values || values.length < 2) return { priority: email ? "email" : (fullName ? "fullName" : ""), matches: [] };
+  var headers = values[0];
+  function idxOf(name) {
+    for (var i = 0; i < headers.length; i++) {
+      if (String(headers[i] || "").trim() === name) return i;
+    }
+    return -1;
+  }
+  var idxApplicant = idxOf("ApplicantID");
+  var idxEffective = idxOf("Effective_Email");
+  var idxParentCorrected = idxOf("Parent_Email_Corrected");
+  var idxParent = idxOf("Parent_Email");
+  var idxEmail = idxOf("Email");
+  var idxFirst = idxOf("First_Name");
+  var idxStudentFirst = idxOf("Student_First_Name");
+  var idxName = idxOf("name");
+  var idxLast = idxOf("Last_Name");
+  var idxStudentLast = idxOf("Student_Last_Name");
+  var idxStudentName = idxOf("Student_Name");
+  var idxFullName = idxOf("Full_Name");
+  for (var r = 1; r < values.length; r++) {
+    var row = values[r];
+    var rowApplicantId = idxApplicant >= 0 ? clean_(row[idxApplicant]) : "";
+    var rowEmail = clean_(
+      (idxEffective >= 0 ? row[idxEffective] : "")
+      || (idxParentCorrected >= 0 ? row[idxParentCorrected] : "")
+      || (idxParent >= 0 ? row[idxParent] : "")
+      || (idxEmail >= 0 ? row[idxEmail] : "")
+    ).toLowerCase();
+    var rowFirst = clean_((idxFirst >= 0 ? row[idxFirst] : "") || (idxStudentFirst >= 0 ? row[idxStudentFirst] : "") || (idxName >= 0 ? row[idxName] : ""));
+    var rowLast = clean_((idxLast >= 0 ? row[idxLast] : "") || (idxStudentLast >= 0 ? row[idxStudentLast] : ""));
+    var rowFullName = clean_((rowFirst + " " + rowLast).trim() || (idxStudentName >= 0 ? row[idxStudentName] : "") || (idxFullName >= 0 ? row[idxFullName] : ""));
+    if (email && rowEmail === email) {
+      out.push({ applicantId: rowApplicantId, rowNumber: r + 1, email: rowEmail, fullName: rowFullName });
+      continue;
+    }
+    if (!email && fullName && rowFullName === fullName) {
+      out.push({ applicantId: rowApplicantId, rowNumber: r + 1, email: rowEmail, fullName: rowFullName });
+    }
+  }
+  return { priority: email ? "email" : "fullName", matches: out };
+}
+
+function runOpsSafeModeGate_(actionType, options) {
+  var opt = options && typeof options === "object" ? options : {};
+  var payload = opt.payload && typeof opt.payload === "object" ? opt.payload : {};
+  if (!isOpsSafeModeSource_(payload)) return { ok: true, safeMode: false, bypassed: true };
+  var adminEmail = clean_(opt.adminEmail || "");
+  var applicantId = clean_(opt.applicantId || payload.applicantId || "");
+  var dbgId = clean_(opt.debugId || payload.debugId || "");
+  var action = clean_(actionType || "");
+  logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_REQUESTED", {
+    actionType: action,
+    operator: adminEmail,
+    applicantId: applicantId,
+    debugId: dbgId
+  });
+  if (getAdminRole_(adminEmail) !== "SUPER") {
+    logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_BLOCKED", {
+      actionType: action,
+      operator: adminEmail,
+      applicantId: applicantId,
+      debugId: dbgId,
+      blockCode: "OPS_SAFE_MODE_SUPER_ADMIN_REQUIRED"
+    });
+    return {
+      ok: false,
+      safeMode: true,
+      diagnosticsLabel: "OPS_SAFE_MODE_ACTION_BLOCKED",
+      blockCode: "OPS_SAFE_MODE_SUPER_ADMIN_REQUIRED",
+      blockReason: "Ops Safe Mode mutation actions require a Super Admin."
+    };
+  }
+  if (CONFIG.OPS_SAFE_MODE_ENABLED !== true) {
+    logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_BLOCKED", {
+      actionType: action,
+      operator: adminEmail,
+      applicantId: applicantId,
+      debugId: dbgId,
+      blockCode: "OPS_SAFE_MODE_DISABLED"
+    });
+    return {
+      ok: false,
+      safeMode: true,
+      diagnosticsLabel: "OPS_SAFE_MODE_ACTION_BLOCKED",
+      blockCode: "OPS_SAFE_MODE_DISABLED",
+      blockReason: "Ops Safe Mode is disabled."
+    };
+  }
+  var runtime = null;
+  try {
+    runtime = typeof buildRuntimeTruth_ === "function" ? buildRuntimeTruth_({ parameter: { view: "ops" } }, "admin") : null;
+  } catch (_runtimeErr) {}
+  if (runtime && runtime.ok === true && runtime.mismatch === true) {
+    logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_BLOCKED", {
+      actionType: action,
+      operator: adminEmail,
+      applicantId: applicantId,
+      debugId: dbgId,
+      blockCode: "OPS_SAFE_MODE_RUNTIME_MISMATCH"
+    });
+    return {
+      ok: false,
+      safeMode: true,
+      diagnosticsLabel: "OPS_SAFE_MODE_ACTION_BLOCKED",
+      blockCode: "OPS_SAFE_MODE_RUNTIME_MISMATCH",
+      blockReason: "Runtime identity mismatch. Verify Admin and Student whoami before running Ops Safe Mode actions."
+    };
+  }
+  if (!applicantId) {
+    logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_BLOCKED", {
+      actionType: action,
+      operator: adminEmail,
+      debugId: dbgId,
+      blockCode: "OPS_SAFE_MODE_MISSING_TARGET"
+    });
+    return {
+      ok: false,
+      safeMode: true,
+      diagnosticsLabel: "OPS_SAFE_MODE_ACTION_BLOCKED",
+      blockCode: "OPS_SAFE_MODE_MISSING_TARGET",
+      blockReason: "Ops Safe Mode requires a single approved applicant target."
+    };
+  }
+  if (Array.isArray(payload.applicantIds) || Array.isArray(payload.recipients) || Array.isArray(payload.messages)) {
+    logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_BLOCKED", {
+      actionType: action,
+      operator: adminEmail,
+      applicantId: applicantId,
+      debugId: dbgId,
+      blockCode: "OPS_SAFE_MODE_BULK_NOT_ALLOWED"
+    });
+    return {
+      ok: false,
+      safeMode: true,
+      diagnosticsLabel: "OPS_SAFE_MODE_ACTION_BLOCKED",
+      blockCode: "OPS_SAFE_MODE_BULK_NOT_ALLOWED",
+      blockReason: "Ops Safe Mode permits single-record actions only."
+    };
+  }
+  var allowAction = (action === "applicant_email_send" && CONFIG.OPS_SAFE_MODE_ALLOW_APPLICANT_EMAIL_SENDS === true)
+    || (action === "classroom_notify" && CONFIG.OPS_SAFE_MODE_ALLOW_CLASSROOM_NOTIFY === true);
+  if (!allowAction) {
+    logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_BLOCKED", {
+      actionType: action,
+      operator: adminEmail,
+      applicantId: applicantId,
+      debugId: dbgId,
+      blockCode: "OPS_SAFE_MODE_ACTION_NOT_ALLOWED"
+    });
+    return {
+      ok: false,
+      safeMode: true,
+      diagnosticsLabel: "OPS_SAFE_MODE_ACTION_BLOCKED",
+      blockCode: "OPS_SAFE_MODE_ACTION_NOT_ALLOWED",
+      blockReason: "This Ops action is not enabled in Safe Mode."
+    };
+  }
+  var approvedTarget = CONFIG.OPS_SAFE_MODE_APPROVED_TARGET && typeof CONFIG.OPS_SAFE_MODE_APPROVED_TARGET === "object"
+    ? CONFIG.OPS_SAFE_MODE_APPROVED_TARGET
+    : {};
+  if (!clean_(approvedTarget.applicantId || approvedTarget.rowEmail || approvedTarget.email || approvedTarget.fullName || "")) {
+    logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_BLOCKED", {
+      actionType: action,
+      operator: adminEmail,
+      applicantId: applicantId,
+      debugId: dbgId,
+      blockCode: "OPS_SAFE_MODE_APPROVED_TARGET_MISSING"
+    });
+    return {
+      ok: false,
+      safeMode: true,
+      diagnosticsLabel: "OPS_SAFE_MODE_ACTION_BLOCKED",
+      blockCode: "OPS_SAFE_MODE_APPROVED_TARGET_MISSING",
+      blockReason: "No approved Ops Safe Mode target is configured."
+    };
+  }
+  var matchInfo = findOpsSafeModeTargetMatches_(approvedTarget);
+  if (!matchInfo.matches.length) {
+    logOpsSafeModeEvent_("OPS_SAFE_MODE_TARGET_MISMATCH", {
+      actionType: action,
+      operator: adminEmail,
+      applicantId: applicantId,
+      debugId: dbgId,
+      matchPriority: matchInfo.priority || ""
+    });
+    return {
+      ok: false,
+      safeMode: true,
+      diagnosticsLabel: "OPS_SAFE_MODE_TARGET_MISMATCH",
+      blockCode: "OPS_SAFE_MODE_TARGET_MISMATCH",
+      blockReason: "Approved Safe Mode target did not resolve to a live applicant record."
+    };
+  }
+  if (matchInfo.matches.length !== 1) {
+    logOpsSafeModeEvent_("OPS_SAFE_MODE_TARGET_NOT_UNIQUE", {
+      actionType: action,
+      operator: adminEmail,
+      applicantId: applicantId,
+      debugId: dbgId,
+      matchPriority: matchInfo.priority || "",
+      matchCount: matchInfo.matches.length
+    });
+    return {
+      ok: false,
+      safeMode: true,
+      diagnosticsLabel: "OPS_SAFE_MODE_TARGET_NOT_UNIQUE",
+      blockCode: "OPS_SAFE_MODE_TARGET_NOT_UNIQUE",
+      blockReason: "Approved Safe Mode target is not unique."
+    };
+  }
+  var approvedMatch = matchInfo.matches[0];
+  if (clean_(approvedMatch.applicantId || "") !== applicantId) {
+    logOpsSafeModeEvent_("OPS_SAFE_MODE_TARGET_MISMATCH", {
+      actionType: action,
+      operator: adminEmail,
+      applicantId: applicantId,
+      approvedApplicantId: clean_(approvedMatch.applicantId || ""),
+      debugId: dbgId,
+      matchPriority: matchInfo.priority || ""
+    });
+    return {
+      ok: false,
+      safeMode: true,
+      diagnosticsLabel: "OPS_SAFE_MODE_TARGET_MISMATCH",
+      blockCode: "OPS_SAFE_MODE_TARGET_MISMATCH",
+      blockReason: "This Ops Safe Mode action is approved only for the configured test identity."
+    };
+  }
+  logOpsSafeModeEvent_("OPS_SAFE_MODE_TARGET_MATCHED", {
+    actionType: action,
+    operator: adminEmail,
+    applicantId: applicantId,
+    approvedApplicantId: clean_(approvedMatch.applicantId || ""),
+    debugId: dbgId,
+    matchPriority: matchInfo.priority || ""
+  });
+  logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_ALLOWED", {
+    actionType: action,
+    operator: adminEmail,
+    applicantId: applicantId,
+    debugId: dbgId,
+    recipientOverride: action === "applicant_email_send" ? clean_(CONFIG.OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE || "") : "",
+    overrideApplied: action === "applicant_email_send" && !!clean_(CONFIG.OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE || "")
+  });
+  return {
+    ok: true,
+    safeMode: true,
+    approvedApplicantId: clean_(approvedMatch.applicantId || ""),
+    diagnosticsLabel: "OPS_SAFE_MODE_ACTION_ALLOWED"
+  };
 }
 
 function buildOpsClassroomHandoverContext_(applicantId, dbgId) {
@@ -6350,6 +6683,20 @@ function admin_notifyOpsClassroomAdmin(payload) {
         blockReason: "Preview and explicit internal single-send confirmation are required."
       });
     }
+    var opsGate = runOpsSafeModeGate_("classroom_notify", {
+      payload: p,
+      adminEmail: adminEmail,
+      applicantId: clean_(p.applicantId || ""),
+      debugId: dbgId
+    });
+    if (opsGate && opsGate.ok !== true) {
+      return adminCommBlockedResult_("notify_classroom_admin", safeStr_(opsGate.blockCode || "OPS_SAFE_MODE_ACTION_BLOCKED"), dbgId, {
+        applicantId: clean_(p.applicantId || ""),
+        blockReason: safeStr_(opsGate.blockReason || "Ops Safe Mode blocked this action."),
+        safeMode: opsGate.safeMode === true,
+        diagnosticsLabel: safeStr_(opsGate.diagnosticsLabel || "OPS_SAFE_MODE_ACTION_BLOCKED")
+      });
+    }
     var ctx = buildOpsClassroomHandoverContext_(p.applicantId, dbgId);
     if (ctx.ok !== true) return adminCommBlockedResult_("notify_classroom_admin", ctx.blockCode, dbgId, ctx);
     var sent = adminSendEmail_(ctx.recipients.join(","), ctx.subject, ctx.body, {
@@ -6358,6 +6705,13 @@ function admin_notifyOpsClassroomAdmin(payload) {
       senderMode: safeStr_(CONFIG.EMAIL_SENDER_MODE || "DEFAULT")
     });
     if (!sent || sent.ok !== true) {
+      logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_FAILED", {
+        actionType: "classroom_notify",
+        operator: adminEmail,
+        applicantId: ctx.applicantId,
+        rowNumber: ctx.rowNumber,
+        debugId: dbgId
+      });
       logAdminEvent_("OPS_CLASSROOM_HANDOVER_NOTIFY", {
         operator: adminEmail,
         applicantId: ctx.applicantId,
@@ -6378,6 +6732,13 @@ function admin_notifyOpsClassroomAdmin(payload) {
         debugId: dbgId
       };
     }
+    logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_COMPLETED", {
+      actionType: "classroom_notify",
+      operator: adminEmail,
+      applicantId: ctx.applicantId,
+      rowNumber: ctx.rowNumber,
+      debugId: dbgId
+    });
     logAdminEvent_("OPS_CLASSROOM_HANDOVER_NOTIFY", {
       operator: adminEmail,
       applicantId: ctx.applicantId,

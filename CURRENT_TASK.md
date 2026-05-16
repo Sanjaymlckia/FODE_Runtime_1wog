@@ -2,139 +2,121 @@
 
 ## Active CIS
 
-- Release target: `r172 / 172`
-- Objective: Operations Cockpit controlled live actions and operational workflow maturity.
-- Accepted baseline: `r171 / 171`
-- Baseline commit: `bd2e99442db5a7a88249072f5e765888dc294ab9`
-- Baseline tag: `staging-as171`
+- Release target in progress: `r173 / 173`
+- Objective: Ops truth/safety correction, Safe Mode gating, and lifecycle/portal/fallback mapping.
+- Accepted live baseline: `r172 / 172`
+- Accepted baseline commit: `1125023`
+- Accepted baseline tag: `staging-as172`
 
-## Required State Classification
+## Proven Baseline Before Editing
 
-1. Live runtime truth:
-   - Admin `?view=whoami`: `r172 / 172`, `mismatch=false`
-   - Student `?view=whoami`: `r172 / 172`, `mismatch=false`
-2. Apps Script deployment truth:
-   - Admin deployment pinned to platform version `180`
-   - Student deployment pinned to platform version `180`
-3. Local `Config.js` truth:
-   - Finalized local target: `r172 / 172`
-4. Remote `Config.js` truth:
-   - `REMOTE VERSION: r172`
-   - `REMOTE DEPLOY_VERSION_NUMBER: 172`
-5. Git truth before finalization:
-   - HEAD currently at accepted `r171` baseline plus r172 release edits
-   - Latest accepted tag before finalization: `staging-as171`
-6. Dirty-state classification before finalization:
-   - `unfinalized deployed release`
-   - Not a failed release.
-   - Not unrelated drift.
+- Admin `?view=whoami`: `r172 / 172`, `mismatch=false`
+- Student `?view=whoami`: `r172 / 172`, `mismatch=false`
+- Script ID: `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`
+- Admin deployment: canonical staging deployment pinned to Apps Script `@180`
+- Student deployment: canonical staging deployment pinned to Apps Script `@180`
+- Admin `?view=ops` route loads
 
-## Current Source State
+## Allowed File Scope
 
-- `Config.js` target identity:
-  - `VERSION: "r172"`
-  - `DEPLOY_VERSION_NUMBER: 172`
-- `AdminUI.html` now matures the r171 cockpit without redesigning it:
-  - FODE Operations branding replaces CodexHub-dominant product branding.
-  - Refresh Snapshot is live and read-only.
-  - Admissions queue filtering is local/read-only.
-  - Communications section has single-applicant preview/send controls with preview and confirmation gates.
-  - Zoho Books has read-only invoice open/status controls only.
-  - Classroom Handover has internal-only handover preview and classroom admin notification.
-  - Reports open read-only in-page report panels; export/schedule remain disabled.
-  - Release Control shows guidance only and does not invoke git, clasp, deployment, or rollback commands.
-- `Admin.js` adds internal-only classroom handover preview/notification helpers.
+- `AdminUI.html`
+- `Admin.js`
+- `Config.js`
+- `CURRENT_TASK.md`
 
-## Safety Boundary
+Audit artifacts may remain untracked:
 
-- No `Code.js` changes.
-- No `Utils.js` changes.
-- No `appsscript.json` or `.clasp.json` changes.
-- No sheet schema changes.
-- No Drive structure changes.
-- No hidden automation changes.
-- Bulk operations remain disabled.
-- Payment recording remains disabled.
-- Mark paid/enrolled/registration-complete remains disabled.
-- Classroom completion/write-back remains disabled.
-- Invoice creation, invoice send, and payment recording from cockpit remain disabled.
+- `audits/r173/r173_ops_feature_audit.json`
+- `audits/r173/r173_ops_feature_audit.md`
 
-## Validation Completed Locally
+## Required r173 Scope
 
-- `node --check Config.js` passed.
-- `node --check Admin.js` passed.
-- `git diff --check` passed.
-- Changed files at this checkpoint:
-  - `Config.js`
-  - `AdminUI.html`
-  - `Admin.js`
-  - `CURRENT_TASK.md`
+- Correct misleading Ops labels and stale acceptance/runtime text.
+- Add explicit Safe Mode banner and approved-target gating for existing Ops live actions.
+- Separate Operator/Admin workflow surfaces from Super Admin/Governance surfaces.
+- Add lifecycle/stage cascade mapping.
+- Add Student Portal diagnostics mapping.
+- Add WhatsApp/contact fallback diagnostics mapping.
 
-## Browser Acceptance Result
+## Explicitly Disabled In r173
 
-- Manual browser acceptance passed using the dedicated FODE acceptance Chrome profile.
-- Accepted evidence:
-  - Admin base route loads correctly.
-  - Admin `?view=ops` loads correctly.
-  - Runtime shows `r172 / 172`.
-  - Admissions Queue Review functionality is reachable.
-  - Student portal functionality is reachable.
-  - Communications workflows are reachable where mapped.
-  - WhatsApp functionality is visible/reachable where mapped.
-  - Zoho Books status/actions are reachable where mapped.
-  - No bulk actions are enabled.
-  - No payment recording is enabled.
-  - No mark-paid/enrolled/completed actions are enabled.
-  - Student portal still works normally.
+- Portal link reset
+- Portal lock/unlock
+- Parent email correction
+- Document status save
+- Overall status override
+- Payment verified write
+- Books draft invoice creation
+- Books test invoice email
+- Books payment/contact mutation
+- WhatsApp CSV export/email
+- Bounce scan write action
+- Docs bulk send
+- Stage batch preview/send
+- Token backfill apply
+- Classroom package generation
+- Mark classroom enrolled
 
-## Deployment Status
+## Local Implementation State
 
-- Source pushed with `clasp push`.
-- Remote `Config.js` was verified outside the clasp source root:
-  - `REMOTE VERSION: r172`
-  - `REMOTE DEPLOY_VERSION_NUMBER: 172`
-- Apps Script platform version created:
-  - `180`
-  - `r172: operations cockpit controlled live actions`
-- Admin deployment repinned to platform version `180`.
-- Student deployment repinned to platform version `180`.
-- Admin `?view=whoami` passed:
-  - `r172`
-  - `deployVersion 172`
+- `Config.js` now contains the `OPS_SAFE_MODE_*` config block.
+- `Admin.js` now contains centralized Ops Safe Mode gating and deterministic diagnostics for Ops mutation actions.
+- `AdminUI.html` now:
+  - corrects misleading action-mode labels
+  - makes the Operator/Admin layer primary
+  - moves governance/runtime/release surfaces secondary
+  - adds lifecycle cascade mapping
+  - adds Student Portal diagnostics mapping
+  - adds WhatsApp/contact fallback diagnostics mapping
+- Local source only. No `clasp push`, version, repin, commit, or tag has been run for `r173`.
+
+## r173 Acceptance Outcome
+
+- Local `Config.js` was bumped to `r173 / 173`.
+- `clasp push` completed.
+- Remote-source verification outside the repo root passed for:
+  - `VERSION: "r173"`
+  - `DEPLOY_VERSION_NUMBER: 173`
+  - latest `AdminUI.html` row-selection acceptance fix
+- Apps Script versions created during r173 acceptance:
+  - `181`
+    - `r173: Ops truth/safety correction + safe-mode lifecycle mapping`
+  - `182`
+    - `r173: ops safe-mode lifecycle mapping with row-selection acceptance fix`
+- Canonical Admin and Student staging deployments are accepted on `@182`.
+- Live Admin `?view=whoami` passed:
+  - `r173 / 173`
   - `mismatch=false`
-- Student `?view=whoami` passed:
-  - `r172`
-  - `deployVersion 172`
+- Live Student `?view=whoami` passed:
+  - `r173 / 173`
   - `mismatch=false`
-- Read-only HTTP payload checks passed for:
-  - Admin base route
-  - Student portal route
-  - Admin `?view=ops` payload includes r172 controlled-action labels
-- Browser acceptance passed.
-- `r172` is accepted as the controlled live-actions baseline.
+- Accepted operator evidence for r173:
+  - Ops loads with `r173 / 173`
+  - Safe Mode visible
+  - approved row identity `FODE-26-002929` visible
+  - approved row email visible
+  - test recipient override separated and visible
+  - applicant email sends shown as `Safe Test Only`
+  - classroom notify shown as `Safe Test Only`
+  - non-approved row `FODE-26-002928` selected and context updated
+  - non-approved row displayed `Not approved for Safe Mode send`
+  - no unintended email/write observed
+  - Books/payment/enrolment/WhatsApp/export writes remain disabled
+  - lifecycle, Student Portal diagnostics, and WhatsApp/contact fallback mapping visible
+- Owner accepted approved-row positive send based on configured Safe Mode state and prior known single-send/email behavior.
+- `r173` is accepted.
 
-## Accepted Gaps
+## Finalization
 
-- Some Ops sections still require deeper operational parity mapping from legacy Admin.
-- Some buttons/routes remain partially populated and will continue maturing in future releases.
-
-## Future Enhancements
-
-- Continue expanding Ops parity against the legacy Admin surface in later controlled releases.
-- Mature partially populated buttons/routes only under future CIS-controlled work.
-
-## Deferred Work
-
-- Post-acceptance git finalization:
-  - `git add Config.js AdminUI.html Admin.js CURRENT_TASK.md`
-  - `git commit -m "release: r172 operations cockpit controlled live actions"`
+- Final source finalization:
+  - `git add Admin.js AdminUI.html Config.js CURRENT_TASK.md audits/r173/r173_ops_feature_audit.json audits/r173/r173_ops_feature_audit.md`
+  - `git commit -m "release: r173 ops safe-mode lifecycle mapping"`
   - `git push`
-  - `git tag staging-as172`
-  - `git push origin staging-as172`
-  - `git status -sb`
+  - `git tag staging-as173`
+  - `git push origin staging-as173`
 
 ## Rollback
 
-- Repin Admin and Student deployments to the accepted `r171 / 171` runtime first.
+- If a future rollback is required, repin Admin and Student back to accepted `r172 / 172` Apps Script `@180` first.
 - Verify Admin and Student `?view=whoami`.
 - Revert source only if needed after deployment rollback.

@@ -7,9 +7,9 @@
  */
 var CONFIG = {
   // Versioning (change control)
-  VERSION: "r172",
+  VERSION: "r173",
 CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alignment",
-  DEPLOY_VERSION_NUMBER: 172,
+  DEPLOY_VERSION_NUMBER: 173,
 BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
 
   // STAGING/PROD data mode routing (working sheet)
@@ -130,6 +130,15 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   ENABLE_AUTOMATED_STAGE_RUNNER: true,
   ENABLE_PRODUCTION_EMAIL_SENDS: true,
   ENABLE_TRIGGER_EMAIL_SENDS: true,
+  OPS_SAFE_MODE_ENABLED: true,
+  OPS_SAFE_MODE_APPROVED_TARGET: {
+    applicantId: "FODE-26-002929",
+    rowEmail: "sanjay+fode-s4a-20260509182546@example.com",
+    fullName: "S4A Trace20260509182546"
+  },
+  OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE: "sanjay@minervacenters.com",
+  OPS_SAFE_MODE_ALLOW_APPLICANT_EMAIL_SENDS: true,
+  OPS_SAFE_MODE_ALLOW_CLASSROOM_NOTIFY: true,
   ENABLE_PROPERTY_CLEANUP_TOOLS: true,
   MAX_PROPERTY_DELETE_BATCH: 500,
   EXPECTED_SCRIPT_PROPERTY_COUNT_AFTER_CLEANUP: 6,

@@ -799,13 +799,16 @@
         </div>
       </div>
       <nav class="opsNav">
-        <a href="#opsDashboard" data-icon="D">Dashboard</a>
-        <a href="#opsRuntimeTruth" data-icon="R">Runtime Truth</a>
+        <a href="#opsDashboard" data-icon="D">Operator Console</a>
         <a href="#opsAdmissionsQueue" data-icon="A">Admissions Queue</a>
-        <a href="#opsZohoBooks" data-icon="Z">Zoho Books</a>
+        <a href="#opsLifecycleMap" data-icon="L">Lifecycle Map</a>
+        <a href="#opsStudentDiagnostics" data-icon="S">Student Portal</a>
         <a href="#opsCommunications" data-icon="C">Communications</a>
+        <a href="#opsZohoBooks" data-icon="Z">Billing Queue</a>
         <a href="#opsClassroom" data-icon="H">Classroom Handover</a>
+        <a href="#opsFallbackDiagnostics" data-icon="W">Fallbacks</a>
         <a href="#opsReports" data-icon="P">Reports</a>
+        <a href="#opsRuntimeTruth" data-icon="R">Governance</a>
         <a href="#opsReleaseControl" data-icon="L">Release Control</a>
         <a href="#opsRulesConfig" data-icon="G">Rules & Config</a>
       </nav>
@@ -829,7 +832,7 @@
         <div class="opsHeader">
           <div>
             <h1>FODE Operations Cockpit</h1>
-            <div class="mutedLight">Institutional admissions, billing, and classroom workflow surface</div>
+            <div class="mutedLight">Operator-first lifecycle console with secondary governance controls</div>
           </div>
           <div class="opsHeaderTools">
             <span class="opsHeaderIcon">N</span>
@@ -843,37 +846,91 @@
           <div class="opsKpiCard"><div class="opsKpiIcon blue">&lt;/&gt;</div><div><div class="kpiLabel">Runtime</div><div class="kpiValue" id="cockpitKpiRuntime">r172 / 172</div><div class="kpiState" id="cockpitKpiRuntimeState">Deploying</div><div class="kpiMeta" id="cockpitKpiRuntimeMeta">Waiting on Admin and Student whoami.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon green">B</div><div><div class="kpiLabel">Billing Status</div><div class="kpiValue" id="cockpitKpiBilling">Books Connected</div><div class="kpiState" id="cockpitKpiBillingState">Read-only</div><div class="kpiMeta" id="cockpitKpiBillingMeta">Invoice snapshot loading. Cockpit writes disabled.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon purple">A</div><div><div class="kpiLabel">Admissions Status</div><div class="kpiValue" id="cockpitKpiAdmissions">Queue Loading</div><div class="kpiState">Visibility Only</div><div class="kpiMeta" id="cockpitKpiAdmissionsMeta">Applicant rows use existing read-only loaders.</div></div></div>
-          <div class="opsKpiCard"><div class="opsKpiIcon amber">!</div><div><div class="kpiLabel">Risks</div><div class="kpiValue" id="cockpitKpiRisks">Unknown</div><div class="kpiState" id="cockpitKpiRiskState">Action Required</div><div class="kpiMeta" id="cockpitKpiRisksMeta">Read-only risk summary only.</div></div></div>
+          <div class="opsKpiCard"><div class="opsKpiIcon amber">!</div><div><div class="kpiLabel">Risks</div><div class="kpiValue" id="cockpitKpiRisks">Risk Summary Not Yet Implemented</div><div class="kpiState" id="cockpitKpiRiskState">Review Required</div><div class="kpiMeta" id="cockpitKpiRisksMeta">Read-only risk summary only.</div></div></div>
         </div>
         <div class="opsSectionGrid mainSplit">
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Executive Snapshot</h3><p>Operational status without live actions.</p></div><span class="opsStatusPill info">Preview Only</span></div>
+            <div class="opsSectionHeader"><div><h3>Executive Snapshot</h3><p>Operator/Admin layer first. Governance and release controls remain secondary.</p></div><span class="opsStatusPill info">Safe Mode Controlled Actions</span></div>
+            <div class="opsResultBox warn">Safe Mode is required for existing Ops live actions. Single-record safe tests are restricted to the approved target identity only.</div>
             <div class="opsMetricGrid">
               <div class="opsMetric"><div class="k">Next Action</div><div class="v" id="cockpitKpiNextRelease">r172 controlled action checks</div></div>
               <div class="opsMetric"><div class="k">Queue Summary</div><div class="v" id="cockpitDashboardQueue">Loading</div></div>
-              <div class="opsMetric"><div class="k">Billing</div><div class="v">No cockpit writes</div></div>
+              <div class="opsMetric"><div class="k">Billing</div><div class="v">Safe Mode Controlled Actions</div></div>
               <div class="opsMetric"><div class="k">Admissions</div><div class="v">Read-only review</div></div>
             </div>
             <div class="opsPlaceholder" id="cockpitKpiNextReleaseMeta">r172 controlled single-applicant action acceptance target.</div>
             <div class="opsActionRow">
               <button class="opsActionBtn primary live" type="button" onclick="opsRefreshSnapshot_()">Refresh Snapshot</button>
               <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsAdmissionsQueue')">View Priority Queue</button>
-              <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsReleaseControl')">Open Release Control</button>
+              <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Open Lifecycle Map</button>
             </div>
           </div>
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Key Queue Summaries</h3><p>Counts appear only when already loaded by existing read-only services.</p></div><span class="opsStatusPill muted" id="cockpitQueueSummary">Loading</span></div>
+            <div class="opsSectionHeader"><div><h3>Operator Layer</h3><p>Daily workflow follows the applicant and student lifecycle before governance and release controls.</p></div><span class="opsStatusPill ok">Operator/Admin Layer</span></div>
             <div class="opsPriorityList">
-              <div class="opsPriorityCard"><div><div class="t">Invoice raised rows</div><div class="m" id="cockpitReportInvoice">Count unavailable</div></div><span class="opsStatusPill info">Read only</span></div>
-              <div class="opsPriorityCard"><div><div class="t">Payment verified but not enrolled</div><div class="m" id="cockpitReportPayment">Count unavailable</div></div><span class="opsStatusPill warn">Review</span></div>
-              <div class="opsPriorityCard"><div><div class="t">Classroom handover pending</div><div class="m" id="cockpitReportClassroom">Count unavailable</div></div><span class="opsStatusPill muted">Pending</span></div>
+              <div class="opsPriorityCard"><div><div class="t">Admissions Queue</div><div class="m">Applicant lookup, queue filters, and review handoff remain the primary operator workflow.</div></div><span class="opsStatusPill info">Read-only + Map</span></div>
+              <div class="opsPriorityCard"><div><div class="t">Communications / Billing / Handover</div><div class="m">Existing Ops live actions are restricted to Safe Mode approved-target testing only.</div></div><span class="opsStatusPill warn">Safe Test Only</span></div>
+              <div class="opsPriorityCard"><div><div class="t">Super Admin / Governance</div><div class="m">Runtime truth, release state, disabled high-risk actions, and integration health remain secondary.</div></div><span class="opsStatusPill muted">Secondary Layer</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="opsLifecycleMap" class="opsSectionPage">
+        <div class="opsPageIntro">
+          <div><h2>Lifecycle / Stage Cascade</h2><p>Operator-first flow map showing current Ops coverage, safe-mode boundaries, and blocked next actions.</p></div>
+          <span class="opsStatusPill info">Map only</span>
+        </div>
+        <div class="opsCard">
+          <div class="opsTableWrap">
+            <table class="opsTable">
+              <thead><tr><th>Stage</th><th>Ops Coverage</th><th>Source Feature</th><th>r173 Mode</th><th>Next Action</th></tr></thead>
+              <tbody>
+                <tr><td>Applicant</td><td>Yes</td><td>Admissions Queue / Applicant Review</td><td>Read-only</td><td>Review applicant state in Admin or Ops queue.</td></tr>
+                <tr><td>Portal Access / Submission</td><td>Partial</td><td>Student portal route and token diagnostics</td><td>Map only</td><td>Portal lock/reset writes remain blocked outside Ops.</td></tr>
+                <tr><td>Document / Eligibility Review</td><td>Partial</td><td>Legacy Admin review modal</td><td>Map only</td><td>Document status writes remain disabled from Ops.</td></tr>
+                <tr><td>Invoice Raised</td><td>Yes</td><td>Open Invoice / Refresh Books Status</td><td>Read-only</td><td>Review invoice state without Books writes.</td></tr>
+                <tr><td>Invoice Sent</td><td>Partial</td><td>Communications and Books previews</td><td>Safe test only</td><td>Approved-target email tests only.</td></tr>
+                <tr><td>Payment Verified</td><td>Partial</td><td>Reports / status visibility</td><td>Map only</td><td>Payment verification writes remain disabled.</td></tr>
+                <tr><td>Enrolment Confirmed</td><td>Partial</td><td>Queue and classroom visibility</td><td>Map only</td><td>Enrollment updates remain disabled.</td></tr>
+                <tr><td>Classroom Handover</td><td>Yes</td><td>Preview / Notify Classroom Admin</td><td>Safe test only</td><td>Approved-target internal notify only after preview.</td></tr>
+                <tr><td>Active Student / Follow-up</td><td>Missing</td><td>Future follow-up/reporting surface</td><td>Defer</td><td>Not yet implemented in Ops.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      <section id="opsStudentDiagnostics" class="opsSectionPage">
+        <div class="opsPageIntro">
+          <div><h2>Student Portal Diagnostics</h2><p>Read-only map of student-facing routes, token state, locks, and upload/update surfaces.</p></div>
+          <span class="opsStatusPill info">Map only</span>
+        </div>
+        <div class="opsSectionGrid two">
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Student Portal Surface</h3></div><span class="opsStatusPill info">Read-only diagnostics</span></div>
+            <div class="opsChecklist">
+              <div class="opsChecklistRow"><span>Current selected applicant</span><span class="opsStatusPill info" id="cockpitPortalSelectedApplicant">FODE-26-002929</span></div>
+              <div class="opsChecklistRow"><span>Portal route/render</span><span class="opsStatusPill ok">Mapped</span></div>
+              <div class="opsChecklistRow"><span>Submitted details</span><span class="opsStatusPill ok">Mapped</span></div>
+              <div class="opsChecklistRow"><span>Portal token/link status</span><span class="opsStatusPill warn">Diagnostics only</span></div>
+              <div class="opsChecklistRow"><span>Portal lock state</span><span class="opsStatusPill warn">Diagnostics only</span></div>
+              <div class="opsChecklistRow"><span>Student whoami/runtime check</span><span class="opsStatusPill ok">Mapped</span></div>
+            </div>
+          </div>
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Blocked Student Writes</h3></div><span class="opsStatusPill danger">Disabled / Deferred</span></div>
+            <div class="opsChecklist">
+              <div class="opsChecklistRow"><span>DOB / exam site / subject updates</span><span class="opsStatusPill danger">Blocked in Ops</span></div>
+              <div class="opsChecklistRow"><span>Document/payment proof uploads</span><span class="opsStatusPill danger">Blocked in Ops</span></div>
+              <div class="opsChecklistRow"><span>Delete uploaded file</span><span class="opsStatusPill danger">Blocked in Ops</span></div>
+              <div class="opsChecklistRow"><span>Portal lock / unlock</span><span class="opsStatusPill danger">Blocked in Ops</span></div>
+              <div class="opsChecklistRow"><span>Portal link reset</span><span class="opsStatusPill danger">Blocked in Ops</span></div>
             </div>
           </div>
         </div>
       </section>
       <section id="opsRuntimeTruth" class="opsSectionPage">
         <div class="opsPageIntro">
-          <div><h2>Runtime Truth</h2><p>Release and deployment safety. Values are informational; no git, clasp, or deployment commands run from this UI.</p></div>
+          <div><h2>Governance / Runtime Truth</h2><p>Secondary governance layer for runtime identity, release state, safe mode, and disabled high-risk controls.</p></div>
           <span class="opsStatusPill ok" id="cockpitRuntimeStatusPill">Waiting</span>
         </div>
         <div class="opsSectionGrid">
@@ -898,9 +955,9 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Accepted Baseline</h3></div><span class="opsStatusPill muted">Current known</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Commit</span><span class="opsStatusPill muted" id="cockpitRuntimeCommit">bd2e994</span></div>
-              <div class="opsChecklistRow"><span>Tag</span><span class="opsStatusPill muted" id="cockpitRuntimeTag">staging-as171</span></div>
-              <div class="opsChecklistRow"><span>Browser acceptance</span><span class="opsStatusPill warn" id="cockpitReleaseBrowser">Pending r172</span></div>
+              <div class="opsChecklistRow"><span>Commit</span><span class="opsStatusPill muted" id="cockpitRuntimeCommit">1125023</span></div>
+              <div class="opsChecklistRow"><span>Tag</span><span class="opsStatusPill muted" id="cockpitRuntimeTag">staging-as172</span></div>
+              <div class="opsChecklistRow"><span>Browser acceptance</span><span class="opsStatusPill ok" id="cockpitReleaseBrowser">Accepted r172</span></div>
             </div>
             <div class="opsActionRow">
               <button class="opsActionBtn" type="button" disabled>Run Runtime Check</button>
@@ -946,12 +1003,13 @@
       </section>
       <section id="opsCommunications" class="opsSectionPage">
         <div class="opsPageIntro">
-          <div><h2>Communications</h2><p>Single-applicant communication actions require preview, recipient review, and explicit confirmation.</p></div>
-          <span class="opsStatusPill ok">Controlled Live</span>
+          <div><h2>Communications</h2><p>Single-applicant communication actions require preview, recipient review, and explicit Safe Mode approval checks.</p></div>
+          <span class="opsStatusPill warn">Safe Test Only</span>
         </div>
         <div class="opsSectionGrid mainSplit">
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Applicant Communication State</h3></div><span class="opsStatusPill muted">Preview Only</span></div>
+            <div class="opsSectionHeader"><div><h3>Applicant Communication State</h3></div><span class="opsStatusPill warn">Safe Test Only</span></div>
+            <div class="opsPlaceholder" id="cockpitCommContext">Current Ops applicant: FODE-26-002929</div>
             <div class="opsInfoGrid">
               <div class="opsInfoItem"><div class="k">Applicant communication status</div><div class="v" id="cockpitCommApplicantStatus">Unknown</div></div>
               <div class="opsInfoItem"><div class="k">Invite status</div><div class="v" id="cockpitCommInviteStatus">Coming Next</div></div>
@@ -970,6 +1028,7 @@
               <button class="opsActionBtn live" type="button" onclick="opsPreviewApplicantEmail_('reminder','Reminder')">Preview Email</button>
               <button class="opsActionBtn" type="button" onclick="opsRenderCommunicationTimeline_()">View Message Timeline</button>
             </div>
+            <div class="opsResultBox warn">Safe Mode allows only approved-target single-record tests. Non-approved applicants are blocked and logged.</div>
             <div id="opsCommunicationResult" class="opsResultBox hidden"></div>
           </div>
           <div class="opsCard">
@@ -985,11 +1044,12 @@
       <section id="opsClassroom" class="opsSectionPage">
         <div class="opsPageIntro">
           <div><h2>Classroom Handover</h2><p>Post-enrolment handover visibility and internal notification. No classroom or enrolment fields are written from this cockpit.</p></div>
-          <span class="opsStatusPill ok">Internal Only</span>
+          <span class="opsStatusPill warn">Safe Test Only</span>
         </div>
         <div class="opsSectionGrid mainSplit">
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Handover Candidate</h3></div><span class="opsStatusPill warn" id="cockpitClassroomSummary">Classroom Pending</span></div>
+            <div class="opsPlaceholder" id="cockpitClassroomContext">Current Ops applicant: FODE-26-002929</div>
             <div class="opsInfoGrid">
               <div class="opsInfoItem"><div class="k">Student</div><div class="v" id="cockpitClassroomStudent">Reference applicant</div></div>
               <div class="opsInfoItem"><div class="k">Grade / FODE level</div><div class="v" id="cockpitClassroomLevel">Coming Next</div></div>
@@ -1000,7 +1060,7 @@
             </div>
           </div>
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Handover Controls</h3></div><span class="opsStatusPill danger">Disabled</span></div>
+            <div class="opsSectionHeader"><div><h3>Handover Controls</h3></div><span class="opsStatusPill warn">Safe Test Only</span></div>
             <div class="opsBadgeStack"><span class="opsStatusPill warn">Classroom Pending</span><span class="opsStatusPill muted">Ready/Complete write path unavailable</span></div>
             <div class="opsActionRow">
               <button class="opsActionBtn" type="button" disabled>Prepare Classroom Package</button>
@@ -1009,7 +1069,34 @@
               <button class="opsActionBtn" type="button" disabled>Mark Classroom Enrolled</button>
               <button class="opsActionBtn" type="button" disabled>View Handover Checklist</button>
             </div>
+            <div class="opsResultBox warn">Classroom notify is allowed only in Safe Mode against the approved test identity after preview passes.</div>
             <div id="opsClassroomResult" class="opsResultBox hidden"></div>
+          </div>
+        </div>
+      </section>
+      <section id="opsFallbackDiagnostics" class="opsSectionPage">
+        <div class="opsPageIntro">
+          <div><h2>WhatsApp / Contact Fallback</h2><p>Read-only map of fallback capabilities and their current r173 safety state.</p></div>
+          <span class="opsStatusPill info">Map only</span>
+        </div>
+        <div class="opsSectionGrid two">
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Fallback Capabilities</h3></div><span class="opsStatusPill info">Diagnostics</span></div>
+            <div class="opsChecklist">
+              <div class="opsChecklistRow"><span>WhatsApp fallback queue exists</span><span class="opsStatusPill ok">Mapped</span></div>
+              <div class="opsChecklistRow"><span>CSV export function exists</span><span class="opsStatusPill warn">Sensitive export</span></div>
+              <div class="opsChecklistRow"><span>Email CSV fallback function exists</span><span class="opsStatusPill warn">Email send path</span></div>
+              <div class="opsChecklistRow"><span>Bounce / suppression diagnostics</span><span class="opsStatusPill ok">Mapped</span></div>
+            </div>
+          </div>
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>r173 Safety State</h3></div><span class="opsStatusPill danger">Disabled / Deferred</span></div>
+            <div class="opsChecklist">
+              <div class="opsChecklistRow"><span>WhatsApp CSV export</span><span class="opsStatusPill danger">Disabled</span></div>
+              <div class="opsChecklistRow"><span>WhatsApp CSV email</span><span class="opsStatusPill danger">Disabled</span></div>
+              <div class="opsChecklistRow"><span>Future safe-test possibility</span><span class="opsStatusPill muted">Deferred</span></div>
+              <div class="opsChecklistRow"><span>Sensitive export risk</span><span class="opsStatusPill warn">Operator review required</span></div>
+            </div>
           </div>
         </div>
       </section>
@@ -1038,10 +1125,10 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Release State</h3></div><span class="opsStatusPill muted">Read only</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Current runtime</span><span class="opsStatusPill info" id="cockpitReleaseRuntime">r172 / 172 target</span></div>
-              <div class="opsChecklistRow"><span>Accepted baseline</span><span class="opsStatusPill ok">r171 / staging-as171</span></div>
+              <div class="opsChecklistRow"><span>Current runtime</span><span class="opsStatusPill info" id="cockpitReleaseRuntime">r172 / 172</span></div>
+              <div class="opsChecklistRow"><span>Accepted baseline</span><span class="opsStatusPill ok">r172 / staging-as172</span></div>
               <div class="opsChecklistRow"><span>Whoami status</span><span class="opsStatusPill muted" id="cockpitReleaseWhoami">Unknown</span></div>
-              <div class="opsChecklistRow"><span>Browser acceptance status</span><span class="opsStatusPill warn" id="cockpitReleaseBrowserState">Pending</span></div>
+              <div class="opsChecklistRow"><span>Browser acceptance status</span><span class="opsStatusPill ok" id="cockpitReleaseBrowserState">Accepted</span></div>
               <div class="opsChecklistRow"><span>Commit / tag state</span><span class="opsStatusPill danger" id="cockpitReleaseGit">Blocked</span></div>
               <div class="opsChecklistRow"><span>Remote Config verified</span><span class="opsStatusPill muted" id="cockpitReleaseRemote">Unknown</span></div>
             </div>
@@ -1049,9 +1136,9 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Control Checklist</h3></div><span class="opsStatusPill danger">Disabled</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Rollback target</span><span class="opsStatusPill info">r171 / 171</span></div>
-              <div class="opsChecklistRow"><span>Current blockers</span><span class="opsStatusPill warn">Browser acceptance pending</span></div>
-              <div class="opsChecklistRow"><span>Next release candidate</span><span class="opsStatusPill info" id="cockpitReleaseNextTask">r172</span></div>
+              <div class="opsChecklistRow"><span>Rollback target</span><span class="opsStatusPill info">r172 / 172</span></div>
+              <div class="opsChecklistRow"><span>Current blockers</span><span class="opsStatusPill warn">Deployment action remains externalized</span></div>
+              <div class="opsChecklistRow"><span>Next release candidate</span><span class="opsStatusPill info" id="cockpitReleaseNextTask">r173</span></div>
               <div class="opsChecklistRow"><span>No active dirty working tree</span><span class="opsStatusPill muted" id="cockpitReleaseDirty">Unknown</span></div>
             </div>
             <div class="opsActionRow">
@@ -1067,10 +1154,22 @@
       </section>
       <section id="opsRulesConfig" class="opsSectionPage">
         <div class="opsPageIntro">
-          <div><h2>Rules & Config</h2><p>Safety flags for controlled single-record cockpit behavior. Dangerous workflow writes remain disabled.</p></div>
-          <span class="opsStatusPill ok">Guarded actions</span>
+          <div><h2>Rules & Config</h2><p>Super Admin / Governance layer for safe mode, integration health, and disabled high-risk actions.</p></div>
+          <span class="opsStatusPill ok">Super Admin / Governance</span>
         </div>
         <div class="opsSectionGrid">
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Safe Mode</h3></div><span class="opsStatusPill <?= CONFIG.OPS_SAFE_MODE_ENABLED === true ? 'warn' : 'danger' ?>"><?= CONFIG.OPS_SAFE_MODE_ENABLED === true ? 'Enabled' : 'Disabled' ?></span></div>
+            <div class="opsChecklist">
+              <div class="opsChecklistRow"><span>Approved target gating</span><span class="opsStatusPill warn">Exact-match only</span></div>
+              <div class="opsChecklistRow"><span>Approved row identity</span><span class="opsStatusPill info"><?= String((CONFIG.OPS_SAFE_MODE_APPROVED_TARGET && CONFIG.OPS_SAFE_MODE_APPROVED_TARGET.applicantId) || "Missing") ?></span></div>
+              <div class="opsChecklistRow"><span>Approved row email</span><span class="opsStatusPill info"><?= String((CONFIG.OPS_SAFE_MODE_APPROVED_TARGET && CONFIG.OPS_SAFE_MODE_APPROVED_TARGET.rowEmail) || "Missing") ?></span></div>
+              <div class="opsChecklistRow"><span>Test recipient override</span><span class="opsStatusPill <?= CONFIG.OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE ? 'warn' : 'muted' ?>"><?= CONFIG.OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE ? 'Applied separately' : 'Not configured' ?></span></div>
+              <div class="opsChecklistRow"><span>Applicant email sends</span><span class="opsStatusPill <?= CONFIG.OPS_SAFE_MODE_ALLOW_APPLICANT_EMAIL_SENDS === true ? 'warn' : 'danger' ?>"><?= CONFIG.OPS_SAFE_MODE_ALLOW_APPLICANT_EMAIL_SENDS === true ? 'Safe test only' : 'Blocked' ?></span></div>
+              <div class="opsChecklistRow"><span>Classroom notify</span><span class="opsStatusPill <?= CONFIG.OPS_SAFE_MODE_ALLOW_CLASSROOM_NOTIFY === true ? 'warn' : 'danger' ?>"><?= CONFIG.OPS_SAFE_MODE_ALLOW_CLASSROOM_NOTIFY === true ? 'Safe test only' : 'Blocked' ?></span></div>
+              <div class="opsChecklistRow"><span>High-risk Admin actions</span><span class="opsStatusPill danger">Disabled / Deferred</span></div>
+            </div>
+          </div>
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Books and Billing</h3></div><span class="opsStatusPill info">Display only</span></div>
             <div class="opsChecklist">
@@ -1097,7 +1196,7 @@
             <div class="opsChecklist">
               <div class="opsChecklistRow"><span>Test email override state</span><span class="opsStatusPill muted">Unknown</span></div>
               <div class="opsChecklistRow"><span>Applicant email suppression rules</span><span class="opsStatusPill muted">Existing controls outside cockpit</span></div>
-              <div class="opsChecklistRow"><span>Server email calls</span><span class="opsStatusPill ok">Not wired</span></div>
+              <div class="opsChecklistRow"><span>Server email calls</span><span class="opsStatusPill warn">Safe Mode gated</span></div>
             </div>
             <div class="opsActionRow">
               <button class="opsActionBtn" type="button" disabled>View Config</button>
@@ -1108,7 +1207,7 @@
         </div>
       </section>
       <section class="opsFooterStrip">
-        <div class="opsFooterItem"><strong>Operational Status</strong><span id="cockpitFooterStatus">Prototype only</span></div>
+        <div class="opsFooterItem"><strong>Operational Status</strong><span id="cockpitFooterStatus">Safe Mode Controlled Actions</span></div>
         <div class="opsFooterItem"><strong>Runtime</strong><span id="cockpitFooterRuntime">r172 target</span></div>
         <div class="opsFooterItem"><strong>Zoho Books</strong><span id="cockpitFooterBooks">Read-only status</span></div>
         <div class="opsFooterItem"><strong>Apps Script</strong><span id="cockpitFooterAppsScript">@current platform unknown</span></div>
@@ -1755,6 +1854,9 @@
       secretSetupBusy: false
     };
     let opsApplicantDetailCache = null;
+    let opsSelectedApplicantId = "<?= String((CONFIG.OPS_SAFE_MODE_APPROVED_TARGET && CONFIG.OPS_SAFE_MODE_APPROVED_TARGET.applicantId) || 'FODE-26-002929') ?>";
+    let opsSelectedApplicantName = "<?= String((CONFIG.OPS_SAFE_MODE_APPROVED_TARGET && CONFIG.OPS_SAFE_MODE_APPROVED_TARGET.fullName) || 'Approved target') ?>";
+    const OPS_SAFE_MODE_APPROVED_APPLICANT_ID = "<?= String((CONFIG.OPS_SAFE_MODE_APPROVED_TARGET && CONFIG.OPS_SAFE_MODE_APPROVED_TARGET.applicantId) || 'FODE-26-002929') ?>";
     let opsActionState = {
       busy: false,
       previewApplicantId: "",
@@ -1827,7 +1929,45 @@
       if (target && target.scrollIntoView) target.scrollIntoView({ behavior:"smooth", block:"start" });
     }
     function opsApplicantId_(){
-      return String((opsApplicantDetailCache && opsApplicantDetailCache.ApplicantID) || "FODE-26-002929").trim();
+      return String((opsApplicantDetailCache && opsApplicantDetailCache.ApplicantID) || opsSelectedApplicantId || "FODE-26-002929").trim();
+    }
+    function opsApplicantName_(){
+      var d = opsApplicantDetailCache || {};
+      var first = String((d.First_Name || d.name) || "").trim();
+      var last = String(d.Last_Name || "").trim();
+      var detailName = (first + " " + last).trim();
+      return detailName || String(opsSelectedApplicantName || "Unknown applicant");
+    }
+    function opsClearSelectedActionState_(){
+      opsActionState.previewApplicantId = "";
+      opsActionState.previewMessageType = "";
+      opsActionState.previewResult = null;
+      opsActionState.classroomPreviewApplicantId = "";
+      opsActionState.classroomPreviewResult = null;
+    }
+    function renderOpsSelectedApplicantContext_(){
+      var applicantId = opsApplicantId_();
+      var applicantName = opsApplicantName_();
+      var approved = applicantId === OPS_SAFE_MODE_APPROVED_APPLICANT_ID;
+      setOpsText_("cockpitCommContext", "Current Ops applicant: " + applicantId + " - " + applicantName + (approved ? " (Approved Safe Mode target)" : " (Not approved for Safe Mode send)"));
+      setOpsText_("cockpitClassroomContext", "Current Ops applicant: " + applicantId + " - " + applicantName + (approved ? " (Approved Safe Mode target)" : " (Not approved for Safe Mode notify)"));
+      setOpsPill_("cockpitPortalSelectedApplicant", applicantId, approved ? "ok" : "warn");
+    }
+    function opsSelectApplicantContext_(applicantId, applicantName){
+      var nextId = String(applicantId || "").trim();
+      if (!nextId) return;
+      opsSelectedApplicantId = nextId;
+      opsSelectedApplicantName = String(applicantName || "").trim() || nextId;
+      opsApplicantDetailCache = null;
+      opsClearSelectedActionState_();
+      renderOpsSelectedApplicantContext_();
+      renderOpsQueue_();
+      setOpsResult_("opsAdmissionsResult", {
+        result: "SELECTED",
+        applicantId: nextId,
+        message: "Ops applicant context set to " + nextId + ". Communications, Billing Queue, Classroom Handover, and portal diagnostics now follow this selected row."
+      }, "Applicant Selected");
+      fetchOpsApplicantSummary_(nextId);
     }
     function opsNowLabel_(){
       var d = new Date();
@@ -1938,36 +2078,36 @@
       setOpsPill_("cockpitAdminWhoami", runtime.mismatch === false ? "Match" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitStudentWhoami", runtime.mismatch === false ? "Match" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitRuntimeCommit", "Unknown", "muted");
-      setOpsPill_("cockpitRuntimeTag", "staging-as171 accepted", "muted");
+      setOpsPill_("cockpitRuntimeTag", "staging-as172 accepted", "ok");
       setOpsPill_("cockpitWorkingTree", "Unknown", "muted");
       setOpsPill_("cockpitReleaseWhoami", runtime.mismatch === false ? "OK" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitReleaseRemote", "Unknown", "muted");
-      setOpsPill_("cockpitReleaseBrowser", "Pending", "warn");
-      setOpsPill_("cockpitReleaseBrowserState", "Pending", "warn");
+      setOpsPill_("cockpitReleaseBrowser", "Accepted", "ok");
+      setOpsPill_("cockpitReleaseBrowserState", "Accepted", "ok");
       setOpsPill_("cockpitReleaseGit", "Blocked", "danger");
       setOpsPill_("cockpitReleaseDirty", "Unknown", "muted");
-      setOpsPill_("cockpitReleaseNextTask", "r172", "info");
+      setOpsPill_("cockpitReleaseNextTask", "r173 truth and safety correction", "info");
       setOpsPill_("cockpitRuntimeRemoteConfig", runtime.version ? "Loaded from runtime" : "Unknown", runtime.version ? "info" : "muted");
       setOpsPill_("cockpitRuntimeDrift", runtime.mismatch === false ? "No mismatch reported" : "Unknown until verified", runtime.mismatch === false ? "ok" : "warn");
       setOpsPill_("cockpitReleaseRuntime", version + " / " + String(deploy), "info");
-      setOpsText_("cockpitKpiNextRelease", "r172 controlled action checks");
-      setOpsText_("cockpitKpiNextReleaseMeta", "r172 controlled single-applicant action acceptance target.");
+      setOpsText_("cockpitKpiNextRelease", "Verify Controlled Actions");
+      setOpsText_("cockpitKpiNextReleaseMeta", "r173 targets Safe Mode gating, truth correction, and lifecycle mapping only.");
       setOpsText_("cockpitKpiRuntimeState", runtime.mismatch === false ? "Live" : "Unknown");
       setOpsText_("cockpitKpiRuntimeMeta", runtime.mismatch === false ? "Admin and Student whoami align." : "Waiting on whoami alignment.");
       setOpsPill_("cockpitRuntimeStatusPill", runtime.mismatch === false ? "Runtime Match" : "Runtime Unknown", runtime.mismatch === false ? "ok" : "warn");
       setOpsText_("cockpitFooterAppsScript", "@" + String(deploy) + " Live");
-      setOpsText_("cockpitFooterStatus", "Controlled single-record actions");
+      setOpsText_("cockpitFooterStatus", "Safe Mode Controlled Actions");
     }
     function renderOpsSafetyStatus_(data){
       var runtime = data && data.runtime ? data.runtime : {};
       var propertyHealth = data && data.propertyHealth ? data.propertyHealth : {};
       setOpsPill_("cockpitReleaseRemote", runtime.version ? "OK" : "Unknown", runtime.version ? "ok" : "muted");
       setOpsPill_("cockpitReleaseWhoami", runtime.mismatch === false ? "OK" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
-      setOpsText_("cockpitKpiRisks", propertyHealth.warning ? "1" : "0");
-      setOpsText_("cockpitKpiRiskState", propertyHealth.warning ? "Action Required" : "No active priority");
-      setOpsText_("cockpitKpiRisksMeta", propertyHealth.warning ? String(propertyHealth.label || "Property health warning") : "No active runtime property warning.");
+      setOpsText_("cockpitKpiRisks", "Map Only");
+      setOpsText_("cockpitKpiRiskState", "Review Required");
+      setOpsText_("cockpitKpiRisksMeta", "Risk Summary Not Yet Implemented. Runtime property warnings remain visible where available.");
       setOpsText_("cockpitKpiBilling", "Books Connected");
-      setOpsText_("cockpitKpiBillingMeta", "Connection ready. Cockpit remains read-only.");
+      setOpsText_("cockpitKpiBillingMeta", "Connection ready. Books writes remain disabled; Ops uses read-only checks and Safe Mode controls only.");
       setOpsText_("cockpitReportRelease", runtime.mismatch === false ? "Runtime aligned" : "Whoami mismatch");
       setOpsText_("cockpitFooterHealth", propertyHealth.warning ? String(propertyHealth.healthLevel || "Warning") : "All systems nominal");
     }
@@ -2004,6 +2144,8 @@
       var classroomPendingCount = 0;
       body.innerHTML = rows.map(function(row){
         var applicantId = String(row.applicantId || row.ApplicantID || "");
+        var applicantName = String(row.name || row.Student_Name || row.First_Name || "Unknown applicant");
+        var selected = applicantId === opsApplicantId_();
         var invoiceState = opsInvoiceSummary_(row);
         var emailState = opsInvoiceEmailSummary_(row);
         var docsState = opsDocsSummary_(row);
@@ -2023,7 +2165,7 @@
         if (paymentOk) paymentVerifiedCount++;
         if (paymentOk && !enrolledOk) notEnrolledCount++;
         if (classroom.label.indexOf("Pending") >= 0 || classroom.label.indexOf("Unknown") >= 0) classroomPendingCount++;
-        return "<tr>"
+        return "<tr class='opsQueueSelectableRow' data-applicant-id='" + esc(applicantId) + "' data-applicant-name='" + esc(applicantName) + "' style='cursor:pointer;" + (selected ? "background:rgba(59,130,246,0.14);outline:1px solid rgba(96,165,250,0.7);" : "") + "'>"
           + "<td><div class='opsQueueName'>" + esc(applicantId) + "</div></td>"
           + "<td><div>" + esc(String(row.name || "Unknown applicant")) + "</div><div class='opsQueueMeta'>" + esc(String(row.email || row.Parent_Email || "")) + "</div></td>"
           + "<td><span class='opsStatusPill " + docsState.cls + "'>" + esc(docsState.label) + "</span></td>"
@@ -2048,6 +2190,11 @@
       setOpsText_("cockpitReportPaymentTile", notEnrolledCount + " verified not enrolled");
       setOpsText_("cockpitReportClassroom", classroomPendingCount + " pending or unknown");
       setOpsText_("cockpitReportClassroomTile", classroomPendingCount + " pending or unknown");
+      Array.prototype.slice.call(body.querySelectorAll(".opsQueueSelectableRow")).forEach(function(rowEl){
+        rowEl.addEventListener("click", function(){
+          opsSelectApplicantContext_(rowEl.getAttribute("data-applicant-id") || "", rowEl.getAttribute("data-applicant-name") || "");
+        });
+      });
     }
     function renderOpsApplicantSummary_(detail){
       var el = document.getElementById("cockpitApplicantSummary");
@@ -2081,6 +2228,7 @@
       var bounceFlag = isCommBounceFlagTrue_(d.Email_Bounce_Flag);
       var portalSubmitted = workflowIsYes_(d.Portal_Submitted);
       var commStatus = bounceFlag ? "Bounce risk" : (emailStatus === "SENT" ? "Recently contacted" : (nextAction ? "Follow-up scheduled" : "Reminder due"));
+      renderOpsSelectedApplicantContext_();
       setOpsText_("cockpitCommApplicantStatus", commStatus);
       setOpsText_("cockpitCommInviteStatus", portalSubmitted ? "Portal submitted" : (emailStatus === "SENT" ? "Invite sent" : "Invite pending"));
       setOpsText_("cockpitCommReminderStatus", bounceFlag ? "Reminder suppressed" : (nextAction ? "Reminder due: " + nextAction : "Reminder due"));
@@ -2148,18 +2296,26 @@
         "</div>"
       ].join("");
     }
-    function fetchOpsApplicantSummary_(){
+    function fetchOpsApplicantSummary_(applicantId){
       if (String(INITIAL_ADMIN_VIEW || "").toLowerCase() !== "ops") return;
+      var targetApplicantId = String(applicantId || opsSelectedApplicantId || "FODE-26-002929").trim();
+      opsSelectedApplicantId = targetApplicantId;
       google.script.run
         .withSuccessHandler(function(res){
           var detail = normalizeDetailResponse_(res);
           opsApplicantDetailCache = detail || null;
+          if (detail && detail.ApplicantID) opsSelectedApplicantId = String(detail.ApplicantID || "").trim() || opsSelectedApplicantId;
+          opsSelectedApplicantName = detail ? opsDetailName_(detail) : opsSelectedApplicantName;
           renderOpsApplicantSummary_(detail || null);
+          renderOpsSelectedApplicantContext_();
+          renderOpsQueue_();
         })
         .withFailureHandler(function(){
+          opsApplicantDetailCache = null;
           renderOpsApplicantSummary_(null);
+          renderOpsSelectedApplicantContext_();
         })
-        .admin_getApplicantDetail_json({ applicantId: "FODE-26-002929" });
+        .admin_getApplicantDetail_json({ applicantId: targetApplicantId });
     }
     function opsRefreshSnapshot_(){
       setOpsText_("cockpitLastRefreshed", opsNowLabel_());
@@ -2262,7 +2418,7 @@
             blockReason:String((err && err.message) || err || "Send failed.")
           }, "Send Failed");
         })
-        .admin_sendApplicantMessage({ applicantId: applicantId, messageType: msgType, confirmManualSingleSend: true });
+        .admin_sendApplicantMessage({ applicantId: applicantId, messageType: msgType, confirmManualSingleSend: true, sourceSurface: "ops", sourceView: "ops" });
     }
     function opsRenderCommunicationTimeline_(){
       var d = opsApplicantDetailCache || {};
@@ -2354,7 +2510,7 @@
         .withFailureHandler(function(err){
           setOpsResult_("opsClassroomResult", { result:"FAILED", applicantId: applicantId, blockReason:String((err && err.message) || err || "Classroom notification failed.") }, "Notify Failed");
         })
-        .admin_notifyOpsClassroomAdmin({ applicantId: applicantId, confirmInternalSingleSend: true });
+        .admin_notifyOpsClassroomAdmin({ applicantId: applicantId, confirmInternalSingleSend: true, sourceSurface: "ops", sourceView: "ops" });
     }
     function opsOpenReport_(title){
       setOpsResult_("opsReportResult", {
