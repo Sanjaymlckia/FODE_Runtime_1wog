@@ -897,7 +897,7 @@
           </div>
         </div>
         <div class="opsKpiGrid">
-          <div class="opsKpiCard"><div class="opsKpiIcon blue">&lt;/&gt;</div><div><div class="kpiLabel">Runtime</div><div class="kpiValue" id="cockpitKpiRuntime">r173 / 173</div><div class="kpiState" id="cockpitKpiRuntimeState">Baseline live</div><div class="kpiMeta" id="cockpitKpiRuntimeMeta">Waiting on Admin and Student whoami.</div></div></div>
+          <div class="opsKpiCard"><div class="opsKpiIcon blue">&lt;/&gt;</div><div><div class="kpiLabel">Runtime</div><div class="kpiValue" id="cockpitKpiRuntime">r174 / 174</div><div class="kpiState" id="cockpitKpiRuntimeState">Baseline live</div><div class="kpiMeta" id="cockpitKpiRuntimeMeta">Waiting on Admin and Student whoami.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon green">B</div><div><div class="kpiLabel">Billing Status</div><div class="kpiValue" id="cockpitKpiBilling">Books Connected</div><div class="kpiState" id="cockpitKpiBillingState">Read-only</div><div class="kpiMeta" id="cockpitKpiBillingMeta">Invoice snapshot loading. Cockpit writes disabled.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon purple">A</div><div><div class="kpiLabel">Admissions Status</div><div class="kpiValue" id="cockpitKpiAdmissions">Queue Loading</div><div class="kpiState">Visibility Only</div><div class="kpiMeta" id="cockpitKpiAdmissionsMeta">Applicant rows use existing read-only loaders.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon amber">!</div><div><div class="kpiLabel">System Health</div><div class="kpiValue" id="cockpitKpiRisks">Unknown</div><div class="kpiState" id="cockpitKpiRiskState">Defined States</div><div class="kpiMeta" id="cockpitKpiRisksMeta">Healthy, Warning, Blocked, Degraded, or Unknown.</div></div></div>
@@ -912,7 +912,7 @@
               <div class="opsMetric"><div class="k">Billing</div><div class="v">Safe Mode Controlled Actions</div></div>
               <div class="opsMetric"><div class="k">Admissions</div><div class="v">Read-only review</div></div>
             </div>
-            <div class="opsPlaceholder" id="cockpitKpiNextReleaseMeta">r174 usability candidate; deployment identity bump is pending review approval.</div>
+            <div class="opsPlaceholder" id="cockpitKpiNextReleaseMeta">r175 operational readiness remains local until approved and deployed.</div>
             <div class="opsActionRow">
               <button class="opsActionBtn primary live" type="button" onclick="opsRefreshSnapshot_()">Refresh Snapshot</button>
               <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsAdmissionsQueue')">View Priority Queue</button>
@@ -1006,9 +1006,9 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Accepted Baseline</h3></div><span class="opsStatusPill muted">Current known</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Commit</span><span class="opsStatusPill muted" id="cockpitRuntimeCommit">609e513</span></div>
-              <div class="opsChecklistRow"><span>Tag</span><span class="opsStatusPill muted" id="cockpitRuntimeTag">staging-as173</span></div>
-              <div class="opsChecklistRow"><span>Browser acceptance</span><span class="opsStatusPill ok" id="cockpitReleaseBrowser">Accepted r173</span></div>
+              <div class="opsChecklistRow"><span>Commit</span><span class="opsStatusPill muted" id="cockpitRuntimeCommit">4a0473a</span></div>
+              <div class="opsChecklistRow"><span>Tag</span><span class="opsStatusPill muted" id="cockpitRuntimeTag">staging-as174</span></div>
+              <div class="opsChecklistRow"><span>Browser acceptance</span><span class="opsStatusPill ok" id="cockpitReleaseBrowser">Accepted r174</span></div>
             </div>
             <div class="opsActionRow">
               <button class="opsActionBtn" type="button" disabled>Run Runtime Check</button>
@@ -1034,6 +1034,8 @@
             <button class="opsActionBtn" type="button" onclick="opsSetQueueFilter_('')">All Rows</button>
             <button class="opsActionBtn" type="button" onclick="opsSetQueueFilter_('ready')">Ready</button>
             <button class="opsActionBtn" type="button" onclick="opsSetQueueFilter_('blocked')">Blocked</button>
+            <button class="opsActionBtn" type="button" onclick="opsActionState.queueSort='aging_desc';renderOpsQueue_()">Sort Aging</button>
+            <button class="opsActionBtn" type="button" onclick="opsActionState.queueSort='date_desc';renderOpsQueue_()">Sort Date Applied</button>
             <button class="opsActionBtn" type="button" disabled>Export Queue</button>
           </div>
           <div id="opsAdmissionsResult" class="opsResultBox hidden"></div>
@@ -1096,6 +1098,7 @@
               <button class="opsActionBtn" type="button" onclick="opsRenderCommunicationTimeline_()">View Message Timeline</button>
             </div>
             <div class="opsResultBox warn">Safe Mode allows only approved-target single-record tests. Non-approved applicants are blocked and logged.</div>
+            <div class="opsInspectPanel" id="opsCommunicationStatePanel">Select an applicant and preview a template to inspect recipient, subject, block reason, and Safe Mode state.</div>
             <div id="opsCommunicationResult" class="opsResultBox hidden"></div>
           </div>
           <div class="opsCard">
@@ -1144,6 +1147,7 @@
               <div class="opsMeaningItem"><strong>Generate Welcome/Handover Preview</strong>Reads applicant identity, subjects, invoice, payment, enrolment, and classroom status. It does not write any fields.</div>
               <div class="opsMeaningItem"><strong>Blocked / Allowed Reason</strong>Blocked when payment or enrolment prerequisites are absent, preview is missing, Safe Mode target mismatches, or the action would write enrolment/classroom state.</div>
             </div>
+            <div class="opsInspectPanel" id="opsClassroomChecklist">Generate preview to load classroom checklist, recipients, and notify reason.</div>
             <div class="opsActionRow">
               <button class="opsActionBtn" type="button" disabled>Prepare Classroom Package</button>
               <button class="opsActionBtn live" type="button" onclick="opsNotifyClassroomAdmin_()">Notify Classroom Admin</button>
@@ -1208,8 +1212,8 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Release State</h3></div><span class="opsStatusPill muted">Read only</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Current runtime</span><span class="opsStatusPill info" id="cockpitReleaseRuntime">r173 / 173</span></div>
-              <div class="opsChecklistRow"><span>Accepted baseline</span><span class="opsStatusPill ok">r173 / staging-as173</span></div>
+              <div class="opsChecklistRow"><span>Current runtime</span><span class="opsStatusPill info" id="cockpitReleaseRuntime">r174 / 174</span></div>
+              <div class="opsChecklistRow"><span>Accepted baseline</span><span class="opsStatusPill ok">r174 / staging-as174</span></div>
               <div class="opsChecklistRow"><span>Whoami status</span><span class="opsStatusPill muted" id="cockpitReleaseWhoami">Unknown</span></div>
               <div class="opsChecklistRow"><span>Browser acceptance status</span><span class="opsStatusPill ok" id="cockpitReleaseBrowserState">Accepted</span></div>
               <div class="opsChecklistRow"><span>Commit / tag state</span><span class="opsStatusPill danger" id="cockpitReleaseGit">Blocked</span></div>
@@ -1219,7 +1223,7 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Control Checklist</h3></div><span class="opsStatusPill danger">Disabled</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Rollback target</span><span class="opsStatusPill info">r173 / 173 @182</span></div>
+              <div class="opsChecklistRow"><span>Rollback target</span><span class="opsStatusPill info">r174 / 174 @183</span></div>
               <div class="opsChecklistRow"><span>Current blockers</span><span class="opsStatusPill warn">Deployment action remains externalized</span></div>
               <div class="opsChecklistRow"><span>Next release candidate</span><span class="opsStatusPill info" id="cockpitReleaseNextTask">r174</span></div>
               <div class="opsChecklistRow"><span>No active dirty working tree</span><span class="opsStatusPill muted" id="cockpitReleaseDirty">Unknown</span></div>
@@ -1963,6 +1967,7 @@
       queueFilter: "",
       lifecycleStage: "",
       booksFilter: "all",
+      queueSort: "aging_desc",
       templateType: "reminder",
       longPressTimer: null
     };
@@ -2049,8 +2054,11 @@
       var applicantId = opsApplicantId_();
       var applicantName = opsApplicantName_();
       var approved = applicantId === OPS_SAFE_MODE_APPROVED_APPLICANT_ID;
-      setOpsText_("cockpitCommContext", "Current Ops applicant: " + applicantId + " - " + applicantName + (approved ? " (Approved Safe Mode target)" : " (Not approved for Safe Mode send)"));
-      setOpsText_("cockpitClassroomContext", "Current Ops applicant: " + applicantId + " - " + applicantName + (approved ? " (Approved Safe Mode target)" : " (Not approved for Safe Mode notify)"));
+      var row = opsApplicantContextRow_() || {};
+      var dateInfo = opsDateAppliedInfo_(row);
+      var aging = opsAgingDays_(row) || "Missing source";
+      setOpsText_("cockpitCommContext", "Current Ops applicant: " + applicantId + " - " + applicantName + (approved ? " (Approved Safe Mode target)" : " (Not approved for Safe Mode send)") + " | Date Applied: " + dateInfo.label + " | Aging: " + aging);
+      setOpsText_("cockpitClassroomContext", "Current Ops applicant: " + applicantId + " - " + applicantName + (approved ? " (Approved Safe Mode target)" : " (Not approved for Safe Mode notify)") + " | Date Applied: " + dateInfo.label + " | Aging: " + aging);
       setOpsPill_("cockpitPortalSelectedApplicant", applicantId, approved ? "ok" : "warn");
       renderOpsSelectedApplicantMini_(opsApplicantDetailCache || null);
       renderOpsTemplateBrowser_();
@@ -2063,6 +2071,8 @@
       opsApplicantDetailCache = null;
       opsClearSelectedActionState_();
       renderOpsSelectedApplicantContext_();
+      renderOpsCommunicationStatePanel_();
+      renderOpsClassroomChecklist_();
       renderOpsQueue_();
       setOpsResult_("opsAdmissionsResult", {
         result: "SELECTED",
@@ -2088,15 +2098,82 @@
         return true;
       });
     }
+    function opsQueueRowByApplicantId_(applicantId){
+      var target = String(applicantId || "").trim();
+      if (!target) return null;
+      var rows = opsAllQueueRows_();
+      for (var i = 0; i < rows.length; i++) {
+        var rowId = String((rows[i] && (rows[i].applicantId || rows[i].ApplicantID)) || "").trim();
+        if (rowId === target) return rows[i];
+      }
+      return null;
+    }
+    function opsApplicantContextRow_(){
+      return opsQueueRowByApplicantId_(opsApplicantId_()) || opsApplicantDetailCache || null;
+    }
+    function opsDateAppliedInfo_(row){
+      var r = row || {};
+      var queueDisplay = opsFirstNonBlank_(r.receivedDisplay, r.receivedAt);
+      if (queueDisplay) {
+        return {
+          label: queueDisplay,
+          source: opsFirstNonBlank_(r.receivedSource, "queue_received_timestamp"),
+          iso: opsFirstNonBlank_(r.receivedAt, ""),
+          missingReason: ""
+        };
+      }
+      var fallback = opsFirstNonBlank_(r.Date_Applied, r.Application_Date, r.Timestamp, r.Created_At, r.Submitted_At, r.createdAt, r.timestamp, "");
+      if (fallback) {
+        return {
+          label: fallback,
+          source: "detail_fallback_fields",
+          iso: fallback,
+          missingReason: ""
+        };
+      }
+      return {
+        label: "Missing source",
+        source: "",
+        iso: "",
+        missingReason: "Missing queue timestamp fields: PortalTokenIssuedAt, PortalLastUpdateAt, adapter_timestamp, Timestamp, and Created_At."
+      };
+    }
     function opsDateApplied_(row){
-      return opsFirstNonBlank_(row.Date_Applied, row.Application_Date, row.Timestamp, row.Created_At, row.Submitted_At, row.createdAt, row.timestamp, "Unknown");
+      return opsDateAppliedInfo_(row).label;
     }
     function opsAgingDays_(row){
-      var raw = opsDateApplied_(row);
-      var t = Date.parse(raw);
-      if (!Number.isFinite(t)) return "";
+      var r = row || {};
+      if (typeof r.ageLabel === "string" && String(r.ageLabel).trim()) return String(r.ageLabel).trim();
+      if (typeof r.ageDays === "number" && isFinite(r.ageDays) && r.ageDays >= 0) {
+        return String(r.ageDays) + " day" + (Number(r.ageDays) === 1 ? "" : "s");
+      }
+      var info = opsDateAppliedInfo_(r);
+      var t = Date.parse(info.iso || info.label || "");
+      if (!Number.isFinite(t)) return info.missingReason ? "Missing source" : "";
       var days = Math.max(0, Math.floor((Date.now() - t) / 86400000));
       return String(days) + " day" + (days === 1 ? "" : "s");
+    }
+    function opsAgingBand_(row){
+      var band = String((row && row.ageBand) || "").trim().toLowerCase();
+      if (band === "green" || band === "orange" || band === "red") return band;
+      var label = String(opsAgingDays_(row) || "");
+      var num = Number(label.replace(/[^\d]/g, ""));
+      if (!isFinite(num)) return "unknown";
+      if (num <= 3) return "green";
+      if (num <= 7) return "orange";
+      return "red";
+    }
+    function opsAgingKind_(row){
+      var band = opsAgingBand_(row);
+      if (band === "green") return "ok";
+      if (band === "orange") return "warn";
+      if (band === "red") return "danger";
+      return "muted";
+    }
+    function opsDateAppliedTitle_(row){
+      var info = opsDateAppliedInfo_(row);
+      if (info.missingReason) return info.missingReason;
+      return "Source: " + String(info.source || "Unknown");
     }
     function opsDummyMarker_(applicantId){
       return String(applicantId || "").trim() === "FODE-26-002013" ? "Live applicant" : "Dummy / test";
@@ -2155,24 +2232,25 @@
       if (detail) {
         var stage = stages.filter(function(s){ return s.key === selected; })[0];
         var rows = selected ? opsRowsForLifecycleStage_(selected) : [];
+        var selectedApplicant = opsApplicantId_() || "none";
         detail.innerHTML = stage
-          ? "<strong>" + esc(stage.name) + "</strong><div style='margin-top:6px;'>Count: " + String(rows.length) + "</div><div>Fields used: loaded applicant row status, invoice, payment, enrolment, portal, and classroom fields.</div><div>Next action: " + esc(stage.next) + "</div>"
+          ? "<strong>" + esc(stage.name) + "</strong><div style='margin-top:6px;'>Count: " + String(rows.length) + "</div><div>Selected applicant: " + esc(selectedApplicant) + "</div><div>Records in view: " + esc(rows.slice(0, 6).map(function(row){ return String(row.applicantId || row.ApplicantID || ""); }).filter(Boolean).join(", ") || "None in loaded queue") + "</div><div>Fields used: loaded applicant row status, invoice, payment, enrolment, portal, and classroom fields.</div><div>Next action: " + esc(stage.next) + "</div>"
           : "Select a lifecycle stage to inspect records, blockers, and next action.";
       }
     }
     function renderOpsSelectedApplicantMini_(row){
       var el = document.getElementById("opsSelectedApplicantMini");
       if (!el) return;
-      var d = row || opsApplicantDetailCache || {};
+      var d = row || opsApplicantContextRow_() || {};
       var id = opsApplicantId_();
       var name = opsApplicantName_();
-      var dateApplied = opsDateApplied_(d);
-      var aging = opsAgingDays_(d) || "Unknown";
+      var dateInfo = opsDateAppliedInfo_(d);
+      var aging = opsAgingDays_(d) || "Missing source";
       var marker = opsDummyMarker_(id);
       el.innerHTML = [
         "<div class='opsInfoItem'><div class='k'>Selected Applicant</div><div class='v'>" + esc(id) + "</div></div>",
         "<div class='opsInfoItem'><div class='k'>Name</div><div class='v'>" + esc(name) + "</div></div>",
-        "<div class='opsInfoItem'><div class='k'>Date Applied</div><div class='v'>" + esc(dateApplied) + "</div></div>",
+        "<div class='opsInfoItem'><div class='k'>Date Applied</div><div class='v' title='" + esc(opsDateAppliedTitle_(d)) + "'>" + esc(dateInfo.label) + "</div></div>",
         "<div class='opsInfoItem'><div class='k'>Aging / Marker</div><div class='v'>" + esc(aging + " | " + marker) + "</div></div>"
       ].join("");
     }
@@ -2262,7 +2340,7 @@
     function opsApplyTemplateToCustomDraft_(){
       var selected = opsSelectedTemplateType_();
       var t = opsTemplateDefinitions_().filter(function(x){ return x.type === selected; })[0] || opsTemplateDefinitions_()[0];
-      var d = opsApplicantDetailCache || {};
+      var d = opsApplicantContextRow_() || {};
       var recipient = opsFirstNonBlank_(d.Effective_Email, d.Parent_Email_Corrected, d.Parent_Email, "");
       var templateName = document.getElementById("opsCustomTemplateName");
       var rec = document.getElementById("opsCustomRecipient");
@@ -2276,6 +2354,35 @@
       if (safety) safety.value = opsApplicantId_() === OPS_SAFE_MODE_APPROVED_APPLICANT_ID
         ? "Safe Mode approved target; test override: " + (OPS_SAFE_MODE_TEST_RECIPIENT || "none") + "; preview and confirmation required"
         : "Send blocked for non-approved applicant; test override: " + (OPS_SAFE_MODE_TEST_RECIPIENT || "none");
+      renderOpsCommunicationStatePanel_();
+    }
+    function renderOpsCommunicationStatePanel_(){
+      var panel = document.getElementById("opsCommunicationStatePanel");
+      if (!panel) return;
+      var row = opsApplicantContextRow_() || {};
+      var selectedType = opsSelectedTemplateType_();
+      var payload = opsCustomEmailPayload_();
+      var recipient = payload.recipient || opsFirstNonBlank_(row.Effective_Email, row.Parent_Email_Corrected, row.Parent_Email, "No effective email in loaded fields");
+      var approved = opsApplicantId_() === OPS_SAFE_MODE_APPROVED_APPLICANT_ID;
+      var previewReady = opsActionState.previewApplicantId === opsApplicantId_()
+        && opsActionState.previewMessageType === selectedType
+        && opsActionState.previewResult
+        && String(opsActionState.previewResult.result || "").toUpperCase() === "PREVIEW";
+      var staleDraft = selectedType === "custom_email" && previewReady && opsActionState.previewDraftSignature !== opsCustomEmailSignature_();
+      var blockReason = "";
+      if (!approved) blockReason = "Not approved for Safe Mode send.";
+      else if (!previewReady) blockReason = "Preview required before send.";
+      else if (staleDraft) blockReason = "Draft changed after preview. Re-preview required.";
+      else if (opsActionState.previewResult && opsActionState.previewResult.blockReason) blockReason = String(opsActionState.previewResult.blockReason);
+      panel.innerHTML = [
+        "<strong>Selected applicant:</strong> " + esc(opsApplicantId_()) + " - " + esc(opsApplicantName_()),
+        "<br><strong>Template:</strong> " + esc(selectedType),
+        "<br><strong>Recipient:</strong> " + esc(recipient),
+        "<br><strong>Subject:</strong> " + esc(payload.subject || "Preview/template will populate subject"),
+        "<br><strong>Body:</strong> " + esc((payload.body || "").slice(0, 180) || "Preview/template will populate body"),
+        "<br><strong>Safe Mode state:</strong> " + esc(approved ? "Approved target / owner-controlled single-record send only" : "Blocked for non-approved applicant"),
+        "<br><strong>Block reason:</strong> " + esc(blockReason || "Ready for send only after preview and confirmation")
+      ].join("");
     }
     function opsHideContextMenu_(){
       var menu = document.getElementById("opsApplicantContextMenu");
@@ -2291,15 +2398,11 @@
       menu.setAttribute("data-applicant-name", applicantName);
       var actions = [
         ["select", "Select applicant", false],
-        ["summary", "View applicant summary", false],
         ["review", "Open applicant review", false],
-        ["preview", "Preview email", false],
-        ["send_reminder", "Send reminder", true],
-        ["portal", "Resend portal access", true],
-        ["invoice", "Open invoice", false],
-        ["books", "Refresh Books status", false],
-        ["portal_status", "View portal status", false],
-        ["classroom", "View classroom handover", false],
+        ["billing", "Open billing status", false],
+        ["communications", "Open communications", false],
+        ["portal_status", "Open portal diagnostics", false],
+        ["classroom", "Open classroom handover", false],
         ["copy", "Copy ApplicantID", false]
       ];
       menu.innerHTML = actions.map(function(a){
@@ -2319,13 +2422,10 @@
     }
     function opsHandleApplicantMenuAction_(action, applicantId, applicantName){
       opsSelectApplicantContext_(applicantId, applicantName);
-      if (action === "select" || action === "summary") return;
+      if (action === "select") return;
       if (action === "review") return opsOpenApplicantReview_();
-      if (action === "preview") return opsPreviewApplicantEmail_(opsSelectedTemplateType_(), "Selected Template");
-      if (action === "send_reminder") return opsSendApplicantEmail_("reminder", "Reminder");
-      if (action === "portal") return opsSendApplicantEmail_("legacy_invite", "Portal Access");
-      if (action === "invoice") return opsOpenInvoice_();
-      if (action === "books") return opsRefreshInvoiceStatus_();
+      if (action === "billing") return opsScrollTo_("opsZohoBooks");
+      if (action === "communications") return opsScrollTo_("opsCommunications");
       if (action === "portal_status") return opsScrollTo_("opsStudentDiagnostics");
       if (action === "classroom") return opsScrollTo_("opsClassroom");
       if (action === "copy") {
@@ -2469,14 +2569,14 @@
       setOpsPill_("cockpitReleaseBrowserState", "Accepted", "ok");
       setOpsPill_("cockpitReleaseGit", "Blocked", "danger");
       setOpsPill_("cockpitReleaseDirty", "Unknown", "muted");
-      setOpsPill_("cockpitRuntimeCommit", "609e513", "ok");
-      setOpsPill_("cockpitRuntimeTag", "staging-as173 accepted", "ok");
-      setOpsPill_("cockpitReleaseNextTask", "r174 operator console usability", "info");
+      setOpsPill_("cockpitRuntimeCommit", "4a0473a", "ok");
+      setOpsPill_("cockpitRuntimeTag", "staging-as174 accepted", "ok");
+      setOpsPill_("cockpitReleaseNextTask", "r175 ops operational readiness", "info");
       setOpsPill_("cockpitRuntimeRemoteConfig", runtime.version ? "Loaded from runtime" : "Unknown", runtime.version ? "info" : "muted");
       setOpsPill_("cockpitRuntimeDrift", runtime.mismatch === false ? "No mismatch reported" : "Unknown until verified", runtime.mismatch === false ? "ok" : "warn");
       setOpsPill_("cockpitReleaseRuntime", version + " / " + String(deploy), "info");
-      setOpsText_("cockpitKpiNextRelease", "r174 usability candidate");
-      setOpsText_("cockpitKpiNextReleaseMeta", "r174 keeps writes gated and improves daily operator console usability.");
+      setOpsText_("cockpitKpiNextRelease", "r175 operational readiness");
+      setOpsText_("cockpitKpiNextReleaseMeta", "r175 keeps writes gated and focuses on operator readiness improvements only.");
       setOpsText_("cockpitKpiRuntimeState", runtime.mismatch === false ? "Live" : "Unknown");
       setOpsText_("cockpitKpiRuntimeMeta", runtime.mismatch === false ? "Admin and Student whoami align." : "Waiting on whoami alignment.");
       setOpsPill_("cockpitRuntimeStatusPill", runtime.mismatch === false ? "Runtime Match" : "Runtime Unknown", runtime.mismatch === false ? "ok" : "warn");
@@ -2484,36 +2584,57 @@
       setOpsText_("cockpitFooterStatus", "Safe Mode Controlled Actions");
       setOpsPill_("cockpitHealthLevel", runtime.mismatch === false ? "Warning" : "Unknown", runtime.mismatch === false ? "warn" : "muted");
       setOpsText_("cockpitHealthWhy", runtime.mismatch === false
-        ? "Runtime identity is aligned. r174 remains a local candidate until Config.js is bumped, remote source is verified, and deployments are repinned after review approval."
+        ? "Runtime identity is aligned to the accepted r174 baseline. r175 remains a local candidate until Config.js is bumped, remote source is verified, and deployments are repinned after approval."
         : "Runtime identity has not returned enough evidence yet.");
     }
     function renderOpsSafetyStatus_(data){
       var runtime = data && data.runtime ? data.runtime : {};
+      var gates = data && data.gates ? data.gates : {};
+      var trigger = data && data.trigger ? data.trigger : {};
       var propertyHealth = data && data.propertyHealth ? data.propertyHealth : {};
       setOpsPill_("cockpitReleaseRemote", runtime.version ? "OK" : "Unknown", runtime.version ? "ok" : "muted");
       setOpsPill_("cockpitReleaseWhoami", runtime.mismatch === false ? "OK" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
-      setOpsText_("cockpitKpiRisks", "Warning");
-      setOpsText_("cockpitKpiRiskState", "Defined");
+      setOpsText_("cockpitKpiRisks", "Health Report");
+      setOpsText_("cockpitKpiRiskState", "Cause visible");
       setOpsText_("cockpitKpiRisksMeta", "Health is derived from runtime identity, config coherence, queue load, Books/read-only state, Safe Mode, and critical write gates.");
       setOpsText_("cockpitKpiBilling", "Books Connected");
       setOpsText_("cockpitKpiBillingMeta", "Connection ready. Books writes remain disabled; Ops uses read-only checks and Safe Mode controls only.");
       setOpsText_("cockpitReportRelease", runtime.mismatch === false ? "Runtime aligned" : "Whoami mismatch");
       var health = "Unknown";
       var why = [];
+      var next = [];
       if (runtime.mismatch === true) {
         health = "Blocked";
         why.push("Admin/Student runtime identity mismatch is reported.");
+        next.push("Stop operator action and verify both whoami endpoints.");
       } else if (runtime.mismatch === false) {
         health = propertyHealth.warning ? "Warning" : "Healthy";
         why.push("Admin runtime identity returned without mismatch.");
         why.push("VERSION / DEPLOY_VERSION_NUMBER are read from runtime.");
+        next.push("Continue with read-only review or Safe Mode single-record actions only.");
       }
-      if (propertyHealth.warning) why.push("Property/config health warning: " + String(propertyHealth.warning));
+      if (propertyHealth.warning) {
+        why.push("Property/config health warning: " + String(propertyHealth.warning));
+        next.push("Review property inventory and stale script-property growth.");
+      }
+      if (gates.stabilizationMode === true) {
+        health = health === "Blocked" ? "Blocked" : "Warning";
+        why.push("System stabilization mode is active.");
+        next.push("Do not expect unrestricted production sends.");
+      }
+      if (gates.productionSendsEnabled === false) why.push("Production email sends are disabled.");
+      if (gates.batchSendEnabled === false) why.push("Batch send remains disabled.");
+      if (trigger.installed === false && gates.automatedStageRunnerEnabled === true) {
+        health = health === "Blocked" ? "Blocked" : "Degraded";
+        why.push("Automated runner is enabled in config but no trigger is installed.");
+        next.push("Repair trigger installation or keep automation disabled.");
+      }
       why.push("Books connection is read-only in this console.");
       why.push("Admissions queue loaded state is shown in the Applicant Queue.");
       why.push("Critical writes, bulk sends, Books writes, payment/enrolment writes, and WhatsApp export/email remain disabled or gated.");
+      if (!next.length) next.push("Refresh runtime and safety checks if evidence changes.");
       setOpsPill_("cockpitHealthLevel", health, health === "Healthy" ? "ok" : (health === "Blocked" ? "danger" : (health === "Unknown" ? "muted" : "warn")));
-      setOpsText_("cockpitHealthWhy", why.join(" "));
+      setOpsText_("cockpitHealthWhy", "Causes: " + why.join(" ") + " Next action: " + next.join(" "));
       setOpsText_("cockpitFooterHealth", health);
     }
     function renderOpsQueue_(){
@@ -2535,6 +2656,21 @@
           });
         }
       }
+      rows = rows.slice().sort(function(a, b){
+        var sortKey = String(opsActionState.queueSort || "aging_desc");
+        if (sortKey === "applicant_asc") {
+          return String(a.applicantId || a.ApplicantID || "").localeCompare(String(b.applicantId || b.ApplicantID || ""));
+        }
+        if (sortKey === "date_desc") {
+          return Date.parse(String(opsDateAppliedInfo_(b).iso || "")) - Date.parse(String(opsDateAppliedInfo_(a).iso || ""));
+        }
+        var aAge = Number(a && a.ageDays);
+        var bAge = Number(b && b.ageDays);
+        if (!isFinite(aAge)) aAge = -1;
+        if (!isFinite(bAge)) bAge = -1;
+        if (bAge !== aAge) return bAge - aAge;
+        return String(a.applicantId || a.ApplicantID || "").localeCompare(String(b.applicantId || b.ApplicantID || ""));
+      });
       if (!rows.length) {
         body.innerHTML = "<tr><td colspan='11' class='opsPlaceholder'>No queue rows loaded yet.</td></tr>";
         renderOpsSelectedApplicantMini_(null);
@@ -2550,8 +2686,9 @@
         var applicantId = String(row.applicantId || row.ApplicantID || "");
         var applicantName = String(row.name || row.Student_Name || row.First_Name || "Unknown applicant");
         var selected = applicantId === opsApplicantId_();
-        var dateApplied = opsDateApplied_(row);
-        var aging = opsAgingDays_(row) || "Unknown";
+        var dateInfo = opsDateAppliedInfo_(row);
+        var dateApplied = dateInfo.label;
+        var aging = opsAgingDays_(row) || "Missing source";
         var marker = opsDummyMarker_(applicantId);
         var invoiceState = opsInvoiceSummary_(row);
         var emailState = opsInvoiceEmailSummary_(row);
@@ -2575,8 +2712,8 @@
         return "<tr class='opsQueueSelectableRow" + (selected ? " opsQueueSelectedRow" : "") + "' data-applicant-id='" + esc(applicantId) + "' data-applicant-name='" + esc(applicantName) + "' style='cursor:pointer;'>"
           + "<td><div class='opsQueueName'>" + esc(applicantId) + "</div></td>"
           + "<td><div>" + esc(String(row.name || "Unknown applicant")) + "</div><div class='opsQueueMeta'>" + esc(String(row.email || row.Parent_Email || "")) + "</div></td>"
-          + "<td><span class='opsStatusPill info'>" + esc(dateApplied) + "</span></td>"
-          + "<td><span class='opsStatusPill " + (aging === "Unknown" ? "muted" : "warn") + "'>" + esc(aging) + "</span></td>"
+          + "<td><span class='opsStatusPill info' title='" + esc(opsDateAppliedTitle_(row)) + "'>" + esc(dateApplied) + "</span></td>"
+          + "<td><span class='opsStatusPill " + opsAgingKind_(row) + "' title='" + esc(opsDateAppliedTitle_(row)) + "'>" + esc(aging) + "</span></td>"
           + "<td><span class='opsStatusPill " + (marker.indexOf("Live") >= 0 ? "ok" : "muted") + "'>" + esc(marker) + "</span></td>"
           + "<td><span class='opsStatusPill " + docsState.cls + "'>" + esc(docsState.label) + "</span></td>"
           + "<td>" + payment + "</td>"
@@ -2603,6 +2740,7 @@
       var summaryStrip = document.getElementById("opsQueueSummaryStrip");
       if (summaryStrip) {
         summaryStrip.innerHTML = "<span class='opsStatusPill info'>Rows shown: " + String(rows.length) + "</span>"
+          + "<span class='opsStatusPill muted'>Sort: " + esc(String(opsActionState.queueSort || "aging_desc").replace(/_/g, " ")) + "</span>"
           + "<span class='opsStatusPill ok'>Invoices raised: " + String(invoiceRaisedCount) + "</span>"
           + "<span class='opsStatusPill ok'>Payment verified: " + String(paymentVerifiedCount) + "</span>"
           + "<span class='opsStatusPill warn'>Classroom pending/unknown: " + String(classroomPendingCount) + "</span>";
@@ -2621,6 +2759,7 @@
     function renderOpsApplicantSummary_(detail){
       var el = document.getElementById("cockpitApplicantSummary");
       if (!el) return;
+      var queueRow = opsQueueRowByApplicantId_(String((detail && detail.ApplicantID) || opsSelectedApplicantId || ""));
       var d = detail || opsApplicantDetailCache || {
         ApplicantID: "FODE-26-002929",
         First_Name: "Reference",
@@ -2633,6 +2772,11 @@
         Enrolled_Confirmed: "Yes",
         Classroom_Handover_Status: "Classroom Pending"
       };
+      if (queueRow) {
+        Object.keys(queueRow).forEach(function(k){
+          if (!String(d[k] == null ? "" : d[k]).trim()) d[k] = queueRow[k];
+        });
+      }
       var invoiceState = opsInvoiceSummary_(d);
       var payment = opsIsYes_(d.Payment_Verified) ? "Payment Verified" : "Payment Pending";
       var enrolled = opsIsYes_(d.Enrolled_Confirmed) ? "Enrolled Confirmed" : "Enrolment Pending";
@@ -2649,6 +2793,8 @@
       var nextAction = String(d.Email_Next_Action_Date || "").trim();
       var bounceFlag = isCommBounceFlagTrue_(d.Email_Bounce_Flag);
       var portalSubmitted = workflowIsYes_(d.Portal_Submitted);
+      var dateInfo = opsDateAppliedInfo_(d);
+      var aging = opsAgingDays_(d) || "Missing source";
       var commStatus = bounceFlag ? "Bounce risk" : (emailStatus === "SENT" ? "Recently contacted" : (nextAction ? "Follow-up scheduled" : "Reminder due"));
       renderOpsSelectedApplicantContext_();
       setOpsText_("cockpitCommApplicantStatus", commStatus);
@@ -2668,6 +2814,8 @@
       renderOpsSelectedApplicantMini_(d);
       renderOpsTemplateBrowser_();
       opsApplyTemplateToCustomDraft_();
+      renderOpsCommunicationStatePanel_();
+      renderOpsClassroomChecklist_();
       renderOpsBooksFilters_();
       el.innerHTML = [
         "<div class='opsSectionGrid mainSplit'>",
@@ -2688,6 +2836,8 @@
         "<div class='opsInfoGrid'>",
           "<div class='opsInfoItem'><div class='k'>Applicant</div><div class='v'>" + esc(opsDetailName_(d)) + "</div></div>",
           "<div class='opsInfoItem'><div class='k'>Student</div><div class='v'>" + esc(opsDetailName_(d)) + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Date Applied</div><div class='v' title='" + esc(opsDateAppliedTitle_(d)) + "'>" + esc(dateInfo.label) + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Aging</div><div class='v'>" + esc(aging) + "</div></div>",
           "<div class='opsInfoItem'><div class='k'>Invoice Raised / No Invoice</div><div class='v'>" + esc(invoiceState.label) + "</div></div>",
           "<div class='opsInfoItem'><div class='k'>Invoice Number</div><div class='v'>" + esc(invoiceNumber) + "</div></div>",
           "<div class='opsInfoItem'><div class='k'>Books Status</div><div class='v'>" + esc(String(d.Books_Push_Status || d.Books_Invoice_Status || "Unknown")) + "</div></div>",
@@ -2735,12 +2885,16 @@
           opsSelectedApplicantName = detail ? opsDetailName_(detail) : opsSelectedApplicantName;
           renderOpsApplicantSummary_(detail || null);
           renderOpsSelectedApplicantContext_();
+          renderOpsCommunicationStatePanel_();
+          renderOpsClassroomChecklist_();
           renderOpsQueue_();
         })
         .withFailureHandler(function(){
           opsApplicantDetailCache = null;
           renderOpsApplicantSummary_(null);
           renderOpsSelectedApplicantContext_();
+          renderOpsCommunicationStatePanel_();
+          renderOpsClassroomChecklist_();
         })
         .admin_getApplicantDetail_json({ applicantId: targetApplicantId });
     }
@@ -2801,6 +2955,7 @@
             opsActionState.previewDraftSignature = "";
           }
           setOpsResult_("opsCommunicationResult", out, String(label || "Email") + " Preview");
+          renderOpsCommunicationStatePanel_();
         })
         .withFailureHandler(function(err){
           opsActionState.busy = false;
@@ -2809,6 +2964,7 @@
             applicantId: applicantId,
             blockReason:String((err && err.message) || err || "Preview failed.")
           }, "Preview Email Failed");
+          renderOpsCommunicationStatePanel_();
         })
         .admin_previewApplicantMessage(payload);
     }
@@ -2826,6 +2982,7 @@
           blockCode:"PREVIEW_REQUIRED",
           blockReason:"Preview " + String(label || msgType) + " before sending. Recipient, subject, and body must be reviewed first."
         }, "Send Blocked");
+        renderOpsCommunicationStatePanel_();
         return;
       }
       if (msgType === "custom_email" && opsActionState.previewDraftSignature !== opsCustomEmailSignature_()) {
@@ -2835,6 +2992,7 @@
           blockCode:"PREVIEW_STALE",
           blockReason:"Custom email content changed after preview. Preview the final subject/body again before sending."
         }, "Send Blocked");
+        renderOpsCommunicationStatePanel_();
         return;
       }
       var recipient = String(opsActionState.previewResult.effectiveEmail || "").trim();
@@ -2845,6 +3003,7 @@
           blockCode:"NO_RECIPIENT",
           blockReason:"Preview did not provide a recipient."
         }, "Send Blocked");
+        renderOpsCommunicationStatePanel_();
         return;
       }
       if (!window.confirm("Send " + String(label || msgType) + " for " + applicantId + " to " + recipient + "?")) return;
@@ -2863,6 +3022,7 @@
             fetchOpsApplicantSummary_();
             fetchOperationalSafetyStatus_();
           }
+          renderOpsCommunicationStatePanel_();
         })
         .withFailureHandler(function(err){
           opsActionState.busy = false;
@@ -2871,6 +3031,7 @@
             applicantId: applicantId,
             blockReason:String((err && err.message) || err || "Send failed.")
           }, "Send Failed");
+          renderOpsCommunicationStatePanel_();
         })
         .admin_sendApplicantMessage(payload);
     }
@@ -2934,11 +3095,41 @@
             opsActionState.classroomPreviewResult = out;
           }
           setOpsResult_("opsClassroomResult", out, "Classroom Handover Preview");
+          renderOpsClassroomChecklist_();
         })
         .withFailureHandler(function(err){
           setOpsResult_("opsClassroomResult", { result:"FAILED", applicantId: applicantId, blockReason:String((err && err.message) || err || "Classroom preview failed.") }, "Classroom Preview Failed");
+          renderOpsClassroomChecklist_();
         })
         .admin_previewOpsClassroomHandover({ applicantId: applicantId });
+    }
+    function renderOpsClassroomChecklist_(){
+      var panel = document.getElementById("opsClassroomChecklist");
+      if (!panel) return;
+      var row = opsApplicantContextRow_() || {};
+      var preview = opsActionState.classroomPreviewResult || {};
+      var invoiceRaised = opsInvoiceSummary_(row).label === "Invoice Raised";
+      var paymentVerified = opsIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true;
+      var enrolmentConfirmed = opsIsYes_(row.Enrolled_Confirmed);
+      var subjects = opsFirstNonBlank_(row.Selected_Subjects, row.Subjects, "");
+      var recipient = opsFirstNonBlank_(preview.effectiveEmail, preview.recipientEmail, preview.recipient, "");
+      var previewGenerated = String(preview.result || "").toUpperCase() === "PREVIEW";
+      var approved = opsApplicantId_() === OPS_SAFE_MODE_APPROVED_APPLICANT_ID;
+      var notifyReason = preview.blockReason || (approved ? "Allowed only after preview and confirm." : "Blocked: selected applicant is not the approved Safe Mode target.");
+      function line(label, ok, detail){
+        return "<div class='opsChecklistRow'><span>" + esc(label) + "</span><span class='opsStatusPill " + (ok ? "ok" : "warn") + "'>" + esc(detail) + "</span></div>";
+      }
+      panel.innerHTML = [
+        "<strong>Classroom Pending Checklist</strong>",
+        line("Invoice raised", invoiceRaised, invoiceRaised ? "Visible" : "Not visible"),
+        line("Payment verified", paymentVerified, paymentVerified ? "Visible" : "Not yet visible"),
+        line("Enrolment confirmed", enrolmentConfirmed, enrolmentConfirmed ? "Visible" : "Not yet visible"),
+        line("Selected subjects visible", !!subjects, subjects || "No subject field loaded"),
+        line("Classroom recipient available", !!recipient, recipient || "Recipient not known until preview/config resolves"),
+        line("Preview generated", previewGenerated, previewGenerated ? "Yes" : "No"),
+        line("Notify allowed / blocked", approved && previewGenerated, notifyReason),
+        "<div style='margin-top:8px;'><strong>Notify Classroom Admin does:</strong> Sends an internal classroom notification only. It does not mark enrolled, create packages, or write classroom state.</div>"
+      ].join("");
     }
     function opsNotifyClassroomAdmin_(){
       var applicantId = opsApplicantId_();
@@ -2952,6 +3143,7 @@
           blockCode:"PREVIEW_REQUIRED",
           blockReason:"Generate the classroom handover preview before notifying the internal classroom admin."
         }, "Notify Blocked");
+        renderOpsClassroomChecklist_();
         return;
       }
       var recipient = String(opsActionState.classroomPreviewResult.effectiveEmail || "").trim();
@@ -2960,9 +3152,11 @@
         .withSuccessHandler(function(res){
           var out = res && typeof res === "object" ? res : { ok:false, result:"FAILED", blockReason:"Invalid classroom notify response." };
           setOpsResult_("opsClassroomResult", out, "Classroom Admin Notification");
+          renderOpsClassroomChecklist_();
         })
         .withFailureHandler(function(err){
           setOpsResult_("opsClassroomResult", { result:"FAILED", applicantId: applicantId, blockReason:String((err && err.message) || err || "Classroom notification failed.") }, "Notify Failed");
+          renderOpsClassroomChecklist_();
         })
         .admin_notifyOpsClassroomAdmin({ applicantId: applicantId, confirmInternalSingleSend: true, sourceSurface: "ops", sourceView: "ops" });
     }

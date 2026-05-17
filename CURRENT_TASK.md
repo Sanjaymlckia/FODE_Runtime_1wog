@@ -2,14 +2,14 @@
 
 ## Active CIS
 
-- Release accepted: `r174 Operator Console Usability`
+- Release accepted: `r175 Ops Operational Readiness`
 - Accepted live release:
-  - Commit: `5678c14`
-  - Tag: `staging-as174`
-  - Apps Script version: `183`
-  - Runtime: `r174 / 174`
-  - Admin deployment: `@183`
-  - Student deployment: `@183`
+  - Commit: `pending local git finalize`
+  - Tag: `staging-as175`
+  - Apps Script version: `184`
+  - Runtime: `r175 / 175`
+  - Admin deployment: `@184`
+  - Student deployment: `@184`
 
 ## Baseline Verified Before Release
 
@@ -31,25 +31,30 @@
 
 ## Released Scope
 
-- `AdminUI.html` updated for the r174 operator usability release:
-  - operator-first visual order
-  - responsive lifecycle stage cascade with inspect/filter behavior
-  - full-width applicant queue with selected-row highlight
-  - date applied, aging, and dummy/test markers
-  - applicant row right-click and long-press context menu
-  - Zoho Books filters with meaning, fields used, counts, records, and next action
-  - communications template quick look, custom draft controls, selected applicant context, and single-record preview/send gates
-  - Classroom Pending explanation and read/write impact notes
-  - WhatsApp/contact fallback explanation only
-  - Rules & Config setting classification
-  - System Health definitions and reason text
-- Review hardening applied after `/review`:
-  - footer strip explicitly ordered after the operator sections
-  - custom email send is blocked if subject/body/recipient changed after preview
-- `Admin.js` updated only to remove a stale `r172` label from the classroom handover preview text. No server logic or gates changed.
-- `Config.js` released as:
-  - `VERSION: "r174"`
-  - `DEPLOY_VERSION_NUMBER: 174`
+- `AdminUI.html` only:
+  - Date Applied / Aging now prefers queue `received*` and `age*` fields with explicit missing-source reasons
+  - Applicant Queue supports low-risk Date Applied / Aging sort buttons
+  - lifecycle drill-down detail shows count, visible records, selected applicant, and next action
+  - applicant row context menu narrowed to non-mutating navigation actions only
+  - communications panel shows selected applicant, recipient, subject/body summary, Safe Mode state, and current block reason
+  - classroom handover panel shows checklist, preview state, recipient visibility, and notify reason
+  - System Health cause text expanded with contributing reasons and next suggested action
+  - stale accepted-baseline labels corrected to the accepted `r174` live baseline
+
+## Still Explicitly Not Activated In r175
+
+- all r174 disabled items remain disabled
+- no Books invoice creation/send
+- no payment verified write
+- no enrolment write
+- no portal reset/lock
+- no parent email correction
+- no WhatsApp CSV export/email
+- no bulk send
+- no stage batch send
+- no token backfill apply
+- no document status save
+- no overall status override
 
 ## Explicitly Not Activated In r174
 
@@ -72,22 +77,26 @@
 
 ## Release Outcome
 
+- `Config.js` released as:
+  - `VERSION: "r175"`
+  - `DEPLOY_VERSION_NUMBER: 175`
 - `clasp push` completed.
 - Remote source outside the repo root verified:
-  - `VERSION: "r174"`
-  - `DEPLOY_VERSION_NUMBER: 174`
+  - `VERSION: "r175"`
+  - `DEPLOY_VERSION_NUMBER: 175`
 - Apps Script version created:
-  - `183`
-  - `r174: operator console usability`
-- Canonical Admin deployment repinned to `@183`.
-- Canonical Student deployment repinned to `@183`.
+  - `184`
+  - `r175: ops operational readiness`
+- Canonical Admin deployment repinned to `@184`.
+- Canonical Student deployment repinned to `@184`.
 - Live Admin `?view=whoami` passed:
-  - `r174 / 174`
+  - `r175 / 175`
   - `mismatch=false`
 - Live Student `?view=whoami` passed:
-  - `r174 / 174`
+  - `r175 / 175`
   - `mismatch=false`
-- Operator browser acceptance passed for r174.
+- source-level Codex review passed for r175.
+- operator review accepted for r175.
 
 ## Accepted Browser Evidence
 
@@ -103,19 +112,14 @@
 - System Health meaning visible
 - no forbidden write exposure observed
 
-## r175 Follow-ups
+## r175 Remaining / Deferred
 
-- populate Date Applied and Aging correctly
-- refine sidebar/menu alignment
-- improve lifecycle stage detail drawer/filtering
-- improve applicant context menu behavior
-- improve communication composer layout
-- add classroom handover checklist/recipient visibility
-- clarify System Health warning cause
-- design temporary Super Admin delegation model
+- refine sidebar/menu alignment only if a visible issue remains after source review
+- temporary Super Admin delegation model remains design-only and was not implemented in this local pass
+- no server payload change was made; if recipient/checklist detail later proves insufficient, raise a separate CIS for `Admin.js`
 
 ## Rollback
 
-- If future rollback is required, repin Admin and Student back to accepted `r173 / 173` Apps Script `@182`.
+- If future rollback is required, repin Admin and Student back to accepted `r174 / 174` Apps Script `@183`.
 - Verify Admin and Student `?view=whoami`.
 - Revert source only if needed after deployment rollback.
