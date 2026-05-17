@@ -111,6 +111,7 @@ function renderAdminApp_(e) {
   t.BUILD_RENDERED_AT = new Date().toISOString();
   t.BUILD_SCRIPT_ID = ScriptApp.getScriptId();
   t.INITIAL_ADMIN_VIEW = String((e && e.parameter && e.parameter.view) || "admin");
+  t.INITIAL_OPEN_APPLICANT_ID = clean_((e && e.parameter && (e.parameter.open || e.parameter.applicantId)) || "");
   t.STUDENT_URL_READY = isStudentUrlConfigured_();
   t.STUDENT_URL_WARNING = getStudentUrlWarning_();
   return t.evaluate()

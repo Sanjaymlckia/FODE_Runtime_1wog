@@ -799,6 +799,18 @@
     .opsContextMenu button{ width:100%; border:0; background:transparent; color:inherit; text-align:left; padding:9px 10px; border-radius:6px; font-size:13px; cursor:pointer; }
     .opsContextMenu button:hover{ background:#eef5ff; }
     .opsContextMenu button[data-danger="1"]{ color:#8f1f1f; }
+    .opsDrawerBack{ position:fixed; inset:0; z-index:9998; display:none; align-items:stretch; justify-content:flex-end; background:rgba(12,25,42,.42); }
+    .opsDrawerBack.open{ display:flex; }
+    .opsDrawerPanel{ width:min(720px,100vw); height:100vh; background:#fff; color:#102030; box-shadow:-18px 0 48px rgba(17,39,68,.28); display:flex; flex-direction:column; }
+    .opsDrawerHead{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; padding:16px; border-bottom:1px solid #e1e9f2; }
+    .opsDrawerHead h3{ margin:0; font-size:18px; color:#10263c; }
+    .opsDrawerBody{ padding:16px; overflow:auto; display:flex; flex-direction:column; gap:14px; }
+    .opsRegistryTable{ width:100%; border-collapse:collapse; font-size:11px; }
+    .opsRegistryTable th,.opsRegistryTable td{ padding:8px 7px; border-bottom:1px solid #e8eef5; text-align:left; vertical-align:top; }
+    .opsRegistryTable th{ color:#61748a; font-weight:900; background:#fbfdff; }
+    .opsSuperShell{ border:1px solid #f0c36d; background:#fffaf0; border-radius:8px; padding:12px; }
+    .opsSuperShell.hidden{ display:none; }
+    .opsSuperShell.locked .opsSuperBody{ display:none; }
     .opsFilterGrid{ display:grid; grid-template-columns:260px minmax(0,1fr); gap:14px; align-items:start; }
     .opsFilterList{ display:flex; flex-direction:column; gap:7px; }
     .opsFilterBtn{ border:1px solid #dce6ef; background:#fff; color:#20364d; border-radius:8px; padding:9px 10px; text-align:left; cursor:pointer; font-size:12px; font-weight:800; }
@@ -897,7 +909,7 @@
           </div>
         </div>
         <div class="opsKpiGrid">
-          <div class="opsKpiCard"><div class="opsKpiIcon blue">&lt;/&gt;</div><div><div class="kpiLabel">Runtime</div><div class="kpiValue" id="cockpitKpiRuntime">r175 / 175</div><div class="kpiState" id="cockpitKpiRuntimeState">Baseline live</div><div class="kpiMeta" id="cockpitKpiRuntimeMeta">Waiting on Admin and Student whoami.</div></div></div>
+          <div class="opsKpiCard"><div class="opsKpiIcon blue">&lt;/&gt;</div><div><div class="kpiLabel">Runtime</div><div class="kpiValue" id="cockpitKpiRuntime">r176 / 176</div><div class="kpiState" id="cockpitKpiRuntimeState">Baseline live</div><div class="kpiMeta" id="cockpitKpiRuntimeMeta">Waiting on Admin and Student whoami.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon green">B</div><div><div class="kpiLabel">Billing Status</div><div class="kpiValue" id="cockpitKpiBilling">Books Connected</div><div class="kpiState" id="cockpitKpiBillingState">Read-only</div><div class="kpiMeta" id="cockpitKpiBillingMeta">Invoice snapshot loading. Cockpit writes disabled.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon purple">A</div><div><div class="kpiLabel">Admissions Status</div><div class="kpiValue" id="cockpitKpiAdmissions">Queue Loading</div><div class="kpiState">Visibility Only</div><div class="kpiMeta" id="cockpitKpiAdmissionsMeta">Applicant rows use existing read-only loaders.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon amber">!</div><div><div class="kpiLabel">System Health</div><div class="kpiValue" id="cockpitKpiRisks">Unknown</div><div class="kpiState" id="cockpitKpiRiskState">Defined States</div><div class="kpiMeta" id="cockpitKpiRisksMeta">Healthy, Warning, Blocked, Degraded, or Unknown.</div></div></div>
@@ -978,7 +990,7 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Config Identity</h3></div><span class="opsStatusPill info">Read only</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Config VERSION</span><span class="opsStatusPill info" id="cockpitRuntimeConfigVersion">r175</span></div>
+              <div class="opsChecklistRow"><span>Config VERSION</span><span class="opsStatusPill info" id="cockpitRuntimeConfigVersion">r176</span></div>
               <div class="opsChecklistRow"><span>DEPLOY_VERSION_NUMBER</span><span class="opsStatusPill info" id="cockpitRuntimeDeployNumber">175</span></div>
               <div class="opsChecklistRow"><span>Apps Script platform/version</span><span class="opsStatusPill muted" id="cockpitAppsScript">Unknown</span></div>
               <div class="opsChecklistRow"><span>Remote config status</span><span class="opsStatusPill muted" id="cockpitRuntimeRemoteConfig">Unknown</span></div>
@@ -1007,9 +1019,9 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Accepted Baseline</h3></div><span class="opsStatusPill muted">Current known</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Commit</span><span class="opsStatusPill muted" id="cockpitRuntimeCommit">bf50855</span></div>
-              <div class="opsChecklistRow"><span>Tag</span><span class="opsStatusPill muted" id="cockpitRuntimeTag">staging-as175</span></div>
-              <div class="opsChecklistRow"><span>Browser acceptance</span><span class="opsStatusPill ok" id="cockpitReleaseBrowser">Accepted r175</span></div>
+              <div class="opsChecklistRow"><span>Commit</span><span class="opsStatusPill muted" id="cockpitRuntimeCommit">5f7d309</span></div>
+              <div class="opsChecklistRow"><span>Tag</span><span class="opsStatusPill muted" id="cockpitRuntimeTag">staging-as176</span></div>
+              <div class="opsChecklistRow"><span>Browser acceptance</span><span class="opsStatusPill ok" id="cockpitReleaseBrowser">Accepted r176</span></div>
             </div>
             <div class="opsActionRow">
               <button class="opsActionBtn" type="button" disabled>Run Runtime Check</button>
@@ -1180,11 +1192,18 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Risk and Future Path</h3></div><span class="opsStatusPill danger">Disabled / Deferred</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>WhatsApp CSV export</span><span class="opsStatusPill danger">Disabled</span></div>
-              <div class="opsChecklistRow"><span>WhatsApp CSV email</span><span class="opsStatusPill danger">Disabled</span></div>
+              <div class="opsChecklistRow"><span>WhatsApp CSV export</span><span class="opsStatusPill warn">Super Admin confirmation</span></div>
+              <div class="opsChecklistRow"><span>WhatsApp CSV email</span><span class="opsStatusPill warn">After export confirmation</span></div>
               <div class="opsChecklistRow"><span>Risk level</span><span class="opsStatusPill warn">Sensitive contact export</span></div>
-              <div class="opsChecklistRow"><span>Future safe-test path</span><span class="opsStatusPill muted">Separate CIS required</span></div>
+              <div class="opsChecklistRow"><span>Future safe-test path</span><span class="opsStatusPill muted">Manual WhatsApp only; no automated send</span></div>
             </div>
+            <? if (IS_SUPER) { ?>
+            <div class="opsActionRow" style="margin-top:10px;">
+              <button class="opsActionBtn live" type="button" onclick="exportWhatsAppFallbackCsv_()">Export WhatsApp CSV</button>
+              <button class="opsActionBtn live" type="button" onclick="emailWhatsAppFallbackCsv_()">Email CSV to Admins</button>
+            </div>
+            <div class="opsResultBox warn">Super Admin only. Shows target count/filter before export or email. No WhatsApp message is sent by this system.</div>
+            <? } ?>
           </div>
         </div>
       </section>
@@ -1213,10 +1232,10 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Release State</h3></div><span class="opsStatusPill muted">Read only</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Current runtime</span><span class="opsStatusPill info" id="cockpitReleaseRuntime">r175 / 175</span></div>
-              <div class="opsChecklistRow"><span>Accepted baseline</span><span class="opsStatusPill ok">r175 / staging-as175</span></div>
+              <div class="opsChecklistRow"><span>Current runtime</span><span class="opsStatusPill info" id="cockpitReleaseRuntime">r176 / 176</span></div>
+              <div class="opsChecklistRow"><span>Accepted baseline</span><span class="opsStatusPill ok">r176 / staging-as176</span></div>
               <div class="opsChecklistRow"><span>Whoami status</span><span class="opsStatusPill muted" id="cockpitReleaseWhoami">Unknown</span></div>
-              <div class="opsChecklistRow"><span>Browser acceptance status</span><span class="opsStatusPill ok" id="cockpitReleaseBrowserState">Accepted r175</span></div>
+              <div class="opsChecklistRow"><span>Browser acceptance status</span><span class="opsStatusPill ok" id="cockpitReleaseBrowserState">Accepted r176</span></div>
               <div class="opsChecklistRow"><span>Commit / tag state</span><span class="opsStatusPill info" id="cockpitReleaseGit">Recorded externally</span></div>
               <div class="opsChecklistRow"><span>Remote Config verified</span><span class="opsStatusPill muted" id="cockpitReleaseRemote">Unknown</span></div>
               <div class="opsChecklistRow"><span>Local Git state</span><span class="opsStatusPill muted" id="cockpitReleaseDirty">Unavailable unless release metadata is recorded</span></div>
@@ -1225,7 +1244,7 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Control Checklist</h3></div><span class="opsStatusPill danger">Disabled</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Rollback target</span><span class="opsStatusPill info">r174 / staging-as174 / @183</span></div>
+              <div class="opsChecklistRow"><span>Rollback target</span><span class="opsStatusPill info">r176 / staging-as176 / @185</span></div>
               <div class="opsChecklistRow"><span>Current blockers</span><span class="opsStatusPill warn">Deployment action remains externalized</span></div>
               <div class="opsChecklistRow"><span>Next release candidate</span><span class="opsStatusPill info" id="cockpitReleaseNextTask">r176</span></div>
               <div class="opsChecklistRow"><span>Git metadata note</span><span class="opsStatusPill muted">Record commit/tag/clean state during release; Apps Script cannot read local Git directly</span></div>
@@ -1249,15 +1268,37 @@
         <div class="opsSectionGrid">
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Admin / Ops Parity Map</h3></div><span class="opsStatusPill info">Read only</span></div>
-            <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Admin-only</span><span class="opsStatusPill muted">Document/status writes, portal reset/lock, payment verified, parent email correction</span></div>
-              <div class="opsChecklistRow"><span>Ops-visible</span><span class="opsStatusPill info">Queue, lifecycle, billing preview, portal diagnostics, fallback diagnostics, reports</span></div>
-              <div class="opsChecklistRow"><span>Shared</span><span class="opsStatusPill warn">Single-record preview/send and classroom notify remain Safe Mode gated</span></div>
-              <div class="opsChecklistRow"><span>Super Admin / Governance</span><span class="opsStatusPill warn">Runtime truth, release metadata, Safe Mode config visibility, high-risk controls disabled</span></div>
-              <div class="opsChecklistRow"><span>Developer / release only</span><span class="opsStatusPill danger">Git, clasp, versioning, deployment repin, release metadata recording</span></div>
-              <div class="opsChecklistRow"><span>Future migration</span><span class="opsStatusPill muted">Temporary Super Admin delegation and deeper Admin/Ops parity need separate design/CIS</span></div>
+            <div class="opsChecklist" id="opsParityRegister"></div>
+          </div>
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>r177 Action Registry</h3><p>Each action is classified by role, surface, function, write/export/bulk risk, confirmation, audit, and activation state.</p></div><span class="opsStatusPill info">Registry driven</span></div>
+            <div class="opsTableWrap">
+              <table class="opsRegistryTable">
+                <thead><tr><th>Action</th><th>Surface</th><th>Function / Bridge</th><th>Role</th><th>Class</th><th>Status</th><th>Confirm / Audit</th><th>Reason</th></tr></thead>
+                <tbody id="opsActionRegistryBody"><tr><td colspan="8" class="opsPlaceholder">Loading registry...</td></tr></tbody>
+              </table>
             </div>
           </div>
+          <? if (IS_SUPER) { ?>
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Super Admin Mode</h3><p>High-risk controls are visible here for governance only and remain individually gated.</p></div><span class="opsStatusPill warn">Owner controlled</span></div>
+            <div id="opsSuperAdminShell" class="opsSuperShell locked">
+              <div class="opsActionRow">
+                <button class="opsActionBtn live" type="button" onclick="opsToggleSuperAdminMode_()">Enter / Exit Super Admin Mode</button>
+                <span class="opsStatusPill warn" id="opsSuperAdminModeState">Locked</span>
+              </div>
+              <div class="opsSuperBody" style="margin-top:10px;">
+                <div class="opsChecklist">
+                  <div class="opsChecklistRow"><span>Bulk email controls</span><span class="opsStatusPill muted">Prepared; activate after selected-recipient composer</span></div>
+                  <div class="opsChecklistRow"><span>WhatsApp export/email controls</span><span class="opsStatusPill warn">Enabled with confirmation and audit</span></div>
+                  <div class="opsChecklistRow"><span>Books write controls</span><span class="opsStatusPill muted">Prepared only; not activated</span></div>
+                  <div class="opsChecklistRow"><span>Portal reset/lock and corrections</span><span class="opsStatusPill muted">Prepared only; not activated</span></div>
+                  <div class="opsChecklistRow"><span>Temporary Super Admin delegation</span><span class="opsStatusPill muted">Design/status only; no delegation write</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <? } ?>
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Role Layers</h3></div><span class="opsStatusPill info">Guidance</span></div>
             <div class="opsMeaningList">
@@ -1335,6 +1376,23 @@
     </main>
   </div>
   <div id="opsApplicantContextMenu" class="opsContextMenu" role="menu" aria-label="Applicant row actions"></div>
+  <div id="opsApplicantReviewDrawer" class="opsDrawerBack" onclick="if(event.target===this) opsCloseApplicantReviewDrawer_();">
+    <aside class="opsDrawerPanel" role="dialog" aria-modal="true" aria-label="Ops applicant review">
+      <div class="opsDrawerHead">
+        <div>
+          <h3 id="opsReviewDrawerTitle">Applicant Review</h3>
+          <div class="opsPlaceholder" id="opsReviewDrawerSub">Selected applicant context</div>
+        </div>
+        <div class="opsActionRow">
+          <button class="opsActionBtn" type="button" onclick="opsOpenLegacyAdminReview_()">Open Admin Review</button>
+          <button class="opsActionBtn" type="button" onclick="opsCloseApplicantReviewDrawer_()">Close</button>
+        </div>
+      </div>
+      <div id="opsReviewDrawerBody" class="opsDrawerBody">
+        <div class="opsPlaceholder">Select an applicant to load review details.</div>
+      </div>
+    </aside>
+  </div>
   <div class="wrap">
     <div class="topbar">
       <div class="brand">
@@ -1885,6 +1943,7 @@
     const BUILD_RENDERED_AT = <?!= JSON.stringify(String(BUILD_RENDERED_AT || "")) ?>;
     const BUILD_SCRIPT_ID = <?!= JSON.stringify(String(BUILD_SCRIPT_ID || "")) ?>;
     const INITIAL_ADMIN_VIEW = <?!= JSON.stringify(String(INITIAL_ADMIN_VIEW || "admin")) ?>;
+    const INITIAL_OPEN_APPLICANT_ID = <?!= JSON.stringify(String(INITIAL_OPEN_APPLICANT_ID || "")) ?>;
     const CFG_WEBAPP_URL_ADMIN = <?!= JSON.stringify(String((CONFIG && CONFIG.WEBAPP_URL_ADMIN) || "")) ?>;
     const CFG_WEBAPP_URL_STUDENT = <?!= JSON.stringify(String((CONFIG && CONFIG.WEBAPP_URL_STUDENT) || "")) ?>;
     const CFG_WEBAPP_URL_STUDENT_EXEC = <?!= JSON.stringify(String((CONFIG && (CONFIG.WEBAPP_URL_STUDENT_EXEC || CONFIG.WEBAPP_URL_STUDENT)) || "")) ?>;
@@ -1991,7 +2050,9 @@
       booksFilter: "all",
       queueSort: "aging_desc",
       templateType: "reminder",
-      longPressTimer: null
+      longPressTimer: null,
+      reviewDrawerOpen: false,
+      superAdminMode: false
     };
     function formatPngAmount_(value){
       var n = Number(value || 0);
@@ -2006,6 +2067,79 @@
       var amount = Number(preview.calculatedAmount || preview.amount || 0);
       if (amount > 0) parts.push(formatPngAmount_(amount));
       return parts.join(" — ");
+    }
+    function opsActionRegistry_(){
+      return [
+        { id:"selectApplicant", label:"Select applicant", source:"Applicant Queue / Context Menu", surface:"All selected-applicant panels", fn:"client:opsSelectApplicantContext_", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Preserves selected applicant context across Ops." },
+        { id:"viewApplicantSummary", label:"View applicant summary", source:"Applicant Queue", surface:"Applicant Review Drawer", fn:"admin_getApplicantDetail_json", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Uses existing read-only detail RPC." },
+        { id:"openApplicantReview", label:"Open applicant review", source:"Button / Context Menu", surface:"Ops drawer + Admin deep-link", fn:"?view=admin&open=ApplicantID", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Direct bridge with drawer fallback." },
+        { id:"previewEmail", label:"Preview email", source:"Communications / Context Menu", surface:"Communications", fn:"admin_previewApplicantMessage", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Preview only; no send." },
+        { id:"sendReminder", label:"Send reminder", source:"Communications / Context Menu", surface:"Communications", fn:"admin_sendApplicantMessage", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Single-record only; preview, confirmation, Safe Mode, and audit required." },
+        { id:"resendPortalAccess", label:"Resend portal access", source:"Communications / Context Menu", surface:"Communications", fn:"admin_sendApplicantMessage:legacy_invite", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Single-record portal-access communication through existing send gate." },
+        { id:"openBilling", label:"Open billing", source:"Context Menu", surface:"Billing / Zoho Books", fn:"client:scroll + admin_previewZohoBooksFodePayload", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Read-only selected-applicant Books preview/status." },
+        { id:"openInvoice", label:"Open invoice", source:"Billing / Context Menu", surface:"Billing / Zoho Books", fn:"client:window.open invoice URL", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Opens existing invoice URL only." },
+        { id:"refreshBooksStatus", label:"Refresh Books status", source:"Billing / Context Menu", surface:"Billing / Zoho Books", fn:"admin_previewZohoBooksFodePayload", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Read-only status/payload preview." },
+        { id:"booksDraftCreate", label:"Create Books draft invoice", source:"Super Admin Mode", surface:"Billing / Zoho Books", fn:"admin_createZohoBooksFodeDraftInvoice", role:"Super Admin/Governance", kind:"write", status:"deferred", confirm:true, audit:true, reason:"Existing function is live-capable but r177 does not activate Books writes." },
+        { id:"viewPortalStatus", label:"View portal status", source:"Context Menu", surface:"Portal Diagnostics", fn:"admin_getStudentPortalLink", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Read-only portal URL/status diagnostics." },
+        { id:"portalResetLock", label:"Portal reset/lock", source:"Super Admin Mode", surface:"Portal Diagnostics", fn:"admin_resetPortalLink/admin_setPortalAccess", role:"Super Admin/Governance", kind:"write", status:"deferred", confirm:true, audit:true, reason:"Forbidden in r177 unless separately matrix-approved." },
+        { id:"viewClassroom", label:"View classroom handover", source:"Context Menu", surface:"Classroom Handover", fn:"admin_previewOpsClassroomHandover", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:true, reason:"Preview logs existing handover review event." },
+        { id:"notifyClassroom", label:"Notify classroom admin", source:"Classroom", surface:"Classroom Handover", fn:"admin_notifyOpsClassroomAdmin", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Internal single-send only; preview and Safe Mode gate required." },
+        { id:"bulkPreview", label:"Bulk email preview", source:"Super Admin Mode", surface:"Communications", fn:"admin_previewStageBatch", role:"Super Admin/Governance", kind:"bulk-read", status:"prepared", confirm:false, audit:true, reason:"Existing stage-batch preview is ready; Ops selected-recipient composer is not yet complete." },
+        { id:"bulkSend", label:"Bulk email send", source:"Super Admin Mode", surface:"Communications", fn:"admin_sendStageBatch", role:"Super Admin/Governance", kind:"bulk-write", status:"deferred", confirm:true, audit:true, reason:"Existing send is stage-based; r177 lacks selected-recipient bulk composer and final suppression review UI." },
+        { id:"whatsappExport", label:"WhatsApp CSV export", source:"Fallbacks / Super Admin", surface:"WhatsApp Fallback", fn:"admin_exportWhatsAppFallbackCsv", role:"Super Admin/Governance", kind:"export", status:"enabled-gated", confirm:true, audit:true, reason:"Existing export is capped, Super Admin gated, logged, and does not send WhatsApp." },
+        { id:"whatsappEmailCsv", label:"Email WhatsApp CSV", source:"Fallbacks / Super Admin", surface:"WhatsApp Fallback", fn:"admin_emailWhatsAppFallbackCsv", role:"Super Admin/Governance", kind:"export-send", status:"enabled-gated", confirm:true, audit:true, reason:"Emails cached CSV only to configured admin recipients after export confirmation." },
+        { id:"copyApplicantId", label:"Copy ApplicantID", source:"Context Menu", surface:"Clipboard", fn:"navigator.clipboard.writeText", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"No data mutation." },
+        { id:"developerRelease", label:"Release/deployment actions", source:"Release Control", surface:"Developer/Release", fn:"external CIS workflow", role:"Developer/Release", kind:"release", status:"deferred", confirm:true, audit:true, reason:"Apps Script UI must not run git, clasp, version, repin, tag, or rollback commands." }
+      ];
+    }
+    function opsActionById_(id){
+      var key = String(id || "");
+      return opsActionRegistry_().filter(function(action){ return action.id === key; })[0] || null;
+    }
+    function renderOpsActionRegistry_(){
+      var body = document.getElementById("opsActionRegistryBody");
+      if (!body) return;
+      body.innerHTML = opsActionRegistry_().map(function(action){
+        var statusKind = action.status === "enabled" ? "ok" : (action.status === "enabled-gated" || action.status === "prepared" ? "warn" : "muted");
+        return "<tr>"
+          + "<td><strong>" + esc(action.label) + "</strong><br><span class='opsPlaceholder'>" + esc(action.id) + "</span></td>"
+          + "<td>" + esc(action.source) + "<br>" + esc(action.surface) + "</td>"
+          + "<td>" + esc(action.fn) + "</td>"
+          + "<td>" + esc(action.role) + "</td>"
+          + "<td>" + esc(action.kind) + "</td>"
+          + "<td><span class='opsStatusPill " + statusKind + "'>" + esc(action.status) + "</span></td>"
+          + "<td>Confirm: " + esc(action.confirm ? "yes" : "no") + "<br>Audit: " + esc(action.audit ? "yes" : "no") + "</td>"
+          + "<td>" + esc(action.reason) + "</td>"
+          + "</tr>";
+      }).join("");
+    }
+    function renderOpsParityRegister_(){
+      var el = document.getElementById("opsParityRegister");
+      if (!el) return;
+      var rows = [
+        ["Admin-only", "Document/status writes, portal reset/lock, payment verified, parent email correction"],
+        ["Ops-visible", "Queue, lifecycle, billing preview, portal diagnostics, fallback diagnostics, reports, applicant drawer"],
+        ["Shared", "Single-record preview/send and classroom notify through existing gates"],
+        ["Super Admin / Governance", "High-risk prepared controls, WhatsApp export/email, Safe Mode boundaries, Rules & Config"],
+        ["Student Portal", "Applicant self-service portal state, upload/payment proof visibility, URL diagnostics"],
+        ["Developer / Release", "Git, clasp, versioning, deployment repin, release metadata, rollback"],
+        ["Future migration", "Temporary Super Admin delegation and shared InstitutionConfig/DriveConfig registry"]
+      ];
+      el.innerHTML = rows.map(function(row){
+        var kind = row[0].indexOf("Developer") >= 0 ? "danger" : (row[0].indexOf("Super") >= 0 || row[0].indexOf("Shared") >= 0 ? "warn" : "info");
+        return "<div class='opsChecklistRow'><span>" + esc(row[0]) + "</span><span class='opsStatusPill " + kind + "'>" + esc(row[1]) + "</span></div>";
+      }).join("");
+    }
+    function opsToggleSuperAdminMode_(){
+      if (!IS_SUPER) return;
+      opsActionState.superAdminMode = !opsActionState.superAdminMode;
+      var shell = document.getElementById("opsSuperAdminShell");
+      var state = document.getElementById("opsSuperAdminModeState");
+      if (shell) shell.classList.toggle("locked", !opsActionState.superAdminMode);
+      if (state) {
+        state.textContent = opsActionState.superAdminMode ? "Unlocked for review" : "Locked";
+        state.className = "opsStatusPill " + (opsActionState.superAdminMode ? "warn" : "muted");
+      }
     }
     function updateOpsVisibility_(){
       var opsActive = String(INITIAL_ADMIN_VIEW || "").toLowerCase() === "ops";
@@ -2418,17 +2552,24 @@
       if (!applicantId) return;
       menu.setAttribute("data-applicant-id", applicantId);
       menu.setAttribute("data-applicant-name", applicantName);
-      var actions = [
-        ["select", "Select applicant", false],
-        ["review", "Open applicant review", false],
-        ["billing", "Open billing status", false],
-        ["communications", "Open communications", false],
-        ["portal_status", "Open portal diagnostics", false],
-        ["classroom", "Open classroom handover", false],
-        ["copy", "Copy ApplicantID", false]
+      var menuActionIds = [
+        "selectApplicant",
+        "openApplicantReview",
+        "previewEmail",
+        "sendReminder",
+        "resendPortalAccess",
+        "openBilling",
+        "openInvoice",
+        "refreshBooksStatus",
+        "viewPortalStatus",
+        "viewClassroom",
+        "copyApplicantId"
       ];
-      menu.innerHTML = actions.map(function(a){
-        return "<button type='button' role='menuitem' data-menu-action='" + esc(a[0]) + "'" + (a[2] ? " data-danger='1'" : "") + ">" + esc(a[1]) + "</button>";
+      menu.innerHTML = menuActionIds.map(function(id){
+        var action = opsActionById_(id);
+        if (!action) return "";
+        var risky = action.confirm || action.kind.indexOf("write") >= 0 || action.kind.indexOf("export") >= 0;
+        return "<button type='button' role='menuitem' data-menu-action='" + esc(action.id) + "'" + (risky ? " data-danger='1'" : "") + ">" + esc(action.label) + "</button>";
       }).join("");
       Array.prototype.slice.call(menu.querySelectorAll("button")).forEach(function(btn){
         btn.addEventListener("click", function(){
@@ -2444,13 +2585,17 @@
     }
     function opsHandleApplicantMenuAction_(action, applicantId, applicantName){
       opsSelectApplicantContext_(applicantId, applicantName);
-      if (action === "select") return;
-      if (action === "review") return opsOpenApplicantReview_();
-      if (action === "billing") return opsScrollTo_("opsZohoBooks");
-      if (action === "communications") return opsScrollTo_("opsCommunications");
-      if (action === "portal_status") return opsScrollTo_("opsStudentDiagnostics");
-      if (action === "classroom") return opsScrollTo_("opsClassroom");
-      if (action === "copy") {
+      if (action === "selectApplicant") return;
+      if (action === "openApplicantReview") return opsOpenApplicantReview_();
+      if (action === "previewEmail") { opsActionState.templateType = "reminder"; opsScrollTo_("opsCommunications"); return opsPreviewApplicantEmail_("reminder", "Reminder"); }
+      if (action === "sendReminder") { opsActionState.templateType = "reminder"; opsScrollTo_("opsCommunications"); return setOpsResult_("opsCommunicationResult", { result:"BLOCKED", applicantId: applicantId, blockReason:"Use Preview Email first, then the Send Reminder button with owner confirmation. Context menu never sends directly." }, "Send Reminder Gate"); }
+      if (action === "resendPortalAccess") { opsActionState.templateType = "legacy_invite"; opsScrollTo_("opsCommunications"); return setOpsResult_("opsCommunicationResult", { result:"BLOCKED", applicantId: applicantId, blockReason:"Preview Portal Access first, then send with explicit confirmation. Context menu never sends directly." }, "Portal Access Gate"); }
+      if (action === "openBilling") return opsScrollTo_("opsZohoBooks");
+      if (action === "openInvoice") return opsOpenInvoice_();
+      if (action === "refreshBooksStatus") return opsRefreshInvoiceStatus_();
+      if (action === "viewPortalStatus") return opsOpenPortalStatus_();
+      if (action === "viewClassroom") { opsScrollTo_("opsClassroom"); return opsPreviewClassroomHandover_(); }
+      if (action === "copyApplicantId") {
         if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(applicantId);
         setOpsResult_("opsAdmissionsResult", { result:"OPEN", applicantId: applicantId, message:"ApplicantID copied to clipboard when browser permissions allow it." }, "Copy ApplicantID");
       }
@@ -2583,16 +2728,16 @@
       setOpsPill_("cockpitAdminWhoami", runtime.mismatch === false ? "Match" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitStudentWhoami", runtime.mismatch === false ? "Match" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitRuntimeCommit", "Unknown", "muted");
-      setOpsPill_("cockpitRuntimeTag", "staging-as175 accepted", "ok");
+      setOpsPill_("cockpitRuntimeTag", "staging-as176 accepted", "ok");
       setOpsPill_("cockpitWorkingTree", "Unknown", "muted");
       setOpsPill_("cockpitReleaseWhoami", runtime.mismatch === false ? "OK" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitReleaseRemote", "Unknown", "muted");
-      setOpsPill_("cockpitReleaseBrowser", "Accepted r175", "ok");
-      setOpsPill_("cockpitReleaseBrowserState", "Accepted r175", "ok");
+      setOpsPill_("cockpitReleaseBrowser", "Accepted r176", "ok");
+      setOpsPill_("cockpitReleaseBrowserState", "Accepted r176", "ok");
       setOpsPill_("cockpitReleaseGit", "Recorded externally", "info");
       setOpsPill_("cockpitReleaseDirty", "Unavailable here", "muted");
-      setOpsPill_("cockpitRuntimeCommit", "bf50855", "ok");
-      setOpsPill_("cockpitRuntimeTag", "staging-as175 accepted", "ok");
+      setOpsPill_("cockpitRuntimeCommit", "5f7d309", "ok");
+      setOpsPill_("cockpitRuntimeTag", "staging-as176 accepted", "ok");
       setOpsPill_("cockpitReleaseNextTask", "r176 ops stabilization and drift control", "info");
       setOpsPill_("cockpitRuntimeRemoteConfig", runtime.version ? "Loaded from runtime" : "Unknown", runtime.version ? "info" : "muted");
       setOpsPill_("cockpitRuntimeDrift", runtime.mismatch === false ? "No mismatch reported" : "Unknown until verified", runtime.mismatch === false ? "ok" : "warn");
@@ -2606,7 +2751,7 @@
       setOpsText_("cockpitFooterStatus", "Safe Mode Controlled Actions");
       setOpsPill_("cockpitHealthLevel", runtime.mismatch === false ? "Warning" : "Unknown", runtime.mismatch === false ? "warn" : "muted");
       setOpsText_("cockpitHealthWhy", runtime.mismatch === false
-        ? "Runtime identity is aligned to the accepted r175 baseline. Release metadata shown here is read-only and depends on what was recorded during the release."
+        ? "Runtime identity is aligned to the accepted r176 baseline. Release metadata shown here is read-only and depends on what was recorded during the release."
         : "Runtime identity has not returned enough evidence yet.");
     }
     function renderOpsSafetyStatus_(data){
@@ -2910,6 +3055,9 @@
           renderOpsCommunicationStatePanel_();
           renderOpsClassroomChecklist_();
           renderOpsQueue_();
+          renderOpsActionRegistry_();
+          renderOpsParityRegister_();
+          if (opsActionState.reviewDrawerOpen) opsRenderApplicantReviewDrawer_(detail || null);
         })
         .withFailureHandler(function(){
           opsApplicantDetailCache = null;
@@ -2917,6 +3065,8 @@
           renderOpsSelectedApplicantContext_();
           renderOpsCommunicationStatePanel_();
           renderOpsClassroomChecklist_();
+          renderOpsActionRegistry_();
+          renderOpsParityRegister_();
         })
         .admin_getApplicantDetail_json({ applicantId: targetApplicantId });
     }
@@ -2936,13 +3086,116 @@
       renderOpsQueue_();
       opsScrollTo_("opsAdmissionsQueue");
     }
+    function opsAdminDeepLink_(applicantId){
+      var base = String(CFG_WEBAPP_URL_ADMIN || window.WEBAPP_URL_ADMIN || "").trim();
+      var id = String(applicantId || opsApplicantId_() || "").trim();
+      if (!base || !id) return "";
+      return base + "?view=admin&open=" + encodeURIComponent(id);
+    }
+    function opsOpenLegacyAdminReview_(){
+      var url = opsAdminDeepLink_(opsApplicantId_());
+      if (!url) {
+        setOpsResult_("opsAdmissionsResult", { result:"BLOCKED", applicantId: opsApplicantId_(), blockReason:"Admin URL or ApplicantID is unavailable." }, "Admin Review Link");
+        return;
+      }
+      window.open(url, "_blank", "noopener");
+    }
+    function opsCloseApplicantReviewDrawer_(){
+      opsActionState.reviewDrawerOpen = false;
+      var drawer = document.getElementById("opsApplicantReviewDrawer");
+      if (drawer) drawer.classList.remove("open");
+    }
+    function opsReviewField_(label, value){
+      return "<div class='opsInfoItem'><div class='k'>" + esc(label) + "</div><div class='v'>" + esc(value || "Unknown") + "</div></div>";
+    }
+    function opsRenderApplicantReviewDrawer_(detail){
+      var d = detail || opsApplicantDetailCache || {};
+      var id = String(d.ApplicantID || opsApplicantId_() || "").trim();
+      var title = document.getElementById("opsReviewDrawerTitle");
+      var sub = document.getElementById("opsReviewDrawerSub");
+      var body = document.getElementById("opsReviewDrawerBody");
+      if (title) title.textContent = "Applicant Review - " + (id || "Unknown");
+      if (sub) sub.textContent = opsApplicantName_() + " | Admin bridge: " + (opsAdminDeepLink_(id) ? "available" : "unavailable");
+      if (!body) return;
+      if (!id) {
+        body.innerHTML = "<div class='opsPlaceholder'>No selected applicant.</div>";
+        return;
+      }
+      var docs = Array.isArray(d._docs) ? d._docs : [];
+      var docRows = docs.length ? docs.map(function(doc){
+        return "<tr><td>" + esc(doc.label || doc.field || "Document") + "</td><td>" + esc(doc.status || "Unknown") + "</td><td>" + esc(doc.hasFile ? "File visible" : "No file") + "</td></tr>";
+      }).join("") : "<tr><td colspan='3' class='opsPlaceholder'>No document checklist returned in detail payload.</td></tr>";
+      var portalUrl = String(d.portalUrl || d.PortalUrl || d.StudentPortalUrl || "").trim();
+      body.innerHTML = [
+        "<div class='opsActionRow'>",
+          "<button class='opsActionBtn live' type='button' onclick='opsOpenLegacyAdminReview_()'>Open Admin Review for " + esc(id) + "</button>",
+          "<button class='opsActionBtn' type='button' onclick='opsScrollTo_(\"opsCommunications\")'>Communications</button>",
+          "<button class='opsActionBtn' type='button' onclick='opsScrollTo_(\"opsZohoBooks\")'>Billing</button>",
+          "<button class='opsActionBtn' type='button' onclick='opsScrollTo_(\"opsStudentDiagnostics\")'>Portal Diagnostics</button>",
+          "<button class='opsActionBtn' type='button' onclick='opsScrollTo_(\"opsClassroom\")'>Classroom</button>",
+        "</div>",
+        "<div class='opsInfoGrid'>",
+          opsReviewField_("ApplicantID", id),
+          opsReviewField_("Student", opsDetailName_(d)),
+          opsReviewField_("Parent / Guardian", opsFirstNonBlank_(d.Parent_Name, d.Parent_Full_Name, d.ParentName)),
+          opsReviewField_("Effective Email", opsFirstNonBlank_(d.Effective_Email, d.Parent_Email_Corrected, d.Parent_Email)),
+          opsReviewField_("Phone", opsFirstNonBlank_(d.Parent_Phone, d.Parent_Mobile, d.Phone_Number, d.Mobile)),
+          opsReviewField_("Portal Submitted", opsFirstNonBlank_(d.Portal_Submitted, d.portalSubmitted)),
+          opsReviewField_("Portal Access", opsFirstNonBlank_(d.Portal_Access_Status, d.portalAccess)),
+          opsReviewField_("Payment", opsFirstNonBlank_(d.Payment_Badge, d.Payment_Verified, d.Payment_Status)),
+          opsReviewField_("Subjects", opsFirstNonBlank_(d.Subjects_Selected_Canonical, d.Selected_Subjects, d.Subjects)),
+          opsReviewField_("Invoice", opsFirstNonBlank_(d.Books_Invoice_Number, d.Books_Invoice_Status, d.Books_Push_Status)),
+          opsReviewField_("Enrolment", opsFirstNonBlank_(d.Enrolled_Confirmed, d.Enrolment_Status)),
+          opsReviewField_("Classroom", opsFirstNonBlank_(d.Classroom_Status, d.Classroom_Handover_Status)),
+        "</div>",
+        "<div class='opsCard'><div class='opsSectionHeader'><div><h3>Documents</h3><p>Read-only checklist from applicant detail.</p></div><span class='opsStatusPill info'>Review bridge</span></div><table class='opsLineTable'><thead><tr><th>Document</th><th>Status</th><th>File</th></tr></thead><tbody>" + docRows + "</tbody></table></div>",
+        "<div class='opsCard'><div class='opsSectionHeader'><div><h3>Portal / Notes / History</h3><p>Ops drawer preserves context. Corrections and writes stay in Admin/Super Admin gated paths.</p></div><span class='opsStatusPill muted'>Read-only</span></div>",
+          "<div class='opsInfoGrid'>",
+            opsReviewField_("Portal URL", portalUrl || "Use Portal Diagnostics to generate/read link"),
+            opsReviewField_("Last Contacted", d.Last_Contacted_At),
+            opsReviewField_("Last Contact Type", d.Last_Contact_Type),
+            opsReviewField_("Last Contact Result", d.Last_Contact_Result),
+          "</div>",
+        "</div>"
+      ].join("");
+    }
+    function opsOpenApplicantReviewDrawer_(){
+      opsActionState.reviewDrawerOpen = true;
+      var drawer = document.getElementById("opsApplicantReviewDrawer");
+      if (drawer) drawer.classList.add("open");
+      opsRenderApplicantReviewDrawer_(opsApplicantDetailCache || {});
+    }
     function opsOpenApplicantReview_(){
       var applicantId = opsApplicantId_();
+      opsOpenApplicantReviewDrawer_();
       setOpsResult_("opsAdmissionsResult", {
         result: "OPEN",
         applicantId: applicantId,
-        message: "Applicant review remains in the standard Admin review surface. Use the base Admin route, search ApplicantID " + applicantId + ", and continue any write workflow there. Ops remains read-only or Safe Mode gated."
+        message: "Opened Ops applicant review drawer. Direct Admin review link is available: " + (opsAdminDeepLink_(applicantId) || "unavailable")
       }, "Open Applicant Review");
+    }
+    function opsOpenPortalStatus_(){
+      var applicantId = opsApplicantId_();
+      if (!applicantId) {
+        setOpsResult_("opsAdmissionsResult", { result:"BLOCKED", blockReason:"Select an applicant before opening portal diagnostics." }, "Portal Diagnostics");
+        return;
+      }
+      opsScrollTo_("opsStudentDiagnostics");
+      setOpsResult_("opsAdmissionsResult", { result:"GUIDANCE", applicantId: applicantId, message:"Loading portal diagnostics for selected applicant..." }, "Portal Diagnostics");
+      google.script.run
+        .withSuccessHandler(function(res){
+          var out = res && typeof res === "object" ? res : { ok:false, result:"FAILED", blockReason:"Invalid portal response." };
+          setOpsResult_("opsAdmissionsResult", {
+            result: out.ok === false ? "FAILED" : "OPEN",
+            applicantId: applicantId,
+            message: "Portal status loaded. URL: " + String(out.url || out.portalUrl || "Unavailable"),
+            blockReason: out.message || out.blockReason || out.error || ""
+          }, "Portal Diagnostics");
+        })
+        .withFailureHandler(function(err){
+          setOpsResult_("opsAdmissionsResult", { result:"FAILED", applicantId: applicantId, blockReason:String((err && err.message) || err || "Portal diagnostics failed.") }, "Portal Diagnostics");
+        })
+        .admin_getStudentPortalLink({ applicantId: applicantId });
     }
     function opsCustomEmailPayload_(){
       return {
@@ -6199,6 +6452,17 @@ function renderStageDashboard_(items, emptyMessage){
       updateBulkDocsUi_();
     }
 
+    function initAdminOpenApplicant_(){
+      var id = String(INITIAL_OPEN_APPLICANT_ID || "").trim();
+      var view = String(INITIAL_ADMIN_VIEW || "").toLowerCase();
+      if (!id || view === "ops") return;
+      window.setTimeout(function(){
+        var applicantInput = document.getElementById("qApplicantId");
+        if (applicantInput) applicantInput.value = id;
+        review(null, id, null);
+      }, 0);
+    }
+
     function selectAllEligibleDocs_(){
       selectedDocsRowNumbers = {};
       (lastSearchRows || []).forEach(function(r){
@@ -6899,6 +7163,7 @@ function renderStageDashboard_(items, emptyMessage){
       var filterEl = document.getElementById("waFallbackFilter");
       var limit = Number(limitEl && limitEl.value || <?= Number((CONFIG && CONFIG.WHATSAPP_FALLBACK_DEFAULT_LIMIT) || 20) ?>);
       var filter = String(filterEl && filterEl.value || "ALL_FALLBACK");
+      if (!window.confirm("Export WhatsApp fallback CSV for up to " + String(limit) + " candidate(s) using filter " + filter + "? This exports sensitive contact data for manual operator use only.")) return;
       setMsg("waFallbackMsg", "Preparing WhatsApp fallback CSV. No WhatsApp messages will be sent.");
       run_("admin_exportWhatsAppFallbackCsv", {
         limit: limit,
@@ -6950,6 +7215,7 @@ function renderStageDashboard_(items, emptyMessage){
         setMsg("waFallbackMsg", "Export the CSV first, then email the cached snapshot to admins.");
         return;
       }
+      if (!window.confirm("Email cached WhatsApp fallback CSV batch " + batchLabel + " to configured internal admin recipients? No applicant will be emailed.")) return;
       setMsg("waFallbackMsg", "Emailing WhatsApp fallback CSV to configured admin recipients...");
         run_("admin_emailWhatsAppFallbackCsv", {
           batchLabel: batchLabel
@@ -7150,9 +7416,12 @@ function renderStageDashboard_(items, emptyMessage){
         renderOpsLifecycleCascade_();
         renderOpsBooksFilters_();
         renderOpsTemplateBrowser_();
+        renderOpsActionRegistry_();
+        renderOpsParityRegister_();
         loadStageDashboard();
         loadReviewQueues();
         fetchOpsApplicantSummary_();
+        initAdminOpenApplicant_();
       });
     } else {
       fetchRuntimeInfo_();
@@ -7164,9 +7433,12 @@ function renderStageDashboard_(items, emptyMessage){
         renderOpsLifecycleCascade_();
         renderOpsBooksFilters_();
         renderOpsTemplateBrowser_();
+        renderOpsActionRegistry_();
+        renderOpsParityRegister_();
         loadStageDashboard();
         loadReviewQueues();
         fetchOpsApplicantSummary_();
+        initAdminOpenApplicant_();
     }
     setActionButtonsEnabled(false);
     var resultsBody = document.getElementById("tbody");
