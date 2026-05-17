@@ -631,6 +631,20 @@
     .opsBrandMark{ width:34px; height:34px; border-radius:12px; display:grid; place-items:center; border:1px solid rgba(45,125,255,.65); color:#54a0ff; font-weight:900; box-shadow:inset 0 0 0 3px rgba(45,125,255,.12); }
     .opsSidebarTitle{ font-size:20px; font-weight:900; letter-spacing:.01em; }
     .opsSidebarSub{ margin-top:4px; font-size:12px; line-height:1.45; color:#b8c9dc; }
+    .opsModeStack{ display:flex; flex-direction:column; gap:10px; padding:0 8px; }
+    .opsModeBar{ display:flex; flex-wrap:wrap; gap:8px; }
+    .opsModeBtn{
+      border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.04); color:#dce9f8;
+      border-radius:999px; padding:8px 12px; font-size:12px; font-weight:800; cursor:pointer;
+    }
+    .opsModeBtn.active{ background:#2878f0; border-color:#4b94ff; color:#fff; }
+    .opsModeBtn[disabled]{ opacity:.42; cursor:not-allowed; }
+    .opsRoleStrip{
+      display:flex; flex-direction:column; gap:6px; padding:10px 12px; border-radius:14px;
+      background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08);
+    }
+    .opsRoleStrip strong{ font-size:13px; }
+    .opsRoleMeta{ font-size:12px; color:#c6d7eb; }
     .opsNav{ display:flex; flex-direction:column; gap:8px; }
     .opsNav a{
       color:#e8f0f8; text-decoration:none; padding:12px 12px; border-radius:10px;
@@ -645,6 +659,7 @@
     .opsNav a:hover{ background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.12); transform:translateX(2px); }
     .opsNav a.active{ background:#2878f0; border-color:#3b8dff; color:#fff; box-shadow:0 10px 24px rgba(27,112,242,.32); }
     .opsNav a.active:before{ background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.28); color:#fff; }
+    .opsNav a.hiddenByMode{ display:none; }
     .opsSideBottom{ margin-top:auto; display:flex; flex-direction:column; gap:12px; }
     .opsEnvCard{ border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.05); border-radius:14px; padding:12px; }
     .opsEnvLabel{ font-size:11px; color:#93abc6; text-transform:uppercase; }
@@ -655,6 +670,10 @@
     .opsHeader{ display:flex; justify-content:space-between; gap:16px; align-items:center; padding:0 4px 2px; }
     .opsHeader h1{ margin:0; font-size:28px; color:#0f1f35; }
     .opsHeader .mutedLight{ color:#66788c; font-size:14px; margin-top:4px; }
+    .opsHeaderMode{
+      display:inline-flex; align-items:center; gap:8px; margin-top:8px; padding:8px 12px; border-radius:999px;
+      border:1px solid #d7e4f2; background:#f4f8fc; color:#23415f; font-size:12px; font-weight:800;
+    }
     .opsHeaderTools{ display:flex; align-items:center; gap:14px; color:#687a8f; font-size:12px; }
     .opsHeaderIcon{ width:32px; height:32px; border-radius:50%; display:grid; place-items:center; border:1px solid #dbe5ef; background:#fff; font-weight:900; color:#40556b; }
     .opsKpiGrid{ display:grid; grid-template-columns:repeat(4,minmax(170px,1fr)); gap:14px; }
@@ -681,6 +700,7 @@
     .opsLowerGrid{ display:grid; grid-template-columns:minmax(420px,1fr) minmax(360px,.82fr) minmax(340px,.72fr); gap:14px; align-items:start; }
     .opsUtilityGrid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
     .opsSectionPage{ display:flex; flex-direction:column; gap:14px; scroll-margin-top:22px; }
+    .opsSectionPage.hiddenByMode{ display:none; }
     .opsSectionGrid{ display:grid; grid-template-columns:repeat(3,minmax(220px,1fr)); gap:14px; align-items:start; }
     .opsSectionGrid.two{ grid-template-columns:repeat(2,minmax(260px,1fr)); }
     .opsSectionGrid.mainSplit{ grid-template-columns:minmax(420px,1.35fr) minmax(320px,.75fr); }
@@ -864,19 +884,31 @@
           <div class="opsSidebarSub">Governed Runtime</div>
         </div>
       </div>
+      <div class="opsModeStack">
+        <div class="opsModeBar" id="opsModeBar">
+          <button id="opsModeOperator" class="opsModeBtn" type="button" onclick="setOpsMode_('operator')">Operator Mode</button>
+          <button id="opsModeAdmin" class="opsModeBtn" type="button" onclick="setOpsMode_('admin')">Admin Mode</button>
+          <button id="opsModeSuper" class="opsModeBtn" type="button" onclick="setOpsMode_('super')">Super Admin Mode</button>
+        </div>
+        <div class="opsRoleStrip">
+          <strong id="opsRoleStripEmail"><?= USER_EMAIL ?></strong>
+          <div class="opsRoleMeta" id="opsRoleStripRole">Detected role loading</div>
+          <div class="opsRoleMeta" id="opsRoleStripMode">Current mode loading</div>
+        </div>
+      </div>
       <nav class="opsNav">
-        <a href="#opsDashboard" data-icon="D">Operator Console</a>
-        <a href="#opsLifecycleMap" data-icon="L">Lifecycle Map</a>
-        <a href="#opsAdmissionsQueue" data-icon="A">Applicant Queue</a>
-        <a href="#opsZohoBooks" data-icon="Z">Billing Queue</a>
-        <a href="#opsCommunications" data-icon="C">Communications</a>
-        <a href="#opsClassroom" data-icon="H">Classroom Handover</a>
-        <a href="#opsReports" data-icon="P">Reports</a>
-        <a href="#opsRulesConfig" data-icon="G">Rules & Config</a>
-        <a href="#opsRuntimeTruth" data-icon="R">Governance</a>
-        <a href="#opsStudentDiagnostics" data-icon="S">Portal Diagnostics</a>
-        <a href="#opsFallbackDiagnostics" data-icon="W">Fallbacks</a>
-        <a href="#opsReleaseControl" data-icon="L">Release Control</a>
+        <a href="#opsDashboard" data-icon="D" data-ops-mode-link="operator admin super">Operator Console</a>
+        <a href="#opsLifecycleMap" data-icon="L" data-ops-mode-link="operator admin super">Lifecycle Map</a>
+        <a href="#opsAdmissionsQueue" data-icon="A" data-ops-mode-link="operator admin super">Applicant Queue</a>
+        <a href="#opsZohoBooks" data-icon="Z" data-ops-mode-link="admin super">Billing Queue</a>
+        <a href="#opsCommunications" data-icon="C" data-ops-mode-link="admin super">Communications</a>
+        <a href="#opsClassroom" data-icon="H" data-ops-mode-link="admin super">Classroom Handover</a>
+        <a href="#opsFallbackDiagnostics" data-icon="W" data-ops-mode-link="admin super">Fallbacks</a>
+        <a href="#opsReports" data-icon="P" data-ops-mode-link="operator admin super">Reports</a>
+        <a href="#opsStudentDiagnostics" data-icon="S" data-ops-mode-link="operator admin super">Portal Diagnostics</a>
+        <a href="#opsRulesConfig" data-icon="G" data-ops-mode-link="super">Rules & Config</a>
+        <a href="#opsRuntimeTruth" data-icon="R" data-ops-mode-link="super">Governance</a>
+        <a href="#opsReleaseControl" data-icon="L" data-ops-mode-link="super">Release Control</a>
       </nav>
       <div class="opsSideBottom">
         <div class="opsEnvCard">
@@ -894,11 +926,12 @@
       </div>
     </aside>
     <main class="opsMain">
-      <section id="opsDashboard" class="opsSectionPage">
+      <section id="opsDashboard" class="opsSectionPage" data-ops-mode-group="operator admin super">
         <div class="opsHeader">
           <div>
             <h1>FODE Operations Cockpit</h1>
             <div class="mutedLight">Operator-first lifecycle console with secondary governance controls</div>
+            <div class="opsHeaderMode">Current mode <span id="opsHeaderModeValue">Loading</span></div>
           </div>
           <div class="opsHeaderTools">
             <span class="opsHeaderIcon">N</span>
@@ -916,13 +949,13 @@
         </div>
         <div class="opsSectionGrid mainSplit">
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Executive Snapshot</h3><p>Operator/Admin layer first. Governance and release controls remain secondary.</p></div><span class="opsStatusPill info">Safe Mode Controlled Actions</span></div>
+            <div class="opsSectionHeader"><div><h3>Executive Snapshot</h3><p>Operator and Admin working surfaces first. Governance and release controls remain secondary.</p></div><span class="opsStatusPill info">Safe Mode Controlled Actions</span></div>
             <div class="opsResultBox warn">Safe Mode is required for existing Ops live actions. Single-record safe tests are restricted to the approved target identity only.</div>
             <div class="opsMetricGrid">
               <div class="opsMetric"><div class="k">Next Action</div><div class="v" id="cockpitKpiNextRelease">r178 control hardening candidate</div></div>
               <div class="opsMetric"><div class="k">Queue Summary</div><div class="v" id="cockpitDashboardQueue">Loading</div></div>
               <div class="opsMetric"><div class="k">Billing</div><div class="v">Safe Mode Controlled Actions</div></div>
-              <div class="opsMetric"><div class="k">Admissions</div><div class="v">Read-only review</div></div>
+              <div class="opsMetric"><div class="k">Admissions</div><div class="v">Admin working surface</div></div>
             </div>
             <div class="opsPlaceholder" id="cockpitKpiNextReleaseMeta">r178 hardens Super Admin controls, clarifies portal behavior, and classifies full-functionality activation without uncontrolled writes.</div>
             <div class="opsActionRow">
@@ -932,17 +965,40 @@
             </div>
           </div>
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Operator Layer</h3><p>Daily workflow follows the applicant and student lifecycle before governance and release controls.</p></div><span class="opsStatusPill ok">Operator/Admin Layer</span></div>
+            <div class="opsSectionHeader"><div><h3>Working Layers</h3><p>Admin Mode is the primary working surface. Operator Mode preserves queue and lifecycle navigation; Super Admin Mode adds governed controls.</p></div><span class="opsStatusPill ok">Role-driven surface</span></div>
             <div class="opsPriorityList">
-              <div class="opsPriorityCard"><div><div class="t">Admissions Queue</div><div class="m">Applicant lookup, queue filters, and review handoff remain the primary operator workflow.</div></div><span class="opsStatusPill info">Read-only + Map</span></div>
-              <div class="opsPriorityCard"><div><div class="t">Communications / Billing / Handover</div><div class="m">Existing Ops live actions are restricted to Safe Mode approved-target testing only.</div></div><span class="opsStatusPill warn">Safe Test Only</span></div>
-              <div class="opsPriorityCard"><div><div class="t">Super Admin / Governance</div><div class="m">Runtime truth, release metadata, disabled high-risk actions, and integration health remain secondary.</div></div><span class="opsStatusPill muted">Secondary Layer</span></div>
+              <div class="opsPriorityCard"><div><div class="t">Operator Mode</div><div class="m">Queue, lifecycle, selected-applicant context, and read-only diagnostics remain the low-risk intake surface.</div></div><span class="opsStatusPill info">Operator</span></div>
+              <div class="opsPriorityCard"><div><div class="t">Admin Mode</div><div class="m">Communications, billing reads, classroom preview/notify, and the fallback working surface are grouped as the primary daily surface.</div></div><span class="opsStatusPill warn">Primary Working Surface</span></div>
+              <div class="opsPriorityCard"><div><div class="t">Super Admin Mode</div><div class="m">Governed exports, portal control mutations, release truth, and high-risk classifications remain secondary and explicitly gated.</div></div><span class="opsStatusPill muted">Governance</span></div>
               <div class="opsPriorityCard"><div><div class="t">Developer / Release</div><div class="m">Git, clasp, versioning, deployment pins, and release metadata recording stay outside Apps Script UI.</div></div><span class="opsStatusPill muted">Externalized</span></div>
             </div>
           </div>
         </div>
+        <div class="opsCard">
+          <div class="opsSectionHeader"><div><h3>Bulk Communications</h3><p>Super Admin-only working path for bounded cohort preview. Live send stays blocked until a matching preview exists and the final recipient set is visible.</p></div><span class="opsStatusPill warn">Admin / Super Admin</span></div>
+          <div class="opsMetricGrid">
+            <div class="opsMetric"><div class="k">Selected stage</div><div class="v" id="opsStageBatchSelectedStage">&mdash;</div></div>
+            <div class="opsMetric"><div class="k">Priority</div><div class="v" id="opsStageBatchPriority">&mdash;</div></div>
+            <div class="opsMetric"><div class="k">Message type</div><div class="v" id="opsStageBatchMessageType">&mdash;</div></div>
+            <div class="opsMetric"><div class="k">Sendable</div><div class="v" id="opsStageBatchSendable">&mdash;</div></div>
+          </div>
+          <div class="opsDraftGrid" style="margin-top:12px;">
+            <div class="field"><label>Preview limit</label><input id="opsStageBatchLimit" type="number" min="1" max="100" step="1" value="50"></div>
+            <div class="field"><label>Diagnostic offset</label><input id="opsStageBatchOffset" type="number" min="0" step="1" value="0"></div>
+            <div class="field"><label>Selected applicant</label><input type="text" id="opsStageBatchApplicantContext" readonly value="No applicant selected"></div>
+            <div class="field"><label>Disabled reason</label><input type="text" id="opsStageBatchDisabledReason" readonly value="Select a lifecycle stage first"></div>
+          </div>
+          <div class="opsActionRow">
+            <button id="btnOpsStageBatchPreview" class="opsActionBtn live" type="button" onclick="previewStageBatchUi_()">Preview Cohort</button>
+            <button id="btnOpsStageBatchSend" class="opsActionBtn live" type="button" onclick="sendStageBatchUi_()">Send Stage Batch</button>
+            <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Choose Lifecycle Stage</button>
+          </div>
+          <div class="opsInspectPanel" id="opsStageBatchInlineNote">Select a lifecycle stage to prepare the next eligible unsent cohort preview.</div>
+          <div id="opsStageBatchSummary" class="opsResultBox hidden"></div>
+          <div id="opsStageBatchPreviewDiagnostics" class="opsResultBox hidden"></div>
+        </div>
       </section>
-      <section id="opsLifecycleMap" class="opsSectionPage">
+      <section id="opsLifecycleMap" class="opsSectionPage" data-ops-mode-group="operator admin super">
         <div class="opsPageIntro">
           <div><h2>Lifecycle Cascade</h2><p>Inspectable operator flow. Stage selection filters the applicant queue without clearing the selected applicant context.</p></div>
           <span class="opsStatusPill info">Interactive / read-only</span>
@@ -952,7 +1008,7 @@
           <div class="opsInspectPanel" id="opsLifecycleInspector">Select a lifecycle stage to inspect records, blockers, and next action.</div>
         </div>
       </section>
-      <section id="opsStudentDiagnostics" class="opsSectionPage">
+      <section id="opsStudentDiagnostics" class="opsSectionPage" data-ops-mode-group="operator admin super">
         <div class="opsPageIntro">
           <div><h2>Student Portal Diagnostics</h2><p>Read-only map of student-facing routes, token state, locks, and upload/update surfaces.</p></div>
           <span class="opsStatusPill info">Map only</span>
@@ -981,7 +1037,7 @@
           </div>
         </div>
       </section>
-      <section id="opsRuntimeTruth" class="opsSectionPage">
+      <section id="opsRuntimeTruth" class="opsSectionPage" data-ops-mode-group="super">
         <div class="opsPageIntro">
           <div><h2>Governance / Runtime Truth</h2><p>Secondary governance layer for runtime identity, release metadata, role boundaries, safe mode, and disabled high-risk controls.</p></div>
           <span class="opsStatusPill ok" id="cockpitRuntimeStatusPill">Waiting</span>
@@ -1031,7 +1087,7 @@
           </div>
         </div>
       </section>
-      <section id="opsAdmissionsQueue" class="opsSectionPage">
+      <section id="opsAdmissionsQueue" class="opsSectionPage" data-ops-mode-group="operator admin super">
         <div class="opsPageIntro">
           <div><h2>Applicant Queue</h2><p>Full-width applicant rows with selected-row context. Use horizontal scroll when fields exceed the viewport.</p></div>
           <span class="opsStatusPill info">Read only</span>
@@ -1049,7 +1105,7 @@
             <button class="opsActionBtn" type="button" onclick="opsSetQueueFilter_('blocked')">Blocked</button>
             <button class="opsActionBtn" type="button" onclick="opsActionState.queueSort='aging_desc';renderOpsQueue_()">Sort Aging</button>
             <button class="opsActionBtn" type="button" onclick="opsActionState.queueSort='date_desc';renderOpsQueue_()">Sort Date Applied</button>
-            <button class="opsActionBtn" type="button" disabled>Export Queue</button>
+            <button class="opsActionBtn" type="button" disabled>Export Queue (Prepared)</button>
           </div>
           <div id="opsAdmissionsResult" class="opsResultBox hidden"></div>
           <div class="opsTableWrap">
@@ -1063,7 +1119,7 @@
           <div class="opsQueueSummaryStrip" id="opsQueueSummaryStrip"></div>
         </div>
       </section>
-      <section id="opsZohoBooks" class="opsSectionPage">
+      <section id="opsZohoBooks" class="opsSectionPage" data-ops-mode-group="admin super">
         <div class="opsPageIntro">
           <div><h2>Billing / Zoho Books</h2><p>Filterable billing console. No draft invoice creation, invoice send, payment creation, or Books write is activated in this release.</p></div>
           <span class="opsStatusPill info">Read-only actions</span>
@@ -1081,7 +1137,7 @@
           </div>
         </div>
       </section>
-      <section id="opsCommunications" class="opsSectionPage">
+      <section id="opsCommunications" class="opsSectionPage" data-ops-mode-group="admin super">
         <div class="opsPageIntro">
           <div><h2>Communications</h2><p>Single-applicant communication actions require preview, recipient review, and explicit Safe Mode approval checks.</p></div>
           <span class="opsStatusPill warn">Safe Test Only</span>
@@ -1106,7 +1162,7 @@
               <button class="opsActionBtn live" type="button" onclick="opsSendApplicantEmail_('legacy_invite','Portal Access')">Resend Portal Access</button>
               <button class="opsActionBtn live" type="button" onclick="opsPreviewApplicantEmail_('custom_email','Custom Email')">Custom Email Preview</button>
               <button class="opsActionBtn live" type="button" onclick="opsSendApplicantEmail_('custom_email','Custom Email')">Send Custom Email</button>
-              <button class="opsActionBtn" type="button" disabled>Bulk Send</button>
+              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsRulesConfig')">View Role / Action Registry</button>
               <button class="opsActionBtn live" type="button" onclick="opsPreviewApplicantEmail_('reminder','Reminder')">Preview Email</button>
               <button class="opsActionBtn" type="button" onclick="opsRenderCommunicationTimeline_()">View Message Timeline</button>
             </div>
@@ -1133,7 +1189,7 @@
           </div>
         </div>
       </section>
-      <section id="opsClassroom" class="opsSectionPage">
+      <section id="opsClassroom" class="opsSectionPage" data-ops-mode-group="admin super">
         <div class="opsPageIntro">
           <div><h2>Classroom Handover</h2><p>Post-enrolment handover visibility and internal notification. No classroom or enrolment fields are written from this cockpit.</p></div>
           <span class="opsStatusPill warn">Safe Test Only</span>
@@ -1162,68 +1218,83 @@
             </div>
             <div class="opsInspectPanel" id="opsClassroomChecklist">Generate preview to load classroom checklist, recipients, and notify reason.</div>
             <div class="opsActionRow">
-              <button class="opsActionBtn" type="button" disabled>Prepare Classroom Package</button>
+              <button class="opsActionBtn" type="button" disabled>Prepare Classroom Package (Prepared)</button>
               <button class="opsActionBtn live" type="button" onclick="opsNotifyClassroomAdmin_()">Notify Classroom Admin</button>
               <button class="opsActionBtn live" type="button" onclick="opsPreviewClassroomHandover_()">Generate Welcome/Handover Preview</button>
-              <button class="opsActionBtn" type="button" disabled>Mark Classroom Enrolled</button>
-              <button class="opsActionBtn" type="button" disabled>View Handover Checklist</button>
+              <button class="opsActionBtn" type="button" disabled>Mark Classroom Enrolled (Prepared)</button>
+              <button class="opsActionBtn" type="button" disabled>View Handover Checklist (Coming Soon)</button>
             </div>
             <div class="opsResultBox warn">Classroom notify is allowed only in Safe Mode against the approved test identity after preview passes.</div>
             <div id="opsClassroomResult" class="opsResultBox hidden"></div>
           </div>
         </div>
       </section>
-      <section id="opsFallbackDiagnostics" class="opsSectionPage">
+      <section id="opsFallbackDiagnostics" class="opsSectionPage" data-ops-mode-group="admin super">
         <div class="opsPageIntro">
-          <div><h2>WhatsApp / Contact Fallback</h2><p>Explanation only. Export and email fallback paths remain disabled in the operator console.</p></div>
-          <span class="opsStatusPill info">Map only</span>
+          <div><h2>WhatsApp / Contact Fallback</h2><p>Operational fallback surface for governed export/email paths. No direct WhatsApp send is implemented by this system.</p></div>
+          <span class="opsStatusPill warn">Admin / Super Admin</span>
         </div>
         <div class="opsSectionGrid two">
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Fallback Status</h3></div><span class="opsStatusPill info">Diagnostics</span></div>
+            <div class="opsDraftGrid" style="margin-bottom:12px;">
+              <div class="field"><label>Export limit</label><input id="opsWaFallbackLimit" type="number" min="1" max="100" step="1" value="<?= Number((CONFIG && CONFIG.WHATSAPP_FALLBACK_DEFAULT_LIMIT) || 20) ?>"></div>
+              <div class="field"><label>Fallback filter</label>
+                <select id="opsWaFallbackFilter">
+                  <option value="ALL_FALLBACK">All fallback candidates</option>
+                  <option value="BOUNCE_ONLY">Bounce only</option>
+                  <option value="NO_EMAIL_ONLY">No email only</option>
+                </select>
+              </div>
+            </div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Fallback status</span><span class="opsStatusPill info">Explanation only</span></div>
+              <div class="opsChecklistRow"><span>Fallback status</span><span class="opsStatusPill ok">Usable with gating</span></div>
               <div class="opsChecklistRow"><span>Phone/contact data exists</span><span class="opsStatusPill muted" id="opsFallbackPhoneState">Unknown until applicant loads</span></div>
-              <div class="opsChecklistRow"><span>CSV/export capability exists</span><span class="opsStatusPill danger">Disabled</span></div>
-              <div class="opsChecklistRow"><span>Email CSV fallback exists</span><span class="opsStatusPill danger">Disabled</span></div>
+              <div class="opsChecklistRow"><span>CSV/export capability exists</span><span class="opsStatusPill warn">Super Admin-only</span></div>
+              <div class="opsChecklistRow"><span>Email CSV fallback exists</span><span class="opsStatusPill warn">After export snapshot</span></div>
               <div class="opsChecklistRow"><span>Bounce / suppression diagnostics</span><span class="opsStatusPill ok">Mapped</span></div>
+              <div class="opsChecklistRow"><span>Last batch label</span><span class="opsStatusPill info" id="waFallbackBatchLabel">&mdash;</span></div>
+              <div class="opsChecklistRow"><span>Scanned</span><span class="opsStatusPill info" id="waFallbackScanned">&mdash;</span></div>
+              <div class="opsChecklistRow"><span>Exported</span><span class="opsStatusPill info" id="waFallbackExported">&mdash;</span></div>
+              <div class="opsChecklistRow"><span>Invalid phone</span><span class="opsStatusPill muted" id="waFallbackInvalidPhone">&mdash;</span></div>
+              <div class="opsChecklistRow"><span>Skipped duplicate phone</span><span class="opsStatusPill muted" id="waFallbackSkippedDuplicate">&mdash;</span></div>
             </div>
           </div>
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Risk and Future Path</h3></div><span class="opsStatusPill danger">Disabled / Deferred</span></div>
+            <div class="opsSectionHeader"><div><h3>Risk and Working Path</h3></div><span class="opsStatusPill warn">Governed path</span></div>
             <div class="opsChecklist">
               <div class="opsChecklistRow"><span>WhatsApp CSV export</span><span class="opsStatusPill warn">Super Admin confirmation</span></div>
               <div class="opsChecklistRow"><span>WhatsApp CSV email</span><span class="opsStatusPill warn">After export confirmation</span></div>
               <div class="opsChecklistRow"><span>Risk level</span><span class="opsStatusPill warn">Sensitive contact export</span></div>
-              <div class="opsChecklistRow"><span>Future safe-test path</span><span class="opsStatusPill muted">Manual WhatsApp only; no automated send</span></div>
+              <div class="opsChecklistRow"><span>Direct WhatsApp send</span><span class="opsStatusPill danger">Blocked: no verified send function</span></div>
             </div>
-            <? if (IS_SUPER) { ?>
             <div class="opsActionRow" style="margin-top:10px;">
-              <button class="opsActionBtn live" type="button" onclick="exportWhatsAppFallbackCsv_()">Export WhatsApp CSV</button>
-              <button class="opsActionBtn live" type="button" onclick="emailWhatsAppFallbackCsv_()">Email CSV to Admins</button>
+              <button id="opsWaExportBtn" class="opsActionBtn live" type="button" onclick="exportWhatsAppFallbackCsv_()">Export WhatsApp CSV</button>
+              <button id="opsWaEmailBtn" class="opsActionBtn live" type="button" onclick="emailWhatsAppFallbackCsv_()">Email CSV to Admins</button>
             </div>
-            <div class="opsResultBox warn">Super Admin only. Shows target count/filter before export or email. No WhatsApp message is sent by this system.</div>
-            <? } ?>
+            <div class="opsResultBox warn">Shows count/filter before export and requires explicit confirmation. Email path uses the cached export snapshot only. No WhatsApp message is sent by this system.</div>
+            <div class="opsInspectPanel">If you are not Super Admin, this surface remains visible but actions stay labeled Super Admin-only and blocked.</div>
+            <div id="waFallbackMsg" class="opsResultBox"></div>
           </div>
         </div>
       </section>
-      <section id="opsReports" class="opsSectionPage">
+      <section id="opsReports" class="opsSectionPage" data-ops-mode-group="operator admin super">
         <div class="opsPageIntro">
           <div><h2>Reports</h2><p>Operational report menu. Tiles are polished placeholders unless existing queue loaders provide counts.</p></div>
           <span class="opsStatusPill muted">Coming Next</span>
         </div>
         <div class="opsTileGrid">
-          <div class="opsTile"><div class="opsTileTitle">Daily Admissions Snapshot</div><div class="opsTileMeta" id="cockpitReportAdmissions">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Daily Admissions Snapshot')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV</button><button class="opsActionBtn" type="button" disabled>Schedule Report</button></div></div>
-          <div class="opsTile"><div class="opsTileTitle">Invoice Raised vs Sent</div><div class="opsTileMeta" id="cockpitReportInvoiceTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Invoice Raised vs Sent')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV</button><button class="opsActionBtn" type="button" disabled>Schedule Report</button></div></div>
-          <div class="opsTile"><div class="opsTileTitle">Payment Verified but Not Enrolled</div><div class="opsTileMeta" id="cockpitReportPaymentTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Payment Verified but Not Enrolled')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV</button><button class="opsActionBtn" type="button" disabled>Schedule Report</button></div></div>
-          <div class="opsTile"><div class="opsTileTitle">Classroom Handover Pending</div><div class="opsTileMeta" id="cockpitReportClassroomTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Classroom Handover Pending')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV</button><button class="opsActionBtn" type="button" disabled>Schedule Report</button></div></div>
-          <div class="opsTile"><div class="opsTileTitle">Missing Zoho Item Mapping</div><div class="opsTileMeta" id="cockpitReportMapping">Coming Next</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Missing Zoho Item Mapping')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV</button><button class="opsActionBtn" type="button" disabled>Schedule Report</button></div></div>
-          <div class="opsTile"><div class="opsTileTitle">Communications Suppression Report</div><div class="opsTileMeta" id="cockpitReportSuppression">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Communications Suppression Report')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV</button><button class="opsActionBtn" type="button" disabled>Schedule Report</button></div></div>
-          <div class="opsTile"><div class="opsTileTitle">Release Truth / Drift Report</div><div class="opsTileMeta" id="cockpitReportRelease">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Release Truth / Drift Report')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV</button><button class="opsActionBtn" type="button" disabled>Schedule Report</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Daily Admissions Snapshot</div><div class="opsTileMeta" id="cockpitReportAdmissions">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Daily Admissions Snapshot')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV (Prepared)</button><button class="opsActionBtn" type="button" disabled>Schedule Report (Coming Soon)</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Invoice Raised vs Sent</div><div class="opsTileMeta" id="cockpitReportInvoiceTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Invoice Raised vs Sent')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV (Prepared)</button><button class="opsActionBtn" type="button" disabled>Schedule Report (Coming Soon)</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Payment Verified but Not Enrolled</div><div class="opsTileMeta" id="cockpitReportPaymentTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Payment Verified but Not Enrolled')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV (Prepared)</button><button class="opsActionBtn" type="button" disabled>Schedule Report (Coming Soon)</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Classroom Handover Pending</div><div class="opsTileMeta" id="cockpitReportClassroomTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Classroom Handover Pending')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV (Prepared)</button><button class="opsActionBtn" type="button" disabled>Schedule Report (Coming Soon)</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Missing Zoho Item Mapping</div><div class="opsTileMeta" id="cockpitReportMapping">Coming Next</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Missing Zoho Item Mapping')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV (Prepared)</button><button class="opsActionBtn" type="button" disabled>Schedule Report (Coming Soon)</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Communications Suppression Report</div><div class="opsTileMeta" id="cockpitReportSuppression">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Communications Suppression Report')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV (Prepared)</button><button class="opsActionBtn" type="button" disabled>Schedule Report (Coming Soon)</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Release Truth / Drift Report</div><div class="opsTileMeta" id="cockpitReportRelease">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Release Truth / Drift Report')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV (Prepared)</button><button class="opsActionBtn" type="button" disabled>Schedule Report (Coming Soon)</button></div></div>
         </div>
         <div id="opsReportResult" class="opsResultBox hidden"></div>
       </section>
-      <section id="opsReleaseControl" class="opsSectionPage">
+      <section id="opsReleaseControl" class="opsSectionPage" data-ops-mode-group="super">
         <div class="opsPageIntro">
           <div><h2>Release Control</h2><p>Governed release metadata and rollback guidance. This panel does not invoke git, clasp, or deployment commands, and local Git state is unavailable here unless recorded during a release.</p></div>
           <span class="opsStatusPill warn">Requires Approval</span>
@@ -1232,10 +1303,10 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Release State</h3></div><span class="opsStatusPill muted">Read only</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Current runtime</span><span class="opsStatusPill info" id="cockpitReleaseRuntime">r177 / 177</span></div>
-              <div class="opsChecklistRow"><span>Accepted baseline</span><span class="opsStatusPill ok">r177 / staging-as177</span></div>
+              <div class="opsChecklistRow"><span>Current runtime</span><span class="opsStatusPill info" id="cockpitReleaseRuntime">r178 / 178</span></div>
+              <div class="opsChecklistRow"><span>Accepted baseline</span><span class="opsStatusPill ok">r178 / staging-as178</span></div>
               <div class="opsChecklistRow"><span>Whoami status</span><span class="opsStatusPill muted" id="cockpitReleaseWhoami">Unknown</span></div>
-              <div class="opsChecklistRow"><span>Browser acceptance status</span><span class="opsStatusPill ok" id="cockpitReleaseBrowserState">Accepted r177</span></div>
+              <div class="opsChecklistRow"><span>Browser acceptance status</span><span class="opsStatusPill ok" id="cockpitReleaseBrowserState">Accepted r178</span></div>
               <div class="opsChecklistRow"><span>Commit / tag state</span><span class="opsStatusPill info" id="cockpitReleaseGit">Recorded externally</span></div>
               <div class="opsChecklistRow"><span>Remote Config verified</span><span class="opsStatusPill muted" id="cockpitReleaseRemote">Unknown</span></div>
               <div class="opsChecklistRow"><span>Local Git state</span><span class="opsStatusPill muted" id="cockpitReleaseDirty">Unavailable unless release metadata is recorded</span></div>
@@ -1244,9 +1315,9 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Control Checklist</h3></div><span class="opsStatusPill danger">Disabled</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Rollback target</span><span class="opsStatusPill info">r177 / staging-as177 / @186</span></div>
+              <div class="opsChecklistRow"><span>Rollback target</span><span class="opsStatusPill info">r178 / staging-as178 / @188</span></div>
               <div class="opsChecklistRow"><span>Current blockers</span><span class="opsStatusPill warn">Deployment action remains externalized</span></div>
-              <div class="opsChecklistRow"><span>Next release candidate</span><span class="opsStatusPill info" id="cockpitReleaseNextTask">r178</span></div>
+              <div class="opsChecklistRow"><span>Next release candidate</span><span class="opsStatusPill info" id="cockpitReleaseNextTask">r179</span></div>
               <div class="opsChecklistRow"><span>Git metadata note</span><span class="opsStatusPill muted">Record commit/tag/clean state during release; Apps Script cannot read local Git directly</span></div>
             </div>
             <div class="opsActionRow">
@@ -1260,9 +1331,9 @@
           </div>
         </div>
       </section>
-      <section id="opsRulesConfig" class="opsSectionPage">
+      <section id="opsRulesConfig" class="opsSectionPage" data-ops-mode-group="super">
         <div class="opsPageIntro">
-          <div><h2>Rules & Config</h2><p>Settings are classified by operational risk. r178 hardens Super Admin controls, clarifies portal behavior, and activates only functions that already have enforceable gates.</p></div>
+          <div><h2>Rules & Config</h2><p>Settings are classified by operational risk. r179 keeps role-driven working surfaces, prevents Admin/Ops drift, and only activates functions that already have enforceable gates.</p></div>
           <span class="opsStatusPill ok">Super Admin / Governance</span>
         </div>
         <div class="opsSectionGrid">
@@ -1286,7 +1357,11 @@
             <div class="opsChecklist" id="opsParityRegister"></div>
           </div>
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>r178 Action Registry</h3><p>Each action is classified by role, surface, function, write/export/bulk risk, confirmation, audit, activation state, and exact blocker if not yet enabled.</p></div><span class="opsStatusPill info">Registry driven</span></div>
+            <div class="opsSectionHeader"><div><h3>Drift Prevention Register</h3></div><span class="opsStatusPill info">Pre-activation audit</span></div>
+            <div class="opsChecklist" id="opsDriftRegister"></div>
+          </div>
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>r179 Action Registry</h3><p>Each action is classified by role, surface, function, write/export/bulk risk, confirmation, audit, activation state, and exact blocker if not yet enabled.</p></div><span class="opsStatusPill info">Registry driven</span></div>
             <div class="opsTableWrap">
               <table class="opsRegistryTable">
                 <thead><tr><th>Action</th><th>Surface</th><th>Function / Bridge</th><th>Role</th><th>Class</th><th>Status</th><th>Confirm / Audit</th><th>Reason</th></tr></thead>
@@ -2072,8 +2147,48 @@
       templateType: "reminder",
       longPressTimer: null,
       reviewDrawerOpen: false,
-      superAdminMode: false
+      superAdminMode: false,
+      mode: ""
     };
+    var OPS_MODE_SESSION_KEY = "fode_ops_mode";
+    function availableOpsModes_(){
+      if (String(ADMIN_ROLE || "").toUpperCase() === "SUPER" || IS_SUPER === true) return ["operator","admin","super"];
+      if (String(ADMIN_ROLE || "").trim()) return ["operator","admin"];
+      return ["operator"];
+    }
+    function defaultOpsMode_(){
+      var modes = availableOpsModes_();
+      return modes.indexOf("admin") >= 0 ? "admin" : "operator";
+    }
+    function normalizeOpsMode_(mode){
+      var wanted = String(mode || "").toLowerCase();
+      var modes = availableOpsModes_();
+      return modes.indexOf(wanted) >= 0 ? wanted : defaultOpsMode_();
+    }
+    function opsModeLabel_(mode){
+      if (mode === "super") return "Super Admin Mode";
+      if (mode === "admin") return "Admin Mode";
+      return "Operator Mode";
+    }
+    function detectedRoleLabel_(){
+      var role = String(ADMIN_ROLE || "").trim().toUpperCase();
+      if (role === "SUPER") return "Super Admin";
+      if (role) return "Admin";
+      return "Operator";
+    }
+    function readOpsMode_(){
+      var saved = "";
+      try { saved = window.sessionStorage ? String(window.sessionStorage.getItem(OPS_MODE_SESSION_KEY) || "") : ""; } catch (_e) {}
+      return normalizeOpsMode_(saved || opsActionState.mode || defaultOpsMode_());
+    }
+    function writeOpsMode_(mode){
+      try { if (window.sessionStorage) window.sessionStorage.setItem(OPS_MODE_SESSION_KEY, normalizeOpsMode_(mode)); } catch (_e) {}
+    }
+    function setOpsMode_(mode){
+      opsActionState.mode = normalizeOpsMode_(mode);
+      writeOpsMode_(opsActionState.mode);
+      applyOpsModeVisibility_();
+    }
     function formatPngAmount_(value){
       var n = Number(value || 0);
       if (!isFinite(n)) n = 0;
@@ -2099,15 +2214,15 @@
         { id:"openBilling", label:"Open billing", source:"Context Menu", surface:"Billing / Zoho Books", fn:"client:scroll + admin_previewZohoBooksFodePayload", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Read-only selected-applicant Books preview/status." },
         { id:"openInvoice", label:"Open invoice", source:"Billing / Context Menu", surface:"Billing / Zoho Books", fn:"client:window.open invoice URL", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Opens existing invoice URL only." },
         { id:"refreshBooksStatus", label:"Refresh Books status", source:"Billing / Context Menu", surface:"Billing / Zoho Books", fn:"admin_previewZohoBooksFodePayload", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Read-only status/payload preview." },
-        { id:"booksDraftCreate", label:"Create Books draft invoice", source:"Super Admin Mode", surface:"Billing / Zoho Books", fn:"admin_createZohoBooksFodeDraftInvoice", role:"Super Admin/Governance", kind:"write", status:"prepared-r179", confirm:true, audit:true, reason:"Blocked in r178 because live write requires write-enabled Books config, preview READY parity, and explicit Zoho Books test-applicant allowlist; current Ops surface does not yet prove that handoff." },
+        { id:"booksDraftCreate", label:"Create Books draft invoice", source:"Super Admin Mode", surface:"Billing / Zoho Books", fn:"admin_createZohoBooksFodeDraftInvoice", role:"Super Admin/Governance", kind:"write", status:"prepared", confirm:true, audit:true, reason:"Prepared next: live write still requires write-enabled Books config, preview READY parity, and an explicit Zoho Books test-applicant allowlist handoff." },
         { id:"viewPortalStatus", label:"View portal status", source:"Context Menu", surface:"Portal Diagnostics", fn:"admin_getStudentPortalLink", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Read-only portal URL/status diagnostics." },
-        { id:"portalLinkReset", label:"Portal Link Reset", source:"Super Admin Mode", surface:"Portal Diagnostics", fn:"admin_resetPortalLink", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Can activate in r178: explicit browser confirmation is required, and the server enforces requireSuperAdmin_() before resetting the portal secret." },
-        { id:"portalAccessLockUnlock", label:"Portal Access Lock/Unlock", source:"Super Admin Mode", surface:"Portal Diagnostics", fn:"admin_setPortalAccess", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Can activate in r178 only with explicit browser confirmation showing ApplicantID and target access state. Server already enforces requireSuperAdmin_()." },
+        { id:"portalLinkReset", label:"Portal Link Reset", source:"Super Admin Mode", surface:"Portal Diagnostics", fn:"admin_resetPortalLink", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Explicit browser confirmation is required, and the server enforces requireSuperAdmin_() before resetting the portal secret." },
+        { id:"portalAccessLockUnlock", label:"Portal Access Lock/Unlock", source:"Super Admin Mode", surface:"Portal Diagnostics", fn:"admin_setPortalAccess", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Explicit browser confirmation shows ApplicantID and target access state. Server already enforces requireSuperAdmin_()." },
         { id:"localEditingLock", label:"Local Editing Lock/Unlock", source:"Legacy Admin modal", surface:"Applicant Review modal", fn:"client:unlockReview_/lockReview_", role:"Operator/Admin", kind:"client-state", status:"enabled", confirm:false, audit:false, reason:"Local modal editing state only. Does not change applicant portal access status." },
         { id:"viewClassroom", label:"View classroom handover", source:"Context Menu", surface:"Classroom Handover", fn:"admin_previewOpsClassroomHandover", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:true, reason:"Preview logs existing handover review event." },
         { id:"notifyClassroom", label:"Notify classroom admin", source:"Classroom", surface:"Classroom Handover", fn:"admin_notifyOpsClassroomAdmin", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Internal single-send only; preview and Safe Mode gate required." },
-        { id:"bulkPreview", label:"Bulk email preview", source:"Super Admin Mode", surface:"Communications", fn:"admin_previewStageBatch", role:"Super Admin/Governance", kind:"bulk-read", status:"enabled-gated", confirm:false, audit:true, reason:"Can activate in r178: server already requires Super Admin and preview-only mode, and returns bounded eligible/blocked counts with replay summary." },
-        { id:"bulkSend", label:"Bulk email send", source:"Super Admin Mode", surface:"Communications", fn:"admin_sendStageBatch", role:"Super Admin/Governance", kind:"bulk-write", status:"prepared-r179", confirm:true, audit:true, reason:"Blocked in r178 because current send confirms stage/preview parity only; Ops still lacks final recipient-level suppression review before a live bulk send." },
+        { id:"bulkPreview", label:"Bulk email preview", source:"Super Admin Mode", surface:"Communications", fn:"admin_previewStageBatch", role:"Super Admin/Governance", kind:"bulk-read", status:"enabled-gated", confirm:false, audit:true, reason:"Server already requires Super Admin and preview-only mode, and returns bounded eligible/blocked counts with replay summary." },
+        { id:"bulkSend", label:"Bulk email send", source:"Super Admin Mode", surface:"Communications", fn:"admin_sendStageBatch", role:"Super Admin/Governance", kind:"bulk-write", status:"prepared", confirm:true, audit:true, reason:"Prepared next: current send confirms stage/preview parity only; the working surface still lacks final recipient-level suppression review before a live bulk send." },
         { id:"whatsappExport", label:"WhatsApp CSV export", source:"Fallbacks / Super Admin", surface:"WhatsApp Fallback", fn:"admin_exportWhatsAppFallbackCsv", role:"Super Admin/Governance", kind:"export", status:"enabled-gated", confirm:true, audit:true, reason:"Existing export is capped, Super Admin gated, logged, and does not send WhatsApp." },
         { id:"whatsappEmailCsv", label:"Email WhatsApp CSV", source:"Fallbacks / Super Admin", surface:"WhatsApp Fallback", fn:"admin_emailWhatsAppFallbackCsv", role:"Super Admin/Governance", kind:"export-send", status:"enabled-gated", confirm:true, audit:true, reason:"Emails cached CSV only to configured admin recipients after export confirmation." },
         { id:"copyApplicantId", label:"Copy ApplicantID", source:"Context Menu", surface:"Clipboard", fn:"navigator.clipboard.writeText", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"No data mutation." },
@@ -2126,7 +2241,7 @@
       var switchVisible = IS_SUPER === true;
       var hiddenReason = switchVisible ? "Visible for SUPER role." : (matchesExpected ? "Configured SUPER account did not resolve IS_SUPER=true. Check ADMIN_ROLES render path." : "Current login is not a configured SUPER account.");
       setOpsPill_("opsRoleEmail", ADMIN_EMAIL || "Unknown", ADMIN_EMAIL ? "info" : "muted");
-      setOpsPill_("opsRoleDetected", ADMIN_ROLE === "SUPER" ? "Super Admin" : "Operator/Admin", ADMIN_ROLE === "SUPER" ? "warn" : "info");
+      setOpsPill_("opsRoleDetected", detectedRoleLabel_(), ADMIN_ROLE === "SUPER" ? "warn" : "info");
       setOpsPill_("opsRoleIsSuper", IS_SUPER ? "true" : "false", IS_SUPER ? "warn" : "muted");
       setOpsPill_("opsRoleSource", ROLE_DECISION_SOURCE || "CONFIG.ADMIN_ROLES", "muted");
       setOpsPill_("opsRoleExpectedSuper", expectedPrimary || "No configured SUPER account", expectedPrimary ? "info" : "muted");
@@ -2138,6 +2253,36 @@
       else if (switchVisible) note += " Super Admin mode controls may render for this login, but each high-risk action remains individually gated.";
       else note += " Super Admin mode stays hidden for non-SUPER logins.";
       setOpsResult_("opsRoleDiagnosticNote", { result: matchesExpected && !IS_SUPER ? "BLOCKED" : "INFO", blockReason: note }, "Role Diagnostic");
+    }
+    function renderOpsModeUi_(){
+      var mode = readOpsMode_();
+      opsActionState.mode = mode;
+      [["operator","opsModeOperator"],["admin","opsModeAdmin"],["super","opsModeSuper"]].forEach(function(pair){
+        var el = document.getElementById(pair[1]);
+        if (!el) return;
+        var allowed = availableOpsModes_().indexOf(pair[0]) >= 0;
+        el.disabled = !allowed;
+        el.style.display = allowed ? "inline-block" : "none";
+        el.classList.toggle("active", mode === pair[0]);
+      });
+      setOpsText_("opsHeaderModeValue", opsModeLabel_(mode));
+      setOpsText_("opsRoleStripEmail", ADMIN_EMAIL || "Unknown");
+      setOpsText_("opsRoleStripRole", "Detected role: " + detectedRoleLabel_());
+      setOpsText_("opsRoleStripMode", "Current mode: " + opsModeLabel_(mode));
+    }
+    function applyOpsModeVisibility_(){
+      var mode = readOpsMode_();
+      opsActionState.mode = mode;
+      renderOpsModeUi_();
+      Array.prototype.slice.call(document.querySelectorAll("[data-ops-mode-group]")).forEach(function(node){
+        var allowed = String(node.getAttribute("data-ops-mode-group") || "").split(/\s+/).filter(function(v){ return !!v; });
+        node.classList.toggle("hiddenByMode", allowed.indexOf(mode) < 0);
+      });
+      Array.prototype.slice.call(document.querySelectorAll("[data-ops-mode-link]")).forEach(function(node){
+        var allowed = String(node.getAttribute("data-ops-mode-link") || "").split(/\s+/).filter(function(v){ return !!v; });
+        node.classList.toggle("hiddenByMode", allowed.indexOf(mode) < 0);
+      });
+      bindOpsNav_(true);
     }
     function renderOpsActionRegistry_(){
       var body = document.getElementById("opsActionRegistryBody");
@@ -2160,17 +2305,31 @@
       var el = document.getElementById("opsParityRegister");
       if (!el) return;
       var rows = [
-        ["Admin-only", "Document/status writes, portal reset/lock, payment verified, parent email correction"],
-        ["Ops-visible", "Queue, lifecycle, billing preview, portal diagnostics, fallback diagnostics, reports, applicant drawer"],
-        ["Shared", "Single-record preview/send and classroom notify through existing gates"],
+        ["Admin-only", "Legacy review modal edits, doc/status writes, payment verified, parent email correction, overall override"],
+        ["Ops-only", "Lifecycle cascade, selected-applicant queue routing, mode-based working shell, WhatsApp/bulk registry surfaces"],
+        ["Shared", "Applicant review bridge, single-record preview/send, billing preview, portal diagnostics, classroom preview/notify"],
         ["Super Admin / Governance", "High-risk prepared controls, WhatsApp export/email, Safe Mode boundaries, Rules & Config"],
-        ["Student Portal", "Applicant self-service portal state, upload/payment proof visibility, URL diagnostics"],
+        ["Still using legacy Admin only", "Docs follow-up bulk UI, detailed modal edit cards, parent-email correction, overall override workflow"],
         ["Developer / Release", "Git, clasp, versioning, deployment repin, release metadata, rollback"],
         ["Future migration", "Temporary Super Admin delegation and shared InstitutionConfig/DriveConfig registry"]
       ];
       el.innerHTML = rows.map(function(row){
         var kind = row[0].indexOf("Developer") >= 0 ? "danger" : (row[0].indexOf("Super") >= 0 || row[0].indexOf("Shared") >= 0 ? "warn" : "info");
         return "<div class='opsChecklistRow'><span>" + esc(row[0]) + "</span><span class='opsStatusPill " + kind + "'>" + esc(row[1]) + "</span></div>";
+      }).join("");
+    }
+    function renderOpsDriftRegister_(){
+      var target = document.getElementById("opsDriftRegister");
+      if (!target) return;
+      var items = [
+        ["Duplicated action paths", "Applicant review bridge plus legacy Admin review remain intentionally paired; no second send/export implementation is introduced in r179."],
+        ["Admin-only actions", "Portal reset, portal access lock/unlock, WhatsApp export/email, bulk send candidate, Books draft/test writes."],
+        ["Ops-only actions", "Mode switch, lifecycle drill-down, selected-applicant queue context, operator dashboard grouping."],
+        ["Shared actions", "Applicant email preview/send, billing preview, open invoice, portal diagnostics, classroom preview/notify."],
+        ["Legacy Admin only", "Document verification edits, overall override, parent-email correction, deep modal document handling."]
+      ];
+      target.innerHTML = items.map(function(row){
+        return "<div class='opsChecklistRow'><span>" + esc(row[0]) + "</span><span class='opsStatusPill info'>" + esc(row[1]) + "</span></div>";
       }).join("");
     }
     function opsToggleSuperAdminMode_(){
@@ -2190,7 +2349,10 @@
       var wrap = document.querySelector(".wrap");
       if (shell) shell.classList.toggle("active", opsActive);
       if (wrap) wrap.classList.toggle("hiddenView", opsActive);
-      if (opsActive) window.setTimeout(bindOpsNav_, 0);
+      if (opsActive) window.setTimeout(function(){
+        applyOpsModeVisibility_();
+        bindOpsNav_(true);
+      }, 0);
     }
     function setOpsText_(id, value){
       var el = document.getElementById(id);
@@ -2201,6 +2363,15 @@
       if (!el) return;
       el.className = "opsStatusPill" + (kind ? (" " + kind) : "");
       el.textContent = text || "Unknown";
+    }
+    function firstExistingEl_(){
+      for (var i = 0; i < arguments.length; i++) {
+        var id = arguments[i];
+        if (!id) continue;
+        var el = document.getElementById(id);
+        if (el) return el;
+      }
+      return null;
     }
     function setOpsResult_(id, result, title){
       var box = document.getElementById(id);
@@ -2258,6 +2429,7 @@
       var aging = opsAgingDays_(row) || "Missing source";
       setOpsText_("cockpitCommContext", "Current Ops applicant: " + applicantId + " - " + applicantName + (approved ? " (Approved Safe Mode target)" : " (Not approved for Safe Mode send)") + " | Date Applied: " + dateInfo.label + " | Aging: " + aging);
       setOpsText_("cockpitClassroomContext", "Current Ops applicant: " + applicantId + " - " + applicantName + (approved ? " (Approved Safe Mode target)" : " (Not approved for Safe Mode notify)") + " | Date Applied: " + dateInfo.label + " | Aging: " + aging);
+      setOpsText_("opsStageBatchApplicantContext", applicantId + " - " + applicantName);
       setOpsPill_("cockpitPortalSelectedApplicant", applicantId, approved ? "ok" : "warn");
       renderOpsSelectedApplicantMini_(opsApplicantDetailCache || null);
       renderOpsTemplateBrowser_();
@@ -2423,8 +2595,19 @@
           var key = String(btn.getAttribute("data-stage-key") || "");
           opsActionState.lifecycleStage = opsActionState.lifecycleStage === key ? "" : key;
           opsActionState.queueFilter = opsActionState.lifecycleStage ? ("stage:" + opsActionState.lifecycleStage) : "";
+          if (opsActionState.lifecycleStage) {
+            batchState.selectedStage = key;
+            batchState.priority = mapStagePriorityUi_(key);
+            batchState.messageType = getBatchMessageTypeForStageUi_(key);
+            batchState.sendable = isBatchSendableStageUi_(key);
+            batchState.disabledReason = batchState.sendable ? "" : "No batch message is supported for this stage.";
+            resetBatchPreviewState_(false);
+          } else {
+            clearBatchSelection_(false);
+          }
           renderOpsLifecycleCascade_();
           renderOpsQueue_();
+          renderBatchPanel();
           opsScrollTo_("opsAdmissionsQueue");
         });
       });
@@ -2668,20 +2851,26 @@
       var menu = document.getElementById("opsApplicantContextMenu");
       if (menu && menu.classList.contains("open") && !(ev.target && ev.target.closest && ev.target.closest("#opsApplicantContextMenu"))) opsHideContextMenu_();
     });
-    function bindOpsNav_(){
+    function bindOpsNav_(force){
       var shell = document.getElementById("opsCockpitShell");
-      if (!shell || shell.getAttribute("data-nav-bound") === "1") return;
+      if (!shell) return;
+      if (force === true) shell.setAttribute("data-nav-bound", "0");
+      if (shell.getAttribute("data-nav-bound") === "1") return;
       shell.setAttribute("data-nav-bound", "1");
       var links = Array.prototype.slice.call(shell.querySelectorAll(".opsNav a[href^='#']"));
       function syncActiveLink_(){
         var activeId = "";
         links.forEach(function(link){
+          if (link.classList.contains("hiddenByMode")) return;
           var target = document.querySelector(link.getAttribute("href"));
-          if (!target) return;
+          if (!target || target.classList.contains("hiddenByMode")) return;
           var rect = target.getBoundingClientRect();
           if (rect.top <= 140 && rect.bottom >= 140) activeId = link.getAttribute("href");
         });
-        if (!activeId && links.length) activeId = links[0].getAttribute("href");
+        if (!activeId) {
+          var firstVisible = links.filter(function(link){ return !link.classList.contains("hiddenByMode"); })[0];
+          if (firstVisible) activeId = firstVisible.getAttribute("href");
+        }
         links.forEach(function(link){
           link.classList.toggle("active", !!activeId && link.getAttribute("href") === activeId);
         });
@@ -2771,22 +2960,22 @@
       setOpsPill_("cockpitAdminWhoami", runtime.mismatch === false ? "Match" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitStudentWhoami", runtime.mismatch === false ? "Match" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitRuntimeCommit", "Unknown", "muted");
-      setOpsPill_("cockpitRuntimeTag", "staging-as177 accepted", "ok");
+      setOpsPill_("cockpitRuntimeTag", "staging-as178 accepted", "ok");
       setOpsPill_("cockpitWorkingTree", "Unknown", "muted");
       setOpsPill_("cockpitReleaseWhoami", runtime.mismatch === false ? "OK" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitReleaseRemote", "Unknown", "muted");
-      setOpsPill_("cockpitReleaseBrowser", "Accepted r177", "ok");
-      setOpsPill_("cockpitReleaseBrowserState", "Accepted r177", "ok");
+      setOpsPill_("cockpitReleaseBrowser", "Accepted r178", "ok");
+      setOpsPill_("cockpitReleaseBrowserState", "Accepted r178", "ok");
       setOpsPill_("cockpitReleaseGit", "Recorded externally", "info");
       setOpsPill_("cockpitReleaseDirty", "Unavailable here", "muted");
-      setOpsPill_("cockpitRuntimeCommit", "5f7d309", "ok");
-      setOpsPill_("cockpitRuntimeTag", "staging-as177 accepted", "ok");
-      setOpsPill_("cockpitReleaseNextTask", "r178 control hardening and activation classification", "info");
+      setOpsPill_("cockpitRuntimeCommit", "9a6f53f", "ok");
+      setOpsPill_("cockpitRuntimeTag", "staging-as178 accepted", "ok");
+      setOpsPill_("cockpitReleaseNextTask", "r179 full working surface", "info");
       setOpsPill_("cockpitRuntimeRemoteConfig", runtime.version ? "Loaded from runtime" : "Unknown", runtime.version ? "info" : "muted");
       setOpsPill_("cockpitRuntimeDrift", runtime.mismatch === false ? "No mismatch reported" : "Unknown until verified", runtime.mismatch === false ? "ok" : "warn");
       setOpsPill_("cockpitReleaseRuntime", version + " / " + String(deploy), "info");
-      setOpsText_("cockpitKpiNextRelease", "r178 control hardening candidate");
-      setOpsText_("cockpitKpiNextReleaseMeta", "r178 keeps dangerous writes controlled while hardening Super Admin behavior and classifying activation-ready functions.");
+      setOpsText_("cockpitKpiNextRelease", "r179 full working surface");
+      setOpsText_("cockpitKpiNextReleaseMeta", "r179 prioritizes WhatsApp, bulk communications, Admin working surface completion, and read-first Books usability without uncontrolled writes.");
       setOpsText_("cockpitKpiRuntimeState", runtime.mismatch === false ? "Live" : "Unknown");
       setOpsText_("cockpitKpiRuntimeMeta", runtime.mismatch === false ? "Admin and Student whoami align." : "Waiting on whoami alignment.");
       setOpsPill_("cockpitRuntimeStatusPill", runtime.mismatch === false ? "Runtime Match" : "Runtime Unknown", runtime.mismatch === false ? "ok" : "warn");
@@ -2794,7 +2983,7 @@
       setOpsText_("cockpitFooterStatus", "Safe Mode Controlled Actions");
       setOpsPill_("cockpitHealthLevel", runtime.mismatch === false ? "Warning" : "Unknown", runtime.mismatch === false ? "warn" : "muted");
       setOpsText_("cockpitHealthWhy", runtime.mismatch === false
-        ? "Runtime identity is aligned to the accepted r177 baseline. Release metadata shown here is read-only and depends on what was recorded during the release."
+        ? "Runtime identity is aligned to the accepted r178 baseline. Release metadata shown here is read-only and depends on what was recorded during the release."
         : "Runtime identity has not returned enough evidence yet.");
     }
     function renderOpsSafetyStatus_(data){
@@ -4972,13 +5161,13 @@
       return Math.max(0, n);
     }
     function getStageBatchLimitUi_(){
-      var el = document.getElementById("stageBatchLimit");
+      var el = firstExistingEl_("opsStageBatchLimit", "stageBatchLimit");
       var value = clampStageBatchLimitUi_(el && el.value);
       if (el) el.value = String(value);
       return value;
     }
     function getStageBatchOffsetUi_(){
-  var el = document.getElementById("stageBatchOffset");
+  var el = firstExistingEl_("opsStageBatchOffset", "stageBatchOffset");
   var value = clampStageBatchOffsetUi_(el && el.value);
   if (el) el.value = String(value);
   return value;
@@ -5031,7 +5220,7 @@ function onStageSelected(stageIndex){
   search();
 }
 function renderBatchPreviewDiagnostics_(res){
-  var panel = document.getElementById("stageBatchPreviewDiagnostics");
+  var panel = firstExistingEl_("opsStageBatchPreviewDiagnostics", "stageBatchPreviewDiagnostics");
   if (!panel) return;
   var isPreview = res && (String(res.action || "") === "preview_stage_batch" || batchState.action === "preview");
   if (!isPreview) {
@@ -5059,7 +5248,7 @@ function renderBatchPreviewDiagnostics_(res){
   panel.classList.remove("hidden");
 }
 function renderStageBatchSummary_(res){
-  var box = document.getElementById("stageBatchSummary");
+  var box = firstExistingEl_("opsStageBatchSummary", "stageBatchSummary");
   if (!box) return;
   if (!res) {
     box.classList.add("hidden");
@@ -5141,13 +5330,14 @@ function renderBatchPanel(){
   var limit = getStageBatchLimitUi_();
   getStageBatchOffsetUi_();
   var stageEl = document.getElementById("stageBatchSelectedStage");
-  var priorityEl = document.getElementById("stageBatchPriority");
-  var msgTypeEl = document.getElementById("stageBatchMessageType");
-  var sendableEl = document.getElementById("stageBatchSendable");
-  var disabledReasonEl = document.getElementById("stageBatchDisabledReason");
-  var previewBtn = document.getElementById("btnStageBatchPreview");
-  var sendBtn = document.getElementById("btnStageBatchSend");
-  var noteEl = document.getElementById("stageBatchInlineNote");
+  var priorityEl = firstExistingEl_("opsStageBatchPriority", "stageBatchPriority");
+  var msgTypeEl = firstExistingEl_("opsStageBatchMessageType", "stageBatchMessageType");
+  var sendableEl = firstExistingEl_("opsStageBatchSendable", "stageBatchSendable");
+  var disabledReasonEl = firstExistingEl_("opsStageBatchDisabledReason", "stageBatchDisabledReason");
+  var previewBtn = firstExistingEl_("btnOpsStageBatchPreview", "btnStageBatchPreview");
+  var sendBtn = firstExistingEl_("btnOpsStageBatchSend", "btnStageBatchSend");
+  var noteEl = firstExistingEl_("opsStageBatchInlineNote", "stageBatchInlineNote");
+  if (!stageEl) stageEl = firstExistingEl_("opsStageBatchSelectedStage", "stageBatchSelectedStage");
   if (stageEl) stageEl.textContent = selectedStage || "-";
   if (priorityEl) priorityEl.innerHTML = selectedStage ? renderPriorityBadge_(priority || mapStagePriorityUi_(selectedStage)) : "&mdash;";
   if (msgTypeEl) msgTypeEl.textContent = messageType || "-";
@@ -5192,12 +5382,14 @@ function onStageBatchOffsetChange_(){
 }
 function bindStageBatchControls_(){
   var limitInput = document.getElementById("stageBatchLimit");
+  if (!limitInput) limitInput = document.getElementById("opsStageBatchLimit");
   if (limitInput && limitInput.dataset.bound !== "1") {
     limitInput.dataset.bound = "1";
     limitInput.addEventListener("change", onStageBatchLimitChange_);
     limitInput.addEventListener("input", onStageBatchLimitChange_);
   }
   var offsetInput = document.getElementById("stageBatchOffset");
+  if (!offsetInput) offsetInput = document.getElementById("opsStageBatchOffset");
   if (offsetInput && offsetInput.dataset.bound !== "1") {
     offsetInput.dataset.bound = "1";
     offsetInput.addEventListener("change", onStageBatchOffsetChange_);
@@ -6539,12 +6731,22 @@ function renderStageDashboard_(items, emptyMessage){
       const btnReset = document.getElementById("btnResetLink");
       const btnLock = document.getElementById("btnLockPortal");
       const btnUnlock = document.getElementById("btnUnlockPortal");
+      const btnOpsWaExport = document.getElementById("opsWaExportBtn");
+      const btnOpsWaEmail = document.getElementById("opsWaEmailBtn");
       const overallStatusEl = document.getElementById("overallStatus");
       const emailOverrideWrap = document.getElementById("superEmailOverrideWrap");
       if (superTools) superTools.style.display = showSuper ? "flex" : "none";
       if (btnReset) btnReset.style.display = showSuper ? "inline-block" : "none";
       if (btnLock) btnLock.textContent = "Lock Editing";
       if (btnUnlock) btnUnlock.textContent = "Unlock Editing";
+      if (btnOpsWaExport) {
+        btnOpsWaExport.disabled = !showSuper;
+        btnOpsWaExport.textContent = showSuper ? "Export WhatsApp CSV" : "Export WhatsApp CSV (Super Admin-only)";
+      }
+      if (btnOpsWaEmail) {
+        btnOpsWaEmail.disabled = !showSuper;
+        btnOpsWaEmail.textContent = showSuper ? "Email CSV to Admins" : "Email CSV to Admins (Super Admin-only)";
+      }
       if (overallStatusEl) {
         overallStatusEl.disabled = !CAN_OVERRIDE;
         if (!CAN_OVERRIDE) {
@@ -6561,6 +6763,7 @@ function renderStageDashboard_(items, emptyMessage){
       }
       if (emailOverrideWrap) emailOverrideWrap.style.display = showSuper ? "block" : "none";
       renderOpsRoleDiagnostic_();
+      renderOpsModeUi_();
     }
 
     function applyAuditNow(){
@@ -7201,7 +7404,7 @@ function renderStageDashboard_(items, emptyMessage){
       setOpsValue_("waFallbackExported", Number(s.exported || 0));
       setOpsValue_("waFallbackInvalidPhone", Number(s.invalidPhone || 0));
       setOpsValue_("waFallbackSkippedDuplicate", Number(s.skippedDuplicatePhone || 0));
-      var emailBtn = document.getElementById("btnWaFallbackEmail");
+      var emailBtn = firstExistingEl_("opsWaEmailBtn", "btnWaFallbackEmail");
       if (emailBtn) emailBtn.disabled = !window.__waFallbackLastBatchLabel;
     }
 
@@ -7210,8 +7413,8 @@ function renderStageDashboard_(items, emptyMessage){
         setMsg("waFallbackMsg", "SUPER admin required.");
         return;
       }
-      var limitEl = document.getElementById("waFallbackLimit");
-      var filterEl = document.getElementById("waFallbackFilter");
+      var limitEl = firstExistingEl_("opsWaFallbackLimit", "waFallbackLimit");
+      var filterEl = firstExistingEl_("opsWaFallbackFilter", "waFallbackFilter");
       var limit = Number(limitEl && limitEl.value || <?= Number((CONFIG && CONFIG.WHATSAPP_FALLBACK_DEFAULT_LIMIT) || 20) ?>);
       var filter = String(filterEl && filterEl.value || "ALL_FALLBACK");
       if (!window.confirm("Export WhatsApp fallback CSV for up to " + String(limit) + " candidate(s) using filter " + filter + "? This exports sensitive contact data for manual operator use only.")) return;
@@ -7469,6 +7672,7 @@ function renderStageDashboard_(items, emptyMessage){
         renderOpsTemplateBrowser_();
         renderOpsActionRegistry_();
         renderOpsParityRegister_();
+        renderOpsDriftRegister_();
         loadStageDashboard();
         loadReviewQueues();
         fetchOpsApplicantSummary_();
@@ -7486,6 +7690,7 @@ function renderStageDashboard_(items, emptyMessage){
         renderOpsTemplateBrowser_();
         renderOpsActionRegistry_();
         renderOpsParityRegister_();
+        renderOpsDriftRegister_();
         loadStageDashboard();
         loadReviewQueues();
         fetchOpsApplicantSummary_();

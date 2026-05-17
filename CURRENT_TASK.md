@@ -2,41 +2,33 @@
 
 ## Active CIS
 
-- Release target: `r178 Ops Control Hardening + Activation Readiness`
+- Release target: `r179 Ops Full Working Surface`
 - Mode: local implementation only until a separate deployment approval.
 - Do not deploy, `clasp push`, create Apps Script versions, repin deployments, push git, or tag during this implementation step.
 
 ## Accepted Baseline
 
-- Release finalized: `r177 Ops Working Surface + Action Router + Admin Review Bridge`
-- Commit: `af33ca4`
-- Tag: `staging-as177`
-- Apps Script version: `186`
-- Runtime identity: `r177 / 177`
-- Admin staging deployment: `@186`
-- Student staging deployment: `@186`
-- Admin whoami: `r177 / 177`, `mismatch=false`
-- Student whoami: `r177 / 177`, `mismatch=false`
+- Release finalized: `r178 Super Admin Portal Controls and Action Activation Clarity`
+- Commit: `9a6f53f`
+- Tag: `staging-as178`
+- Apps Script version: `188`
+- Runtime identity: `r178 / 178`
+- Admin staging deployment: `@188`
+- Student staging deployment: `@188`
+- Admin whoami: `r178 / 178`, `mismatch=false`
+- Student whoami: `r178 / 178`, `mismatch=false`
 - Script ID: `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`
 - Expected starting git state: `## main...origin/main`
-- Rollback target for r178: repin Admin and Student staging deployments to accepted `r177 @186`.
+- Rollback target for r179: repin Admin and Student staging deployments to accepted `r178 @188`.
 
-## r178 Objective
+## r179 Objective
 
-- Make Super Admin detection observable and debuggable.
-- Ensure `sanjay@minervacenters.com` resolves as `SUPER` from the canonical role config source.
-- Fix legacy Admin portal reset visibility and server gating to `Super Admin` only.
-- Clarify the difference between:
-  - read-only portal link actions
-  - local editing lock/unlock
-  - portal reset / lock governance actions
-- Classify existing full-functionality actions with exact technical blockers:
-  - bulk email preview/send
-  - WhatsApp export/email
-  - Books draft/test actions
-  - portal controls
-- Preserve Admin / Ops parity and drift visibility.
-- Keep `DriveConfig` / `InstitutionConfig` as future architecture note only.
+- Make Ops a full working surface instead of a dashboard-only console.
+- Keep WhatsApp / communications capability first.
+- Keep bulk communications capability second.
+- Make Admin Mode the primary working surface and prevent Admin/Ops drift.
+- Keep Books read surfaces aggressively usable.
+- Improve operational navigation and grouping without redesign.
 
 ## Allowed File Scope
 
@@ -54,121 +46,87 @@
 - `.clasp.json`
 - Sheets, Drive, deployment state, Apps Script versions, and tags
 
-## r178 Local Scope Implemented
-
-- `Admin.js`
-  - `renderAdminApp_` now exposes canonical role observability inputs to the template:
-    - `SUPER_ADMIN_EMAILS`
-    - `ROLE_DECISION_SOURCE`
-  - `admin_resetPortalLink` now enforces `requireSuperAdmin_()` server-side.
+## Local r179 Scope Implemented
 
 - `AdminUI.html`
-  - added read-only role / identity diagnostic in `Rules & Config` showing:
+  - added a functional session-persistent top-left mode switch:
+    - `Operator Mode`
+    - `Admin Mode`
+    - `Super Admin Mode`
+  - mode visibility now follows existing role detection:
+    - Super Admin: all modes
+    - Admin: Operator + Admin
+    - other users: Operator only
+  - visible role strip now shows:
     - logged-in email
     - detected role
-    - `IS_SUPER`
-    - role-decision source
-    - expected Super Admin account
-    - current-email match state
-    - Super Admin mode switch visible yes/no
-    - reason if hidden
-    - temporary delegation status
-  - `setRoleUi()` now:
-    - hides `Reset Link` from non-super-admin users
-    - keeps editing lock buttons clearly labeled as local editing controls
-    - renders the role diagnostic each time role UI is applied
-  - legacy Admin portal labels clarified:
-    - `Unlock` -> `Unlock Editing`
-    - `Lock` -> `Lock Editing`
-    - helper text now states these do not change applicant portal access state
-    - `Reset Link` now states Super Admin only
-  - `resetPortalLink()` client path now blocks immediately for non-super-admin users
-  - action registry updated with exact activation classifications:
-    - bulk preview: `enabled-gated`
-    - bulk send: `prepared-r179` with exact recipient-review blocker
-    - WhatsApp export/email: `enabled-gated`
-    - Books draft create: `prepared-r179` with exact write-config/test-applicant blocker
-    - portal reset/lock: `enabled-gated`
-  - visible Rules / Config and release-copy drift labels updated from stale `r176` / `r177` references to the accepted `r177` baseline and `r178` next-candidate context
+    - current mode
+  - mode switching now changes visible working surfaces instead of being cosmetic
+  - selected applicant context is preserved across mode changes
+  - Admin Mode is now the primary working surface inside Ops for:
+    - Billing / Books reads
+    - Communications
+    - Classroom Handover
+    - WhatsApp / Contact Fallback
+  - Super Admin governance sections are now mode-scoped instead of always competing with operator work
+  - lifecycle stage selection now also prepares bulk-stage context for bulk preview/send
+  - added an Ops bulk communications card using the existing stage-batch preview/send path
+  - upgraded WhatsApp fallback section from passive diagnostics to governed working controls:
+    - export limit/filter visible
+    - export/email buttons visible
+    - buttons explicitly labeled Super Admin-only when blocked
+    - no direct WhatsApp send path exposed
+  - added a drift prevention register covering:
+    - duplicated action paths
+    - Admin-only actions
+    - Ops-only actions
+    - shared actions
+    - legacy Admin-only actions
+  - relabeled disabled actions to avoid dead buttons:
+    - `Prepared`
+    - `Coming Soon`
+    - `Super Admin-only`
+  - updated stale release/runtime copy from r177-era placeholders to accepted r178 baseline and r179 next-candidate wording
 
-## Canonical Super Admin Source
+## Drift Prevention Snapshot
 
-- `Config.js -> ADMIN_ROLES` is the canonical role source.
-- Matching is case-insensitive in `getAdminRole_()`.
-- `sanjay@minervacenters.com` is present as `SUPER`.
-- `SUPER_ADMIN_EMAILS` also contains `sanjay@minervacenters.com`.
-- Do not duplicate Super Admin identity elsewhere unless a later CIS explicitly changes the canonical source.
+- Duplicated action paths:
+  - Applicant review bridge plus legacy Admin review remain intentionally paired
+- Admin-only actions:
+  - portal reset
+  - portal access lock/unlock
+  - WhatsApp export/email
+  - bulk send candidate
+  - Books draft/test writes
+- Ops-only actions:
+  - lifecycle cascade
+  - selected-applicant queue routing
+  - role-driven mode switch
+  - operator dashboard grouping
+- Shared actions:
+  - applicant email preview/send
+  - billing preview
+  - open invoice
+  - portal diagnostics
+  - classroom preview/notify
+- Still using legacy Admin only:
+  - document verification edits
+  - overall override
+  - parent-email correction
+  - detailed modal document handling
 
-## Exact Action Classification Notes
+## Explicitly Not Activated In This Local r179 Step
 
-- `admin_previewStageBatch`
-  - can activate in r178
-  - already requires `Super Admin`
-  - preview-only, audit-visible, no send
-
-- `admin_sendStageBatch`
-  - prepare in r178, activate in r179
-  - exact blocker:
-    - current send flow validates preview parity and stage snapshot
-    - current Ops surface still lacks final recipient-level suppression review before live bulk send
-
-- `admin_exportWhatsAppFallbackCsv`
-  - can activate in r178
-  - exact basis:
-    - `Super Admin` only
-    - explicit confirmation
-    - capped export
-    - audit event
-    - no WhatsApp send occurs
-
-- `admin_emailWhatsAppFallbackCsv`
-  - can activate in r178
-  - exact basis:
-    - `Super Admin` only
-    - explicit confirmation
-    - requires prior cached export snapshot
-    - sends only to configured admin recipients
-
-- `admin_createZohoBooksFodeDraftInvoice`
-  - prepare in r178, activate in r179
-  - exact blocker:
-    - requires Books live-write enablement
-    - requires preview-ready parity
-    - requires explicit Zoho Books test-applicant allowlist
-    - current Ops flow does not yet prove safe handoff for create-from-preview
-
-- `admin_sendZohoBooksTestInvoiceEmail`
-  - prepare in r178, activate in r179
-  - exact blocker:
-    - requires draft invoice already created
-    - requires test-recipient config
-    - should remain tied to explicit Books test applicant flow
-
-## Explicitly Not Activated In This Local r178 Step
-
-- Books draft create/send live activation
-- bulk send live activation
+- direct WhatsApp send
+- uncontrolled bulk send
+- Books draft create/test email live activation
 - payment verified write
 - enrolment write
-- parent email correction activation from Ops
 - document/status writes from Ops
 - overall status override from Ops
-- classroom package/mark enrolled
+- classroom package / mark enrolled
 - token backfill apply
 - silent/background mass action
-
-## Codebase Size Control
-
-- `AdminUI.html` is already large.
-- r178 changes were kept localized to:
-  - role observability
-  - legacy portal-control clarity
-  - action registry classification
-- If later r178 review demands larger new UI surfaces, stop and split by boundary:
-  - role diagnostics / governance
-  - portal controls
-  - bulk activation surfaces
-  - Books activation surfaces
 
 ## Required Local Stop State
 
@@ -180,7 +138,9 @@
 
 - Run local validation on the scoped changes.
 - Review:
-  - Super Admin observability
-  - legacy Admin portal reset hardening
-  - action-registry activation classification
-- If accepted, prepare a separate r178 deployment CIS.
+  - functional mode switching
+  - Admin-primary working surface grouping
+  - WhatsApp and bulk working-path activation
+  - drift prevention register
+  - no dead-button regressions
+- If accepted, prepare a separate r179 deployment CIS.
