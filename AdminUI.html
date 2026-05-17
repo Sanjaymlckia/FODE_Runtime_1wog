@@ -909,7 +909,7 @@
           </div>
         </div>
         <div class="opsKpiGrid">
-          <div class="opsKpiCard"><div class="opsKpiIcon blue">&lt;/&gt;</div><div><div class="kpiLabel">Runtime</div><div class="kpiValue" id="cockpitKpiRuntime">r176 / 176</div><div class="kpiState" id="cockpitKpiRuntimeState">Baseline live</div><div class="kpiMeta" id="cockpitKpiRuntimeMeta">Waiting on Admin and Student whoami.</div></div></div>
+          <div class="opsKpiCard"><div class="opsKpiIcon blue">&lt;/&gt;</div><div><div class="kpiLabel">Runtime</div><div class="kpiValue" id="cockpitKpiRuntime">r177 / 177</div><div class="kpiState" id="cockpitKpiRuntimeState">Baseline live</div><div class="kpiMeta" id="cockpitKpiRuntimeMeta">Waiting on Admin and Student whoami.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon green">B</div><div><div class="kpiLabel">Billing Status</div><div class="kpiValue" id="cockpitKpiBilling">Books Connected</div><div class="kpiState" id="cockpitKpiBillingState">Read-only</div><div class="kpiMeta" id="cockpitKpiBillingMeta">Invoice snapshot loading. Cockpit writes disabled.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon purple">A</div><div><div class="kpiLabel">Admissions Status</div><div class="kpiValue" id="cockpitKpiAdmissions">Queue Loading</div><div class="kpiState">Visibility Only</div><div class="kpiMeta" id="cockpitKpiAdmissionsMeta">Applicant rows use existing read-only loaders.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon amber">!</div><div><div class="kpiLabel">System Health</div><div class="kpiValue" id="cockpitKpiRisks">Unknown</div><div class="kpiState" id="cockpitKpiRiskState">Defined States</div><div class="kpiMeta" id="cockpitKpiRisksMeta">Healthy, Warning, Blocked, Degraded, or Unknown.</div></div></div>
@@ -919,12 +919,12 @@
             <div class="opsSectionHeader"><div><h3>Executive Snapshot</h3><p>Operator/Admin layer first. Governance and release controls remain secondary.</p></div><span class="opsStatusPill info">Safe Mode Controlled Actions</span></div>
             <div class="opsResultBox warn">Safe Mode is required for existing Ops live actions. Single-record safe tests are restricted to the approved target identity only.</div>
             <div class="opsMetricGrid">
-              <div class="opsMetric"><div class="k">Next Action</div><div class="v" id="cockpitKpiNextRelease">r176 stabilization candidate</div></div>
+              <div class="opsMetric"><div class="k">Next Action</div><div class="v" id="cockpitKpiNextRelease">r178 control hardening candidate</div></div>
               <div class="opsMetric"><div class="k">Queue Summary</div><div class="v" id="cockpitDashboardQueue">Loading</div></div>
               <div class="opsMetric"><div class="k">Billing</div><div class="v">Safe Mode Controlled Actions</div></div>
               <div class="opsMetric"><div class="k">Admissions</div><div class="v">Read-only review</div></div>
             </div>
-            <div class="opsPlaceholder" id="cockpitKpiNextReleaseMeta">r176 stabilizes release metadata, role layers, and Admin/Ops drift control without broadening writes.</div>
+            <div class="opsPlaceholder" id="cockpitKpiNextReleaseMeta">r178 hardens Super Admin controls, clarifies portal behavior, and classifies full-functionality activation without uncontrolled writes.</div>
             <div class="opsActionRow">
               <button class="opsActionBtn primary live" type="button" onclick="opsRefreshSnapshot_()">Refresh Snapshot</button>
               <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsAdmissionsQueue')">View Priority Queue</button>
@@ -990,7 +990,7 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Config Identity</h3></div><span class="opsStatusPill info">Read only</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Config VERSION</span><span class="opsStatusPill info" id="cockpitRuntimeConfigVersion">r176</span></div>
+              <div class="opsChecklistRow"><span>Config VERSION</span><span class="opsStatusPill info" id="cockpitRuntimeConfigVersion">r177</span></div>
               <div class="opsChecklistRow"><span>DEPLOY_VERSION_NUMBER</span><span class="opsStatusPill info" id="cockpitRuntimeDeployNumber">175</span></div>
               <div class="opsChecklistRow"><span>Apps Script platform/version</span><span class="opsStatusPill muted" id="cockpitAppsScript">Unknown</span></div>
               <div class="opsChecklistRow"><span>Remote config status</span><span class="opsStatusPill muted" id="cockpitRuntimeRemoteConfig">Unknown</span></div>
@@ -1020,8 +1020,8 @@
             <div class="opsSectionHeader"><div><h3>Accepted Baseline</h3></div><span class="opsStatusPill muted">Current known</span></div>
             <div class="opsChecklist">
               <div class="opsChecklistRow"><span>Commit</span><span class="opsStatusPill muted" id="cockpitRuntimeCommit">5f7d309</span></div>
-              <div class="opsChecklistRow"><span>Tag</span><span class="opsStatusPill muted" id="cockpitRuntimeTag">staging-as176</span></div>
-              <div class="opsChecklistRow"><span>Browser acceptance</span><span class="opsStatusPill ok" id="cockpitReleaseBrowser">Accepted r176</span></div>
+              <div class="opsChecklistRow"><span>Tag</span><span class="opsStatusPill muted" id="cockpitRuntimeTag">staging-as177</span></div>
+              <div class="opsChecklistRow"><span>Browser acceptance</span><span class="opsStatusPill ok" id="cockpitReleaseBrowser">Accepted r177</span></div>
             </div>
             <div class="opsActionRow">
               <button class="opsActionBtn" type="button" disabled>Run Runtime Check</button>
@@ -1232,10 +1232,10 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Release State</h3></div><span class="opsStatusPill muted">Read only</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Current runtime</span><span class="opsStatusPill info" id="cockpitReleaseRuntime">r176 / 176</span></div>
-              <div class="opsChecklistRow"><span>Accepted baseline</span><span class="opsStatusPill ok">r176 / staging-as176</span></div>
+              <div class="opsChecklistRow"><span>Current runtime</span><span class="opsStatusPill info" id="cockpitReleaseRuntime">r177 / 177</span></div>
+              <div class="opsChecklistRow"><span>Accepted baseline</span><span class="opsStatusPill ok">r177 / staging-as177</span></div>
               <div class="opsChecklistRow"><span>Whoami status</span><span class="opsStatusPill muted" id="cockpitReleaseWhoami">Unknown</span></div>
-              <div class="opsChecklistRow"><span>Browser acceptance status</span><span class="opsStatusPill ok" id="cockpitReleaseBrowserState">Accepted r176</span></div>
+              <div class="opsChecklistRow"><span>Browser acceptance status</span><span class="opsStatusPill ok" id="cockpitReleaseBrowserState">Accepted r177</span></div>
               <div class="opsChecklistRow"><span>Commit / tag state</span><span class="opsStatusPill info" id="cockpitReleaseGit">Recorded externally</span></div>
               <div class="opsChecklistRow"><span>Remote Config verified</span><span class="opsStatusPill muted" id="cockpitReleaseRemote">Unknown</span></div>
               <div class="opsChecklistRow"><span>Local Git state</span><span class="opsStatusPill muted" id="cockpitReleaseDirty">Unavailable unless release metadata is recorded</span></div>
@@ -1244,9 +1244,9 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Control Checklist</h3></div><span class="opsStatusPill danger">Disabled</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Rollback target</span><span class="opsStatusPill info">r176 / staging-as176 / @185</span></div>
+              <div class="opsChecklistRow"><span>Rollback target</span><span class="opsStatusPill info">r177 / staging-as177 / @186</span></div>
               <div class="opsChecklistRow"><span>Current blockers</span><span class="opsStatusPill warn">Deployment action remains externalized</span></div>
-              <div class="opsChecklistRow"><span>Next release candidate</span><span class="opsStatusPill info" id="cockpitReleaseNextTask">r176</span></div>
+              <div class="opsChecklistRow"><span>Next release candidate</span><span class="opsStatusPill info" id="cockpitReleaseNextTask">r178</span></div>
               <div class="opsChecklistRow"><span>Git metadata note</span><span class="opsStatusPill muted">Record commit/tag/clean state during release; Apps Script cannot read local Git directly</span></div>
             </div>
             <div class="opsActionRow">
@@ -1262,16 +1262,31 @@
       </section>
       <section id="opsRulesConfig" class="opsSectionPage">
         <div class="opsPageIntro">
-          <div><h2>Rules & Config</h2><p>Settings are classified by operational risk. r176 clarifies role boundaries and drift control only; dangerous writes remain locked.</p></div>
+          <div><h2>Rules & Config</h2><p>Settings are classified by operational risk. r178 hardens Super Admin controls, clarifies portal behavior, and activates only functions that already have enforceable gates.</p></div>
           <span class="opsStatusPill ok">Super Admin / Governance</span>
         </div>
         <div class="opsSectionGrid">
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Role / Identity Diagnostic</h3><p>Read-only role observability for governance and Super Admin rendering checks.</p></div><span class="opsStatusPill info">Read only</span></div>
+            <div class="opsChecklist">
+              <div class="opsChecklistRow"><span>Logged-in email</span><span class="opsStatusPill info" id="opsRoleEmail">Unknown</span></div>
+              <div class="opsChecklistRow"><span>Role detected</span><span class="opsStatusPill info" id="opsRoleDetected">Unknown</span></div>
+              <div class="opsChecklistRow"><span>IS_SUPER</span><span class="opsStatusPill muted" id="opsRoleIsSuper">Unknown</span></div>
+              <div class="opsChecklistRow"><span>Role decision source</span><span class="opsStatusPill muted" id="opsRoleSource">Unknown</span></div>
+              <div class="opsChecklistRow"><span>Expected Super Admin account</span><span class="opsStatusPill info" id="opsRoleExpectedSuper">Unknown</span></div>
+              <div class="opsChecklistRow"><span>Current email matches expected Super Admin</span><span class="opsStatusPill muted" id="opsRoleExpectedMatch">Unknown</span></div>
+              <div class="opsChecklistRow"><span>Super Admin mode switch visible</span><span class="opsStatusPill muted" id="opsRoleSwitchVisible">Unknown</span></div>
+              <div class="opsChecklistRow"><span>Reason if hidden</span><span class="opsStatusPill muted" id="opsRoleSwitchReason">Unknown</span></div>
+              <div class="opsChecklistRow"><span>Temporary delegation status</span><span class="opsStatusPill muted">Not active / future design</span></div>
+            </div>
+            <div class="opsResultBox warn" id="opsRoleDiagnosticNote">Role diagnostic loading.</div>
+          </div>
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Admin / Ops Parity Map</h3></div><span class="opsStatusPill info">Read only</span></div>
             <div class="opsChecklist" id="opsParityRegister"></div>
           </div>
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>r177 Action Registry</h3><p>Each action is classified by role, surface, function, write/export/bulk risk, confirmation, audit, and activation state.</p></div><span class="opsStatusPill info">Registry driven</span></div>
+            <div class="opsSectionHeader"><div><h3>r178 Action Registry</h3><p>Each action is classified by role, surface, function, write/export/bulk risk, confirmation, audit, activation state, and exact blocker if not yet enabled.</p></div><span class="opsStatusPill info">Registry driven</span></div>
             <div class="opsTableWrap">
               <table class="opsRegistryTable">
                 <thead><tr><th>Action</th><th>Surface</th><th>Function / Bridge</th><th>Role</th><th>Class</th><th>Status</th><th>Confirm / Audit</th><th>Reason</th></tr></thead>
@@ -1292,7 +1307,9 @@
                   <div class="opsChecklistRow"><span>Bulk email controls</span><span class="opsStatusPill muted">Prepared; activate after selected-recipient composer</span></div>
                   <div class="opsChecklistRow"><span>WhatsApp export/email controls</span><span class="opsStatusPill warn">Enabled with confirmation and audit</span></div>
                   <div class="opsChecklistRow"><span>Books write controls</span><span class="opsStatusPill muted">Prepared only; not activated</span></div>
-                  <div class="opsChecklistRow"><span>Portal reset/lock and corrections</span><span class="opsStatusPill muted">Prepared only; not activated</span></div>
+                  <div class="opsChecklistRow"><span>Portal link reset</span><span class="opsStatusPill warn">Super Admin only; explicit confirmation</span></div>
+                  <div class="opsChecklistRow"><span>Portal access lock/unlock</span><span class="opsStatusPill warn">Super Admin only; explicit confirmation</span></div>
+                  <div class="opsChecklistRow"><span>Local editing lock/unlock</span><span class="opsStatusPill info">Client-only modal state</span></div>
                   <div class="opsChecklistRow"><span>Temporary Super Admin delegation</span><span class="opsStatusPill muted">Design/status only; no delegation write</span></div>
                 </div>
               </div>
@@ -1305,7 +1322,7 @@
               <div class="opsMeaningItem"><strong>Operator/Admin</strong>Daily admissions, billing preview, communications preview/send gates, classroom preview, and diagnostics.</div>
               <div class="opsMeaningItem"><strong>Super Admin/Governance</strong>Runtime truth, release metadata visibility, Safe Mode boundaries, and disabled high-risk controls.</div>
               <div class="opsMeaningItem"><strong>Developer/Release</strong>Source edits, git state, clasp push/version, deployment pinning, and rollback remain external to this UI.</div>
-              <div class="opsMeaningItem"><strong>Temporary Super Admin delegation</strong>Future design item only. No delegation model is implemented in r176.</div>
+              <div class="opsMeaningItem"><strong>Temporary Super Admin delegation</strong>Future design item only. No delegation model is implemented in r178.</div>
             </div>
           </div>
           <div class="opsCard">
@@ -1862,17 +1879,18 @@
         </div>
         <button id="btnSaveOverall" class="btn ok" onclick="saveOverall()">Save Overall</button>
         <div style="flex:1;"></div>
-        <button id="btnUnlockPortal" class="btn small" onclick="unlockReview_()">Unlock</button>
-        <button id="btnLockPortal" class="btn small danger" onclick="lockReview_()">Lock</button>
+        <button id="btnUnlockPortal" class="btn small" onclick="unlockReview_()" title="Local editing lock only. Does not change portal access state.">Unlock Editing</button>
+        <button id="btnLockPortal" class="btn small danger" onclick="lockReview_()" title="Local editing lock only. Does not change portal access state.">Lock Editing</button>
       </div>
 
       <div class="row" style="margin-top:10px;">
         <button id="btnSaveDocs" class="btn accent" onclick="saveDocs()">Save Document Statuses</button>
         <button id="btnCopyLink" class="btn" onclick="copyPortalLink()">Copy Portal Link</button>
-        <button id="btnResetLink" class="btn warn" onclick="resetPortalLink()">Reset Link</button>
+        <button id="btnResetLink" class="btn warn" onclick="resetPortalLink()" title="Super Admin only. Resets the portal secret and generates a new link.">Reset Link</button>
         <button id="btnRefreshDetails" class="btn small" onclick="refreshDetails()">Refresh Details</button>
       </div>
       <div id="docsRouteHint" class="muted" style="margin-top:8px;font-size:12px;"></div>
+      <div class="muted" style="margin-top:6px;font-size:12px;">Copy Portal Link is read-only. Reset Link is Super Admin only and regenerates the portal secret after confirmation. Unlock Editing / Lock Editing are local modal controls only and do not change applicant portal access state. Actual portal access lock/unlock is a separate Super Admin server action.</div>
 
       <details id="superEmailOverrideWrap" style="margin-top:10px;">
         <summary style="cursor:pointer;font-weight:700;">Super Admin: Override Parent Email (Corrected)</summary>
@@ -1927,6 +1945,8 @@
   <script>
     const ADMIN_ROLE = <?!= JSON.stringify(String(ADMIN_ROLE || "")) ?>;
     const IS_SUPER = <?!= JSON.stringify(!!IS_SUPER) ?>;
+    const SUPER_ADMIN_EMAILS = <?!= JSON.stringify((SUPER_ADMIN_EMAILS || []).map(function(v){ return String(v || ""); })) ?>;
+    const ROLE_DECISION_SOURCE = <?!= JSON.stringify(String(ROLE_DECISION_SOURCE || "CONFIG.ADMIN_ROLES")) ?>;
     const CAN_OVERRIDE = <?!= JSON.stringify(!!CAN_OVERRIDE) ?>;
     const ADMIN_EMAIL = <?!= JSON.stringify(String(USER_EMAIL || "")) ?>;
     const STUDENT_URL_READY = <?!= JSON.stringify(!!STUDENT_URL_READY) ?>;
@@ -2079,13 +2099,15 @@
         { id:"openBilling", label:"Open billing", source:"Context Menu", surface:"Billing / Zoho Books", fn:"client:scroll + admin_previewZohoBooksFodePayload", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Read-only selected-applicant Books preview/status." },
         { id:"openInvoice", label:"Open invoice", source:"Billing / Context Menu", surface:"Billing / Zoho Books", fn:"client:window.open invoice URL", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Opens existing invoice URL only." },
         { id:"refreshBooksStatus", label:"Refresh Books status", source:"Billing / Context Menu", surface:"Billing / Zoho Books", fn:"admin_previewZohoBooksFodePayload", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Read-only status/payload preview." },
-        { id:"booksDraftCreate", label:"Create Books draft invoice", source:"Super Admin Mode", surface:"Billing / Zoho Books", fn:"admin_createZohoBooksFodeDraftInvoice", role:"Super Admin/Governance", kind:"write", status:"deferred", confirm:true, audit:true, reason:"Existing function is live-capable but r177 does not activate Books writes." },
+        { id:"booksDraftCreate", label:"Create Books draft invoice", source:"Super Admin Mode", surface:"Billing / Zoho Books", fn:"admin_createZohoBooksFodeDraftInvoice", role:"Super Admin/Governance", kind:"write", status:"prepared-r179", confirm:true, audit:true, reason:"Blocked in r178 because live write requires write-enabled Books config, preview READY parity, and explicit Zoho Books test-applicant allowlist; current Ops surface does not yet prove that handoff." },
         { id:"viewPortalStatus", label:"View portal status", source:"Context Menu", surface:"Portal Diagnostics", fn:"admin_getStudentPortalLink", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Read-only portal URL/status diagnostics." },
-        { id:"portalResetLock", label:"Portal reset/lock", source:"Super Admin Mode", surface:"Portal Diagnostics", fn:"admin_resetPortalLink/admin_setPortalAccess", role:"Super Admin/Governance", kind:"write", status:"deferred", confirm:true, audit:true, reason:"Forbidden in r177 unless separately matrix-approved." },
+        { id:"portalLinkReset", label:"Portal Link Reset", source:"Super Admin Mode", surface:"Portal Diagnostics", fn:"admin_resetPortalLink", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Can activate in r178: explicit browser confirmation is required, and the server enforces requireSuperAdmin_() before resetting the portal secret." },
+        { id:"portalAccessLockUnlock", label:"Portal Access Lock/Unlock", source:"Super Admin Mode", surface:"Portal Diagnostics", fn:"admin_setPortalAccess", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Can activate in r178 only with explicit browser confirmation showing ApplicantID and target access state. Server already enforces requireSuperAdmin_()." },
+        { id:"localEditingLock", label:"Local Editing Lock/Unlock", source:"Legacy Admin modal", surface:"Applicant Review modal", fn:"client:unlockReview_/lockReview_", role:"Operator/Admin", kind:"client-state", status:"enabled", confirm:false, audit:false, reason:"Local modal editing state only. Does not change applicant portal access status." },
         { id:"viewClassroom", label:"View classroom handover", source:"Context Menu", surface:"Classroom Handover", fn:"admin_previewOpsClassroomHandover", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:true, reason:"Preview logs existing handover review event." },
         { id:"notifyClassroom", label:"Notify classroom admin", source:"Classroom", surface:"Classroom Handover", fn:"admin_notifyOpsClassroomAdmin", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Internal single-send only; preview and Safe Mode gate required." },
-        { id:"bulkPreview", label:"Bulk email preview", source:"Super Admin Mode", surface:"Communications", fn:"admin_previewStageBatch", role:"Super Admin/Governance", kind:"bulk-read", status:"prepared", confirm:false, audit:true, reason:"Existing stage-batch preview is ready; Ops selected-recipient composer is not yet complete." },
-        { id:"bulkSend", label:"Bulk email send", source:"Super Admin Mode", surface:"Communications", fn:"admin_sendStageBatch", role:"Super Admin/Governance", kind:"bulk-write", status:"deferred", confirm:true, audit:true, reason:"Existing send is stage-based; r177 lacks selected-recipient bulk composer and final suppression review UI." },
+        { id:"bulkPreview", label:"Bulk email preview", source:"Super Admin Mode", surface:"Communications", fn:"admin_previewStageBatch", role:"Super Admin/Governance", kind:"bulk-read", status:"enabled-gated", confirm:false, audit:true, reason:"Can activate in r178: server already requires Super Admin and preview-only mode, and returns bounded eligible/blocked counts with replay summary." },
+        { id:"bulkSend", label:"Bulk email send", source:"Super Admin Mode", surface:"Communications", fn:"admin_sendStageBatch", role:"Super Admin/Governance", kind:"bulk-write", status:"prepared-r179", confirm:true, audit:true, reason:"Blocked in r178 because current send confirms stage/preview parity only; Ops still lacks final recipient-level suppression review before a live bulk send." },
         { id:"whatsappExport", label:"WhatsApp CSV export", source:"Fallbacks / Super Admin", surface:"WhatsApp Fallback", fn:"admin_exportWhatsAppFallbackCsv", role:"Super Admin/Governance", kind:"export", status:"enabled-gated", confirm:true, audit:true, reason:"Existing export is capped, Super Admin gated, logged, and does not send WhatsApp." },
         { id:"whatsappEmailCsv", label:"Email WhatsApp CSV", source:"Fallbacks / Super Admin", surface:"WhatsApp Fallback", fn:"admin_emailWhatsAppFallbackCsv", role:"Super Admin/Governance", kind:"export-send", status:"enabled-gated", confirm:true, audit:true, reason:"Emails cached CSV only to configured admin recipients after export confirmation." },
         { id:"copyApplicantId", label:"Copy ApplicantID", source:"Context Menu", surface:"Clipboard", fn:"navigator.clipboard.writeText", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"No data mutation." },
@@ -2096,11 +2118,32 @@
       var key = String(id || "");
       return opsActionRegistry_().filter(function(action){ return action.id === key; })[0] || null;
     }
+    function renderOpsRoleDiagnostic_(){
+      var normalizedEmail = String(ADMIN_EMAIL || "").trim().toLowerCase();
+      var normalizedExpected = (SUPER_ADMIN_EMAILS || []).map(function(v){ return String(v || "").trim().toLowerCase(); }).filter(function(v){ return !!v; });
+      var expectedPrimary = normalizedExpected[0] || "";
+      var matchesExpected = !!expectedPrimary && normalizedEmail === expectedPrimary;
+      var switchVisible = IS_SUPER === true;
+      var hiddenReason = switchVisible ? "Visible for SUPER role." : (matchesExpected ? "Configured SUPER account did not resolve IS_SUPER=true. Check ADMIN_ROLES render path." : "Current login is not a configured SUPER account.");
+      setOpsPill_("opsRoleEmail", ADMIN_EMAIL || "Unknown", ADMIN_EMAIL ? "info" : "muted");
+      setOpsPill_("opsRoleDetected", ADMIN_ROLE === "SUPER" ? "Super Admin" : "Operator/Admin", ADMIN_ROLE === "SUPER" ? "warn" : "info");
+      setOpsPill_("opsRoleIsSuper", IS_SUPER ? "true" : "false", IS_SUPER ? "warn" : "muted");
+      setOpsPill_("opsRoleSource", ROLE_DECISION_SOURCE || "CONFIG.ADMIN_ROLES", "muted");
+      setOpsPill_("opsRoleExpectedSuper", expectedPrimary || "No configured SUPER account", expectedPrimary ? "info" : "muted");
+      setOpsPill_("opsRoleExpectedMatch", matchesExpected ? "yes" : "no", matchesExpected ? "ok" : "warn");
+      setOpsPill_("opsRoleSwitchVisible", switchVisible ? "yes" : "no", switchVisible ? "ok" : "warn");
+      setOpsPill_("opsRoleSwitchReason", hiddenReason, switchVisible ? "ok" : "warn");
+      var note = "Role is resolved from " + (ROLE_DECISION_SOURCE || "CONFIG.ADMIN_ROLES") + " using case-insensitive email matching.";
+      if (matchesExpected && !IS_SUPER) note += " Expected SUPER account is logged in but IS_SUPER is false. Treat this as a role/config mismatch before enabling mode-dependent actions.";
+      else if (switchVisible) note += " Super Admin mode controls may render for this login, but each high-risk action remains individually gated.";
+      else note += " Super Admin mode stays hidden for non-SUPER logins.";
+      setOpsResult_("opsRoleDiagnosticNote", { result: matchesExpected && !IS_SUPER ? "BLOCKED" : "INFO", blockReason: note }, "Role Diagnostic");
+    }
     function renderOpsActionRegistry_(){
       var body = document.getElementById("opsActionRegistryBody");
       if (!body) return;
       body.innerHTML = opsActionRegistry_().map(function(action){
-        var statusKind = action.status === "enabled" ? "ok" : (action.status === "enabled-gated" || action.status === "prepared" ? "warn" : "muted");
+        var statusKind = action.status === "enabled" ? "ok" : (action.status === "enabled-gated" || action.status === "prepared" || action.status === "prepared-r179" ? "warn" : "muted");
         return "<tr>"
           + "<td><strong>" + esc(action.label) + "</strong><br><span class='opsPlaceholder'>" + esc(action.id) + "</span></td>"
           + "<td>" + esc(action.source) + "<br>" + esc(action.surface) + "</td>"
@@ -2728,22 +2771,22 @@
       setOpsPill_("cockpitAdminWhoami", runtime.mismatch === false ? "Match" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitStudentWhoami", runtime.mismatch === false ? "Match" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitRuntimeCommit", "Unknown", "muted");
-      setOpsPill_("cockpitRuntimeTag", "staging-as176 accepted", "ok");
+      setOpsPill_("cockpitRuntimeTag", "staging-as177 accepted", "ok");
       setOpsPill_("cockpitWorkingTree", "Unknown", "muted");
       setOpsPill_("cockpitReleaseWhoami", runtime.mismatch === false ? "OK" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitReleaseRemote", "Unknown", "muted");
-      setOpsPill_("cockpitReleaseBrowser", "Accepted r176", "ok");
-      setOpsPill_("cockpitReleaseBrowserState", "Accepted r176", "ok");
+      setOpsPill_("cockpitReleaseBrowser", "Accepted r177", "ok");
+      setOpsPill_("cockpitReleaseBrowserState", "Accepted r177", "ok");
       setOpsPill_("cockpitReleaseGit", "Recorded externally", "info");
       setOpsPill_("cockpitReleaseDirty", "Unavailable here", "muted");
       setOpsPill_("cockpitRuntimeCommit", "5f7d309", "ok");
-      setOpsPill_("cockpitRuntimeTag", "staging-as176 accepted", "ok");
-      setOpsPill_("cockpitReleaseNextTask", "r176 ops stabilization and drift control", "info");
+      setOpsPill_("cockpitRuntimeTag", "staging-as177 accepted", "ok");
+      setOpsPill_("cockpitReleaseNextTask", "r178 control hardening and activation classification", "info");
       setOpsPill_("cockpitRuntimeRemoteConfig", runtime.version ? "Loaded from runtime" : "Unknown", runtime.version ? "info" : "muted");
       setOpsPill_("cockpitRuntimeDrift", runtime.mismatch === false ? "No mismatch reported" : "Unknown until verified", runtime.mismatch === false ? "ok" : "warn");
       setOpsPill_("cockpitReleaseRuntime", version + " / " + String(deploy), "info");
-      setOpsText_("cockpitKpiNextRelease", "r176 stabilization candidate");
-      setOpsText_("cockpitKpiNextReleaseMeta", "r176 keeps writes gated and focuses on release metadata, role clarity, and Admin/Ops drift control.");
+      setOpsText_("cockpitKpiNextRelease", "r178 control hardening candidate");
+      setOpsText_("cockpitKpiNextReleaseMeta", "r178 keeps dangerous writes controlled while hardening Super Admin behavior and classifying activation-ready functions.");
       setOpsText_("cockpitKpiRuntimeState", runtime.mismatch === false ? "Live" : "Unknown");
       setOpsText_("cockpitKpiRuntimeMeta", runtime.mismatch === false ? "Admin and Student whoami align." : "Waiting on whoami alignment.");
       setOpsPill_("cockpitRuntimeStatusPill", runtime.mismatch === false ? "Runtime Match" : "Runtime Unknown", runtime.mismatch === false ? "ok" : "warn");
@@ -2751,7 +2794,7 @@
       setOpsText_("cockpitFooterStatus", "Safe Mode Controlled Actions");
       setOpsPill_("cockpitHealthLevel", runtime.mismatch === false ? "Warning" : "Unknown", runtime.mismatch === false ? "warn" : "muted");
       setOpsText_("cockpitHealthWhy", runtime.mismatch === false
-        ? "Runtime identity is aligned to the accepted r176 baseline. Release metadata shown here is read-only and depends on what was recorded during the release."
+        ? "Runtime identity is aligned to the accepted r177 baseline. Release metadata shown here is read-only and depends on what was recorded during the release."
         : "Runtime identity has not returned enough evidence yet.");
     }
     function renderOpsSafetyStatus_(data){
@@ -6499,9 +6542,9 @@ function renderStageDashboard_(items, emptyMessage){
       const overallStatusEl = document.getElementById("overallStatus");
       const emailOverrideWrap = document.getElementById("superEmailOverrideWrap");
       if (superTools) superTools.style.display = showSuper ? "flex" : "none";
-      if (btnReset) btnReset.style.display = "inline-block";
-      if (btnLock) btnLock.style.display = "inline-block";
-      if (btnUnlock) btnUnlock.style.display = "inline-block";
+      if (btnReset) btnReset.style.display = showSuper ? "inline-block" : "none";
+      if (btnLock) btnLock.textContent = "Lock Editing";
+      if (btnUnlock) btnUnlock.textContent = "Unlock Editing";
       if (overallStatusEl) {
         overallStatusEl.disabled = !CAN_OVERRIDE;
         if (!CAN_OVERRIDE) {
@@ -6517,6 +6560,7 @@ function renderStageDashboard_(items, emptyMessage){
         warnText.textContent = STUDENT_URL_WARNING || "Student URL not configured.";
       }
       if (emailOverrideWrap) emailOverrideWrap.style.display = showSuper ? "block" : "none";
+      renderOpsRoleDiagnostic_();
     }
 
     function applyAuditNow(){
@@ -6866,6 +6910,9 @@ function renderStageDashboard_(items, emptyMessage){
 
     function setPortal(status){
       if (!currentRowNumber) return;
+      var applicantId = String((currentDetail && currentDetail.ApplicantID) || "").trim() || "Unknown ApplicantID";
+      var targetStatus = String(status || "").trim();
+      if (!window.confirm("Change portal access for " + applicantId + " to " + targetStatus + "? This updates applicant portal access state.")) return;
       run_("admin_setPortalAccess", { rowNumber: currentRowNumber, status }, function(res){
           setMsg("mMsg","Portal set to: " + status + ".");
           var freshDetail = res && res.detail;
@@ -6952,6 +6999,10 @@ function renderStageDashboard_(items, emptyMessage){
     function resetPortalLink(){
       if (!currentRowNumber) return;
       if (isLinkBusy) return;
+      if (!IS_SUPER) {
+        setMsg("mMsg", "Access denied: SUPER admin required.");
+        return;
+      }
       if (isDirty) {
         setMsg("mMsg", "Unsaved changes detected. Click \"Save Document Statuses\" first.");
         return;

@@ -103,6 +103,8 @@ function renderAdminApp_(e) {
   t.WEBAPP_URL = CONFIG.WEBAPP_URL_ADMIN || CONFIG.WEBAPP_URL;
   t.ADMIN_ROLE = getAdminRole_(email);
   t.IS_SUPER = getAdminRole_(email) === "SUPER";
+  t.SUPER_ADMIN_EMAILS = (CONFIG.SUPER_ADMIN_EMAILS || []).slice();
+  t.ROLE_DECISION_SOURCE = "CONFIG.ADMIN_ROLES";
   t.CAN_OVERRIDE = canOverrideOverall_(email);
   t.PAYMENT_BADGE = "Payment Pending";
   t.PAYMENT_VERIFIED_BOOL = false;
@@ -1235,6 +1237,9 @@ function admin_resetPortalLink(payload) {
   try {
     var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) return { ok: false, code: "PORTAL_RESET_ERROR", debugId: debugId, message: "Link generation failed" };
+    try { requireSuperAdmin_(adminEmail); } catch (_superErr) {
+      return { ok: false, code: "ACCESS_DENIED", debugId: debugId, message: "Access denied: SUPER admin required" };
+    }
     var rowNumber = Number(payload.rowNumber || 0);
     if (!rowNumber || rowNumber < 2) return { ok: false, code: "PORTAL_RESET_ERROR", debugId: debugId, message: "Link generation failed" };
 
