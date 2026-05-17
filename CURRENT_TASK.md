@@ -2,24 +2,25 @@
 
 ## Active CIS
 
-- Release candidate: `r174 Operator Console Usability`
-- Local candidate objective: make Ops Cockpit usable as a daily operator console while preserving existing write gates.
-- Accepted live baseline before editing:
-  - Commit: `609e513`
-  - Tag: `staging-as173`
-  - Apps Script version: `182`
-  - Runtime: `r173 / 173`
-  - Admin deployment: `@182`
-  - Student deployment: `@182`
-  - Git state before editing: `## main...origin/main`
+- Release accepted: `r174 Operator Console Usability`
+- Accepted live release:
+  - Commit: `5678c14`
+  - Tag: `staging-as174`
+  - Apps Script version: `183`
+  - Runtime: `r174 / 174`
+  - Admin deployment: `@183`
+  - Student deployment: `@183`
 
-## Baseline Verified Before Editing
+## Baseline Verified Before Release
 
-- `git status -sb`: clean `## main...origin/main`
-- `git log --oneline -5`: latest `609e513 release: r173 ops safe-mode lifecycle mapping`
-- `clasp deployments`: canonical Admin and Student staging deployments pinned to `@182`
-- Admin `?view=whoami`: embedded payload showed `r173 / 173`, `mismatch=false`
-- Student `?view=whoami`: embedded payload showed `r173 / 173`, `mismatch=false`
+- `git status -sb`: `## main...origin/main [ahead 2]`
+- `git rev-parse --short HEAD`: `5678c14`
+- accepted live baseline before bump:
+  - commit `609e513`
+  - tag `staging-as173`
+  - Apps Script `@182`
+  - Admin `?view=whoami = r173 / 173`, `mismatch=false`
+  - Student `?view=whoami = r173 / 173`, `mismatch=false`
 
 ## Allowed File Scope
 
@@ -28,9 +29,9 @@
 - `Config.js` only after review approval for the release identity bump
 - `CURRENT_TASK.md`
 
-## Local Implementation State
+## Released Scope
 
-- `AdminUI.html` locally updated for the r174 usability candidate:
+- `AdminUI.html` updated for the r174 operator usability release:
   - operator-first visual order
   - responsive lifecycle stage cascade with inspect/filter behavior
   - full-width applicant queue with selected-row highlight
@@ -45,11 +46,12 @@
 - Review hardening applied after `/review`:
   - footer strip explicitly ordered after the operator sections
   - custom email send is blocked if subject/body/recipient changed after preview
-- `CURRENT_TASK.md` updated for this r174 local candidate handoff.
 - `Admin.js` updated only to remove a stale `r172` label from the classroom handover preview text. No server logic or gates changed.
-- `Config.js` unchanged. Local source still reports `VERSION: "r173"` and `DEPLOY_VERSION_NUMBER: 173` until review approval.
+- `Config.js` released as:
+  - `VERSION: "r174"`
+  - `DEPLOY_VERSION_NUMBER: 174`
 
-## Explicitly Not Activated In r174 Local Candidate
+## Explicitly Not Activated In r174
 
 - bulk send
 - stage batch send
@@ -68,31 +70,52 @@
 - token backfill apply
 - mark classroom enrolled
 
-## Stop State
+## Release Outcome
 
-- Local implementation only.
-- No `clasp push`.
-- No `clasp version`.
-- No deployment repin.
-- No browser acceptance.
-- No tag.
-- Next required operator step: review local diff and approve or reject the r174 identity bump/release workflow.
+- `clasp push` completed.
+- Remote source outside the repo root verified:
+  - `VERSION: "r174"`
+  - `DEPLOY_VERSION_NUMBER: 174`
+- Apps Script version created:
+  - `183`
+  - `r174: operator console usability`
+- Canonical Admin deployment repinned to `@183`.
+- Canonical Student deployment repinned to `@183`.
+- Live Admin `?view=whoami` passed:
+  - `r174 / 174`
+  - `mismatch=false`
+- Live Student `?view=whoami` passed:
+  - `r174 / 174`
+  - `mismatch=false`
+- Operator browser acceptance passed for r174.
 
-## Future Release Workflow After Review Approval Only
+## Accepted Browser Evidence
 
-1. Bump `Config.js` to `VERSION = "r174"` and `DEPLOY_VERSION_NUMBER = 174`.
-2. Run `Select-String -Path Config.js -Pattern "VERSION|DEPLOY_VERSION_NUMBER"` and `git diff -- Config.js`.
-3. Run `clasp push`.
-4. Verify remote source outside the repo contains `r174 / 174`.
-5. Create Apps Script version.
-6. Repin Admin and Student staging deployments.
-7. Verify Admin `whoami = r174 / 174`, `mismatch=false`.
-8. Verify Student `whoami = r174 / 174`, `mismatch=false`.
-9. Run browser acceptance.
-10. Commit/push/tag only after acceptance.
+- runtime `r174 / 174` visible
+- lifecycle cascade visible and improved
+- applicant queue improved with selected context and test/live markers
+- Billing/Zoho filters visible with explanations and counts
+- Communications template quick look/custom email controls visible
+- Classroom Pending explanation visible
+- Reports acceptable as evolving placeholders
+- Governance/Runtime Truth separated
+- Rules & Config meaning improved
+- System Health meaning visible
+- no forbidden write exposure observed
+
+## r175 Follow-ups
+
+- populate Date Applied and Aging correctly
+- refine sidebar/menu alignment
+- improve lifecycle stage detail drawer/filtering
+- improve applicant context menu behavior
+- improve communication composer layout
+- add classroom handover checklist/recipient visibility
+- clarify System Health warning cause
+- design temporary Super Admin delegation model
 
 ## Rollback
 
-- If future release acceptance fails after deployment, repin Admin and Student back to accepted `r173 / 173` Apps Script `@182`.
+- If future rollback is required, repin Admin and Student back to accepted `r173 / 173` Apps Script `@182`.
 - Verify Admin and Student `?view=whoami`.
-- Do not tag a failed release.
+- Revert source only if needed after deployment rollback.
