@@ -3,48 +3,64 @@
 ## Active CIS
 
 - Release accepted: `r175 Ops Operational Readiness`
-- Accepted live release:
-  - Commit: `pending local git finalize`
+- Accepted live baseline:
+  - Commit: `bf50855`
   - Tag: `staging-as175`
   - Apps Script version: `184`
   - Runtime: `r175 / 175`
   - Admin deployment: `@184`
   - Student deployment: `@184`
 
-## Baseline Verified Before Release
+## Current r176 Local Objective
 
-- `git status -sb`: `## main...origin/main [ahead 2]`
-- `git rev-parse --short HEAD`: `5678c14`
-- accepted live baseline before bump:
-  - commit `609e513`
-  - tag `staging-as173`
-  - Apps Script `@182`
-  - Admin `?view=whoami = r173 / 173`, `mismatch=false`
-  - Student `?view=whoami = r173 / 173`, `mismatch=false`
+- Prepare `r176 Ops Stabilization and Drift Control` locally only.
+- Clean up Release Control metadata and remove stale next-candidate labels.
+- Clarify Admin/Ops parity and role layers to reduce operator drift.
+- Improve operational guidance for Applicant Review, System Health, and Release Control meaning.
+- Stop after local implementation and validation.
+- Do not deploy until a separate approval/release step.
+
+## Verified Starting State
+
+- `git status -sb`: `## main...origin/main`
+- `git rev-parse --short HEAD`: `bf50855`
+- live Admin `?view=whoami = r175 / 175`, `mismatch=false`
+- live Student `?view=whoami = r175 / 175`, `mismatch=false`
+- rollback target remains accepted `r174 / 174` Apps Script `@183`
 
 ## Allowed File Scope
 
 - `AdminUI.html`
-- `Admin.js` only if required and justified
-- `Config.js` only after review approval for the release identity bump
 - `CURRENT_TASK.md`
+- `Config.js` only during a later r176 release bump
 
-## Released Scope
+## r176 Local Scope Implemented
 
-- `AdminUI.html` only:
-  - Date Applied / Aging now prefers queue `received*` and `age*` fields with explicit missing-source reasons
-  - Applicant Queue supports low-risk Date Applied / Aging sort buttons
-  - lifecycle drill-down detail shows count, visible records, selected applicant, and next action
-  - applicant row context menu narrowed to non-mutating navigation actions only
-  - communications panel shows selected applicant, recipient, subject/body summary, Safe Mode state, and current block reason
-  - classroom handover panel shows checklist, preview state, recipient visibility, and notify reason
-  - System Health cause text expanded with contributing reasons and next suggested action
-  - stale accepted-baseline labels corrected to the accepted `r174` live baseline
+- `AdminUI.html`:
+  - Release Control metadata now reflects accepted baseline `r175 / staging-as175`
+  - accepted commit updated to `bf50855`
+  - rollback target clarified as `r174 / staging-as174 / @183`
+  - next release candidate updated to `r176`
+  - local Git state explicitly marked unavailable from Apps Script unless release metadata is recorded
+  - Admin / Ops parity map added:
+    - Admin-only
+    - Ops-visible
+    - Shared
+    - Super Admin / Governance
+    - Developer / Release
+    - Future migration
+  - role layers clarified:
+    - Operator / Admin
+    - Super Admin / Governance
+    - Developer / Release
+    - temporary Super Admin delegation remains future design only
+  - Open Applicant Review guidance now points operators back to the base Admin route and ApplicantID search
+  - System Health and Release Control copy clarified as read-only guidance, not live Git/deployment state
+  - stale `r174` and `r175-as-next-candidate` labels removed from visible Ops metadata
 
-## Still Explicitly Not Activated In r175
+## Explicitly Not Activated In r176
 
-- all r174 disabled items remain disabled
-- no Books invoice creation/send
+- no Books invoice creation/send/payment writes
 - no payment verified write
 - no enrolment write
 - no portal reset/lock
@@ -56,70 +72,24 @@
 - no document status save
 - no overall status override
 
-## Explicitly Not Activated In r174
+## Post-Edit Stop State
 
-- bulk send
-- stage batch send
-- docs bulk follow-up
-- Books draft invoice create
-- Books invoice send
-- Books payment creation
-- payment verified write
-- enrolment write
-- portal link reset
-- portal lock/unlock
-- parent email correction
-- document status save
-- overall status override
-- WhatsApp CSV export/email
-- token backfill apply
-- mark classroom enrolled
+- local implementation only
+- no `clasp push`
+- no Apps Script version
+- no deployment repin
+- no commit or tag
+- release bump in `Config.js` not started
 
-## Release Outcome
+## Next Exact Step
 
-- `Config.js` released as:
-  - `VERSION: "r175"`
-  - `DEPLOY_VERSION_NUMBER: 175`
-- `clasp push` completed.
-- Remote source outside the repo root verified:
-  - `VERSION: "r175"`
-  - `DEPLOY_VERSION_NUMBER: 175`
-- Apps Script version created:
-  - `184`
-  - `r175: ops operational readiness`
-- Canonical Admin deployment repinned to `@184`.
-- Canonical Student deployment repinned to `@184`.
-- Live Admin `?view=whoami` passed:
-  - `r175 / 175`
-  - `mismatch=false`
-- Live Student `?view=whoami` passed:
-  - `r175 / 175`
-  - `mismatch=false`
-- source-level Codex review passed for r175.
-- operator review accepted for r175.
-
-## Accepted Browser Evidence
-
-- runtime `r174 / 174` visible
-- lifecycle cascade visible and improved
-- applicant queue improved with selected context and test/live markers
-- Billing/Zoho filters visible with explanations and counts
-- Communications template quick look/custom email controls visible
-- Classroom Pending explanation visible
-- Reports acceptable as evolving placeholders
-- Governance/Runtime Truth separated
-- Rules & Config meaning improved
-- System Health meaning visible
-- no forbidden write exposure observed
-
-## r175 Remaining / Deferred
-
-- refine sidebar/menu alignment only if a visible issue remains after source review
-- temporary Super Admin delegation model remains design-only and was not implemented in this local pass
-- no server payload change was made; if recipient/checklist detail later proves insufficient, raise a separate CIS for `Admin.js`
-
-## Rollback
-
-- If future rollback is required, repin Admin and Student back to accepted `r174 / 174` Apps Script `@183`.
-- Verify Admin and Student `?view=whoami`.
-- Revert source only if needed after deployment rollback.
+- Review local `AdminUI.html` metadata/guidance cleanup.
+- If accepted, run a separate r176 release CIS:
+  - bump `Config.js` to `r176 / 176`
+  - push
+  - remote-source verify
+  - create new Apps Script version
+  - repin Admin and Student
+  - verify `whoami`
+  - browser acceptance
+  - then commit/tag

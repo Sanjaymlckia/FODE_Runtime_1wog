@@ -897,7 +897,7 @@
           </div>
         </div>
         <div class="opsKpiGrid">
-          <div class="opsKpiCard"><div class="opsKpiIcon blue">&lt;/&gt;</div><div><div class="kpiLabel">Runtime</div><div class="kpiValue" id="cockpitKpiRuntime">r174 / 174</div><div class="kpiState" id="cockpitKpiRuntimeState">Baseline live</div><div class="kpiMeta" id="cockpitKpiRuntimeMeta">Waiting on Admin and Student whoami.</div></div></div>
+          <div class="opsKpiCard"><div class="opsKpiIcon blue">&lt;/&gt;</div><div><div class="kpiLabel">Runtime</div><div class="kpiValue" id="cockpitKpiRuntime">r175 / 175</div><div class="kpiState" id="cockpitKpiRuntimeState">Baseline live</div><div class="kpiMeta" id="cockpitKpiRuntimeMeta">Waiting on Admin and Student whoami.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon green">B</div><div><div class="kpiLabel">Billing Status</div><div class="kpiValue" id="cockpitKpiBilling">Books Connected</div><div class="kpiState" id="cockpitKpiBillingState">Read-only</div><div class="kpiMeta" id="cockpitKpiBillingMeta">Invoice snapshot loading. Cockpit writes disabled.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon purple">A</div><div><div class="kpiLabel">Admissions Status</div><div class="kpiValue" id="cockpitKpiAdmissions">Queue Loading</div><div class="kpiState">Visibility Only</div><div class="kpiMeta" id="cockpitKpiAdmissionsMeta">Applicant rows use existing read-only loaders.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon amber">!</div><div><div class="kpiLabel">System Health</div><div class="kpiValue" id="cockpitKpiRisks">Unknown</div><div class="kpiState" id="cockpitKpiRiskState">Defined States</div><div class="kpiMeta" id="cockpitKpiRisksMeta">Healthy, Warning, Blocked, Degraded, or Unknown.</div></div></div>
@@ -907,12 +907,12 @@
             <div class="opsSectionHeader"><div><h3>Executive Snapshot</h3><p>Operator/Admin layer first. Governance and release controls remain secondary.</p></div><span class="opsStatusPill info">Safe Mode Controlled Actions</span></div>
             <div class="opsResultBox warn">Safe Mode is required for existing Ops live actions. Single-record safe tests are restricted to the approved target identity only.</div>
             <div class="opsMetricGrid">
-              <div class="opsMetric"><div class="k">Next Action</div><div class="v" id="cockpitKpiNextRelease">r174 local candidate</div></div>
+              <div class="opsMetric"><div class="k">Next Action</div><div class="v" id="cockpitKpiNextRelease">r176 stabilization candidate</div></div>
               <div class="opsMetric"><div class="k">Queue Summary</div><div class="v" id="cockpitDashboardQueue">Loading</div></div>
               <div class="opsMetric"><div class="k">Billing</div><div class="v">Safe Mode Controlled Actions</div></div>
               <div class="opsMetric"><div class="k">Admissions</div><div class="v">Read-only review</div></div>
             </div>
-            <div class="opsPlaceholder" id="cockpitKpiNextReleaseMeta">r175 operational readiness remains local until approved and deployed.</div>
+            <div class="opsPlaceholder" id="cockpitKpiNextReleaseMeta">r176 stabilizes release metadata, role layers, and Admin/Ops drift control without broadening writes.</div>
             <div class="opsActionRow">
               <button class="opsActionBtn primary live" type="button" onclick="opsRefreshSnapshot_()">Refresh Snapshot</button>
               <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsAdmissionsQueue')">View Priority Queue</button>
@@ -924,7 +924,8 @@
             <div class="opsPriorityList">
               <div class="opsPriorityCard"><div><div class="t">Admissions Queue</div><div class="m">Applicant lookup, queue filters, and review handoff remain the primary operator workflow.</div></div><span class="opsStatusPill info">Read-only + Map</span></div>
               <div class="opsPriorityCard"><div><div class="t">Communications / Billing / Handover</div><div class="m">Existing Ops live actions are restricted to Safe Mode approved-target testing only.</div></div><span class="opsStatusPill warn">Safe Test Only</span></div>
-              <div class="opsPriorityCard"><div><div class="t">Super Admin / Governance</div><div class="m">Runtime truth, release state, disabled high-risk actions, and integration health remain secondary.</div></div><span class="opsStatusPill muted">Secondary Layer</span></div>
+              <div class="opsPriorityCard"><div><div class="t">Super Admin / Governance</div><div class="m">Runtime truth, release metadata, disabled high-risk actions, and integration health remain secondary.</div></div><span class="opsStatusPill muted">Secondary Layer</span></div>
+              <div class="opsPriorityCard"><div><div class="t">Developer / Release</div><div class="m">Git, clasp, versioning, deployment pins, and release metadata recording stay outside Apps Script UI.</div></div><span class="opsStatusPill muted">Externalized</span></div>
             </div>
           </div>
         </div>
@@ -970,15 +971,15 @@
       </section>
       <section id="opsRuntimeTruth" class="opsSectionPage">
         <div class="opsPageIntro">
-          <div><h2>Governance / Runtime Truth</h2><p>Secondary governance layer for runtime identity, release state, safe mode, and disabled high-risk controls.</p></div>
+          <div><h2>Governance / Runtime Truth</h2><p>Secondary governance layer for runtime identity, release metadata, role boundaries, safe mode, and disabled high-risk controls.</p></div>
           <span class="opsStatusPill ok" id="cockpitRuntimeStatusPill">Waiting</span>
         </div>
         <div class="opsSectionGrid">
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Config Identity</h3></div><span class="opsStatusPill info">Read only</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Config VERSION</span><span class="opsStatusPill info" id="cockpitRuntimeConfigVersion">r173</span></div>
-              <div class="opsChecklistRow"><span>DEPLOY_VERSION_NUMBER</span><span class="opsStatusPill info" id="cockpitRuntimeDeployNumber">173</span></div>
+              <div class="opsChecklistRow"><span>Config VERSION</span><span class="opsStatusPill info" id="cockpitRuntimeConfigVersion">r175</span></div>
+              <div class="opsChecklistRow"><span>DEPLOY_VERSION_NUMBER</span><span class="opsStatusPill info" id="cockpitRuntimeDeployNumber">175</span></div>
               <div class="opsChecklistRow"><span>Apps Script platform/version</span><span class="opsStatusPill muted" id="cockpitAppsScript">Unknown</span></div>
               <div class="opsChecklistRow"><span>Remote config status</span><span class="opsStatusPill muted" id="cockpitRuntimeRemoteConfig">Unknown</span></div>
             </div>
@@ -1006,9 +1007,9 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Accepted Baseline</h3></div><span class="opsStatusPill muted">Current known</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Commit</span><span class="opsStatusPill muted" id="cockpitRuntimeCommit">4a0473a</span></div>
-              <div class="opsChecklistRow"><span>Tag</span><span class="opsStatusPill muted" id="cockpitRuntimeTag">staging-as174</span></div>
-              <div class="opsChecklistRow"><span>Browser acceptance</span><span class="opsStatusPill ok" id="cockpitReleaseBrowser">Accepted r174</span></div>
+              <div class="opsChecklistRow"><span>Commit</span><span class="opsStatusPill muted" id="cockpitRuntimeCommit">bf50855</span></div>
+              <div class="opsChecklistRow"><span>Tag</span><span class="opsStatusPill muted" id="cockpitRuntimeTag">staging-as175</span></div>
+              <div class="opsChecklistRow"><span>Browser acceptance</span><span class="opsStatusPill ok" id="cockpitReleaseBrowser">Accepted r175</span></div>
             </div>
             <div class="opsActionRow">
               <button class="opsActionBtn" type="button" disabled>Run Runtime Check</button>
@@ -1205,28 +1206,29 @@
       </section>
       <section id="opsReleaseControl" class="opsSectionPage">
         <div class="opsPageIntro">
-          <div><h2>Release Control</h2><p>Governed release state. This panel does not invoke git, clasp, or deployment commands.</p></div>
+          <div><h2>Release Control</h2><p>Governed release metadata and rollback guidance. This panel does not invoke git, clasp, or deployment commands, and local Git state is unavailable here unless recorded during a release.</p></div>
           <span class="opsStatusPill warn">Requires Approval</span>
         </div>
         <div class="opsSectionGrid mainSplit">
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Release State</h3></div><span class="opsStatusPill muted">Read only</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Current runtime</span><span class="opsStatusPill info" id="cockpitReleaseRuntime">r174 / 174</span></div>
-              <div class="opsChecklistRow"><span>Accepted baseline</span><span class="opsStatusPill ok">r174 / staging-as174</span></div>
+              <div class="opsChecklistRow"><span>Current runtime</span><span class="opsStatusPill info" id="cockpitReleaseRuntime">r175 / 175</span></div>
+              <div class="opsChecklistRow"><span>Accepted baseline</span><span class="opsStatusPill ok">r175 / staging-as175</span></div>
               <div class="opsChecklistRow"><span>Whoami status</span><span class="opsStatusPill muted" id="cockpitReleaseWhoami">Unknown</span></div>
-              <div class="opsChecklistRow"><span>Browser acceptance status</span><span class="opsStatusPill ok" id="cockpitReleaseBrowserState">Accepted</span></div>
-              <div class="opsChecklistRow"><span>Commit / tag state</span><span class="opsStatusPill danger" id="cockpitReleaseGit">Blocked</span></div>
+              <div class="opsChecklistRow"><span>Browser acceptance status</span><span class="opsStatusPill ok" id="cockpitReleaseBrowserState">Accepted r175</span></div>
+              <div class="opsChecklistRow"><span>Commit / tag state</span><span class="opsStatusPill info" id="cockpitReleaseGit">Recorded externally</span></div>
               <div class="opsChecklistRow"><span>Remote Config verified</span><span class="opsStatusPill muted" id="cockpitReleaseRemote">Unknown</span></div>
+              <div class="opsChecklistRow"><span>Local Git state</span><span class="opsStatusPill muted" id="cockpitReleaseDirty">Unavailable unless release metadata is recorded</span></div>
             </div>
           </div>
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Control Checklist</h3></div><span class="opsStatusPill danger">Disabled</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Rollback target</span><span class="opsStatusPill info">r174 / 174 @183</span></div>
+              <div class="opsChecklistRow"><span>Rollback target</span><span class="opsStatusPill info">r174 / staging-as174 / @183</span></div>
               <div class="opsChecklistRow"><span>Current blockers</span><span class="opsStatusPill warn">Deployment action remains externalized</span></div>
-              <div class="opsChecklistRow"><span>Next release candidate</span><span class="opsStatusPill info" id="cockpitReleaseNextTask">r174</span></div>
-              <div class="opsChecklistRow"><span>No active dirty working tree</span><span class="opsStatusPill muted" id="cockpitReleaseDirty">Unknown</span></div>
+              <div class="opsChecklistRow"><span>Next release candidate</span><span class="opsStatusPill info" id="cockpitReleaseNextTask">r176</span></div>
+              <div class="opsChecklistRow"><span>Git metadata note</span><span class="opsStatusPill muted">Record commit/tag/clean state during release; Apps Script cannot read local Git directly</span></div>
             </div>
             <div class="opsActionRow">
               <button class="opsActionBtn" type="button" onclick="opsOpenReleaseGuidance_('Run Preflight')">Run Preflight</button>
@@ -1241,10 +1243,30 @@
       </section>
       <section id="opsRulesConfig" class="opsSectionPage">
         <div class="opsPageIntro">
-          <div><h2>Rules & Config</h2><p>Settings are classified by operational risk. r174 exposes clarity only; dangerous writes remain locked.</p></div>
+          <div><h2>Rules & Config</h2><p>Settings are classified by operational risk. r176 clarifies role boundaries and drift control only; dangerous writes remain locked.</p></div>
           <span class="opsStatusPill ok">Super Admin / Governance</span>
         </div>
         <div class="opsSectionGrid">
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Admin / Ops Parity Map</h3></div><span class="opsStatusPill info">Read only</span></div>
+            <div class="opsChecklist">
+              <div class="opsChecklistRow"><span>Admin-only</span><span class="opsStatusPill muted">Document/status writes, portal reset/lock, payment verified, parent email correction</span></div>
+              <div class="opsChecklistRow"><span>Ops-visible</span><span class="opsStatusPill info">Queue, lifecycle, billing preview, portal diagnostics, fallback diagnostics, reports</span></div>
+              <div class="opsChecklistRow"><span>Shared</span><span class="opsStatusPill warn">Single-record preview/send and classroom notify remain Safe Mode gated</span></div>
+              <div class="opsChecklistRow"><span>Super Admin / Governance</span><span class="opsStatusPill warn">Runtime truth, release metadata, Safe Mode config visibility, high-risk controls disabled</span></div>
+              <div class="opsChecklistRow"><span>Developer / release only</span><span class="opsStatusPill danger">Git, clasp, versioning, deployment repin, release metadata recording</span></div>
+              <div class="opsChecklistRow"><span>Future migration</span><span class="opsStatusPill muted">Temporary Super Admin delegation and deeper Admin/Ops parity need separate design/CIS</span></div>
+            </div>
+          </div>
+          <div class="opsCard">
+            <div class="opsSectionHeader"><div><h3>Role Layers</h3></div><span class="opsStatusPill info">Guidance</span></div>
+            <div class="opsMeaningList">
+              <div class="opsMeaningItem"><strong>Operator/Admin</strong>Daily admissions, billing preview, communications preview/send gates, classroom preview, and diagnostics.</div>
+              <div class="opsMeaningItem"><strong>Super Admin/Governance</strong>Runtime truth, release metadata visibility, Safe Mode boundaries, and disabled high-risk controls.</div>
+              <div class="opsMeaningItem"><strong>Developer/Release</strong>Source edits, git state, clasp push/version, deployment pinning, and rollback remain external to this UI.</div>
+              <div class="opsMeaningItem"><strong>Temporary Super Admin delegation</strong>Future design item only. No delegation model is implemented in r176.</div>
+            </div>
+          </div>
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Setting Classes</h3></div><span class="opsStatusPill info">Display only</span></div>
             <div class="opsMeaningList">
@@ -2258,7 +2280,7 @@
       return [
         { key:"all", label:"All billing records", means:"Every loaded applicant row with billing context.", fields:"ApplicantID, Books_* fields, amount fields", next:"Inspect selected applicant or choose a narrower filter.", test:function(){ return true; } },
         { key:"no_invoice", label:"No invoice", means:"No Books invoice ID or invoice number is loaded.", fields:"Books_Invoice_ID, Books_Invoice_Number", next:"Review readiness; Books draft creation remains disabled.", test:function(r){ return !opsFirstNonBlank_(r.Books_Invoice_ID, r.Books_Invoice_Number); } },
-        { key:"draft_created", label:"Invoice draft created", means:"A draft or draft-created status is visible.", fields:"Books_Invoice_Status, Books_Push_Status", next:"Open invoice read-only or confirm send status outside r174.", test:function(r){ var s=(opsFirstNonBlank_(r.Books_Invoice_Status,r.Books_Push_Status)).toUpperCase(); return s.indexOf("DRAFT")>=0; } },
+        { key:"draft_created", label:"Invoice draft created", means:"A draft or draft-created status is visible.", fields:"Books_Invoice_Status, Books_Push_Status", next:"Open invoice read-only or confirm send status outside Ops.", test:function(r){ var s=(opsFirstNonBlank_(r.Books_Invoice_Status,r.Books_Push_Status)).toUpperCase(); return s.indexOf("DRAFT")>=0; } },
         { key:"invoice_raised", label:"Invoice raised", means:"A Books invoice is present in loaded fields.", fields:"Books_Invoice_ID, Books_Invoice_Number", next:"Refresh read-only Books status.", test:function(r){ return opsInvoiceSummary_(r).label === "Invoice Raised"; } },
         { key:"invoice_sent", label:"Invoice sent", means:"Loaded communication fields indicate invoice email was sent.", fields:"Email_Status, Last_Contact_Type, invoice email fields", next:"Review timeline. No bulk send.", test:function(r){ return opsInvoiceEmailSummary_(r).label === "Invoice Email Sent"; } },
         { key:"payment_pending", label:"Payment pending", means:"Payment is not verified in loaded fields.", fields:"Payment_Verified, Payment_Verified_Bool", next:"Use read-only follow-up preview; payment writes remain disabled.", test:function(r){ return !(opsIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true); } },
@@ -2266,7 +2288,7 @@
         { key:"missing_mapping", label:"Missing item mapping", means:"Mapping/fallback fields indicate a missing or blocked item mapping.", fields:"Missing_Item_Mapping, Fallback_Item_Used, readiness status", next:"Manual Books mapping review. No write.", test:function(r){ return !!opsFirstNonBlank_(r.Missing_Item_Mapping) || String(r.Books_Push_Status || "").toUpperCase().indexOf("MAPPING")>=0; } },
         { key:"amount_known", label:"Amount known", means:"A numeric invoice/fee amount can be derived.", fields:"Books_Invoice_Amount, Fee_Total_Kina, Total_Fee", next:"Review line summary.", test:function(r){ return opsAmountFromRow_(r) > 0; } },
         { key:"amount_unknown", label:"Amount unknown", means:"No numeric amount was loaded.", fields:"Books_Invoice_Amount, Fee_Total_Kina, Total_Fee", next:"Manual fee review before any Books action.", test:function(r){ return opsAmountFromRow_(r) <= 0; } },
-        { key:"push_ready", label:"Books push ready", means:"Loaded status says READY.", fields:"Books_Push_Status", next:"Still disabled in r174; separate approval required.", test:function(r){ return String(r.Books_Push_Status || "").toUpperCase() === "READY"; } },
+        { key:"push_ready", label:"Books push ready", means:"Loaded status says READY.", fields:"Books_Push_Status", next:"Still disabled in Ops; separate approval required.", test:function(r){ return String(r.Books_Push_Status || "").toUpperCase() === "READY"; } },
         { key:"push_blocked", label:"Books push blocked", means:"Loaded status/error indicates blocked or error.", fields:"Books_Push_Status, Books_Last_Error", next:"Review error and mapping. No write.", test:function(r){ var s=String(r.Books_Push_Status || "").toUpperCase(); return s.indexOf("BLOCK")>=0 || s.indexOf("ERROR")>=0 || !!opsFirstNonBlank_(r.Books_Last_Error); } }
       ];
     }
@@ -2561,22 +2583,22 @@
       setOpsPill_("cockpitAdminWhoami", runtime.mismatch === false ? "Match" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitStudentWhoami", runtime.mismatch === false ? "Match" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitRuntimeCommit", "Unknown", "muted");
-      setOpsPill_("cockpitRuntimeTag", "staging-as173 accepted", "ok");
+      setOpsPill_("cockpitRuntimeTag", "staging-as175 accepted", "ok");
       setOpsPill_("cockpitWorkingTree", "Unknown", "muted");
       setOpsPill_("cockpitReleaseWhoami", runtime.mismatch === false ? "OK" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitReleaseRemote", "Unknown", "muted");
-      setOpsPill_("cockpitReleaseBrowser", "Accepted", "ok");
-      setOpsPill_("cockpitReleaseBrowserState", "Accepted", "ok");
-      setOpsPill_("cockpitReleaseGit", "Blocked", "danger");
-      setOpsPill_("cockpitReleaseDirty", "Unknown", "muted");
-      setOpsPill_("cockpitRuntimeCommit", "4a0473a", "ok");
-      setOpsPill_("cockpitRuntimeTag", "staging-as174 accepted", "ok");
-      setOpsPill_("cockpitReleaseNextTask", "r175 ops operational readiness", "info");
+      setOpsPill_("cockpitReleaseBrowser", "Accepted r175", "ok");
+      setOpsPill_("cockpitReleaseBrowserState", "Accepted r175", "ok");
+      setOpsPill_("cockpitReleaseGit", "Recorded externally", "info");
+      setOpsPill_("cockpitReleaseDirty", "Unavailable here", "muted");
+      setOpsPill_("cockpitRuntimeCommit", "bf50855", "ok");
+      setOpsPill_("cockpitRuntimeTag", "staging-as175 accepted", "ok");
+      setOpsPill_("cockpitReleaseNextTask", "r176 ops stabilization and drift control", "info");
       setOpsPill_("cockpitRuntimeRemoteConfig", runtime.version ? "Loaded from runtime" : "Unknown", runtime.version ? "info" : "muted");
       setOpsPill_("cockpitRuntimeDrift", runtime.mismatch === false ? "No mismatch reported" : "Unknown until verified", runtime.mismatch === false ? "ok" : "warn");
       setOpsPill_("cockpitReleaseRuntime", version + " / " + String(deploy), "info");
-      setOpsText_("cockpitKpiNextRelease", "r175 operational readiness");
-      setOpsText_("cockpitKpiNextReleaseMeta", "r175 keeps writes gated and focuses on operator readiness improvements only.");
+      setOpsText_("cockpitKpiNextRelease", "r176 stabilization candidate");
+      setOpsText_("cockpitKpiNextReleaseMeta", "r176 keeps writes gated and focuses on release metadata, role clarity, and Admin/Ops drift control.");
       setOpsText_("cockpitKpiRuntimeState", runtime.mismatch === false ? "Live" : "Unknown");
       setOpsText_("cockpitKpiRuntimeMeta", runtime.mismatch === false ? "Admin and Student whoami align." : "Waiting on whoami alignment.");
       setOpsPill_("cockpitRuntimeStatusPill", runtime.mismatch === false ? "Runtime Match" : "Runtime Unknown", runtime.mismatch === false ? "ok" : "warn");
@@ -2584,7 +2606,7 @@
       setOpsText_("cockpitFooterStatus", "Safe Mode Controlled Actions");
       setOpsPill_("cockpitHealthLevel", runtime.mismatch === false ? "Warning" : "Unknown", runtime.mismatch === false ? "warn" : "muted");
       setOpsText_("cockpitHealthWhy", runtime.mismatch === false
-        ? "Runtime identity is aligned to the accepted r174 baseline. r175 remains a local candidate until Config.js is bumped, remote source is verified, and deployments are repinned after approval."
+        ? "Runtime identity is aligned to the accepted r175 baseline. Release metadata shown here is read-only and depends on what was recorded during the release."
         : "Runtime identity has not returned enough evidence yet.");
     }
     function renderOpsSafetyStatus_(data){
@@ -2919,7 +2941,7 @@
       setOpsResult_("opsAdmissionsResult", {
         result: "OPEN",
         applicantId: applicantId,
-        message: "Applicant review remains in the standard Admin review surface. Use the base Admin route and search ApplicantID " + applicantId + "."
+        message: "Applicant review remains in the standard Admin review surface. Use the base Admin route, search ApplicantID " + applicantId + ", and continue any write workflow there. Ops remains read-only or Safe Mode gated."
       }, "Open Applicant Review");
     }
     function opsCustomEmailPayload_(){
