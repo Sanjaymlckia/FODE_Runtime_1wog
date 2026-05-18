@@ -674,6 +674,23 @@
       display:inline-flex; align-items:center; gap:8px; margin-top:8px; padding:8px 12px; border-radius:999px;
       border:1px solid #d7e4f2; background:#f4f8fc; color:#23415f; font-size:12px; font-weight:800;
     }
+    .opsWorkspaceSwitch{
+      display:grid; grid-template-columns:1.15fr .85fr; gap:14px; margin-top:14px;
+    }
+    .opsWorkspaceCard{
+      border:1px solid #d7e4f2; border-radius:22px; background:linear-gradient(180deg,#ffffff 0%,#f6f9fc 100%);
+      padding:18px 18px 16px; box-shadow:0 12px 28px rgba(16,38,60,.08);
+    }
+    .opsWorkspaceCard h3{ margin:0; font-size:20px; color:#10263c; }
+    .opsWorkspaceCard p{ margin:8px 0 0; color:#5d7288; font-size:13px; line-height:1.5; }
+    .opsWorkspaceCard.hiddenByMode{ display:none; }
+    .opsWorkspaceMeta{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+    .opsWorkspaceGrid{ display:grid; grid-template-columns:repeat(2,minmax(180px,1fr)); gap:10px; margin-top:14px; }
+    .opsWorkspaceInfo{
+      border:1px solid #d9e4f0; border-radius:16px; background:#fff; padding:12px 14px;
+    }
+    .opsWorkspaceInfo .k{ font-size:11px; color:#7b8ea2; text-transform:uppercase; }
+    .opsWorkspaceInfo .v{ margin-top:6px; font-size:13px; font-weight:800; color:#16314c; }
     .opsHeaderTools{ display:flex; align-items:center; gap:14px; color:#687a8f; font-size:12px; }
     .opsHeaderIcon{ width:32px; height:32px; border-radius:50%; display:grid; place-items:center; border:1px solid #dbe5ef; background:#fff; font-weight:900; color:#40556b; }
     .opsKpiGrid{ display:grid; grid-template-columns:repeat(4,minmax(170px,1fr)); gap:14px; }
@@ -897,15 +914,15 @@
         </div>
       </div>
       <nav class="opsNav">
-        <a href="#opsDashboard" data-icon="D" data-ops-mode-link="operator admin super">Operator Console</a>
-        <a href="#opsLifecycleMap" data-icon="L" data-ops-mode-link="operator admin super">Lifecycle Map</a>
-        <a href="#opsAdmissionsQueue" data-icon="A" data-ops-mode-link="operator admin super">Applicant Queue</a>
-        <a href="#opsZohoBooks" data-icon="Z" data-ops-mode-link="admin super">Billing Queue</a>
-        <a href="#opsCommunications" data-icon="C" data-ops-mode-link="admin super">Communications</a>
-        <a href="#opsClassroom" data-icon="H" data-ops-mode-link="admin super">Classroom Handover</a>
-        <a href="#opsFallbackDiagnostics" data-icon="W" data-ops-mode-link="admin super">Fallbacks</a>
-        <a href="#opsReports" data-icon="P" data-ops-mode-link="operator admin super">Reports</a>
-        <a href="#opsStudentDiagnostics" data-icon="S" data-ops-mode-link="operator admin super">Portal Diagnostics</a>
+        <a href="#opsDashboard" data-icon="D" data-ops-mode-link="operator admin super">Workspace Home</a>
+        <a href="#opsLifecycleMap" data-icon="L" data-ops-mode-link="operator">Lifecycle Map</a>
+        <a href="#opsAdmissionsQueue" data-icon="A" data-ops-mode-link="operator admin">Applicant Queue</a>
+        <a href="#opsZohoBooks" data-icon="Z" data-ops-mode-link="admin">Billing Queue</a>
+        <a href="#opsCommunications" data-icon="C" data-ops-mode-link="admin">Communications</a>
+        <a href="#opsClassroom" data-icon="H" data-ops-mode-link="admin">Classroom Handover</a>
+        <a href="#opsFallbackDiagnostics" data-icon="W" data-ops-mode-link="super">Fallbacks</a>
+        <a href="#opsReports" data-icon="P" data-ops-mode-link="operator">Reports</a>
+        <a href="#opsStudentDiagnostics" data-icon="S" data-ops-mode-link="operator">Portal Diagnostics</a>
         <a href="#opsRulesConfig" data-icon="G" data-ops-mode-link="super">Rules & Config</a>
         <a href="#opsRuntimeTruth" data-icon="R" data-ops-mode-link="super">Governance</a>
         <a href="#opsReleaseControl" data-icon="L" data-ops-mode-link="super">Release Control</a>
@@ -946,6 +963,83 @@
           <div class="opsKpiCard"><div class="opsKpiIcon green">B</div><div><div class="kpiLabel">Billing Status</div><div class="kpiValue" id="cockpitKpiBilling">Books Connected</div><div class="kpiState" id="cockpitKpiBillingState">Read-only</div><div class="kpiMeta" id="cockpitKpiBillingMeta">Invoice snapshot loading. Cockpit writes disabled.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon purple">A</div><div><div class="kpiLabel">Admissions Status</div><div class="kpiValue" id="cockpitKpiAdmissions">Queue Loading</div><div class="kpiState">Visibility Only</div><div class="kpiMeta" id="cockpitKpiAdmissionsMeta">Applicant rows use existing read-only loaders.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon amber">!</div><div><div class="kpiLabel">System Health</div><div class="kpiValue" id="cockpitKpiRisks">Unknown</div><div class="kpiState" id="cockpitKpiRiskState">Defined States</div><div class="kpiMeta" id="cockpitKpiRisksMeta">Healthy, Warning, Blocked, Degraded, or Unknown.</div></div></div>
+        </div>
+        <div class="opsWorkspaceSwitch">
+          <div class="opsWorkspaceCard" id="opsWorkspaceOperator" data-ops-workspace="operator">
+            <h3>Operator Workspace</h3>
+            <p>Lifecycle-first, queue-first intake view with selected applicant context and read-only diagnostics.</p>
+            <div class="opsWorkspaceMeta">
+              <span class="opsStatusPill info">Operator Mode</span>
+              <span class="opsStatusPill ok">Read-only diagnostics</span>
+              <span class="opsStatusPill muted">No governed writes</span>
+            </div>
+            <div class="opsWorkspaceGrid">
+              <div class="opsWorkspaceInfo"><div class="k">Primary modules</div><div class="v">Operator Console, Lifecycle Map, Applicant Queue</div></div>
+              <div class="opsWorkspaceInfo"><div class="k">Applicant bridge</div><div class="v">Read-only drawer plus Admin review handoff</div></div>
+              <div class="opsWorkspaceInfo"><div class="k">Portal visibility</div><div class="v">Read-only diagnostics only</div></div>
+              <div class="opsWorkspaceInfo"><div class="k">Action limit</div><div class="v">No send/export/write actions</div></div>
+            </div>
+            <div class="opsActionRow" style="margin-top:14px;">
+              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Open Lifecycle Workspace</button>
+              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsAdmissionsQueue')">Open Applicant Queue</button>
+              <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsStudentDiagnostics')">Open Read-only Diagnostics</button>
+            </div>
+          </div>
+          <div class="opsWorkspaceCard hiddenByMode" id="opsWorkspaceAdmin" data-ops-workspace="admin">
+            <h3>Admin Workspace</h3>
+            <p>Primary working surface for selected-applicant actions, applicant review bridge, communications, billing, and classroom handover.</p>
+            <div class="opsWorkspaceMeta">
+              <span class="opsStatusPill warn">Admin Mode</span>
+              <span class="opsStatusPill info">Selected applicant preserved</span>
+              <span class="opsStatusPill ok">Single-record working path</span>
+            </div>
+            <div class="opsWorkspaceGrid">
+              <div class="opsWorkspaceInfo"><div class="k">Primary modules</div><div class="v">Communications, Billing Queue, Classroom Handover</div></div>
+              <div class="opsWorkspaceInfo"><div class="k">Applicant review</div><div class="v">Use queue selection, then open Admin Review bridge</div></div>
+              <div class="opsWorkspaceInfo"><div class="k">Send controls</div><div class="v">Preview, recipient visibility, explicit confirmation</div></div>
+              <div class="opsWorkspaceInfo"><div class="k">Action limit</div><div class="v">Safe single-record actions only</div></div>
+            </div>
+            <div class="opsActionRow" style="margin-top:14px;">
+              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsAdmissionsQueue')">Open Applicant Review Bridge</button>
+              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsCommunications')">Open Communications Workspace</button>
+              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsZohoBooks')">Open Billing Workspace</button>
+              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsClassroom')">Open Classroom Workspace</button>
+            </div>
+          </div>
+          <div class="opsWorkspaceCard hiddenByMode" id="opsWorkspaceSuper" data-ops-workspace="super">
+            <h3>Super Admin Workspace</h3>
+            <p>Governance surface for role diagnostics, portal controls, WhatsApp export/email fallback, bulk communication controls, and release truth.</p>
+            <div class="opsWorkspaceMeta">
+              <span class="opsStatusPill danger">Super Admin Mode</span>
+              <span class="opsStatusPill warn">Explicit confirmation required</span>
+              <span class="opsStatusPill muted">Developer / Release stays external</span>
+            </div>
+            <div class="opsWorkspaceGrid">
+              <div class="opsWorkspaceInfo"><div class="k">Primary modules</div><div class="v">Rules &amp; Config, Governance, Release Control</div></div>
+              <div class="opsWorkspaceInfo"><div class="k">High-risk controls</div><div class="v">Portal reset/lock, WhatsApp export/email, bulk preview/send</div></div>
+              <div class="opsWorkspaceInfo"><div class="k">Portal controls</div><div class="v">Use Admin Review bridge for selected applicant mutation path</div></div>
+              <div class="opsWorkspaceInfo"><div class="k">Release boundary</div><div class="v">Git, clasp, tags, and repins remain externalized</div></div>
+            </div>
+            <div class="opsActionRow" style="margin-top:14px;">
+              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsRulesConfig')">Open Super Admin Controls</button>
+              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsRuntimeTruth')">Open Governance / Runtime Truth</button>
+              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsReleaseControl')">Open Release Control</button>
+              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsFallbackDiagnostics')">Open WhatsApp / Fallback</button>
+              <button class="opsActionBtn live" type="button" onclick="opsOpenLegacyAdminReview_()">Open Admin Review for Portal Controls</button>
+            </div>
+          </div>
+          <div class="opsWorkspaceCard">
+            <h3>Developer / Release</h3>
+            <p>Release execution remains outside Apps Script UI. This cockpit may show guidance and recorded metadata only.</p>
+            <div class="opsWorkspaceMeta">
+              <span class="opsStatusPill muted">Externalized</span>
+              <span class="opsStatusPill info">Guidance only</span>
+            </div>
+            <div class="opsWorkspaceGrid">
+              <div class="opsWorkspaceInfo"><div class="k">Outside UI</div><div class="v">Git, clasp, versioning, repin, rollback, tagging</div></div>
+              <div class="opsWorkspaceInfo"><div class="k">Inside UI</div><div class="v">Read-only release state and acceptance guidance</div></div>
+            </div>
+          </div>
         </div>
         <div class="opsSectionGrid mainSplit">
           <div class="opsCard">
@@ -1008,7 +1102,7 @@
           <div class="opsInspectPanel" id="opsLifecycleInspector">Select a lifecycle stage to inspect records, blockers, and next action.</div>
         </div>
       </section>
-      <section id="opsStudentDiagnostics" class="opsSectionPage" data-ops-mode-group="operator admin super">
+      <section id="opsStudentDiagnostics" class="opsSectionPage" data-ops-mode-group="operator">
         <div class="opsPageIntro">
           <div><h2>Student Portal Diagnostics</h2><p>Read-only map of student-facing routes, token state, locks, and upload/update surfaces.</p></div>
           <span class="opsStatusPill info">Map only</span>
@@ -1087,7 +1181,7 @@
           </div>
         </div>
       </section>
-      <section id="opsAdmissionsQueue" class="opsSectionPage" data-ops-mode-group="operator admin super">
+      <section id="opsAdmissionsQueue" class="opsSectionPage" data-ops-mode-group="operator admin">
         <div class="opsPageIntro">
           <div><h2>Applicant Queue</h2><p>Full-width applicant rows with selected-row context. Use horizontal scroll when fields exceed the viewport.</p></div>
           <span class="opsStatusPill info">Read only</span>
@@ -1119,7 +1213,7 @@
           <div class="opsQueueSummaryStrip" id="opsQueueSummaryStrip"></div>
         </div>
       </section>
-      <section id="opsZohoBooks" class="opsSectionPage" data-ops-mode-group="admin super">
+      <section id="opsZohoBooks" class="opsSectionPage" data-ops-mode-group="admin">
         <div class="opsPageIntro">
           <div><h2>Billing / Zoho Books</h2><p>Filterable billing console. No draft invoice creation, invoice send, payment creation, or Books write is activated in this release.</p></div>
           <span class="opsStatusPill info">Read-only actions</span>
@@ -1137,7 +1231,7 @@
           </div>
         </div>
       </section>
-      <section id="opsCommunications" class="opsSectionPage" data-ops-mode-group="admin super">
+      <section id="opsCommunications" class="opsSectionPage" data-ops-mode-group="admin">
         <div class="opsPageIntro">
           <div><h2>Communications</h2><p>Single-applicant communication actions require preview, recipient review, and explicit Safe Mode approval checks.</p></div>
           <span class="opsStatusPill warn">Safe Test Only</span>
@@ -1189,7 +1283,7 @@
           </div>
         </div>
       </section>
-      <section id="opsClassroom" class="opsSectionPage" data-ops-mode-group="admin super">
+      <section id="opsClassroom" class="opsSectionPage" data-ops-mode-group="admin">
         <div class="opsPageIntro">
           <div><h2>Classroom Handover</h2><p>Post-enrolment handover visibility and internal notification. No classroom or enrolment fields are written from this cockpit.</p></div>
           <span class="opsStatusPill warn">Safe Test Only</span>
@@ -1229,7 +1323,7 @@
           </div>
         </div>
       </section>
-      <section id="opsFallbackDiagnostics" class="opsSectionPage" data-ops-mode-group="admin super">
+      <section id="opsFallbackDiagnostics" class="opsSectionPage" data-ops-mode-group="super">
         <div class="opsPageIntro">
           <div><h2>WhatsApp / Contact Fallback</h2><p>Operational fallback surface for governed export/email paths. No direct WhatsApp send is implemented by this system.</p></div>
           <span class="opsStatusPill warn">Admin / Super Admin</span>
@@ -1278,7 +1372,7 @@
           </div>
         </div>
       </section>
-      <section id="opsReports" class="opsSectionPage" data-ops-mode-group="operator admin super">
+      <section id="opsReports" class="opsSectionPage" data-ops-mode-group="operator">
         <div class="opsPageIntro">
           <div><h2>Reports</h2><p>Operational report menu. Tiles are polished placeholders unless existing queue loaders provide counts.</p></div>
           <span class="opsStatusPill muted">Coming Next</span>
@@ -2170,6 +2264,11 @@
       if (mode === "admin") return "Admin Mode";
       return "Operator Mode";
     }
+    function opsPrimarySectionForMode_(mode){
+      if (mode === "super") return "opsRulesConfig";
+      if (mode === "admin") return "opsAdmissionsQueue";
+      return "opsLifecycleMap";
+    }
     function detectedRoleLabel_(){
       var role = String(ADMIN_ROLE || "").trim().toUpperCase();
       if (role === "SUPER") return "Super Admin";
@@ -2188,6 +2287,8 @@
       opsActionState.mode = normalizeOpsMode_(mode);
       writeOpsMode_(opsActionState.mode);
       applyOpsModeVisibility_();
+      var targetId = opsPrimarySectionForMode_(opsActionState.mode);
+      if (targetId) opsScrollTo_(targetId);
     }
     function formatPngAmount_(value){
       var n = Number(value || 0);
@@ -2269,6 +2370,9 @@
       setOpsText_("opsRoleStripEmail", ADMIN_EMAIL || "Unknown");
       setOpsText_("opsRoleStripRole", "Detected role: " + detectedRoleLabel_());
       setOpsText_("opsRoleStripMode", "Current mode: " + opsModeLabel_(mode));
+      Array.prototype.slice.call(document.querySelectorAll("[data-ops-workspace]")).forEach(function(node){
+        node.classList.toggle("hiddenByMode", String(node.getAttribute("data-ops-workspace") || "") !== mode);
+      });
     }
     function applyOpsModeVisibility_(){
       var mode = readOpsMode_();
