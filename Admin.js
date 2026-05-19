@@ -732,6 +732,36 @@ function ensureZohoBooksHeaders_(sheet) {
   return { ok: true, headers: finalHeaders, readiness: readinessAfter };
 }
 
+function lookupZohoBooksInvoiceUrlById_(invoiceId) {
+  var id = safeStr_(invoiceId || "");
+  if (!id) return { ok: false, code: "NO_INVOICE_ID", url: "" };
+  try {
+    var res = zohoBooksApiRequest_("get", "invoices/" + encodeURIComponent(id), null, {});
+    if (!res || res.ok !== true) {
+      return {
+        ok: false,
+        code: safeStr_(res && res.code || "INVOICE_ID_LOOKUP_FAILED"),
+        message: safeStr_(res && res.message || ""),
+        url: ""
+      };
+    }
+    var invoice = res.response && res.response.invoice ? res.response.invoice : {};
+    var url = safeStr_(invoice.invoice_url || invoice.invoiceUrl || invoice.url || invoice.permalink_url || invoice.invoice_link || "");
+    return {
+      ok: !!url,
+      code: url ? "INVOICE_URL_FOUND" : "INVOICE_URL_UNAVAILABLE",
+      url: url
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      code: "INVOICE_ID_LOOKUP_ERROR",
+      message: safeStr_(err && err.message || err || ""),
+      url: ""
+    };
+  }
+}
+
 function buildZohoBooksPreviewResult_(rowObj, options) {
   var row = rowObj || {};
   var opts = options && typeof options === "object" ? options : {};
@@ -752,7 +782,26 @@ function buildZohoBooksPreviewResult_(rowObj, options) {
   var localInvoiceStatus = safeStr_(row.Books_Invoice_Status || "");
   var localPushAt = safeStr_(row.Books_Last_Push_At || row.Books_Push_At || "");
   var localPushBy = safeStr_(row.Books_Push_By || "");
+  var contactLookup = opts.contactLookup || { ok: true, code: "NOT_CHECKED", matches: [] };
+  var invoiceLookup = opts.invoiceLookup || { ok: true, code: "NOT_CHECKED", matches: [] };
   var invoiceRaised = !!(localInvoice || (invoiceLookup.ok && Array.isArray(invoiceLookup.matches) && invoiceLookup.matches.length));
+  var firstInvoiceMatch = invoiceLookup.ok && Array.isArray(invoiceLookup.matches) && invoiceLookup.matches.length
+    ? (invoiceLookup.matches[0] || {})
+    : {};
+  var effectiveInvoiceId = safeStr_(localInvoice || firstInvoiceMatch.invoice_id || firstInvoiceMatch.invoiceId || "");
+  var effectiveInvoiceNumber = safeStr_(localInvoiceNumber || firstInvoiceMatch.invoice_number || firstInvoiceMatch.invoiceNumber || "");
+  var effectiveInvoiceStatus = safeStr_(localInvoiceStatus || firstInvoiceMatch.status || firstInvoiceMatch.invoice_status || firstInvoiceMatch.invoiceStatus || "");
+  var currentInvoiceUrlSource = "";
+  var currentInvoiceUrl = safeStr_(row.Books_Invoice_URL || row.Books_Invoice_Link || row.Invoice_URL
+    || firstInvoiceMatch.invoice_url || firstInvoiceMatch.invoiceUrl || firstInvoiceMatch.url
+    || firstInvoiceMatch.permalink_url || firstInvoiceMatch.invoice_link || "");
+  if (currentInvoiceUrl) currentInvoiceUrlSource = safeStr_(row.Books_Invoice_URL || row.Books_Invoice_Link || row.Invoice_URL) ? "SHEET" : "REFERENCE_LOOKUP";
+  var invoiceUrlLookup = { ok: false, code: effectiveInvoiceId ? "NOT_ATTEMPTED" : "NO_INVOICE_ID", url: "" };
+  if (!currentInvoiceUrl && effectiveInvoiceId) {
+    invoiceUrlLookup = lookupZohoBooksInvoiceUrlById_(effectiveInvoiceId);
+    currentInvoiceUrl = safeStr_(invoiceUrlLookup.url || "");
+    if (currentInvoiceUrl) currentInvoiceUrlSource = "INVOICE_ID_LOOKUP";
+  }
   var missingFields = [];
   if (!safeStr_(payer.name || "")) missingFields.push("PAYER_NAME_MISSING");
   if (!safeStr_(row.Student_Name || rowStudentName_(row))) missingFields.push("STUDENT_MISSING");
@@ -762,8 +811,6 @@ function buildZohoBooksPreviewResult_(rowObj, options) {
   if (!(amount > 0)) missingFields.push("AMOUNT_MISSING");
   if (resolvedItems.amountMismatch === true && isZohoBooksSourceAmountAuthoritative_()) missingFields.push("AMOUNT_MISMATCH");
 
-  var contactLookup = opts.contactLookup || { ok: true, code: "NOT_CHECKED", matches: [] };
-  var invoiceLookup = opts.invoiceLookup || { ok: true, code: "NOT_CHECKED", matches: [] };
   var idempotencyStatus = "READY";
   if (localInvoice) idempotencyStatus = "ALREADY_PROCESSED";
   else if (invoiceLookup.ok && Array.isArray(invoiceLookup.matches) && invoiceLookup.matches.length) idempotencyStatus = "ALREADY_PROCESSED_REMOTE";
@@ -882,9 +929,12 @@ function buildZohoBooksPreviewResult_(rowObj, options) {
     currentBooksPushStatus: currentPushStatus,
     effectiveBooksPushStatus: effectivePushStatus,
     currentBooksContactId: localContact,
-    currentBooksInvoiceId: localInvoice,
-    currentBooksInvoiceNumber: localInvoiceNumber,
-    currentBooksInvoiceStatus: localInvoiceStatus,
+    currentBooksInvoiceId: effectiveInvoiceId,
+    currentBooksInvoiceNumber: effectiveInvoiceNumber,
+    currentBooksInvoiceStatus: effectiveInvoiceStatus,
+    currentBooksInvoiceUrl: currentInvoiceUrl,
+    currentBooksInvoiceUrlSource: currentInvoiceUrlSource,
+    currentBooksInvoiceUrlLookup: invoiceUrlLookup,
     currentBooksPushAt: localPushAt,
     currentBooksPushBy: localPushBy,
     invoiceRaised: invoiceRaised,

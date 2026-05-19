@@ -777,7 +777,6 @@
     .opsActionBtn.primary{ background:#eaf2ff; border-color:#bfd6f8; color:#1f5aa5; }
     .opsActionBtn.live{ background:#e9f8ef; border-color:#b9e6c9; color:#17613a; }
     .opsActionBtn[disabled]{ cursor:not-allowed; color:#73879b; background:#f3f6f9; border-color:#d9e2eb; opacity:.95; }
-    .opsActionBtn[disabled]::after{ content:"  | Prototype Only"; font-weight:800; color:#8a99a8; }
     .opsResultBox{ margin-top:12px; border:1px solid #dbe5ef; background:#fbfdff; border-radius:10px; padding:12px; color:#26384e; font-size:13px; }
     .opsResultBox.ok{ border-color:#a7dfbd; background:#f1fbf5; color:#17613a; }
     .opsResultBox.warn{ border-color:#f2d083; background:#fff9e8; color:#76520a; }
@@ -915,14 +914,14 @@
       </div>
       <nav class="opsNav">
         <a href="#opsDashboard" data-icon="D" data-ops-mode-link="operator admin super">Workspace Home</a>
-        <a href="#opsLifecycleMap" data-icon="L" data-ops-mode-link="operator">Lifecycle Map</a>
-        <a href="#opsAdmissionsQueue" data-icon="A" data-ops-mode-link="operator admin">Applicant Queue</a>
+        <a href="#opsLifecycleMap" data-icon="L" data-ops-mode-link="operator admin super">Lifecycle Map</a>
+        <a href="#opsAdmissionsQueue" data-icon="A" data-ops-mode-link="operator admin super">Applicant Queue</a>
         <a href="#opsZohoBooks" data-icon="Z" data-ops-mode-link="admin">Billing Queue</a>
         <a href="#opsCommunications" data-icon="C" data-ops-mode-link="admin">Communications</a>
         <a href="#opsClassroom" data-icon="H" data-ops-mode-link="admin">Classroom Handover</a>
         <a href="#opsFallbackDiagnostics" data-icon="W" data-ops-mode-link="super">Fallbacks</a>
-        <a href="#opsReports" data-icon="P" data-ops-mode-link="operator">Reports</a>
-        <a href="#opsStudentDiagnostics" data-icon="S" data-ops-mode-link="operator">Portal Diagnostics</a>
+        <a href="#opsReports" data-icon="P" data-ops-mode-link="operator admin super">Reports</a>
+        <a href="#opsStudentDiagnostics" data-icon="S" data-ops-mode-link="operator admin super">Portal Diagnostics</a>
         <a href="#opsRulesConfig" data-icon="G" data-ops-mode-link="super">Rules & Config</a>
         <a href="#opsRuntimeTruth" data-icon="R" data-ops-mode-link="super">Governance</a>
         <a href="#opsReleaseControl" data-icon="L" data-ops-mode-link="super">Release Control</a>
@@ -931,7 +930,7 @@
         <div class="opsEnvCard">
           <div class="opsEnvLabel">Environment</div>
           <div class="opsEnvValue">Production - Staging</div>
-          <div class="opsEnvValue" id="cockpitSideRuntime">Runtime r173</div>
+          <div class="opsEnvValue" id="cockpitSideRuntime">Runtime r180</div>
         </div>
         <div class="opsUserBlock">
           <div class="opsAvatar">SW</div>
@@ -959,30 +958,30 @@
           </div>
         </div>
         <div class="opsKpiGrid">
-          <div class="opsKpiCard"><div class="opsKpiIcon blue">&lt;/&gt;</div><div><div class="kpiLabel">Runtime</div><div class="kpiValue" id="cockpitKpiRuntime">r177 / 177</div><div class="kpiState" id="cockpitKpiRuntimeState">Baseline live</div><div class="kpiMeta" id="cockpitKpiRuntimeMeta">Waiting on Admin and Student whoami.</div></div></div>
-          <div class="opsKpiCard"><div class="opsKpiIcon green">B</div><div><div class="kpiLabel">Billing Status</div><div class="kpiValue" id="cockpitKpiBilling">Books Connected</div><div class="kpiState" id="cockpitKpiBillingState">Read-only</div><div class="kpiMeta" id="cockpitKpiBillingMeta">Invoice snapshot loading. Cockpit writes disabled.</div></div></div>
-          <div class="opsKpiCard"><div class="opsKpiIcon purple">A</div><div><div class="kpiLabel">Admissions Status</div><div class="kpiValue" id="cockpitKpiAdmissions">Queue Loading</div><div class="kpiState">Visibility Only</div><div class="kpiMeta" id="cockpitKpiAdmissionsMeta">Applicant rows use existing read-only loaders.</div></div></div>
+          <div class="opsKpiCard"><div class="opsKpiIcon blue">&lt;/&gt;</div><div><div class="kpiLabel">Runtime</div><div class="kpiValue" id="cockpitKpiRuntime">r180 / 180</div><div class="kpiState" id="cockpitKpiRuntimeState">Baseline live</div><div class="kpiMeta" id="cockpitKpiRuntimeMeta">Waiting on Admin and Student whoami.</div></div></div>
+          <div class="opsKpiCard"><div class="opsKpiIcon green">B</div><div><div class="kpiLabel">Billing Status</div><div class="kpiValue" id="cockpitKpiBilling">Books Connected</div><div class="kpiState" id="cockpitKpiBillingState">Guarded actions</div><div class="kpiMeta" id="cockpitKpiBillingMeta">Invoice snapshot loading. Draft/test actions require selected applicant, preview, and server gates.</div></div></div>
+          <div class="opsKpiCard"><div class="opsKpiIcon purple">A</div><div><div class="kpiLabel">Admissions Status</div><div class="kpiValue" id="cockpitKpiAdmissions">Queue Loading</div><div class="kpiState">Working Surface</div><div class="kpiMeta" id="cockpitKpiAdmissionsMeta">Applicant rows use existing loaders and selected-applicant action bridges.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon amber">!</div><div><div class="kpiLabel">System Health</div><div class="kpiValue" id="cockpitKpiRisks">Unknown</div><div class="kpiState" id="cockpitKpiRiskState">Defined States</div><div class="kpiMeta" id="cockpitKpiRisksMeta">Healthy, Warning, Blocked, Degraded, or Unknown.</div></div></div>
         </div>
         <div class="opsWorkspaceSwitch">
           <div class="opsWorkspaceCard" id="opsWorkspaceOperator" data-ops-workspace="operator">
             <h3>Operator Workspace</h3>
-            <p>Lifecycle-first, queue-first intake view with selected applicant context and read-only diagnostics.</p>
+            <p>Lifecycle-first, queue-first intake view with selected applicant context, diagnostics, local export, and guarded action handoffs.</p>
             <div class="opsWorkspaceMeta">
               <span class="opsStatusPill info">Operator Mode</span>
-              <span class="opsStatusPill ok">Read-only diagnostics</span>
-              <span class="opsStatusPill muted">No governed writes</span>
+              <span class="opsStatusPill ok">Diagnostics active</span>
+              <span class="opsStatusPill warn">Guarded handoffs</span>
             </div>
             <div class="opsWorkspaceGrid">
               <div class="opsWorkspaceInfo"><div class="k">Primary modules</div><div class="v">Operator Console, Lifecycle Map, Applicant Queue</div></div>
-              <div class="opsWorkspaceInfo"><div class="k">Applicant bridge</div><div class="v">Read-only drawer plus Admin review handoff</div></div>
-              <div class="opsWorkspaceInfo"><div class="k">Portal visibility</div><div class="v">Read-only diagnostics only</div></div>
-              <div class="opsWorkspaceInfo"><div class="k">Action limit</div><div class="v">No send/export/write actions</div></div>
+              <div class="opsWorkspaceInfo"><div class="k">Applicant bridge</div><div class="v">Drawer plus Admin review handoff</div></div>
+              <div class="opsWorkspaceInfo"><div class="k">Portal visibility</div><div class="v">Diagnostics plus Super Admin reset/lock bridge</div></div>
+              <div class="opsWorkspaceInfo"><div class="k">Action scope</div><div class="v">Selected applicant, local export, and guarded handoffs</div></div>
             </div>
             <div class="opsActionRow" style="margin-top:14px;">
               <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Open Lifecycle Workspace</button>
               <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsAdmissionsQueue')">Open Applicant Queue</button>
-              <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsStudentDiagnostics')">Open Read-only Diagnostics</button>
+              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsStudentDiagnostics')">Open Portal Diagnostics</button>
             </div>
           </div>
           <div class="opsWorkspaceCard hiddenByMode" id="opsWorkspaceAdmin" data-ops-workspace="admin">
@@ -1046,12 +1045,12 @@
             <div class="opsSectionHeader"><div><h3>Executive Snapshot</h3><p>Operator and Admin working surfaces first. Governance and release controls remain secondary.</p></div><span class="opsStatusPill info">Safe Mode Controlled Actions</span></div>
             <div class="opsResultBox warn">Safe Mode is required for existing Ops live actions. Single-record safe tests are restricted to the approved target identity only.</div>
             <div class="opsMetricGrid">
-              <div class="opsMetric"><div class="k">Next Action</div><div class="v" id="cockpitKpiNextRelease">r178 control hardening candidate</div></div>
+              <div class="opsMetric"><div class="k">Next Action</div><div class="v" id="cockpitKpiNextRelease">OPS guarded activation candidate</div></div>
               <div class="opsMetric"><div class="k">Queue Summary</div><div class="v" id="cockpitDashboardQueue">Loading</div></div>
               <div class="opsMetric"><div class="k">Billing</div><div class="v">Safe Mode Controlled Actions</div></div>
               <div class="opsMetric"><div class="k">Admissions</div><div class="v">Admin working surface</div></div>
             </div>
-            <div class="opsPlaceholder" id="cockpitKpiNextReleaseMeta">r178 hardens Super Admin controls, clarifies portal behavior, and classifies full-functionality activation without uncontrolled writes.</div>
+            <div class="opsPlaceholder" id="cockpitKpiNextReleaseMeta">OPS activation exposes existing backend functions with selected-applicant, preview, role, and confirmation gates. Release actions remain external.</div>
             <div class="opsActionRow">
               <button class="opsActionBtn primary live" type="button" onclick="opsRefreshSnapshot_()">Refresh Snapshot</button>
               <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsAdmissionsQueue')">View Priority Queue</button>
@@ -1061,8 +1060,8 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Working Layers</h3><p>Admin Mode is the primary working surface. Operator Mode preserves queue and lifecycle navigation; Super Admin Mode adds governed controls.</p></div><span class="opsStatusPill ok">Role-driven surface</span></div>
             <div class="opsPriorityList">
-              <div class="opsPriorityCard"><div><div class="t">Operator Mode</div><div class="m">Queue, lifecycle, selected-applicant context, and read-only diagnostics remain the low-risk intake surface.</div></div><span class="opsStatusPill info">Operator</span></div>
-              <div class="opsPriorityCard"><div><div class="t">Admin Mode</div><div class="m">Communications, billing reads, classroom preview/notify, and the fallback working surface are grouped as the primary daily surface.</div></div><span class="opsStatusPill warn">Primary Working Surface</span></div>
+              <div class="opsPriorityCard"><div><div class="t">Operator Mode</div><div class="m">Queue, lifecycle, selected-applicant context, diagnostics, and local export remain the low-risk intake surface.</div></div><span class="opsStatusPill info">Operator</span></div>
+              <div class="opsPriorityCard"><div><div class="t">Admin Mode</div><div class="m">Communications send gates, billing preview/create/test-email gates, classroom preview/notify, and the fallback working surface are grouped as the primary daily surface.</div></div><span class="opsStatusPill warn">Primary Working Surface</span></div>
               <div class="opsPriorityCard"><div><div class="t">Super Admin Mode</div><div class="m">Governed exports, portal control mutations, release truth, and high-risk classifications remain secondary and explicitly gated.</div></div><span class="opsStatusPill muted">Governance</span></div>
               <div class="opsPriorityCard"><div><div class="t">Developer / Release</div><div class="m">Git, clasp, versioning, deployment pins, and release metadata recording stay outside Apps Script UI.</div></div><span class="opsStatusPill muted">Externalized</span></div>
             </div>
@@ -1080,7 +1079,7 @@
             <div class="field"><label>Preview limit</label><input id="opsStageBatchLimit" type="number" min="1" max="100" step="1" value="50"></div>
             <div class="field"><label>Diagnostic offset</label><input id="opsStageBatchOffset" type="number" min="0" step="1" value="0"></div>
             <div class="field"><label>Selected applicant</label><input type="text" id="opsStageBatchApplicantContext" readonly value="No applicant selected"></div>
-            <div class="field"><label>Disabled reason</label><input type="text" id="opsStageBatchDisabledReason" readonly value="Select a lifecycle stage first"></div>
+            <div class="field"><label>Gate / status reason</label><input type="text" id="opsStageBatchDisabledReason" readonly value="Select a lifecycle stage first"></div>
           </div>
           <div class="opsActionRow">
             <button id="btnOpsStageBatchPreview" class="opsActionBtn live" type="button" onclick="previewStageBatchUi_()">Preview Cohort</button>
@@ -1094,18 +1093,18 @@
       </section>
       <section id="opsLifecycleMap" class="opsSectionPage" data-ops-mode-group="operator admin super">
         <div class="opsPageIntro">
-          <div><h2>Lifecycle Cascade</h2><p>Inspectable operator flow. Stage selection filters the applicant queue without clearing the selected applicant context.</p></div>
-          <span class="opsStatusPill info">Interactive / read-only</span>
+          <div><h2>Lifecycle Cascade</h2><p>Inspectable operator flow. Stage selection filters the applicant queue, drives batch preview/send eligibility, and preserves selected applicant context.</p></div>
+          <span class="opsStatusPill warn">Interactive / guarded actions</span>
         </div>
         <div class="opsCard">
           <div class="opsStageCascade" id="opsLifecycleStageCards"></div>
           <div class="opsInspectPanel" id="opsLifecycleInspector">Select a lifecycle stage to inspect records, blockers, and next action.</div>
         </div>
       </section>
-      <section id="opsStudentDiagnostics" class="opsSectionPage" data-ops-mode-group="operator">
+      <section id="opsStudentDiagnostics" class="opsSectionPage" data-ops-mode-group="operator admin super">
         <div class="opsPageIntro">
-          <div><h2>Student Portal Diagnostics</h2><p>Read-only map of student-facing routes, token state, locks, and upload/update surfaces.</p></div>
-          <span class="opsStatusPill info">Map only</span>
+          <div><h2>Student Portal Diagnostics</h2><p>Selected-applicant portal link, token, and access controls through existing Admin gates.</p></div>
+          <span class="opsStatusPill warn">Selected applicant / Super Admin for mutation</span>
         </div>
         <div class="opsSectionGrid two">
           <div class="opsCard">
@@ -1114,34 +1113,43 @@
               <div class="opsChecklistRow"><span>Current selected applicant</span><span class="opsStatusPill info" id="cockpitPortalSelectedApplicant">FODE-26-002929</span></div>
               <div class="opsChecklistRow"><span>Portal route/render</span><span class="opsStatusPill ok">Mapped</span></div>
               <div class="opsChecklistRow"><span>Submitted details</span><span class="opsStatusPill ok">Mapped</span></div>
-              <div class="opsChecklistRow"><span>Portal token/link status</span><span class="opsStatusPill warn">Diagnostics only</span></div>
-              <div class="opsChecklistRow"><span>Portal lock state</span><span class="opsStatusPill warn">Diagnostics only</span></div>
+              <div class="opsChecklistRow"><span>Portal token/link status</span><span class="opsStatusPill ok">Open/generate supported</span></div>
+              <div class="opsChecklistRow"><span>Portal lock state</span><span class="opsStatusPill warn">Super Admin gated</span></div>
               <div class="opsChecklistRow"><span>Student whoami/runtime check</span><span class="opsStatusPill ok">Mapped</span></div>
             </div>
+            <div class="opsActionRow" style="margin-top:10px;">
+              <button class="opsActionBtn live" type="button" onclick="opsOpenPortalStatus_()">Load Portal Link / Status</button>
+              <button class="opsActionBtn live" type="button" onclick="opsOpenSelectedPortalLink_()">Open Selected Portal</button>
+              <button class="opsActionBtn live" type="button" onclick="opsCopySelectedPortalLink_()">Copy Portal Link</button>
+              <button class="opsActionBtn live" type="button" onclick="opsResetSelectedPortalLink_()">Reset Portal Link</button>
+              <button class="opsActionBtn live" type="button" onclick="opsSetSelectedPortalAccess_('Open')">Unlock Portal Access</button>
+              <button class="opsActionBtn live" type="button" onclick="opsSetSelectedPortalAccess_('Locked')">Lock Portal Access</button>
+            </div>
+            <div id="opsPortalResult" class="opsResultBox hidden"></div>
           </div>
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Blocked Student Writes</h3></div><span class="opsStatusPill danger">Disabled / Deferred</span></div>
+            <div class="opsSectionHeader"><div><h3>Student Write Boundary</h3></div><span class="opsStatusPill danger">Backend route boundary</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>DOB / exam site / subject updates</span><span class="opsStatusPill danger">Blocked in Ops</span></div>
-              <div class="opsChecklistRow"><span>Document/payment proof uploads</span><span class="opsStatusPill danger">Blocked in Ops</span></div>
-              <div class="opsChecklistRow"><span>Delete uploaded file</span><span class="opsStatusPill danger">Blocked in Ops</span></div>
-              <div class="opsChecklistRow"><span>Portal lock / unlock</span><span class="opsStatusPill danger">Blocked in Ops</span></div>
-              <div class="opsChecklistRow"><span>Portal link reset</span><span class="opsStatusPill danger">Blocked in Ops</span></div>
+              <div class="opsChecklistRow"><span>DOB / exam site / subject updates</span><span class="opsStatusPill danger">Not implemented: backend missing</span></div>
+              <div class="opsChecklistRow"><span>Document/payment proof uploads</span><span class="opsStatusPill danger">Student portal backend only</span></div>
+              <div class="opsChecklistRow"><span>Delete uploaded file</span><span class="opsStatusPill danger">Student portal backend only</span></div>
+              <div class="opsChecklistRow"><span>Portal lock / unlock</span><span class="opsStatusPill warn">Existing Super Admin server gate</span></div>
+              <div class="opsChecklistRow"><span>Portal link reset</span><span class="opsStatusPill warn">Existing Super Admin server gate</span></div>
             </div>
           </div>
         </div>
       </section>
       <section id="opsRuntimeTruth" class="opsSectionPage" data-ops-mode-group="super">
         <div class="opsPageIntro">
-          <div><h2>Governance / Runtime Truth</h2><p>Secondary governance layer for runtime identity, release metadata, role boundaries, safe mode, and disabled high-risk controls.</p></div>
+          <div><h2>Governance / Runtime Truth</h2><p>Secondary governance layer for runtime identity, release metadata, role boundaries, safe mode, and guarded high-risk controls.</p></div>
           <span class="opsStatusPill ok" id="cockpitRuntimeStatusPill">Waiting</span>
         </div>
         <div class="opsSectionGrid">
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Config Identity</h3></div><span class="opsStatusPill info">Read only</span></div>
+            <div class="opsSectionHeader"><div><h3>Config Identity</h3></div><span class="opsStatusPill info">Runtime evidence</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Config VERSION</span><span class="opsStatusPill info" id="cockpitRuntimeConfigVersion">r177</span></div>
-              <div class="opsChecklistRow"><span>DEPLOY_VERSION_NUMBER</span><span class="opsStatusPill info" id="cockpitRuntimeDeployNumber">175</span></div>
+              <div class="opsChecklistRow"><span>Config VERSION</span><span class="opsStatusPill info" id="cockpitRuntimeConfigVersion">r180</span></div>
+              <div class="opsChecklistRow"><span>DEPLOY_VERSION_NUMBER</span><span class="opsStatusPill info" id="cockpitRuntimeDeployNumber">180</span></div>
               <div class="opsChecklistRow"><span>Apps Script platform/version</span><span class="opsStatusPill muted" id="cockpitAppsScript">Unknown</span></div>
               <div class="opsChecklistRow"><span>Remote config status</span><span class="opsStatusPill muted" id="cockpitRuntimeRemoteConfig">Unknown</span></div>
             </div>
@@ -1158,7 +1166,7 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>System Health Meaning</h3></div><span class="opsStatusPill muted" id="cockpitHealthLevel">Unknown</span></div>
             <div class="opsMeaningList">
-              <div class="opsMeaningItem"><strong>Healthy</strong>Runtime identity matches, config identity is coherent, critical writes are disabled, and required queues loaded.</div>
+              <div class="opsMeaningItem"><strong>Healthy</strong>Runtime identity matches, config identity is coherent, critical write gates are visible, and required queues loaded.</div>
               <div class="opsMeaningItem"><strong>Warning</strong>Operator can continue, but at least one non-critical check needs attention.</div>
               <div class="opsMeaningItem"><strong>Blocked</strong>A release/runtime/data integrity gate failed. Stop operator action until resolved.</div>
               <div class="opsMeaningItem"><strong>Degraded</strong>Core UI loads but one supporting integration or refresh path is unavailable.</div>
@@ -1169,22 +1177,23 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Accepted Baseline</h3></div><span class="opsStatusPill muted">Current known</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Commit</span><span class="opsStatusPill muted" id="cockpitRuntimeCommit">5f7d309</span></div>
-              <div class="opsChecklistRow"><span>Tag</span><span class="opsStatusPill muted" id="cockpitRuntimeTag">staging-as177</span></div>
-              <div class="opsChecklistRow"><span>Browser acceptance</span><span class="opsStatusPill ok" id="cockpitReleaseBrowser">Accepted r177</span></div>
+              <div class="opsChecklistRow"><span>Commit</span><span class="opsStatusPill muted" id="cockpitRuntimeCommit">344c446</span></div>
+              <div class="opsChecklistRow"><span>Tag</span><span class="opsStatusPill muted" id="cockpitRuntimeTag">staging-as180</span></div>
+              <div class="opsChecklistRow"><span>Browser acceptance</span><span class="opsStatusPill ok" id="cockpitReleaseBrowser">Accepted r180</span></div>
             </div>
             <div class="opsActionRow">
-              <button class="opsActionBtn" type="button" disabled>Run Runtime Check</button>
-              <button class="opsActionBtn" type="button" disabled>Copy Whoami URLs</button>
-              <button class="opsActionBtn" type="button" disabled>View Last Acceptance</button>
+              <button class="opsActionBtn live" type="button" onclick="opsRunRuntimeCheck_()">Run Runtime Check</button>
+              <button class="opsActionBtn live" type="button" onclick="opsCopyWhoamiUrls_()">Copy Whoami URLs</button>
+              <button class="opsActionBtn live" type="button" onclick="opsViewAcceptanceChecklist_()">View Last Acceptance</button>
             </div>
+            <div id="opsRuntimeActionResult" class="opsResultBox hidden"></div>
           </div>
         </div>
       </section>
-      <section id="opsAdmissionsQueue" class="opsSectionPage" data-ops-mode-group="operator admin">
+      <section id="opsAdmissionsQueue" class="opsSectionPage" data-ops-mode-group="operator admin super">
         <div class="opsPageIntro">
-          <div><h2>Applicant Queue</h2><p>Full-width applicant rows with selected-row context. Use horizontal scroll when fields exceed the viewport.</p></div>
-          <span class="opsStatusPill info">Read only</span>
+          <div><h2>Applicant Queue</h2><p>Full-width applicant rows with selected-row context, Admin review bridge, filters, sorting, and browser CSV export.</p></div>
+          <span class="opsStatusPill ok">Working queue</span>
         </div>
         <div class="opsCard">
           <div class="opsSectionHeader">
@@ -1199,7 +1208,7 @@
             <button class="opsActionBtn" type="button" onclick="opsSetQueueFilter_('blocked')">Blocked</button>
             <button class="opsActionBtn" type="button" onclick="opsActionState.queueSort='aging_desc';renderOpsQueue_()">Sort Aging</button>
             <button class="opsActionBtn" type="button" onclick="opsActionState.queueSort='date_desc';renderOpsQueue_()">Sort Date Applied</button>
-            <button class="opsActionBtn" type="button" disabled>Export Queue (Prepared)</button>
+            <button class="opsActionBtn live" type="button" onclick="opsExportQueueCsv_()">Export Queue CSV</button>
           </div>
           <div id="opsAdmissionsResult" class="opsResultBox hidden"></div>
           <div class="opsTableWrap">
@@ -1215,8 +1224,8 @@
       </section>
       <section id="opsZohoBooks" class="opsSectionPage" data-ops-mode-group="admin">
         <div class="opsPageIntro">
-          <div><h2>Billing / Zoho Books</h2><p>Filterable billing console. No draft invoice creation, invoice send, payment creation, or Books write is activated in this release.</p></div>
-          <span class="opsStatusPill info">Read-only actions</span>
+          <div><h2>Billing / Zoho Books</h2><p>Filterable billing console with selected-applicant preflight, preview, draft invoice, and controlled test-email bridge where backend/config allow.</p></div>
+          <span class="opsStatusPill warn">Selected applicant / preview required</span>
         </div>
         <div class="opsCard">
           <div class="opsFilterGrid">
@@ -1227,6 +1236,16 @@
             <div>
               <div id="opsBooksFilterDetail" class="opsInspectPanel">Select a billing filter.</div>
               <div id="cockpitApplicantSummary" class="opsPlaceholder">Loading Books summary for FODE-26-002929...</div>
+              <div class="opsActionRow" style="margin-top:10px;">
+                <button class="opsActionBtn live" type="button" onclick="opsPreflightBooks_()">Books Preflight</button>
+                <button class="opsActionBtn live" type="button" onclick="opsPreviewBooksForSelected_()">Preview Selected Applicant</button>
+                <button class="opsActionBtn live" type="button" onclick="opsRefreshInvoiceStatus_()">Refresh Invoice Status</button>
+                <button class="opsActionBtn live" type="button" onclick="opsCreateBooksDraftForSelected_()">Create Draft Invoice</button>
+                <button class="opsActionBtn live" type="button" onclick="opsSendBooksTestInvoiceForSelected_()">Send Test Invoice Email</button>
+                <button class="opsActionBtn live" type="button" onclick="opsOpenInvoice_()">Open Invoice</button>
+                <button class="opsActionBtn" type="button" onclick="opsOpenLegacyAdminReview_()">Open Admin Review</button>
+              </div>
+              <div id="opsBooksResult" class="opsResultBox hidden"></div>
             </div>
           </div>
         </div>
@@ -1242,11 +1261,11 @@
             <div class="opsPlaceholder" id="cockpitCommContext">Current Ops applicant: FODE-26-002929</div>
             <div class="opsInfoGrid">
               <div class="opsInfoItem"><div class="k">Applicant communication status</div><div class="v" id="cockpitCommApplicantStatus">Unknown</div></div>
-              <div class="opsInfoItem"><div class="k">Invite status</div><div class="v" id="cockpitCommInviteStatus">Coming Next</div></div>
-              <div class="opsInfoItem"><div class="k">Reminder status</div><div class="v" id="cockpitCommReminderStatus">Coming Next</div></div>
+              <div class="opsInfoItem"><div class="k">Invite status</div><div class="v" id="cockpitCommInviteStatus">Loaded from selected applicant</div></div>
+              <div class="opsInfoItem"><div class="k">Reminder status</div><div class="v" id="cockpitCommReminderStatus">Loaded from selected applicant</div></div>
               <div class="opsInfoItem"><div class="k">Invoice email status</div><div class="v" id="cockpitCommInvoiceEmail">Unknown</div></div>
               <div class="opsInfoItem"><div class="k">Bounce / suppression</div><div class="v" id="cockpitCommSuppression">Unknown</div></div>
-              <div class="opsInfoItem"><div class="k">WhatsApp fallback</div><div class="v" id="cockpitCommWhatsapp">Coming Next</div></div>
+              <div class="opsInfoItem"><div class="k">WhatsApp fallback</div><div class="v" id="cockpitCommWhatsapp">Loaded from selected applicant</div></div>
             </div>
             <div class="opsActionRow">
               <button class="opsActionBtn live" type="button" onclick="opsPreviewApplicantEmail_(opsSelectedTemplateType_(),'Selected Template')">Preview Selected Template</button>
@@ -1285,7 +1304,7 @@
       </section>
       <section id="opsClassroom" class="opsSectionPage" data-ops-mode-group="admin">
         <div class="opsPageIntro">
-          <div><h2>Classroom Handover</h2><p>Post-enrolment handover visibility and internal notification. No classroom or enrolment fields are written from this cockpit.</p></div>
+          <div><h2>Classroom Handover</h2><p>Post-enrolment handover visibility and internal notification through existing backend gates. Enrolment/package mutations are shown only where backend exists.</p></div>
           <span class="opsStatusPill warn">Safe Test Only</span>
         </div>
         <div class="opsSectionGrid mainSplit">
@@ -1294,7 +1313,7 @@
             <div class="opsPlaceholder" id="cockpitClassroomContext">Current Ops applicant: FODE-26-002929</div>
             <div class="opsInfoGrid">
               <div class="opsInfoItem"><div class="k">Student</div><div class="v" id="cockpitClassroomStudent">Reference applicant</div></div>
-              <div class="opsInfoItem"><div class="k">Grade / FODE level</div><div class="v" id="cockpitClassroomLevel">Coming Next</div></div>
+              <div class="opsInfoItem"><div class="k">Grade / FODE level</div><div class="v" id="cockpitClassroomLevel">Loaded from selected applicant</div></div>
               <div class="opsInfoItem"><div class="k">Selected subjects</div><div class="v" id="cockpitClassroomSubjects">Language & Literature; General Mathematics</div></div>
               <div class="opsInfoItem"><div class="k">Invoice raised / sent</div><div class="v" id="cockpitClassroomInvoice">Invoice Raised</div></div>
               <div class="opsInfoItem"><div class="k">Payment verified</div><div class="v" id="cockpitClassroomPayment">Payment Verified</div></div>
@@ -1303,20 +1322,21 @@
           </div>
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Handover Controls</h3></div><span class="opsStatusPill warn">Safe Test Only</span></div>
-            <div class="opsBadgeStack"><span class="opsStatusPill warn">Classroom Pending</span><span class="opsStatusPill muted">Ready/Complete write path unavailable</span></div>
+            <div class="opsBadgeStack"><span class="opsStatusPill warn">Classroom Pending</span><span class="opsStatusPill ok">Notify backend active</span><span class="opsStatusPill danger">Package/enrol backend missing</span></div>
             <div class="opsMeaningList" style="margin-top:10px;">
-              <div class="opsMeaningItem"><strong>What Classroom Pending Means</strong>Payment and enrolment checks must be visible before classroom handover can move beyond preview. This cockpit does not mark enrolled or write classroom package fields.</div>
+              <div class="opsMeaningItem"><strong>What Classroom Pending Means</strong>Payment and enrolment checks must be visible before classroom handover can move beyond preview. Notify uses the existing backend; package/enrolment mutation backend is not implemented.</div>
               <div class="opsMeaningItem"><strong>Notify Classroom Admin</strong>Sends an internal notification only when preview exists, Safe Mode allows it, and the selected applicant is the approved target. Recipient comes from the classroom admin configuration.</div>
               <div class="opsMeaningItem"><strong>Generate Welcome/Handover Preview</strong>Reads applicant identity, subjects, invoice, payment, enrolment, and classroom status. It does not write any fields.</div>
-              <div class="opsMeaningItem"><strong>Blocked / Allowed Reason</strong>Blocked when payment or enrolment prerequisites are absent, preview is missing, Safe Mode target mismatches, or the action would write enrolment/classroom state.</div>
+              <div class="opsMeaningItem"><strong>Gate / Allowed Reason</strong>Notify is gated by payment/enrolment prerequisites, preview, Safe Mode target, and confirmation. Package/enrolment actions are labeled as backend missing.</div>
             </div>
             <div class="opsInspectPanel" id="opsClassroomChecklist">Generate preview to load classroom checklist, recipients, and notify reason.</div>
             <div class="opsActionRow">
-              <button class="opsActionBtn" type="button" disabled>Prepare Classroom Package (Prepared)</button>
+              <button class="opsActionBtn" type="button" onclick="opsShowBackendMissing_('Prepare Classroom Package','No Admin backend exists to create or write a classroom package from OPS.')">Prepare Classroom Package</button>
               <button class="opsActionBtn live" type="button" onclick="opsNotifyClassroomAdmin_()">Notify Classroom Admin</button>
               <button class="opsActionBtn live" type="button" onclick="opsPreviewClassroomHandover_()">Generate Welcome/Handover Preview</button>
-              <button class="opsActionBtn" type="button" disabled>Mark Classroom Enrolled (Prepared)</button>
-              <button class="opsActionBtn" type="button" disabled>View Handover Checklist (Coming Soon)</button>
+              <button class="opsActionBtn live" type="button" onclick="opsVerifyPaymentForSelected_()">Verify Payment (Super Admin)</button>
+              <button class="opsActionBtn" type="button" onclick="opsShowBackendMissing_('Mark Classroom Enrolled','No Admin backend exists to mark enrolment from OPS.')">Mark Classroom Enrolled</button>
+              <button class="opsActionBtn live" type="button" onclick="renderOpsClassroomChecklist_();setOpsResult_('opsClassroomResult',{result:'OPEN',applicantId:opsApplicantId_(),message:'Classroom handover checklist refreshed from selected applicant and preview state.'},'Handover Checklist')">View Handover Checklist</button>
             </div>
             <div class="opsResultBox warn">Classroom notify is allowed only in Safe Mode against the approved test identity after preview passes.</div>
             <div id="opsClassroomResult" class="opsResultBox hidden"></div>
@@ -1372,19 +1392,19 @@
           </div>
         </div>
       </section>
-      <section id="opsReports" class="opsSectionPage" data-ops-mode-group="operator">
+      <section id="opsReports" class="opsSectionPage" data-ops-mode-group="operator admin super">
         <div class="opsPageIntro">
-          <div><h2>Reports</h2><p>Operational report menu. Tiles are polished placeholders unless existing queue loaders provide counts.</p></div>
-          <span class="opsStatusPill muted">Coming Next</span>
+          <div><h2>Reports</h2><p>Operational report menu backed by loaded queue/runtime snapshots. CSV export is local browser-only and does not write Sheets or Drive.</p></div>
+          <span class="opsStatusPill info">Local export</span>
         </div>
         <div class="opsTileGrid">
-          <div class="opsTile"><div class="opsTileTitle">Daily Admissions Snapshot</div><div class="opsTileMeta" id="cockpitReportAdmissions">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Daily Admissions Snapshot')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV (Prepared)</button><button class="opsActionBtn" type="button" disabled>Schedule Report (Coming Soon)</button></div></div>
-          <div class="opsTile"><div class="opsTileTitle">Invoice Raised vs Sent</div><div class="opsTileMeta" id="cockpitReportInvoiceTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Invoice Raised vs Sent')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV (Prepared)</button><button class="opsActionBtn" type="button" disabled>Schedule Report (Coming Soon)</button></div></div>
-          <div class="opsTile"><div class="opsTileTitle">Payment Verified but Not Enrolled</div><div class="opsTileMeta" id="cockpitReportPaymentTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Payment Verified but Not Enrolled')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV (Prepared)</button><button class="opsActionBtn" type="button" disabled>Schedule Report (Coming Soon)</button></div></div>
-          <div class="opsTile"><div class="opsTileTitle">Classroom Handover Pending</div><div class="opsTileMeta" id="cockpitReportClassroomTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Classroom Handover Pending')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV (Prepared)</button><button class="opsActionBtn" type="button" disabled>Schedule Report (Coming Soon)</button></div></div>
-          <div class="opsTile"><div class="opsTileTitle">Missing Zoho Item Mapping</div><div class="opsTileMeta" id="cockpitReportMapping">Coming Next</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Missing Zoho Item Mapping')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV (Prepared)</button><button class="opsActionBtn" type="button" disabled>Schedule Report (Coming Soon)</button></div></div>
-          <div class="opsTile"><div class="opsTileTitle">Communications Suppression Report</div><div class="opsTileMeta" id="cockpitReportSuppression">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Communications Suppression Report')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV (Prepared)</button><button class="opsActionBtn" type="button" disabled>Schedule Report (Coming Soon)</button></div></div>
-          <div class="opsTile"><div class="opsTileTitle">Release Truth / Drift Report</div><div class="opsTileMeta" id="cockpitReportRelease">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Release Truth / Drift Report')">Open Report</button><button class="opsActionBtn" type="button" disabled>Export CSV (Prepared)</button><button class="opsActionBtn" type="button" disabled>Schedule Report (Coming Soon)</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Daily Admissions Snapshot</div><div class="opsTileMeta" id="cockpitReportAdmissions">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Daily Admissions Snapshot')">Open Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Daily Admissions Snapshot')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Report</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Invoice Raised vs Sent</div><div class="opsTileMeta" id="cockpitReportInvoiceTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Invoice Raised vs Sent')">Open Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Invoice Raised vs Sent')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Report</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Payment Verified but Not Enrolled</div><div class="opsTileMeta" id="cockpitReportPaymentTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Payment Verified but Not Enrolled')">Open Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Payment Verified but Not Enrolled')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Report</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Classroom Handover Pending</div><div class="opsTileMeta" id="cockpitReportClassroomTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Classroom Handover Pending')">Open Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Classroom Handover Pending')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Report</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Missing Zoho Item Mapping</div><div class="opsTileMeta" id="cockpitReportMapping">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Missing Zoho Item Mapping')">Open Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Missing Zoho Item Mapping')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Report</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Communications Suppression Report</div><div class="opsTileMeta" id="cockpitReportSuppression">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Communications Suppression Report')">Open Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Communications Suppression Report')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Report</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Release Truth / Drift Report</div><div class="opsTileMeta" id="cockpitReportRelease">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Release Truth / Drift Report')">Open Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Release Truth / Drift Report')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Report</button></div></div>
         </div>
         <div id="opsReportResult" class="opsResultBox hidden"></div>
       </section>
@@ -1395,23 +1415,23 @@
         </div>
         <div class="opsSectionGrid mainSplit">
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Release State</h3></div><span class="opsStatusPill muted">Read only</span></div>
+            <div class="opsSectionHeader"><div><h3>Release State</h3></div><span class="opsStatusPill muted">Guidance only</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Current runtime</span><span class="opsStatusPill info" id="cockpitReleaseRuntime">r178 / 178</span></div>
-              <div class="opsChecklistRow"><span>Accepted baseline</span><span class="opsStatusPill ok">r178 / staging-as178</span></div>
+              <div class="opsChecklistRow"><span>Current runtime</span><span class="opsStatusPill info" id="cockpitReleaseRuntime">r180 / 180</span></div>
+              <div class="opsChecklistRow"><span>Accepted baseline</span><span class="opsStatusPill ok">r180 / staging-as180</span></div>
               <div class="opsChecklistRow"><span>Whoami status</span><span class="opsStatusPill muted" id="cockpitReleaseWhoami">Unknown</span></div>
-              <div class="opsChecklistRow"><span>Browser acceptance status</span><span class="opsStatusPill ok" id="cockpitReleaseBrowserState">Accepted r178</span></div>
+              <div class="opsChecklistRow"><span>Browser acceptance status</span><span class="opsStatusPill ok" id="cockpitReleaseBrowserState">Accepted r180</span></div>
               <div class="opsChecklistRow"><span>Commit / tag state</span><span class="opsStatusPill info" id="cockpitReleaseGit">Recorded externally</span></div>
               <div class="opsChecklistRow"><span>Remote Config verified</span><span class="opsStatusPill muted" id="cockpitReleaseRemote">Unknown</span></div>
               <div class="opsChecklistRow"><span>Local Git state</span><span class="opsStatusPill muted" id="cockpitReleaseDirty">Unavailable unless release metadata is recorded</span></div>
             </div>
           </div>
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Control Checklist</h3></div><span class="opsStatusPill danger">Disabled</span></div>
+            <div class="opsSectionHeader"><div><h3>Control Checklist</h3></div><span class="opsStatusPill warn">Guidance only</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Rollback target</span><span class="opsStatusPill info">r178 / staging-as178 / @188</span></div>
+              <div class="opsChecklistRow"><span>Rollback target</span><span class="opsStatusPill info">r180 / staging-as180 / @190</span></div>
               <div class="opsChecklistRow"><span>Current blockers</span><span class="opsStatusPill warn">Deployment action remains externalized</span></div>
-              <div class="opsChecklistRow"><span>Next release candidate</span><span class="opsStatusPill info" id="cockpitReleaseNextTask">r179</span></div>
+              <div class="opsChecklistRow"><span>Next release candidate</span><span class="opsStatusPill info" id="cockpitReleaseNextTask">OPS activation after acceptance</span></div>
               <div class="opsChecklistRow"><span>Git metadata note</span><span class="opsStatusPill muted">Record commit/tag/clean state during release; Apps Script cannot read local Git directly</span></div>
             </div>
             <div class="opsActionRow">
@@ -1432,7 +1452,7 @@
         </div>
         <div class="opsSectionGrid">
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Role / Identity Diagnostic</h3><p>Read-only role observability for governance and Super Admin rendering checks.</p></div><span class="opsStatusPill info">Read only</span></div>
+            <div class="opsSectionHeader"><div><h3>Role / Identity Diagnostic</h3><p>Role observability for governance and Super Admin rendering checks.</p></div><span class="opsStatusPill info">Runtime evidence</span></div>
             <div class="opsChecklist">
               <div class="opsChecklistRow"><span>Logged-in email</span><span class="opsStatusPill info" id="opsRoleEmail">Unknown</span></div>
               <div class="opsChecklistRow"><span>Role detected</span><span class="opsStatusPill info" id="opsRoleDetected">Unknown</span></div>
@@ -1447,7 +1467,7 @@
             <div class="opsResultBox warn" id="opsRoleDiagnosticNote">Role diagnostic loading.</div>
           </div>
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Admin / Ops Parity Map</h3></div><span class="opsStatusPill info">Read only</span></div>
+            <div class="opsSectionHeader"><div><h3>Admin / Ops Parity Map</h3></div><span class="opsStatusPill info">Activation map</span></div>
             <div class="opsChecklist" id="opsParityRegister"></div>
           </div>
           <div class="opsCard">
@@ -1473,9 +1493,9 @@
               </div>
               <div class="opsSuperBody" style="margin-top:10px;">
                 <div class="opsChecklist">
-                  <div class="opsChecklistRow"><span>Bulk email controls</span><span class="opsStatusPill muted">Prepared; activate after selected-recipient composer</span></div>
+                  <div class="opsChecklistRow"><span>Bulk email controls</span><span class="opsStatusPill warn">Ready for controlled live test in next CIS</span></div>
                   <div class="opsChecklistRow"><span>WhatsApp export/email controls</span><span class="opsStatusPill warn">Enabled with confirmation and audit</span></div>
-                  <div class="opsChecklistRow"><span>Books write controls</span><span class="opsStatusPill muted">Prepared only; not activated</span></div>
+                  <div class="opsChecklistRow"><span>Books write controls</span><span class="opsStatusPill warn">Selected-applicant preview/create/test-email gates active</span></div>
                   <div class="opsChecklistRow"><span>Portal link reset</span><span class="opsStatusPill warn">Super Admin only; explicit confirmation</span></div>
                   <div class="opsChecklistRow"><span>Portal access lock/unlock</span><span class="opsStatusPill warn">Super Admin only; explicit confirmation</span></div>
                   <div class="opsChecklistRow"><span>Local editing lock/unlock</span><span class="opsStatusPill info">Client-only modal state</span></div>
@@ -1489,9 +1509,9 @@
             <div class="opsSectionHeader"><div><h3>Role Layers</h3></div><span class="opsStatusPill info">Guidance</span></div>
             <div class="opsMeaningList">
               <div class="opsMeaningItem"><strong>Operator/Admin</strong>Daily admissions, billing preview, communications preview/send gates, classroom preview, and diagnostics.</div>
-              <div class="opsMeaningItem"><strong>Super Admin/Governance</strong>Runtime truth, release metadata visibility, Safe Mode boundaries, and disabled high-risk controls.</div>
+              <div class="opsMeaningItem"><strong>Super Admin/Governance</strong>Runtime truth, release metadata visibility, Safe Mode boundaries, and high-risk controls with role/preview/confirmation gates.</div>
               <div class="opsMeaningItem"><strong>Developer/Release</strong>Source edits, git state, clasp push/version, deployment pinning, and rollback remain external to this UI.</div>
-              <div class="opsMeaningItem"><strong>Temporary Super Admin delegation</strong>Future design item only. No delegation model is implemented in r178.</div>
+              <div class="opsMeaningItem"><strong>Temporary Super Admin delegation</strong>Future design item only. No delegation model is implemented in this activation pass.</div>
             </div>
           </div>
           <div class="opsCard">
@@ -1500,12 +1520,12 @@
               <div class="opsMeaningItem"><strong>Display only</strong>Visible for operator context. No in-app change path.</div>
               <div class="opsMeaningItem"><strong>Safe to tweak</strong>Low-risk UI/safe-mode preferences only; no dangerous config write is exposed in this candidate.</div>
               <div class="opsMeaningItem"><strong>Super Admin only</strong>Requires owner approval and existing gates before any future change path.</div>
-              <div class="opsMeaningItem"><strong>Dangerous / locked</strong>Data, deployment, payment, enrolment, portal, Books, and bulk-send write controls remain locked.</div>
+              <div class="opsMeaningItem"><strong>High-risk / gated</strong>Portal, Books, payment verification, classroom notify, and bulk-send controls use existing backend gates. Deployment and release actions stay outside the UI.</div>
               <div class="opsMeaningItem"><strong>Developer-only</strong>Source/config changes must happen through CIS and release workflow, not this UI.</div>
             </div>
           </div>
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Safe Mode</h3></div><span class="opsStatusPill <?= CONFIG.OPS_SAFE_MODE_ENABLED === true ? 'warn' : 'danger' ?>"><?= CONFIG.OPS_SAFE_MODE_ENABLED === true ? 'Enabled' : 'Disabled' ?></span></div>
+            <div class="opsSectionHeader"><div><h3>Safe Mode</h3></div><span class="opsStatusPill <?= CONFIG.OPS_SAFE_MODE_ENABLED === true ? 'warn' : 'danger' ?>"><?= CONFIG.OPS_SAFE_MODE_ENABLED === true ? 'Enabled' : 'Config off' ?></span></div>
             <div class="opsChecklist">
               <div class="opsChecklistRow"><span>Approved target gating - exact-match only; impacts send/notify allowance; Developer-only; live after deployment</span><span class="opsStatusPill warn">Super Admin only</span></div>
               <div class="opsChecklistRow"><span>Approved row identity - selected safe-test applicant</span><span class="opsStatusPill info"><?= String((CONFIG.OPS_SAFE_MODE_APPROVED_TARGET && CONFIG.OPS_SAFE_MODE_APPROVED_TARGET.applicantId) || "Missing") ?></span></div>
@@ -1513,49 +1533,52 @@
               <div class="opsChecklistRow"><span>Test recipient override - redirects applicant email tests; Super Admin only; live after deployment/config change</span><span class="opsStatusPill <?= CONFIG.OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE ? 'warn' : 'muted' ?>"><?= CONFIG.OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE ? 'Applied separately' : 'Not configured' ?></span></div>
               <div class="opsChecklistRow"><span>Applicant email sends</span><span class="opsStatusPill <?= CONFIG.OPS_SAFE_MODE_ALLOW_APPLICANT_EMAIL_SENDS === true ? 'warn' : 'danger' ?>"><?= CONFIG.OPS_SAFE_MODE_ALLOW_APPLICANT_EMAIL_SENDS === true ? 'Safe test only' : 'Blocked' ?></span></div>
               <div class="opsChecklistRow"><span>Classroom notify</span><span class="opsStatusPill <?= CONFIG.OPS_SAFE_MODE_ALLOW_CLASSROOM_NOTIFY === true ? 'warn' : 'danger' ?>"><?= CONFIG.OPS_SAFE_MODE_ALLOW_CLASSROOM_NOTIFY === true ? 'Safe test only' : 'Blocked' ?></span></div>
-              <div class="opsChecklistRow"><span>High-risk Admin actions</span><span class="opsStatusPill danger">Disabled / Deferred</span></div>
+              <div class="opsChecklistRow"><span>High-risk Admin actions</span><span class="opsStatusPill warn">Guarded by role, preview, confirmation, and Config gates</span></div>
             </div>
           </div>
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Books and Billing</h3></div><span class="opsStatusPill info">Display only</span></div>
+            <div class="opsSectionHeader"><div><h3>Books and Billing</h3></div><span class="opsStatusPill warn">Guarded actions</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Books writes enabled</span><span class="opsStatusPill <?= CONFIG.ENABLE_ZOHO_BOOKS_INTEGRATION === true ? 'warn' : 'ok' ?>"><?= CONFIG.ENABLE_ZOHO_BOOKS_INTEGRATION === true ? 'Integration on; cockpit disabled' : 'Disabled' ?></span></div>
-              <div class="opsChecklistRow"><span>Draft invoice creation</span><span class="opsStatusPill <?= CONFIG.ENABLE_ZOHO_BOOKS_DRAFT_INVOICE_CREATE === true ? 'warn' : 'ok' ?>"><?= CONFIG.ENABLE_ZOHO_BOOKS_DRAFT_INVOICE_CREATE === true ? 'Enabled outside cockpit' : 'Disabled' ?></span></div>
-              <div class="opsChecklistRow"><span>Invoice send state</span><span class="opsStatusPill danger">Disabled from cockpit</span></div>
-              <div class="opsChecklistRow"><span>Fallback item policy</span><span class="opsStatusPill muted">Coming Next</span></div>
+              <div class="opsChecklistRow"><span>Books writes enabled</span><span class="opsStatusPill <?= CONFIG.ENABLE_ZOHO_BOOKS_INTEGRATION === true ? 'warn' : 'ok' ?>"><?= CONFIG.ENABLE_ZOHO_BOOKS_INTEGRATION === true ? 'Integration on; guarded by backend' : 'Config off' ?></span></div>
+              <div class="opsChecklistRow"><span>Draft invoice creation</span><span class="opsStatusPill <?= CONFIG.ENABLE_ZOHO_BOOKS_DRAFT_INVOICE_CREATE === true ? 'warn' : 'ok' ?>"><?= CONFIG.ENABLE_ZOHO_BOOKS_DRAFT_INVOICE_CREATE === true ? 'Selected-applicant gated' : 'Config off' ?></span></div>
+              <div class="opsChecklistRow"><span>Invoice send state</span><span class="opsStatusPill warn">Test-email only where backend allows</span></div>
+              <div class="opsChecklistRow"><span>Fallback item policy</span><span class="opsStatusPill info">Visible in preview/export</span></div>
             </div>
           </div>
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Operational Writes</h3></div><span class="opsStatusPill ok">Blocked</span></div>
+            <div class="opsSectionHeader"><div><h3>Operational Writes</h3></div><span class="opsStatusPill warn">Backend-gated</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Payment creation</span><span class="opsStatusPill ok">Disabled</span></div>
-              <div class="opsChecklistRow"><span>Bulk processing</span><span class="opsStatusPill ok">Disabled</span></div>
-              <div class="opsChecklistRow"><span>Bulk send</span><span class="opsStatusPill ok">Disabled</span></div>
-              <div class="opsChecklistRow"><span>Autonomous workflows</span><span class="opsStatusPill ok">Disabled</span></div>
+              <div class="opsChecklistRow"><span>Payment verification</span><span class="opsStatusPill warn">Super Admin selected-applicant gate active</span></div>
+              <div class="opsChecklistRow"><span>Payment creation</span><span class="opsStatusPill danger">Not implemented: backend missing</span></div>
+              <div class="opsChecklistRow"><span>Bulk processing</span><span class="opsStatusPill warn">Preview/send surface active with gates</span></div>
+              <div class="opsChecklistRow"><span>Bulk send</span><span class="opsStatusPill warn">Ready for controlled live test in next CIS</span></div>
+              <div class="opsChecklistRow"><span>Autonomous workflows</span><span class="opsStatusPill danger">Not implemented: backend missing</span></div>
               <div class="opsChecklistRow"><span>Release actions</span><span class="opsStatusPill ok">Externalized</span></div>
-              <div class="opsChecklistRow"><span>Classroom automation</span><span class="opsStatusPill ok">Disabled</span></div>
-              <div class="opsChecklistRow"><span>Enrollment field updates</span><span class="opsStatusPill ok">Disabled</span></div>
+              <div class="opsChecklistRow"><span>Classroom notify</span><span class="opsStatusPill warn">Super Admin preview gate active</span></div>
+              <div class="opsChecklistRow"><span>Classroom package automation</span><span class="opsStatusPill danger">Not implemented: backend missing</span></div>
+              <div class="opsChecklistRow"><span>Enrollment field updates</span><span class="opsStatusPill danger">Not implemented: backend missing</span></div>
             </div>
           </div>
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Communications Rules</h3></div><span class="opsStatusPill muted">Prototype Only</span></div>
+            <div class="opsSectionHeader"><div><h3>Communications Rules</h3></div><span class="opsStatusPill warn">Guarded controls</span></div>
             <div class="opsChecklist">
               <div class="opsChecklistRow"><span>Test email override state</span><span class="opsStatusPill muted">Unknown</span></div>
               <div class="opsChecklistRow"><span>Applicant email suppression rules</span><span class="opsStatusPill muted">Existing controls outside cockpit</span></div>
               <div class="opsChecklistRow"><span>Server email calls</span><span class="opsStatusPill warn">Safe Mode gated</span></div>
             </div>
             <div class="opsActionRow">
-              <button class="opsActionBtn" type="button" disabled>View Config</button>
-              <button class="opsActionBtn" type="button" disabled>Compare Rules</button>
-              <button class="opsActionBtn" type="button" disabled>Export Rules Snapshot</button>
+              <button class="opsActionBtn live" type="button" onclick="opsShowRulesSnapshot_('Config Snapshot')">View Config</button>
+              <button class="opsActionBtn live" type="button" onclick="opsShowRulesSnapshot_('Rule Comparison')">Compare Rules</button>
+              <button class="opsActionBtn live" type="button" onclick="opsExportRulesSnapshot_()">Export Rules Snapshot</button>
             </div>
+            <div id="opsRulesResult" class="opsResultBox hidden"></div>
           </div>
         </div>
       </section>
       <section class="opsFooterStrip">
         <div class="opsFooterItem"><strong>Operational Status</strong><span id="cockpitFooterStatus">Safe Mode Controlled Actions</span></div>
-        <div class="opsFooterItem"><strong>Runtime</strong><span id="cockpitFooterRuntime">r173 baseline</span></div>
-        <div class="opsFooterItem"><strong>Zoho Books</strong><span id="cockpitFooterBooks">Read-only status</span></div>
+        <div class="opsFooterItem"><strong>Runtime</strong><span id="cockpitFooterRuntime">r180 baseline</span></div>
+        <div class="opsFooterItem"><strong>Zoho Books</strong><span id="cockpitFooterBooks">Guarded status/actions</span></div>
         <div class="opsFooterItem"><strong>Apps Script</strong><span id="cockpitFooterAppsScript">@current platform unknown</span></div>
         <div class="opsFooterItem"><strong>System Health</strong><span id="cockpitFooterHealth">Unknown</span></div>
       </section>
@@ -1734,7 +1757,7 @@
         <div class="box"><div class="k">Priority</div><div class="v" id="stageBatchPriority">&mdash;</div></div>
         <div class="box"><div class="k">Recommended Message Type</div><div class="v" id="stageBatchMessageType">&mdash;</div></div>
         <div class="box"><div class="k">Sendable</div><div class="v" id="stageBatchSendable">&mdash;</div></div>
-        <div class="box"><div class="k">Disabled Reason</div><div class="v" id="stageBatchDisabledReason">&mdash;</div></div>
+        <div class="box"><div class="k">Gate Reason</div><div class="v" id="stageBatchDisabledReason">&mdash;</div></div>
       </div>
       <div class="commControls">
         <div class="field" style="max-width:180px;">
@@ -1813,7 +1836,7 @@
         <button id="btnClearDocsSelection" class="btn small" type="button">Clear Selection</button>
         <button id="btnSendDocsBulk" class="btn small accent" type="button" disabled>Send Docs Quote to Selected</button>
         <button id="btnRefreshEligibility" class="btn small" type="button">Refresh Eligibility</button>
-        <button id="btnPaymentFollowupSoon" class="btn small" type="button" disabled title="Payment workflow (coming soon)">Payment workflow (coming soon)</button>
+        <button id="btnPaymentFollowupSoon" class="btn small" type="button" disabled title="Payment creation backend is not implemented">Payment creation backend missing</button>
         <span class="muted" id="docsBulkStatus" style="font-size:12px;"></span>
       </div>
       <div style="margin-top:10px; overflow:auto;">
@@ -2059,7 +2082,7 @@
         <button id="btnRefreshDetails" class="btn small" onclick="refreshDetails()">Refresh Details</button>
       </div>
       <div id="docsRouteHint" class="muted" style="margin-top:8px;font-size:12px;"></div>
-      <div class="muted" style="margin-top:6px;font-size:12px;">Copy Portal Link is read-only. Reset Link is Super Admin only and regenerates the portal secret after confirmation. Unlock Editing / Lock Editing are local modal controls only and do not change applicant portal access state. Actual portal access lock/unlock is a separate Super Admin server action.</div>
+      <div class="muted" style="margin-top:6px;font-size:12px;">Copy Portal Link does not mutate data. Reset Link is Super Admin only and regenerates the portal secret after confirmation. Unlock Editing / Lock Editing are local modal controls only and do not change applicant portal access state. Actual portal access lock/unlock is a separate Super Admin server action.</div>
 
       <details id="superEmailOverrideWrap" style="margin-top:10px;">
         <summary style="cursor:pointer;font-weight:700;">Super Admin: Override Parent Email (Corrected)</summary>
@@ -2307,15 +2330,19 @@
     function opsActionRegistry_(){
       return [
         { id:"selectApplicant", label:"Select applicant", source:"Applicant Queue / Context Menu", surface:"All selected-applicant panels", fn:"client:opsSelectApplicantContext_", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Preserves selected applicant context across Ops." },
-        { id:"viewApplicantSummary", label:"View applicant summary", source:"Applicant Queue", surface:"Applicant Review Drawer", fn:"admin_getApplicantDetail_json", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Uses existing read-only detail RPC." },
+        { id:"viewApplicantSummary", label:"View applicant summary", source:"Applicant Queue", surface:"Applicant Review Drawer", fn:"admin_getApplicantDetail_json", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Uses existing applicant detail RPC without mutation." },
         { id:"openApplicantReview", label:"Open applicant review", source:"Button / Context Menu", surface:"Ops drawer + Admin deep-link", fn:"?view=admin&open=ApplicantID", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Direct bridge with drawer fallback." },
+        { id:"openDocumentReview", label:"Open document verification review", source:"Context Menu / Drawer", surface:"Admin review bridge", fn:"?view=admin&open=ApplicantID", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Opens the existing Admin review path for document verification. No Ops document mutation is introduced." },
+        { id:"openPaymentReview", label:"Open payment verification review", source:"Context Menu / Drawer", surface:"Admin review bridge", fn:"?view=admin&open=ApplicantID", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Opens the existing Admin review path for payment verification." },
+        { id:"verifyPayment", label:"Verify selected payment", source:"Classroom / Payment", surface:"Classroom Handover", fn:"admin_setPaymentVerified", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Selected applicant only; requires row context, Super Admin, browser confirmation, and existing server-side payment/docs/freeze gates." },
         { id:"previewEmail", label:"Preview email", source:"Communications / Context Menu", surface:"Communications", fn:"admin_previewApplicantMessage", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Preview only; no send." },
         { id:"sendReminder", label:"Send reminder", source:"Communications / Context Menu", surface:"Communications", fn:"admin_sendApplicantMessage", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Single-record only; preview, confirmation, Safe Mode, and audit required." },
         { id:"resendPortalAccess", label:"Resend portal access", source:"Communications / Context Menu", surface:"Communications", fn:"admin_sendApplicantMessage:legacy_invite", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Single-record portal-access communication through existing send gate." },
         { id:"openBilling", label:"Open billing", source:"Context Menu", surface:"Billing / Zoho Books", fn:"client:scroll + admin_previewZohoBooksFodePayload", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Read-only selected-applicant Books preview/status." },
         { id:"openInvoice", label:"Open invoice", source:"Billing / Context Menu", surface:"Billing / Zoho Books", fn:"client:window.open invoice URL", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Opens existing invoice URL only." },
         { id:"refreshBooksStatus", label:"Refresh Books status", source:"Billing / Context Menu", surface:"Billing / Zoho Books", fn:"admin_previewZohoBooksFodePayload", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Read-only status/payload preview." },
-        { id:"booksDraftCreate", label:"Create Books draft invoice", source:"Super Admin Mode", surface:"Billing / Zoho Books", fn:"admin_createZohoBooksFodeDraftInvoice", role:"Super Admin/Governance", kind:"write", status:"prepared", confirm:true, audit:true, reason:"Prepared next: live write still requires write-enabled Books config, preview READY parity, and an explicit Zoho Books test-applicant allowlist handoff." },
+        { id:"booksDraftCreate", label:"Create Books draft invoice", source:"Billing / Zoho Books", surface:"Billing / Zoho Books", fn:"admin_createZohoBooksFodeDraftInvoice", role:"Write Admin/Super Admin", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Selected applicant only; requires READY preview, write-enabled Books config, duplicate guard, and explicit Zoho Books test-applicant allowlist." },
+        { id:"booksTestEmail", label:"Send Books test invoice email", source:"Billing / Zoho Books", surface:"Billing / Zoho Books", fn:"admin_sendZohoBooksTestInvoiceEmail", role:"Write Admin/Super Admin", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Selected applicant only; requires preview parity, existing invoice ID, configured test recipient, and backend test-applicant gate." },
         { id:"viewPortalStatus", label:"View portal status", source:"Context Menu", surface:"Portal Diagnostics", fn:"admin_getStudentPortalLink", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Read-only portal URL/status diagnostics." },
         { id:"portalLinkReset", label:"Portal Link Reset", source:"Super Admin Mode", surface:"Portal Diagnostics", fn:"admin_resetPortalLink", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Explicit browser confirmation is required, and the server enforces requireSuperAdmin_() before resetting the portal secret." },
         { id:"portalAccessLockUnlock", label:"Portal Access Lock/Unlock", source:"Super Admin Mode", surface:"Portal Diagnostics", fn:"admin_setPortalAccess", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Explicit browser confirmation shows ApplicantID and target access state. Server already enforces requireSuperAdmin_()." },
@@ -2323,7 +2350,7 @@
         { id:"viewClassroom", label:"View classroom handover", source:"Context Menu", surface:"Classroom Handover", fn:"admin_previewOpsClassroomHandover", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:true, reason:"Preview logs existing handover review event." },
         { id:"notifyClassroom", label:"Notify classroom admin", source:"Classroom", surface:"Classroom Handover", fn:"admin_notifyOpsClassroomAdmin", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Internal single-send only; preview and Safe Mode gate required." },
         { id:"bulkPreview", label:"Bulk email preview", source:"Super Admin Mode", surface:"Communications", fn:"admin_previewStageBatch", role:"Super Admin/Governance", kind:"bulk-read", status:"enabled-gated", confirm:false, audit:true, reason:"Server already requires Super Admin and preview-only mode, and returns bounded eligible/blocked counts with replay summary." },
-        { id:"bulkSend", label:"Bulk email send", source:"Super Admin Mode", surface:"Communications", fn:"admin_sendStageBatch", role:"Super Admin/Governance", kind:"bulk-write", status:"prepared", confirm:true, audit:true, reason:"Prepared next: current send confirms stage/preview parity only; the working surface still lacks final recipient-level suppression review before a live bulk send." },
+        { id:"bulkSend", label:"Bulk email send", source:"Super Admin Mode", surface:"Communications", fn:"admin_sendStageBatch", role:"Super Admin/Governance", kind:"bulk-write", status:"enabled-gated", confirm:true, audit:true, reason:"Ready for controlled live test in next CIS. Existing backend requires Super Admin, send gates, preview cache parity, explicit confirmation, caps, and idempotency." },
         { id:"whatsappExport", label:"WhatsApp CSV export", source:"Fallbacks / Super Admin", surface:"WhatsApp Fallback", fn:"admin_exportWhatsAppFallbackCsv", role:"Super Admin/Governance", kind:"export", status:"enabled-gated", confirm:true, audit:true, reason:"Existing export is capped, Super Admin gated, logged, and does not send WhatsApp." },
         { id:"whatsappEmailCsv", label:"Email WhatsApp CSV", source:"Fallbacks / Super Admin", surface:"WhatsApp Fallback", fn:"admin_emailWhatsAppFallbackCsv", role:"Super Admin/Governance", kind:"export-send", status:"enabled-gated", confirm:true, audit:true, reason:"Emails cached CSV only to configured admin recipients after export confirmation." },
         { id:"copyApplicantId", label:"Copy ApplicantID", source:"Context Menu", surface:"Clipboard", fn:"navigator.clipboard.writeText", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"No data mutation." },
@@ -2392,7 +2419,7 @@
       var body = document.getElementById("opsActionRegistryBody");
       if (!body) return;
       body.innerHTML = opsActionRegistry_().map(function(action){
-        var statusKind = action.status === "enabled" ? "ok" : (action.status === "enabled-gated" || action.status === "prepared" || action.status === "prepared-r179" ? "warn" : "muted");
+        var statusKind = action.status === "enabled" ? "ok" : (action.status === "enabled-gated" ? "warn" : "muted");
         return "<tr>"
           + "<td><strong>" + esc(action.label) + "</strong><br><span class='opsPlaceholder'>" + esc(action.id) + "</span></td>"
           + "<td>" + esc(action.source) + "<br>" + esc(action.surface) + "</td>"
@@ -2412,7 +2439,7 @@
         ["Admin-only", "Legacy review modal edits, doc/status writes, payment verified, parent email correction, overall override"],
         ["Ops-only", "Lifecycle cascade, selected-applicant queue routing, mode-based working shell, WhatsApp/bulk registry surfaces"],
         ["Shared", "Applicant review bridge, single-record preview/send, billing preview, portal diagnostics, classroom preview/notify"],
-        ["Super Admin / Governance", "High-risk prepared controls, WhatsApp export/email, Safe Mode boundaries, Rules & Config"],
+        ["Super Admin / Governance", "High-risk guarded controls, WhatsApp export/email, Safe Mode boundaries, Rules & Config"],
         ["Still using legacy Admin only", "Docs follow-up bulk UI, detailed modal edit cards, parent-email correction, overall override workflow"],
         ["Developer / Release", "Git, clasp, versioning, deployment repin, release metadata, rollback"],
         ["Future migration", "Temporary Super Admin delegation and shared InstitutionConfig/DriveConfig registry"]
@@ -2426,11 +2453,11 @@
       var target = document.getElementById("opsDriftRegister");
       if (!target) return;
       var items = [
-        ["Duplicated action paths", "Applicant review bridge plus legacy Admin review remain intentionally paired; no second send/export implementation is introduced in r179."],
-        ["Admin-only actions", "Portal reset, portal access lock/unlock, WhatsApp export/email, bulk send candidate, Books draft/test writes."],
+        ["Duplicated action paths", "Applicant review bridge plus legacy Admin review remain intentionally paired; Ops bridges to existing backend functions instead of duplicating business logic."],
+        ["Admin/Ops shared actions", "Portal reset, portal access lock/unlock, WhatsApp export/email, stage batch preview/send, and Books draft/test actions use existing Admin server gates."],
         ["Ops-only actions", "Mode switch, lifecycle drill-down, selected-applicant queue context, operator dashboard grouping."],
         ["Shared actions", "Applicant email preview/send, billing preview, open invoice, portal diagnostics, classroom preview/notify."],
-        ["Legacy Admin only", "Document verification edits, overall override, parent-email correction, deep modal document handling."]
+        ["Legacy Admin only", "Document verification edits, overall override, parent-email correction, payment verification mutation, and deep modal document handling."]
       ];
       target.innerHTML = items.map(function(row){
         return "<div class='opsChecklistRow'><span>" + esc(row[0]) + "</span><span class='opsStatusPill info'>" + esc(row[1]) + "</span></div>";
@@ -2507,8 +2534,144 @@
       var target = document.getElementById(id);
       if (target && target.scrollIntoView) target.scrollIntoView({ behavior:"smooth", block:"start" });
     }
+    function opsSelectedRowNumber_(){
+      var detail = opsApplicantDetailCache || {};
+      var row = opsApplicantContextRow_() || {};
+      return Number(detail._rowNumber || detail.rowNumber || row._rowNumber || row.rowNumber || 0) || 0;
+    }
+    function opsSelectedEmail_(){
+      var d = opsApplicantDetailCache || {};
+      var row = opsApplicantContextRow_() || {};
+      return opsFirstNonBlank_(d.Effective_Email, d.Parent_Email_Corrected, d.Parent_Email, row.Effective_Email, row.Parent_Email_Corrected, row.Parent_Email);
+    }
+    function opsSelectedIdentityLine_(){
+      return opsApplicantId_() + " - " + opsApplicantName_() + (opsSelectedEmail_() ? " <" + opsSelectedEmail_() + ">" : "");
+    }
+    function opsRequireSelectedApplicant_(resultId, title, requireRow){
+      var applicantId = opsApplicantId_();
+      var rowNumber = opsSelectedRowNumber_();
+      if (!applicantId) {
+        setOpsResult_(resultId || "opsAdmissionsResult", { result:"BLOCKED", blockReason:"Select an applicant before running this action." }, title || "Applicant Required");
+        return null;
+      }
+      if (requireRow === true && !(rowNumber >= 2)) {
+        setOpsResult_(resultId || "opsAdmissionsResult", { result:"BLOCKED", applicantId:applicantId, blockReason:"Selected applicant row number is unavailable. Open/refresh applicant review first." }, title || "Row Required");
+        return null;
+      }
+      return { applicantId: applicantId, rowNumber: rowNumber };
+    }
+    function opsCsvCell_(value){
+      var text = String(value == null ? "" : value);
+      return "\"" + text.replace(/"/g, "\"\"") + "\"";
+    }
+    function opsDownloadCsv_(filename, headers, rows){
+      var cols = headers || [];
+      var body = [cols.map(opsCsvCell_).join(",")].concat((rows || []).map(function(row){
+        return cols.map(function(h){ return opsCsvCell_(row && row[h]); }).join(",");
+      })).join("\r\n");
+      var blob = new Blob([body], { type:"text/csv;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = filename || "ops-export.csv";
+      document.body.appendChild(a);
+      a.click();
+      window.setTimeout(function(){ URL.revokeObjectURL(url); if (a && a.parentNode) a.parentNode.removeChild(a); }, 0);
+    }
+    function opsQueueExportRows_(){
+      return opsAllQueueRows_().map(function(row){
+        var invoice = opsInvoiceSummary_(row);
+        var paymentOk = opsIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true;
+        var enrolledOk = opsIsYes_(row.Enrolled_Confirmed);
+        return {
+          ApplicantID: String(row.applicantId || row.ApplicantID || ""),
+          Student: opsFirstNonBlank_(row.Student_Name, row.First_Name, row.name),
+          Date_Applied: opsDateAppliedInfo_(row).label,
+          Aging: opsAgingDays_(row) || "",
+          Docs: opsDocsSummary_(row).label,
+          Payment: paymentOk ? "Payment Verified" : "Payment Pending",
+          Invoice: invoice.label,
+          Invoice_Detail: invoice.detail || "",
+          Enrolled: enrolledOk ? "Yes" : "No",
+          Classroom: classroomStatusFromRow_(row).label
+        };
+      });
+    }
+    function opsExportQueueCsv_(){
+      var rows = opsQueueExportRows_();
+      if (!rows.length) {
+        setOpsResult_("opsAdmissionsResult", { result:"EMPTY", blockReason:"No loaded queue rows are available to export. Refresh the snapshot first." }, "Queue Export");
+        return;
+      }
+      var headers = ["ApplicantID","Student","Date_Applied","Aging","Docs","Payment","Invoice","Invoice_Detail","Enrolled","Classroom"];
+      opsDownloadCsv_("ops-applicant-queue.csv", headers, rows);
+      setOpsResult_("opsAdmissionsResult", { result:"OPEN", message:"Exported loaded queue snapshot locally. Rows: " + String(rows.length) + ". No Sheets or Drive write occurred." }, "Queue Export");
+    }
+    function opsReportRows_(title){
+      var name = String(title || "");
+      var rows = opsQueueExportRows_();
+      if (name === "Invoice Raised vs Sent") return rows.filter(function(r){ return String(r.Invoice || "").indexOf("Invoice") >= 0; });
+      if (name === "Payment Verified but Not Enrolled") return rows.filter(function(r){ return r.Payment === "Payment Verified" && r.Enrolled !== "Yes"; });
+      if (name === "Classroom Handover Pending") return rows.filter(function(r){ return String(r.Classroom || "").toLowerCase().indexOf("pending") >= 0 || r.Enrolled === "Yes"; });
+      if (name === "Communications Suppression Report") return rows.filter(function(r){ return String(r.Docs || "").toLowerCase().indexOf("missing") >= 0 || String(r.Payment || "").toLowerCase().indexOf("pending") >= 0; });
+      if (name === "Release Truth / Drift Report") return [{
+        ApplicantID: "runtime",
+        Student: String(VERSION || "") + " / " + String(DEPLOY_VERSION_NUMBER || ""),
+        Date_Applied: "Accepted baseline r180 / staging-as180",
+        Aging: "Release actions externalized",
+        Docs: "Admin/Student whoami required before release acceptance",
+        Payment: "No git/clasp mutation in OPS",
+        Invoice: "No deployment mutation in OPS",
+        Invoice_Detail: "Use CIS release workflow",
+        Enrolled: "",
+        Classroom: ""
+      }];
+      return rows;
+    }
+    function opsExportReportCsv_(title){
+      var rows = opsReportRows_(title);
+      if (!rows.length) {
+        setOpsResult_("opsReportResult", { result:"EMPTY", message:String(title || "Report") + " has no rows in the loaded snapshot." }, "Report Export");
+        return;
+      }
+      var headers = ["ApplicantID","Student","Date_Applied","Aging","Docs","Payment","Invoice","Invoice_Detail","Enrolled","Classroom"];
+      var slug = String(title || "ops-report").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "ops-report";
+      opsDownloadCsv_(slug + ".csv", headers, rows);
+      setOpsResult_("opsReportResult", { result:"OPEN", message:String(title || "Report") + " exported locally. Rows: " + String(rows.length) + ". No Sheets or Drive write occurred." }, "Report Export");
+    }
+    function opsWhoamiUrls_(){
+      var admin = String(CFG_WEBAPP_URL_ADMIN || window.WEBAPP_URL_ADMIN || "").trim();
+      var student = String(CFG_WEBAPP_URL_STUDENT || CFG_WEBAPP_URL_STUDENT_EXEC || window.WEBAPP_URL_STUDENT || window.WEBAPP_URL_STUDENT_EXEC || "").trim();
+      return {
+        admin: admin ? admin + "?view=whoami" : "",
+        student: student ? student + "?view=whoami" : ""
+      };
+    }
+    function opsRunRuntimeCheck_(){
+      setOpsResult_("opsRuntimeActionResult", { result:"GUIDANCE", message:"Refreshing runtime and safety status using existing non-mutating RPCs." }, "Runtime Check");
+      fetchRuntimeInfo_();
+      fetchOperationalSafetyStatus_();
+    }
+    function opsCopyWhoamiUrls_(){
+      var urls = opsWhoamiUrls_();
+      var text = ["Admin whoami: " + (urls.admin || "unavailable"), "Student whoami: " + (urls.student || "unavailable")].join("\n");
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text);
+      setOpsResult_("opsRuntimeActionResult", { result:"OPEN", message:"Whoami URLs generated for clipboard. " + text }, "Whoami URLs");
+    }
+    function opsViewAcceptanceChecklist_(){
+      var urls = opsWhoamiUrls_();
+      setOpsResult_("opsRuntimeActionResult", {
+        result:"OPEN",
+        message:[
+          "Accepted baseline: r180 / 180, commit 344c446, tag staging-as180, Apps Script platform version 190.",
+          "Admin whoami: " + (urls.admin || "unavailable"),
+          "Student whoami: " + (urls.student || "unavailable"),
+          "PASS requires Admin whoami, Student whoami, and browser checks. This panel does not run clasp, git, deploy, or repin actions."
+        ].join(" ")
+      }, "Acceptance Checklist");
+    }
     function opsApplicantId_(){
-      return String((opsApplicantDetailCache && opsApplicantDetailCache.ApplicantID) || opsSelectedApplicantId || "FODE-26-002929").trim();
+      return String((opsApplicantDetailCache && opsApplicantDetailCache.ApplicantID) || opsSelectedApplicantId || OPS_SAFE_MODE_APPROVED_APPLICANT_ID || "").trim();
     }
     function opsApplicantName_(){
       var d = opsApplicantDetailCache || {};
@@ -2659,15 +2822,15 @@
     }
     function opsLifecycleDefinitions_(){
       return [
-        { key:"applicant", name:"Applicant", mode:"read-only", meaning:"Applicant has entered the admissions workflow.", next:"Select row and review applicant summary.", matches:function(row){ return !!row; } },
-        { key:"portal", name:"Portal Access / Submission", mode:"read-only", meaning:"Portal invite, access, or submission state needs operator visibility.", next:"View portal diagnostics. Reset/lock writes remain disabled.", matches:function(row){ return workflowIsYes_(row.Portal_Submitted) || !!opsFirstNonBlank_(row.Portal_Status, row.Portal_Link, row.Portal_Token_Status); } },
-        { key:"docs", name:"Document / Eligibility Review", mode:"owner-controlled", meaning:"Documents or eligibility still need review.", next:"Use existing review surface. Ops document saves remain disabled.", matches:function(row){ var d=opsDocsSummary_(row); return d.cls !== "ok"; } },
-        { key:"invoice_raised", name:"Invoice Raised", mode:"read-only", meaning:"Books invoice exists or local invoice fields indicate raised.", next:"Open invoice or refresh read-only Books status.", matches:function(row){ return opsInvoiceSummary_(row).label === "Invoice Raised"; } },
+        { key:"applicant", name:"Applicant", mode:"inspect/select", meaning:"Applicant has entered the admissions workflow.", next:"Select row and review applicant summary.", matches:function(row){ return !!row; } },
+        { key:"portal", name:"Portal Access / Submission", mode:"guarded", meaning:"Portal invite, access, or submission state needs operator visibility.", next:"View portal diagnostics. Reset/lock uses existing Super Admin gates.", matches:function(row){ return workflowIsYes_(row.Portal_Submitted) || !!opsFirstNonBlank_(row.Portal_Status, row.Portal_Link, row.Portal_Token_Status); } },
+        { key:"docs", name:"Document / Eligibility Review", mode:"Admin review bridge", meaning:"Documents or eligibility still need review.", next:"Use existing review surface for document decisions.", matches:function(row){ var d=opsDocsSummary_(row); return d.cls !== "ok"; } },
+        { key:"invoice_raised", name:"Invoice Raised", mode:"guarded Books", meaning:"Books invoice exists or local invoice fields indicate raised.", next:"Open invoice or refresh Books status.", matches:function(row){ return opsInvoiceSummary_(row).label === "Invoice Raised"; } },
         { key:"invoice_sent", name:"Invoice Sent", mode:"owner-controlled", meaning:"Invoice communication has been sent or is ready for single-record follow-up.", next:"Preview communication before any single-record send.", matches:function(row){ return opsInvoiceEmailSummary_(row).label === "Invoice Email Sent"; } },
-        { key:"payment", name:"Payment Verified", mode:"disabled write", meaning:"Payment appears verified in loaded fields.", next:"Payment write remains disabled; inspect downstream enrolment.", matches:function(row){ return opsIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true; } },
-        { key:"enrolment", name:"Enrolment Confirmed", mode:"disabled write", meaning:"Loaded fields indicate enrolment is confirmed.", next:"Inspect classroom handover readiness. Enrolment writes remain disabled.", matches:function(row){ return opsIsYes_(row.Enrolled_Confirmed); } },
+        { key:"payment", name:"Payment Verified", mode:"Super Admin gated", meaning:"Payment appears verified in loaded fields.", next:"Inspect downstream enrolment or use selected-applicant payment verification gate when needed.", matches:function(row){ return opsIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true; } },
+        { key:"enrolment", name:"Enrolment Confirmed", mode:"Not implemented: backend missing", meaning:"Loaded fields indicate enrolment is confirmed.", next:"Inspect classroom handover readiness. No OPS enrolment writer exists.", matches:function(row){ return opsIsYes_(row.Enrolled_Confirmed); } },
         { key:"classroom", name:"Classroom Handover", mode:"owner-controlled", meaning:"Classroom handover is pending, unknown, or awaiting internal notification.", next:"Generate preview first; notification stays Safe Mode gated.", matches:function(row){ var c=classroomStatusFromRow_(row).label; return c.indexOf("Pending") >= 0 || c.indexOf("Unknown") >= 0; } },
-        { key:"active", name:"Active Student / Follow-up", mode:"read-only / disabled", meaning:"Post-handover follow-up is visible only when loaded data supports it.", next:"Reports only. No follow-up automation is activated.", matches:function(row){ var c=classroomStatusFromRow_(row).label.toUpperCase(); return c.indexOf("COMPLETE") >= 0 || c.indexOf("ACTIVE") >= 0; } }
+        { key:"active", name:"Active Student / Follow-up", mode:"Not implemented: backend missing", meaning:"Post-handover follow-up is visible only when loaded data supports it.", next:"Reports and local export only until a follow-up backend exists.", matches:function(row){ var c=classroomStatusFromRow_(row).label.toUpperCase(); return c.indexOf("COMPLETE") >= 0 || c.indexOf("ACTIVE") >= 0; } }
       ];
     }
     function opsRowsForLifecycleStage_(stageKey){
@@ -2690,7 +2853,7 @@
           + "<div class='stageMeaning'>" + esc(stage.meaning) + "</div>"
           + "<div class='stageRecords'><strong>Records:</strong> " + esc(ids.length ? ids.join(", ") : "None in loaded queue") + "</div>"
           + "<div class='stageRecords'><strong>" + esc(selectedText) + "</strong></div>"
-          + "<div><span class='opsStatusPill " + (stage.mode.indexOf("disabled") >= 0 ? "danger" : (stage.mode.indexOf("owner") >= 0 ? "warn" : "info")) + "'>" + esc(stage.mode) + "</span></div>"
+          + "<div><span class='opsStatusPill " + (stage.mode.indexOf("backend missing") >= 0 ? "danger" : (stage.mode.indexOf("gated") >= 0 || stage.mode.indexOf("guarded") >= 0 || stage.mode.indexOf("owner") >= 0 ? "warn" : "info")) + "'>" + esc(stage.mode) + "</span></div>"
           + "<div class='stageNext'>" + esc(stage.next) + "</div>"
           + "</button>";
       }).join("");
@@ -2743,16 +2906,16 @@
     function opsBooksFilterDefinitions_(){
       return [
         { key:"all", label:"All billing records", means:"Every loaded applicant row with billing context.", fields:"ApplicantID, Books_* fields, amount fields", next:"Inspect selected applicant or choose a narrower filter.", test:function(){ return true; } },
-        { key:"no_invoice", label:"No invoice", means:"No Books invoice ID or invoice number is loaded.", fields:"Books_Invoice_ID, Books_Invoice_Number", next:"Review readiness; Books draft creation remains disabled.", test:function(r){ return !opsFirstNonBlank_(r.Books_Invoice_ID, r.Books_Invoice_Number); } },
-        { key:"draft_created", label:"Invoice draft created", means:"A draft or draft-created status is visible.", fields:"Books_Invoice_Status, Books_Push_Status", next:"Open invoice read-only or confirm send status outside Ops.", test:function(r){ var s=(opsFirstNonBlank_(r.Books_Invoice_Status,r.Books_Push_Status)).toUpperCase(); return s.indexOf("DRAFT")>=0; } },
-        { key:"invoice_raised", label:"Invoice raised", means:"A Books invoice is present in loaded fields.", fields:"Books_Invoice_ID, Books_Invoice_Number", next:"Refresh read-only Books status.", test:function(r){ return opsInvoiceSummary_(r).label === "Invoice Raised"; } },
+        { key:"no_invoice", label:"No invoice", means:"No Books invoice ID or invoice number is loaded.", fields:"Books_Invoice_ID, Books_Invoice_Number", next:"Review readiness, then use selected-applicant draft creation gate if preview returns READY.", test:function(r){ return !opsFirstNonBlank_(r.Books_Invoice_ID, r.Books_Invoice_Number); } },
+        { key:"draft_created", label:"Invoice draft created", means:"A draft or draft-created status is visible.", fields:"Books_Invoice_Status, Books_Push_Status", next:"Open invoice or confirm send status with selected-applicant Books status.", test:function(r){ var s=(opsFirstNonBlank_(r.Books_Invoice_Status,r.Books_Push_Status)).toUpperCase(); return s.indexOf("DRAFT")>=0; } },
+        { key:"invoice_raised", label:"Invoice raised", means:"A Books invoice is present in loaded fields.", fields:"Books_Invoice_ID, Books_Invoice_Number", next:"Refresh Books status.", test:function(r){ return opsInvoiceSummary_(r).label === "Invoice Raised"; } },
         { key:"invoice_sent", label:"Invoice sent", means:"Loaded communication fields indicate invoice email was sent.", fields:"Email_Status, Last_Contact_Type, invoice email fields", next:"Review timeline. No bulk send.", test:function(r){ return opsInvoiceEmailSummary_(r).label === "Invoice Email Sent"; } },
-        { key:"payment_pending", label:"Payment pending", means:"Payment is not verified in loaded fields.", fields:"Payment_Verified, Payment_Verified_Bool", next:"Use read-only follow-up preview; payment writes remain disabled.", test:function(r){ return !(opsIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true); } },
+        { key:"payment_pending", label:"Payment pending", means:"Payment is not verified in loaded fields.", fields:"Payment_Verified, Payment_Verified_Bool", next:"Use selected-applicant payment verification gate only under Super Admin approval.", test:function(r){ return !(opsIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true); } },
         { key:"payment_verified", label:"Payment verified", means:"Payment appears verified in loaded fields.", fields:"Payment_Verified, Payment_Verified_Bool", next:"Inspect enrolment and classroom readiness.", test:function(r){ return opsIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true; } },
         { key:"missing_mapping", label:"Missing item mapping", means:"Mapping/fallback fields indicate a missing or blocked item mapping.", fields:"Missing_Item_Mapping, Fallback_Item_Used, readiness status", next:"Manual Books mapping review. No write.", test:function(r){ return !!opsFirstNonBlank_(r.Missing_Item_Mapping) || String(r.Books_Push_Status || "").toUpperCase().indexOf("MAPPING")>=0; } },
         { key:"amount_known", label:"Amount known", means:"A numeric invoice/fee amount can be derived.", fields:"Books_Invoice_Amount, Fee_Total_Kina, Total_Fee", next:"Review line summary.", test:function(r){ return opsAmountFromRow_(r) > 0; } },
         { key:"amount_unknown", label:"Amount unknown", means:"No numeric amount was loaded.", fields:"Books_Invoice_Amount, Fee_Total_Kina, Total_Fee", next:"Manual fee review before any Books action.", test:function(r){ return opsAmountFromRow_(r) <= 0; } },
-        { key:"push_ready", label:"Books push ready", means:"Loaded status says READY.", fields:"Books_Push_Status", next:"Still disabled in Ops; separate approval required.", test:function(r){ return String(r.Books_Push_Status || "").toUpperCase() === "READY"; } },
+        { key:"push_ready", label:"Books push ready", means:"Loaded status says READY.", fields:"Books_Push_Status", next:"Use selected-applicant preview/create gate under operator-approved live test.", test:function(r){ return String(r.Books_Push_Status || "").toUpperCase() === "READY"; } },
         { key:"push_blocked", label:"Books push blocked", means:"Loaded status/error indicates blocked or error.", fields:"Books_Push_Status, Books_Last_Error", next:"Review error and mapping. No write.", test:function(r){ var s=String(r.Books_Push_Status || "").toUpperCase(); return s.indexOf("BLOCK")>=0 || s.indexOf("ERROR")>=0 || !!opsFirstNonBlank_(r.Books_Last_Error); } }
       ];
     }
@@ -2805,7 +2968,7 @@
       var applicantId = opsApplicantId_();
       var approved = applicantId === OPS_SAFE_MODE_APPROVED_APPLICANT_ID;
       el.innerHTML = opsTemplateDefinitions_().map(function(t){
-        var allowed = approved ? "Allowed for approved Safe Mode target after preview" : "Blocked for send; preview/read-only only";
+        var allowed = approved ? "Allowed for approved Safe Mode target after preview" : "Blocked by Safe Mode target gate";
         return "<div class='opsTemplateCard" + (selected === t.type ? " active" : "") + "' data-template-type='" + esc(t.type) + "'>"
           + "<h4>" + esc(t.name) + "</h4>"
           + "<p><strong>Purpose:</strong> " + esc(t.purpose) + "</p>"
@@ -2848,12 +3011,14 @@
       var row = opsApplicantContextRow_() || {};
       var selectedType = opsSelectedTemplateType_();
       var payload = opsCustomEmailPayload_();
-      var recipient = payload.recipient || opsFirstNonBlank_(row.Effective_Email, row.Parent_Email_Corrected, row.Parent_Email, "No effective email in loaded fields");
       var approved = opsApplicantId_() === OPS_SAFE_MODE_APPROVED_APPLICANT_ID;
       var previewReady = opsActionState.previewApplicantId === opsApplicantId_()
         && opsActionState.previewMessageType === selectedType
         && opsActionState.previewResult
         && String(opsActionState.previewResult.result || "").toUpperCase() === "PREVIEW";
+      var recipient = (previewReady && opsActionState.previewResult.effectiveEmail)
+        || payload.recipient
+        || opsFirstNonBlank_(row.Effective_Email, row.Parent_Email_Corrected, row.Parent_Email, "No effective email in loaded fields");
       var staleDraft = selectedType === "custom_email" && previewReady && opsActionState.previewDraftSignature !== opsCustomEmailSignature_();
       var blockReason = "";
       if (!approved) blockReason = "Not approved for Safe Mode send.";
@@ -2885,6 +3050,8 @@
       var menuActionIds = [
         "selectApplicant",
         "openApplicantReview",
+        "openDocumentReview",
+        "openPaymentReview",
         "previewEmail",
         "sendReminder",
         "resendPortalAccess",
@@ -2917,6 +3084,8 @@
       opsSelectApplicantContext_(applicantId, applicantName);
       if (action === "selectApplicant") return;
       if (action === "openApplicantReview") return opsOpenApplicantReview_();
+      if (action === "openDocumentReview") return opsOpenLegacyAdminReview_();
+      if (action === "openPaymentReview") return opsOpenLegacyAdminReview_();
       if (action === "previewEmail") { opsActionState.templateType = "reminder"; opsScrollTo_("opsCommunications"); return opsPreviewApplicantEmail_("reminder", "Reminder"); }
       if (action === "sendReminder") { opsActionState.templateType = "reminder"; opsScrollTo_("opsCommunications"); return setOpsResult_("opsCommunicationResult", { result:"BLOCKED", applicantId: applicantId, blockReason:"Use Preview Email first, then the Send Reminder button with owner confirmation. Context menu never sends directly." }, "Send Reminder Gate"); }
       if (action === "resendPortalAccess") { opsActionState.templateType = "legacy_invite"; opsScrollTo_("opsCommunications"); return setOpsResult_("opsCommunicationResult", { result:"BLOCKED", applicantId: applicantId, blockReason:"Preview Portal Access first, then send with explicit confirmation. Context menu never sends directly." }, "Portal Access Gate"); }
@@ -3052,34 +3221,34 @@
     }
     function renderOpsRuntimeTruth_(){
       var runtime = runtimeInfoCache || {};
-      var version = runtime.version || VERSION || "r173";
+      var version = runtime.version || VERSION || "r180";
       var deploy = runtime.deployVersion || DEPLOY_VERSION_NUMBER || 173;
       setOpsText_("cockpitKpiRuntime", version + " / " + String(deploy));
       setOpsText_("cockpitSideRuntime", "Runtime " + version);
       setOpsText_("cockpitLastRefreshed", opsNowLabel_());
       setOpsText_("cockpitFooterRuntime", version + " Live");
-      setOpsText_("cockpitRuntimeConfigVersion", String(VERSION || "r173"));
+      setOpsText_("cockpitRuntimeConfigVersion", String(VERSION || "r180"));
       setOpsText_("cockpitRuntimeDeployNumber", String(DEPLOY_VERSION_NUMBER || 173));
       setOpsPill_("cockpitAppsScript", "@" + String(deploy), "info");
       setOpsPill_("cockpitAdminWhoami", runtime.mismatch === false ? "Match" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitStudentWhoami", runtime.mismatch === false ? "Match" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitRuntimeCommit", "Unknown", "muted");
-      setOpsPill_("cockpitRuntimeTag", "staging-as178 accepted", "ok");
+      setOpsPill_("cockpitRuntimeTag", "staging-as180 accepted", "ok");
       setOpsPill_("cockpitWorkingTree", "Unknown", "muted");
       setOpsPill_("cockpitReleaseWhoami", runtime.mismatch === false ? "OK" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitReleaseRemote", "Unknown", "muted");
-      setOpsPill_("cockpitReleaseBrowser", "Accepted r178", "ok");
-      setOpsPill_("cockpitReleaseBrowserState", "Accepted r178", "ok");
+      setOpsPill_("cockpitReleaseBrowser", "Accepted r180", "ok");
+      setOpsPill_("cockpitReleaseBrowserState", "Accepted r180", "ok");
       setOpsPill_("cockpitReleaseGit", "Recorded externally", "info");
       setOpsPill_("cockpitReleaseDirty", "Unavailable here", "muted");
-      setOpsPill_("cockpitRuntimeCommit", "9a6f53f", "ok");
-      setOpsPill_("cockpitRuntimeTag", "staging-as178 accepted", "ok");
-      setOpsPill_("cockpitReleaseNextTask", "r179 full working surface", "info");
+      setOpsPill_("cockpitRuntimeCommit", "344c446", "ok");
+      setOpsPill_("cockpitRuntimeTag", "staging-as180 accepted", "ok");
+      setOpsPill_("cockpitReleaseNextTask", "OPS activation after acceptance", "info");
       setOpsPill_("cockpitRuntimeRemoteConfig", runtime.version ? "Loaded from runtime" : "Unknown", runtime.version ? "info" : "muted");
       setOpsPill_("cockpitRuntimeDrift", runtime.mismatch === false ? "No mismatch reported" : "Unknown until verified", runtime.mismatch === false ? "ok" : "warn");
       setOpsPill_("cockpitReleaseRuntime", version + " / " + String(deploy), "info");
-      setOpsText_("cockpitKpiNextRelease", "r179 full working surface");
-      setOpsText_("cockpitKpiNextReleaseMeta", "r179 prioritizes WhatsApp, bulk communications, Admin working surface completion, and read-first Books usability without uncontrolled writes.");
+      setOpsText_("cockpitKpiNextRelease", "OPS guarded activation candidate");
+      setOpsText_("cockpitKpiNextReleaseMeta", "OPS activation exposes existing backend functions with selected-applicant, preview, role, and confirmation gates. Release actions remain external.");
       setOpsText_("cockpitKpiRuntimeState", runtime.mismatch === false ? "Live" : "Unknown");
       setOpsText_("cockpitKpiRuntimeMeta", runtime.mismatch === false ? "Admin and Student whoami align." : "Waiting on whoami alignment.");
       setOpsPill_("cockpitRuntimeStatusPill", runtime.mismatch === false ? "Runtime Match" : "Runtime Unknown", runtime.mismatch === false ? "ok" : "warn");
@@ -3087,7 +3256,7 @@
       setOpsText_("cockpitFooterStatus", "Safe Mode Controlled Actions");
       setOpsPill_("cockpitHealthLevel", runtime.mismatch === false ? "Warning" : "Unknown", runtime.mismatch === false ? "warn" : "muted");
       setOpsText_("cockpitHealthWhy", runtime.mismatch === false
-        ? "Runtime identity is aligned to the accepted r178 baseline. Release metadata shown here is read-only and depends on what was recorded during the release."
+        ? "Runtime identity is aligned to the accepted r180 baseline. Release metadata shown here is guidance and depends on what was recorded during the release."
         : "Runtime identity has not returned enough evidence yet.");
     }
     function renderOpsSafetyStatus_(data){
@@ -3099,9 +3268,9 @@
       setOpsPill_("cockpitReleaseWhoami", runtime.mismatch === false ? "OK" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsText_("cockpitKpiRisks", "Health Report");
       setOpsText_("cockpitKpiRiskState", "Cause visible");
-      setOpsText_("cockpitKpiRisksMeta", "Health is derived from runtime identity, config coherence, queue load, Books/read-only state, Safe Mode, and critical write gates.");
+      setOpsText_("cockpitKpiRisksMeta", "Health is derived from runtime identity, config coherence, queue load, Books gate state, Safe Mode, and critical write gates.");
       setOpsText_("cockpitKpiBilling", "Books Connected");
-      setOpsText_("cockpitKpiBillingMeta", "Connection ready. Books writes remain disabled; Ops uses read-only checks and Safe Mode controls only.");
+      setOpsText_("cockpitKpiBillingMeta", "Connection ready. Books preview, draft invoice, status refresh, and test-email controls use selected-applicant server gates.");
       setOpsText_("cockpitReportRelease", runtime.mismatch === false ? "Runtime aligned" : "Whoami mismatch");
       var health = "Unknown";
       var why = [];
@@ -3114,7 +3283,7 @@
         health = propertyHealth.warning ? "Warning" : "Healthy";
         why.push("Admin runtime identity returned without mismatch.");
         why.push("VERSION / DEPLOY_VERSION_NUMBER are read from runtime.");
-        next.push("Continue with read-only review or Safe Mode single-record actions only.");
+        next.push("Continue with selected-applicant review or Safe Mode single-record actions only.");
       }
       if (propertyHealth.warning) {
         why.push("Property/config health warning: " + String(propertyHealth.warning));
@@ -3125,16 +3294,16 @@
         why.push("System stabilization mode is active.");
         next.push("Do not expect unrestricted production sends.");
       }
-      if (gates.productionSendsEnabled === false) why.push("Production email sends are disabled.");
-      if (gates.batchSendEnabled === false) why.push("Batch send remains disabled.");
+      if (gates.productionSendsEnabled === false) why.push("Production email sends are currently stopped by Config gate.");
+      if (gates.batchSendEnabled === false) why.push("Batch send is currently stopped by Config gate.");
       if (trigger.installed === false && gates.automatedStageRunnerEnabled === true) {
         health = health === "Blocked" ? "Blocked" : "Degraded";
         why.push("Automated runner is enabled in config but no trigger is installed.");
-        next.push("Repair trigger installation or keep automation disabled.");
+        next.push("Repair trigger installation or keep automation off.");
       }
-      why.push("Books connection is read-only in this console.");
+      why.push("Books connection is exposed through selected-applicant guarded controls in this console.");
       why.push("Admissions queue loaded state is shown in the Applicant Queue.");
-      why.push("Critical writes, bulk sends, Books writes, payment/enrolment writes, and WhatsApp export/email remain disabled or gated.");
+      why.push("Critical writes, bulk sends, Books writes, payment verification, and WhatsApp export/email are gated by role, preview, confirmation, and Config. Enrolment/package writes report backend missing.");
       if (!next.length) next.push("Refresh runtime and safety checks if evidence changes.");
       setOpsPill_("cockpitHealthLevel", health, health === "Healthy" ? "ok" : (health === "Blocked" ? "danger" : (health === "Unknown" ? "muted" : "warn")));
       setOpsText_("cockpitHealthWhy", "Causes: " + why.join(" ") + " Next action: " + next.join(" "));
@@ -3308,7 +3477,7 @@
       setOpsText_("cockpitCommWhatsapp", bounceFlag ? "WhatsApp fallback suggested" : "Not currently suggested");
       setOpsPill_("opsFallbackPhoneState", opsPhoneState_(d), opsPhoneState_(d).indexOf("present") >= 0 ? "ok" : "muted");
       setOpsText_("cockpitClassroomStudent", studentName);
-      setOpsText_("cockpitClassroomLevel", opsFirstNonBlank_(d.FODE_Level, d.Grade, d.Class_Level, "Coming Next"));
+      setOpsText_("cockpitClassroomLevel", opsFirstNonBlank_(d.FODE_Level, d.Grade, d.Class_Level, "Loaded from selected applicant"));
       setOpsText_("cockpitClassroomSubjects", opsFirstNonBlank_(d.Selected_Subjects, d.Subjects, "Language & Literature; General Mathematics"));
       setOpsText_("cockpitClassroomInvoice", invoiceNumber + " / " + invoiceState.label);
       setOpsText_("cockpitClassroomPayment", payment);
@@ -3353,7 +3522,7 @@
         "</div>",
         "</div>",
         "<div class='opsCard'>",
-        "<div class='opsSectionHeader'><div><h3>Invoice Operations</h3><p>Invoice open/status actions are read-only. Create, send, and payment actions remain disabled.</p></div><span class='opsStatusPill info'>Read-only</span></div>",
+        "<div class='opsSectionHeader'><div><h3>Invoice Operations</h3><p>Selected-applicant Books actions use existing Admin backend gates, preview parity, duplicate protection, and explicit confirmation.</p></div><span class='opsStatusPill warn'>Guarded actions</span></div>",
         "<table class='opsLineTable'>",
           "<thead><tr><th>Invoice Line Items</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>",
           "<tbody>",
@@ -3367,11 +3536,13 @@
         "<div class='opsActionRow'>",
           "<button class='opsActionBtn live' type='button' onclick='opsOpenInvoice_()'>Open Invoice</button>",
           "<button class='opsActionBtn live' type='button' onclick='opsRefreshInvoiceStatus_()'>Refresh Invoice Status</button>",
-          "<button class='opsActionBtn' type='button' disabled>Send Invoice via Books</button>",
-          "<button class='opsActionBtn' type='button' disabled>View Missing Item Mapping</button>",
+          "<button class='opsActionBtn live' type='button' onclick='opsPreviewBooksForSelected_()'>Preview Books Payload</button>",
+          "<button class='opsActionBtn live' type='button' onclick='opsCreateBooksDraftForSelected_()'>Create Draft Invoice</button>",
+          "<button class='opsActionBtn live' type='button' onclick='opsSendBooksTestInvoiceForSelected_()'>Send Test Invoice Email</button>",
+          "<button class='opsActionBtn' type='button' onclick='opsExportReportCsv_(\"Missing Zoho Item Mapping\")'>Export Missing Item Mapping</button>",
         "</div>",
-        "<div id='opsBooksResult' class='opsResultBox hidden'></div>",
-        "<div class='opsBadgeStack'><span class='opsStatusPill ok'>No invoice creation</span><span class='opsStatusPill ok'>No payment recording</span><span class='opsStatusPill ok'>No invoice send</span></div>",
+        "<div id='opsBooksSummaryResult' class='opsResultBox hidden'></div>",
+        "<div class='opsBadgeStack'><span class='opsStatusPill warn'>Create draft requires READY preview</span><span class='opsStatusPill warn'>Payment verification uses Super Admin gate</span><span class='opsStatusPill warn'>Test email only where backend allows</span></div>",
         "</div>",
         "</div>"
       ].join("");
@@ -3465,6 +3636,8 @@
       body.innerHTML = [
         "<div class='opsActionRow'>",
           "<button class='opsActionBtn live' type='button' onclick='opsOpenLegacyAdminReview_()'>Open Admin Review for " + esc(id) + "</button>",
+          "<button class='opsActionBtn live' type='button' onclick='opsOpenLegacyAdminReview_()'>Open Document Review</button>",
+          "<button class='opsActionBtn live' type='button' onclick='opsOpenLegacyAdminReview_()'>Open Payment Review</button>",
           "<button class='opsActionBtn' type='button' onclick='opsScrollTo_(\"opsCommunications\")'>Communications</button>",
           "<button class='opsActionBtn' type='button' onclick='opsScrollTo_(\"opsZohoBooks\")'>Billing</button>",
           "<button class='opsActionBtn' type='button' onclick='opsScrollTo_(\"opsStudentDiagnostics\")'>Portal Diagnostics</button>",
@@ -3532,6 +3705,95 @@
           setOpsResult_("opsAdmissionsResult", { result:"FAILED", applicantId: applicantId, blockReason:String((err && err.message) || err || "Portal diagnostics failed.") }, "Portal Diagnostics");
         })
         .admin_getStudentPortalLink({ applicantId: applicantId });
+    }
+    function opsLoadSelectedPortalLink_(onDone){
+      var ctx = opsRequireSelectedApplicant_("opsPortalResult", "Portal Link", true);
+      if (!ctx) return;
+      setOpsResult_("opsPortalResult", { result:"GUIDANCE", applicantId:ctx.applicantId, message:"Loading portal link for " + opsSelectedIdentityLine_() + "." }, "Portal Link");
+      google.script.run
+        .withSuccessHandler(function(res){
+          var out = res && typeof res === "object" ? res : { ok:false, result:"FAILED", message:"Invalid portal link response." };
+          if (out.ok === true && (out.link || out.portalUrl || out.url)) {
+            currentPortalLinkInfo = { applicantId:ctx.applicantId, url:String(out.link || out.portalUrl || out.url || "") };
+            setOpsResult_("opsPortalResult", { result:"OPEN", applicantId:ctx.applicantId, message:"Portal link ready: " + currentPortalLinkInfo.url, debugId:out.debugId }, "Portal Link");
+          } else {
+            setOpsResult_("opsPortalResult", { result:"FAILED", applicantId:ctx.applicantId, blockReason:String(out.message || out.blockReason || out.error || "Portal link unavailable."), debugId:out.debugId }, "Portal Link");
+          }
+          if (typeof onDone === "function") onDone(out);
+        })
+        .withFailureHandler(function(err){
+          setOpsResult_("opsPortalResult", { result:"FAILED", applicantId:ctx.applicantId, blockReason:String((err && err.message) || err || "Portal link failed.") }, "Portal Link");
+        })
+        .admin_getPortalLink({ rowNumber:ctx.rowNumber, applicantId:ctx.applicantId });
+    }
+    function opsOpenSelectedPortalLink_(){
+      var openUrl = currentPortalLinkInfo && currentPortalLinkInfo.applicantId === opsApplicantId_() ? String(currentPortalLinkInfo.url || "") : "";
+      if (openUrl) {
+        window.open(openUrl, "_blank", "noopener");
+        setOpsResult_("opsPortalResult", { result:"OPEN", applicantId:opsApplicantId_(), message:"Opened selected applicant portal link." }, "Open Portal");
+        return;
+      }
+      opsLoadSelectedPortalLink_(function(out){
+        var url = out && (out.link || out.portalUrl || out.url);
+        if (url) window.open(String(url), "_blank", "noopener");
+      });
+    }
+    function opsCopySelectedPortalLink_(){
+      opsLoadSelectedPortalLink_(function(out){
+        var url = out && (out.link || out.portalUrl || out.url);
+        if (url && navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(String(url));
+      });
+    }
+    function opsResetSelectedPortalLink_(){
+      var ctx = opsRequireSelectedApplicant_("opsPortalResult", "Reset Portal Link", true);
+      if (!ctx) return;
+      if (!IS_SUPER) {
+        setOpsResult_("opsPortalResult", { result:"BLOCKED", applicantId:ctx.applicantId, blockReason:"Portal link reset requires Super Admin mode and server-side requireSuperAdmin_()." }, "Reset Portal Link");
+        return;
+      }
+      if (!window.confirm("Reset portal link for " + opsSelectedIdentityLine_() + "? This regenerates the portal secret for this one applicant.")) return;
+      setOpsResult_("opsPortalResult", { result:"GUIDANCE", applicantId:ctx.applicantId, message:"Resetting selected applicant portal link..." }, "Reset Portal Link");
+      google.script.run
+        .withSuccessHandler(function(res){
+          var out = res && typeof res === "object" ? res : { ok:false, message:"Invalid portal reset response." };
+          if (out.ok === true && (out.link || out.portalUrl || out.url)) {
+            currentPortalLinkInfo = { applicantId:ctx.applicantId, url:String(out.link || out.portalUrl || out.url || "") };
+            setOpsResult_("opsPortalResult", { result:"OPEN", applicantId:ctx.applicantId, message:"Portal link reset completed. New link: " + currentPortalLinkInfo.url, debugId:out.debugId }, "Reset Portal Link");
+            fetchOpsApplicantSummary_(ctx.applicantId);
+          } else {
+            setOpsResult_("opsPortalResult", { result:"FAILED", applicantId:ctx.applicantId, blockReason:String(out.message || out.blockReason || out.error || "Portal reset failed."), debugId:out.debugId }, "Reset Portal Link");
+          }
+        })
+        .withFailureHandler(function(err){
+          setOpsResult_("opsPortalResult", { result:"FAILED", applicantId:ctx.applicantId, blockReason:String((err && err.message) || err || "Portal reset failed.") }, "Reset Portal Link");
+        })
+        .admin_resetPortalSecret({ rowNumber:ctx.rowNumber, applicantId:ctx.applicantId });
+    }
+    function opsSetSelectedPortalAccess_(status){
+      var ctx = opsRequireSelectedApplicant_("opsPortalResult", "Portal Access", true);
+      var targetStatus = String(status || "").trim();
+      if (!ctx) return;
+      if (!IS_SUPER) {
+        setOpsResult_("opsPortalResult", { result:"BLOCKED", applicantId:ctx.applicantId, blockReason:"Portal access lock/unlock requires Super Admin mode and server-side requireSuperAdmin_()." }, "Portal Access");
+        return;
+      }
+      if (targetStatus !== "Open" && targetStatus !== "Locked") {
+        setOpsResult_("opsPortalResult", { result:"BLOCKED", applicantId:ctx.applicantId, blockReason:"Unsupported portal access status." }, "Portal Access");
+        return;
+      }
+      if (!window.confirm("Change portal access for " + opsSelectedIdentityLine_() + " to " + targetStatus + "? This updates only the selected applicant row.")) return;
+      google.script.run
+        .withSuccessHandler(function(res){
+          var out = res && typeof res === "object" ? res : { ok:false, message:"Invalid portal access response." };
+          setOpsResult_("opsPortalResult", out.ok === false
+            ? { result:"FAILED", applicantId:ctx.applicantId, blockReason:String(out.message || out.error || "Portal access update failed."), debugId:out.debugId }
+            : { result:"OPEN", applicantId:ctx.applicantId, message:"Portal access updated to " + targetStatus + ".", debugId:out.debugId }, "Portal Access");
+          fetchOpsApplicantSummary_(ctx.applicantId);
+        })
+        .withFailureHandler(function(err){
+          setOpsResult_("opsPortalResult", { result:"FAILED", applicantId:ctx.applicantId, blockReason:String((err && err.message) || err || "Portal access update failed.") }, "Portal Access");
+        })
+        .admin_setPortalAccess({ rowNumber:ctx.rowNumber, status:targetStatus });
     }
     function opsCustomEmailPayload_(){
       return {
@@ -3661,29 +3923,54 @@
     }
     function opsOpenInvoice_(){
       var d = opsApplicantDetailCache || {};
-      var url = String(d.Books_Invoice_URL || d.Books_Invoice_Link || d.Invoice_URL || "").trim();
+      var preview = opsActionState.booksPreviewApplicantId === opsApplicantId_() ? (opsActionState.booksPreviewResult || null) : null;
+      var url = opsInvoiceUrlFrom_(d) || opsInvoiceUrlFrom_(preview);
       if (!url) {
         setOpsResult_("opsBooksResult", {
           result:"BLOCKED",
           applicantId: opsApplicantId_(),
-          blockReason:"No safe invoice URL is available in the loaded applicant detail."
+          blockReason:"Invoice URL unavailable.",
+          message:"Open Invoice requires a Books invoice URL. Refresh Books Status can confirm the existing invoice ID/number and attempt a read-only invoice ID lookup, but it cannot open without a URL."
         }, "Open Invoice Blocked");
         return;
       }
       window.open(url, "_blank", "noopener");
       setOpsResult_("opsBooksResult", { result:"OPEN", applicantId: opsApplicantId_(), message:"Opened invoice link in a new tab." }, "Open Invoice");
     }
+    function opsInvoiceUrlFrom_(source){
+      var src = source && typeof source === "object" ? source : {};
+      var lookup = src.invoiceLookup && typeof src.invoiceLookup === "object" ? src.invoiceLookup : {};
+      var match = Array.isArray(lookup.matches) && lookup.matches.length ? (lookup.matches[0] || {}) : {};
+      var url = String(src.currentBooksInvoiceUrl || src.Books_Invoice_URL || src.Books_Invoice_Link || src.Invoice_URL
+        || src.invoiceUrl || src.invoice_url || src.url || src.permalink_url || src.invoice_link
+        || match.invoice_url || match.invoiceUrl || match.url || match.permalink_url || match.invoice_link || "").trim();
+      return /^https?:\/\//i.test(url) ? url : "";
+    }
     function opsRefreshInvoiceStatus_(){
       var applicantId = opsApplicantId_();
-      setOpsResult_("opsBooksResult", { result:"GUIDANCE", applicantId: applicantId, message:"Loading read-only Books payload/status preview..." }, "Invoice Status");
+      setOpsResult_("opsBooksResult", { result:"GUIDANCE", applicantId: applicantId, message:"Loading Books payload/status through the existing selected-applicant preview backend..." }, "Invoice Status");
       google.script.run
         .withSuccessHandler(function(res){
           var out = res && typeof res === "object" ? res : { ok:false, result:"FAILED", blockReason:"Invalid Books preview response." };
           var preview = out.preview || out;
+          opsActionState.booksPreviewApplicantId = applicantId;
+          opsActionState.booksPreviewResult = preview;
+          if (opsApplicantDetailCache && String(opsApplicantDetailCache.ApplicantID || "") === applicantId) {
+            opsApplicantDetailCache.Books_Invoice_ID = preview.currentBooksInvoiceId || opsApplicantDetailCache.Books_Invoice_ID || "";
+            opsApplicantDetailCache.Books_Invoice_Number = preview.currentBooksInvoiceNumber || opsApplicantDetailCache.Books_Invoice_Number || "";
+            opsApplicantDetailCache.Books_Invoice_Status = preview.currentBooksInvoiceStatus || opsApplicantDetailCache.Books_Invoice_Status || "";
+            opsApplicantDetailCache.Books_Invoice_URL = opsInvoiceUrlFrom_(preview) || opsApplicantDetailCache.Books_Invoice_URL || "";
+          }
+          renderOpsBooksFilters_();
+          var invoiceUrl = opsInvoiceUrlFrom_(preview);
+          var invoiceLabel = String(preview.currentBooksInvoiceNumber || preview.currentBooksInvoiceId || "Unknown");
+          var urlMessage = invoiceUrl
+            ? "Invoice URL available via " + String(preview.currentBooksInvoiceUrlSource || "preview") + "."
+            : "Invoice URL unavailable. Refresh succeeded, but open requires Books invoice URL or invoice ID lookup.";
           setOpsResult_("opsBooksResult", {
             result: out.ok === true ? "PREVIEW" : "FAILED",
             applicantId: applicantId,
-            message: "Read-only Books preview returned. Invoice raised: " + String(preview.invoiceRaised === true ? "YES" : "UNKNOWN") + ". Current invoice: " + String(preview.currentBooksInvoiceNumber || "Unknown") + ".",
+            message: "Refresh Books Status succeeded. Invoice raised: " + String(preview.invoiceRaised === true ? "YES" : "UNKNOWN") + ". Current invoice: " + invoiceLabel + ". " + urlMessage,
             debugId: out.debugId
           }, "Invoice Status");
         })
@@ -3691,6 +3978,115 @@
           setOpsResult_("opsBooksResult", { result:"FAILED", applicantId: applicantId, blockReason:String((err && err.message) || err || "Books preview failed.") }, "Invoice Status Failed");
         })
         .admin_previewZohoBooksFodePayload({ applicantId: applicantId });
+    }
+    function opsPreflightBooks_(){
+      setOpsResult_("opsBooksResult", { result:"GUIDANCE", message:"Running Zoho Books preflight through existing Admin backend." }, "Books Preflight");
+      google.script.run
+        .withSuccessHandler(function(res){
+          var out = res && typeof res === "object" ? res : { ok:false, code:"INVALID_PREFLIGHT_RESPONSE" };
+          opsActionState.booksPreflightResult = out;
+          setOpsResult_("opsBooksResult", {
+            result: out.ok === false ? "FAILED" : "PREVIEW",
+            message: [
+              "Preflight complete.",
+              "Write enabled: " + String(out.writeEnabled === true),
+              "Write admin authorized: " + String(out.writeAdminAuthorized === true),
+              "Token: " + String((out.tokenStatus && (out.tokenStatus.code || out.tokenStatus.message)) || "Unknown"),
+              "Field readiness: " + String((out.fieldReadiness && out.fieldReadiness.status) || "Unknown")
+            ].join(" "),
+            debugId: out.debugId
+          }, "Books Preflight");
+        })
+        .withFailureHandler(function(err){
+          setOpsResult_("opsBooksResult", { result:"FAILED", blockReason:String((err && err.message) || err || "Books preflight failed.") }, "Books Preflight");
+        })
+        .admin_preflightZohoBooks({});
+    }
+    function opsPreviewBooksForSelected_(){
+      var ctx = opsRequireSelectedApplicant_("opsBooksResult", "Books Preview", false);
+      if (!ctx) return;
+      setOpsResult_("opsBooksResult", { result:"GUIDANCE", applicantId:ctx.applicantId, message:"Loading selected-applicant Books preview for " + opsSelectedIdentityLine_() + "." }, "Books Preview");
+      google.script.run
+        .withSuccessHandler(function(res){
+          var out = res && typeof res === "object" ? res : { ok:false, code:"INVALID_PREVIEW_RESPONSE" };
+          opsActionState.booksPreviewApplicantId = ctx.applicantId;
+          opsActionState.booksPreviewResult = out;
+          var invoiceRaised = out.invoiceRaised === true || !!out.currentBooksInvoiceId;
+          setOpsResult_("opsBooksResult", {
+            result: out.ok === false ? "FAILED" : "PREVIEW",
+            applicantId:ctx.applicantId,
+            message:[
+              "Books preview ready.",
+              "Readiness: " + String(out.readinessStatus || "Unknown"),
+              "Idempotency: " + String(invoiceRaised ? "DUPLICATE_BLOCKED" : (out.idempotencyStatus || "Unknown")),
+              "Invoice: " + String(out.currentBooksInvoiceNumber || out.currentBooksInvoiceId || "None"),
+              "Amount: " + String(out.calculatedAmount ? formatPngAmount_(out.calculatedAmount) : "Unknown"),
+              "Recipient/test email: " + String(out.testEmailRecipient || "Not configured")
+            ].join(" "),
+            blockReason: out.blockReason || "",
+            debugId: out.debugId
+          }, "Books Preview");
+        })
+        .withFailureHandler(function(err){
+          setOpsResult_("opsBooksResult", { result:"FAILED", applicantId:ctx.applicantId, blockReason:String((err && err.message) || err || "Books preview failed.") }, "Books Preview");
+        })
+        .admin_previewZohoBooksFodePayload({ applicantId:ctx.applicantId });
+    }
+    function opsCreateBooksDraftForSelected_(){
+      var ctx = opsRequireSelectedApplicant_("opsBooksResult", "Create Draft Invoice", false);
+      if (!ctx) return;
+      var preview = opsActionState.booksPreviewResult || null;
+      var previewApplicantId = String(opsActionState.booksPreviewApplicantId || "");
+      var ready = preview && (preview.readinessStatus === "READY" || preview.readinessStatus === "READY_WITH_FALLBACK");
+      var invoiceRaised = preview && (preview.invoiceRaised === true || !!preview.currentBooksInvoiceId);
+      if (!preview || previewApplicantId !== ctx.applicantId) {
+        setOpsResult_("opsBooksResult", { result:"BLOCKED", applicantId:ctx.applicantId, blockReason:"Preview this exact selected applicant before creating a draft invoice." }, "Create Draft Invoice");
+        return;
+      }
+      if (!ready || invoiceRaised) {
+        setOpsResult_("opsBooksResult", { result:"BLOCKED", applicantId:ctx.applicantId, blockReason:invoiceRaised ? "Duplicate guard active: invoice already exists." : ("Preview readiness is not READY: " + String(preview.readinessStatus || "Unknown")) }, "Create Draft Invoice");
+        return;
+      }
+      if (!window.confirm("Create Zoho Books draft invoice for " + opsSelectedIdentityLine_() + "? This is selected-applicant only and uses existing duplicate/test-applicant server gates.")) return;
+      google.script.run
+        .withSuccessHandler(function(res){
+          var out = res && typeof res === "object" ? res : { ok:false, message:"Invalid draft invoice response." };
+          setOpsResult_("opsBooksResult", out.ok === false
+            ? { result:"FAILED", applicantId:ctx.applicantId, blockReason:String(out.message || out.blockReason || out.code || "Draft invoice creation failed."), debugId:out.debugId }
+            : { result:"OPEN", applicantId:ctx.applicantId, message:"Draft invoice created. Invoice: " + String(out.invoiceNumber || out.invoiceId || "Unknown") + ". Status: " + String(out.invoiceStatus || "draft") + ".", debugId:out.debugId }, "Create Draft Invoice");
+          fetchOpsApplicantSummary_(ctx.applicantId);
+        })
+        .withFailureHandler(function(err){
+          setOpsResult_("opsBooksResult", { result:"FAILED", applicantId:ctx.applicantId, blockReason:String((err && err.message) || err || "Draft invoice creation failed.") }, "Create Draft Invoice");
+        })
+        .admin_createZohoBooksFodeDraftInvoice({ applicantId:ctx.applicantId, previewApplicantId:ctx.applicantId });
+    }
+    function opsSendBooksTestInvoiceForSelected_(){
+      var ctx = opsRequireSelectedApplicant_("opsBooksResult", "Send Test Invoice Email", false);
+      if (!ctx) return;
+      var preview = opsActionState.booksPreviewResult || null;
+      var previewApplicantId = String(opsActionState.booksPreviewApplicantId || "");
+      if (!preview || previewApplicantId !== ctx.applicantId) {
+        setOpsResult_("opsBooksResult", { result:"BLOCKED", applicantId:ctx.applicantId, blockReason:"Preview this exact selected applicant before sending a controlled test invoice email." }, "Send Test Invoice Email");
+        return;
+      }
+      if (!preview.currentBooksInvoiceId || !preview.testEmailRecipient) {
+        setOpsResult_("opsBooksResult", { result:"BLOCKED", applicantId:ctx.applicantId, blockReason:"A draft invoice ID and configured test email recipient are required." }, "Send Test Invoice Email");
+        return;
+      }
+      if (!window.confirm("Send controlled Zoho Books test invoice email for " + opsSelectedIdentityLine_() + " to " + String(preview.testEmailRecipient) + "?")) return;
+      google.script.run
+        .withSuccessHandler(function(res){
+          var out = res && typeof res === "object" ? res : { ok:false, message:"Invalid test invoice email response." };
+          setOpsResult_("opsBooksResult", out.ok === false
+            ? { result:"FAILED", applicantId:ctx.applicantId, blockReason:String(out.message || out.blockReason || out.code || "Test invoice email failed."), debugId:out.debugId }
+            : { result:"SENT", applicantId:ctx.applicantId, effectiveEmail:String(out.recipient || preview.testEmailRecipient || ""), message:"Controlled test invoice email sent. Invoice: " + String(out.invoiceNumber || out.invoiceId || "Unknown") + ".", debugId:out.debugId }, "Send Test Invoice Email");
+          fetchOpsApplicantSummary_(ctx.applicantId);
+        })
+        .withFailureHandler(function(err){
+          setOpsResult_("opsBooksResult", { result:"FAILED", applicantId:ctx.applicantId, blockReason:String((err && err.message) || err || "Test invoice email failed.") }, "Send Test Invoice Email");
+        })
+        .admin_sendZohoBooksTestInvoiceEmail({ applicantId:ctx.applicantId, previewApplicantId:ctx.applicantId });
     }
     function opsPreviewClassroomHandover_(){
       var applicantId = opsApplicantId_();
@@ -3771,11 +4167,80 @@
         })
         .admin_notifyOpsClassroomAdmin({ applicantId: applicantId, confirmInternalSingleSend: true, sourceSurface: "ops", sourceView: "ops" });
     }
+    function opsVerifyPaymentForSelected_(){
+      var ctx = opsRequireSelectedApplicant_("opsClassroomResult", "Verify Payment", true);
+      if (!ctx) return;
+      if (!IS_SUPER) {
+        setOpsResult_("opsClassroomResult", {
+          result:"BLOCKED",
+          applicantId:ctx.applicantId,
+          blockCode:"SUPER_ADMIN_REQUIRED",
+          blockReason:"Payment verification requires Super Admin mode and the existing server-side requireSuperAdmin_() gate."
+        }, "Verify Payment");
+        return;
+      }
+      var confirmText = "Verify payment for " + opsSelectedIdentityLine_()
+        + "?\n\nThis is selected-applicant only. Proceed only under an approved live-test CIS. Existing backend docs-before-payment, payment-freeze, audit, and Super Admin gates still apply.";
+      if (!window.confirm(confirmText)) return;
+      setOpsResult_("opsClassroomResult", { result:"GUIDANCE", applicantId:ctx.applicantId, message:"Submitting selected-applicant payment verification through existing Admin backend gates..." }, "Verify Payment");
+      google.script.run
+        .withSuccessHandler(function(res){
+          var out = res && typeof res === "object" ? res : { ok:false, message:"Invalid payment verification response." };
+          setOpsResult_("opsClassroomResult", out.ok === false
+            ? { result:"FAILED", applicantId:ctx.applicantId, blockReason:String(out.message || out.blockReason || out.error || out.code || "Payment verification failed."), debugId:out.debugId || out.dbg }
+            : { result:"OPEN", applicantId:ctx.applicantId, message:"Payment verification backend returned. Payment badge: " + String(out.paymentBadge || out.paymentVerified || "Unknown") + ".", debugId:out.debugId || out.dbg }, "Verify Payment");
+          fetchOpsApplicantSummary_(ctx.applicantId);
+          renderOpsClassroomChecklist_();
+        })
+        .withFailureHandler(function(err){
+          setOpsResult_("opsClassroomResult", { result:"FAILED", applicantId:ctx.applicantId, blockReason:String((err && err.message) || err || "Payment verification failed.") }, "Verify Payment");
+          renderOpsClassroomChecklist_();
+        })
+        .admin_setPaymentVerified({ rowNumber:ctx.rowNumber, applicantId:ctx.applicantId, reason:"OPS selected-applicant payment verification" });
+    }
+    function opsShowBackendMissing_(label, detail){
+      setOpsResult_("opsClassroomResult", {
+        result:"BLOCKED",
+        blockCode:"BACKEND_MISSING",
+        applicantId:opsApplicantId_(),
+        blockReason:"Not implemented: backend missing. " + String(detail || "")
+      }, String(label || "Action"));
+    }
+    function opsRulesSnapshotRows_(){
+      return [
+        ["Safe Mode approved applicant", OPS_SAFE_MODE_APPROVED_APPLICANT_ID || ""],
+        ["Safe Mode test recipient override", OPS_SAFE_MODE_TEST_RECIPIENT || "none"],
+        ["Applicant email sends", "Preview, selected applicant, confirmation, Safe Mode, and server gates required"],
+        ["Stage batch send", "Ready for controlled live test in next CIS; preview cache and Super Admin required"],
+        ["Books draft/test email", "Selected applicant, preview parity, duplicate guard, Config and backend gates required"],
+        ["Portal reset/lock/unlock", "Selected applicant, Super Admin, confirmation, and server gate required"],
+        ["Payment verification", "Selected applicant, Super Admin, confirmation, and backend docs/freeze/audit gates required"],
+        ["Enrolment/package mutation", "Not implemented: backend missing"]
+      ];
+    }
+    function opsShowRulesSnapshot_(title){
+      var rows = opsRulesSnapshotRows_();
+      setOpsResult_("opsRulesResult", {
+        result:"OPEN",
+        message:rows.map(function(row){ return row[0] + ": " + row[1]; }).join("\n")
+      }, String(title || "Rules Snapshot"));
+    }
+    function opsExportRulesSnapshot_(){
+      var rows = opsRulesSnapshotRows_();
+      opsDownloadCsv_("ops_rules_snapshot.csv", ["Rule", "State"], rows);
+      setOpsResult_("opsRulesResult", { result:"OPEN", message:"Rules snapshot exported locally as CSV. No Sheets or Drive write occurred." }, "Rules Snapshot Export");
+    }
     function opsOpenReport_(title){
       setOpsResult_("opsReportResult", {
         result:"OPEN",
-        message:String(title || "Report") + " opened as a read-only cockpit panel. CSV export and scheduling remain disabled."
+        message:String(title || "Report") + " opened from the loaded Ops snapshot. Use Export CSV for a local browser export; no Sheets or Drive write occurs."
       }, "Report View");
+    }
+    function opsShowReportSchedulingGuidance_(){
+      setOpsResult_("opsReportResult", {
+        result:"GUIDANCE",
+        message:"Report scheduling is not an Apps Script UI mutation in this activation pass. Use local Export CSV now; unattended/scheduled report automation requires a separate CIS."
+      }, "Report Scheduling");
     }
     function opsOpenReleaseGuidance_(label){
       setOpsResult_("opsReleaseResult", {
@@ -5470,7 +5935,7 @@ function renderBatchPanel(){
     if (batchState.busy && batchState.action === "preview") noteEl.textContent = "Loading the next eligible unsent cohort...";
     else if (batchState.busy && batchState.action === "send") noteEl.textContent = "Sending the next eligible unsent cohort...";
     else if (disabledReason) noteEl.textContent = disabledReason;
-    else if (previewReady) noteEl.textContent = "Preview ready for send. Standard production flow uses the next eligible unsent records; diagnostic offset is ignored.";
+    else if (previewReady) noteEl.textContent = "Ready for controlled live test in next CIS. Preview cache is valid; stage, message type, count, caps, Config gates, and idempotency are enforced before send.";
     else noteEl.textContent = "Preview is required before send. Standard production flow uses the next eligible unsent records; diagnostic offset is ignored.";
   }
   renderStageBatchSummary_(batchState.result);
@@ -5667,7 +6132,12 @@ function sendStageBatchUi_(){
     });
     return;
   }
-  var confirmText = "Send " + String(limit) + " emails for stage " + stage + " using the next eligible unsent records? Preview prepared: " + String(Number(batchState.previewEligible || 0)) + ". Message: " + messageType + ". Diagnostic offset is ignored.";
+  var confirmText = "Controlled stage batch send\n\nStage: " + stage
+    + "\nMessage type: " + messageType
+    + "\nPreview request: " + String(batchState.previewRequestId || "")
+    + "\nExact preview count: " + String(Number(batchState.previewEligible || 0))
+    + "\nSend cap: " + String(limit)
+    + "\n\nProceed only under an approved live-test CIS. Existing backend Config gates, preview cache parity, and idempotency still apply.";
   if (!window.confirm(confirmText)) return;
   batchState.sendRequestSeq = Number(batchState.sendRequestSeq || 0) + 1;
   var requestSeq = batchState.sendRequestSeq;
