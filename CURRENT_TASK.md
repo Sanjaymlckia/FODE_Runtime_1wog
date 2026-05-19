@@ -2,133 +2,109 @@
 
 ## Accepted Baseline
 
-- Release finalized: `r180 Ops Mode Workspace Acceptance Fix`
-- Commit: `344c446`
-- Tag: `staging-as180`
-- Apps Script version: `190`
-- Runtime identity: `r180 / 180`
-- Admin staging deployment: `@190`
-- Student staging deployment: `@190`
-- Admin whoami: `r180 / 180`, `mismatch=false`
-- Student whoami: `r180 / 180`, `mismatch=false`
-- Script ID: `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`
-- Effective user during release verification: `sanjay@minervacenters.com`
-- Rollback target after finalization: accepted `r180 @190`
+- Latest finalized release: `r181 OPS invoice workflow acceptance fixes`.
+- Commit: `2f339ca`.
+- Tag: `staging-as181`.
+- Apps Script platform version: `191`.
+- Runtime identity: `r181 / 181`.
+- Admin staging deployment: `@191`.
+- Student staging deployment: `@191`.
+- Admin whoami: `r181 / 181`, `mismatch=false`.
+- Student whoami: `r181 / 181`, `mismatch=false`.
+- Browser evidence accepted: Admin OPS loaded, Runtime Verified visible, Admin Mode visible, Books Connected visible.
+- Known untracked local tooling residue: `.codexhub/`; do not commit without separate approval.
 
 ## Active CIS
 
-- `CIS: Finalize r181 OPS Invoice Workflow Acceptance Fixes`
-- Mode: release finalization with remote source verification gate
-- Release candidate: `r181 / 181`
-- Current accepted baseline before finalization: `r180 / 180`
-- OPS invoice workflow acceptance: PASS in HEAD/dev browser testing.
-- Release gate pending: remote Apps Script source verification before `clasp version`.
+- `CIS r182: OPS Progressive Role Stack, Linear Navigation, and Acceptance Hardening`.
+- Mode: r182 release preparation with remote source verification gate.
+- Release candidate: `r182 / 182`.
+- Local `Config.js` identity is bumped to `r182 / 182`.
+- Release gate state:
+  - `clasp push`: PASS; remote HEAD accepted r182 source.
+  - Remote source proof: PASS from isolated pull outside repo root.
+  - Apps Script platform version: `192`.
+  - Admin staging deployment: pinned to `@192`.
+  - Student staging deployment: pinned to `@192` for shared runtime identity alignment.
+  - Admin whoami: PASS, `r182 / 182`.
+  - Student whoami: PASS, `r182 / 182`.
+  - Browser acceptance: BLOCKED in this Codex session because the connected Chrome Extension execution tool is unavailable; operator/manual browser evidence required before commit/tag.
 
-## Files Inspected
+## Files In Scope
 
-- `CURRENT_TASK.md`
-- `AGENTS.md`
-- `PROJECT_NOTES.md`
-- `Config.js`
-- `Admin.js`
-- `Code.js`
-- `AdminUI.html`
-- `Utils.js`
+- Allowed edits used in this pass:
+  - `AdminUI.html`
+  - `CURRENT_TASK.md`
+- Release identity edit:
+  - `Config.js` bumped to `r182 / 182`.
+- Not edited in this pass:
+  - `Admin.js`
+  - `Code.js`
+  - `Routes.js`
+  - `Utils.js`
+  - `appsscript.json`
+  - `.clasp.json`
+  - Student-facing UI files
 
-## Files Changed
+## r182 Implementation State
 
-- `Config.js`
-- `AdminUI.html`
-- `Admin.js`
-- `CURRENT_TASK.md`
+- OPS role visibility is now progressive in the client UI:
+  - Operator sees Operator items.
+  - Admin sees Operator plus Admin items.
+  - Super Admin sees Operator plus Admin plus Super Admin items.
+- Left navigation has been reordered into the r182 operational sequence:
+  1. Intake / Queue
+  2. Applicant Review
+  3. Communications
+  4. Billing
+  5. Classroom Handover
+  6. Exceptions
+  7. Bulk Tools
+  8. Reports / Exports
+  9. Operational Supervision
+  10. System Health
+  11. Rules / Configuration
+  12. Portal Controls
+  13. Books / Email / Send Gates
+  14. Runtime / Release Governance
+- Main OPS section ordering now follows the same lifecycle using existing section IDs and backend routes.
+- Billing acceptance observability improved:
+  - Billing shows invoice number, invoice ID, status, target URL, target source, and last check.
+  - Open Invoice records deterministic target state before attempting to open.
+  - Popup/new-tab failure is visible as a blocked result.
+  - Invoice Open Target panel is visually prominent in Billing near the selected-applicant invoice controls.
+  - Existing invoice URL lookup support is preserved; no invoice creation/send behavior changed.
+- Communications acceptance observability improved:
+  - Preview-only controls are visually separated from send/write controls.
+  - Preview audit is grouped with preview-only controls; send/write controls are in a separate warning group.
+  - Custom preview controls are separated from custom send.
+  - Read-only preview audit block shows ApplicantID, recipient, subject, template key/type, preview status/timestamp, and body preview.
+  - Send workflow semantics and Safe Mode gates are unchanged.
+- Bulk Communications is visible to Operator as an escalation-awareness block only:
+  - Operator cannot run Preview Cohort or Send Stage Batch.
+  - Operator block reason: `Operator can view this capability but cannot run bulk communication actions.`
+  - Existing Admin/Super Admin bulk gates are unchanged.
 
-## OPS Acceptance Fix Pass State
+## Safety State
 
-- Billing / Books:
-  - `Refresh Invoice Status`: PASS.
-  - `Open Invoice`: PASS.
-  - Invoice URL lookup: PASS.
-  - Zoho customer portal invoice opened successfully.
-  - `Refresh Invoice Status` distinguishes refresh success from invoice URL availability.
-  - When an existing Books invoice ID is present locally or returned by read-only reference lookup, backend preview attempts a read-only invoice ID lookup for an invoice URL.
-  - `Open Invoice` checks loaded applicant detail and the latest Books preview for an existing safe invoice URL; if none is available it blocks clearly with `Invoice URL unavailable`.
-  - No invoice creation, invoice send, payment creation, schema change, or Books write path was added.
-- Communications:
-  - Recipient display alignment: PASS.
-  - Recipient display prefers the preview-resolved `effectiveEmail` once a matching preview exists.
-  - Email workflow semantics remain unchanged; send still requires preview, Safe Mode target, recipient, and confirmation/server gates.
-
-## r181 Release Gate State
-
-- `Config.js` identity bumped locally to `r181 / 181`.
-- Remote source verification passed from isolated temp pull outside the repo root.
-- Apps Script platform version created: `191`.
-- Admin staging deployment pinned to `@191`.
-- Student staging deployment pinned to `@191`.
-- Admin whoami passed: `r181 / 181`, `mismatch=false`.
-- Student whoami passed: `r181 / 181`, `mismatch=false`.
-- Browser OPS verification is still pending manual or connected-browser evidence; no commit/tag until it passes.
-- No unintended live writes were observed during HEAD/dev acceptance.
-
-## OPS Activation State
-
-- OPS is no longer treated as a passive shell.
-- Mode navigation, lifecycle map, applicant queue/filter/sort, applicant drawer, portal diagnostics, runtime truth, billing preview/status, classroom preview, system health, reports, action registry, parity, and drift views are active surfaces.
-- Single-record applicant actions bridge to existing Admin/backend functions where available.
-- Communications preview/send remains selected-applicant only with preview, stale-preview, recipient, confirmation, Safe Mode, and server gates.
-- WhatsApp fallback export/email remains Super Admin controlled with confirmation and no direct WhatsApp send.
-- Zoho Books OPS surface now exposes existing selected-applicant preflight, preview, draft invoice, and controlled test-email functions with preview/idempotency/server gates.
-- Stage batch preview remains fully functional.
-- Stage batch send remains visible and wired to the existing backend for a controlled live test in a future CIS; it still requires Super Admin, valid preview cache/cohort, exact count/stage/message confirmation, Config send gates, and idempotency.
-- Classroom handover preview/notify remains available through existing preview and Safe Mode gates.
-- Runtime/release controls remain guidance only; OPS does not run git, clasp, version, repin, rollback, commit, or tag actions.
-- Prior passive-shell labels have been removed from backend-backed OPS actions.
-- Queue browser CSV export is active.
-- Stage preview and stage send remain visible and wired; send is ready for controlled live test in the next CIS and still requires Super Admin, valid preview cache/cohort, exact count/stage/message confirmation, Config send gates, caps, and idempotency.
-- Books preflight, selected-applicant preview, invoice status refresh, draft invoice creation, invoice opening, and test invoice email controls are visible and wired to existing backend functions with selected-applicant, preview, duplicate, Config, and confirmation gates.
-- Portal link load/open/copy/reset and portal lock/unlock controls are visible and wired where backend exists; mutation controls require selected applicant, Super Admin, and confirmation.
-- Communications preview and send controls are visible and wired for approved Safe Mode target testing; preview, stale-preview, recipient, confirmation, Safe Mode, and server gates remain.
-- Payment verification is exposed as a selected-applicant Super Admin action using the existing backend payment/docs/freeze/audit gates.
-- Classroom handover preview and classroom-admin notify are exposed through existing backend gates.
-- Classroom package creation, enrolment field updates, payment creation, autonomous workflow execution, and direct WhatsApp send are labeled as backend-missing or external where no OPS-safe backend exists.
-
-## Still Blocked / External
-
-- No FD acknowledgement work is active in this CIS.
+- Apps Script version created: `192`.
+- Admin and Student staging deployments repinned to `@192`.
+- No commit or tag.
 - No trigger install/remove.
-- No unattended automation.
-- No CRM write.
-- No bulk Books push.
+- No Books write.
+- No invoice creation/send.
 - No payment creation.
-- No uncontrolled enrolment/classroom state mutation.
-- No live broad stage send during this CIS; controlled live test belongs to the next approved CIS.
-- No deployment or release mutation from OPS.
+- No CRM write.
+- No portal reset/lock action.
+- No schema or Script Properties change.
 
-## FD Acknowledgement Parked State
+## Release Gate Plan
 
-- FD acknowledgement implementation remains parked.
-- No broad pending/batch acknowledgement processor remains.
-- No admin-callable acknowledgement wrapper remains.
-- No AdminUI path exists.
-- No Routes path exists.
-- No diagnostic wrapper, panel, route, trace return, or hardcoded applicant ID remains.
+1. Obtain authenticated Admin OPS browser acceptance evidence for `r182 / 182`.
+2. Confirm Runtime Verified, role inheritance, menu order, Operator bulk escalation block, Communications preview/send separation, and Invoice Open Target.
+3. If accepted, stage only `AdminUI.html`, `CURRENT_TASK.md`, and `Config.js`; do not stage `.codexhub/`.
+4. Commit/tag only after acceptance approval.
 
 ## Next Exact Step
 
-- Provide connected browser/manual evidence for Admin OPS after repin:
-  - runtime badge shows `r181 / 181`
-  - OPS loads
-  - Super Admin detected
-  - selected applicant flow still works
-  - Refresh Invoice Status still works
-  - Open Invoice still works, or clearly blocks only if invoice URL unavailable
-- If browser verification passes, stage only approved files, commit, push, tag `staging-as181`, and push the tag.
-
-## Continuity Note
-
-Project notes initialized for:
-
-- operator observations
-- UX findings
-- future enhancements
-- non-blocking issues
+- Provide connected Chrome Extension or manual browser evidence for Admin OPS after r182 repin.
