@@ -812,14 +812,14 @@
     .opsFooterItem{ padding:14px 18px; border-right:1px solid #e8eef5; font-size:12px; color:#66788c; }
     .opsFooterItem:last-child{ border-right:none; }
     .opsFooterItem strong{ display:block; color:#22364d; margin-bottom:4px; font-size:13px; }
-    #opsAdmissionsQueue{ order:1; }
-    #opsCommunications{ order:3; }
-    #opsZohoBooks{ order:4; }
-    #opsClassroom{ order:5; }
-    #opsFallbackDiagnostics{ order:6; }
-    #opsLifecycleMap{ order:7; }
+    #opsLifecycleMap{ order:1; }
+    #opsAdmissionsQueue{ order:2; }
+    #opsDashboard{ order:3; }
+    #opsCommunications{ order:4; }
+    #opsZohoBooks{ order:5; }
+    #opsClassroom{ order:6; }
+    #opsFallbackDiagnostics{ order:7; }
     #opsReports{ order:8; }
-    #opsDashboard{ order:9; }
     #opsRuntimeTruth{ order:10; }
     #opsRulesConfig{ order:11; }
     #opsStudentDiagnostics{ order:12; }
@@ -923,13 +923,13 @@
         </div>
       </div>
       <nav class="opsNav">
-        <a href="#opsAdmissionsQueue" data-icon="1" data-ops-mode-link="operator">Intake / Queue</a>
-        <a href="#opsAdmissionsQueue" data-icon="2" data-ops-mode-link="operator">Applicant Review</a>
+        <a href="#opsLifecycleMap" data-icon="1" data-ops-mode-link="operator">Lifecycle Map</a>
+        <a href="#opsAdmissionsQueue" data-icon="2" data-ops-mode-link="operator">Intake / Queue</a>
         <a href="#opsCommunications" data-icon="3" data-ops-mode-link="operator">Communications</a>
         <a href="#opsZohoBooks" data-icon="4" data-ops-mode-link="operator">Billing</a>
         <a href="#opsClassroom" data-icon="5" data-ops-mode-link="operator">Classroom Handover</a>
         <a href="#opsFallbackDiagnostics" data-icon="6" data-ops-mode-link="admin">Exceptions</a>
-        <a href="#opsLifecycleMap" data-icon="7" data-ops-mode-link="admin">Bulk Tools</a>
+        <a href="#opsDashboard" data-icon="7" data-ops-mode-link="admin">Bulk Tools</a>
         <a href="#opsReports" data-icon="8" data-ops-mode-link="admin">Reports / Exports</a>
         <a href="#opsDashboard" data-icon="9" data-ops-mode-link="admin">Operational Supervision</a>
         <a href="#opsRuntimeTruth" data-icon="10" data-ops-mode-link="super">System Health</a>
@@ -942,13 +942,13 @@
         <div class="opsEnvCard">
           <div class="opsEnvLabel">Environment</div>
           <div class="opsEnvValue">Production - Staging</div>
-          <div class="opsEnvValue" id="cockpitSideRuntime">Runtime r180</div>
+          <div class="opsEnvValue" id="cockpitSideRuntime">Runtime pending</div>
         </div>
         <div class="opsUserBlock">
           <div class="opsAvatar">SW</div>
           <div>
             <div><?= USER_EMAIL ?></div>
-            <div class="opsEnvLabel">Administrator</div>
+            <div class="opsEnvLabel">Administrator display label only</div>
           </div>
         </div>
       </div>
@@ -970,7 +970,7 @@
           </div>
         </div>
         <div class="opsKpiGrid">
-          <div class="opsKpiCard"><div class="opsKpiIcon blue">&lt;/&gt;</div><div><div class="kpiLabel">Runtime</div><div class="kpiValue" id="cockpitKpiRuntime">r180 / 180</div><div class="kpiState" id="cockpitKpiRuntimeState">Baseline live</div><div class="kpiMeta" id="cockpitKpiRuntimeMeta">Waiting on Admin and Student whoami.</div></div></div>
+          <div class="opsKpiCard"><div class="opsKpiIcon blue">&lt;/&gt;</div><div><div class="kpiLabel">Runtime</div><div class="kpiValue" id="cockpitKpiRuntime">Runtime pending</div><div class="kpiState" id="cockpitKpiRuntimeState">Awaiting live check</div><div class="kpiMeta" id="cockpitKpiRuntimeMeta">Waiting on Admin and Student whoami.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon green">B</div><div><div class="kpiLabel">Billing Status</div><div class="kpiValue" id="cockpitKpiBilling">Books Connected</div><div class="kpiState" id="cockpitKpiBillingState">Guarded actions</div><div class="kpiMeta" id="cockpitKpiBillingMeta">Invoice snapshot loading. Draft/test actions require selected applicant, preview, and server gates.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon purple">A</div><div><div class="kpiLabel">Admissions Status</div><div class="kpiValue" id="cockpitKpiAdmissions">Queue Loading</div><div class="kpiState">Working Surface</div><div class="kpiMeta" id="cockpitKpiAdmissionsMeta">Applicant rows use existing loaders and selected-applicant action bridges.</div></div></div>
           <div class="opsKpiCard"><div class="opsKpiIcon amber">!</div><div><div class="kpiLabel">System Health</div><div class="kpiValue" id="cockpitKpiRisks">Unknown</div><div class="kpiState" id="cockpitKpiRiskState">Defined States</div><div class="kpiMeta" id="cockpitKpiRisksMeta">Healthy, Warning, Blocked, Degraded, or Unknown.</div></div></div>
@@ -1080,33 +1080,37 @@
           </div>
         </div>
         <div class="opsCard">
-          <div class="opsSectionHeader"><div><h3>Bulk Communications</h3><p>Super Admin-only working path for bounded cohort preview. Live send stays blocked until a matching preview exists and the final recipient set is visible.</p></div><span class="opsStatusPill warn">Admin / Super Admin</span></div>
+          <div class="opsSectionHeader"><div><h3>Bulk Tools</h3><p>Admin/Super Admin action layer for bounded cohort preview. Lifecycle mapping stays separate above; live send remains gated by preview, role, caps, and backend checks.</p></div><span class="opsStatusPill warn">Admin / Super Admin</span></div>
           <div class="opsMetricGrid">
             <div class="opsMetric"><div class="k">Selected stage</div><div class="v" id="opsStageBatchSelectedStage">&mdash;</div></div>
+            <div class="opsMetric"><div class="k">Eligible records</div><div class="v" id="opsStageBatchEligible">&mdash;</div></div>
+            <div class="opsMetric"><div class="k">Blocked records</div><div class="v" id="opsStageBatchBlocked">&mdash;</div></div>
+            <div class="opsMetric"><div class="k">Preview availability</div><div class="v" id="opsStageBatchPreviewAvailability">&mdash;</div></div>
+            <div class="opsMetric"><div class="k">Send availability</div><div class="v" id="opsStageBatchSendAvailability">&mdash;</div></div>
             <div class="opsMetric"><div class="k">Priority</div><div class="v" id="opsStageBatchPriority">&mdash;</div></div>
             <div class="opsMetric"><div class="k">Message type</div><div class="v" id="opsStageBatchMessageType">&mdash;</div></div>
-            <div class="opsMetric"><div class="k">Sendable</div><div class="v" id="opsStageBatchSendable">&mdash;</div></div>
+            <div class="opsMetric"><div class="k">Backend sendable</div><div class="v" id="opsStageBatchSendable">&mdash;</div></div>
           </div>
           <div class="opsDraftGrid" style="margin-top:12px;">
             <div class="field"><label>Preview limit</label><input id="opsStageBatchLimit" type="number" min="1" max="100" step="1" value="50"></div>
             <div class="field"><label>Diagnostic offset</label><input id="opsStageBatchOffset" type="number" min="0" step="1" value="0"></div>
             <div class="field"><label>Selected applicant</label><input type="text" id="opsStageBatchApplicantContext" readonly value="No applicant selected"></div>
-            <div class="field"><label>Gate / status reason</label><input type="text" id="opsStageBatchDisabledReason" readonly value="Select a lifecycle stage first"></div>
+            <div class="field"><label>Gate / status reason</label><input type="text" id="opsStageBatchDisabledReason" readonly value="Switch to Admin/Super Admin mode to run gated bulk tools."></div>
           </div>
           <div class="opsActionRow">
             <button id="btnOpsStageBatchPreview" class="opsActionBtn live" type="button" onclick="previewStageBatchUi_()">Preview Cohort</button>
             <button id="btnOpsStageBatchSend" class="opsActionBtn live" type="button" onclick="sendStageBatchUi_()">Send Stage Batch</button>
             <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Choose Lifecycle Stage</button>
           </div>
-          <div class="opsInspectPanel" id="opsStageBatchInlineNote">Select a lifecycle stage to prepare the next eligible unsent cohort preview.</div>
+          <div class="opsInspectPanel" id="opsStageBatchInlineNote">Switch to Admin/Super Admin mode to run gated bulk tools. Operators may use Lifecycle Cascade for stage context.</div>
           <div id="opsStageBatchSummary" class="opsResultBox hidden"></div>
           <div id="opsStageBatchPreviewDiagnostics" class="opsResultBox hidden"></div>
         </div>
       </section>
-      <section id="opsLifecycleMap" class="opsSectionPage" data-ops-mode-group="admin">
+      <section id="opsLifecycleMap" class="opsSectionPage" data-ops-mode-group="operator">
         <div class="opsPageIntro">
-          <div><h2>Bulk Operational Tools</h2><p>Stage selection filters the applicant queue, drives batch preview/send eligibility, and preserves selected applicant context.</p></div>
-          <span class="opsStatusPill warn">Interactive / guarded actions</span>
+          <div><h2>Lifecycle Cascade</h2><p>Top-level operational map. Stage selection filters the applicant queue and preserves selected applicant context.</p></div>
+          <span class="opsStatusPill info">Operational lifecycle</span>
         </div>
         <div class="opsCard">
           <div class="opsStageCascade" id="opsLifecycleStageCards"></div>
@@ -1122,7 +1126,7 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Student Portal Surface</h3></div><span class="opsStatusPill info">Read-only diagnostics</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Current selected applicant</span><span class="opsStatusPill info" id="cockpitPortalSelectedApplicant">FODE-26-002929</span></div>
+              <div class="opsChecklistRow"><span>Current selected applicant</span><span class="opsStatusPill info" id="cockpitPortalSelectedApplicant">No applicant selected</span></div>
               <div class="opsChecklistRow"><span>Portal route/render</span><span class="opsStatusPill ok">Mapped</span></div>
               <div class="opsChecklistRow"><span>Submitted details</span><span class="opsStatusPill ok">Mapped</span></div>
               <div class="opsChecklistRow"><span>Portal token/link status</span><span class="opsStatusPill ok">Open/generate supported</span></div>
@@ -1160,8 +1164,8 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Config Identity</h3></div><span class="opsStatusPill info">Runtime evidence</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Config VERSION</span><span class="opsStatusPill info" id="cockpitRuntimeConfigVersion">r180</span></div>
-              <div class="opsChecklistRow"><span>DEPLOY_VERSION_NUMBER</span><span class="opsStatusPill info" id="cockpitRuntimeDeployNumber">180</span></div>
+              <div class="opsChecklistRow"><span>Config VERSION</span><span class="opsStatusPill info" id="cockpitRuntimeConfigVersion">Runtime pending</span></div>
+              <div class="opsChecklistRow"><span>DEPLOY_VERSION_NUMBER</span><span class="opsStatusPill info" id="cockpitRuntimeDeployNumber">Runtime pending</span></div>
               <div class="opsChecklistRow"><span>Apps Script platform/version</span><span class="opsStatusPill muted" id="cockpitAppsScript">Unknown</span></div>
               <div class="opsChecklistRow"><span>Remote config status</span><span class="opsStatusPill muted" id="cockpitRuntimeRemoteConfig">Unknown</span></div>
             </div>
@@ -1189,9 +1193,9 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Accepted Baseline</h3></div><span class="opsStatusPill muted">Current known</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Commit</span><span class="opsStatusPill muted" id="cockpitRuntimeCommit">344c446</span></div>
-              <div class="opsChecklistRow"><span>Tag</span><span class="opsStatusPill muted" id="cockpitRuntimeTag">staging-as180</span></div>
-              <div class="opsChecklistRow"><span>Browser acceptance</span><span class="opsStatusPill ok" id="cockpitReleaseBrowser">Accepted r180</span></div>
+              <div class="opsChecklistRow"><span>Commit</span><span class="opsStatusPill muted" id="cockpitRuntimeCommit">Recorded externally</span></div>
+              <div class="opsChecklistRow"><span>Tag</span><span class="opsStatusPill muted" id="cockpitRuntimeTag">Last recorded acceptance</span></div>
+              <div class="opsChecklistRow"><span>Browser acceptance</span><span class="opsStatusPill muted" id="cockpitReleaseBrowser">Last recorded acceptance</span></div>
             </div>
             <div class="opsActionRow">
               <button class="opsActionBtn live" type="button" onclick="opsRunRuntimeCheck_()">Run Runtime Check</button>
@@ -1234,7 +1238,7 @@
           <div class="opsQueueSummaryStrip" id="opsQueueSummaryStrip"></div>
           <div class="opsEscalationPanel">
             <div class="opsSectionHeader"><div><h3>Bulk Communications</h3><p>Admin/Super Admin capability — escalate if needed.</p></div><span class="opsStatusPill warn">Escalation awareness</span></div>
-            <div class="opsResultBox warn">Operator can view this capability but cannot run bulk communication actions.</div>
+            <div class="opsResultBox warn" id="opsOperatorBulkAwareness">Escalate to Admin/Super Admin. Operator mode can view this capability but cannot run bulk communication actions.</div>
             <div class="opsActionRow">
               <button class="opsActionBtn live" type="button" disabled>Preview Cohort</button>
               <button class="opsActionBtn live" type="button" disabled>Send Stage Batch</button>
@@ -1256,7 +1260,7 @@
             </div>
             <div>
               <div id="opsBooksFilterDetail" class="opsInspectPanel">Select a billing filter.</div>
-              <div id="cockpitApplicantSummary" class="opsPlaceholder">Loading Books summary for FODE-26-002929...</div>
+              <div id="cockpitApplicantSummary" class="opsPlaceholder">Billing data unavailable until the selected applicant loads.</div>
               <div id="opsInvoiceTargetStatus" class="opsInvoiceTargetPanel"><strong>Invoice Open Target</strong>Refresh invoice status or load applicant detail to resolve invoice number, invoice ID, source, and open target.</div>
               <div class="opsActionRow" style="margin-top:10px;">
                 <button class="opsActionBtn live" type="button" onclick="opsPreflightBooks_()">Books Preflight</button>
@@ -1280,7 +1284,7 @@
         <div class="opsSectionGrid mainSplit">
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Applicant Communication State</h3></div><span class="opsStatusPill warn">Safe Test Only</span></div>
-            <div class="opsPlaceholder" id="cockpitCommContext">Current Ops applicant: FODE-26-002929</div>
+            <div class="opsPlaceholder" id="cockpitCommContext">No selected-applicant communication data loaded.</div>
             <div class="opsInfoGrid">
               <div class="opsInfoItem"><div class="k">Applicant communication status</div><div class="v" id="cockpitCommApplicantStatus">Unknown</div></div>
               <div class="opsInfoItem"><div class="k">Invite status</div><div class="v" id="cockpitCommInviteStatus">Loaded from selected applicant</div></div>
@@ -1354,14 +1358,14 @@
         <div class="opsSectionGrid mainSplit">
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Handover Candidate</h3></div><span class="opsStatusPill warn" id="cockpitClassroomSummary">Classroom Pending</span></div>
-            <div class="opsPlaceholder" id="cockpitClassroomContext">Current Ops applicant: FODE-26-002929</div>
+            <div class="opsPlaceholder" id="cockpitClassroomContext">No selected-applicant classroom data loaded.</div>
             <div class="opsInfoGrid">
-              <div class="opsInfoItem"><div class="k">Student</div><div class="v" id="cockpitClassroomStudent">Reference applicant</div></div>
+              <div class="opsInfoItem"><div class="k">Student</div><div class="v" id="cockpitClassroomStudent">Data unavailable for selected applicant</div></div>
               <div class="opsInfoItem"><div class="k">Grade / FODE level</div><div class="v" id="cockpitClassroomLevel">Loaded from selected applicant</div></div>
-              <div class="opsInfoItem"><div class="k">Selected subjects</div><div class="v" id="cockpitClassroomSubjects">Language & Literature; General Mathematics</div></div>
-              <div class="opsInfoItem"><div class="k">Invoice raised / sent</div><div class="v" id="cockpitClassroomInvoice">Invoice Raised</div></div>
-              <div class="opsInfoItem"><div class="k">Payment verified</div><div class="v" id="cockpitClassroomPayment">Payment Verified</div></div>
-              <div class="opsInfoItem"><div class="k">Enrolled confirmed</div><div class="v" id="cockpitClassroomEnrolled">Enrolled Confirmed</div></div>
+              <div class="opsInfoItem"><div class="k">Selected subjects</div><div class="v" id="cockpitClassroomSubjects">Data unavailable for selected applicant</div></div>
+              <div class="opsInfoItem"><div class="k">Invoice raised / sent</div><div class="v" id="cockpitClassroomInvoice">Data unavailable for selected applicant</div></div>
+              <div class="opsInfoItem"><div class="k">Payment verified</div><div class="v" id="cockpitClassroomPayment">Data unavailable for selected applicant</div></div>
+              <div class="opsInfoItem"><div class="k">Enrolled confirmed</div><div class="v" id="cockpitClassroomEnrolled">Data unavailable for selected applicant</div></div>
             </div>
           </div>
           <div class="opsCard">
@@ -1461,10 +1465,10 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Release State</h3></div><span class="opsStatusPill muted">Guidance only</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Current runtime</span><span class="opsStatusPill info" id="cockpitReleaseRuntime">r180 / 180</span></div>
-              <div class="opsChecklistRow"><span>Accepted baseline</span><span class="opsStatusPill ok">r180 / staging-as180</span></div>
+              <div class="opsChecklistRow"><span>Current runtime</span><span class="opsStatusPill info" id="cockpitReleaseRuntime">Runtime pending</span></div>
+              <div class="opsChecklistRow"><span>Last recorded acceptance</span><span class="opsStatusPill ok" id="cockpitReleaseAcceptedBaseline">Recorded externally</span></div>
               <div class="opsChecklistRow"><span>Whoami status</span><span class="opsStatusPill muted" id="cockpitReleaseWhoami">Unknown</span></div>
-              <div class="opsChecklistRow"><span>Browser acceptance status</span><span class="opsStatusPill ok" id="cockpitReleaseBrowserState">Accepted r180</span></div>
+              <div class="opsChecklistRow"><span>Browser acceptance status</span><span class="opsStatusPill muted" id="cockpitReleaseBrowserState">Awaiting evidence</span></div>
               <div class="opsChecklistRow"><span>Commit / tag state</span><span class="opsStatusPill info" id="cockpitReleaseGit">Recorded externally</span></div>
               <div class="opsChecklistRow"><span>Remote Config verified</span><span class="opsStatusPill muted" id="cockpitReleaseRemote">Unknown</span></div>
               <div class="opsChecklistRow"><span>Local Git state</span><span class="opsStatusPill muted" id="cockpitReleaseDirty">Unavailable unless release metadata is recorded</span></div>
@@ -1473,7 +1477,7 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Control Checklist</h3></div><span class="opsStatusPill warn">Guidance only</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>Rollback target</span><span class="opsStatusPill info">r180 / staging-as180 / @190</span></div>
+              <div class="opsChecklistRow"><span>Rollback target</span><span class="opsStatusPill info">Use last accepted deployment pin recorded in release notes</span></div>
               <div class="opsChecklistRow"><span>Current blockers</span><span class="opsStatusPill warn">Deployment action remains externalized</span></div>
               <div class="opsChecklistRow"><span>Next release candidate</span><span class="opsStatusPill info" id="cockpitReleaseNextTask">OPS activation after acceptance</span></div>
               <div class="opsChecklistRow"><span>Git metadata note</span><span class="opsStatusPill muted">Record commit/tag/clean state during release; Apps Script cannot read local Git directly</span></div>
@@ -1491,7 +1495,7 @@
       </section>
       <section id="opsRulesConfig" class="opsSectionPage" data-ops-mode-group="super">
         <div class="opsPageIntro">
-          <div><h2>Rules & Config</h2><p>Settings are classified by operational risk. r179 keeps role-driven working surfaces, prevents Admin/Ops drift, and only activates functions that already have enforceable gates.</p></div>
+          <div><h2>Rules & Config</h2><p>Settings are classified by operational risk. Role-driven working surfaces prevent Admin/Ops drift and only activate functions that already have enforceable gates.</p></div>
           <span class="opsStatusPill ok">Super Admin / Governance</span>
         </div>
         <div class="opsSectionGrid">
@@ -1519,7 +1523,7 @@
             <div class="opsChecklist" id="opsDriftRegister"></div>
           </div>
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>r179 Action Registry</h3><p>Each action is classified by role, surface, function, write/export/bulk risk, confirmation, audit, activation state, and exact blocker if not yet enabled.</p></div><span class="opsStatusPill info">Registry driven</span></div>
+            <div class="opsSectionHeader"><div><h3>Action Registry</h3><p>Each action is classified by role, surface, function, write/export/bulk risk, confirmation, audit, activation state, and exact blocker if not yet enabled.</p></div><span class="opsStatusPill info">Registry driven</span></div>
             <div class="opsTableWrap">
               <table class="opsRegistryTable">
                 <thead><tr><th>Action</th><th>Surface</th><th>Function / Bridge</th><th>Role</th><th>Class</th><th>Status</th><th>Confirm / Audit</th><th>Reason</th></tr></thead>
@@ -1621,7 +1625,7 @@
       </section>
       <section class="opsFooterStrip">
         <div class="opsFooterItem"><strong>Operational Status</strong><span id="cockpitFooterStatus">Safe Mode Controlled Actions</span></div>
-        <div class="opsFooterItem"><strong>Runtime</strong><span id="cockpitFooterRuntime">r180 baseline</span></div>
+        <div class="opsFooterItem"><strong>Runtime</strong><span id="cockpitFooterRuntime">Runtime pending</span></div>
         <div class="opsFooterItem"><strong>Zoho Books</strong><span id="cockpitFooterBooks">Guarded status/actions</span></div>
         <div class="opsFooterItem"><strong>Apps Script</strong><span id="cockpitFooterAppsScript">@current platform unknown</span></div>
         <div class="opsFooterItem"><strong>System Health</strong><span id="cockpitFooterHealth">Unknown</span></div>
@@ -2289,9 +2293,9 @@
       secretSetupBusy: false
     };
     let opsApplicantDetailCache = null;
-    let opsSelectedApplicantId = "<?= String((CONFIG.OPS_SAFE_MODE_APPROVED_TARGET && CONFIG.OPS_SAFE_MODE_APPROVED_TARGET.applicantId) || 'FODE-26-002929') ?>";
+    let opsSelectedApplicantId = "<?= String((CONFIG.OPS_SAFE_MODE_APPROVED_TARGET && CONFIG.OPS_SAFE_MODE_APPROVED_TARGET.applicantId) || '') ?>";
     let opsSelectedApplicantName = "<?= String((CONFIG.OPS_SAFE_MODE_APPROVED_TARGET && CONFIG.OPS_SAFE_MODE_APPROVED_TARGET.fullName) || 'Approved target') ?>";
-    const OPS_SAFE_MODE_APPROVED_APPLICANT_ID = "<?= String((CONFIG.OPS_SAFE_MODE_APPROVED_TARGET && CONFIG.OPS_SAFE_MODE_APPROVED_TARGET.applicantId) || 'FODE-26-002929') ?>";
+    const OPS_SAFE_MODE_APPROVED_APPLICANT_ID = "<?= String((CONFIG.OPS_SAFE_MODE_APPROVED_TARGET && CONFIG.OPS_SAFE_MODE_APPROVED_TARGET.applicantId) || '') ?>";
     const OPS_SAFE_MODE_TEST_RECIPIENT = "<?= String(CONFIG.OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE || '') ?>";
     let opsActionState = {
       busy: false,
@@ -2449,6 +2453,7 @@
       Array.prototype.slice.call(document.querySelectorAll("[data-ops-workspace]")).forEach(function(node){
         node.classList.toggle("hiddenByMode", visibleModes.indexOf(String(node.getAttribute("data-ops-workspace") || "")) < 0);
       });
+      if (typeof renderBatchPanel === "function") renderBatchPanel();
     }
     function applyOpsModeVisibility_(){
       var mode = readOpsMode_();
@@ -2667,7 +2672,7 @@
       if (name === "Release Truth / Drift Report") return [{
         ApplicantID: "runtime",
         Student: String(VERSION || "") + " / " + String(DEPLOY_VERSION_NUMBER || ""),
-        Date_Applied: "Accepted baseline r180 / staging-as180",
+        Date_Applied: "Last recorded acceptance",
         Aging: "Release actions externalized",
         Docs: "Admin/Student whoami required before release acceptance",
         Payment: "No git/clasp mutation in OPS",
@@ -2713,7 +2718,7 @@
       setOpsResult_("opsRuntimeActionResult", {
         result:"OPEN",
         message:[
-          "Accepted baseline: r180 / 180, commit 344c446, tag staging-as180, Apps Script platform version 190.",
+          "Last recorded acceptance evidence is tracked in CURRENT_TASK.md and release notes.",
           "Admin whoami: " + (urls.admin || "unavailable"),
           "Student whoami: " + (urls.student || "unavailable"),
           "PASS requires Admin whoami, Student whoami, and browser checks. This panel does not run clasp, git, deploy, or repin actions."
@@ -2744,9 +2749,11 @@
       var row = opsApplicantContextRow_() || {};
       var dateInfo = opsDateAppliedInfo_(row);
       var aging = opsAgingDays_(row) || "Missing source";
-      setOpsText_("cockpitCommContext", "Current Ops applicant: " + applicantId + " - " + applicantName + (approved ? " (Approved Safe Mode target)" : " (Not approved for Safe Mode send)") + " | Date Applied: " + dateInfo.label + " | Aging: " + aging);
-      setOpsText_("cockpitClassroomContext", "Current Ops applicant: " + applicantId + " - " + applicantName + (approved ? " (Approved Safe Mode target)" : " (Not approved for Safe Mode notify)") + " | Date Applied: " + dateInfo.label + " | Aging: " + aging);
-      setOpsText_("opsStageBatchApplicantContext", applicantId + " - " + applicantName);
+      var hasApplicantData = !!(opsApplicantDetailCache || opsQueueRowByApplicantId_(applicantId));
+      var dataNote = hasApplicantData ? "" : " | Data unavailable for selected applicant";
+      setOpsText_("cockpitCommContext", "Current Ops applicant: " + applicantId + " - " + applicantName + (approved ? " (Approved Safe Mode target)" : " (Not approved for Safe Mode send)") + " | Date Applied: " + dateInfo.label + " | Aging: " + aging + dataNote);
+      setOpsText_("cockpitClassroomContext", "Current Ops applicant: " + applicantId + " - " + applicantName + (approved ? " (Approved Safe Mode target)" : " (Not approved for Safe Mode notify)") + " | Date Applied: " + dateInfo.label + " | Aging: " + aging + dataNote);
+      setOpsText_("opsStageBatchApplicantContext", applicantId ? (applicantId + " - " + applicantName + (hasApplicantData ? "" : " (data unavailable)")) : "No applicant selected");
       setOpsPill_("cockpitPortalSelectedApplicant", applicantId, approved ? "ok" : "warn");
       renderOpsSelectedApplicantMini_(opsApplicantDetailCache || null);
       renderOpsTemplateBrowser_();
@@ -3278,32 +3285,34 @@
     }
     function renderOpsRuntimeTruth_(){
       var runtime = runtimeInfoCache || {};
-      var version = runtime.version || VERSION || "r180";
-      var deploy = runtime.deployVersion || DEPLOY_VERSION_NUMBER || 173;
-      setOpsText_("cockpitKpiRuntime", version + " / " + String(deploy));
+      var version = runtime.version || VERSION || "runtime pending";
+      var deploy = runtime.deployVersion || DEPLOY_VERSION_NUMBER || "";
+      var releaseLabel = version && deploy ? (version + " / " + String(deploy)) : "Runtime pending";
+      setOpsText_("cockpitKpiRuntime", releaseLabel);
       setOpsText_("cockpitSideRuntime", "Runtime " + version);
       setOpsText_("cockpitLastRefreshed", opsNowLabel_());
-      setOpsText_("cockpitFooterRuntime", version + " Live");
-      setOpsText_("cockpitRuntimeConfigVersion", String(VERSION || "r180"));
-      setOpsText_("cockpitRuntimeDeployNumber", String(DEPLOY_VERSION_NUMBER || 173));
-      setOpsPill_("cockpitAppsScript", "@" + String(deploy), "info");
+      setOpsText_("cockpitFooterRuntime", deploy ? (version + " Live") : "Runtime pending");
+      setOpsText_("cockpitRuntimeConfigVersion", String(VERSION || "Runtime pending"));
+      setOpsText_("cockpitRuntimeDeployNumber", String(DEPLOY_VERSION_NUMBER || "Runtime pending"));
+      setOpsPill_("cockpitAppsScript", deploy ? ("@" + String(deploy)) : "Unknown", deploy ? "info" : "muted");
       setOpsPill_("cockpitAdminWhoami", runtime.mismatch === false ? "Match" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitStudentWhoami", runtime.mismatch === false ? "Match" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitRuntimeCommit", "Unknown", "muted");
-      setOpsPill_("cockpitRuntimeTag", "staging-as180 accepted", "ok");
+      setOpsPill_("cockpitRuntimeTag", "Last recorded acceptance", "muted");
       setOpsPill_("cockpitWorkingTree", "Unknown", "muted");
       setOpsPill_("cockpitReleaseWhoami", runtime.mismatch === false ? "OK" : "Unknown", runtime.mismatch === false ? "ok" : "muted");
       setOpsPill_("cockpitReleaseRemote", "Unknown", "muted");
-      setOpsPill_("cockpitReleaseBrowser", "Accepted r180", "ok");
-      setOpsPill_("cockpitReleaseBrowserState", "Accepted r180", "ok");
+      setOpsPill_("cockpitReleaseBrowser", "Last recorded acceptance", "muted");
+      setOpsPill_("cockpitReleaseBrowserState", "Awaiting browser evidence", "muted");
       setOpsPill_("cockpitReleaseGit", "Recorded externally", "info");
       setOpsPill_("cockpitReleaseDirty", "Unavailable here", "muted");
-      setOpsPill_("cockpitRuntimeCommit", "344c446", "ok");
-      setOpsPill_("cockpitRuntimeTag", "staging-as180 accepted", "ok");
+      setOpsPill_("cockpitRuntimeCommit", "Recorded externally", "muted");
+      setOpsPill_("cockpitRuntimeTag", "Last recorded acceptance", "muted");
       setOpsPill_("cockpitReleaseNextTask", "OPS activation after acceptance", "info");
       setOpsPill_("cockpitRuntimeRemoteConfig", runtime.version ? "Loaded from runtime" : "Unknown", runtime.version ? "info" : "muted");
       setOpsPill_("cockpitRuntimeDrift", runtime.mismatch === false ? "No mismatch reported" : "Unknown until verified", runtime.mismatch === false ? "ok" : "warn");
-      setOpsPill_("cockpitReleaseRuntime", version + " / " + String(deploy), "info");
+      setOpsPill_("cockpitReleaseRuntime", releaseLabel, "info");
+      setOpsPill_("cockpitReleaseAcceptedBaseline", "Last recorded acceptance", "muted");
       setOpsText_("cockpitKpiNextRelease", "OPS guarded activation candidate");
       setOpsText_("cockpitKpiNextReleaseMeta", "OPS activation exposes existing backend functions with selected-applicant, preview, role, and confirmation gates. Release actions remain external.");
       setOpsText_("cockpitKpiRuntimeState", runtime.mismatch === false ? "Live" : "Unknown");
@@ -3313,7 +3322,7 @@
       setOpsText_("cockpitFooterStatus", "Safe Mode Controlled Actions");
       setOpsPill_("cockpitHealthLevel", runtime.mismatch === false ? "Warning" : "Unknown", runtime.mismatch === false ? "warn" : "muted");
       setOpsText_("cockpitHealthWhy", runtime.mismatch === false
-        ? "Runtime identity is aligned to the accepted r180 baseline. Release metadata shown here is guidance and depends on what was recorded during the release."
+        ? "Runtime identity is aligned. Release metadata shown here is guidance and depends on the last recorded acceptance evidence."
         : "Runtime identity has not returned enough evidence yet.");
     }
     function renderOpsSafetyStatus_(data){
@@ -3490,16 +3499,16 @@
       if (!el) return;
       var queueRow = opsQueueRowByApplicantId_(String((detail && detail.ApplicantID) || opsSelectedApplicantId || ""));
       var d = detail || opsApplicantDetailCache || {
-        ApplicantID: "FODE-26-002929",
-        First_Name: "Reference",
+        ApplicantID: opsSelectedApplicantId || "",
+        First_Name: "Selected",
         Last_Name: "Applicant",
-        Books_Invoice_Number: "INV-000051",
-        Books_Invoice_Status: "Invoice Raised",
-        Books_Push_Status: "Invoice Raised",
-        Books_Invoice_Amount: 1500,
-        Payment_Verified: "Yes",
-        Enrolled_Confirmed: "Yes",
-        Classroom_Handover_Status: "Classroom Pending"
+        Books_Invoice_Number: "",
+        Books_Invoice_Status: "Data unavailable for selected applicant",
+        Books_Push_Status: "Data unavailable",
+        Books_Invoice_Amount: 0,
+        Payment_Verified: "",
+        Enrolled_Confirmed: "",
+        Classroom_Handover_Status: "Data unavailable"
       };
       if (queueRow) {
         Object.keys(queueRow).forEach(function(k){
@@ -3511,12 +3520,11 @@
       var enrolled = opsIsYes_(d.Enrolled_Confirmed) ? "Enrolled Confirmed" : "Enrolment Pending";
       var classroom = classroomStatusFromRow_(d).label;
       var amount = opsAmountFromRow_(d);
-      if (!amount && String(d.ApplicantID || "") === "FODE-26-002929") amount = 1500;
       var invoiceHeroLabel = invoiceState.label === "Invoice Raised" ? "INVOICE RAISED" : invoiceState.label;
       var lineHint = amount > 0
         ? ("Line Item Summary: " + formatPngAmount_(amount) + " from loaded applicant fee fields. Detailed Books item mapping unavailable in this cockpit.")
         : "Line Item Summary: unavailable from loaded applicant detail.";
-      var invoiceNumber = String(d.Books_Invoice_Number || (String(d.ApplicantID || "") === "FODE-26-002929" ? "INV-000051" : "Unknown"));
+      var invoiceNumber = String(d.Books_Invoice_Number || "Unknown");
       var studentName = opsDetailName_(d);
       var emailStatus = String(d.Email_Status || "").trim().toUpperCase();
       var nextAction = String(d.Email_Next_Action_Date || "").trim();
@@ -3607,7 +3615,7 @@
     }
     function fetchOpsApplicantSummary_(applicantId){
       if (String(INITIAL_ADMIN_VIEW || "").toLowerCase() !== "ops") return;
-      var targetApplicantId = String(applicantId || opsSelectedApplicantId || "FODE-26-002929").trim();
+      var targetApplicantId = String(applicantId || opsSelectedApplicantId || OPS_SAFE_MODE_APPROVED_APPLICANT_ID || "").trim();
       opsSelectedApplicantId = targetApplicantId;
       google.script.run
         .withSuccessHandler(function(res){
@@ -6001,20 +6009,27 @@ function renderBatchPanel(){
   var priorityEl = firstExistingEl_("opsStageBatchPriority", "stageBatchPriority");
   var msgTypeEl = firstExistingEl_("opsStageBatchMessageType", "stageBatchMessageType");
   var sendableEl = firstExistingEl_("opsStageBatchSendable", "stageBatchSendable");
+  var eligibleEl = document.getElementById("opsStageBatchEligible");
+  var blockedEl = document.getElementById("opsStageBatchBlocked");
+  var previewAvailabilityEl = document.getElementById("opsStageBatchPreviewAvailability");
+  var sendAvailabilityEl = document.getElementById("opsStageBatchSendAvailability");
   var disabledReasonEl = firstExistingEl_("opsStageBatchDisabledReason", "stageBatchDisabledReason");
   var previewBtn = firstExistingEl_("btnOpsStageBatchPreview", "btnStageBatchPreview");
   var sendBtn = firstExistingEl_("btnOpsStageBatchSend", "btnStageBatchSend");
   var noteEl = firstExistingEl_("opsStageBatchInlineNote", "stageBatchInlineNote");
+  var awarenessEl = document.getElementById("opsOperatorBulkAwareness");
   if (!stageEl) stageEl = firstExistingEl_("opsStageBatchSelectedStage", "stageBatchSelectedStage");
   if (stageEl) stageEl.textContent = selectedStage || "-";
   if (priorityEl) priorityEl.innerHTML = selectedStage ? renderPriorityBadge_(priority || mapStagePriorityUi_(selectedStage)) : "&mdash;";
   if (msgTypeEl) msgTypeEl.textContent = messageType || "-";
   if (sendableEl) sendableEl.textContent = selectedStage ? (sendable ? "YES" : "NO") : "-";
   var disabledReason = "";
-  var operatorMode = typeof normalizeOpsMode_ === "function" && normalizeOpsMode_(opsActionState.mode) === "operator";
-  if (!IS_SUPER && operatorMode) disabledReason = "Operator can view this capability but cannot run bulk communication actions.";
-  else if (!selectedStage) disabledReason = "Select a stage card to preview or send the next eligible unsent cohort.";
-  else if (!IS_SUPER) disabledReason = "SUPER admin required for stage batch actions.";
+  var currentMode = typeof readOpsMode_ === "function" ? readOpsMode_() : normalizeOpsMode_(opsActionState.mode);
+  var operatorMode = currentMode === "operator";
+  if (operatorMode && IS_SUPER) disabledReason = "Switch to Admin/Super Admin mode to run gated bulk tools.";
+  else if (operatorMode) disabledReason = "Escalate to Admin/Super Admin.";
+  else if (!selectedStage) disabledReason = "Select a lifecycle stage to enable bulk preview.";
+  else if (!IS_SUPER) disabledReason = "Execution requires Super Admin.";
   else if (!sendable) disabledReason = batchState.disabledReason || "No batch message is supported for this stage.";
   batchState.disabledReason = disabledReason;
   if (disabledReasonEl) disabledReasonEl.textContent = disabledReason || "-";
@@ -6024,12 +6039,36 @@ function renderBatchPanel(){
     && Number(batchState.previewOffset || 0) === Number(getStageBatchOffsetUi_() || 0)
     && !!String(batchState.previewRequestId || "")
     && sendable;
+  var result = batchState.result || {};
+  var blockedMap = (result && typeof result.blockedByReason === "object" && result.blockedByReason) ? result.blockedByReason : {};
+  var blockedReasons = Object.keys(blockedMap).sort().map(function(key){ return key + ": " + String(Number(blockedMap[key] || 0)); }).join("; ");
+  var eligibleText = selectedStage
+    ? (batchState.previewReady ? String(Number(batchState.previewEligible || 0)) : (result.count != null ? String(Number(result.count || 0)) : "Preview required"))
+    : "-";
+  var blockedText = selectedStage
+    ? (result.blocked != null || result.blockedCount != null
+      ? String(Number(result.blocked != null ? result.blocked : result.blockedCount || 0)) + (blockedReasons ? " - " + blockedReasons : "")
+      : "Preview required")
+    : "-";
+  var previewAvailability = selectedStage
+    ? (disabledReason || (sendable ? "Available" : "Not available"))
+    : "Select a lifecycle stage to enable bulk preview.";
+  var sendAvailability = selectedStage
+    ? (previewReady ? "Available after confirmation and backend gates" : (disabledReason || "Preview required"))
+    : "-";
+  if (eligibleEl) eligibleEl.textContent = eligibleText;
+  if (blockedEl) blockedEl.textContent = blockedText;
+  if (previewAvailabilityEl) previewAvailabilityEl.textContent = previewAvailability;
+  if (sendAvailabilityEl) sendAvailabilityEl.textContent = sendAvailability;
+  if (awarenessEl) awarenessEl.textContent = operatorMode && IS_SUPER
+    ? "Switch to Admin/Super Admin mode to run gated bulk tools."
+    : "Escalate to Admin/Super Admin. Operator mode can view this capability but cannot run bulk communication actions.";
   if (previewBtn) {
-    previewBtn.disabled = !selectedStage || batchState.busy || !IS_SUPER;
+    previewBtn.disabled = !selectedStage || batchState.busy || !IS_SUPER || operatorMode;
     previewBtn.textContent = batchState.busy && batchState.action === "preview" ? "Previewing..." : "Preview Cohort";
   }
   if (sendBtn) {
-    sendBtn.disabled = !previewReady || batchState.busy || !IS_SUPER;
+    sendBtn.disabled = !previewReady || batchState.busy || !IS_SUPER || operatorMode;
     sendBtn.textContent = batchState.busy && batchState.action === "send" ? "Sending..." : "Send Stage Batch";
   }
   if (noteEl) {
@@ -6072,7 +6111,7 @@ function previewStageBatchUi_(){
   var stage = batchState.selectedStage;
   var limit = getStageBatchLimitUi_();
   var offset = getStageBatchOffsetUi_();
-  if (!stage || batchState.busy || !IS_SUPER) return;
+  if (!stage || batchState.busy || !IS_SUPER || (typeof readOpsMode_ === "function" && readOpsMode_() === "operator")) return;
   batchState.previewRequestSeq = Number(batchState.previewRequestSeq || 0) + 1;
   var requestSeq = batchState.previewRequestSeq;
   var clientRequestId = "preview-client-" + String(Date.now()) + "-" + String(requestSeq);
@@ -6212,7 +6251,7 @@ function sendStageBatchUi_(){
     && Number(batchState.previewOffset || 0) === offset
     && !!String(batchState.previewRequestId || "")
     && batchState.sendable === true;
-  if (!previewReady || batchState.busy || !IS_SUPER) {
+  if (!previewReady || batchState.busy || !IS_SUPER || (typeof readOpsMode_ === "function" && readOpsMode_() === "operator")) {
     console.log("STAGE_BATCH_SEND_GUARD_BLOCKED", {
       stage: stage,
       previewStage: batchState.previewStage,
