@@ -7,9 +7,9 @@
  */
 var CONFIG = {
   // Versioning (change control)
-  VERSION: "r185",
+  VERSION: "r189",
 CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alignment",
-  DEPLOY_VERSION_NUMBER: 185,
+  DEPLOY_VERSION_NUMBER: 189,
 BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
 
   // STAGING/PROD data mode routing (working sheet)
@@ -124,6 +124,7 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   ENABLE_CONTROLLED_MANUAL_SEND_PROBE: true,
   ENABLE_MANUAL_SINGLE_SENDS: true,
   ENABLE_UNATTENDED_EMAIL_SENDS: false,
+  ENABLE_AUTOMATED_FD_ACK_SENDS: true,
   ENABLE_BATCH_PREVIEW_MODE: true,
   ENABLE_BATCH_SENDS: true,
   ENABLE_TRIGGER_SENDS: true,

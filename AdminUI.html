@@ -625,7 +625,7 @@
       background:linear-gradient(180deg,#081a2e 0%,#0b2440 58%,#102f54 100%);
       color:#eef6ff; padding:24px 14px; display:flex; flex-direction:column; gap:18px;
       border-right:1px solid rgba(255,255,255,.08); box-shadow:8px 0 28px rgba(7,24,39,.18);
-      position:sticky; top:0; height:100vh; overflow-y:auto;
+      position:sticky; top:0; height:100vh; overflow-y:auto; overscroll-behavior:contain;
     }
     .opsBrand{ display:flex; align-items:center; gap:12px; padding:0 10px 12px; }
     .opsBrandMark{ width:34px; height:34px; border-radius:12px; display:grid; place-items:center; border:1px solid rgba(45,125,255,.65); color:#54a0ff; font-weight:900; box-shadow:inset 0 0 0 3px rgba(45,125,255,.12); }
@@ -656,7 +656,7 @@
       content:attr(data-icon); width:24px; height:24px; border-radius:8px; display:grid; place-items:center;
       color:#cfe0f6; border:1px solid rgba(255,255,255,.16); font-size:12px; font-weight:900; flex:0 0 auto;
     }
-    .opsNav a:hover{ background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.12); transform:translateX(2px); }
+    .opsNav a:hover{ background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.12); }
     .opsNav a.active{ background:#2878f0; border-color:#3b8dff; color:#fff; box-shadow:0 10px 24px rgba(27,112,242,.32); }
     .opsNav a.active:before{ background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.28); color:#fff; }
     .opsNav a.hiddenByMode{ display:none; }
@@ -666,7 +666,7 @@
     .opsEnvValue{ margin-top:6px; font-size:12px; color:#dbeafe; }
     .opsUserBlock{ display:flex; gap:10px; align-items:center; padding:0 8px; color:#dbeafe; font-size:12px; }
     .opsAvatar{ width:32px; height:32px; border-radius:50%; display:grid; place-items:center; background:#8aa0ba; color:#fff; font-weight:900; }
-    .opsMain{ padding:24px; display:flex; flex-direction:column; gap:18px; min-width:0; }
+    .opsMain{ padding:24px; display:flex; flex-direction:column; gap:18px; min-width:0; height:100vh; overflow-y:auto; }
     .opsHeader{ display:flex; justify-content:space-between; gap:16px; align-items:center; padding:0 4px 2px; }
     .opsHeader h1{ margin:0; font-size:28px; color:#0f1f35; }
     .opsHeader .mutedLight{ color:#66788c; font-size:14px; margin-top:4px; }
@@ -746,6 +746,39 @@
     .opsTable tbody tr:hover{ background:#f8fbff; }
     .opsTable tr:last-child td{ border-bottom:none; }
     .opsPlaceholder{ color:#6f8194; font-size:13px; }
+    .opsWorkflowToolbar{ display:grid; grid-template-columns:minmax(260px,1fr) auto; gap:12px; align-items:center; margin:12px 0; }
+    .opsQueueSearch{ display:flex; align-items:center; gap:8px; border:1px solid #d8e5f2; background:#fbfdff; border-radius:10px; padding:8px 10px; }
+    .opsQueueSearch input{ width:100%; border:0; outline:0; background:transparent; color:#10263c; font-size:13px; }
+    .opsSortableStrip{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 12px; }
+    .opsSortableHeader{
+      border:1px solid #d8e5f2; background:#fff; color:#31516f; border-radius:999px;
+      padding:7px 10px; font-size:11px; font-weight:900; cursor:pointer;
+    }
+    .opsSortableHeader.active{ background:#eef5ff; border-color:#9fc3f5; color:#1f5aa5; }
+    .opsLifecycleQueue{ display:flex; flex-direction:column; gap:12px; }
+    .opsLifecycleBand{ border:1px solid #dce7f2; border-radius:12px; background:#fff; overflow:hidden; }
+    .opsLifecycleBandHeader{
+      width:100%; border:0; background:#f8fbff; color:#10263c; padding:13px 14px; text-align:left;
+      display:grid; grid-template-columns:minmax(220px,1fr) minmax(220px,1.2fr) auto; gap:12px; align-items:center; cursor:pointer;
+    }
+    .opsLifecycleBandHeader:hover{ background:#f2f7fd; }
+    .opsLifecycleTitle{ font-weight:900; font-size:14px; }
+    .opsLifecycleNext{ color:#66788c; font-size:12px; line-height:1.35; }
+    .opsLifecycleRows{ display:flex; flex-direction:column; border-top:1px solid #e6eef6; }
+    .opsWorkflowRow{
+      display:grid; grid-template-columns:minmax(170px,.95fr) minmax(210px,1.1fr) minmax(110px,.55fr) minmax(100px,.5fr) minmax(150px,.72fr) minmax(320px,1.5fr) minmax(130px,.62fr);
+      gap:10px; align-items:center; padding:12px 14px; border-bottom:1px solid #eef3f8; cursor:pointer;
+    }
+    .opsWorkflowRow:last-child{ border-bottom:0; }
+    .opsWorkflowRow:hover{ background:#fbfdff; }
+    .opsWorkflowRow.opsQueueSelectedRow{ background:#eef6ff; box-shadow:inset 4px 0 0 #2878f0; }
+    .opsWorkflowCellLabel{ display:none; color:#7a8da1; font-size:10px; font-weight:900; text-transform:uppercase; }
+    .opsWorkflowPrimary{ font-weight:900; color:#1f70ea; overflow-wrap:anywhere; }
+    .opsWorkflowSecondary{ margin-top:3px; color:#6f8194; font-size:11px; overflow-wrap:anywhere; }
+    .opsWorkflowBadges{ display:flex; flex-wrap:wrap; gap:5px; align-items:center; }
+    .opsWorkflowAction{ justify-self:end; }
+    .opsBackendRegister{ display:grid; grid-template-columns:repeat(4,minmax(180px,1fr)); gap:10px; margin-top:12px; }
+    .opsBackendRegister .opsInfoItem{ min-height:96px; }
     .opsQueueName{ font-weight:900; color:#1f70ea; white-space:nowrap; }
     .opsQueueMeta{ margin-top:3px; font-size:11px; color:#6f8194; max-width:170px; overflow:hidden; text-overflow:ellipsis; }
     .opsBadgeStack{ display:flex; flex-wrap:wrap; gap:6px; }
@@ -880,6 +913,9 @@
       .opsSectionGrid,.opsSectionGrid.two,.opsSectionGrid.mainSplit{ grid-template-columns:1fr; }
       .opsFilterGrid{ grid-template-columns:1fr; }
       .opsApplicantMini{ grid-template-columns:repeat(2,minmax(150px,1fr)); }
+      .opsWorkflowRow{ grid-template-columns:minmax(170px,1fr) minmax(210px,1.15fr) minmax(110px,.65fr) minmax(100px,.55fr); }
+      .opsWorkflowBadges,.opsWorkflowAction{ grid-column:1 / -1; justify-self:start; }
+      .opsBackendRegister{ grid-template-columns:repeat(2,minmax(180px,1fr)); }
     }
     @media (max-width: 1100px){
       .opsShell.active{ grid-template-columns:1fr; }
@@ -890,6 +926,12 @@
       .opsMetricGrid{ grid-template-columns:repeat(2,minmax(130px,1fr)); }
       .opsDraftGrid{ grid-template-columns:1fr; }
       .opsApplicantMini{ grid-template-columns:1fr; }
+      .opsWorkflowToolbar{ grid-template-columns:1fr; }
+      .opsLifecycleBandHeader{ grid-template-columns:1fr auto; }
+      .opsLifecycleNext{ grid-column:1 / -1; }
+      .opsWorkflowRow{ grid-template-columns:1fr; }
+      .opsWorkflowCellLabel{ display:block; }
+      .opsBackendRegister{ grid-template-columns:1fr; }
       .opsFooterStrip{ grid-template-columns:1fr; }
       .opsFooterItem{ border-right:none; border-bottom:1px solid #e8eef5; }
     }
@@ -925,9 +967,9 @@
       <nav class="opsNav">
         <a href="#opsLifecycleMap" data-icon="1" data-ops-mode-link="operator">Lifecycle Map</a>
         <a href="#opsAdmissionsQueue" data-icon="2" data-ops-mode-link="operator">Intake / Queue</a>
-        <a href="#opsCommunications" data-icon="3" data-ops-mode-link="operator">Communications</a>
-        <a href="#opsZohoBooks" data-icon="4" data-ops-mode-link="operator">Billing</a>
-        <a href="#opsClassroom" data-icon="5" data-ops-mode-link="operator">Classroom Handover</a>
+        <a href="#opsCommunications" data-icon="3" data-ops-mode-link="admin">Communications</a>
+        <a href="#opsZohoBooks" data-icon="4" data-ops-mode-link="admin">Billing</a>
+        <a href="#opsClassroom" data-icon="5" data-ops-mode-link="admin">Classroom Handover</a>
         <a href="#opsFallbackDiagnostics" data-icon="6" data-ops-mode-link="admin">Exceptions</a>
         <a href="#opsDashboard" data-icon="7" data-ops-mode-link="admin">Bulk Tools</a>
         <a href="#opsReports" data-icon="8" data-ops-mode-link="admin">Reports / Exports</a>
@@ -1222,12 +1264,19 @@
             <button class="opsActionBtn" type="button" onclick="opsSetQueueFilter_('')">All Rows</button>
             <button class="opsActionBtn" type="button" onclick="opsSetQueueFilter_('ready')">Ready</button>
             <button class="opsActionBtn" type="button" onclick="opsSetQueueFilter_('blocked')">Blocked</button>
-            <button class="opsActionBtn" type="button" onclick="opsActionState.queueSort='aging_desc';renderOpsQueue_()">Sort Aging</button>
-            <button class="opsActionBtn" type="button" onclick="opsActionState.queueSort='date_desc';renderOpsQueue_()">Sort Date Applied</button>
             <button class="opsActionBtn live" type="button" onclick="opsExportQueueCsv_()">Export Queue CSV</button>
           </div>
+          <div class="opsWorkflowToolbar">
+            <label class="opsQueueSearch" for="opsQueueSearchInput">
+              <span class="opsStatusPill muted">Search</span>
+              <input id="opsQueueSearchInput" type="search" placeholder="ApplicantID, name, email, or phone" oninput="opsSetQueueSearch_(this.value)" autocomplete="off">
+            </label>
+            <button class="opsActionBtn" type="button" onclick="opsClearQueueSearch_()">Clear Search</button>
+          </div>
+          <div class="opsSortableStrip" id="opsQueueSortHeaders"></div>
           <div id="opsAdmissionsResult" class="opsResultBox hidden"></div>
-          <div class="opsTableWrap">
+          <div id="opsLifecycleQueue" class="opsLifecycleQueue"></div>
+          <div class="opsTableWrap hidden">
             <table class="opsTable">
               <thead>
                 <tr><th>Applicant ID</th><th>Applicant / Student</th><th>Date Applied</th><th>Aging</th><th>Test Marker</th><th>Docs</th><th>Payment</th><th>Invoice</th><th>Enrolment</th><th>Classroom</th><th>Ready?</th></tr>
@@ -1245,9 +1294,18 @@
               <button class="opsActionBtn" type="button" disabled>Escalate to Admin/Super Admin</button>
             </div>
           </div>
+          <div class="opsEscalationPanel">
+            <div class="opsSectionHeader"><div><h3>Not Yet Available / Backend Missing</h3><p>Visible controls are separated from the daily intake workflow until their backend path is accepted.</p></div><span class="opsStatusPill muted">Release discipline</span></div>
+            <div class="opsBackendRegister">
+              <div class="opsInfoItem"><div class="k">Working</div><div class="v">Intake queue, Applicant Review, selected context, fd_ack/CRM/portal status visibility.</div></div>
+              <div class="opsInfoItem"><div class="k">Guarded implemented</div><div class="v">Single-applicant communications and Books previews where existing gates allow.</div></div>
+              <div class="opsInfoItem"><div class="k">Not yet implemented</div><div class="v">Broad automation runners, historical processing, CRM-as-authority, and unattended non-fd_ack sends.</div></div>
+              <div class="opsInfoItem"><div class="k">Needs follow-up</div><div class="v">Full OPS adapter diagnostics card and richer reporting/export workflows.</div></div>
+            </div>
+          </div>
         </div>
       </section>
-      <section id="opsZohoBooks" class="opsSectionPage" data-ops-mode-group="operator">
+      <section id="opsZohoBooks" class="opsSectionPage" data-ops-mode-group="admin">
         <div class="opsPageIntro">
           <div><h2>Billing / Zoho Books</h2><p>Filterable billing console with selected-applicant preflight, preview, draft invoice, and controlled test-email bridge where backend/config allow.</p></div>
           <span class="opsStatusPill warn">Selected applicant / preview required</span>
@@ -1276,14 +1334,14 @@
           </div>
         </div>
       </section>
-      <section id="opsCommunications" class="opsSectionPage" data-ops-mode-group="operator">
+      <section id="opsCommunications" class="opsSectionPage" data-ops-mode-group="admin">
         <div class="opsPageIntro">
-          <div><h2>Communications</h2><p>Single-applicant communication actions require preview, recipient review, and explicit Safe Mode approval checks.</p></div>
-          <span class="opsStatusPill warn">Safe Test Only</span>
+          <div><h2>Communications</h2><p>Single-applicant communication actions require selected-applicant context, recipient review, and explicit confirmation.</p></div>
+          <span class="opsStatusPill ok">Admin / Super Admin</span>
         </div>
         <div class="opsSectionGrid mainSplit">
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Applicant Communication State</h3></div><span class="opsStatusPill warn">Safe Test Only</span></div>
+            <div class="opsSectionHeader"><div><h3>Applicant Communication State</h3></div><span class="opsStatusPill info">Selected applicant</span></div>
             <div class="opsPlaceholder" id="cockpitCommContext">No selected-applicant communication data loaded.</div>
             <div class="opsInfoGrid">
               <div class="opsInfoItem"><div class="k">Applicant communication status</div><div class="v" id="cockpitCommApplicantStatus">Unknown</div></div>
@@ -1308,7 +1366,7 @@
               </div>
               <div class="opsControlGroup write">
                 <div class="opsControlTitle">Send / write gated</div>
-                <p class="opsControlNote">Separated from preview acceptance. Send actions still require preview, Safe Mode, confirmation, and existing server gates.</p>
+                <p class="opsControlNote">Separated from preview acceptance. Super Admin selected-applicant sends use the original Admin send path with confirmation, recipient validation, duplicate/cooldown checks, and durable writeback.</p>
                 <div class="opsActionRow">
                   <button class="opsActionBtn live" type="button" onclick="opsSendApplicantEmail_('reminder','Reminder')">Send Reminder</button>
                   <button class="opsActionBtn live" type="button" onclick="opsSendApplicantEmail_('docs_missing','Missing Documents Request')">Send Missing Documents Request</button>
@@ -1318,7 +1376,7 @@
                 </div>
               </div>
             </div>
-            <div class="opsResultBox warn">Safe Mode allows only approved-target single-record tests. Non-approved applicants are blocked and logged.</div>
+            <div class="opsResultBox warn">Operator access remains read/preview focused. Super Admin may send for the selected applicant; normal blockers still apply for missing recipient, invalid email, cooldown, duplicate, or Gmail failure.</div>
             <div id="opsCommunicationResult" class="opsResultBox hidden"></div>
           </div>
           <div class="opsCard">
@@ -1328,7 +1386,7 @@
               <div class="field"><label>Recipient</label><input id="opsCustomRecipient" type="text" placeholder="Loaded from selected applicant"></div>
               <div class="field"><label>Template selected</label><input id="opsCustomTemplateName" type="text" readonly></div>
               <div class="field"><label>Subject</label><input id="opsCustomSubject" type="text" placeholder="Choose template or enter subject"></div>
-              <div class="field"><label>Safe Mode / owner-controlled</label><input id="opsCustomSafety" type="text" readonly value="Preview and confirmation required"></div>
+              <div class="field"><label>Send authority</label><input id="opsCustomSafety" type="text" readonly value="Preview recommended; confirmation required"></div>
               <textarea id="opsCustomBody" placeholder="Choose template or enter custom body"></textarea>
             </div>
             <div class="opsControlGrid">
@@ -1347,13 +1405,31 @@
                 </div>
               </div>
             </div>
+            <div class="opsControlGrid">
+              <div class="opsControlGroup write">
+                <div class="opsControlTitle">Email correction</div>
+                <p class="opsControlNote">Uses the existing Super Admin email override backend. Search loaded OPS rows, select the applicant, then write `Parent_Email_Corrected` with audit/reset behaviour preserved.</p>
+                <div class="opsDraftGrid">
+                  <div class="field"><label>Search ApplicantID / name / email / phone</label><input id="opsEmailCorrectionSearch" type="search" placeholder="Search loaded applicant rows" oninput="opsRenderEmailCorrectionCandidates_()"></div>
+                  <div class="field"><label>Selected ApplicantID</label><input id="opsEmailCorrectionApplicantId" type="text" readonly></div>
+                  <div class="field"><label>Corrected email</label><input id="opsEmailCorrectionNewEmail" type="email" placeholder="parent@example.com"></div>
+                  <div class="field"><label>Reason</label><input id="opsEmailCorrectionReason" type="text" placeholder="Required audit reason"></div>
+                </div>
+                <div class="opsRecordList" id="opsEmailCorrectionCandidates" style="margin-top:10px;"></div>
+                <div class="opsActionRow" style="margin-top:10px;">
+                  <button class="opsActionBtn live" type="button" onclick="opsApplyEmailCorrection_()">Apply Email Correction</button>
+                  <button class="opsActionBtn" type="button" onclick="opsRenderEmailCorrectionCandidates_()">Refresh Candidates</button>
+                </div>
+                <div id="opsEmailCorrectionResult" class="opsResultBox hidden"></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
-      <section id="opsClassroom" class="opsSectionPage" data-ops-mode-group="operator">
+      <section id="opsClassroom" class="opsSectionPage" data-ops-mode-group="admin">
         <div class="opsPageIntro">
           <div><h2>Classroom Handover</h2><p>Post-enrolment handover visibility and internal notification through existing backend gates. Enrolment/package mutations are shown only where backend exists.</p></div>
-          <span class="opsStatusPill warn">Safe Test Only</span>
+          <span class="opsStatusPill ok">Admin / Super Admin</span>
         </div>
         <div class="opsSectionGrid mainSplit">
           <div class="opsCard">
@@ -1369,13 +1445,13 @@
             </div>
           </div>
           <div class="opsCard">
-            <div class="opsSectionHeader"><div><h3>Handover Controls</h3></div><span class="opsStatusPill warn">Safe Test Only</span></div>
+            <div class="opsSectionHeader"><div><h3>Handover Controls</h3></div><span class="opsStatusPill info">Selected applicant</span></div>
             <div class="opsBadgeStack"><span class="opsStatusPill warn">Classroom Pending</span><span class="opsStatusPill ok">Notify backend active</span><span class="opsStatusPill danger">Package/enrol backend missing</span></div>
             <div class="opsMeaningList" style="margin-top:10px;">
               <div class="opsMeaningItem"><strong>What Classroom Pending Means</strong>Payment and enrolment checks must be visible before classroom handover can move beyond preview. Notify uses the existing backend; package/enrolment mutation backend is not implemented.</div>
-              <div class="opsMeaningItem"><strong>Notify Classroom Admin</strong>Sends an internal notification only when preview exists, Safe Mode allows it, and the selected applicant is the approved target. Recipient comes from the classroom admin configuration.</div>
+              <div class="opsMeaningItem"><strong>Notify Classroom Admin</strong>Sends an internal notification only when preview exists, selected-applicant context is explicit, and confirmation is given. Recipient comes from the classroom admin configuration.</div>
               <div class="opsMeaningItem"><strong>Generate Welcome/Handover Preview</strong>Reads applicant identity, subjects, invoice, payment, enrolment, and classroom status. It does not write any fields.</div>
-              <div class="opsMeaningItem"><strong>Gate / Allowed Reason</strong>Notify is gated by payment/enrolment prerequisites, preview, Safe Mode target, and confirmation. Package/enrolment actions are labeled as backend missing.</div>
+              <div class="opsMeaningItem"><strong>Gate / Allowed Reason</strong>Notify is gated by payment/enrolment prerequisites, preview, role, and confirmation. Package/enrolment actions are labeled as backend missing.</div>
             </div>
             <div class="opsInspectPanel" id="opsClassroomChecklist">Generate preview to load classroom checklist, recipients, and notify reason.</div>
             <div class="opsActionRow">
@@ -1386,7 +1462,7 @@
               <button class="opsActionBtn" type="button" onclick="opsShowBackendMissing_('Mark Classroom Enrolled','No Admin backend exists to mark enrolment from OPS.')">Mark Classroom Enrolled</button>
               <button class="opsActionBtn live" type="button" onclick="renderOpsClassroomChecklist_();setOpsResult_('opsClassroomResult',{result:'OPEN',applicantId:opsApplicantId_(),message:'Classroom handover checklist refreshed from selected applicant and preview state.'},'Handover Checklist')">View Handover Checklist</button>
             </div>
-            <div class="opsResultBox warn">Classroom notify is allowed only in Safe Mode against the approved test identity after preview passes.</div>
+            <div class="opsResultBox warn">Classroom notify remains selected-applicant only and requires preview plus confirmation. Package/enrolment mutation remains backend missing.</div>
             <div id="opsClassroomResult" class="opsResultBox hidden"></div>
           </div>
         </div>
@@ -1404,8 +1480,9 @@
               <div class="field"><label>Fallback filter</label>
                 <select id="opsWaFallbackFilter">
                   <option value="ALL_FALLBACK">All fallback candidates</option>
-                  <option value="BOUNCE_ONLY">Bounce only</option>
-                  <option value="NO_EMAIL_ONLY">No email only</option>
+                  <option value="BOUNCED">Bounced email</option>
+                  <option value="INVALID_EMAIL">Missing or invalid email</option>
+                  <option value="BLOCKED">Blocked email</option>
                 </select>
               </div>
             </div>
@@ -1843,6 +1920,7 @@
 
     <div id="reviewQueuesPanel" class="card queue-panel">
       <h3>Review Queues</h3>
+      <div id="queueFdReceived" class="queue-section"></div>
       <div id="queueDocs" class="queue-section"></div>
       <div id="queueAwaitingPayment" class="queue-section"></div>
       <div id="queuePayments" class="queue-section"></div>
@@ -2221,12 +2299,13 @@
     const queueRenderCache = {};
     let queueExpandState = {};
     let queueDataState = {
+      fdReceived: [],
       docs: [],
       awaitingPayment: [],
       payments: [],
       anomalies: [],
       paidApproved: [],
-      counts: { docs: 0, awaitingPayment: 0, payments: 0, anomalies: 0, paidApproved: 0 },
+      counts: { fdReceived: 0, docs: 0, awaitingPayment: 0, payments: 0, anomalies: 0, paidApproved: 0 },
       hasMore: false,
       nextOffset: 0
     };
@@ -2293,8 +2372,9 @@
       secretSetupBusy: false
     };
     let opsApplicantDetailCache = null;
-    let opsSelectedApplicantId = "<?= String((CONFIG.OPS_SAFE_MODE_APPROVED_TARGET && CONFIG.OPS_SAFE_MODE_APPROVED_TARGET.applicantId) || '') ?>";
-    let opsSelectedApplicantName = "<?= String((CONFIG.OPS_SAFE_MODE_APPROVED_TARGET && CONFIG.OPS_SAFE_MODE_APPROVED_TARGET.fullName) || 'Approved target') ?>";
+    let opsSelectedApplicantId = "";
+    let opsSelectedApplicantName = "";
+    let opsSelectedApplicantExplicit = false;
     const OPS_SAFE_MODE_APPROVED_APPLICANT_ID = "<?= String((CONFIG.OPS_SAFE_MODE_APPROVED_TARGET && CONFIG.OPS_SAFE_MODE_APPROVED_TARGET.applicantId) || '') ?>";
     const OPS_SAFE_MODE_TEST_RECIPIENT = "<?= String(CONFIG.OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE || '') ?>";
     let opsActionState = {
@@ -2306,9 +2386,10 @@
       classroomPreviewResult: null,
       previewDraftSignature: "",
       queueFilter: "",
+      queueSearch: "",
       lifecycleStage: "",
       booksFilter: "all",
-      queueSort: "aging_desc",
+      queueSort: "date_desc",
       templateType: "reminder",
       longPressTimer: null,
       reviewDrawerOpen: false,
@@ -2726,7 +2807,7 @@
       }, "Acceptance Checklist");
     }
     function opsApplicantId_(){
-      return String((opsApplicantDetailCache && opsApplicantDetailCache.ApplicantID) || opsSelectedApplicantId || OPS_SAFE_MODE_APPROVED_APPLICANT_ID || "").trim();
+      return String((opsApplicantDetailCache && opsApplicantDetailCache.ApplicantID) || opsSelectedApplicantId || "").trim();
     }
     function opsApplicantName_(){
       var d = opsApplicantDetailCache || {};
@@ -2751,18 +2832,21 @@
       var aging = opsAgingDays_(row) || "Missing source";
       var hasApplicantData = !!(opsApplicantDetailCache || opsQueueRowByApplicantId_(applicantId));
       var dataNote = hasApplicantData ? "" : " | Data unavailable for selected applicant";
-      setOpsText_("cockpitCommContext", "Current Ops applicant: " + applicantId + " - " + applicantName + (approved ? " (Approved Safe Mode target)" : " (Not approved for Safe Mode send)") + " | Date Applied: " + dateInfo.label + " | Aging: " + aging + dataNote);
-      setOpsText_("cockpitClassroomContext", "Current Ops applicant: " + applicantId + " - " + applicantName + (approved ? " (Approved Safe Mode target)" : " (Not approved for Safe Mode notify)") + " | Date Applied: " + dateInfo.label + " | Aging: " + aging + dataNote);
+      var superNote = IS_SUPER ? " (Super Admin selected-applicant authority)" : (approved ? " (Safe Mode target)" : " (Admin/operator role restrictions may apply)");
+      setOpsText_("cockpitCommContext", "Current Ops applicant: " + applicantId + " - " + applicantName + superNote + " | Effective email: " + (opsSelectedEmail_() || "missing") + " | Date Applied: " + dateInfo.label + " | Aging: " + aging + dataNote);
+      setOpsText_("cockpitClassroomContext", "Current Ops applicant: " + applicantId + " - " + applicantName + superNote + " | Date Applied: " + dateInfo.label + " | Aging: " + aging + dataNote);
       setOpsText_("opsStageBatchApplicantContext", applicantId ? (applicantId + " - " + applicantName + (hasApplicantData ? "" : " (data unavailable)")) : "No applicant selected");
       setOpsPill_("cockpitPortalSelectedApplicant", applicantId, approved ? "ok" : "warn");
       renderOpsSelectedApplicantMini_(opsApplicantDetailCache || null);
       renderOpsTemplateBrowser_();
+      opsHydrateEmailCorrection_();
     }
     function opsSelectApplicantContext_(applicantId, applicantName){
       var nextId = String(applicantId || "").trim();
       if (!nextId) return;
       opsSelectedApplicantId = nextId;
       opsSelectedApplicantName = String(applicantName || "").trim() || nextId;
+      opsSelectedApplicantExplicit = true;
       opsApplicantDetailCache = null;
       opsClearSelectedActionState_();
       renderOpsSelectedApplicantContext_();
@@ -2784,7 +2868,7 @@
     }
     function opsAllQueueRows_(){
       var all = []
-        .concat(queueDataState.docs || [], queueDataState.awaitingPayment || [], queueDataState.payments || [], queueDataState.anomalies || [], queueDataState.paidApproved || []);
+        .concat(queueDataState.fdReceived || [], queueDataState.docs || [], queueDataState.awaitingPayment || [], queueDataState.payments || [], queueDataState.anomalies || [], queueDataState.paidApproved || []);
       var seen = {};
       return all.filter(function(row){
         var key = String((row && (row.applicantId || row.ApplicantID)) || "").trim();
@@ -2870,8 +2954,39 @@
       if (info.missingReason) return info.missingReason;
       return "Source: " + String(info.source || "Unknown");
     }
-    function opsDummyMarker_(applicantId){
-      return String(applicantId || "").trim() === "FODE-26-002013" ? "Live applicant" : "Dummy / test";
+    function opsExplicitTestMarker_(row, applicantId){
+      var r = row || {};
+      var id = String(applicantId || r.applicantId || r.ApplicantID || "").trim().toUpperCase();
+      var sourceText = [
+        id,
+        r.email,
+        r.Parent_Email,
+        r.First_Name,
+        r.Last_Name,
+        r.name,
+        r.Student_Name,
+        r.FD_FormID,
+        r.FormID,
+        r.adapter_source,
+        r.source,
+        r.Source
+      ].map(function(v){ return String(v == null ? "" : v).trim().toUpperCase(); }).filter(Boolean).join(" ");
+      if (/\bFODE-\d{2}-TEST\b/.test(id) || /\bFODE-\d{2}-DUMMY\b/.test(id)) return true;
+      return /\b(TEST|DUMMY)\b/.test(sourceText);
+    }
+    function opsExternalFdFeedMarker_(row){
+      var r = row || {};
+      var adapterSource = String(r.adapter_source || r.Adapter_Source || "").trim().toLowerCase();
+      var forwarded = String(r.adapter_forwarded || r.Adapter_Forwarded || "").trim().toLowerCase();
+      var hasForwarded = forwarded === "1" || forwarded === "true" || forwarded === "yes";
+      var hasFdEvidence = !!opsFirstNonBlank_(r.FD_FormID, r.FormID, r.correlation_id, r.Correlation_ID, r.__reqId);
+      return adapterSource === "sheet_bound_adapter" && (hasForwarded || hasFdEvidence);
+    }
+    function opsDummyMarker_(applicantId, row){
+      var r = row || {};
+      if (opsExplicitTestMarker_(r, applicantId)) return "Dummy / test";
+      if (opsExternalFdFeedMarker_(r)) return "Live / external FD feed";
+      return "Unclassified";
     }
     function opsPhoneState_(row){
       var phone = opsFirstNonBlank_(row.Phone, row.Parent_Phone, row.Mobile, row.WhatsApp, row.Contact_Number, row.Phone_Number);
@@ -2879,21 +2994,184 @@
     }
     function opsLifecycleDefinitions_(){
       return [
-        { key:"applicant", name:"Applicant", mode:"inspect/select", meaning:"Applicant has entered the admissions workflow.", next:"Select row and review applicant summary.", matches:function(row){ return !!row; } },
-        { key:"portal", name:"Portal Access / Submission", mode:"guarded", meaning:"Portal invite, access, or submission state needs operator visibility.", next:"View portal diagnostics. Reset/lock uses existing Super Admin gates.", matches:function(row){ return workflowIsYes_(row.Portal_Submitted) || !!opsFirstNonBlank_(row.Portal_Status, row.Portal_Link, row.Portal_Token_Status); } },
-        { key:"docs", name:"Document / Eligibility Review", mode:"Admin review bridge", meaning:"Documents or eligibility still need review.", next:"Use existing review surface for document decisions.", matches:function(row){ var d=opsDocsSummary_(row); return d.cls !== "ok"; } },
-        { key:"invoice_raised", name:"Invoice Raised", mode:"guarded Books", meaning:"Books invoice exists or local invoice fields indicate raised.", next:"Open invoice or refresh Books status.", matches:function(row){ return opsInvoiceSummary_(row).label === "Invoice Raised"; } },
-        { key:"invoice_sent", name:"Invoice Sent", mode:"owner-controlled", meaning:"Invoice communication has been sent or is ready for single-record follow-up.", next:"Preview communication before any single-record send.", matches:function(row){ return opsInvoiceEmailSummary_(row).label === "Invoice Email Sent"; } },
-        { key:"payment", name:"Payment Verified", mode:"Super Admin gated", meaning:"Payment appears verified in loaded fields.", next:"Inspect downstream enrolment or use selected-applicant payment verification gate when needed.", matches:function(row){ return opsIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true; } },
-        { key:"enrolment", name:"Enrolment Confirmed", mode:"Not implemented: backend missing", meaning:"Loaded fields indicate enrolment is confirmed.", next:"Inspect classroom handover readiness. No OPS enrolment writer exists.", matches:function(row){ return opsIsYes_(row.Enrolled_Confirmed); } },
-        { key:"classroom", name:"Classroom Handover", mode:"owner-controlled", meaning:"Classroom handover is pending, unknown, or awaiting internal notification.", next:"Generate preview first; notification stays Safe Mode gated.", matches:function(row){ var c=classroomStatusFromRow_(row).label; return c.indexOf("Pending") >= 0 || c.indexOf("Unknown") >= 0; } },
-        { key:"active", name:"Active Student / Follow-up", mode:"Not implemented: backend missing", meaning:"Post-handover follow-up is visible only when loaded data supports it.", next:"Reports and local export only until a follow-up backend exists.", matches:function(row){ var c=classroomStatusFromRow_(row).label.toUpperCase(); return c.indexOf("COMPLETE") >= 0 || c.indexOf("ACTIVE") >= 0; } }
+        { key:"fd_received", name:"Application Received / FD Received", mode:"operator workflow", meaning:"External FD intake row has been received and assigned an ApplicantID.", next:"Review Application", matches:function(row){ return opsWorkflowStageKey_(row) === "fd_received"; } },
+        { key:"portal", name:"Portal Access / Portal Submitted", mode:"operator workflow", meaning:"Portal link, acknowledgement, or submission state needs operator visibility.", next:"Check Portal Access", matches:function(row){ return opsWorkflowStageKey_(row) === "portal"; } },
+        { key:"docs", name:"Documents Pending / Review", mode:"operator workflow", meaning:"Documents or eligibility still need review.", next:"Check Documents", matches:function(row){ return opsWorkflowStageKey_(row) === "docs"; } },
+        { key:"payment", name:"Payment Pending", mode:"operator workflow", meaning:"Payment evidence or verification is pending.", next:"Verify Payment", matches:function(row){ return opsWorkflowStageKey_(row) === "payment"; } },
+        { key:"invoice", name:"Invoice / Books", mode:"admin guarded", meaning:"Books invoice or billing state needs follow-up.", next:"View Invoice Status", matches:function(row){ return opsWorkflowStageKey_(row) === "invoice"; } },
+        { key:"enrolment", name:"Enrolment Pending", mode:"admin guarded", meaning:"Payment is verified and enrolment is not confirmed.", next:"Complete Enrolment", matches:function(row){ return opsWorkflowStageKey_(row) === "enrolment"; } },
+        { key:"classroom", name:"Classroom Handover", mode:"admin guarded", meaning:"Enrolment/classroom handover is pending or unknown.", next:"Prepare Handover", matches:function(row){ return opsWorkflowStageKey_(row) === "classroom"; } },
+        { key:"exceptions", name:"Exceptions / Blocked", mode:"escalation", meaning:"Loaded status indicates blocked, failed, anomalous, or unsafe state.", next:"Resolve Issue", matches:function(row){ return opsWorkflowStageKey_(row) === "exceptions"; } }
       ];
+    }
+    function opsWorkflowStageKey_(row){
+      var r = row || {};
+      var lastResult = String(r.Last_Contact_Result || r.Email_Status || r.Ack_Email_Status || r.Books_Last_Error || "").toUpperCase();
+      if (lastResult.indexOf("FAILED") >= 0 || lastResult.indexOf("BLOCK") >= 0 || lastResult.indexOf("ERROR") >= 0) return "exceptions";
+      var paymentOk = opsIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true;
+      var enrolledOk = opsIsYes_(r.Enrolled_Confirmed);
+      var invoiceState = opsInvoiceSummary_(r);
+      var docsState = opsDocsSummary_(r);
+      var portalSubmitted = workflowIsYes_(r.Portal_Submitted);
+      var portalEvidence = !!opsFirstNonBlank_(r.PortalURL, r.Portal_Status, r.Portal_Link, r.Portal_Token_Status, r.portalLastUpdateAt);
+      if (enrolledOk) return "classroom";
+      if (paymentOk && !enrolledOk) return "enrolment";
+      if (invoiceState.label === "Invoice Raised" || opsInvoiceEmailSummary_(r).label === "Invoice Email Sent" || !!opsFirstNonBlank_(r.Books_Invoice_ID, r.Books_Invoice_Number, r.Books_Push_Status)) return paymentOk ? "enrolment" : "payment";
+      if (docsState.cls === "ok") return paymentOk ? "enrolment" : "payment";
+      if (portalSubmitted) return "docs";
+      if (portalEvidence || String(r.Email_Status || r.Ack_Email_Status || "").trim()) return "portal";
+      if (opsExternalFdFeedMarker_(r)) return "fd_received";
+      return "fd_received";
+    }
+    function opsWorkflowStageLabel_(row){
+      var key = opsWorkflowStageKey_(row);
+      var stage = opsLifecycleDefinitions_().filter(function(s){ return s.key === key; })[0];
+      return stage ? stage.name : "Application Received / FD Received";
     }
     function opsRowsForLifecycleStage_(stageKey){
       var rows = opsAllQueueRows_();
       var stage = opsLifecycleDefinitions_().filter(function(s){ return s.key === stageKey; })[0];
       return stage ? rows.filter(function(row){ return stage.matches(row || {}); }) : rows;
+    }
+    function opsQueueSearchText_(row){
+      var r = row || {};
+      return [
+        r.applicantId, r.ApplicantID, r.name, r.Student_Name, r.First_Name, r.Last_Name,
+        r.email, r.Parent_Email, r.parentEmail, r.correctedEmail, r.effectiveEmail,
+        r.Phone, r.Parent_Phone, r.Mobile, r.WhatsApp, r.Contact_Number, r.Phone_Number,
+        r.FD_FormID, r.FormID, r.correlation_id
+      ].map(function(v){ return String(v == null ? "" : v).toLowerCase(); }).join(" ");
+    }
+    function opsApplyQueueSearch_(rows){
+      var q = String(opsActionState.queueSearch || "").trim().toLowerCase();
+      if (!q) return rows;
+      return (rows || []).filter(function(row){ return opsQueueSearchText_(row).indexOf(q) >= 0; });
+    }
+    function opsSetQueueSearch_(value){
+      opsActionState.queueSearch = String(value || "");
+      opsActionState.queueFilter = "";
+      opsActionState.lifecycleStage = "";
+      renderOpsQueue_();
+    }
+    function opsClearQueueSearch_(){
+      opsActionState.queueSearch = "";
+      var input = document.getElementById("opsQueueSearchInput");
+      if (input) input.value = "";
+      renderOpsQueue_();
+    }
+    function opsQueueSortParts_(){
+      var raw = String(opsActionState.queueSort || "date_desc");
+      var parts = raw.split("_");
+      var dir = parts.pop() || "desc";
+      return { key: parts.join("_") || "date", dir: dir === "asc" ? "asc" : "desc" };
+    }
+    function opsSetQueueSort_(key, naturalDir){
+      var parts = opsQueueSortParts_();
+      var wanted = String(key || "date");
+      var natural = String(naturalDir || "asc") === "desc" ? "desc" : "asc";
+      var dir = (parts.key === wanted) ? (parts.dir === "asc" ? "desc" : "asc") : natural;
+      opsActionState.queueSort = wanted + "_" + dir;
+      renderOpsQueue_();
+    }
+    function opsQueueSortLabel_(){
+      var parts = opsQueueSortParts_();
+      var labels = {
+        applicant:"ApplicantID", name:"Applicant / Student Name", date:"Date Applied", aging:"Aging",
+        stage:"Lifecycle Stage", ack:"Ack Status", crm:"CRM Status", portal:"Portal Status",
+        docs:"Docs Status", payment:"Payment Status", invoice:"Invoice Status",
+        enrolment:"Enrolment Status", classroom:"Classroom Status", last_action:"Last Action"
+      };
+      if (parts.key === "date") return labels.date + (parts.dir === "desc" ? " ↓ Newest first" : " ↑ Oldest first");
+      if (parts.key === "aging") return labels.aging + (parts.dir === "desc" ? " ↓ Longest waiting first" : " ↑ Newest first");
+      return (labels[parts.key] || parts.key) + (parts.dir === "desc" ? " ↓" : " ↑");
+    }
+    function opsStatusPriority_(kind, row){
+      var r = row || {};
+      var text = "";
+      if (kind === "ack") text = fdAckStatusFromRow_(r).label;
+      else if (kind === "crm") text = crmBackupStatusFromRow_(r).label;
+      else if (kind === "portal") text = portalAccessStatusFromRow_(r).label;
+      else if (kind === "docs") text = opsDocsSummary_(r).label;
+      else if (kind === "payment") text = opsIsYes_(r.Payment_Verified) ? "Verified" : (opsIsYes_(r.Payment_Received) ? "Submitted" : "Pending");
+      else if (kind === "invoice") text = opsInvoiceSummary_(r).label;
+      else if (kind === "enrolment") text = opsIsYes_(r.Enrolled_Confirmed) ? "Enrolled" : "Pending";
+      else if (kind === "classroom") text = classroomStatusFromRow_(r).label;
+      text = String(text || "").toUpperCase();
+      if (text.indexOf("FAIL") >= 0 || text.indexOf("BLOCK") >= 0 || text.indexOf("ERROR") >= 0) return 0;
+      if (text.indexOf("PENDING") >= 0 || text.indexOf("MISSING") >= 0 || text.indexOf("UNKNOWN") >= 0) return 1;
+      if (text.indexOf("PARTIAL") >= 0 || text.indexOf("SUBMITTED") >= 0 || text.indexOf("DRAFT") >= 0) return 2;
+      if (text.indexOf("SENT") >= 0 || text.indexOf("OK") >= 0 || text.indexOf("VERIFIED") >= 0 || text.indexOf("ENROLLED") >= 0 || text.indexOf("DONE") >= 0) return 3;
+      return 2;
+    }
+    function opsPillClass_(cls){
+      var s = String(cls || "");
+      if (s.indexOf("success") >= 0 || s === "ok") return "ok";
+      if (s.indexOf("warning") >= 0 || s === "warn") return "warn";
+      if (s.indexOf("danger") >= 0 || s === "danger") return "danger";
+      if (s.indexOf("info") >= 0 || s === "info") return "info";
+      return "muted";
+    }
+    function opsLastActionInfo_(row){
+      var r = row || {};
+      var v = opsFirstNonBlank_(r.Last_Contacted_At, r.Email_Last_Sent_At, r.Ack_Email_Sent_At, r.Handled_At, r.Books_Push_At, r.Books_Last_Push_At, r.Enrolled_At, r.Classroom_Handover_At, r.portalLastUpdateAt, r.PortalLastUpdateAt, r.adapter_timestamp);
+      return v ? String(v) : "No recent action";
+    }
+    function opsQueueCompareValue_(row, key){
+      var r = row || {};
+      if (key === "applicant") return String(r.applicantId || r.ApplicantID || "");
+      if (key === "name") return String(r.name || r.Student_Name || r.First_Name || "");
+      if (key === "date") {
+        var d = Date.parse(String(opsDateAppliedInfo_(r).iso || ""));
+        return Number.isFinite(d) ? d : 0;
+      }
+      if (key === "aging") return Number(r.ageDays || String(opsAgingDays_(r) || "").replace(/\D+/g, "") || 0) || 0;
+      if (key === "stage") return opsLifecycleDefinitions_().map(function(s){ return s.key; }).indexOf(opsWorkflowStageKey_(r));
+      if (key === "last_action") {
+        var la = Date.parse(opsLastActionInfo_(r));
+        return Number.isFinite(la) ? la : 0;
+      }
+      if (["ack","crm","portal","docs","payment","invoice","enrolment","classroom"].indexOf(key) >= 0) return opsStatusPriority_(key, r);
+      return "";
+    }
+    function opsSortQueueRows_(rows){
+      var parts = opsQueueSortParts_();
+      var key = parts.key;
+      var dir = parts.dir === "asc" ? 1 : -1;
+      return (rows || []).slice().sort(function(a, b){
+        var av = opsQueueCompareValue_(a, key);
+        var bv = opsQueueCompareValue_(b, key);
+        if (typeof av === "number" || typeof bv === "number") {
+          av = Number(av) || 0;
+          bv = Number(bv) || 0;
+          if (av !== bv) return (av > bv ? 1 : -1) * dir;
+        } else {
+          var cmp = String(av || "").localeCompare(String(bv || ""));
+          if (cmp !== 0) return cmp * dir;
+        }
+        var ad = Date.parse(String(opsDateAppliedInfo_(a).iso || ""));
+        var bd = Date.parse(String(opsDateAppliedInfo_(b).iso || ""));
+        if (!Number.isFinite(ad)) ad = 0;
+        if (!Number.isFinite(bd)) bd = 0;
+        if (bd !== ad) return bd - ad;
+        return String(b.applicantId || b.ApplicantID || "").localeCompare(String(a.applicantId || a.ApplicantID || ""));
+      });
+    }
+    function renderOpsQueueSortHeaders_(){
+      var el = document.getElementById("opsQueueSortHeaders");
+      if (!el) return;
+      var parts = opsQueueSortParts_();
+      var headers = [
+        ["applicant","ApplicantID","desc"], ["name","Applicant / Student Name","asc"], ["date","Date Applied","desc"],
+        ["aging","Aging","desc"], ["stage","Lifecycle Stage","asc"], ["ack","Ack Status","asc"],
+        ["crm","CRM Status","asc"], ["portal","Portal Status","asc"], ["docs","Docs Status","asc"],
+        ["payment","Payment Status","asc"], ["invoice","Invoice Status","asc"], ["enrolment","Enrolment Status","asc"],
+        ["classroom","Classroom Status","asc"], ["last_action","Last Action / Last Contacted","desc"]
+      ];
+      el.innerHTML = headers.map(function(h){
+        var active = parts.key === h[0];
+        var label = h[1] + (active ? (parts.dir === "desc" ? " ↓" : " ↑") : "");
+        return "<button class='opsSortableHeader" + (active ? " active" : "") + "' type='button' onclick='opsSetQueueSort_(\"" + esc(h[0]) + "\",\"" + esc(h[2]) + "\")'>" + esc(label) + "</button>";
+      }).join("");
     }
     function renderOpsLifecycleCascade_(){
       var wrap = document.getElementById("opsLifecycleStageCards");
@@ -2952,7 +3230,7 @@
       var name = opsApplicantName_();
       var dateInfo = opsDateAppliedInfo_(d);
       var aging = opsAgingDays_(d) || "Missing source";
-      var marker = opsDummyMarker_(id);
+      var marker = opsDummyMarker_(id, d);
       el.innerHTML = [
         "<div class='opsInfoItem'><div class='k'>Selected Applicant</div><div class='v'>" + esc(id) + "</div></div>",
         "<div class='opsInfoItem'><div class='k'>Name</div><div class='v'>" + esc(name) + "</div></div>",
@@ -3025,7 +3303,7 @@
       var applicantId = opsApplicantId_();
       var approved = applicantId === OPS_SAFE_MODE_APPROVED_APPLICANT_ID;
       el.innerHTML = opsTemplateDefinitions_().map(function(t){
-        var allowed = approved ? "Allowed for approved Safe Mode target after preview" : "Blocked by Safe Mode target gate";
+        var allowed = IS_SUPER ? "Super Admin selected-applicant send after preview/confirmation" : (approved ? "Safe Mode target after preview" : "Admin/operator role restrictions may apply");
         return "<div class='opsTemplateCard" + (selected === t.type ? " active" : "") + "' data-template-type='" + esc(t.type) + "'>"
           + "<h4>" + esc(t.name) + "</h4>"
           + "<p><strong>Purpose:</strong> " + esc(t.purpose) + "</p>"
@@ -3058,8 +3336,8 @@
       if (subj) subj.value = t.subject;
       if (body) body.value = t.body + "\n\nApplicantID: " + opsApplicantId_();
       if (safety) safety.value = opsApplicantId_() === OPS_SAFE_MODE_APPROVED_APPLICANT_ID
-        ? "Safe Mode approved target; test override: " + (OPS_SAFE_MODE_TEST_RECIPIENT || "none") + "; preview and confirmation required"
-        : "Send blocked for non-approved applicant; test override: " + (OPS_SAFE_MODE_TEST_RECIPIENT || "none");
+        ? "Selected applicant; preview recommended and confirmation required"
+        : (IS_SUPER ? "Super Admin selected-applicant parity; confirmation required" : "Admin/operator role restrictions may apply");
       renderOpsCommunicationStatePanel_();
     }
     function renderOpsCommunicationStatePanel_(){
@@ -3078,7 +3356,7 @@
         || opsFirstNonBlank_(row.Effective_Email, row.Parent_Email_Corrected, row.Parent_Email, "No effective email in loaded fields");
       var staleDraft = selectedType === "custom_email" && previewReady && opsActionState.previewDraftSignature !== opsCustomEmailSignature_();
       var blockReason = "";
-      if (!approved) blockReason = "Not approved for Safe Mode send.";
+      if (!approved && !IS_SUPER) blockReason = "Admin/operator role restrictions may apply.";
       else if (!previewReady) blockReason = "Preview required before send.";
       else if (staleDraft) blockReason = "Draft changed after preview. Re-preview required.";
       else if (opsActionState.previewResult && opsActionState.previewResult.blockReason) blockReason = String(opsActionState.previewResult.blockReason);
@@ -3095,9 +3373,95 @@
         "<br><strong>Template key/type:</strong> " + esc(selectedType),
         "<br><strong>Preview status:</strong> " + esc(status + " / " + timestamp),
         "<br><strong>Body preview:</strong><div class='opsPreviewBody'>" + esc((body || "Preview/template will populate body").slice(0, 1200)) + "</div>",
-        "<strong>Safe Mode state:</strong> " + esc(approved ? "Approved target / owner-controlled single-record send only" : "Blocked for non-approved applicant"),
+        "<strong>Send authority:</strong> " + esc(IS_SUPER ? "Super Admin selected-applicant parity; target-only Safe Mode block does not apply" : (approved ? "Safe Mode target / selected-record send only" : "Role restricted for non-Super Admin")),
         "<br><strong>Block reason:</strong> " + esc(blockReason || "Ready for send only after preview and confirmation")
       ].join("");
+    }
+    function opsHydrateEmailCorrection_(){
+      var idEl = document.getElementById("opsEmailCorrectionApplicantId");
+      var emailEl = document.getElementById("opsEmailCorrectionNewEmail");
+      if (idEl) idEl.value = opsApplicantId_() || "";
+      if (emailEl && !String(emailEl.value || "").trim()) emailEl.value = opsSelectedEmail_() || "";
+      opsRenderEmailCorrectionCandidates_();
+    }
+    function opsEmailCorrectionCandidateRows_(){
+      var q = String((document.getElementById("opsEmailCorrectionSearch") || {}).value || "").trim().toLowerCase();
+      var rows = opsAllQueueRows_();
+      if (!q) {
+        var selected = opsApplicantContextRow_();
+        return selected ? [selected].concat(rows.filter(function(r){ return String(r.applicantId || r.ApplicantID || "") !== opsApplicantId_(); })).slice(0, 8) : rows.slice(0, 8);
+      }
+      return rows.filter(function(row){ return opsQueueSearchText_(row).indexOf(q) >= 0; }).slice(0, 12);
+    }
+    function opsSelectEmailCorrectionCandidate_(applicantId){
+      var row = opsQueueRowByApplicantId_(applicantId) || {};
+      var id = String(applicantId || row.applicantId || row.ApplicantID || "").trim();
+      if (!id) return;
+      opsSelectApplicantContext_(id, String(row.name || row.Student_Name || id));
+      var idEl = document.getElementById("opsEmailCorrectionApplicantId");
+      var emailEl = document.getElementById("opsEmailCorrectionNewEmail");
+      if (idEl) idEl.value = id;
+      if (emailEl) emailEl.value = opsFirstNonBlank_(row.effectiveEmail, row.correctedEmail, row.parentEmail, row.Effective_Email, row.Parent_Email_Corrected, row.Parent_Email, "");
+      opsRenderEmailCorrectionCandidates_();
+    }
+    function opsRenderEmailCorrectionCandidates_(){
+      var list = document.getElementById("opsEmailCorrectionCandidates");
+      if (!list) return;
+      var rows = opsEmailCorrectionCandidateRows_();
+      if (!rows.length) {
+        list.innerHTML = "<div class='opsPlaceholder'>No loaded OPS rows match. Refresh the queue or use the original Admin Portal search if urgent.</div>";
+        return;
+      }
+      list.innerHTML = rows.map(function(row){
+        var id = String(row.applicantId || row.ApplicantID || "");
+        var name = String(row.name || row.Student_Name || row.First_Name || "Unknown applicant");
+        var email = opsFirstNonBlank_(row.effectiveEmail, row.correctedEmail, row.parentEmail, row.Effective_Email, row.Parent_Email_Corrected, row.Parent_Email, "No email loaded");
+        var phone = opsFirstNonBlank_(row.Parent_Phone, row.Phone, row.Mobile, row.WhatsApp, row.Contact_Number, row.Phone_Number, "No phone loaded");
+        return "<button class='opsFilterBtn' type='button' onclick='opsSelectEmailCorrectionCandidate_(\"" + esc(id) + "\")'><strong>" + esc(id) + "</strong> - " + esc(name) + "<br><span class='opsWorkflowSecondary'>" + esc(email) + " | " + esc(phone) + "</span></button>";
+      }).join("");
+    }
+    function opsApplyEmailCorrection_(){
+      var ctx = opsRequireSelectedApplicant_("opsEmailCorrectionResult", "Email Correction", true);
+      if (!ctx) return;
+      if (!IS_SUPER) {
+        setOpsResult_("opsEmailCorrectionResult", { result:"BLOCKED", applicantId:ctx.applicantId, blockCode:"SUPER_ADMIN_REQUIRED", blockReason:"Email correction uses the existing Super Admin override backend." }, "Email Correction");
+        return;
+      }
+      var idEl = document.getElementById("opsEmailCorrectionApplicantId");
+      var emailEl = document.getElementById("opsEmailCorrectionNewEmail");
+      var reasonEl = document.getElementById("opsEmailCorrectionReason");
+      var applicantId = String((idEl && idEl.value) || ctx.applicantId || "").trim();
+      var newEmail = String((emailEl && emailEl.value) || "").trim();
+      var reason = String((reasonEl && reasonEl.value) || "").trim();
+      if (applicantId !== ctx.applicantId) {
+        setOpsResult_("opsEmailCorrectionResult", { result:"BLOCKED", applicantId:ctx.applicantId, blockCode:"CONTEXT_MISMATCH", blockReason:"Selected tile and email correction ApplicantID do not match." }, "Email Correction");
+        return;
+      }
+      if (!newEmail || !reason) {
+        setOpsResult_("opsEmailCorrectionResult", { result:"BLOCKED", applicantId:ctx.applicantId, blockCode:"EMAIL_REASON_REQUIRED", blockReason:"Corrected email and audit reason are required." }, "Email Correction");
+        return;
+      }
+      if (!window.confirm("Update corrected/effective email for " + ctx.applicantId + " to " + newEmail + "?")) return;
+      setOpsResult_("opsEmailCorrectionResult", { result:"GUIDANCE", applicantId:ctx.applicantId, message:"Applying email correction through existing Super Admin backend..." }, "Email Correction");
+      google.script.run
+        .withSuccessHandler(function(res){
+          var out = res && typeof res === "object" ? res : { ok:false, message:"Invalid email correction response." };
+          if (out.ok === false) {
+            setOpsResult_("opsEmailCorrectionResult", { result:"FAILED", applicantId:ctx.applicantId, blockReason:String(out.message || out.error || out.code || "Email correction failed."), debugId:out.debugId || out.dbg }, "Email Correction");
+            return;
+          }
+          setOpsResult_("opsEmailCorrectionResult", { result:"OPEN", applicantId:ctx.applicantId, effectiveEmail:String(out.newEmail || newEmail), message:"Corrected email updated. Communications will use the corrected/effective email after refresh.", debugId:out.debugId || out.dbg }, "Email Correction");
+          if (opsApplicantDetailCache) {
+            opsApplicantDetailCache.Parent_Email_Corrected = String(out.newEmail || newEmail);
+            opsApplicantDetailCache.Effective_Email = String(out.newEmail || newEmail);
+          }
+          fetchOpsApplicantSummary_(ctx.applicantId);
+          loadReviewQueues({ force: 1 });
+        })
+        .withFailureHandler(function(err){
+          setOpsResult_("opsEmailCorrectionResult", { result:"FAILED", applicantId:ctx.applicantId, blockReason:String((err && err.message) || err || "Email correction failed.") }, "Email Correction");
+        })
+        .admin_updateParentEmailCorrected({ rowNumber:ctx.rowNumber, applicantId:ctx.applicantId, newEmail:newEmail, reason:reason });
     }
     function opsHideContextMenu_(){
       var menu = document.getElementById("opsApplicantContextMenu");
@@ -3377,7 +3741,8 @@
     }
     function renderOpsQueue_(){
       var body = document.getElementById("cockpitQueueBody");
-      if (!body) return;
+      var workflow = document.getElementById("opsLifecycleQueue");
+      if (!body && !workflow) return;
       var rows = opsAllQueueRows_();
       var filter = String(opsActionState.queueFilter || "");
       if (filter) {
@@ -3394,23 +3759,11 @@
           });
         }
       }
-      rows = rows.slice().sort(function(a, b){
-        var sortKey = String(opsActionState.queueSort || "aging_desc");
-        if (sortKey === "applicant_asc") {
-          return String(a.applicantId || a.ApplicantID || "").localeCompare(String(b.applicantId || b.ApplicantID || ""));
-        }
-        if (sortKey === "date_desc") {
-          return Date.parse(String(opsDateAppliedInfo_(b).iso || "")) - Date.parse(String(opsDateAppliedInfo_(a).iso || ""));
-        }
-        var aAge = Number(a && a.ageDays);
-        var bAge = Number(b && b.ageDays);
-        if (!isFinite(aAge)) aAge = -1;
-        if (!isFinite(bAge)) bAge = -1;
-        if (bAge !== aAge) return bAge - aAge;
-        return String(a.applicantId || a.ApplicantID || "").localeCompare(String(b.applicantId || b.ApplicantID || ""));
-      });
+      rows = opsSortQueueRows_(opsApplyQueueSearch_(rows));
+      renderOpsQueueSortHeaders_();
       if (!rows.length) {
-        body.innerHTML = "<tr><td colspan='11' class='opsPlaceholder'>No queue rows loaded yet.</td></tr>";
+        if (body) body.innerHTML = "<tr><td colspan='11' class='opsPlaceholder'>No queue rows loaded yet.</td></tr>";
+        if (workflow) workflow.innerHTML = "<div class='opsLifecycleBand'><div class='opsPlaceholder' style='padding:16px;'>No queue rows match the current filters.</div></div>";
         renderOpsSelectedApplicantMini_(null);
         renderOpsLifecycleCascade_();
         renderOpsBooksFilters_();
@@ -3420,47 +3773,98 @@
       var paymentVerifiedCount = 0;
       var notEnrolledCount = 0;
       var classroomPendingCount = 0;
-      body.innerHTML = rows.map(function(row){
+      if (rows.length && (!opsSelectedApplicantExplicit && (!opsQueueRowByApplicantId_(opsSelectedApplicantId) || opsSelectedApplicantId === OPS_SAFE_MODE_APPROVED_APPLICANT_ID))) {
+        var topRow = rows[0] || {};
+        opsSelectedApplicantId = String(topRow.applicantId || topRow.ApplicantID || opsSelectedApplicantId || "").trim();
+        opsSelectedApplicantName = String(topRow.name || topRow.Student_Name || topRow.First_Name || opsSelectedApplicantId || "").trim();
+        opsSelectedApplicantExplicit = false;
+      }
+      function renderWorkflowRow_(row, stage){
         var applicantId = String(row.applicantId || row.ApplicantID || "");
         var applicantName = String(row.name || row.Student_Name || row.First_Name || "Unknown applicant");
         var selected = applicantId === opsApplicantId_();
         var dateInfo = opsDateAppliedInfo_(row);
         var dateApplied = dateInfo.label;
         var aging = opsAgingDays_(row) || "Missing source";
-        var marker = opsDummyMarker_(applicantId);
+        var marker = opsDummyMarker_(applicantId, row);
         var invoiceState = opsInvoiceSummary_(row);
         var emailState = opsInvoiceEmailSummary_(row);
         var docsState = opsDocsSummary_(row);
+        var ackState = fdAckStatusFromRow_(row);
+        var crmState = crmBackupStatusFromRow_(row);
+        var portalState = portalAccessStatusFromRow_(row);
         var paymentOk = (opsIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true);
         var enrolledOk = opsIsYes_(row.Enrolled_Confirmed);
         var total = opsAmountFromRow_(row);
         var ready = opsReadySummary_(invoiceState, paymentOk, enrolledOk);
-        var payment = paymentOk
-          ? "<span class='opsStatusPill ok'>Payment Verified</span>"
-          : "<span class='opsStatusPill warn'>Payment Pending</span>";
-        var enrolment = enrolledOk
-          ? "<span class='opsStatusPill ok'>Enrolled Confirmed</span>"
-          : "<span class='opsStatusPill warn'>Enrolment Pending</span>";
         var classroom = classroomStatusFromRow_(row);
-        var classroomKind = (classroom.cls && classroom.cls.indexOf("success") >= 0) ? "ok" : (classroom.label.indexOf("Pending") >= 0 ? "warn" : "muted");
+        var classroomKind = opsPillClass_(classroom.cls || (classroom.label.indexOf("Pending") >= 0 ? "warn" : "muted"));
         if (invoiceState.label === "Invoice Raised") invoiceRaisedCount++;
         if (paymentOk) paymentVerifiedCount++;
         if (paymentOk && !enrolledOk) notEnrolledCount++;
         if (classroom.label.indexOf("Pending") >= 0 || classroom.label.indexOf("Unknown") >= 0) classroomPendingCount++;
-        return "<tr class='opsQueueSelectableRow" + (selected ? " opsQueueSelectedRow" : "") + "' data-applicant-id='" + esc(applicantId) + "' data-applicant-name='" + esc(applicantName) + "' style='cursor:pointer;'>"
-          + "<td><div class='opsQueueName'>" + esc(applicantId) + "</div></td>"
-          + "<td><div>" + esc(String(row.name || "Unknown applicant")) + "</div><div class='opsQueueMeta'>" + esc(String(row.email || row.Parent_Email || "")) + "</div></td>"
-          + "<td><span class='opsStatusPill info' title='" + esc(opsDateAppliedTitle_(row)) + "'>" + esc(dateApplied) + "</span></td>"
-          + "<td><span class='opsStatusPill " + opsAgingKind_(row) + "' title='" + esc(opsDateAppliedTitle_(row)) + "'>" + esc(aging) + "</span></td>"
-          + "<td><span class='opsStatusPill " + (marker.indexOf("Live") >= 0 ? "ok" : "muted") + "'>" + esc(marker) + "</span></td>"
-          + "<td><span class='opsStatusPill " + docsState.cls + "'>" + esc(docsState.label) + "</span></td>"
-          + "<td>" + payment + "</td>"
-          + "<td><div class='opsQueueName'>" + esc(String(row.Books_Invoice_Number || invoiceState.detail || "-")) + "</div><div class='opsBadgeStack'><span class='opsStatusPill " + invoiceState.cls + "'>" + esc(invoiceState.label) + "</span><span class='opsStatusPill " + emailState.cls + "'>" + esc(emailState.label) + "</span><span class='opsStatusPill muted'>" + (total > 0 ? esc(formatPngAmount_(total)) : "Amount Unknown") + "</span></div></td>"
-          + "<td>" + enrolment + "</td>"
-          + "<td><span class='opsStatusPill " + classroomKind + "'>" + esc(classroom.label) + "</span></td>"
-          + "<td><span class='opsReady " + ready.cls + "'>" + (ready.cls === "ok" ? "OK " : "! ") + esc(ready.label) + "</span></td>"
-          + "</tr>";
-      }).join("");
+        return "<div class='opsWorkflowRow opsQueueSelectableRow" + (selected ? " opsQueueSelectedRow" : "") + "' data-applicant-id='" + esc(applicantId) + "' data-applicant-name='" + esc(applicantName) + "'>"
+          + "<div><div class='opsWorkflowCellLabel'>ApplicantID</div><div class='opsWorkflowPrimary'>" + esc(applicantId) + "</div><div class='opsWorkflowSecondary'>" + esc(marker) + "</div></div>"
+          + "<div><div class='opsWorkflowCellLabel'>Applicant</div><div>" + esc(applicantName) + "</div><div class='opsWorkflowSecondary'>" + esc(String(row.email || row.Parent_Email || row.parentEmail || row.effectiveEmail || "")) + "</div></div>"
+          + "<div><div class='opsWorkflowCellLabel'>Date Applied</div><span class='opsStatusPill info' title='" + esc(opsDateAppliedTitle_(row)) + "'>" + esc(dateApplied) + "</span></div>"
+          + "<div><div class='opsWorkflowCellLabel'>Aging</div><span class='opsStatusPill " + opsAgingKind_(row) + "' title='" + esc(opsDateAppliedTitle_(row)) + "'>" + esc(aging) + "</span></div>"
+          + "<div><div class='opsWorkflowCellLabel'>Last Action</div><div class='opsWorkflowSecondary'>" + esc(opsLastActionInfo_(row)) + "</div></div>"
+          + "<div class='opsWorkflowBadges'>"
+            + "<span class='opsStatusPill " + opsPillClass_(ackState.cls) + "'>" + esc(ackState.label) + "</span>"
+            + "<span class='opsStatusPill " + opsPillClass_(crmState.cls) + "'>" + esc(crmState.label) + "</span>"
+            + "<span class='opsStatusPill " + opsPillClass_(portalState.cls) + "'>" + esc(portalState.label) + "</span>"
+            + "<span class='opsStatusPill " + docsState.cls + "'>" + esc(docsState.label) + "</span>"
+            + "<span class='opsStatusPill " + (paymentOk ? "ok" : "warn") + "'>" + esc(paymentOk ? "Payment Verified" : "Payment Pending") + "</span>"
+            + "<span class='opsStatusPill " + invoiceState.cls + "'>" + esc(invoiceState.label) + "</span>"
+            + "<span class='opsStatusPill " + (enrolledOk ? "ok" : "warn") + "'>" + esc(enrolledOk ? "Enrolled" : "Enrolment Pending") + "</span>"
+            + "<span class='opsStatusPill " + classroomKind + "'>" + esc(classroom.label) + "</span>"
+            + "<span class='opsStatusPill muted'>" + (total > 0 ? esc(formatPngAmount_(total)) : "Amount Unknown") + "</span>"
+          + "</div>"
+          + "<div class='opsWorkflowAction'><button class='opsActionBtn live' type='button' data-review-applicant-id='" + esc(applicantId) + "' data-review-applicant-name='" + esc(applicantName) + "'>" + esc(stage.next) + "</button><div class='opsWorkflowSecondary'>" + esc(stage.name) + "</div></div>"
+          + "</div>";
+      }
+      if (workflow) {
+        var definitions = opsLifecycleDefinitions_();
+        workflow.innerHTML = definitions.map(function(stage, idx){
+          var stageRows = rows.filter(stage.matches);
+          var expanded = (idx === 0) || String(opsActionState.queueSearch || "").trim() || opsActionState.lifecycleStage === stage.key || queueExpandState["workflow_" + stage.key] === true;
+          if (queueExpandState["workflow_" + stage.key] === false) expanded = false;
+          return "<section class='opsLifecycleBand' data-workflow-stage='" + esc(stage.key) + "'>"
+            + "<button class='opsLifecycleBandHeader' type='button' data-toggle-workflow-stage='" + esc(stage.key) + "' data-workflow-expanded='" + (expanded ? "1" : "0") + "'>"
+              + "<div><div class='opsLifecycleTitle'>" + esc(stage.name) + "</div><div class='opsWorkflowSecondary'>" + esc(stage.mode) + "</div></div>"
+              + "<div class='opsLifecycleNext'>" + esc(stage.meaning) + "<br><strong>Next action:</strong> " + esc(stage.next) + "</div>"
+              + "<span class='opsStatusPill " + (stageRows.length ? "info" : "muted") + "'>" + String(stageRows.length) + "</span>"
+            + "</button>"
+            + (expanded ? "<div class='opsLifecycleRows'>" + (stageRows.length ? stageRows.map(function(row){ return renderWorkflowRow_(row, stage); }).join("") : "<div class='opsPlaceholder' style='padding:14px;'>No loaded rows in this lifecycle stage.</div>") + "</div>" : "")
+          + "</section>";
+        }).join("");
+      }
+      if (body) {
+        body.innerHTML = rows.map(function(row){
+          var applicantId = String(row.applicantId || row.ApplicantID || "");
+          var applicantName = String(row.name || row.Student_Name || row.First_Name || "Unknown applicant");
+          var selected = applicantId === opsApplicantId_();
+          var dateInfo = opsDateAppliedInfo_(row);
+          var invoiceState = opsInvoiceSummary_(row);
+          var docsState = opsDocsSummary_(row);
+          var paymentOk = (opsIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true);
+          var enrolledOk = opsIsYes_(row.Enrolled_Confirmed);
+          var classroom = classroomStatusFromRow_(row);
+          return "<tr class='opsQueueSelectableRow" + (selected ? " opsQueueSelectedRow" : "") + "' data-applicant-id='" + esc(applicantId) + "' data-applicant-name='" + esc(applicantName) + "' style='cursor:pointer;'>"
+            + "<td><div class='opsQueueName'>" + esc(applicantId) + "</div></td>"
+            + "<td><div>" + esc(applicantName) + "</div><div class='opsQueueMeta'>" + esc(String(row.email || row.Parent_Email || "")) + "</div></td>"
+            + "<td><span class='opsStatusPill info' title='" + esc(opsDateAppliedTitle_(row)) + "'>" + esc(dateInfo.label) + "</span></td>"
+            + "<td><span class='opsStatusPill " + opsAgingKind_(row) + "' title='" + esc(opsDateAppliedTitle_(row)) + "'>" + esc(opsAgingDays_(row) || "Missing source") + "</span></td>"
+            + "<td><span class='opsStatusPill " + (opsDummyMarker_(applicantId, row).indexOf("Live") >= 0 ? "ok" : "muted") + "'>" + esc(opsDummyMarker_(applicantId, row)) + "</span></td>"
+            + "<td><span class='opsStatusPill " + docsState.cls + "'>" + esc(docsState.label) + "</span></td>"
+            + "<td><span class='opsStatusPill " + (paymentOk ? "ok" : "warn") + "'>" + esc(paymentOk ? "Payment Verified" : "Payment Pending") + "</span></td>"
+            + "<td><span class='opsStatusPill " + invoiceState.cls + "'>" + esc(invoiceState.label) + "</span></td>"
+            + "<td><span class='opsStatusPill " + (enrolledOk ? "ok" : "warn") + "'>" + esc(enrolledOk ? "Enrolled Confirmed" : "Enrolment Pending") + "</span></td>"
+            + "<td><span class='opsStatusPill muted'>" + esc(classroom.label) + "</span></td>"
+            + "<td><span class='opsReady " + opsReadySummary_(invoiceState, paymentOk, enrolledOk).cls + "'>" + esc(opsReadySummary_(invoiceState, paymentOk, enrolledOk).label) + "</span></td>"
+            + "</tr>";
+        }).join("");
+      }
       setOpsText_("cockpitKpiBilling", rows.some(invoiceRaisedFromRow_) ? "Invoice Raised / Books Connected" : "Books Connected");
       setOpsText_("cockpitKpiBillingState", rows.some(invoiceRaisedFromRow_) ? "Ready for payment" : "Connected");
       setOpsText_("cockpitKpiBillingMeta", invoiceRaisedCount > 0 ? (invoiceRaisedCount + " invoice-raised row(s) in the current queue snapshot.") : "No invoice-raised row in current queue snapshot.");
@@ -3478,7 +3882,8 @@
       var summaryStrip = document.getElementById("opsQueueSummaryStrip");
       if (summaryStrip) {
         summaryStrip.innerHTML = "<span class='opsStatusPill info'>Rows shown: " + String(rows.length) + "</span>"
-          + "<span class='opsStatusPill muted'>Sort: " + esc(String(opsActionState.queueSort || "aging_desc").replace(/_/g, " ")) + "</span>"
+          + "<span class='opsStatusPill muted'>Sort: " + esc(opsQueueSortLabel_()) + "</span>"
+          + (opsActionState.queueSearch ? "<span class='opsStatusPill info'>Search: " + esc(opsActionState.queueSearch) + "</span>" : "")
           + "<span class='opsStatusPill ok'>Invoices raised: " + String(invoiceRaisedCount) + "</span>"
           + "<span class='opsStatusPill ok'>Payment verified: " + String(paymentVerifiedCount) + "</span>"
           + "<span class='opsStatusPill warn'>Classroom pending/unknown: " + String(classroomPendingCount) + "</span>";
@@ -3487,11 +3892,27 @@
       renderOpsSelectedApplicantMini_(selectedRow);
       renderOpsLifecycleCascade_();
       renderOpsBooksFilters_();
-      Array.prototype.slice.call(body.querySelectorAll(".opsQueueSelectableRow")).forEach(function(rowEl){
+      Array.prototype.slice.call(document.querySelectorAll("#cockpitQueueBody .opsQueueSelectableRow, #opsLifecycleQueue .opsQueueSelectableRow")).forEach(function(rowEl){
         rowEl.addEventListener("click", function(){
           opsSelectApplicantContext_(rowEl.getAttribute("data-applicant-id") || "", rowEl.getAttribute("data-applicant-name") || "");
         });
         opsAttachApplicantRowMenu_(rowEl);
+      });
+      Array.prototype.slice.call(document.querySelectorAll("[data-review-applicant-id]")).forEach(function(btn){
+        btn.addEventListener("click", function(ev){
+          ev.stopPropagation();
+          var applicantId = String(btn.getAttribute("data-review-applicant-id") || "");
+          var applicantName = String(btn.getAttribute("data-review-applicant-name") || applicantId);
+          opsSelectApplicantContext_(applicantId, applicantName);
+          review(null, applicantId, btn);
+        });
+      });
+      Array.prototype.slice.call(document.querySelectorAll("[data-toggle-workflow-stage]")).forEach(function(btn){
+        btn.addEventListener("click", function(){
+          var key = "workflow_" + String(btn.getAttribute("data-toggle-workflow-stage") || "");
+          queueExpandState[key] = String(btn.getAttribute("data-workflow-expanded") || "") !== "1";
+          renderOpsQueue_();
+        });
       });
     }
     function renderOpsApplicantSummary_(detail){
@@ -3615,7 +4036,15 @@
     }
     function fetchOpsApplicantSummary_(applicantId){
       if (String(INITIAL_ADMIN_VIEW || "").toLowerCase() !== "ops") return;
-      var targetApplicantId = String(applicantId || opsSelectedApplicantId || OPS_SAFE_MODE_APPROVED_APPLICANT_ID || "").trim();
+      var targetApplicantId = String(applicantId || opsSelectedApplicantId || "").trim();
+      if (!targetApplicantId) {
+        opsApplicantDetailCache = null;
+        renderOpsApplicantSummary_(null);
+        renderOpsSelectedApplicantContext_();
+        renderOpsCommunicationStatePanel_();
+        renderOpsClassroomChecklist_();
+        return;
+      }
       opsSelectedApplicantId = targetApplicantId;
       google.script.run
         .withSuccessHandler(function(res){
@@ -4229,7 +4658,8 @@
       var recipient = opsFirstNonBlank_(preview.effectiveEmail, preview.recipientEmail, preview.recipient, "");
       var previewGenerated = String(preview.result || "").toUpperCase() === "PREVIEW";
       var approved = opsApplicantId_() === OPS_SAFE_MODE_APPROVED_APPLICANT_ID;
-      var notifyReason = preview.blockReason || (approved ? "Allowed only after preview and confirm." : "Blocked: selected applicant is not the approved Safe Mode target.");
+      var notifyAllowed = previewGenerated && (IS_SUPER || approved);
+      var notifyReason = preview.blockReason || (notifyAllowed ? "Allowed after preview and confirmation." : "Role restriction: Super Admin required for non-safe-test selected applicant.");
       function line(label, ok, detail){
         return "<div class='opsChecklistRow'><span>" + esc(label) + "</span><span class='opsStatusPill " + (ok ? "ok" : "warn") + "'>" + esc(detail) + "</span></div>";
       }
@@ -4241,7 +4671,7 @@
         line("Selected subjects visible", !!subjects, subjects || "No subject field loaded"),
         line("Classroom recipient available", !!recipient, recipient || "Recipient not known until preview/config resolves"),
         line("Preview generated", previewGenerated, previewGenerated ? "Yes" : "No"),
-        line("Notify allowed / blocked", approved && previewGenerated, notifyReason),
+        line("Notify allowed / blocked", notifyAllowed, notifyReason),
         "<div style='margin-top:8px;'><strong>Notify Classroom Admin does:</strong> Sends an internal classroom notification only. It does not mark enrolled, create packages, or write classroom state.</div>"
       ].join("");
     }
@@ -4985,6 +5415,34 @@
       if (workflowIsYes_(r.Portal_Submitted)) return "Documents / Payment Evidence Pending";
       return "Intake Received";
     }
+    function fdAckStatusFromRow_(row){
+      var r = row || {};
+      var type = String(r.Last_Contact_Type || "").trim();
+      var last = String(r.Last_Contact_Result || "").trim().toUpperCase();
+      var ack = String(r.Ack_Email_Status || "").trim().toUpperCase();
+      var email = String(r.Email_Status || "").trim().toUpperCase();
+      var result = ack || (type === "fd_acknowledgement" ? last : "") || email;
+      if (result === "SENT") return { label:"Ack Sent", cls:"badge badge-success" };
+      if (result === "FAILED") return { label:"Ack Failed", cls:"badge badge-warning" };
+      if (result === "BLOCKED" || result === "SKIPPED" || result === "DUPLICATE" || result === "COOLDOWN_ACTIVE") return { label:"Ack " + result.replace(/_/g, " "), cls:"badge badge-warning" };
+      return { label:"Ack Pending", cls:"badge badge-muted" };
+    }
+    function crmBackupStatusFromRow_(row){
+      var r = row || {};
+      var result = String(r.adapter_crm_result || "").trim().toUpperCase();
+      if (!result && opsFirstNonBlank_(r.Contact_ID, r.Deal_ID)) result = "CRM_OK";
+      if (result === "CRM_OK") return { label:"CRM Backup OK", cls:"badge badge-success" };
+      if (result === "CRM_FAILED") return { label:"CRM Backup Failed", cls:"badge badge-warning" };
+      if (result === "CRM_SHADOW") return { label:"CRM Shadow", cls:"badge badge-muted" };
+      if (result === "CRM_SKIPPED") return { label:"CRM Skipped", cls:"badge badge-muted" };
+      return { label:"CRM Unknown", cls:"badge badge-muted" };
+    }
+    function portalAccessStatusFromRow_(row){
+      var r = row || {};
+      if (workflowIsYes_(r.Portal_Submitted)) return { label:"Portal Submitted", cls:"badge badge-success" };
+      if (opsFirstNonBlank_(r.PortalURL, r.Portal_Link, r.PortalTokenHash)) return { label:"Portal Open", cls:"badge badge-success" };
+      return { label:"Portal Pending", cls:"badge badge-muted" };
+    }
     function renderLifecycleBadgesHtml_(row){
       var r = row || {};
       var invoice = invoiceRaisedFromRow_(r)
@@ -4999,9 +5457,15 @@
       var classroom = classroomStatusFromRow_(r);
       var email = invoiceEmailStatusFromRow_(r);
       var lifecycle = lifecycleStatusFromRow_(r);
+      var ack = fdAckStatusFromRow_(r);
+      var crm = crmBackupStatusFromRow_(r);
+      var portal = portalAccessStatusFromRow_(r);
       return [
         "<div class='muted' style='font-size:12px;margin-bottom:4px;'>" + esc(lifecycle) + "</div>",
-        "<span class='" + invoice.cls + "'>" + esc(invoice.label) + "</span>",
+        "<span class='" + ack.cls + "'>" + esc(ack.label) + "</span>",
+        " <span class='" + crm.cls + "'>" + esc(crm.label) + "</span>",
+        " <span class='" + portal.cls + "'>" + esc(portal.label) + "</span>",
+        " <span class='" + invoice.cls + "'>" + esc(invoice.label) + "</span>",
         " <span class='" + email.cls + "'>" + esc("Invoice Email: " + email.label) + "</span>",
         " <span class='" + payment.cls + "'>" + esc(payment.label) + "</span>",
         " <span class='" + enrolment.cls + "'>" + esc(enrolment.label) + "</span>",
@@ -5748,12 +6212,13 @@
 
     function resetQueueDataState_(){
       queueDataState = {
+        fdReceived: [],
         docs: [],
         awaitingPayment: [],
         payments: [],
         anomalies: [],
         paidApproved: [],
-        counts: { docs: 0, awaitingPayment: 0, payments: 0, anomalies: 0, paidApproved: 0 },
+        counts: { fdReceived: 0, docs: 0, awaitingPayment: 0, payments: 0, anomalies: 0, paidApproved: 0 },
         hasMore: false,
         nextOffset: 0
       };
@@ -5781,6 +6246,7 @@
       if (!btn || !meta) return;
       var hasMore = !!(queueDataState && queueDataState.hasMore);
       var loadedMax = Math.max(
+        Number((queueDataState.fdReceived || []).length || 0),
         Number((queueDataState.docs || []).length || 0),
         Number((queueDataState.awaitingPayment || []).length || 0),
         Number((queueDataState.payments || []).length || 0),
@@ -6437,12 +6903,14 @@ function renderStageDashboard_(items, emptyMessage){
             try {
               var data = (res && typeof res === "object") ? res : {};
               if (append) {
+                queueDataState.fdReceived = mergeQueueRows_(queueDataState.fdReceived, data.fdReceived);
                 queueDataState.docs = mergeQueueRows_(queueDataState.docs, data.docs);
                 queueDataState.awaitingPayment = mergeQueueRows_(queueDataState.awaitingPayment, data.awaitingPayment);
                 queueDataState.payments = mergeQueueRows_(queueDataState.payments, data.payments);
                 queueDataState.anomalies = mergeQueueRows_(queueDataState.anomalies, data.anomalies);
                 queueDataState.paidApproved = mergeQueueRows_(queueDataState.paidApproved, data.paidApproved);
               } else {
+                queueDataState.fdReceived = Array.isArray(data.fdReceived) ? data.fdReceived.slice() : [];
                 queueDataState.docs = Array.isArray(data.docs) ? data.docs.slice() : [];
                 queueDataState.awaitingPayment = Array.isArray(data.awaitingPayment) ? data.awaitingPayment.slice() : [];
                 queueDataState.payments = Array.isArray(data.payments) ? data.payments.slice() : [];
@@ -6479,16 +6947,17 @@ function renderStageDashboard_(items, emptyMessage){
     function setDefaultQueueExpandState_(counts){
       const c = counts || {};
       queueExpandState = {
-        queueDocs: Number(c.docs || 0) > 0,
+        queueFdReceived: Number(c.fdReceived || 0) > 0,
+        queueDocs: Number(c.docs || 0) > 0 && !(Number(c.fdReceived || 0) > 0),
         queueAwaitingPayment: false,
         queuePayments: false,
         queueAnomalies: false,
         queuePaidApproved: false
       };
-      if (!queueExpandState.queueDocs && Number(c.awaitingPayment || 0) > 0) {
+      if (!queueExpandState.queueFdReceived && !queueExpandState.queueDocs && Number(c.awaitingPayment || 0) > 0) {
         queueExpandState.queueAwaitingPayment = true;
       }
-      if (!queueExpandState.queueDocs && !queueExpandState.queueAwaitingPayment && Number(c.payments || 0) > 0) {
+      if (!queueExpandState.queueFdReceived && !queueExpandState.queueDocs && !queueExpandState.queueAwaitingPayment && Number(c.payments || 0) > 0) {
         queueExpandState.queuePayments = true;
       }
     }
@@ -6803,7 +7272,7 @@ function renderStageDashboard_(items, emptyMessage){
     function applySmartExpansion(counts){
       var c = counts || {};
       setDefaultQueueExpandState_(c);
-      ["queueDocs","queueAwaitingPayment","queuePayments","queueAnomalies","queuePaidApproved"].forEach(function(id){
+      ["queueFdReceived","queueDocs","queueAwaitingPayment","queuePayments","queueAnomalies","queuePaidApproved"].forEach(function(id){
         var el = document.getElementById(id);
         if (!el) return;
         el.classList.toggle("expanded", isQueueExpanded_(id));
@@ -6816,6 +7285,7 @@ function renderStageDashboard_(items, emptyMessage){
       var counts = d.counts || {};
       if (!o.keepPager) resetQueuePagerState_();
       applySmartExpansion(counts);
+      renderQueueSection("queueFdReceived", "Application Received / FD Received", d.fdReceived, counts.fdReceived);
       renderQueueSection("queueDocs", "Documents to Verify", d.docs, counts.docs);
       renderQueueSection("queueAwaitingPayment", "Awaiting Payment", d.awaitingPayment, counts.awaitingPayment);
       renderQueueSection("queuePayments", "Payments to Verify", d.payments, counts.payments);
@@ -6895,6 +7365,8 @@ function renderStageDashboard_(items, emptyMessage){
         var rowNumberRaw = String(btn.getAttribute("data-row-number") || "").trim();
         var rowNumber = Number(rowNumberRaw);
         if (applicantId) {
+          var queueRow = opsQueueRowByApplicantId_(applicantId) || {};
+          opsSelectApplicantContext_(applicantId, queueRow.name || queueRow.Student_Name || applicantId);
           review(null, applicantId, btn);
           return;
         }
@@ -7270,6 +7742,10 @@ function renderStageDashboard_(items, emptyMessage){
         setMsg("mMsg", msg);
         return;
       }
+      if (id) {
+        var rowContext = opsQueueRowByApplicantId_(id) || {};
+        opsSelectApplicantContext_(id, rowContext.name || rowContext.Student_Name || id);
+      }
       currentRowNumber = (Number.isFinite(rowNum) && rowNum >= 2) ? rowNum : null;
       currentDetail = null;
       resetCommunicationsState_("", false);
@@ -7330,6 +7806,9 @@ function renderStageDashboard_(items, emptyMessage){
           clearDocsLoading_("");
           currentDetail = detail;
           currentRowNumber = Number((detail && detail._rowNumber) || rowNum || 0) || null;
+          if (detail && detail.ApplicantID) {
+            opsSelectApplicantContext_(detail.ApplicantID, opsDetailName_(detail) || detail.ApplicantID);
+          }
           openModal(currentDetail);
           setActionButtonsEnabled(!!currentRowNumber);
           setMsg("mMsg", "");

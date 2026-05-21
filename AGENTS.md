@@ -9,6 +9,7 @@ Every release requires exact acceptance URLs and PASS/FAIL checks.
 Release incomplete until Admin whoami, Student whoami, and browser checks pass.
 When unsure, stop and surface uncertainty instead of guessing.
 Rollback prefers deployment repin first.
+Release closure follows `docs/governance/RELEASE_CLOSURE_DISCIPLINE.md`: close only against approved scope, classify new findings as BLOCKER or FOLLOW-UP, and record follow-ups without expanding the current release unless they are true blockers.
 
 Release Identity Gate:
 - Before any `clasp version` command, `Config.js` `VERSION` must already equal the intended release label, for example `r155`.

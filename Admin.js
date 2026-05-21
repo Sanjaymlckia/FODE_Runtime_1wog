@@ -3302,7 +3302,27 @@ function isQueueCandidateRow_(rowObj) {
   var docsVerified = clean_(row.Docs_Verified || "") === "Yes";
   var paymentVerified = clean_(row.Payment_Verified || "") === "Yes";
 
-  return portalSubmitted || docsVerified || paymentVerified;
+  return isExternalFdIntakeRow_(row) || portalSubmitted || docsVerified || paymentVerified;
+}
+
+function isExternalFdIntakeRow_(rowObj) {
+  var row = rowObj || {};
+  if (!clean_(row.ApplicantID || "")) return false;
+  var adapterSource = clean_(row.adapter_source || row.Adapter_Source || "").toLowerCase();
+  var forwarded = clean_(row.adapter_forwarded || row.Adapter_Forwarded || "").toLowerCase();
+  var hasForwarded = forwarded === "1" || forwarded === "true" || forwarded === "yes";
+  var hasAdapterVersion = !!clean_(row.adapter_version || row.Adapter_Version || "");
+  return adapterSource === "sheet_bound_adapter" || hasForwarded || hasAdapterVersion;
+}
+
+function compareFdReceivedQueueItems_(a, b) {
+  var aTime = parseTime_((a && (a.receivedAt || a.adapter_timestamp || a.portalLastUpdateAt || a.portalTokenIssuedAt)) || "");
+  var bTime = parseTime_((b && (b.receivedAt || b.adapter_timestamp || b.portalLastUpdateAt || b.portalTokenIssuedAt)) || "");
+  if (bTime !== aTime) return bTime - aTime;
+  var aSuffix = applicantSuffix_(a && a.applicantId);
+  var bSuffix = applicantSuffix_(b && b.applicantId);
+  if (bSuffix !== aSuffix) return bSuffix - aSuffix;
+  return Number(b && b.rowNumber || 0) - Number(a && a.rowNumber || 0);
 }
 
 function getDashboardCacheKey_(adminEmail) {
@@ -3471,7 +3491,7 @@ function sliceQueueByOffset_(rows, offset, limit) {
 }
 
 function normalizeReviewQueueData_(data) {
-  var names = ["docs", "awaitingPayment", "payments", "anomalies", "paidApproved", "postPaymentIssues"];
+  var names = ["fdReceived", "docs", "awaitingPayment", "payments", "anomalies", "paidApproved", "postPaymentIssues"];
   var src = (data && typeof data === "object") ? data : {};
   var out = { counts: {} };
   for (var i = 0; i < names.length; i++) {
@@ -3484,7 +3504,7 @@ function normalizeReviewQueueData_(data) {
 }
 
 function mergeQueuePageMeta_(queues, offset, limit) {
-  var names = ["docs", "awaitingPayment", "payments", "anomalies", "paidApproved", "postPaymentIssues"];
+  var names = ["fdReceived", "docs", "awaitingPayment", "payments", "anomalies", "paidApproved", "postPaymentIssues"];
   var hasMore = false;
   var nextOffset = "";
   for (var i = 0; i < names.length; i++) {
@@ -3661,18 +3681,20 @@ function admin_getReviewQueues(payload) {
     var data = sheet.getDataRange().getValues();
     if (!data || data.length < 2) {
       fullData = {
+        fdReceived: [],
         docs: [],
         awaitingPayment: [],
         payments: [],
         anomalies: [],
         paidApproved: [],
         postPaymentIssues: [],
-        counts: { payments: 0, docs: 0, awaitingPayment: 0, anomalies: 0, paidApproved: 0, postPaymentIssues: 0 }
+        counts: { fdReceived: 0, payments: 0, docs: 0, awaitingPayment: 0, anomalies: 0, paidApproved: 0, postPaymentIssues: 0 }
       };
     } else {
       var headers = data[0];
       var idx = headerIndex_(headers);
       var payments = [];
+      var fdReceived = [];
       var docs = [];
       var awaitingPayment = [];
       var anomalies = [];
@@ -3716,6 +3738,7 @@ function admin_getReviewQueues(payload) {
         var parentEmail = clean_(rowObj.Parent_Email || "");
         var correctedEmail = clean_(rowObj.Parent_Email_Corrected || "");
         var effectiveEmail = correctedEmail || parentEmail;
+        var parentPhone = clean_(rowObj.Parent_Phone || rowObj.Mobile || rowObj.WhatsApp || rowObj.Contact_Number || rowObj.Phone || rowObj.Phone_Number || "");
 
         var paymentVerifiedRaw = clean_(rowObj.Payment_Verified || "") === "Yes";
         var receiptUrl = clean_(rowObj.Fee_Receipt_File || "");
@@ -3736,6 +3759,7 @@ function admin_getReviewQueues(payload) {
           parentEmail: parentEmail,
           correctedEmail: correctedEmail,
           effectiveEmail: effectiveEmail,
+          Parent_Phone: parentPhone,
           portalLastUpdateAt: rowObj.PortalLastUpdateAt || "",
           portalTokenIssuedAt: rowObj.PortalTokenIssuedAt || "",
           receivedAt: receivedInfo.receivedAt,
@@ -3746,6 +3770,11 @@ function admin_getReviewQueues(payload) {
           ageBand: receivedInfo.ageBand,
           Handled_By: clean_(rowObj.Handled_By || ""),
           Handled_At: clean_(rowObj.Handled_At || ""),
+          Last_Contacted_At: clean_(rowObj.Last_Contacted_At || ""),
+          Email_Last_Sent_At: clean_(rowObj.Email_Last_Sent_At || ""),
+          Ack_Email_Sent_At: clean_(rowObj.Ack_Email_Sent_At || ""),
+          Payment_Verified_At: clean_(rowObj.Payment_Verified_At || rowObj.Payment_Verified_Date || ""),
+          Classroom_Handover_At: clean_(rowObj.Classroom_Handover_At || rowObj.Classroom_Notified_At || ""),
           Enrolled_By: clean_(rowObj.Enrolled_By || ""),
           Enrolled_At: clean_(rowObj.Enrolled_At || ""),
           docsFollowupEligibleBase: !!docsFollowupEligibleBase,
@@ -3766,6 +3795,7 @@ function admin_getReviewQueues(payload) {
         var paymentsQueueMatch = docsVerified && !paymentVerified && paymentEvidencePresent;
         var anomaliesQueueMatch = paymentVerified && !docsVerified;
         var paidApprovedQueueMatch = paymentVerified;
+        var fdReceivedQueueMatch = isExternalFdIntakeRow_(rowObj) && !portalSubmitted && !docsVerified && !paymentVerified;
 
         qItem.Portal_Submitted = portalSubmitted ? "Yes" : "No";
         qItem.Docs_Verified = docsVerified ? "Yes" : "No";
@@ -3783,6 +3813,25 @@ function admin_getReviewQueues(payload) {
         qItem.Books_Last_Error = clean_(rowObj.Books_Last_Error || "");
         qItem.Invoice_Email_Status = "UNKNOWN";
         qItem.invoiceRaised = !!qItem.Books_Invoice_ID;
+        qItem.FD_FormID = clean_(rowObj.FD_FormID || "");
+        qItem.FormID = clean_(rowObj.FormID || "");
+        qItem.correlation_id = clean_(rowObj.correlation_id || rowObj.Correlation_ID || "");
+        qItem.__reqId = clean_(rowObj.__reqId || "");
+        qItem.adapter_forwarded = clean_(rowObj.adapter_forwarded || rowObj.Adapter_Forwarded || "");
+        qItem.adapter_source = clean_(rowObj.adapter_source || rowObj.Adapter_Source || "");
+        qItem.adapter_version = clean_(rowObj.adapter_version || "");
+        qItem.adapter_mode = clean_(rowObj.adapter_mode || "");
+        qItem.adapter_crm_result = clean_(rowObj.adapter_crm_result || "");
+        qItem.adapter_timestamp = clean_(rowObj.adapter_timestamp || rowObj.adapterTimestamp || "");
+        qItem.CRM_Response = clean_(rowObj.CRM_Response || "");
+        qItem.Contact_ID = clean_(rowObj.Contact_ID || "");
+        qItem.Deal_ID = clean_(rowObj.Deal_ID || "");
+        qItem.Email_Status = clean_(rowObj.Email_Status || "");
+        qItem.Ack_Email_Status = clean_(rowObj.Ack_Email_Status || "");
+        qItem.Last_Contact_Type = clean_(rowObj.Last_Contact_Type || "");
+        qItem.Last_Contact_Result = clean_(rowObj.Last_Contact_Result || "");
+        qItem.Last_Contact_DebugId = clean_(rowObj.Last_Contact_DebugId || "");
+        qItem.PortalURL = clean_(rowObj.PortalURL || "");
 
         debugRows.push({
           id: clean_(rowObj.ApplicantID || rowObj.ID || rowObj["Applicant ID"] || "unknown"),
@@ -3797,7 +3846,8 @@ function admin_getReviewQueues(payload) {
           awaitingPaymentQueue: awaitingPaymentQueueMatch,
           paymentsQueue: paymentsQueueMatch,
           anomaliesQueue: anomaliesQueueMatch,
-          paidApprovedQueue: paidApprovedQueueMatch
+          paidApprovedQueue: paidApprovedQueueMatch,
+          fdReceivedQueue: fdReceivedQueueMatch
         });
         Logger.log("QUEUE_CLASSIFY " + JSON.stringify({
           applicantId: rowObj.ApplicantID,
@@ -3833,6 +3883,9 @@ function admin_getReviewQueues(payload) {
           pushQueueItem_(awaitingPayment, qItem);
         } else if (docsQueueMatch) {
           pushQueueItem_(docs, qItem);
+        } else if (fdReceivedQueueMatch) {
+          qItem.queueBucket = "fdReceived";
+          pushQueueItem_(fdReceived, qItem);
         }
 
         if (anomaliesQueueMatch) {
@@ -3842,6 +3895,7 @@ function admin_getReviewQueues(payload) {
           pushQueueItem_(postPaymentIssues, qItem);
         }
       }
+      fdReceived.sort(compareFdReceivedQueueItems_);
       docs.sort(compareQueueItems_);
       awaitingPayment.sort(compareQueueItems_);
       payments.sort(compareQueueItems_);
@@ -3856,6 +3910,7 @@ function admin_getReviewQueues(payload) {
             parentEmail: clean_(it.parentEmail || ""),
             correctedEmail: clean_(it.correctedEmail || ""),
             effectiveEmail: clean_(it.effectiveEmail || ""),
+            Parent_Phone: clean_(it.Parent_Phone || ""),
             receivedAt: clean_(it.receivedAt || ""),
             receivedDisplay: clean_(it.receivedDisplay || ""),
             receivedSource: clean_(it.receivedSource || ""),
@@ -3864,6 +3919,11 @@ function admin_getReviewQueues(payload) {
             ageBand: clean_(it.ageBand || ""),
             Handled_By: clean_(it.Handled_By || ""),
             Handled_At: clean_(it.Handled_At || ""),
+            Last_Contacted_At: clean_(it.Last_Contacted_At || ""),
+            Email_Last_Sent_At: clean_(it.Email_Last_Sent_At || ""),
+            Ack_Email_Sent_At: clean_(it.Ack_Email_Sent_At || ""),
+            Payment_Verified_At: clean_(it.Payment_Verified_At || ""),
+            Classroom_Handover_At: clean_(it.Classroom_Handover_At || ""),
             Enrolled_By: clean_(it.Enrolled_By || ""),
             Enrolled_At: clean_(it.Enrolled_At || ""),
             docsFollowupEligibleBase: !!it.docsFollowupEligibleBase,
@@ -3884,11 +3944,32 @@ function admin_getReviewQueues(payload) {
             Books_Push_By: clean_(it.Books_Push_By || ""),
             Books_Last_Error: clean_(it.Books_Last_Error || ""),
             Invoice_Email_Status: clean_(it.Invoice_Email_Status || "UNKNOWN"),
-            invoiceRaised: !!it.invoiceRaised
+            invoiceRaised: !!it.invoiceRaised,
+            FD_FormID: clean_(it.FD_FormID || ""),
+            FormID: clean_(it.FormID || ""),
+            correlation_id: clean_(it.correlation_id || ""),
+            __reqId: clean_(it.__reqId || ""),
+            adapter_forwarded: clean_(it.adapter_forwarded || ""),
+            adapter_source: clean_(it.adapter_source || ""),
+            adapter_version: clean_(it.adapter_version || ""),
+            adapter_mode: clean_(it.adapter_mode || ""),
+            adapter_crm_result: clean_(it.adapter_crm_result || ""),
+            adapter_timestamp: clean_(it.adapter_timestamp || ""),
+            queueBucket: clean_(it.queueBucket || ""),
+            CRM_Response: clean_(it.CRM_Response || ""),
+            Contact_ID: clean_(it.Contact_ID || ""),
+            Deal_ID: clean_(it.Deal_ID || ""),
+            Email_Status: clean_(it.Email_Status || ""),
+            Ack_Email_Status: clean_(it.Ack_Email_Status || ""),
+            Last_Contact_Type: clean_(it.Last_Contact_Type || ""),
+            Last_Contact_Result: clean_(it.Last_Contact_Result || ""),
+            Last_Contact_DebugId: clean_(it.Last_Contact_DebugId || ""),
+            PortalURL: clean_(it.PortalURL || "")
           });
         });
       }
       fullData = {
+        fdReceived: stripQueue_(fdReceived),
         docs: stripQueue_(docs),
         awaitingPayment: stripQueue_(awaitingPayment),
         payments: stripQueue_(payments),
@@ -3896,6 +3977,7 @@ function admin_getReviewQueues(payload) {
         paidApproved: stripQueue_(paidApproved),
         postPaymentIssues: stripQueue_(postPaymentIssues),
         counts: {
+          fdReceived: fdReceived.length,
           payments: payments.length,
           docs: docs.length,
           awaitingPayment: awaitingPayment.length,
@@ -3910,6 +3992,7 @@ function admin_getReviewQueues(payload) {
         }
       });
       Logger.log("QUEUE_SUMMARY " + JSON.stringify({
+        fdReceived: fdReceived.length,
         docs: docs.length,
         awaitingPayment: awaitingPayment.length,
         payments: payments.length,
@@ -3917,6 +4000,7 @@ function admin_getReviewQueues(payload) {
         paidApproved: paidApproved.length
       }));
       Logger.log("R232_QUEUE_CANARY SUMMARY " + JSON.stringify({
+        fdReceived: fdReceived.length,
         docs: docs.length,
         awaitingPayment: awaitingPayment.length,
         payments: payments.length,
@@ -3927,6 +4011,7 @@ function admin_getReviewQueues(payload) {
         scanned: scannedCount,
         skipped: skippedCount,
         candidates: candidateCount,
+        fdReceived: fdReceived.length,
         docs: docs.length,
         awaitingPayment: awaitingPayment.length,
         payments: payments.length,
@@ -3970,13 +4055,14 @@ function admin_getReviewQueues(payload) {
 
   return {
     ok: true,
+    fdReceived: refreshDocsFollowupRuntime_(sliceQueueByOffset_(fullData.fdReceived, offset, limit)),
     docs: refreshDocsFollowupRuntime_(sliceQueueByOffset_(fullData.docs, offset, limit)),
     awaitingPayment: refreshDocsFollowupRuntime_(sliceQueueByOffset_(fullData.awaitingPayment, offset, limit)),
     payments: refreshDocsFollowupRuntime_(sliceQueueByOffset_(fullData.payments, offset, limit)),
     anomalies: refreshDocsFollowupRuntime_(sliceQueueByOffset_(fullData.anomalies, offset, limit)),
     paidApproved: refreshDocsFollowupRuntime_(sliceQueueByOffset_(fullData.paidApproved, offset, limit)),
     postPaymentIssues: refreshDocsFollowupRuntime_(sliceQueueByOffset_(fullData.postPaymentIssues, offset, limit)),
-    counts: fullData.counts || { payments: 0, docs: 0, awaitingPayment: 0, anomalies: 0, paidApproved: 0, postPaymentIssues: 0 },
+    counts: fullData.counts || { fdReceived: 0, payments: 0, docs: 0, awaitingPayment: 0, anomalies: 0, paidApproved: 0, postPaymentIssues: 0 },
     offset: offset,
     limit: limit,
     hasMore: pageMeta.hasMore,
@@ -6459,6 +6545,8 @@ function runOpsSafeModeGate_(actionType, options) {
   var applicantId = clean_(opt.applicantId || payload.applicantId || "");
   var dbgId = clean_(opt.debugId || payload.debugId || "");
   var action = clean_(actionType || "");
+  var allowAction = (action === "applicant_email_send" && CONFIG.OPS_SAFE_MODE_ALLOW_APPLICANT_EMAIL_SENDS === true)
+    || (action === "classroom_notify" && CONFIG.OPS_SAFE_MODE_ALLOW_CLASSROOM_NOTIFY === true);
   logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_REQUESTED", {
     actionType: action,
     operator: adminEmail,
@@ -6481,20 +6569,20 @@ function runOpsSafeModeGate_(actionType, options) {
       blockReason: "Ops Safe Mode mutation actions require a Super Admin."
     };
   }
-  if (CONFIG.OPS_SAFE_MODE_ENABLED !== true) {
+  if (!allowAction) {
     logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_BLOCKED", {
       actionType: action,
       operator: adminEmail,
       applicantId: applicantId,
       debugId: dbgId,
-      blockCode: "OPS_SAFE_MODE_DISABLED"
+      blockCode: "OPS_SAFE_MODE_ACTION_NOT_ALLOWED"
     });
     return {
       ok: false,
       safeMode: true,
       diagnosticsLabel: "OPS_SAFE_MODE_ACTION_BLOCKED",
-      blockCode: "OPS_SAFE_MODE_DISABLED",
-      blockReason: "Ops Safe Mode is disabled."
+      blockCode: "OPS_SAFE_MODE_ACTION_NOT_ALLOWED",
+      blockReason: "This Ops action is not enabled."
     };
   }
   var runtime = null;
@@ -6529,7 +6617,7 @@ function runOpsSafeModeGate_(actionType, options) {
       safeMode: true,
       diagnosticsLabel: "OPS_SAFE_MODE_ACTION_BLOCKED",
       blockCode: "OPS_SAFE_MODE_MISSING_TARGET",
-      blockReason: "Ops Safe Mode requires a single approved applicant target."
+      blockReason: "Select a single applicant before running this Ops action."
     };
   }
   if (Array.isArray(payload.applicantIds) || Array.isArray(payload.recipients) || Array.isArray(payload.messages)) {
@@ -6548,116 +6636,33 @@ function runOpsSafeModeGate_(actionType, options) {
       blockReason: "Ops Safe Mode permits single-record actions only."
     };
   }
-  var allowAction = (action === "applicant_email_send" && CONFIG.OPS_SAFE_MODE_ALLOW_APPLICANT_EMAIL_SENDS === true)
-    || (action === "classroom_notify" && CONFIG.OPS_SAFE_MODE_ALLOW_CLASSROOM_NOTIFY === true);
-  if (!allowAction) {
-    logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_BLOCKED", {
+  if (CONFIG.OPS_SAFE_MODE_ENABLED !== true) {
+    logOpsSafeModeEvent_("OPS_SUPER_ADMIN_PARITY_ALLOWED", {
       actionType: action,
       operator: adminEmail,
       applicantId: applicantId,
       debugId: dbgId,
-      blockCode: "OPS_SAFE_MODE_ACTION_NOT_ALLOWED"
+      reason: "ops_safe_mode_disabled_but_super_admin_selected_applicant_parity"
     });
     return {
-      ok: false,
-      safeMode: true,
-      diagnosticsLabel: "OPS_SAFE_MODE_ACTION_BLOCKED",
-      blockCode: "OPS_SAFE_MODE_ACTION_NOT_ALLOWED",
-      blockReason: "This Ops action is not enabled in Safe Mode."
+      ok: true,
+      safeMode: false,
+      superAdminParity: true,
+      diagnosticsLabel: "OPS_SUPER_ADMIN_PARITY_ALLOWED"
     };
   }
-  var approvedTarget = CONFIG.OPS_SAFE_MODE_APPROVED_TARGET && typeof CONFIG.OPS_SAFE_MODE_APPROVED_TARGET === "object"
-    ? CONFIG.OPS_SAFE_MODE_APPROVED_TARGET
-    : {};
-  if (!clean_(approvedTarget.applicantId || approvedTarget.rowEmail || approvedTarget.email || approvedTarget.fullName || "")) {
-    logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_BLOCKED", {
-      actionType: action,
-      operator: adminEmail,
-      applicantId: applicantId,
-      debugId: dbgId,
-      blockCode: "OPS_SAFE_MODE_APPROVED_TARGET_MISSING"
-    });
-    return {
-      ok: false,
-      safeMode: true,
-      diagnosticsLabel: "OPS_SAFE_MODE_ACTION_BLOCKED",
-      blockCode: "OPS_SAFE_MODE_APPROVED_TARGET_MISSING",
-      blockReason: "No approved Ops Safe Mode target is configured."
-    };
-  }
-  var matchInfo = findOpsSafeModeTargetMatches_(approvedTarget);
-  if (!matchInfo.matches.length) {
-    logOpsSafeModeEvent_("OPS_SAFE_MODE_TARGET_MISMATCH", {
-      actionType: action,
-      operator: adminEmail,
-      applicantId: applicantId,
-      debugId: dbgId,
-      matchPriority: matchInfo.priority || ""
-    });
-    return {
-      ok: false,
-      safeMode: true,
-      diagnosticsLabel: "OPS_SAFE_MODE_TARGET_MISMATCH",
-      blockCode: "OPS_SAFE_MODE_TARGET_MISMATCH",
-      blockReason: "Approved Safe Mode target did not resolve to a live applicant record."
-    };
-  }
-  if (matchInfo.matches.length !== 1) {
-    logOpsSafeModeEvent_("OPS_SAFE_MODE_TARGET_NOT_UNIQUE", {
-      actionType: action,
-      operator: adminEmail,
-      applicantId: applicantId,
-      debugId: dbgId,
-      matchPriority: matchInfo.priority || "",
-      matchCount: matchInfo.matches.length
-    });
-    return {
-      ok: false,
-      safeMode: true,
-      diagnosticsLabel: "OPS_SAFE_MODE_TARGET_NOT_UNIQUE",
-      blockCode: "OPS_SAFE_MODE_TARGET_NOT_UNIQUE",
-      blockReason: "Approved Safe Mode target is not unique."
-    };
-  }
-  var approvedMatch = matchInfo.matches[0];
-  if (clean_(approvedMatch.applicantId || "") !== applicantId) {
-    logOpsSafeModeEvent_("OPS_SAFE_MODE_TARGET_MISMATCH", {
-      actionType: action,
-      operator: adminEmail,
-      applicantId: applicantId,
-      approvedApplicantId: clean_(approvedMatch.applicantId || ""),
-      debugId: dbgId,
-      matchPriority: matchInfo.priority || ""
-    });
-    return {
-      ok: false,
-      safeMode: true,
-      diagnosticsLabel: "OPS_SAFE_MODE_TARGET_MISMATCH",
-      blockCode: "OPS_SAFE_MODE_TARGET_MISMATCH",
-      blockReason: "This Ops Safe Mode action is approved only for the configured test identity."
-    };
-  }
-  logOpsSafeModeEvent_("OPS_SAFE_MODE_TARGET_MATCHED", {
-    actionType: action,
-    operator: adminEmail,
-    applicantId: applicantId,
-    approvedApplicantId: clean_(approvedMatch.applicantId || ""),
-    debugId: dbgId,
-    matchPriority: matchInfo.priority || ""
-  });
-  logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_ALLOWED", {
+  logOpsSafeModeEvent_("OPS_SUPER_ADMIN_PARITY_ALLOWED", {
     actionType: action,
     operator: adminEmail,
     applicantId: applicantId,
     debugId: dbgId,
-    recipientOverride: action === "applicant_email_send" ? clean_(CONFIG.OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE || "") : "",
-    overrideApplied: action === "applicant_email_send" && !!clean_(CONFIG.OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE || "")
+    reason: "approved_target_gate_bypassed_for_super_admin_selected_applicant"
   });
   return {
     ok: true,
-    safeMode: true,
-    approvedApplicantId: clean_(approvedMatch.applicantId || ""),
-    diagnosticsLabel: "OPS_SAFE_MODE_ACTION_ALLOWED"
+    safeMode: false,
+    superAdminParity: true,
+    diagnosticsLabel: "OPS_SUPER_ADMIN_PARITY_ALLOWED"
   };
 }
 

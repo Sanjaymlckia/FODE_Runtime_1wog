@@ -2892,6 +2892,28 @@ function isUnattendedEmailSource_(source) {
   return /TRIGGER|AUTOMATED|AUTO_|RUNNER|SCHEDULE|SCHEDULER|WORKFLOW|FOLLOWUP/.test(normalized);
 }
 
+function isAutomatedFdAckUnattendedSendAllowed_(templateType, context) {
+  var ctx = context && typeof context === "object" ? context : {};
+  var messageType = safeStr_(templateType || ctx.templateType || ctx.messageType || "").toLowerCase();
+  var source = safeStr_(ctx.sendSource || ctx.source || "").toUpperCase();
+  var processorSource = safeStr_(ctx.processorSource || "").toLowerCase();
+  var limitRaw = ctx.limit;
+  var limit = limitRaw === undefined || limitRaw === null || limitRaw === "" ? 1 : Number(limitRaw || 0);
+  return !!(
+    CONFIG &&
+    CONFIG.ENABLE_AUTOMATED_FD_ACK_SENDS === true &&
+    CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS === true &&
+    (CONFIG.OPS_SAFE_MODE_ENABLED !== true || CONFIG.OPS_SAFE_MODE_ALLOW_APPLICANT_EMAIL_SENDS === true) &&
+    messageType === "fd_acknowledgement" &&
+    safeStr_(ctx.applicantId || "") &&
+    (limit === 1) &&
+    source === "FD_ACK_POST_COMMIT" &&
+    processorSource === "intake_post_commit" &&
+    safeStr_(ctx.processorScope || ctx.scope || "") === "single_applicant" &&
+    ctx.duplicateGuardPassed === true
+  );
+}
+
 function blockUnattendedEmailSendIfNeeded_(templateType, recipient, context) {
   var ctx = context && typeof context === "object" ? context : {};
   var source = safeStr_(ctx.sendSource || ctx.source || ctx.action || "");
@@ -2899,6 +2921,9 @@ function blockUnattendedEmailSendIfNeeded_(templateType, recipient, context) {
   if (!unattended) return { blocked: false };
   if (CONFIG && CONFIG.ENABLE_UNATTENDED_EMAIL_SENDS === true) {
     return { blocked: false, reauthorized: true };
+  }
+  if (isAutomatedFdAckUnattendedSendAllowed_(templateType, ctx)) {
+    return { blocked: false, reauthorized: true, narrowGate: "FD_ACK_POST_COMMIT" };
   }
   var rowObj = ctx.rowObj && typeof ctx.rowObj === "object" ? ctx.rowObj : {};
   var idempotencyKey = buildSendIdempotencyKey_(rowObj, templateType, recipient, ctx);

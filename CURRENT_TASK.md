@@ -1,5 +1,74 @@
 # Current Task
 
+## Active CIS
+
+- `CIS r189: OPS Functional Parity, Role Hierarchy, and Full Function Availability`.
+- Target runtime identity: `r189 / 189`.
+- Scope classification: functional parity and authority correction for existing Admin-equivalent OPS functions.
+- Implementation status:
+  - Super Admin OPS selected-applicant communication/classroom notify no longer uses the `OPS_SAFE_MODE_APPROVED_TARGET` as a production blocker.
+  - `OPS_SAFE_MODE_APPROVED_TARGET` remains configured as diagnostic fallback only and is not used as the normal OPS selected applicant.
+  - Once queue rows load, OPS auto-selects the newest visible/actionable row unless the operator has explicitly selected another row.
+  - Search/result/review/communications row actions must select that row before any preview/send action.
+  - Operator/Admin role limits remain; non-Super Admin OPS mutations still use role restrictions.
+  - Applicant message sends still require selected ApplicantID, explicit confirmation, recipient validation, duplicate/cooldown/idempotency, and existing durable writeback.
+  - WhatsApp fallback queue remains visible under `Exceptions`; filter values align to backend-supported fallback filters.
+  - OPS Communications now exposes email correction using the existing `admin_updateParentEmailCorrected` Super Admin backend and audit/writeback behaviour.
+
+## r189 Acceptance Checklist
+
+- Apps Script platform version: `205`.
+- Admin deployment: repinned to `@205`.
+- Student deployment: repinned to `@205`.
+- Admin whoami: PASS, `r189 / 189`, `mismatch=false`.
+- Student whoami: PASS, `r189 / 189`, `mismatch=false`.
+- Missing Documents Request as Super Admin for non-safe-test applicant: pending.
+- General Reminder as Super Admin for non-safe-test applicant: pending.
+- Portal Access resend as Super Admin for non-safe-test applicant: pending.
+- Custom Email as Super Admin for non-safe-test applicant: pending.
+- WhatsApp fallback queue/export visibility: pending.
+- Email correction search/select/update/effective-email reflection: pending.
+- Context integrity: pending, selected tile, Communications panel, recipient, and server payload ApplicantID must match.
+- No commit/tag until operator acceptance.
+
+## Previous CIS
+
+- `CIS r188: OPS Workflow UX Stabilization`.
+- Target runtime identity: `r188 / 188`.
+- Scope classification: UX/workflow stabilization only; no backend business logic expansion.
+- Allowed edit files:
+  - `AdminUI.html`
+  - `Admin.js` only for minor read-only queue row/status field support
+  - `Code.js` only for existing read-only exposure if needed
+  - `CURRENT_TASK.md`
+  - `Config.js` for release identity
+- Forbidden:
+  - Do not touch `FODE_Data` adapter.
+  - Do not touch CRM routing, Zoho logic, fd_ack send gates, Books/payment/enrolment/classroom backend writes.
+  - Do not process historical rows, change schema, create new deployments, or change canonical URLs.
+
+## r188 Implementation Notes
+
+- Applicant Queue is being stabilized as one lifecycle workflow surface.
+- Lifecycle sections are ordered as: Application Received / FD Received; Portal Access / Portal Submitted; Documents Pending / Review; Payment Pending; Invoice / Books; Enrolment Pending; Classroom Handover; Exceptions / Blocked.
+- Queue search now targets loaded lifecycle rows by `ApplicantID`, applicant/student name, email, and phone.
+- Standalone sort buttons are removed from the workflow surface and replaced by clickable sortable headers.
+- Selected applicant context remains the authority for Communications, Billing, Portal Diagnostics, Classroom, and selected action panels.
+- Backend-missing controls are grouped under `Not Yet Available / Backend Missing` so daily operator workflow is separated from unaccepted modules.
+
+## r188 Acceptance Checklist
+
+- Admin whoami: pending, must report `r188 / 188`, `mismatch=false`.
+- Student whoami: pending, must report `r188 / 188`, `mismatch=false`.
+- Browser/manual OPS acceptance: pending.
+- Queue load: pending.
+- Lifecycle workflow order and newest FD intake visibility: pending.
+- Search by ApplicantID/name/email/phone: pending.
+- Selected context and review drawer alignment: pending.
+- Sortable header behavior: pending.
+- Date Applied, Aging, Last Action visibility: pending.
+- Not Yet Available / Backend Missing register visible: pending.
+
 ## Accepted Baseline
 
 - Latest deployed runtime before this task: `r184`.
@@ -9,13 +78,14 @@
 
 ## Active CIS
 
-- `CIS r185: post-commit single-ApplicantID fd_acknowledgement automation`.
-- Classification: approved to implement based on design pass, with duplicate durable-state correction.
+- `CIS r186: Narrow Automated FD Acknowledgement Send Gate`.
+- Classification: approved to implement the narrow fd_ack unattended-send exception only.
 - Allowed edit files:
   - `Code.js`
-  - `Admin.js`
+  - `Utils.js` only if needed for narrow gate logic
+  - `Config.js` for narrow config flag and release identity
   - `CURRENT_TASK.md`
-  - `Config.js` only for r185 / 185 release bump when release execution begins
+  - `Admin.js` only if diagnostic/admin wrapper adjustment is needed
 
 ## Required Business Outcome
 
@@ -24,7 +94,7 @@ New FD submission:
 1. OPS row is created.
 2. Intake lock is released after row/token/folder/verification commit.
 3. Only the newly created `ApplicantID` is evaluated.
-4. `fd_acknowledgement` sends once if gates allow.
+4. `fd_acknowledgement` sends automatically once if gates allow.
 5. If gates block, durable block evidence is recorded.
 6. Duplicate rerun does not send again.
 7. Intake success response remains independent of acknowledgement email success.
@@ -42,6 +112,8 @@ New FD submission:
 - No trigger or broad autonomous runner activation.
 - No broad UI rewrite.
 - Safe Mode and production gates remain active.
+- `CONFIG.ENABLE_UNATTENDED_EMAIL_SENDS` must remain `false`.
+- Narrow r186 automation may authorize only `fd_acknowledgement`, `FD_ACK_POST_COMMIT`, one `ApplicantID`, single-row post-commit scope, with duplicate guard passed.
 
 ## Duplicate / Blocked Durable Mapping
 
@@ -70,20 +142,104 @@ New FD submission:
 
 ## Current Stop State
 
-- Local `Config.js` identity is bumped to `r185 / 185`.
-- `clasp push`: PASS.
-- Remote source proof outside repo root: PASS from `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog_remote_verify_r185_20260521_1052`.
-- Apps Script platform version created: `196`.
-- r185 confirmation wrapper patch-forward platform version created: `197`.
-- r185 manual fd_ack routing patch-forward platform version created: `198`.
-- Admin staging deployment: pinned to `@198`.
-- Student staging deployment: pinned to `@198`.
-- Admin whoami: PASS, `r185 / 185`, `mismatch=false`.
-- Student whoami: PASS, `r185 / 185`, `mismatch=false`.
-- Live fd_ack wrapper now accepts `confirmManualSingleSend: true` with `confirmApplicantId` matching the single `ApplicantID`.
-- Manual fd_ack acceptance route now classifies confirmed Admin/Ops single-row sends as `manualSingleSendProbe: true`, `unattended: false`, `sendSource: FD_ACK_MANUAL_SINGLE`.
-- Automatic post-commit fd_ack remains `BACKEND_EXISTS_BUT_GATED`; it still uses unattended-send policy and requires a separate approved narrow send-gate CIS before `AUTOMATED_WORKFLOW_ACTIVE`.
-- r185 finalization allowed after recording this status and staging only `Config.js`, `Code.js`, `Admin.js`, and `CURRENT_TASK.md`.
+- r187 / adapter-r002 implementation in progress.
+- Adapter project `FODE_Data` was updated in isolated folder `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Data_adapter_audit`.
+- Adapter source identity: `adapter-r002`.
+- Adapter default mode: `CRM_BACKUP_LIVE`.
+- Adapter canonical forwarding target remains Admin deployment `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ`.
+- Adapter Apps Script platform version created: `27`.
+- Existing pinned adapter deployments repinned to `@27`:
+  - `AKfycbw2foU2aG1XL94EcDvNF-_BrQMmpWwdIdApMZLyYTKG6HIkWlrbLlAIVu5bnmxE4OE6`
+  - `AKfycbzEplxMwBCLxZOCYJ1QyAz1eJwvghWMmd92ZwoMLeJYiaaZFA64RQhxCgoW1O3DsDoG`
+- Adapter Script Property setting still requires manual confirmation if existing property remains `CRM_SHADOW`: set `ADAPTER_MODE = CRM_BACKUP_LIVE`.
+- Main runtime local identity is bumped to `r187 / 187`.
+- r187 `clasp push`: PASS, pushed 8 files at 7:59:58 pm.
+- r187 remote source proof outside repo root: PASS from `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog_remote_verify_r187_20260521_2000`.
+- r187 Apps Script platform version created: `202`.
+- Admin staging deployment: repinned to `@202`.
+- Student staging deployment: repinned to `@202`.
+- Admin whoami after r187 repin: PASS, `r187 / 187`, `mismatch=false`.
+- Student whoami after r187 repin: PASS, `r187 / 187`, `mismatch=false`.
+- r187 runtime scope:
+  - Add `fdReceived` / `Application Received` queue bucket for new external FD intake rows.
+  - Carry adapter/CRM/fd_ack status fields into queue rows.
+  - Display ack, CRM backup, portal, docs, and payment badges where loaded row data exists.
+  - Fix selected applicant context so review/open paths update OPS selected panels.
+- Pending r187 validation: operator FD/PS acceptance test proving adapter `CRM_BACKUP_LIVE`, CRM backup write/log result, fd_ack result, OPS `Application Received / FD Received` visibility, and selected-applicant context alignment.
+
+- r186 implementation in progress.
+- Local `Config.js` identity is bumped to `r186 / 186`.
+- `ENABLE_UNATTENDED_EMAIL_SENDS` remains `false`.
+- `ENABLE_AUTOMATED_FD_ACK_SENDS` is the narrow r186 authorization flag.
+- `clasp push`: PASS, pushed 8 files at 12:32:08 pm.
+- Remote source proof outside repo root: PASS from `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog_remote_verify_r186_20260521_1232`.
+- Apps Script platform version created: `199`.
+- Admin staging deployment: pinned to `@199`.
+- Student staging deployment: pinned to `@199`.
+- Admin whoami: PASS, `r186 / 186`, `mismatch=false`.
+- Student whoami: PASS, `r186 / 186`, `mismatch=false`.
+- r186 gate-metadata forwarding patch: PASS.
+- Patch-forward `clasp push`: PASS, pushed 8 files at 12:58:46 pm.
+- Patch-forward remote source proof outside repo root: PASS from `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog_remote_verify_r186_forwarding_20260521_1259`.
+- Patch-forward Apps Script platform version created: `200`.
+- Admin staging deployment: repinned to `@200`.
+- Student staging deployment: repinned to `@200`.
+- Admin whoami after patch-forward: PASS, `r186 / 186`, `mismatch=false`.
+- Student whoami after patch-forward: PASS, `r186 / 186`, `mismatch=false`.
+- External FD feed classification patch-forward `clasp push`: PASS, pushed 8 files at 1:48:09 pm.
+- External FD feed classification remote source proof outside repo root: PASS from `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog_remote_verify_r186_classification_20260521_1348`.
+- External FD feed classification Apps Script platform version created: `201`.
+- Admin staging deployment: repinned to `@201`.
+- Student staging deployment: repinned to `@201`.
+- Admin whoami after external FD feed classification patch-forward: PASS, `r186 / 186`, `mismatch=false`.
+- Student whoami after external FD feed classification patch-forward: PASS, `r186 / 186`, `mismatch=false`.
+- Automatic post-commit fd_ack must not be classified as `AUTOMATED_WORKFLOW_ACTIVE` until all r186 acceptance tests pass.
+- Pending acceptance: Admin badge check, manual regression, automatic new FD submission, duplicate rerun, and safety regression.
+
+## r186 Patch-Forward: External FD Feed Classification + Portal Link
+
+- Phase 1 diagnosis: PASS.
+- Proven cause: `AdminUI.html` used stale `opsDummyMarker_(applicantId)` logic that marked only `FODE-26-002013` as live and all other ApplicantIDs as `Dummy / test`.
+- Evidence row: `FODE-26-002938` showed external FD feed fields (`FD_FormID`, `FormID`, `adapter_forwarded = 1`, `adapter_source = sheet_bound_adapter`, `correlation_id`, `__reqId`) but no durable fd_ack result.
+- Phase 2 approved files: `AdminUI.html`, `Code.js`, `CURRENT_TASK.md`, and `Config.js` only if identity/source proof requires it.
+- Patch-forward implementation:
+  - Admin UI marker is now row-aware: explicit test/dummy patterns remain `Dummy / test`; external FD feed rows display as `Live / external FD feed`; other rows display as `Unclassified`.
+  - fd_ack email body now presents `Open Student Portal` plus a plain copy-paste fallback URL for Chrome using the existing canonical portal URL.
+  - Post-commit fd_ack exception/lock-skip branches now write minimal durable `Last_Contact_*` trace as `FAILED` or `SKIPPED` using existing fields.
+- Send gate status: unchanged. No global Safe Mode weakening, no `ENABLE_UNATTENDED_EMAIL_SENDS` change, no further r186 gate patch without runtime/log evidence.
+
+## r186 Acceptance Checklist
+
+- Runtime:
+  - Admin whoami `r186 / 186`, `mismatch=false`.
+  - Student whoami `r186 / 186`, `mismatch=false`.
+  - Admin badge `r186 / 186`.
+- Manual regression:
+  - fd_ack manual send/dry-run path still works or duplicate guard blocks appropriately.
+- Automatic new FD submission:
+  - New `ApplicantID` appears in OPS.
+  - Only that `ApplicantID` is evaluated.
+  - fd_ack email sends automatically if gates allow.
+  - Email is received by intended/test recipient.
+  - Email includes Student Portal link.
+  - Email includes Documents still required section or valid fallback.
+  - Durable state records `SENT`.
+  - No historical rows touched.
+- Duplicate protection:
+  - Same `ApplicantID` rerun sends no second email.
+  - Duplicate/cooldown/prior fd_ack reason is durable.
+- Safety regression:
+  - `ENABLE_UNATTENDED_EMAIL_SENDS` remains `false`.
+  - Other unattended message types remain blocked.
+  - Stage runner/global automated sends are not enabled.
+  - No broad scan occurred.
+
+## r186 Release Discipline
+
+- Remote source proof required before Apps Script versioning.
+- Repin existing Admin and Student deployments only; do not create new deployment IDs.
+- No commit or tag until all acceptance tests pass.
+- If r186 fails, repin Admin and Student back to r185 platform version `198` and verify whoami `r185 / 185`.
 
 ## Next Release Notes
 
@@ -105,3 +261,42 @@ New FD submission:
 ### Out of scope for r185 finalization
 
 - Keep other backend-missing items out of r185 finalization.
+
+## Release Closure Discipline + Follow-Up Register (Binding)
+
+### Purpose
+
+Protect runtime stability and prevent release drift.
+
+### Rule
+
+A release closes only against its approved scope and acceptance criteria.
+
+New findings discovered during implementation, browser testing, operator testing, live acceptance, or runtime observation must be classified before affecting closure.
+
+### Classification
+
+`BLOCKER`
+
+- Definition: directly prevents the approved release objective from functioning correctly.
+- Examples: whoami mismatch, deployment mismatch, broken workflow, duplicate protection failure, unintended send/write, security regression, data corruption risk.
+- Action: may block release closure.
+
+`FOLLOW-UP`
+
+- Definition: important but does not prevent the approved release objective from functioning.
+- Examples: mobile-safe portal links, PNG device usability improvements, future automation, UI enhancements, reporting improvements, workflow optimization, convenience features.
+- Action: must not block release closure.
+
+### Closure Rule
+
+- Do not silently absorb follow-up items into the current release.
+- Do not expand acceptance criteria after implementation begins unless the issue is a true `BLOCKER`.
+- Closure occurs against approved scope only.
+
+## Follow-Up Register
+
+| ID | Description | Source release | Suggested target release | Priority | Dependency | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| FU-001 | Narrow automated fd_acknowledgement send gate for post-commit single ApplicantID workflow | r185 | r186 | High | narrow unattended-send exception design | In progress |
+| FU-002 | Mobile-safe Student Portal links for PNG users; canonical /macros/s URL plus copy-paste fallback | r185 | r186 | High | portal link generation review | Pending |

@@ -434,6 +434,13 @@ function doPost(e) {
           source: "intake_post_commit"
         });
       } catch (fdAckErr) {
+        recordFdAcknowledgementPostCommitTrace_(dataSheet, targetRow, "FAILED", {
+          source: "intake_post_commit",
+          correlationId: correlationId,
+          debugId: cid || "",
+          code: "FD_ACK_POST_COMMIT_NON_FATAL",
+          reason: String(fdAckErr && fdAckErr.message ? fdAckErr.message : fdAckErr)
+        });
         logActivation_(logSheet, "FD_ACK_POST_COMMIT_NON_FATAL", {
           correlation_id: correlationId,
           targetRow: targetRow,
@@ -442,6 +449,13 @@ function doPost(e) {
         });
       }
     } else {
+      recordFdAcknowledgementPostCommitTrace_(dataSheet, targetRow, "SKIPPED", {
+        source: "intake_post_commit",
+        correlationId: correlationId,
+        debugId: cid || "",
+        code: "INTAKE_LOCK_RELEASE_FAILED",
+        reason: "INTAKE_LOCK_RELEASE_FAILED"
+      });
       logActivation_(logSheet, "FD_ACK_POST_COMMIT_SKIPPED", {
         correlation_id: correlationId,
         targetRow: targetRow,
@@ -6279,8 +6293,14 @@ function campaignSendEmailGmail_(toEmail, subject, body, meta) {
   var unattendedBlock = blockUnattendedEmailSendIfNeeded_(clean_(trace.templateType || trace.messageType || subject || ""), to, {
     action: "campaign_send_email",
     sendSource: clean_(trace.sendSource || ""),
+    source: clean_(trace.source || ""),
     unattended: trace.unattended === true,
     applicantId: clean_(trace.applicantId || ""),
+    messageType: clean_(trace.messageType || trace.templateType || ""),
+    limit: trace.limit,
+    processorSource: clean_(trace.processorSource || ""),
+    processorScope: clean_(trace.processorScope || ""),
+    duplicateGuardPassed: trace.duplicateGuardPassed === true,
     rowObj: trace.rowObj && typeof trace.rowObj === "object" ? trace.rowObj : {},
     debugId: clean_(trace.requestId || trace.debugId || "")
   });
@@ -6579,6 +6599,8 @@ function buildFdAcknowledgementEmailBody_(context) {
   var row = ctx.rowObj || {};
   var parentOrApplicantName = buildParentOrApplicantName_(row);
   var applicantName = buildApplicantFullName_(row) || "the applicant";
+  var portalUrl = clean_(ctx.portalUrl || "");
+  if (portalUrl && typeof canonicalizeWebAppUrl_ === "function") portalUrl = canonicalizeWebAppUrl_(portalUrl);
   var docLines = buildFdAcknowledgementDocumentLines_(row);
   var docsSection = docLines.length ? [
     "Documents still required:",
@@ -6600,7 +6622,11 @@ function buildFdAcknowledgementEmailBody_(context) {
     "",
     "Please visit the Student Portal using the link below to review your application details and upload any remaining required documents:",
     "",
-    String(ctx.portalUrl || ""),
+    "Open Student Portal:",
+    portalUrl,
+    "",
+    "If the link does not open, copy and paste this full URL into Chrome:",
+    portalUrl,
     "",
     "If you need assistance, please contact FODE Admissions using the contact details provided in your application communication.",
     "",
@@ -7016,12 +7042,36 @@ function fdAcknowledgementInternalActor_() {
 
 function fdAcknowledgementBatchLabel_(source, debugId) {
   var src = clean_(source || "auto").toLowerCase().replace(/[^a-z0-9_-]+/g, "_").slice(0, 32) || "auto";
-  return clean_("r185 fd_ack " + src + " " + clean_(debugId || newDebugId_()));
+  return clean_("fd_ack " + src + " " + clean_(debugId || newDebugId_()));
 }
 
 function fdAcknowledgementContactSubject_(prefix, code) {
   var c = clean_(code || "");
   return clean_("fd_acknowledgement " + clean_(prefix || "blocked") + (c ? ": " + c : ""));
+}
+
+function recordFdAcknowledgementPostCommitTrace_(sheet, rowNumber, outcome, details) {
+  var sh = sheet;
+  var rowNum = Number(rowNumber || 0);
+  if (!sh || rowNum < 2) return false;
+  var info = details && typeof details === "object" ? details : {};
+  var actor = fdAcknowledgementInternalActor_();
+  var result = clean_(outcome || "");
+  var code = clean_(info.code || "");
+  var patch = {
+    Last_Contact_Type: "fd_acknowledgement",
+    Last_Contact_Result: result,
+    Last_Contact_Batch: clean_(info.batchLabel || fdAcknowledgementBatchLabel_(info.source || "post_commit", info.debugId || info.correlationId || "")),
+    Last_Contact_DebugId: clean_(info.debugId || info.correlationId || ""),
+    Last_Contact_By: clean_(actor.actorEmail || ""),
+    Last_Contact_Subject: fdAcknowledgementContactSubject_(String(result || "trace").toLowerCase(), code || clean_(info.reason || ""))
+  };
+  try {
+    applyPatch_(sh, rowNum, patch);
+    return true;
+  } catch (_traceErr) {
+    return false;
+  }
 }
 
 function runFdAcknowledgementForCommittedRow_(sheet, rowNumber, opts) {
@@ -7155,7 +7205,10 @@ function runFdAcknowledgementForCommittedRow_(sheet, rowNumber, opts) {
     debugId: debugId,
     manualSingleSendProbe: options.manualSingleSendProbe === true,
     sendSource: clean_(options.sendSource || "FD_ACK_POST_COMMIT"),
-    unattended: options.unattended === false ? false : true
+    unattended: options.unattended === false ? false : true,
+    limit: 1,
+    processorSource: clean_(options.source || ""),
+    processorScope: "single_applicant"
   });
   if (clean_(dispatched.result || "").toUpperCase() === "BLOCKED") {
     recordApplicantContactOutcome_(context, "BLOCKED", {
@@ -7744,6 +7797,10 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
     templateType: clean_(ctx.messageType || ""),
     sendSource: clean_(options.sendSource || ctx.sendSource || ""),
     unattended: options.unattended === true || ctx.unattended === true,
+    limit: Number(options.limit || 0) || 1,
+    processorSource: clean_(options.processorSource || ctx.processorSource || ""),
+    processorScope: clean_(options.processorScope || ctx.processorScope || ""),
+    duplicateGuardPassed: true,
     rowObj: ctx.rowObj && typeof ctx.rowObj === "object" ? ctx.rowObj : {}
   });
   if (!sendRes.ok) {
