@@ -250,6 +250,7 @@ function doPost(e) {
   var rowCommitted = false;
   var verification = null;
   var intakeLock = LockService.getScriptLock();
+  var intakeLockReleased = false;
 
   try {
     intakeLock.waitLock(30000);
@@ -418,6 +419,36 @@ function doPost(e) {
       targetRow: targetRow,
       applicantId: applicantId
     });
+    var fdAckLockReleased = false;
+    try {
+      intakeLock.releaseLock();
+      intakeLockReleased = true;
+      fdAckLockReleased = true;
+    } catch (_releaseErr) {}
+    if (fdAckLockReleased) {
+      try {
+        runFdAcknowledgementForCommittedRow_(dataSheet, targetRow, {
+          applicantId: applicantId,
+          correlationId: correlationId,
+          debugId: cid || newDebugId_(),
+          source: "intake_post_commit"
+        });
+      } catch (fdAckErr) {
+        logActivation_(logSheet, "FD_ACK_POST_COMMIT_NON_FATAL", {
+          correlation_id: correlationId,
+          targetRow: targetRow,
+          applicantId: applicantId,
+          error: String(fdAckErr && fdAckErr.message ? fdAckErr.message : fdAckErr)
+        });
+      }
+    } else {
+      logActivation_(logSheet, "FD_ACK_POST_COMMIT_SKIPPED", {
+        correlation_id: correlationId,
+        targetRow: targetRow,
+        applicantId: applicantId,
+        reason: "INTAKE_LOCK_RELEASE_FAILED"
+      });
+    }
     return jsonOut_({ status: "ok", ApplicantID: applicantId });
   } catch (errActivation) {
     if (rowCommitted && targetRow >= 2) {
@@ -437,7 +468,9 @@ function doPost(e) {
       correlation_id: correlationId
     });
   } finally {
-    try { intakeLock.releaseLock(); } catch (_lockErr) {}
+    if (!intakeLockReleased) {
+      try { intakeLock.releaseLock(); } catch (_lockErr) {}
+    }
   }}
 
 /******************** ENTRYPOINT: GET ********************/
@@ -6394,7 +6427,7 @@ function communicationBlockReason_(code, messageType) {
 }
 
 function communicationRequiresPortalUrl_(messageType) {
-  return ["legacy_invite", "reminder", "application_feedback", "docs_missing", "payment_followup"].indexOf(clean_(messageType || "")) >= 0;
+  return ["legacy_invite", "reminder", "fd_acknowledgement", "application_feedback", "docs_missing", "payment_followup"].indexOf(clean_(messageType || "")) >= 0;
 }
 
 function isValidEffectiveEmail_(email) {
@@ -6417,6 +6450,7 @@ function communicationFamilyForMessageType_(messageType) {
   var normalizedType = normalizeApplicantMessageType_(messageType || "");
   if (normalizedType === "legacy_invite") return "invite";
   if (normalizedType === "reminder") return "reminder";
+  if (normalizedType === "fd_acknowledgement") return "fd_acknowledgement";
   if (normalizedType === "application_feedback") return "application_feedback";
   if (normalizedType === "custom_email") return "custom_email";
   if (normalizedType === "docs_missing") return "docs_followup";
@@ -6457,28 +6491,56 @@ function feedbackStatusNeedsAttention_(status) {
   return normalized === "rejected" || normalized === "fraudulent";
 }
 
-function buildApplicationFeedbackIssues_(rowObj) {
+function buildDocumentAttentionLines_(rowObj, opts) {
   var row = rowObj || {};
+  var options = opts && typeof opts === "object" ? opts : {};
   var docs = Array.isArray(CONFIG.DOC_FIELDS) ? CONFIG.DOC_FIELDS : [];
-  var issues = [];
+  var lines = [];
   docs.forEach(function (doc) {
     if (!doc || !doc.file || !doc.status || !doc.comment) return;
     var label = clean_(doc.label || doc.file || "");
+    if (!label) return;
     var rawFile = row[doc.file];
     var hasFile = hasUploadEvidence_(rawFile, doc.file);
     var status = clean_(row[doc.status] || "");
     var comment = clean_(row[doc.comment] || "");
-    var issueText = "";
-    if (!hasFile) issueText = "Cannot verify; no file uploaded.";
-    else if (comment) issueText = comment;
-    else if (feedbackStatusNeedsAttention_(status)) issueText = "Status marked " + status + ".";
-    if (!issueText) return;
-    issues.push("- " + label + ": " + issueText);
+    var lineText = "";
+    if (!hasFile) {
+      lineText = clean_(options.missingFileText || "Cannot verify; no file uploaded.");
+    } else if (feedbackStatusNeedsAttention_(status)) {
+      if (comment && options.includeCommentsForAttention === true) lineText = comment;
+      else lineText = clean_(options.attentionStatusText || ("Status marked " + status + "."));
+    } else if (comment && options.includeComments === true) {
+      lineText = comment;
+    }
+    if (!lineText) return;
+    lines.push("- " + label + ": " + lineText);
   });
-  if (!issues.length) {
-    issues.push("- Please review the application details and upload any missing or corrected documents requested by the office.");
+  if (!lines.length) {
+    var fallback = clean_(options.emptyFallback || "");
+    if (fallback) lines.push("- " + fallback);
   }
-  return issues.join("\n");
+  return lines;
+}
+
+function buildApplicationFeedbackIssues_(rowObj) {
+  return buildDocumentAttentionLines_(rowObj, {
+    missingFileText: "Cannot verify; no file uploaded.",
+    attentionStatusText: "",
+    includeComments: true,
+    includeCommentsForAttention: true,
+    emptyFallback: "Please review the application details and upload any missing or corrected documents requested by the office."
+  }).join("\n");
+}
+
+function buildFdAcknowledgementDocumentLines_(rowObj) {
+  return buildDocumentAttentionLines_(rowObj, {
+    missingFileText: "not yet uploaded in the current application record.",
+    attentionStatusText: "uploaded, but a replacement document is still required in the current application record.",
+    includeComments: false,
+    includeCommentsForAttention: false,
+    emptyFallback: ""
+  });
 }
 
 function buildApplicationFeedbackEmailBody_(context) {
@@ -6505,6 +6567,42 @@ function buildApplicationFeedbackEmailBody_(context) {
     "After updating the documents, please submit the portal again or notify our office so we can continue the review.",
     "",
     "If you need assistance, please contact us using the contact details provided in your application communication.",
+    "",
+    "Regards,",
+    "",
+    "FODE KIA Admissions Team"
+  ].join("\n");
+}
+
+function buildFdAcknowledgementEmailBody_(context) {
+  var ctx = context || {};
+  var row = ctx.rowObj || {};
+  var parentOrApplicantName = buildParentOrApplicantName_(row);
+  var applicantName = buildApplicantFullName_(row) || "the applicant";
+  var docLines = buildFdAcknowledgementDocumentLines_(row);
+  var docsSection = docLines.length ? [
+    "Documents still required:",
+    "",
+    docLines.join("\n")
+  ].join("\n") : [
+    "Documents still required:",
+    "",
+    "All required documents appear to have been submitted. Please visit the Student Portal to review your application status."
+  ].join("\n");
+  return [
+    "Dear " + parentOrApplicantName + ",",
+    "",
+    "Thank you for submitting your Kundu FODE application for " + applicantName + " (Applicant ID: " + String(ctx.applicantId || "") + "). We confirm that the application has been received.",
+    "",
+    "Admissions will review the application and the uploaded documents recorded for this applicant.",
+    "",
+    docsSection,
+    "",
+    "Please visit the Student Portal using the link below to review your application details and upload any remaining required documents:",
+    "",
+    String(ctx.portalUrl || ""),
+    "",
+    "If you need assistance, please contact FODE Admissions using the contact details provided in your application communication.",
     "",
     "Regards,",
     "",
@@ -6901,6 +6999,220 @@ function hasPriorSuccessfulMessageSend_(context) {
   return communicationState.durablePriorSuccess === true;
 }
 
+function fdAcknowledgementInternalActor_() {
+  var email = clean_((CONFIG.SUPER_ADMIN_EMAILS && CONFIG.SUPER_ADMIN_EMAILS[0]) || (CONFIG.ADMIN_EMAILS && CONFIG.ADMIN_EMAILS[0]) || "").toLowerCase();
+  var role = email && typeof getAdminRole_ === "function" ? clean_(getAdminRole_(email) || "") : "";
+  if (!role && email && CONFIG.ADMIN_ROLES) role = clean_(CONFIG.ADMIN_ROLES[email] || "");
+  role = String(role || (email ? "SUPER" : "")).toUpperCase();
+  var isAdmin = false;
+  if (email && typeof isAdmin_ === "function") isAdmin = isAdmin_(email);
+  return {
+    actorEmail: email,
+    actorRole: role,
+    isAdmin: !!isAdmin,
+    isSuper: role === "SUPER"
+  };
+}
+
+function fdAcknowledgementBatchLabel_(source, debugId) {
+  var src = clean_(source || "auto").toLowerCase().replace(/[^a-z0-9_-]+/g, "_").slice(0, 32) || "auto";
+  return clean_("r185 fd_ack " + src + " " + clean_(debugId || newDebugId_()));
+}
+
+function fdAcknowledgementContactSubject_(prefix, code) {
+  var c = clean_(code || "");
+  return clean_("fd_acknowledgement " + clean_(prefix || "blocked") + (c ? ": " + c : ""));
+}
+
+function runFdAcknowledgementForCommittedRow_(sheet, rowNumber, opts) {
+  var options = opts && typeof opts === "object" ? opts : {};
+  var sh = sheet;
+  var rowNum = Number(rowNumber || 0);
+  var debugId = clean_(options.debugId || options.correlationId || newDebugId_());
+  var dryRun = options.dryRun === true;
+  var batchLabel = clean_(options.batchLabel || fdAcknowledgementBatchLabel_(dryRun ? "dry_run" : (options.source || "auto"), debugId));
+  var messageType = "fd_acknowledgement";
+  if (!sh || rowNum < 2) {
+    return {
+      ok: true,
+      action: "fd_acknowledgement",
+      result: "BLOCKED",
+      eligible: false,
+      blockCode: "INVALID_TARGET_ROW",
+      blockReason: "A committed applicant row is required.",
+      applicantId: clean_(options.applicantId || ""),
+      messageType: messageType,
+      debugId: debugId,
+      dryRun: dryRun
+    };
+  }
+  var rowObj = getRowObject_(sh, rowNum);
+  var rowApplicantId = clean_(rowObj.ApplicantID || "");
+  var requestedApplicantId = clean_(options.applicantId || rowApplicantId || "");
+  if (!rowApplicantId || (requestedApplicantId && rowApplicantId !== requestedApplicantId)) {
+    return {
+      ok: true,
+      action: "fd_acknowledgement",
+      result: "BLOCKED",
+      eligible: false,
+      blockCode: rowApplicantId ? "APPLICANT_ID_MISMATCH" : "MISSING_APPLICANT_ID",
+      blockReason: rowApplicantId ? "Committed row ApplicantID does not match the requested ApplicantID." : "Committed row is missing ApplicantID.",
+      applicantId: requestedApplicantId || rowApplicantId,
+      messageType: messageType,
+      rowNumber: rowNum,
+      debugId: debugId,
+      dryRun: dryRun
+    };
+  }
+  var actor = fdAcknowledgementInternalActor_();
+  var context = resolveApplicantMessageContextFromRow_(rowObj, rowNum, sh, messageType, {
+    action: dryRun ? "preview" : "send",
+    actorEmail: actor.actorEmail,
+    actorRole: actor.actorRole,
+    applicantId: rowApplicantId,
+    batchLabel: batchLabel,
+    debugId: debugId,
+    requestId: debugId
+  });
+  if (!context.eligible) {
+    if (!dryRun) {
+      recordApplicantContactOutcome_(context, "BLOCKED", {
+        actorEmail: actor.actorEmail,
+        batchLabel: batchLabel,
+        subject: fdAcknowledgementContactSubject_("blocked", context.blockCode),
+        debugId: debugId
+      });
+    }
+    return {
+      ok: true,
+      action: "fd_acknowledgement",
+      result: "BLOCKED",
+      eligible: false,
+      blockCode: clean_(context.blockCode || ""),
+      blockReason: clean_(context.blockReason || ""),
+      applicantId: rowApplicantId,
+      messageType: messageType,
+      rowNumber: rowNum,
+      batchLabel: batchLabel,
+      debugId: debugId,
+      dryRun: dryRun
+    };
+  }
+  var built = buildApplicantMessage_(context);
+  if (!built.ok) {
+    if (!dryRun) {
+      recordApplicantContactOutcome_(context, "BLOCKED", {
+        actorEmail: actor.actorEmail,
+        batchLabel: batchLabel,
+        subject: fdAcknowledgementContactSubject_("blocked", built.code),
+        debugId: debugId
+      });
+    }
+    return {
+      ok: true,
+      action: "fd_acknowledgement",
+      result: "BLOCKED",
+      eligible: false,
+      blockCode: clean_(built.code || "MESSAGE_BUILD_FAILED"),
+      blockReason: "fd_acknowledgement message could not be built.",
+      applicantId: rowApplicantId,
+      messageType: messageType,
+      rowNumber: rowNum,
+      batchLabel: batchLabel,
+      debugId: debugId,
+      dryRun: dryRun
+    };
+  }
+  if (dryRun) {
+    var dryRunIdempotencyKey = computeEmailIdempotencyKey_(context, {
+      batchLabel: batchLabel,
+      sendSource: "FD_ACK_DRY_RUN"
+    });
+    var processed = wasEmailAlreadyProcessed_(context, dryRunIdempotencyKey);
+    return {
+      ok: true,
+      action: "fd_acknowledgement",
+      result: processed.alreadyProcessed ? "DUPLICATE" : "DRY_RUN",
+      eligible: processed.alreadyProcessed ? false : true,
+      blockCode: processed.alreadyProcessed ? "ALREADY_PROCESSED" : "",
+      blockReason: processed.alreadyProcessed ? "Duplicate fd_acknowledgement would be suppressed." : "",
+      applicantId: rowApplicantId,
+      messageType: messageType,
+      rowNumber: rowNum,
+      effectiveEmail: clean_(context.effectiveEmail || ""),
+      portalUrl: clean_(context.portalUrl || ""),
+      subject: clean_(built.subject || ""),
+      bodySnippet: clean_(String(built.body || "").replace(/\s+/g, " ").slice(0, 160)),
+      batchLabel: batchLabel,
+      debugId: debugId,
+      dryRun: true
+    };
+  }
+  var dispatched = dispatchApplicantMessage_(context, built, {
+    actorEmail: actor.actorEmail,
+    actorRole: actor.actorRole,
+    batchLabel: batchLabel,
+    debugId: debugId,
+    manualSingleSendProbe: options.manualSingleSendProbe === true,
+    sendSource: clean_(options.sendSource || "FD_ACK_POST_COMMIT"),
+    unattended: options.unattended === false ? false : true
+  });
+  if (clean_(dispatched.result || "").toUpperCase() === "BLOCKED") {
+    recordApplicantContactOutcome_(context, "BLOCKED", {
+      actorEmail: actor.actorEmail,
+      batchLabel: batchLabel,
+      subject: fdAcknowledgementContactSubject_("blocked", dispatched.blockCode || dispatched.code),
+      debugId: debugId
+    });
+  }
+  return Object.assign({}, dispatched, {
+    action: "fd_acknowledgement",
+    batchLabel: batchLabel,
+    dryRun: false
+  });
+}
+
+function runFdAcknowledgementForApplicantId_(applicantId, opts) {
+  var id = clean_(applicantId || "");
+  var options = opts && typeof opts === "object" ? opts : {};
+  var debugId = clean_(options.debugId || newDebugId_());
+  if (!id) {
+    return {
+      ok: true,
+      action: "fd_acknowledgement",
+      result: "BLOCKED",
+      eligible: false,
+      blockCode: "MISSING_APPLICANT_ID",
+      blockReason: "ApplicantID is required.",
+      applicantId: "",
+      messageType: "fd_acknowledgement",
+      debugId: debugId,
+      dryRun: options.dryRun === true
+    };
+  }
+  var sh = mustGetDataSheet_(getWorkingSpreadsheet_());
+  var rowNumber = findRowByApplicantId_(sh, id);
+  if (!rowNumber) {
+    return {
+      ok: true,
+      action: "fd_acknowledgement",
+      result: "BLOCKED",
+      eligible: false,
+      blockCode: "APPLICANT_NOT_FOUND",
+      blockReason: "Applicant was not found.",
+      applicantId: id,
+      messageType: "fd_acknowledgement",
+      debugId: debugId,
+      dryRun: options.dryRun === true
+    };
+  }
+  return runFdAcknowledgementForCommittedRow_(sh, rowNumber, Object.assign({}, options, {
+    applicantId: id,
+    debugId: debugId,
+    source: clean_(options.source || "admin_single")
+  }));
+}
+
 function communicationRecommendedMessageTypeForStage_(stage) {
   var normalized = clean_(stage || "").toUpperCase();
   if (normalized === "INVITE_PENDING") return "legacy_invite";
@@ -7109,6 +7421,13 @@ function buildApplicantMessage_(context) {
       body: buildReminderEmailBody_(ctx)
     };
   }
+  if (type === "fd_acknowledgement") {
+    return {
+      ok: true,
+      subject: "FODE KIA Application Received - Next Steps",
+      body: buildFdAcknowledgementEmailBody_(ctx)
+    };
+  }
   if (type === "application_feedback") {
     return {
       ok: true,
@@ -7188,7 +7507,7 @@ function wasEmailAlreadyProcessed_(context, idempotencyKey) {
   var lastContactBatch = clean_(row.Last_Contact_Batch || "");
   var batchId = clean_(ctx.batchLabel || "");
   var durableMatch = !!(messageType && lastContactType === messageType && lastContactResult === "SENT");
-  if (batchId && lastContactBatch && batchId !== lastContactBatch) durableMatch = false;
+  if (messageType !== "fd_acknowledgement" && batchId && lastContactBatch && batchId !== lastContactBatch) durableMatch = false;
   var legacyInviteSent = messageType === "legacy_invite" && emailStatus === "SENT";
   var cacheState = getCommunicationCooldownState_(ctx.applicantId || "", messageType);
   var cacheMatch = !!(cacheState && clean_(cacheState.idempotencyKey || "") === clean_(idempotencyKey || ""));
@@ -7341,6 +7660,7 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
       };
     }
   }
+  var dispatchMessageType = clean_(ctx.messageType || "").toLowerCase();
   var processed = wasEmailAlreadyProcessed_(ctx, idempotencyKey);
   if (processed.alreadyProcessed) {
     if (manualProbe) {
@@ -7367,6 +7687,24 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
       result: "BLOCKED",
       blockCode: "ALREADY_PROCESSED"
     });
+    if (dispatchMessageType === "fd_acknowledgement") {
+      recordApplicantContactOutcome_(ctx, "DUPLICATE", {
+        actorEmail: actorEmail,
+        batchLabel: clean_(options.batchLabel || ctx.batchLabel || ""),
+        subject: "Duplicate fd_acknowledgement suppressed"
+      });
+      return {
+        ok: true,
+        result: "DUPLICATE",
+        blockCode: "ALREADY_PROCESSED",
+        blockReason: "Duplicate fd_acknowledgement suppressed.",
+        applicantId: clean_(ctx.applicantId || ""),
+        messageType: clean_(ctx.messageType || ""),
+        effectiveEmail: clean_(ctx.effectiveEmail || ""),
+        subject: clean_(message.subject || ""),
+        debugId: clean_(ctx.debugId || options.debugId || newDebugId_())
+      };
+    }
     markApplicantEmailPipelineState_(ctx, "SUPPRESSED", {
       incrementAttempt: false
     });

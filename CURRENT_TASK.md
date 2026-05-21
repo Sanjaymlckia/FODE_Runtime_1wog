@@ -2,82 +2,106 @@
 
 ## Accepted Baseline
 
-- Latest finalized release: `r182 OPS progressive role stack and acceptance hardening`.
-- Commit: `73b17a9`.
-- Tag: `staging-as182`.
-- Apps Script platform version: `192`.
-- Runtime identity: `r182 / 182`.
-- Admin staging deployment: `@192`.
-- Student staging deployment: `@192`.
-- Admin whoami: `r182 / 182`, `mismatch=false`.
-- Student whoami: `r182 / 182`, `mismatch=false`.
-- Known untracked local tooling residue: `.codexhub/`; do not commit without separate approval.
+- Latest deployed runtime before this task: `r184`.
+- `fd_acknowledgement` message type exists from r184.
+- r184 added the receipt acknowledgement body, Student Portal link, Documents still required section, and backend preview/send path.
+- r185 implementation status in this working tree: accepted for manual fd_ack acknowledgement path; automatic post-commit remains gated.
 
 ## Active CIS
 
-- `CIS r183: OPS stabilization cleanup`.
-- Mode: small Admin/OPS UI stabilization; not a refactor.
-- Release candidate: `r183 / 183`.
-- Local `Config.js` identity is bumped to `r183 / 183`.
+- `CIS r185: post-commit single-ApplicantID fd_acknowledgement automation`.
+- Classification: approved to implement based on design pass, with duplicate durable-state correction.
 - Allowed edit files:
-  - `AdminUI.html`
+  - `Code.js`
+  - `Admin.js`
   - `CURRENT_TASK.md`
-  - `Config.js` only for release bump
+  - `Config.js` only for r185 / 185 release bump when release execution begins
 
-## r183 Local Cleanup State
+## Required Business Outcome
 
-- Lifecycle Cascade / Lifecycle Map restored as a top-level operational concept near the top of OPS.
-- Stage cards remain the lifecycle map.
-- Bulk communication controls remain a separate Admin/Super Admin action layer.
-- Bulk gate wording is mode-aware:
-  - Super Admin in Operator Mode: switch to Admin/Super Admin mode to run gated tools.
-  - Admin: visible, but execution requires Super Admin when the backend requires it.
-  - Operator Mode: escalation awareness only.
-- Stage-selection acceptance visibility strengthened:
-  - selected stage
-  - eligible records
-  - blocked records/reason
-  - preview availability
-  - send availability
-- System Health / Release Control stale `r180` labels replaced with dynamic runtime labels or neutral last-recorded-acceptance wording.
-- Selected-applicant placeholders no longer default to the old safe target in Communications, Billing, Classroom, or Portal Diagnostics.
-- Administrator label clarified as display-only.
-- Final sidebar tidy:
-  - Lifecycle Map is primary menu item 1.
-  - Intake / Queue is primary menu item 2.
-  - Applicant Review is no longer a separate primary sidebar item.
-  - Applicant Review remains available as a drawer/sub-state from Intake / Queue.
+New FD submission:
 
-## Authority Notes
+1. OPS row is created.
+2. Intake lock is released after row/token/folder/verification commit.
+3. Only the newly created `ApplicantID` is evaluated.
+4. `fd_acknowledgement` sends once if gates allow.
+5. If gates block, durable block evidence is recorded.
+6. Duplicate rerun does not send again.
+7. Intake success response remains independent of acknowledgement email success.
 
-- Login role, selected UI mode, action permission, Safe Mode target, and selected applicant are still coupled in legacy UI code.
-- Do not refactor role/mode authority in r183.
-- Future refactor lane:
-  - separate login role from selected UI mode
-  - separate action permission from Safe Mode target
-  - add non-mutating checks for runtime identity, mode visibility, selected-applicant propagation, and gate reasons
+## Mandatory Constraints
 
-## Safety State
+- Normal automatic path evaluates only the newly created `ApplicantID`.
+- No full-sheet scan by default.
+- No email send inside the locked intake mutation section.
+- Intake success response must not depend on email send success.
+- Use internal server-side actor only; no client-callable system actor bypass.
+- Admin wrapper remains admin-checked.
+- Historical/backfill mode remains disabled unless explicitly invoked with dry-run and Super Admin confirmation.
+- No schema change.
+- No trigger or broad autonomous runner activation.
+- No broad UI rewrite.
+- Safe Mode and production gates remain active.
 
-- No backend logic change.
-- No `Admin.js` change.
-- No send logic change.
-- No Books write change.
-- No portal reset/lock change.
-- No schema or Script Properties change.
-- No `appsscript.json` or `.clasp.json` edit.
-- `clasp push`: PASS; remote HEAD accepted r183 source.
-- Remote source proof: PASS from isolated pull outside repo root.
-- Apps Script platform version: `194` for final r183 sidebar tidy.
-- Admin staging deployment: pinned to `@194`.
-- Student staging deployment: pinned to `@194`.
-- Admin whoami: PASS, `r183 / 183`.
-- Student whoami: PASS, `r183 / 183`.
-- Browser acceptance: BLOCKED in this Codex session because the connected Chrome Extension execution tool is unavailable; operator/manual browser evidence required before commit/tag.
+## Duplicate / Blocked Durable Mapping
 
-## Next Exact Step
+- For duplicate `fd_acknowledgement`, do not set `Email_Status = SUPPRESSED`.
+- Preferred duplicate durable state:
+  - `Last_Contact_Type = fd_acknowledgement`
+  - `Last_Contact_Result = DUPLICATE`
+  - `Last_Contact_Batch = r185 fd_ack run/debug label`
+  - `Last_Contact_DebugId = correlation/debug id`
+  - `Last_Contact_Subject = Duplicate fd_acknowledgement suppressed`
+- Leave `Email_Status` unchanged for `DUPLICATE`, `BLOCKED`, and `SKIPPED` unless a safe message-type-specific convention is proven.
 
-1. Obtain authenticated Admin OPS browser acceptance evidence for `r183 / 183`.
-2. Confirm Runtime Verified, Lifecycle Map first, Intake / Queue second, Applicant Review drawer only, mode-aware Bulk Tools gate text, selected-applicant propagation, neutral release labels, and no stale safe-target placeholders.
-3. If accepted, stage only `AdminUI.html`, `CURRENT_TASK.md`, and `Config.js`; do not stage `.codexhub/`.
-4. Commit/tag only after acceptance approval.
+## r185 Accepted Status
+
+- Runtime r185 / 185 deployed and whoami passed.
+- Admin staging deployment: pinned to `@198`.
+- Student staging deployment: pinned to `@198`.
+- Admin whoami: PASS, `r185 / 185`, `mismatch=false`.
+- Student whoami: PASS, `r185 / 185`, `mismatch=false`.
+- Manual fd_ack live send for `FODE-26-002935`: PASS.
+- Email receipt confirmed at `sanjay@kundu.ac`.
+- Duplicate rerun: PASS, blocked with `COOLDOWN_ACTIVE`.
+- Manual fd_ack classification: `MANUAL_PREVIEW_SEND_WORKS`.
+- Automatic post-commit fd_ack classification: `BACKEND_EXISTS_BUT_GATED`, blocked by unattended-send policy.
+- Do not classify r185 as `AUTOMATED_WORKFLOW_ACTIVE`.
+
+## Current Stop State
+
+- Local `Config.js` identity is bumped to `r185 / 185`.
+- `clasp push`: PASS.
+- Remote source proof outside repo root: PASS from `E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog_remote_verify_r185_20260521_1052`.
+- Apps Script platform version created: `196`.
+- r185 confirmation wrapper patch-forward platform version created: `197`.
+- r185 manual fd_ack routing patch-forward platform version created: `198`.
+- Admin staging deployment: pinned to `@198`.
+- Student staging deployment: pinned to `@198`.
+- Admin whoami: PASS, `r185 / 185`, `mismatch=false`.
+- Student whoami: PASS, `r185 / 185`, `mismatch=false`.
+- Live fd_ack wrapper now accepts `confirmManualSingleSend: true` with `confirmApplicantId` matching the single `ApplicantID`.
+- Manual fd_ack acceptance route now classifies confirmed Admin/Ops single-row sends as `manualSingleSendProbe: true`, `unattended: false`, `sendSource: FD_ACK_MANUAL_SINGLE`.
+- Automatic post-commit fd_ack remains `BACKEND_EXISTS_BUT_GATED`; it still uses unattended-send policy and requires a separate approved narrow send-gate CIS before `AUTOMATED_WORKFLOW_ACTIVE`.
+- r185 finalization allowed after recording this status and staging only `Config.js`, `Code.js`, `Admin.js`, and `CURRENT_TASK.md`.
+
+## Next Release Notes
+
+### r186 Candidate: narrow automated fd_ack send gate
+
+- Goal: when a new FD submission updates OPS with a new `ApplicantID`, fd_ack acknowledgement is automatically evaluated and sent or blocked with durable reason.
+- Must not enable global unattended sends.
+- Must allow only `fd_acknowledgement` post-commit, single `ApplicantID`.
+- User will test this with a new FD submission.
+
+### Mobile-safe Student Portal link improvement
+
+- Email portal link did not work cleanly in user's phone environment.
+- Investigate canonical `/macros/s/` Student URL generation.
+- Avoid `/a/macros/` account-scoped links.
+- Add clean `Open Student Portal` link plus plain copy-paste fallback URL.
+- Ensure link works for PNG mobile users without admin Google accounts.
+
+### Out of scope for r185 finalization
+
+- Keep other backend-missing items out of r185 finalization.

@@ -7,9 +7,9 @@
  */
 var CONFIG = {
   // Versioning (change control)
-  VERSION: "r183",
+  VERSION: "r185",
 CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alignment",
-  DEPLOY_VERSION_NUMBER: 183,
+  DEPLOY_VERSION_NUMBER: 185,
 BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
 
   // STAGING/PROD data mode routing (working sheet)
@@ -216,6 +216,7 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   COMMUNICATION_ALLOWED_MESSAGE_TYPES: [
     "legacy_invite",
     "reminder",
+    "fd_acknowledgement",
     "application_feedback",
     "custom_email",
     "docs_missing",

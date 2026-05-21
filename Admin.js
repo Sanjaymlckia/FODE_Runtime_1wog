@@ -6291,6 +6291,59 @@ function admin_sendApplicantMessage(payload) {
   });
 }
 
+function admin_runFdAcknowledgementForApplicant(payload) {
+  return withEnvelope_("admin_runFdAcknowledgementForApplicant", function (dbgId) {
+    var adminEmail = getCallerEmail_();
+    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    var p = payload && typeof payload === "object" ? payload : {};
+    if (Array.isArray(p.applicantIds) || Array.isArray(p.recipients) || Array.isArray(p.messages)) {
+      return adminCommBlockedResult_("fd_acknowledgement", "BULK_NOT_ALLOWED", dbgId, {
+        blockReason: "fd_acknowledgement accepts one ApplicantID only."
+      });
+    }
+    var applicantId = clean_(p.applicantId || p.ApplicantID || "");
+    var dryRun = p.dryRun !== false;
+    if (!applicantId) {
+      return adminCommBlockedResult_("fd_acknowledgement", "MISSING_APPLICANT_ID", dbgId, {
+        blockReason: "ApplicantID is required."
+      });
+    }
+    if (!dryRun) {
+      var confirmedSingleSend = p.confirmFdAcknowledgementSingleSend === true || p.confirmManualSingleSend === true;
+      if (confirmedSingleSend !== true || clean_(p.confirmApplicantId || "") !== applicantId) {
+        return adminCommBlockedResult_("fd_acknowledgement", "CONFIRM_REQUIRED", dbgId, {
+          applicantId: applicantId,
+          messageType: "fd_acknowledgement",
+          blockReason: "Live fd_acknowledgement send requires explicit single-ApplicantID confirmation."
+        });
+      }
+      var opsGate = runOpsSafeModeGate_("applicant_email_send", {
+        payload: p,
+        adminEmail: adminEmail,
+        applicantId: applicantId,
+        debugId: dbgId
+      });
+      if (opsGate && opsGate.ok !== true) {
+        return adminCommBlockedResult_("fd_acknowledgement", safeStr_(opsGate.blockCode || "OPS_SAFE_MODE_ACTION_BLOCKED"), dbgId, {
+          applicantId: applicantId,
+          messageType: "fd_acknowledgement",
+          blockReason: safeStr_(opsGate.blockReason || "Ops Safe Mode blocked this action."),
+          safeMode: opsGate.safeMode === true,
+          diagnosticsLabel: safeStr_(opsGate.diagnosticsLabel || "OPS_SAFE_MODE_ACTION_BLOCKED")
+        });
+      }
+    }
+    return runFdAcknowledgementForApplicantId_(applicantId, {
+      dryRun: dryRun,
+      debugId: clean_(p.debugId || dbgId),
+      source: dryRun ? "admin_dry_run" : "admin_single",
+      manualSingleSendProbe: !dryRun && p.confirmManualSingleSend === true,
+      unattended: dryRun ? true : false,
+      sendSource: dryRun ? "FD_ACK_DRY_RUN" : "FD_ACK_MANUAL_SINGLE"
+    });
+  });
+}
+
 function getOpsClassroomAdminRecipients_() {
   var configured = Array.isArray(CONFIG.OPS_CLASSROOM_ADMIN_EMAILS) ? CONFIG.OPS_CLASSROOM_ADMIN_EMAILS : [];
   var fallback = Array.isArray(CONFIG.INTERNAL_FINANCE_EMAILS) ? CONFIG.INTERNAL_FINANCE_EMAILS : [];
