@@ -2810,11 +2810,12 @@
       return String((opsApplicantDetailCache && opsApplicantDetailCache.ApplicantID) || opsSelectedApplicantId || "").trim();
     }
     function opsApplicantName_(){
+      if (!opsApplicantId_()) return "";
       var d = opsApplicantDetailCache || {};
       var first = String((d.First_Name || d.name) || "").trim();
       var last = String(d.Last_Name || "").trim();
       var detailName = (first + " " + last).trim();
-      return detailName || String(opsSelectedApplicantName || "Unknown applicant");
+      return detailName || String(opsSelectedApplicantName || "");
     }
     function opsClearSelectedActionState_(){
       opsActionState.previewApplicantId = "";
@@ -2823,9 +2824,31 @@
       opsActionState.classroomPreviewApplicantId = "";
       opsActionState.classroomPreviewResult = null;
     }
+    function opsResetSelectedApplicantContext_(preserveResult){
+      opsSelectedApplicantId = "";
+      opsSelectedApplicantName = "";
+      opsSelectedApplicantExplicit = false;
+      opsApplicantDetailCache = null;
+      opsClearSelectedActionState_();
+      resetCommunicationsState_("", preserveResult === true);
+      renderOpsApplicantSummary_(null);
+      renderOpsSelectedApplicantContext_();
+      renderOpsCommunicationStatePanel_();
+      renderOpsClassroomChecklist_();
+    }
     function renderOpsSelectedApplicantContext_(){
       var applicantId = opsApplicantId_();
       var applicantName = opsApplicantName_();
+      if (!applicantId) {
+        setOpsText_("cockpitCommContext", "No applicant selected. Queue row click, Review, search result, Communications, Billing, Classroom Handover, and portal diagnostics will follow the row you select.");
+        setOpsText_("cockpitClassroomContext", "No applicant selected. Classroom Handover follows explicit queue/review selection only.");
+        setOpsText_("opsStageBatchApplicantContext", "No applicant selected");
+        setOpsPill_("cockpitPortalSelectedApplicant", "No applicant selected", "muted");
+        renderOpsSelectedApplicantMini_(null);
+        renderOpsTemplateBrowser_();
+        opsHydrateEmailCorrection_();
+        return;
+      }
       var approved = applicantId === OPS_SAFE_MODE_APPROVED_APPLICANT_ID;
       var row = opsApplicantContextRow_() || {};
       var dateInfo = opsDateAppliedInfo_(row);
@@ -3816,17 +3839,17 @@
         renderOpsSelectedApplicantMini_(null);
         renderOpsLifecycleCascade_();
         renderOpsBooksFilters_();
+        opsResetSelectedApplicantContext_(false);
         return;
       }
       var invoiceRaisedCount = 0;
       var paymentVerifiedCount = 0;
       var notEnrolledCount = 0;
       var classroomPendingCount = 0;
-      if (rows.length && (!opsSelectedApplicantExplicit && (!opsQueueRowByApplicantId_(opsSelectedApplicantId) || opsSelectedApplicantId === OPS_SAFE_MODE_APPROVED_APPLICANT_ID))) {
-        var topRow = rows[0] || {};
-        opsSelectedApplicantId = String(topRow.applicantId || topRow.ApplicantID || opsSelectedApplicantId || "").trim();
-        opsSelectedApplicantName = String(topRow.name || topRow.Student_Name || topRow.First_Name || opsSelectedApplicantId || "").trim();
-        opsSelectedApplicantExplicit = false;
+      if (opsApplicantId_() && !rows.filter(function(row){
+        return String((row && (row.applicantId || row.ApplicantID)) || "").trim() === opsApplicantId_();
+      }).length) {
+        opsResetSelectedApplicantContext_(false);
       }
       function renderWorkflowRow_(row, stage){
         var applicantId = String(row.applicantId || row.ApplicantID || "");
@@ -3975,6 +3998,32 @@
     function renderOpsApplicantSummary_(detail){
       var el = document.getElementById("cockpitApplicantSummary");
       if (!el) return;
+      if (!String((detail && detail.ApplicantID) || opsSelectedApplicantId || "").trim()) {
+        setOpsText_("cockpitCommApplicantStatus", "No applicant selected");
+        setOpsText_("cockpitCommInviteStatus", "Select a queue row");
+        setOpsText_("cockpitCommReminderStatus", "Select a queue row");
+        setOpsText_("cockpitCommInvoiceEmail", "Select a queue row");
+        setOpsText_("cockpitCommSuppression", "No applicant selected");
+        setOpsText_("cockpitCommWhatsapp", "Select a queue row");
+        setOpsPill_("opsFallbackPhoneState", "No applicant selected", "muted");
+        setOpsText_("cockpitClassroomStudent", "No applicant selected");
+        setOpsText_("cockpitClassroomLevel", "Select a queue row");
+        setOpsText_("cockpitClassroomSubjects", "Select a queue row");
+        setOpsText_("cockpitClassroomInvoice", "Select a queue row");
+        setOpsText_("cockpitClassroomPayment", "Select a queue row");
+        setOpsText_("cockpitClassroomEnrolled", "Select a queue row");
+        setOpsPill_("cockpitClassroomSummary", "No applicant selected", "muted");
+        renderOpsSelectedApplicantContext_();
+        renderOpsSelectedApplicantMini_(null);
+        renderOpsTemplateBrowser_();
+        opsApplyTemplateToCustomDraft_();
+        renderOpsCommunicationStatePanel_();
+        renderOpsClassroomChecklist_();
+        renderOpsBooksFilters_();
+        renderOpsInvoiceTargetStatus_("No selected applicant");
+        el.innerHTML = "<div class='opsPlaceholder'>No applicant selected. Queue row click, Review, search result, Communications, Billing, Classroom Handover, and portal diagnostics only follow an explicitly selected row.</div>";
+        return;
+      }
       var queueRow = opsQueueRowByApplicantId_(String((detail && detail.ApplicantID) || opsSelectedApplicantId || ""));
       var d = detail || opsApplicantDetailCache || {
         ApplicantID: opsSelectedApplicantId || "",

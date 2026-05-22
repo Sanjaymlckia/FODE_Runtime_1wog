@@ -2,30 +2,50 @@
 
 ## Active CIS
 
-- `CIS r191: Email Issue Lifecycle, Bounce Visibility, and Existing Email Tools Completion`.
+- `CIS r192: Remove Sticky Selected-Applicant Default Logic`.
 - Baseline:
-  - git commit `5e37d60`
-  - tag `staging-as190`
-  - live Admin and Student runtime `r190 / 190`
-- Target runtime identity: `r191 / 191`.
+  - git commit `9ca7d4f`
+  - tag `staging-as191`
+  - live Admin and Student runtime should be `r191 / 191` before this release
+- Target runtime identity: `r192 / 192`.
 - Scope:
-  - Add final lifecycle stage `Email Issue / Contact Correction`
-  - Surface bounce/suppression badges and reasons from existing fields only
-  - Link that stage into existing OPS email correction flow
-  - Keep WhatsApp/phone fallback visible as suggestion only
-  - Record concise existing email/template/send audit summary
+  - remove implicit selected-applicant defaulting from normal OPS queue operation
+  - do not allow Safe Mode approved target to choose the operator working applicant
+  - clear stale selected applicant when it is not in the current visible queue/search context
+  - keep explicit row click / Review / search-driven selection paths intact
 - Allowed edit files:
   - `AdminUI.html`
-  - `Admin.js`
   - `Config.js`
   - `CURRENT_TASK.md`
 - Explicitly out of scope:
   - no adapter/CRM routing changes
   - no Books/payment/enrolment/classroom backend changes
-  - no fd_ack portal-link changes
-  - no new bounce scanner
+  - no send-gate changes
   - no bulk send activation
   - no sheet reset/archive logic
+
+## r192 Implementation Notes
+
+- Root cause audit:
+  - no hardcoded `FODE-26-002940` was found in runtime source
+  - sticky selection came from OPS queue auto-selecting the first visible row when selection was non-explicit
+  - downstream panels then honored that implicit queue selection through `opsSelectedApplicantId` and detail-cache fallback
+- `AdminUI.html`
+  - removes normal queue auto-select behaviour
+  - keeps no selected applicant on fresh load until the operator explicitly chooses a row
+  - clears stale selected applicant when it is no longer in the current visible queue/search context
+  - leaves explicit row click / Review / search-driven selection intact
+  - keeps Safe Mode approved target as diagnostic metadata only, not as the normal working applicant
+
+## r192 Acceptance Checklist
+
+- Admin whoami: must report `r192 / 192`, `mismatch=false`
+- Student whoami: must report `r192 / 192`, `mismatch=false`
+- Fresh OPS load does not auto-select stale/historical applicant
+- No panel shows `FODE-26-002940` unless the operator explicitly selected it
+- Row click / Review / search result updates selected applicant across panels
+- Refresh does not revert to stale applicant when it is not in current visible queue/search context
+- Super Admin send actions follow the selected row only
 
 ## r191 Implementation Notes
 
