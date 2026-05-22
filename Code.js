@@ -6600,7 +6600,6 @@ function buildFdAcknowledgementEmailBody_(context) {
   var parentOrApplicantName = buildParentOrApplicantName_(row);
   var applicantName = buildApplicantFullName_(row) || "the applicant";
   var portalUrl = clean_(ctx.portalUrl || "");
-  if (portalUrl && typeof canonicalizeWebAppUrl_ === "function") portalUrl = canonicalizeWebAppUrl_(portalUrl);
   var docLines = buildFdAcknowledgementDocumentLines_(row);
   var docsSection = docLines.length ? [
     "Documents still required:",
