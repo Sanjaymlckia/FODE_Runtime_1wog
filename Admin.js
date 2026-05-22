@@ -339,9 +339,12 @@ function admin_getApplicantDetail(payload) {
       Parent_Email: clean_(row[idx.Parent_Email - 1]),
       Parent_Email_Corrected: clean_(row[idx.Parent_Email_Corrected - 1]),
       Email_Status: idx.Email_Status ? clean_(row[idx.Email_Status - 1]) : "",
+      Email_Verification_Status: idx.Email_Verification_Status ? clean_(row[idx.Email_Verification_Status - 1]) : "",
       Email_Bounce_Flag: idx.Email_Bounce_Flag ? clean_(row[idx.Email_Bounce_Flag - 1]) : "",
       Email_Bounce_Reason: idx.Email_Bounce_Reason ? clean_(row[idx.Email_Bounce_Reason - 1]) : "",
       Email_Next_Action_Date: idx.Email_Next_Action_Date ? clean_(row[idx.Email_Next_Action_Date - 1]) : "",
+      Last_Email_Error: idx.Last_Email_Error ? clean_(row[idx.Last_Email_Error - 1]) : "",
+      Last_Email_To: idx.Last_Email_To ? clean_(row[idx.Last_Email_To - 1]) : "",
       Last_Contacted_At: idx.Last_Contacted_At ? clean_(row[idx.Last_Contacted_At - 1]) : "",
       Last_Contact_Type: idx.Last_Contact_Type ? clean_(row[idx.Last_Contact_Type - 1]) : "",
       Last_Contact_By: idx.Last_Contact_By ? clean_(row[idx.Last_Contact_By - 1]) : "",
@@ -3827,6 +3830,13 @@ function admin_getReviewQueues(payload) {
         qItem.Contact_ID = clean_(rowObj.Contact_ID || "");
         qItem.Deal_ID = clean_(rowObj.Deal_ID || "");
         qItem.Email_Status = clean_(rowObj.Email_Status || "");
+        qItem.Email_Verification_Status = clean_(rowObj.Email_Verification_Status || "");
+        qItem.Email_Bounce_Flag = clean_(rowObj.Email_Bounce_Flag || "");
+        qItem.Email_Bounce_Reason = clean_(rowObj.Email_Bounce_Reason || "");
+        qItem.Last_Email_Error = clean_(rowObj.Last_Email_Error || "");
+        qItem.Last_Email_To = clean_(rowObj.Last_Email_To || "");
+        qItem.Parent_Email = clean_(rowObj.Parent_Email || "");
+        qItem.Parent_Email_Corrected = clean_(rowObj.Parent_Email_Corrected || "");
         qItem.Ack_Email_Status = clean_(rowObj.Ack_Email_Status || "");
         qItem.Last_Contact_Type = clean_(rowObj.Last_Contact_Type || "");
         qItem.Last_Contact_Result = clean_(rowObj.Last_Contact_Result || "");

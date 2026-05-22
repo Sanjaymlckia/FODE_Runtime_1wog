@@ -2992,6 +2992,53 @@
       var phone = opsFirstNonBlank_(row.Phone, row.Parent_Phone, row.Mobile, row.WhatsApp, row.Contact_Number, row.Phone_Number);
       return phone ? "Phone/contact present" : "No phone/contact in loaded fields";
     }
+    function opsHasBounceFlag_(row){
+      return isCommBounceFlagTrue_((row && row.Email_Bounce_Flag) || "");
+    }
+    function opsEmailIssueReason_(row){
+      var r = row || {};
+      return opsFirstNonBlank_(
+        r.Email_Bounce_Reason,
+        r.Last_Email_Error,
+        (/^(BOUNCED|SUPPRESSED|DO_NOT_CONTACT)$/i.test(String(r.Email_Status || "").trim()) ? String(r.Email_Status || "").trim() : ""),
+        (/^(BOUNCED|SUPPRESSED)$/i.test(String(r.Email_Verification_Status || "").trim()) ? String(r.Email_Verification_Status || "").trim() : ""),
+        (/^(BOUNCED|SUPPRESSED|FAILED|BLOCKED)$/i.test(String(r.Last_Contact_Result || "").trim()) ? String(r.Last_Contact_Result || "").trim() : "")
+      );
+    }
+    function opsHasEmailIssue_(row){
+      var r = row || {};
+      var emailStatus = String(r.Email_Status || "").trim().toUpperCase();
+      var verification = String(r.Email_Verification_Status || "").trim().toUpperCase();
+      var lastResult = String(r.Last_Contact_Result || "").trim().toUpperCase();
+      return opsHasBounceFlag_(r)
+        || !!opsEmailIssueReason_(r)
+        || emailStatus === "BOUNCED"
+        || emailStatus === "SUPPRESSED"
+        || emailStatus === "DO_NOT_CONTACT"
+        || verification === "BOUNCED"
+        || verification === "INVALID"
+        || verification === "SUPPRESSED"
+        || lastResult === "BOUNCED"
+        || lastResult === "SUPPRESSED";
+    }
+    function opsEmailIssueBadges_(row){
+      var r = row || {};
+      var emailStatus = String(r.Email_Status || "").trim().toUpperCase();
+      var verification = String(r.Email_Verification_Status || "").trim().toUpperCase();
+      var corrected = String(r.Parent_Email_Corrected || r.correctedEmail || "").trim();
+      var out = [];
+      if (opsHasEmailIssue_(r)) out.push({ label:"Email Issue", cls:"warn" });
+      if (opsHasBounceFlag_(r) || emailStatus === "BOUNCED" || verification === "BOUNCED") out.push({ label:"Bounce Detected", cls:"warn" });
+      if (emailStatus === "SUPPRESSED" || verification === "SUPPRESSED" || verification === "INVALID" || emailStatus === "DO_NOT_CONTACT") out.push({ label:"Email Suppressed", cls:"danger" });
+      if (opsHasEmailIssue_(r) && !corrected) out.push({ label:"Correction Required", cls:"warn" });
+      if (corrected) out.push({ label:"Corrected Email Available", cls:"ok" });
+      return out;
+    }
+    function opsEmailIssueFallbackHint_(row){
+      var r = row || {};
+      var phone = opsFirstNonBlank_(r.Parent_Phone, r.Phone, r.Mobile, r.WhatsApp, r.Contact_Number, r.Phone_Number, "");
+      return phone ? "Use phone/WhatsApp fallback while email is blocked." : "No phone/WhatsApp fallback is loaded for this applicant.";
+    }
     function opsLifecycleDefinitions_(){
       return [
         { key:"fd_received", name:"Application Received / FD Received", mode:"operator workflow", meaning:"External FD intake row has been received and assigned an ApplicantID.", next:"Review Application", matches:function(row){ return opsWorkflowStageKey_(row) === "fd_received"; } },
@@ -3001,11 +3048,13 @@
         { key:"invoice", name:"Invoice / Books", mode:"admin guarded", meaning:"Books invoice or billing state needs follow-up.", next:"View Invoice Status", matches:function(row){ return opsWorkflowStageKey_(row) === "invoice"; } },
         { key:"enrolment", name:"Enrolment Pending", mode:"admin guarded", meaning:"Payment is verified and enrolment is not confirmed.", next:"Complete Enrolment", matches:function(row){ return opsWorkflowStageKey_(row) === "enrolment"; } },
         { key:"classroom", name:"Classroom Handover", mode:"admin guarded", meaning:"Enrolment/classroom handover is pending or unknown.", next:"Prepare Handover", matches:function(row){ return opsWorkflowStageKey_(row) === "classroom"; } },
-        { key:"exceptions", name:"Exceptions / Blocked", mode:"escalation", meaning:"Loaded status indicates blocked, failed, anomalous, or unsafe state.", next:"Resolve Issue", matches:function(row){ return opsWorkflowStageKey_(row) === "exceptions"; } }
+        { key:"exceptions", name:"Exceptions / Blocked", mode:"escalation", meaning:"Loaded status indicates blocked, failed, anomalous, or unsafe state.", next:"Resolve Issue", matches:function(row){ return opsWorkflowStageKey_(row) === "exceptions"; } },
+        { key:"email_issue", name:"Email Issue / Contact Correction", mode:"escalation", meaning:"Bounce, suppression, or contact correction is required before email can continue.", next:"Correct Email", matches:function(row){ return opsWorkflowStageKey_(row) === "email_issue"; } }
       ];
     }
     function opsWorkflowStageKey_(row){
       var r = row || {};
+      if (opsHasEmailIssue_(r)) return "email_issue";
       var lastResult = String(r.Last_Contact_Result || r.Email_Status || r.Ack_Email_Status || r.Books_Last_Error || "").toUpperCase();
       if (lastResult.indexOf("FAILED") >= 0 || lastResult.indexOf("BLOCK") >= 0 || lastResult.indexOf("ERROR") >= 0) return "exceptions";
       var paymentOk = opsIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true;
@@ -3793,6 +3842,7 @@
         var ackState = fdAckStatusFromRow_(row);
         var crmState = crmBackupStatusFromRow_(row);
         var portalState = portalAccessStatusFromRow_(row);
+        var emailIssueBadges = opsEmailIssueBadges_(row);
         var paymentOk = (opsIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true);
         var enrolledOk = opsIsYes_(row.Enrolled_Confirmed);
         var total = opsAmountFromRow_(row);
@@ -3808,7 +3858,7 @@
           + "<div><div class='opsWorkflowCellLabel'>Applicant</div><div>" + esc(applicantName) + "</div><div class='opsWorkflowSecondary'>" + esc(String(row.email || row.Parent_Email || row.parentEmail || row.effectiveEmail || "")) + "</div></div>"
           + "<div><div class='opsWorkflowCellLabel'>Date Applied</div><span class='opsStatusPill info' title='" + esc(opsDateAppliedTitle_(row)) + "'>" + esc(dateApplied) + "</span></div>"
           + "<div><div class='opsWorkflowCellLabel'>Aging</div><span class='opsStatusPill " + opsAgingKind_(row) + "' title='" + esc(opsDateAppliedTitle_(row)) + "'>" + esc(aging) + "</span></div>"
-          + "<div><div class='opsWorkflowCellLabel'>Last Action</div><div class='opsWorkflowSecondary'>" + esc(opsLastActionInfo_(row)) + "</div></div>"
+          + "<div><div class='opsWorkflowCellLabel'>Last Action</div><div class='opsWorkflowSecondary'>" + esc(opsLastActionInfo_(row)) + "</div>" + (emailIssueBadges.length ? "<div class='opsWorkflowSecondary' style='margin-top:4px;'>" + esc(opsEmailIssueReason_(row)) + "</div>" : "") + "</div>"
           + "<div class='opsWorkflowBadges'>"
             + "<span class='opsStatusPill " + opsPillClass_(ackState.cls) + "'>" + esc(ackState.label) + "</span>"
             + "<span class='opsStatusPill " + opsPillClass_(crmState.cls) + "'>" + esc(crmState.label) + "</span>"
@@ -3819,8 +3869,9 @@
             + "<span class='opsStatusPill " + (enrolledOk ? "ok" : "warn") + "'>" + esc(enrolledOk ? "Enrolled" : "Enrolment Pending") + "</span>"
             + "<span class='opsStatusPill " + classroomKind + "'>" + esc(classroom.label) + "</span>"
             + "<span class='opsStatusPill muted'>" + (total > 0 ? esc(formatPngAmount_(total)) : "Amount Unknown") + "</span>"
+            + emailIssueBadges.map(function(badge){ return "<span class='opsStatusPill " + esc(badge.cls) + "'>" + esc(badge.label) + "</span>"; }).join("")
           + "</div>"
-          + "<div class='opsWorkflowAction'><button class='opsActionBtn live' type='button' data-review-applicant-id='" + esc(applicantId) + "' data-review-applicant-name='" + esc(applicantName) + "'>" + esc(stage.next) + "</button><div class='opsWorkflowSecondary'>" + esc(stage.name) + "</div></div>"
+          + "<div class='opsWorkflowAction'><button class='opsActionBtn live' type='button' data-review-applicant-id='" + esc(applicantId) + "' data-review-applicant-name='" + esc(applicantName) + "' data-workflow-stage-key='" + esc(stage.key) + "'>" + esc(stage.next) + "</button><div class='opsWorkflowSecondary'>" + esc(stage.name) + "</div></div>"
           + "</div>";
       }
       if (workflow) {
@@ -3903,7 +3954,13 @@
           ev.stopPropagation();
           var applicantId = String(btn.getAttribute("data-review-applicant-id") || "");
           var applicantName = String(btn.getAttribute("data-review-applicant-name") || applicantId);
+          var stageKey = String(btn.getAttribute("data-workflow-stage-key") || "");
           opsSelectApplicantContext_(applicantId, applicantName);
+          if (stageKey === "email_issue") {
+            opsSelectEmailCorrectionCandidate_(applicantId);
+            opsScrollTo_("opsCommunications");
+            return;
+          }
           review(null, applicantId, btn);
         });
       });
@@ -5043,7 +5100,9 @@
       var effectiveEmail = String(d.Effective_Email || d.Parent_Email_Corrected || d.Parent_Email || "").trim();
       if (!effectiveEmail) return "Effective email is missing.";
       if (String(d.Email_Status || "").trim() === "DO_NOT_CONTACT") return "This applicant is marked Do Not Contact.";
-      if (isCommBounceFlagTrue_(d.Email_Bounce_Flag)) return "This applicant email is marked bounced.";
+      if (isCommBounceFlagTrue_(d.Email_Bounce_Flag)) return "Email suppressed: previous bounce detected. Correct email before sending.";
+      if (/^(BOUNCED|SUPPRESSED)$/i.test(String(d.Email_Verification_Status || "").trim())) return "Email suppressed: verification status is " + String(d.Email_Verification_Status || "").trim() + ".";
+      if (/^(BOUNCED|SUPPRESSED)$/i.test(String(d.Last_Contact_Result || "").trim())) return "Email suppressed: last contact result is " + String(d.Last_Contact_Result || "").trim() + ".";
       if ((selectedType === "legacy_invite" || selectedType === "reminder") && commPortalSubmittedActive_(d)) return "Portal already submitted for this applicant.";
       return "";
     }
@@ -5143,6 +5202,8 @@
       if (d.Comm_Block_Reason) rows.push({ label: "Reason", value: d.Comm_Block_Reason });
       if (d.Comm_Recommended_Message_Type) rows.push({ label: "Recommended Message", value: d.Comm_Recommended_Message_Type });
       if (d.Comm_Awaiting_Response === true || d.Comm_Awaiting_Response === false) rows.push({ label: "Awaiting Response", value: d.Comm_Awaiting_Response ? "YES" : "NO" });
+      if (opsHasEmailIssue_(d)) rows.push({ label: "Email Issue", value: opsEmailIssueReason_(d) || "Suppressed until corrected/resolved." });
+      if (opsHasEmailIssue_(d)) rows.push({ label: "Fallback", value: opsEmailIssueFallbackHint_(d) });
       if (!rows.length) {
         box.className = "box hidden";
         box.innerHTML = "";
@@ -5352,6 +5413,7 @@
       var eligibility = deriveSendEligibility(detail);
       var previewReady = communicationsState.previewApplicantId === String(detail.ApplicantID || "") && communicationsState.previewMessageType === selectedType && communicationsState.result && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
       var controlsDisabled = !currentRowNumber || isUiBusy || communicationsState.busy || !!disableReason;
+      var emailIssueHint = opsHasEmailIssue_(detail) ? (disableReason || ("Email issue detected. " + opsEmailIssueFallbackHint_(detail))) : "";
       selectEl.disabled = !currentRowNumber || isUiBusy || communicationsState.busy;
       previewBtn.disabled = editableType ? true : controlsDisabled;
       sendBtn.disabled = editableType ? true : (controlsDisabled || !previewReady);
@@ -5362,7 +5424,8 @@
       sendBtn.textContent = communicationsState.busy ? "Sending..." : "Send";
       noteEl.textContent = communicationsState.busy
         ? (previewReady ? "Sending..." : "Loading preview...")
-        : (disableReason
+        : (emailIssueHint
+          || disableReason
           || ((workflowIsYes_(detail.Portal_Submitted) || workflowIsYes_(detail.Enrolled_Confirmed))
             ? "Applicant already submitted/enrolled; applicant-chasing emails are not required."
             : (editableType && eligibility.active ? eligibility.text : (previewReady ? "Preview ready. You may send this message." : "Preview is required before send."))));

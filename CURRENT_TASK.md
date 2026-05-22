@@ -2,34 +2,75 @@
 
 ## Active CIS
 
-- `CIS r189: OPS Functional Parity, Role Hierarchy, and Full Function Availability`.
-- Target runtime identity: `r189 / 189`.
-- Scope classification: functional parity and authority correction for existing Admin-equivalent OPS functions.
-- Implementation status:
-  - Super Admin OPS selected-applicant communication/classroom notify no longer uses the `OPS_SAFE_MODE_APPROVED_TARGET` as a production blocker.
-  - `OPS_SAFE_MODE_APPROVED_TARGET` remains configured as diagnostic fallback only and is not used as the normal OPS selected applicant.
-  - Once queue rows load, OPS auto-selects the newest visible/actionable row unless the operator has explicitly selected another row.
-  - Search/result/review/communications row actions must select that row before any preview/send action.
-  - Operator/Admin role limits remain; non-Super Admin OPS mutations still use role restrictions.
-  - Applicant message sends still require selected ApplicantID, explicit confirmation, recipient validation, duplicate/cooldown/idempotency, and existing durable writeback.
-  - WhatsApp fallback queue remains visible under `Exceptions`; filter values align to backend-supported fallback filters.
-  - OPS Communications now exposes email correction using the existing `admin_updateParentEmailCorrected` Super Admin backend and audit/writeback behaviour.
+- `CIS r191: Email Issue Lifecycle, Bounce Visibility, and Existing Email Tools Completion`.
+- Baseline:
+  - git commit `5e37d60`
+  - tag `staging-as190`
+  - live Admin and Student runtime `r190 / 190`
+- Target runtime identity: `r191 / 191`.
+- Scope:
+  - Add final lifecycle stage `Email Issue / Contact Correction`
+  - Surface bounce/suppression badges and reasons from existing fields only
+  - Link that stage into existing OPS email correction flow
+  - Keep WhatsApp/phone fallback visible as suggestion only
+  - Record concise existing email/template/send audit summary
+- Allowed edit files:
+  - `AdminUI.html`
+  - `Admin.js`
+  - `Config.js`
+  - `CURRENT_TASK.md`
+- Explicitly out of scope:
+  - no adapter/CRM routing changes
+  - no Books/payment/enrolment/classroom backend changes
+  - no fd_ack portal-link changes
+  - no new bounce scanner
+  - no bulk send activation
+  - no sheet reset/archive logic
 
-## r189 Acceptance Checklist
+## r191 Implementation Notes
 
-- Apps Script platform version: `205`.
-- Admin deployment: repinned to `@205`.
-- Student deployment: repinned to `@205`.
-- Admin whoami: PASS, `r189 / 189`, `mismatch=false`.
-- Student whoami: PASS, `r189 / 189`, `mismatch=false`.
-- Missing Documents Request as Super Admin for non-safe-test applicant: pending.
-- General Reminder as Super Admin for non-safe-test applicant: pending.
-- Portal Access resend as Super Admin for non-safe-test applicant: pending.
-- Custom Email as Super Admin for non-safe-test applicant: pending.
-- WhatsApp fallback queue/export visibility: pending.
-- Email correction search/select/update/effective-email reflection: pending.
-- Context integrity: pending, selected tile, Communications panel, recipient, and server payload ApplicantID must match.
-- No commit/tag until operator acceptance.
+- `AdminUI.html`
+  - Adds `Email Issue / Contact Correction` as the final lifecycle band after `Exceptions / Blocked`
+  - Uses existing queue/detail fields to classify bounced/suppressed/correction-needed rows
+  - Shows email issue badges:
+    - `Email Issue`
+    - `Bounce Detected`
+    - `Email Suppressed`
+    - `Correction Required`
+    - `Corrected Email Available`
+  - Routes the lifecycle action for that stage to the existing OPS email-correction surface instead of the legacy review modal
+  - Communications panel now shows suppression reason and fallback hint where email is blocked
+- `Admin.js`
+  - Exposes existing row fields into queue/detail payloads only:
+    - `Email_Verification_Status`
+    - `Last_Email_Error`
+    - `Last_Email_To`
+    - plus bounce/corrected-email fields for queue rendering
+- Existing bounce processing remains unchanged and was not run
+- Existing send gates remain unchanged
+
+## Existing Email / Send Audit Summary
+
+- `fd_acknowledgement`: working, backend/admin path present
+- `missing documents`: weak, working send path but generic body and no template save flow
+- `reminder`: working
+- `portal access / legacy invite`: working
+- `invoice reminder / payment_followup`: weak
+- `custom email`: working
+- `WhatsApp fallback`: working as CSV/export + admin email only
+- `bulk / legacy campaign`: weak, backend exists but still stabilized/gated
+
+## r191 Acceptance Checklist
+
+- Admin whoami: must report `r191 / 191`, `mismatch=false`
+- Student whoami: must report `r191 / 191`, `mismatch=false`
+- Email Issue / Contact Correction appears as final lifecycle stage
+- Known bounced/suppressed rows appear there when loaded
+- Selecting a row there updates selected applicant context
+- Lifecycle action from that stage reaches existing email correction UI
+- Communications panel shows suppression/bounce reason and fallback hint
+- WhatsApp fallback queue remains visible
+- No scanner run, no bulk send, no sheet reset, no adapter/CRM changes
 
 ## Previous CIS
 
