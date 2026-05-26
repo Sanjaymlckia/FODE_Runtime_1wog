@@ -2,6 +2,93 @@
 
 ## Active CIS
 
+- `CIS: Operator/Admin Surface Safety Policy Implementation`.
+- Implementation date: `2026-05-26`.
+- Proven local starting state before edits:
+  - git commit `251b7e0`
+  - tag at HEAD `staging-as192`
+  - `.codexhub/` already untracked before this CIS
+- Baseline discrepancy:
+  - supplied CIS described `r183` / commit `6a89a4d` / tag `staging-as183`
+  - this local repo already proves a later `staging-as192` source state
+  - no runtime identity or live deployment state is inferred from local files
+- Scope:
+  - restrict normal Operator/Admin Ops surfaces to read/select/preview workflow
+  - require explicit Super Admin mode before write/export-sensitive Ops UI actions can execute
+  - expose consequence and supervision warnings for communications, Books, portal, classroom, bulk, export, and legacy bridge surfaces
+- Target runtime identity: `r193 / 193`.
+- Allowed edit files used:
+  - `AdminUI.html`
+  - `CURRENT_TASK.md`
+- Explicitly not changed:
+  - `Admin.js`
+  - backend permissions, role mapping, Books/email/portal/payment/classroom logic, schemas, and Apps Script configuration
+- Release status:
+  - release authorized by owner after UI implementation review
+  - `Config.js` bumped to `r193 / 193` for release identity gate
+  - `clasp push`: PASS, pushed 8 clasp-managed files
+  - remote-source proof: PASS from `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog_remote_verify_r193_20260526_01`
+  - Apps Script platform version: `211`
+  - Admin staging deployment: repinned to `@211`
+  - Student staging deployment: repinned to `@211`
+  - Admin whoami: PASS, `r193 / 193`, `mismatch=false`
+  - Student whoami: PASS, `r193 / 193`, `mismatch=false`
+  - browser acceptance: PASS by operator-supplied HTML evidence
+  - commit, tag, and push: authorized after browser acceptance passed
+
+## r193 Release Identity Gate Evidence
+
+- Required local identity proof before `clasp version`:
+  - `Config.js:10:  VERSION: "r193",`
+  - `Config.js:12:  DEPLOY_VERSION_NUMBER: 193,`
+- Invariant check: `VERSION == "r" + DEPLOY_VERSION_NUMBER` is PASS for `r193 / 193`.
+- `git diff -- Config.js`: confirms the only identity change is `r192 / 192` to `r193 / 193`.
+- `clasp push`: PASS; output reported `Pushed 8 files.`
+- Remote independent proof outside source root:
+  - pulled into `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog_remote_verify_r193_20260526_01`
+  - remote `Config.js` contains `VERSION: "r193"` and `DEPLOY_VERSION_NUMBER: 193`
+  - remote `AdminUI.html` contains `data-ops-supervisory-write` controls and the bulk supervisory-policy marker
+- Safe to create Apps Script version for `r193 / 193`.
+
+## Operator/Admin Safety Implementation Notes
+
+- `AdminUI.html`
+  - makes Communications preview, Billing read/preview, Classroom checklist/preview, and Portal diagnostics visible as read surfaces in Operator/Admin workflow
+  - adds local-export applicant-data warning text
+  - separates and warning-labels applicant communication sends and financial record actions
+  - disables write/export-sensitive Ops buttons unless the active UI mode is explicitly `Super Admin Mode`
+  - adds direct handler blocks for applicant sends, Books draft/test-email actions, portal reset/lock/unlock, email correction, classroom notify, payment verification, bulk actions, WhatsApp export/email, and legacy mutation bridge access
+  - hides the legacy edit/mutation bridge controls from normal Operator/Admin drawer workflow and replaces them with a supervisory warning
+- Existing backend gate inspection only:
+  - `Admin.js` was read to confirm existing Super Admin/Safe Mode enforcement paths; it was not edited
+  - confirmed existing backend enforcement for portal reset/lock/unlock, payment verification, email correction, Ops Safe Mode send/notify paths, and bulk send
+  - owner accepted existing trusted-Admin backend access for `admin_updateDocStatuses`, `admin_setOverallStatus`, and `admin_sendDocsFollowupEmails`
+  - backend hardening against malicious Admin invocation is deferred and is not a release blocker for this CIS
+
+## Operator/Admin Safety Static Acceptance
+
+- Operator block text: `Operator mode is read/select/preview only. Escalate to Admin/Super Admin for this action.`
+- Admin supervisory label: `Supervisory action — requires approval, preview, confirmation, and audit.`
+- Sensitive export warning: `Local export contains applicant data. Do not share outside authorised staff.`
+- Bulk wording: `Bulk communication is not a normal Operator/Admin action. Use preview/metrics for planning; execution requires supervisory approval.`
+- Release acceptance: PASS; remote-source proof, Apps Script version/deployment repin, live `whoami`, and operator-supplied browser HTML evidence are recorded.
+- Owner decision: trusted Admin backend access is accepted as supervised workflow; deferred backend hardening is `FOLLOW-UP`, not a release blocker.
+
+## r193 Acceptance Closure
+
+- Deployment pin confirmation: PASS; active Admin and Student staging deployments both list platform `@211`.
+- Runtime identity: PASS from canonical Admin and Student `whoami` checks already completed in this release flow.
+- Browser acceptance: PASS by operator-supplied HTML evidence.
+  - `r193` build visible
+  - Operator/Admin preview surfaces visible
+  - local export applicant-data warning present
+  - preview-only and send/write gated areas separated
+  - supervisory-write buttons marked and governed
+  - no dangerous action triggered
+- Release finalization status: HOLD cleared; git commit/tag/push authorized.
+
+## Previous Active CIS
+
 - `CIS r192: Remove Sticky Selected-Applicant Default Logic`.
 - Baseline:
   - git commit `9ca7d4f`
