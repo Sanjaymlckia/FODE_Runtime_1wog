@@ -2,6 +2,85 @@
 
 ## Active CIS
 
+- `CIS r194: Lifecycle Map Usability Cleanup`.
+- Implementation date: `2026-05-27`.
+- Proven local starting state before edits:
+  - git commit `5d1ef42`
+  - tag at HEAD `staging-as193`
+  - `.codexhub/` already untracked before this CIS
+- Scope:
+  - make Lifecycle Map read as a stage workflow with explicit stage meaning and next action
+  - reduce row badge clutter into grouped operational summaries
+  - make Email Issue / Contact Correction rows expose email, phone/WhatsApp, contact follow-up context, block reason, and correction action
+  - preserve the r193 Operator/Admin supervisory gate policy
+- Allowed edit files:
+  - `AdminUI.html`
+  - `CURRENT_TASK.md`
+  - `Config.js` only if release is executed
+- Explicitly out of scope:
+  - `Admin.js`, backend gates, email send logic, Books logic, portal logic, schema, and Script Properties
+- Release status:
+  - LIGHT UI release path authorized by CIS
+  - `Config.js` bumped to intended release identity `r194 / 194`
+  - `clasp push`: PASS, pushed 8 clasp-managed files
+  - remote-source proof: PASS from `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog_remote_verify_r194_20260527_01`
+  - Apps Script platform version: `212`
+  - Admin staging deployment: repinned to `@212`
+  - Student staging deployment: repinned to `@212`
+  - Admin whoami: PASS, `r194 / 194`, `mismatch=false`
+  - Student whoami: PASS, `r194 / 194`, `mismatch=false`
+  - browser/manual acceptance: PASS by operator-supplied rendered OPS HTML evidence
+  - commit, tag, and push: authorized after visual acceptance passed
+
+## r194 Local Acceptance Targets
+
+- Lifecycle Map stage header exposes stage name, count, stage meaning, and next action.
+- Applicant rows expose essential fields only: ApplicantID, student/applicant name, email, phone/WhatsApp, age/aging, grouped key status, and one primary action.
+- Badge summaries are grouped as:
+  - `Ack / CRM / Portal`
+  - `Docs / Payment / Invoice`
+  - `Enrolment / Classroom`
+  - `Email issue`
+- Email Issue / Contact Correction rows foreground current email and phone/WhatsApp, show `No phone on record` if unavailable, show block reason and last-action context, and route the primary `Correct Email` action to the existing correction workspace.
+- Primary action labels are constrained to existing read/review paths: `Check Portal Access`, `Check Documents`, `Correct Email`, `Review Payment`, or `Review Application`.
+- r193 supervisory write gating remains unchanged; no dangerous action is newly executable.
+
+## r194 Release Identity Gate
+
+- Intended runtime identity: `r194 / 194`.
+- Local identity proof before `clasp version`:
+  - `Config.js:10:  VERSION: "r194",`
+  - `Config.js:12:  DEPLOY_VERSION_NUMBER: 194,`
+- Invariant check: `VERSION == "r" + DEPLOY_VERSION_NUMBER` is PASS for `r194 / 194`.
+- `git diff -- Config.js`: confirms the only identity change is `r193 / 193` to `r194 / 194`.
+- `clasp push`: PASS; output reported `Pushed 8 files.`
+- Remote independent proof outside source root:
+  - pulled into `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog_remote_verify_r194_20260527_01`
+  - remote `Config.js` contains `VERSION: "r194"` and `DEPLOY_VERSION_NUMBER: 194`
+  - remote `AdminUI.html` contains `opsLifecycleStageTop`, `Ack / CRM / Portal`, `No phone on record`, and `Correct Email`
+  - remote `AdminUI.html` retains `data-ops-supervisory-write` and `opsSupervisoryExecutionAllowed_` safety markers
+- Remote-source gate: PASS; safe to create Apps Script platform version for `r194 / 194`.
+
+## r194 Runtime Acceptance Evidence
+
+- Apps Script platform version: `212`.
+- Admin staging deployment: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @212`.
+- Student staging deployment: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @212`.
+- Admin whoami URL: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami`.
+  - PASS: `version="r194"`, `deployVersion=194`, `mismatch=false`.
+- Student whoami URL: `https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec?view=whoami`.
+  - PASS: `version="r194"`, `deployVersion=194`, `mismatch=false`.
+- Browser/manual acceptance: PASS by operator-supplied rendered OPS HTML evidence.
+  - Lifecycle stage headers show workflow structure.
+  - Lifecycle row structure includes contact/phone support.
+  - Email Issue workflow has highlighted contact/correction path.
+  - Grouped status summaries are present.
+  - r193 Operator/Admin safety markers remain present.
+  - No dangerous action was triggered.
+- Release finalization status: HOLD cleared; git commit/tag/push authorized.
+
+## Previous Active CIS
+
 - `CIS: Operator/Admin Surface Safety Policy Implementation`.
 - Implementation date: `2026-05-26`.
 - Proven local starting state before edits:

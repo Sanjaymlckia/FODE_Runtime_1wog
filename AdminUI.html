@@ -759,14 +759,19 @@
     .opsLifecycleBand{ border:1px solid #dce7f2; border-radius:12px; background:#fff; overflow:hidden; }
     .opsLifecycleBandHeader{
       width:100%; border:0; background:#f8fbff; color:#10263c; padding:13px 14px; text-align:left;
-      display:grid; grid-template-columns:minmax(220px,1fr) minmax(220px,1.2fr) auto; gap:12px; align-items:center; cursor:pointer;
+      display:grid; grid-template-columns:minmax(245px,.9fr) minmax(290px,1.2fr) minmax(170px,.65fr); gap:12px; align-items:center; cursor:pointer;
     }
     .opsLifecycleBandHeader:hover{ background:#f2f7fd; }
-    .opsLifecycleTitle{ font-weight:900; font-size:14px; }
+    .opsLifecycleTitle{ font-weight:900; font-size:15px; }
+    .opsLifecycleStageTop{ display:flex; align-items:center; gap:9px; margin-bottom:5px; }
+    .opsLifecycleCount{ min-width:30px; justify-content:center; }
+    .opsLifecycleHeaderLabel{ color:#7a8da1; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.03em; }
     .opsLifecycleNext{ color:#66788c; font-size:12px; line-height:1.35; }
+    .opsLifecycleAction{ border-left:1px solid #dce7f2; padding-left:12px; color:#1d3d60; font-size:12px; }
+    .opsLifecycleAction strong{ display:block; color:#1f5aa5; font-size:14px; margin-top:4px; }
     .opsLifecycleRows{ display:flex; flex-direction:column; border-top:1px solid #e6eef6; }
     .opsWorkflowRow{
-      display:grid; grid-template-columns:minmax(170px,.95fr) minmax(210px,1.1fr) minmax(110px,.55fr) minmax(100px,.5fr) minmax(150px,.72fr) minmax(320px,1.5fr) minmax(130px,.62fr);
+      display:grid; grid-template-columns:minmax(150px,.78fr) minmax(210px,1fr) minmax(200px,1fr) minmax(90px,.45fr) minmax(300px,1.45fr) minmax(150px,.7fr);
       gap:10px; align-items:center; padding:12px 14px; border-bottom:1px solid #eef3f8; cursor:pointer;
     }
     .opsWorkflowRow:last-child{ border-bottom:0; }
@@ -776,6 +781,13 @@
     .opsWorkflowPrimary{ font-weight:900; color:#1f70ea; overflow-wrap:anywhere; }
     .opsWorkflowSecondary{ margin-top:3px; color:#6f8194; font-size:11px; overflow-wrap:anywhere; }
     .opsWorkflowBadges{ display:flex; flex-wrap:wrap; gap:5px; align-items:center; }
+    .opsWorkflowStatusGroup{ display:flex; flex-direction:column; gap:5px; }
+    .opsWorkflowStatusGroup .opsStatusPill{ white-space:normal; line-height:1.25; }
+    .opsWorkflowContact{ line-height:1.4; }
+    .opsWorkflowContactStrong{ color:#10263c; font-size:13px; font-weight:900; }
+    .opsWorkflowEmailIssue{ background:#fffaf0; }
+    .opsWorkflowEmailIssue .opsWorkflowContact{ border:1px solid #f3d6a5; background:#fff5e8; border-radius:8px; padding:8px; }
+    .opsWorkflowBlockReason{ color:#8b5400; font-weight:700; margin-top:5px; }
     .opsWorkflowAction{ justify-self:end; }
     .opsBackendRegister{ display:grid; grid-template-columns:repeat(4,minmax(180px,1fr)); gap:10px; margin-top:12px; }
     .opsBackendRegister .opsInfoItem{ min-height:96px; }
@@ -914,7 +926,7 @@
       .opsSectionGrid,.opsSectionGrid.two,.opsSectionGrid.mainSplit{ grid-template-columns:1fr; }
       .opsFilterGrid{ grid-template-columns:1fr; }
       .opsApplicantMini{ grid-template-columns:repeat(2,minmax(150px,1fr)); }
-      .opsWorkflowRow{ grid-template-columns:minmax(170px,1fr) minmax(210px,1.15fr) minmax(110px,.65fr) minmax(100px,.55fr); }
+      .opsWorkflowRow{ grid-template-columns:minmax(170px,1fr) minmax(210px,1.15fr) minmax(180px,1fr) minmax(90px,.55fr); }
       .opsWorkflowBadges,.opsWorkflowAction{ grid-column:1 / -1; justify-self:start; }
       .opsBackendRegister{ grid-template-columns:repeat(2,minmax(180px,1fr)); }
     }
@@ -929,7 +941,8 @@
       .opsApplicantMini{ grid-template-columns:1fr; }
       .opsWorkflowToolbar{ grid-template-columns:1fr; }
       .opsLifecycleBandHeader{ grid-template-columns:1fr auto; }
-      .opsLifecycleNext{ grid-column:1 / -1; }
+      .opsLifecycleNext,.opsLifecycleAction{ grid-column:1 / -1; }
+      .opsLifecycleAction{ border-left:0; border-top:1px solid #dce7f2; padding:10px 0 0; }
       .opsWorkflowRow{ grid-template-columns:1fr; }
       .opsWorkflowCellLabel{ display:block; }
       .opsBackendRegister{ grid-template-columns:1fr; }
@@ -3103,11 +3116,11 @@
         { key:"fd_received", name:"Application Received / FD Received", mode:"operator workflow", meaning:"External FD intake row has been received and assigned an ApplicantID.", next:"Review Application", matches:function(row){ return opsWorkflowStageKey_(row) === "fd_received"; } },
         { key:"portal", name:"Portal Access / Portal Submitted", mode:"operator workflow", meaning:"Portal link, acknowledgement, or submission state needs operator visibility.", next:"Check Portal Access", matches:function(row){ return opsWorkflowStageKey_(row) === "portal"; } },
         { key:"docs", name:"Documents Pending / Review", mode:"operator workflow", meaning:"Documents or eligibility still need review.", next:"Check Documents", matches:function(row){ return opsWorkflowStageKey_(row) === "docs"; } },
-        { key:"payment", name:"Payment Pending", mode:"operator workflow", meaning:"Payment evidence or verification is pending.", next:"Verify Payment", matches:function(row){ return opsWorkflowStageKey_(row) === "payment"; } },
-        { key:"invoice", name:"Invoice / Books", mode:"admin guarded", meaning:"Books invoice or billing state needs follow-up.", next:"View Invoice Status", matches:function(row){ return opsWorkflowStageKey_(row) === "invoice"; } },
-        { key:"enrolment", name:"Enrolment Pending", mode:"admin guarded", meaning:"Payment is verified and enrolment is not confirmed.", next:"Complete Enrolment", matches:function(row){ return opsWorkflowStageKey_(row) === "enrolment"; } },
-        { key:"classroom", name:"Classroom Handover", mode:"admin guarded", meaning:"Enrolment/classroom handover is pending or unknown.", next:"Prepare Handover", matches:function(row){ return opsWorkflowStageKey_(row) === "classroom"; } },
-        { key:"exceptions", name:"Exceptions / Blocked", mode:"escalation", meaning:"Loaded status indicates blocked, failed, anomalous, or unsafe state.", next:"Resolve Issue", matches:function(row){ return opsWorkflowStageKey_(row) === "exceptions"; } },
+        { key:"payment", name:"Payment Pending", mode:"operator workflow", meaning:"Payment evidence or verification is pending.", next:"Review Payment", matches:function(row){ return opsWorkflowStageKey_(row) === "payment"; } },
+        { key:"invoice", name:"Invoice / Books", mode:"admin guarded", meaning:"Books invoice or billing state needs follow-up.", next:"Review Payment", matches:function(row){ return opsWorkflowStageKey_(row) === "invoice"; } },
+        { key:"enrolment", name:"Enrolment Pending", mode:"admin guarded", meaning:"Payment is verified and enrolment is not confirmed.", next:"Review Application", matches:function(row){ return opsWorkflowStageKey_(row) === "enrolment"; } },
+        { key:"classroom", name:"Classroom Handover", mode:"admin guarded", meaning:"Enrolment/classroom handover is pending or unknown.", next:"Review Application", matches:function(row){ return opsWorkflowStageKey_(row) === "classroom"; } },
+        { key:"exceptions", name:"Exceptions / Blocked", mode:"escalation", meaning:"Loaded status indicates blocked, failed, anomalous, or unsafe state.", next:"Review Application", matches:function(row){ return opsWorkflowStageKey_(row) === "exceptions"; } },
         { key:"email_issue", name:"Email Issue / Contact Correction", mode:"escalation", meaning:"Bounce, suppression, or contact correction is required before email can continue.", next:"Correct Email", matches:function(row){ return opsWorkflowStageKey_(row) === "email_issue"; } }
       ];
     }
@@ -3892,44 +3905,36 @@
         var applicantId = String(row.applicantId || row.ApplicantID || "");
         var applicantName = String(row.name || row.Student_Name || row.First_Name || "Unknown applicant");
         var selected = applicantId === opsApplicantId_();
-        var dateInfo = opsDateAppliedInfo_(row);
-        var dateApplied = dateInfo.label;
         var aging = opsAgingDays_(row) || "Missing source";
         var marker = opsDummyMarker_(applicantId, row);
         var invoiceState = opsInvoiceSummary_(row);
-        var emailState = opsInvoiceEmailSummary_(row);
         var docsState = opsDocsSummary_(row);
         var ackState = fdAckStatusFromRow_(row);
         var crmState = crmBackupStatusFromRow_(row);
         var portalState = portalAccessStatusFromRow_(row);
         var emailIssueBadges = opsEmailIssueBadges_(row);
+        var isEmailIssue = stage.key === "email_issue";
+        var currentEmail = opsFirstNonBlank_(row.email, row.Parent_Email, row.parentEmail, row.effectiveEmail, row.Effective_Email, "No email on record");
+        var phone = opsFirstNonBlank_(row.Parent_Phone, row.Phone, row.Mobile, row.WhatsApp, row.Contact_Number, row.Phone_Number, "No phone on record");
+        var emailIssueLabel = emailIssueBadges.map(function(badge){ return badge.label; }).join(" / ") || "No email issue";
         var paymentOk = (opsIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true);
         var enrolledOk = opsIsYes_(row.Enrolled_Confirmed);
-        var total = opsAmountFromRow_(row);
-        var ready = opsReadySummary_(invoiceState, paymentOk, enrolledOk);
         var classroom = classroomStatusFromRow_(row);
-        var classroomKind = opsPillClass_(classroom.cls || (classroom.label.indexOf("Pending") >= 0 ? "warn" : "muted"));
         if (invoiceState.label === "Invoice Raised") invoiceRaisedCount++;
         if (paymentOk) paymentVerifiedCount++;
         if (paymentOk && !enrolledOk) notEnrolledCount++;
         if (classroom.label.indexOf("Pending") >= 0 || classroom.label.indexOf("Unknown") >= 0) classroomPendingCount++;
-        return "<div class='opsWorkflowRow opsQueueSelectableRow" + (selected ? " opsQueueSelectedRow" : "") + "' data-applicant-id='" + esc(applicantId) + "' data-applicant-name='" + esc(applicantName) + "'>"
+        return "<div class='opsWorkflowRow opsQueueSelectableRow" + (selected ? " opsQueueSelectedRow" : "") + (isEmailIssue ? " opsWorkflowEmailIssue" : "") + "' data-applicant-id='" + esc(applicantId) + "' data-applicant-name='" + esc(applicantName) + "'>"
           + "<div><div class='opsWorkflowCellLabel'>ApplicantID</div><div class='opsWorkflowPrimary'>" + esc(applicantId) + "</div><div class='opsWorkflowSecondary'>" + esc(marker) + "</div></div>"
-          + "<div><div class='opsWorkflowCellLabel'>Applicant</div><div>" + esc(applicantName) + "</div><div class='opsWorkflowSecondary'>" + esc(String(row.email || row.Parent_Email || row.parentEmail || row.effectiveEmail || "")) + "</div></div>"
-          + "<div><div class='opsWorkflowCellLabel'>Date Applied</div><span class='opsStatusPill info' title='" + esc(opsDateAppliedTitle_(row)) + "'>" + esc(dateApplied) + "</span></div>"
-          + "<div><div class='opsWorkflowCellLabel'>Aging</div><span class='opsStatusPill " + opsAgingKind_(row) + "' title='" + esc(opsDateAppliedTitle_(row)) + "'>" + esc(aging) + "</span></div>"
-          + "<div><div class='opsWorkflowCellLabel'>Last Action</div><div class='opsWorkflowSecondary'>" + esc(opsLastActionInfo_(row)) + "</div>" + (emailIssueBadges.length ? "<div class='opsWorkflowSecondary' style='margin-top:4px;'>" + esc(opsEmailIssueReason_(row)) + "</div>" : "") + "</div>"
-          + "<div class='opsWorkflowBadges'>"
-            + "<span class='opsStatusPill " + opsPillClass_(ackState.cls) + "'>" + esc(ackState.label) + "</span>"
-            + "<span class='opsStatusPill " + opsPillClass_(crmState.cls) + "'>" + esc(crmState.label) + "</span>"
-            + "<span class='opsStatusPill " + opsPillClass_(portalState.cls) + "'>" + esc(portalState.label) + "</span>"
-            + "<span class='opsStatusPill " + docsState.cls + "'>" + esc(docsState.label) + "</span>"
-            + "<span class='opsStatusPill " + (paymentOk ? "ok" : "warn") + "'>" + esc(paymentOk ? "Payment Verified" : "Payment Pending") + "</span>"
-            + "<span class='opsStatusPill " + invoiceState.cls + "'>" + esc(invoiceState.label) + "</span>"
-            + "<span class='opsStatusPill " + (enrolledOk ? "ok" : "warn") + "'>" + esc(enrolledOk ? "Enrolled" : "Enrolment Pending") + "</span>"
-            + "<span class='opsStatusPill " + classroomKind + "'>" + esc(classroom.label) + "</span>"
-            + "<span class='opsStatusPill muted'>" + (total > 0 ? esc(formatPngAmount_(total)) : "Amount Unknown") + "</span>"
-            + emailIssueBadges.map(function(badge){ return "<span class='opsStatusPill " + esc(badge.cls) + "'>" + esc(badge.label) + "</span>"; }).join("")
+          + "<div><div class='opsWorkflowCellLabel'>Student / Applicant</div><div class='opsWorkflowContactStrong'>" + esc(applicantName) + "</div><div class='opsWorkflowSecondary'>Email: " + esc(currentEmail) + "</div></div>"
+          + "<div class='opsWorkflowContact'><div class='opsWorkflowCellLabel'>Phone / WhatsApp</div><div class='opsWorkflowContactStrong'>" + esc(phone) + "</div>" + (isEmailIssue ? "<div class='opsWorkflowSecondary'>Call or message for corrected email.</div>" : "<div class='opsWorkflowSecondary'>Phone / WhatsApp</div>") + "</div>"
+          + "<div><div class='opsWorkflowCellLabel'>Age</div><span class='opsStatusPill " + opsAgingKind_(row) + "' title='" + esc(opsDateAppliedTitle_(row)) + "'>" + esc(aging) + "</span></div>"
+          + "<div class='opsWorkflowStatusGroup'><div class='opsWorkflowCellLabel'>Key Status / Blockers</div>"
+            + "<span class='opsStatusPill " + opsPillClass_(ackState.cls) + "'>Ack / CRM / Portal: " + esc(ackState.label + " | " + crmState.label + " | " + portalState.label) + "</span>"
+            + "<span class='opsStatusPill " + docsState.cls + "'>Docs / Payment / Invoice: " + esc(docsState.label + " | " + (paymentOk ? "Verified" : "Pending") + " | " + invoiceState.label) + "</span>"
+            + "<span class='opsStatusPill " + (enrolledOk ? "ok" : "warn") + "'>Enrolment / Classroom: " + esc((enrolledOk ? "Enrolled" : "Pending") + " | " + classroom.label) + "</span>"
+            + "<span class='opsStatusPill " + (emailIssueBadges.length ? "warn" : "muted") + "'>Email issue: " + esc(emailIssueLabel) + "</span>"
+            + (isEmailIssue ? "<div class='opsWorkflowBlockReason'>Block reason: " + esc(opsEmailIssueReason_(row) || "Email correction required") + "</div><div class='opsWorkflowSecondary'>Last action / contacted: " + esc(opsLastActionInfo_(row)) + "</div>" : "")
           + "</div>"
           + "<div class='opsWorkflowAction'><button class='opsActionBtn live' type='button' data-review-applicant-id='" + esc(applicantId) + "' data-review-applicant-name='" + esc(applicantName) + "' data-workflow-stage-key='" + esc(stage.key) + "'>" + esc(stage.next) + "</button><div class='opsWorkflowSecondary'>" + esc(stage.name) + "</div></div>"
           + "</div>";
@@ -3942,9 +3947,9 @@
           if (queueExpandState["workflow_" + stage.key] === false) expanded = false;
           return "<section class='opsLifecycleBand' data-workflow-stage='" + esc(stage.key) + "'>"
             + "<button class='opsLifecycleBandHeader' type='button' data-toggle-workflow-stage='" + esc(stage.key) + "' data-workflow-expanded='" + (expanded ? "1" : "0") + "'>"
-              + "<div><div class='opsLifecycleTitle'>" + esc(stage.name) + "</div><div class='opsWorkflowSecondary'>" + esc(stage.mode) + "</div></div>"
-              + "<div class='opsLifecycleNext'>" + esc(stage.meaning) + "<br><strong>Next action:</strong> " + esc(stage.next) + "</div>"
-              + "<span class='opsStatusPill " + (stageRows.length ? "info" : "muted") + "'>" + String(stageRows.length) + "</span>"
+              + "<div><div class='opsLifecycleStageTop'><div class='opsLifecycleTitle'>" + esc(stage.name) + "</div><span class='opsStatusPill opsLifecycleCount " + (stageRows.length ? "info" : "muted") + "'>" + String(stageRows.length) + "</span></div><div class='opsWorkflowSecondary'>" + esc(stage.mode) + "</div></div>"
+              + "<div class='opsLifecycleNext'><div class='opsLifecycleHeaderLabel'>Stage meaning</div>" + esc(stage.meaning) + "</div>"
+              + "<div class='opsLifecycleAction'><div class='opsLifecycleHeaderLabel'>Next action</div><strong>" + esc(stage.next) + "</strong></div>"
             + "</button>"
             + (expanded ? "<div class='opsLifecycleRows'>" + (stageRows.length ? stageRows.map(function(row){ return renderWorkflowRow_(row, stage); }).join("") : "<div class='opsPlaceholder' style='padding:14px;'>No loaded rows in this lifecycle stage.</div>") + "</div>" : "")
           + "</section>";
@@ -4019,6 +4024,10 @@
           if (stageKey === "email_issue") {
             opsSelectEmailCorrectionCandidate_(applicantId);
             opsScrollTo_("opsCommunications");
+            return;
+          }
+          if (stageKey === "portal") {
+            opsScrollTo_("opsStudentDiagnostics");
             return;
           }
           review(null, applicantId, btn);
