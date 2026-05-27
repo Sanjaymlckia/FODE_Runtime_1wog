@@ -2,6 +2,74 @@
 
 ## Active CIS
 
+- `CIS r199: Communication Cooldown, Workflow Clarity, and Follow-up CSV Fields`.
+- Implementation date: `2026-05-27`.
+- Work class: `Runtime release - light UI wording and local CSV visibility`.
+- Release track: `Track L`.
+- Reason for classification: frontend-only wording, status display, and local browser CSV column changes; no backend, schema, send logic, or mutation authority changes.
+- Intended runtime identity: `r199 / 199`.
+- Runtime release authorized: `YES`.
+- Allowed edit files:
+  - `AdminUI.html`
+  - `CURRENT_TASK.md`
+  - `Config.js`
+- Explicitly forbidden:
+  - `Admin.js`, backend send logic, schema, AI/document processing, file writeback, email/Books/portal/payment/classroom logic changes, closed/lost/transferred workflow implementation, broad refactor.
+- Inspection finding:
+  - frontend detail already loads `Last_Contacted_At`, `Last_Contact_Type`, `Last_Contact_By`, `Last_Contact_Subject`, and `Email_Next_Action_Date` for cooldown display.
+  - queue row rendering already provides email/phone fields, lifecycle-stage derivation, next-action definitions, document/payment status helpers, invoice/enrolment/classroom fields, and explicit blockers when present.
+  - `opsExportQueueCsv_()` is a local browser-only export from loaded queue rows; it can expose available follow-up fields with blank or `Unknown` fallbacks without backend/schema work.
+- Acceptance targets:
+  - active cooldown display identifies source-backed last communication evidence, next eligible send, and cooldown block reason without inventing message type.
+  - Applicant Review and OPS workflow text explains portal/document/payment/enrolment fields in operator language.
+  - vague payment-pending lifecycle wording is replaced where displayed in the affected workflow surfaces.
+  - local queue CSV includes manual follow-up contact, stage, action, communication, evidence, verification, invoice/enrolment/classroom, and ready/block reason columns.
+  - local export retains the authorised-staff privacy warning.
+  - no AI inspection, closed/lost/transferred implementation, backend/schema change, or dangerous-action change is introduced.
+  - only `AdminUI.html`, `CURRENT_TASK.md`, and `Config.js` change.
+- Release closure discipline:
+  - close only against this approved scope and acceptance criteria.
+  - classify new findings as `BLOCKER` or `FOLLOW-UP`; do not expand this release for non-blockers.
+- Follow-up register: none identified at implementation start.
+
+## r199 Release Identity Gate
+
+- Intended runtime identity: `r199 / 199`.
+- Local identity proof before `clasp version`:
+  - `Config.js:10:  VERSION: "r199",`
+  - `Config.js:12:  DEPLOY_VERSION_NUMBER: 199,`
+- Invariant check: `VERSION == "r" + DEPLOY_VERSION_NUMBER` is PASS for `r199 / 199`.
+- `git diff -- Config.js`: confirms the only identity change is `r198 / 198` to `r199 / 199`.
+- `clasp push`: PASS; output reported `Pushed 8 files.` and did not report `Skipping push`.
+- Remote independent proof outside source root:
+  - pulled into `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog_remote_verify_r199_20260527_01`
+  - remote `Config.js` contains `VERSION: "r199"` and `DEPLOY_VERSION_NUMBER: 199`
+  - remote `AdminUI.html` contains `Last communication:`, `Next eligible send:`, `Block reason: Cooldown active`, `Payment Evidence Not Verified`, `Required documents/payment evidence missing or unverified`, and operator workflow wording markers
+  - remote `AdminUI.html` contains the local CSV markers `Applicant / Student Name`, `Phone / WhatsApp`, `Lifecycle Stage`, `Stage Meaning`, `Next Action`, `Communication Status`, `Document Evidence Status`, `Payment Evidence Status`, `Ready / Blocked`, and `Block Reason`
+  - remote `AdminUI.html` retains `Local export contains applicant data. Do not share outside authorised staff.`, `data-ops-supervisory-write`, and `opsSupervisoryExecutionAllowed_` safety markers
+- Remote-source gate: PASS; Apps Script platform version creation was authorized for `r199 / 199`.
+
+## r199 Runtime Acceptance Evidence
+
+- Apps Script platform version: `217`.
+- Admin staging deployment: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @217`.
+- Student staging deployment: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @217`.
+- Admin whoami URL: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami`.
+  - PASS: `version="r199"`, `deployVersion=199`, `mismatch=false`.
+- Student whoami URL: `https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec?view=whoami`.
+  - PASS: `version="r199"`, `deployVersion=199`, `mismatch=false`.
+- Track L acceptance: PASS by CIS-permitted local/remote HTML evidence.
+  - active cooldown rendering shows source-backed last communication details when loaded, otherwise `recorded, details unavailable`, plus next eligible send and `Cooldown active` block reason.
+  - Applicant Review and OPS workflow displays explain portal submission, document verification, payment evidence/payment verification, and enrolled confirmation in operator language.
+  - unverified payment displays use `Payment Evidence Not Verified` / `Payment evidence not verified`, and enrolled confirmation no longer derives `Yes` from payment verification alone.
+  - local queue CSV includes the required manual follow-up columns with blank or `Unknown` fallbacks and retains the authorised-staff privacy warning.
+  - no AI/document processing, closed/lost/transferred implementation, backend/schema change, send logic change, or dangerous-action enablement was introduced.
+  - existing supervisory safety markers remain present and no dangerous action was triggered during acceptance.
+- Closure classification: no `BLOCKER` or `FOLLOW-UP` was identified within the approved r199 scope.
+- Release finalization status: PASS; commit, tag, and push authorized.
+
+## Previous Active CIS
+
 - `CIS r198: Payment Receipt Evidence Wording Alignment`.
 - Implementation date: `2026-05-27`.
 - Work class: `Runtime release - light UI wording alignment`.
@@ -200,13 +268,13 @@
 <!-- CODEXHUB_STATE_BACKUP_START -->
 ## CodexHub State Backup
 
-- Last state backup timestamp: 2026-05-27 13:05:08
+- Last state backup timestamp: 2026-05-27 13:23:24
 - Project path: `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog`
 - Repository state: DIRTY
 - Current branch: `main`
-- Latest commit: `eb2fa01 release: r197 document checklist visibility`
-- Latest matching staging tag: `staging-as197`
-- Config version / deploy number: VERSION: r197; DEPLOY_VERSION_NUMBER: 197
+- Latest commit: `71260fd release: r198 payment receipt evidence wording alignment`
+- Latest matching staging tag: `staging-as198`
+- Config version / deploy number: VERSION: r198; DEPLOY_VERSION_NUMBER: 198
 - Current release track: Not detected.
 - Current blocker: None detected.
 - Next exact action: Not detected.
