@@ -2,6 +2,81 @@
 
 ## Active CIS
 
+- `CIS r195: Email Correction Handoff + Communications UX Cleanup`.
+- Implementation date: `2026-05-27`.
+- Proven local starting state before edits:
+  - git commit `86b4c95`
+  - tag at HEAD `staging-as194`
+  - `.codexhub/` already untracked before this CIS
+- Scope:
+  - keep Email Issue rows focused on applicant contact and correction handoff
+  - route `Correct Email` into the existing Applicant Review / Admin Review bridge with the selected ApplicantID
+  - keep Communications focused on preview/send workflow and remove its exposed correction form
+  - preserve r193/r194 Operator/Admin/Super Admin safety policy
+- Allowed edit files:
+  - `AdminUI.html`
+  - `CURRENT_TASK.md`
+  - `Config.js` only if release is executed
+- Explicitly out of scope:
+  - `Admin.js`, backend gates, email send logic, Books logic, portal logic, schema, Script Properties, and any new correction backend
+- Release status:
+  - release authorized by this CIS after acceptance and runtime gates pass
+  - `Config.js` bumped to intended release identity `r195 / 195`
+  - `clasp push`: PASS, pushed 8 clasp-managed files
+  - remote-source proof: PASS from `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog_remote_verify_r195_20260527_01`
+  - Apps Script platform version: `213`
+  - Admin staging deployment: repinned to `@213`
+  - Student staging deployment: repinned to `@213`
+  - Admin whoami: PASS, `r195 / 195`, `mismatch=false`
+  - Student whoami: PASS, `r195 / 195`, `mismatch=false`
+  - acceptance: PASS by permitted source/remote HTML evidence; no dangerous action triggered
+  - commit, tag, and push: authorized after acceptance passed
+
+## r195 Local Acceptance Targets
+
+- Email Issue rows show ApplicantID, applicant name, current/bad email, phone/WhatsApp, blocker, last action/contacted detail, and `Correct Email`.
+- `Correct Email` preserves the selected ApplicantID and opens the existing Applicant Review / Admin Review path, not generic Communications.
+- Communications exposes preview/send workflow and guidance to use Lifecycle Map / Applicant Queue for bad or missing email correction.
+- Existing supervisory write gates remain unchanged; no dangerous action is newly executable.
+- No files outside `AdminUI.html`, `CURRENT_TASK.md`, and release-only `Config.js` are changed.
+
+## r195 Release Identity Gate
+
+- Intended runtime identity: `r195 / 195`.
+- Local identity proof before `clasp version`:
+  - `Config.js:10:  VERSION: "r195",`
+  - `Config.js:12:  DEPLOY_VERSION_NUMBER: 195,`
+- Invariant check: `VERSION == "r" + DEPLOY_VERSION_NUMBER` is PASS for `r195 / 195`.
+- `git diff -- Config.js`: confirms the only identity change is `r194 / 194` to `r195 / 195`.
+- `clasp push`: PASS; output reported `Pushed 8 files.`
+- Remote independent proof outside source root:
+  - pulled into `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog_remote_verify_r195_20260527_01`
+  - remote `Config.js` contains `VERSION: "r195"` and `DEPLOY_VERSION_NUMBER: 195`
+  - remote `AdminUI.html` contains `Correct Email` handoff guidance, `Email correction is handled in Admin Review.`, and `review(null, applicantId, btn);`
+  - remote `AdminUI.html` retains `data-ops-supervisory-write` and `opsSupervisoryExecutionAllowed_` safety markers
+  - remote Communications no longer exposes the OPS `Apply Email Correction` control
+- Remote-source gate: PASS; safe to create an Apps Script platform version for `r195 / 195`.
+
+## r195 Runtime Acceptance Evidence
+
+- Apps Script platform version: `213`.
+- Admin staging deployment: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @213`.
+- Student staging deployment: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @213`.
+- Admin whoami URL: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami`.
+  - PASS: `version="r195"`, `deployVersion=195`, `mismatch=false`.
+- Student whoami URL: `https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec?view=whoami`.
+  - PASS: `version="r195"`, `deployVersion=195`, `mismatch=false`.
+- Acceptance: PASS by CIS-permitted source/remote HTML evidence.
+  - Email Issue row retains prominent phone/WhatsApp contact support and tells the operator to call/message for a corrected email.
+  - `Correct Email` preserves selected ApplicantID context by routing through existing `review(null, applicantId, btn);` Applicant Review handling.
+  - Helper text states `Email correction is handled in Admin Review.`
+  - Communications displays the Admin Review handoff note and no longer exposes its OPS `Apply Email Correction` form/button.
+  - Existing supervisory markers `data-ops-supervisory-write` and `opsSupervisoryExecutionAllowed_` remain present.
+  - No dangerous action was triggered during acceptance.
+- Release finalization status: HOLD cleared; git commit/tag/push authorized.
+
+## Previous Active CIS
+
 - `CIS r194: Lifecycle Map Usability Cleanup`.
 - Implementation date: `2026-05-27`.
 - Proven local starting state before edits:

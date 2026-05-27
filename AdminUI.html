@@ -1356,6 +1356,7 @@
           <div><h2>Communications</h2><p>Single-applicant communication actions require selected-applicant context, recipient review, and explicit confirmation.</p></div>
           <span class="opsStatusPill warn">Preview only for Operator/Admin</span>
         </div>
+        <div class="opsSafetyNotice">For bad or missing email, use <strong>Correct Email</strong> from Lifecycle Map / Applicant Queue to open Admin Review.</div>
         <div class="opsSectionGrid mainSplit">
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Applicant Communication State</h3></div><span class="opsStatusPill info">Selected applicant</span></div>
@@ -1420,24 +1421,6 @@
                 <div class="opsActionRow">
                   <button class="opsActionBtn live" type="button" data-ops-supervisory-write="1" data-ops-base-label="Send Custom Email" onclick="opsSendApplicantEmail_('custom_email','Custom Email')">Send Custom Email</button>
                 </div>
-              </div>
-            </div>
-            <div class="opsControlGrid">
-              <div class="opsControlGroup write">
-                <div class="opsControlTitle">Email correction</div>
-                <p class="opsControlNote">Uses the existing Super Admin email override backend. Search loaded OPS rows, select the applicant, then write `Parent_Email_Corrected` with audit/reset behaviour preserved.</p>
-                <div class="opsDraftGrid">
-                  <div class="field"><label>Search ApplicantID / name / email / phone</label><input id="opsEmailCorrectionSearch" type="search" placeholder="Search loaded applicant rows" oninput="opsRenderEmailCorrectionCandidates_()"></div>
-                  <div class="field"><label>Selected ApplicantID</label><input id="opsEmailCorrectionApplicantId" type="text" readonly></div>
-                  <div class="field"><label>Corrected email</label><input id="opsEmailCorrectionNewEmail" type="email" placeholder="parent@example.com"></div>
-                  <div class="field"><label>Reason</label><input id="opsEmailCorrectionReason" type="text" placeholder="Required audit reason"></div>
-                </div>
-                <div class="opsRecordList" id="opsEmailCorrectionCandidates" style="margin-top:10px;"></div>
-                <div class="opsActionRow" style="margin-top:10px;">
-                  <button class="opsActionBtn live" type="button" data-ops-supervisory-write="1" data-ops-base-label="Apply Email Correction" onclick="opsApplyEmailCorrection_()">Apply Email Correction</button>
-                  <button class="opsActionBtn" type="button" onclick="opsRenderEmailCorrectionCandidates_()">Refresh Candidates</button>
-                </div>
-                <div id="opsEmailCorrectionResult" class="opsResultBox hidden"></div>
               </div>
             </div>
           </div>
@@ -3926,8 +3909,8 @@
         if (classroom.label.indexOf("Pending") >= 0 || classroom.label.indexOf("Unknown") >= 0) classroomPendingCount++;
         return "<div class='opsWorkflowRow opsQueueSelectableRow" + (selected ? " opsQueueSelectedRow" : "") + (isEmailIssue ? " opsWorkflowEmailIssue" : "") + "' data-applicant-id='" + esc(applicantId) + "' data-applicant-name='" + esc(applicantName) + "'>"
           + "<div><div class='opsWorkflowCellLabel'>ApplicantID</div><div class='opsWorkflowPrimary'>" + esc(applicantId) + "</div><div class='opsWorkflowSecondary'>" + esc(marker) + "</div></div>"
-          + "<div><div class='opsWorkflowCellLabel'>Student / Applicant</div><div class='opsWorkflowContactStrong'>" + esc(applicantName) + "</div><div class='opsWorkflowSecondary'>Email: " + esc(currentEmail) + "</div></div>"
-          + "<div class='opsWorkflowContact'><div class='opsWorkflowCellLabel'>Phone / WhatsApp</div><div class='opsWorkflowContactStrong'>" + esc(phone) + "</div>" + (isEmailIssue ? "<div class='opsWorkflowSecondary'>Call or message for corrected email.</div>" : "<div class='opsWorkflowSecondary'>Phone / WhatsApp</div>") + "</div>"
+          + "<div><div class='opsWorkflowCellLabel'>Student / Applicant</div><div class='opsWorkflowContactStrong'>" + esc(applicantName) + "</div><div class='opsWorkflowSecondary'>" + esc(isEmailIssue ? "Current / bad email: " : "Email: ") + esc(currentEmail) + "</div></div>"
+          + "<div class='opsWorkflowContact'><div class='opsWorkflowCellLabel'>Phone / WhatsApp</div><div class='opsWorkflowContactStrong'>" + esc(phone) + "</div>" + (isEmailIssue ? "<div class='opsWorkflowSecondary'>Call/message applicant to obtain corrected email.</div>" : "<div class='opsWorkflowSecondary'>Phone / WhatsApp</div>") + "</div>"
           + "<div><div class='opsWorkflowCellLabel'>Age</div><span class='opsStatusPill " + opsAgingKind_(row) + "' title='" + esc(opsDateAppliedTitle_(row)) + "'>" + esc(aging) + "</span></div>"
           + "<div class='opsWorkflowStatusGroup'><div class='opsWorkflowCellLabel'>Key Status / Blockers</div>"
             + "<span class='opsStatusPill " + opsPillClass_(ackState.cls) + "'>Ack / CRM / Portal: " + esc(ackState.label + " | " + crmState.label + " | " + portalState.label) + "</span>"
@@ -3936,7 +3919,7 @@
             + "<span class='opsStatusPill " + (emailIssueBadges.length ? "warn" : "muted") + "'>Email issue: " + esc(emailIssueLabel) + "</span>"
             + (isEmailIssue ? "<div class='opsWorkflowBlockReason'>Block reason: " + esc(opsEmailIssueReason_(row) || "Email correction required") + "</div><div class='opsWorkflowSecondary'>Last action / contacted: " + esc(opsLastActionInfo_(row)) + "</div>" : "")
           + "</div>"
-          + "<div class='opsWorkflowAction'><button class='opsActionBtn live' type='button' data-review-applicant-id='" + esc(applicantId) + "' data-review-applicant-name='" + esc(applicantName) + "' data-workflow-stage-key='" + esc(stage.key) + "'>" + esc(stage.next) + "</button><div class='opsWorkflowSecondary'>" + esc(stage.name) + "</div></div>"
+          + "<div class='opsWorkflowAction'><button class='opsActionBtn live' type='button' data-review-applicant-id='" + esc(applicantId) + "' data-review-applicant-name='" + esc(applicantName) + "' data-workflow-stage-key='" + esc(stage.key) + "'>" + esc(stage.next) + "</button><div class='opsWorkflowSecondary'>" + esc(isEmailIssue ? "Email correction is handled in Admin Review." : stage.name) + "</div></div>"
           + "</div>";
       }
       if (workflow) {
@@ -4022,8 +4005,7 @@
           var stageKey = String(btn.getAttribute("data-workflow-stage-key") || "");
           opsSelectApplicantContext_(applicantId, applicantName);
           if (stageKey === "email_issue") {
-            opsSelectEmailCorrectionCandidate_(applicantId);
-            opsScrollTo_("opsCommunications");
+            review(null, applicantId, btn);
             return;
           }
           if (stageKey === "portal") {
