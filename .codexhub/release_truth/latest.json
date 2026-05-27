@@ -1,0 +1,80 @@
+{
+  "timestamp_utc": "2026-05-19T03:47:08.7016585Z",
+  "repo_root": "E:\\Gdrive\\01 SANJAY\\Codex_Sync\\FODE_Runtime_1wog",
+  "mode": "LO",
+  "git": {
+    "is_repo": true,
+    "branch": "main",
+    "head": "344c44632493dff66a63f4eef75359fe756d28f7",
+    "status_sb": "## main...origin/main\n M AdminUI.html\n M CURRENT_TASK.md",
+    "dirty": true
+  },
+  "config": {
+    "path": "E:\\Gdrive\\01 SANJAY\\Codex_Sync\\FODE_Runtime_1wog\\Config.js",
+    "exists": true,
+    "version": "r180",
+    "deploy_version_number": "180",
+    "expected_version_from_deploy": "r180",
+    "version_matches_expected": true
+  },
+  "tags": {
+    "local_latest": "staging-as180",
+    "remote_latest": "",
+    "remote_origin": "",
+    "remote_lookup_attempted": false,
+    "remote_lookup_error": ""
+  },
+  "clasp": {
+    "path": "E:\\Gdrive\\01 SANJAY\\Codex_Sync\\FODE_Runtime_1wog\\.clasp.json",
+    "exists": true,
+    "script_id": "",
+    "root_dir": "",
+    "inventory_available": false
+  },
+  "current_task": {
+    "path": "E:\\Gdrive\\01 SANJAY\\Codex_Sync\\FODE_Runtime_1wog\\CURRENT_TASK.md",
+    "exists": true,
+    "version": "",
+    "deploy_version_number": "190",
+    "lines": [
+      "- Admin staging deployment: `@190`"
+    ]
+  },
+  "live": {
+    "configured": true,
+    "admin": {
+      "configured": true,
+      "url": "",
+      "success": false,
+      "status_code": null,
+      "payload": null,
+      "error": ""
+    },
+    "student": {
+      "configured": true,
+      "url": "",
+      "success": false,
+      "status_code": null,
+      "payload": null,
+      "error": ""
+    },
+    "match": null
+  },
+  "skipped_checks": [
+    {
+      "check": "remote_staging_tag",
+      "reason": "LO mode is fully local; remote tag lookup disabled."
+    },
+    {
+      "check": "clasp_inventory",
+      "reason": "LO mode skips clasp inventory."
+    },
+    {
+      "check": "live_whoami",
+      "reason": "LO mode does not perform live whoami checks."
+    }
+  ],
+  "warnings": [],
+  "classification": "LOCAL_DIRTY",
+  "next_recommended_mode": "MED"
+}

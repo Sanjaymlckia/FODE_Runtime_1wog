@@ -356,13 +356,13 @@
 <!-- CODEXHUB_STATE_BACKUP_START -->
 ## CodexHub State Backup
 
-- Last state backup timestamp: 2026-05-27 14:44:59
+- Last state backup timestamp: 2026-05-28 08:46:31
 - Project path: `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog`
 - Repository state: DIRTY
 - Current branch: `main`
-- Latest commit: `633b128 release: r199 communication clarity and followup csv fields`
-- Latest matching staging tag: `staging-as199`
-- Config version / deploy number: VERSION: r199; DEPLOY_VERSION_NUMBER: 199
+- Latest commit: `7ba1802 release: r200 elevated admin role`
+- Latest matching staging tag: `staging-as200`
+- Config version / deploy number: VERSION: r200; DEPLOY_VERSION_NUMBER: 200
 - Current release track: Not detected.
 - Current blocker: None detected.
 - Next exact action: Not detected.
@@ -371,11 +371,17 @@
 ### Git Status
 ```text
 ## main...origin/main
+ M CURRENT_TASK.md
 ?? .codexhub/
+?? audits/FODE_Data_Reviewed_with_Deprecation_Plan.xlsx
+?? audits/~$FODE_Data_Reviewed_with_Deprecation_Plan.xlsx
 ```
 
 ### Changed Files
+- `CURRENT_TASK.md`
 - `.codexhub/`
+- `audits/FODE_Data_Reviewed_with_Deprecation_Plan.xlsx`
+- `audits/~$FODE_Data_Reviewed_with_Deprecation_Plan.xlsx`
 <!-- CODEXHUB_STATE_BACKUP_END -->
 
 ## Previous Active CIS

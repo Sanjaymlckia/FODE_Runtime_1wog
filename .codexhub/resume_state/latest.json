@@ -1,0 +1,43 @@
+{
+  "machine": "SVAIDYA",
+  "repo_path": "E:\\Gdrive\\01_SANJAY\\Codex_Sync\\FODE_Runtime_1wog",
+  "branch": "main",
+  "head": "7ba18027417b4d4bfc0f02b19e1b195a1b882b70",
+  "git_status": "## main...origin/main\n M CURRENT_TASK.md\n?? .codexhub/\n?? audits/FODE_Data_Reviewed_with_Deprecation_Plan.xlsx\n?? audits/~$FODE_Data_Reviewed_with_Deprecation_Plan.xlsx",
+  "current_task": {
+    "path": "E:\\Gdrive\\01_SANJAY\\Codex_Sync\\FODE_Runtime_1wog\\CURRENT_TASK.md",
+    "exists": true,
+    "last_write_utc": "2026-05-27T22:46:31.2678831Z",
+    "hash_sha256": "030783202280261C5CE3671010FE2691975AC090D3E19AE2B96542631FC5AF3F",
+    "workspace_path": "",
+    "has_next_action": false,
+    "has_state_backup": true,
+    "state_backup_timestamp": "2026-05-28 08:46:31",
+    "state_backup_note": "[add operator note]",
+    "state_backup_timestamp_valid": true,
+    "state_backup_is_fresh": true,
+    "appears_current": false
+  },
+  "release_truth_reference": {
+    "path": "E:\\Gdrive\\01_SANJAY\\Codex_Sync\\FODE_Runtime_1wog\\.codexhub\\release_truth\\latest.json",
+    "exists": true,
+    "repo_root": "E:\\Gdrive\\01 SANJAY\\Codex_Sync\\FODE_Runtime_1wog",
+    "branch": "main",
+    "head": "344c44632493dff66a63f4eef75359fe756d28f7",
+    "classification": "LOCAL_DIRTY",
+    "timestamp_utc": "05/19/2026 03:47:08"
+  },
+  "resume_state_reference": {
+    "path": "",
+    "exists": false,
+    "machine": "",
+    "repo_path": "",
+    "branch": "",
+    "head": "",
+    "current_task_hash": ""
+  },
+  "warnings": [],
+  "classification": "DIRTY_BUT_RECORDED",
+  "confidence": "medium",
+  "recommended_action": "Continue carefully; local changes exist but task context is present."
+}
