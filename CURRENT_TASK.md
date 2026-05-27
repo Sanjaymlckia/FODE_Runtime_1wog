@@ -1,5 +1,69 @@
 ﻿# Current Task
 
+## Active CIS
+
+- `CIS r196: Document Evidence Wording Cleanup`.
+- Implementation date: `2026-05-27`.
+- Work class: `Runtime release - light UI wording and evidence clarity`.
+- Release track: `Track L`.
+- Reason for classification: frontend-only lifecycle/document-stage wording and visible evidence labels; no backend behavior or mutation authority changes.
+- Intended runtime identity: `r196 / 196`.
+- Runtime release authorized: `YES`.
+- Allowed edit files:
+  - `AdminUI.html`
+  - `CURRENT_TASK.md`
+  - `Config.js`
+- Explicitly forbidden:
+  - `Admin.js`, backend classification, schema, email send logic, Books logic, portal write/reset/lock logic, Script Properties, broad refactor.
+- Inspection finding:
+  - selected-applicant detail already provides `_docs[].hasFile` and blocks document verification without a file.
+  - lifecycle queue rows expose document status and portal submission, but not a direct file-link flag; queue wording must therefore use explicit status only and never infer upload from `Portal_Submitted`.
+- Acceptance targets:
+  - `Documents Pending / Review` is replaced with `Documents / Eligibility Check`.
+  - lifecycle rows show explicit document evidence wording without assuming files exist.
+  - Portal Submitted remains separate from document upload evidence.
+  - actions use upload checks/contact/eligibility wording rather than implying document review where no file evidence is visible.
+  - r193/r194/r195 safety markers and gates remain unchanged; no dangerous action becomes executable.
+  - only `AdminUI.html`, `CURRENT_TASK.md`, and `Config.js` change.
+- Release closure discipline:
+  - close only against this approved scope and acceptance criteria.
+  - classify new findings as `BLOCKER` or `FOLLOW-UP`; do not expand this release for non-blockers.
+- Follow-up register: none identified at implementation start.
+
+## r196 Release Identity Gate
+
+- Intended runtime identity: `r196 / 196`.
+- Local identity proof before `clasp version`:
+  - `Config.js:10:  VERSION: "r196",`
+  - `Config.js:12:  DEPLOY_VERSION_NUMBER: 196,`
+- Invariant check: `VERSION == "r" + DEPLOY_VERSION_NUMBER` is PASS for `r196 / 196`.
+- `git diff -- Config.js`: confirms the only identity change is `r195 / 195` to `r196 / 196`.
+- `clasp push`: PASS; output reported `Pushed 8 files.` and did not report `Skipping push`.
+- Remote independent proof outside source root:
+  - pulled into `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog_remote_verify_r196_20260527_01`
+  - remote `Config.js` contains `VERSION: "r196"` and `DEPLOY_VERSION_NUMBER: 196`
+  - remote `AdminUI.html` contains `Documents / Eligibility Check`, document evidence status markers, and `Check portal uploads / contact applicant`
+  - remote `AdminUI.html` retains `data-ops-supervisory-write` and `opsSupervisoryExecutionAllowed_` safety markers
+- Remote-source gate: PASS; Apps Script platform version creation was authorized for `r196 / 196`.
+
+## r196 Runtime Acceptance Evidence
+
+- Apps Script platform version: `214`.
+- Admin staging deployment: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @214`.
+- Student staging deployment: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @214`.
+- Admin whoami URL: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami`.
+  - PASS: `version="r196"`, `deployVersion=196`, `mismatch=false`.
+- Student whoami URL: `https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec?view=whoami`.
+  - PASS: `version="r196"`, `deployVersion=196`, `mismatch=false`.
+- Track L acceptance: PASS by CIS-permitted local/remote HTML evidence.
+  - `Documents Pending / Review` is removed from the lifecycle definition and replaced with `Documents / Eligibility Check`.
+  - lifecycle rows show one of `Files uploaded - review required`, `No files uploaded`, `Documents verified`, `Unknown evidence state`, or `Pending eligibility check`.
+  - queue rows never infer document upload from `Portal_Submitted`; portal/document actions use upload-check/contact/eligibility wording.
+  - selected-applicant detail uses existing `_docs[].hasFile` to distinguish files uploaded from no files uploaded.
+  - existing supervisory safety markers remain present and no dangerous action was triggered during acceptance.
+- Closure classification: no `BLOCKER` or `FOLLOW-UP` was identified within the approved r196 scope.
+- Release finalization status: PASS; commit, tag, and push authorized.
+
 <!-- CODEXHUB_STATE_BACKUP_START -->
 ## CodexHub State Backup
 
@@ -31,7 +95,7 @@
 - `docs/RELEASE_DISCIPLINE.md`
 <!-- CODEXHUB_STATE_BACKUP_END -->
 
-## Active CIS
+## Previous Active CIS
 
 - `CIS: Release Track Discipline - documentation-only process hardening`.
 - Implementation date: `2026-05-27`.
