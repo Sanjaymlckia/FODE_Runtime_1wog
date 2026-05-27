@@ -789,6 +789,11 @@
     .opsWorkflowEmailIssue .opsWorkflowContact{ border:1px solid #f3d6a5; background:#fff5e8; border-radius:8px; padding:8px; }
     .opsWorkflowBlockReason{ color:#8b5400; font-weight:700; margin-top:5px; }
     .opsWorkflowAction{ justify-self:end; }
+    .opsDocChecklist{ margin-top:8px; padding:8px; border:1px solid #dce7f2; border-radius:8px; background:#f8fbff; font-size:11px; line-height:1.4; color:#334b64; }
+    .opsDocChecklistLabel{ margin-top:4px; color:#7a8da1; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.03em; }
+    .opsDocChecklistItem.ok{ color:#167447; }
+    .opsDocChecklistItem.warn{ color:#9a4c0a; }
+    .opsDocChecklistItem.muted{ color:#66788c; }
     .opsBackendRegister{ display:grid; grid-template-columns:repeat(4,minmax(180px,1fr)); gap:10px; margin-top:12px; }
     .opsBackendRegister .opsInfoItem{ min-height:96px; }
     .opsQueueName{ font-weight:900; color:#1f70ea; white-space:nowrap; }
@@ -3751,6 +3756,19 @@
         ? { label:"Documents verified", cls:"ok", action:"Eligibility check required" }
         : { label:"Files uploaded - review required", cls:"warn", action:"Eligibility check required" };
     }
+    function opsQueueDocumentChecklistHtml_(row){
+      var r = row || {};
+      if (!Object.prototype.hasOwnProperty.call(r, "Fee_Receipt_File")) {
+        return "<div class='opsDocChecklist'><div class='opsDocChecklistItem muted'>Document checklist unavailable in queue view</div></div>";
+      }
+      var hasReceipt = !!String(r.Fee_Receipt_File || "").trim();
+      return "<div class='opsDocChecklist'>"
+        + "<div class='opsDocChecklistLabel'>" + (hasReceipt ? "Uploaded" : "Missing") + "</div>"
+        + "<div class='opsDocChecklistItem " + (hasReceipt ? "ok" : "warn") + "'>" + (hasReceipt ? "&#10003;" : "&#10007;") + " Payment Receipt</div>"
+        + "<div class='opsDocChecklistLabel'>Unknown</div>"
+        + "<div class='opsDocChecklistItem muted'>? Other required documents: unknown from loaded data</div>"
+        + "</div>";
+    }
     function opsInvoiceSummary_(row){
       var raised = invoiceRaisedFromRow_(row);
       if (raised) {
@@ -3927,6 +3945,8 @@
         var emailIssueBadges = opsEmailIssueBadges_(row);
         var isEmailIssue = stage.key === "email_issue";
         var usesDocumentEvidenceAction = stage.key === "portal" || stage.key === "docs";
+        var primaryActionLabel = stage.key === "docs" ? "Check portal uploads / contact applicant" : (usesDocumentEvidenceAction ? documentEvidence.action : stage.next);
+        var documentChecklistHtml = stage.key === "docs" ? opsQueueDocumentChecklistHtml_(row) : "";
         var currentEmail = opsFirstNonBlank_(row.email, row.Parent_Email, row.parentEmail, row.effectiveEmail, row.Effective_Email, "No email on record");
         var phone = opsFirstNonBlank_(row.Parent_Phone, row.Phone, row.Mobile, row.WhatsApp, row.Contact_Number, row.Phone_Number, "No phone on record");
         var emailIssueLabel = emailIssueBadges.map(function(badge){ return badge.label; }).join(" / ") || "No email issue";
@@ -3950,7 +3970,7 @@
             + "<span class='opsStatusPill " + (emailIssueBadges.length ? "warn" : "muted") + "'>Email issue: " + esc(emailIssueLabel) + "</span>"
             + (isEmailIssue ? "<div class='opsWorkflowBlockReason'>Block reason: " + esc(opsEmailIssueReason_(row) || "Email correction required") + "</div><div class='opsWorkflowSecondary'>Last action / contacted: " + esc(opsLastActionInfo_(row)) + "</div>" : "")
           + "</div>"
-          + "<div class='opsWorkflowAction'><button class='opsActionBtn live' type='button' data-review-applicant-id='" + esc(applicantId) + "' data-review-applicant-name='" + esc(applicantName) + "' data-workflow-stage-key='" + esc(stage.key) + "'>" + esc(usesDocumentEvidenceAction ? documentEvidence.action : stage.next) + "</button><div class='opsWorkflowSecondary'>" + esc(isEmailIssue ? "Email correction is handled in Admin Review." : ("Portal: " + (workflowIsYes_(row.Portal_Submitted) ? "Submitted" : portalState.label) + " | Documents: " + documentEvidence.label)) + "</div></div>"
+          + "<div class='opsWorkflowAction'><button class='opsActionBtn live' type='button' data-review-applicant-id='" + esc(applicantId) + "' data-review-applicant-name='" + esc(applicantName) + "' data-workflow-stage-key='" + esc(stage.key) + "'>" + esc(primaryActionLabel) + "</button><div class='opsWorkflowSecondary'>" + esc(isEmailIssue ? "Email correction is handled in Admin Review." : ("Portal: " + (workflowIsYes_(row.Portal_Submitted) ? "Submitted" : portalState.label) + " | Documents: " + documentEvidence.label)) + "</div>" + documentChecklistHtml + "</div>"
           + "</div>";
       }
       if (workflow) {

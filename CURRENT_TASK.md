@@ -1,6 +1,71 @@
-﻿# Current Task
+# Current Task
 
 ## Active CIS
+
+- `CIS r197: Document Checklist Visibility`.
+- Implementation date: `2026-05-27`.
+- Work class: `Runtime release - light UI checklist visibility`.
+- Release track: `Track L`.
+- Reason for classification: frontend-only document checklist display in existing lifecycle rows; no backend, schema, file processing, or mutation changes.
+- Intended runtime identity: `r197 / 197`.
+- Runtime release authorized: `YES`.
+- Allowed edit files:
+  - `AdminUI.html`
+  - `CURRENT_TASK.md`
+  - `Config.js`
+- Explicitly forbidden:
+  - `Admin.js`, backend/schema changes, AI/document processing, image resizing, file writeback, email/Books/portal/payment/classroom logic changes, broad refactor.
+- Inspection finding:
+  - full `_docs[].label` and `_docs[].hasFile` are available only in selected-applicant detail rendering.
+  - lifecycle queue rows expose a proven partial upload indicator in `Fee_Receipt_File`; no frontend evidence shows full required-document labels in the loaded row.
+  - implementation therefore shows `Payment Receipt` uploaded/missing when that row field is present, marks other required documents unknown from loaded data, and shows checklist unavailable if the row does not carry the indicator.
+- Acceptance targets:
+  - `Documents / Eligibility Check` rows display compact uploaded/missing/unknown checklist content in the right-side area.
+  - the primary action remains `Check portal uploads / contact applicant`.
+  - Portal Submitted remains separate from Documents Uploaded and existing r196 evidence wording remains visible.
+  - no AI inspection, image processing, or file mutation is added.
+  - r193-r196 safety markers and gates remain unchanged; no dangerous action becomes executable.
+  - only `AdminUI.html`, `CURRENT_TASK.md`, and `Config.js` change.
+- Release closure discipline:
+  - close only against this approved scope and acceptance criteria.
+  - classify new findings as `BLOCKER` or `FOLLOW-UP`; do not expand this release for non-blockers.
+- Follow-up register: none identified at implementation start.
+
+## r197 Release Identity Gate
+
+- Intended runtime identity: `r197 / 197`.
+- Local identity proof before `clasp version`:
+  - `Config.js:10:  VERSION: "r197",`
+  - `Config.js:12:  DEPLOY_VERSION_NUMBER: 197,`
+- Invariant check: `VERSION == "r" + DEPLOY_VERSION_NUMBER` is PASS for `r197 / 197`.
+- `git diff -- Config.js`: confirms the only identity change is `r196 / 196` to `r197 / 197`.
+- `clasp push`: PASS; output reported `Pushed 8 files.` and did not report `Skipping push`.
+- Remote independent proof outside source root:
+  - pulled into `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog_remote_verify_r197_20260527_01`
+  - remote `Config.js` contains `VERSION: "r197"` and `DEPLOY_VERSION_NUMBER: 197`
+  - remote `AdminUI.html` contains `opsQueueDocumentChecklistHtml_`, `Document checklist unavailable in queue view`, `Payment Receipt`, `Other required documents: unknown from loaded data`, and `Check portal uploads / contact applicant`
+  - remote `AdminUI.html` retains `data-ops-supervisory-write` and `opsSupervisoryExecutionAllowed_` safety markers
+- Remote-source gate: PASS; Apps Script platform version creation was authorized for `r197 / 197`.
+
+## r197 Runtime Acceptance Evidence
+
+- Apps Script platform version: `215`.
+- Admin staging deployment: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @215`.
+- Student staging deployment: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @215`.
+- Admin whoami URL: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami`.
+  - PASS: `version="r197"`, `deployVersion=197`, `mismatch=false`.
+- Student whoami URL: `https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec?view=whoami`.
+  - PASS: `version="r197"`, `deployVersion=197`, `mismatch=false`.
+- Track L acceptance: PASS by CIS-permitted local/remote HTML evidence.
+  - `Documents / Eligibility Check` rows retain the primary action `Check portal uploads / contact applicant`.
+  - when loaded queue data contains `Fee_Receipt_File`, the checklist shows `Payment Receipt` as uploaded or missing and explicitly marks other required documents unknown from loaded data.
+  - when the loaded queue row has no reliable checklist indicator, the row explicitly shows `Document checklist unavailable in queue view`.
+  - the r196 portal/document evidence distinction remains intact; no AI inspection, image processing, file writeback, or backend/schema change was introduced.
+  - existing supervisory safety markers remain present and no dangerous action was triggered during acceptance.
+- Closure classification: no `BLOCKER` or `FOLLOW-UP` was identified within the approved r197 scope.
+- Release finalization status: PASS; commit, tag, and push authorized.
+
+## Previous Active CIS
 
 - `CIS r196: Document Evidence Wording Cleanup`.
 - Implementation date: `2026-05-27`.
@@ -67,13 +132,13 @@
 <!-- CODEXHUB_STATE_BACKUP_START -->
 ## CodexHub State Backup
 
-- Last state backup timestamp: 2026-05-27 11:52:30
+- Last state backup timestamp: 2026-05-27 12:30:29
 - Project path: `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog`
 - Repository state: DIRTY
 - Current branch: `main`
-- Latest commit: `1d37194 release: r195 email correction handoff and communications cleanup`
-- Latest matching staging tag: `staging-as195`
-- Config version / deploy number: VERSION: r195; DEPLOY_VERSION_NUMBER: 195
+- Latest commit: `3ed9cb3 release: r196 document evidence wording cleanup`
+- Latest matching staging tag: `staging-as196`
+- Config version / deploy number: VERSION: r196; DEPLOY_VERSION_NUMBER: 196
 - Current release track: Not detected.
 - Current blocker: None detected.
 - Next exact action: Not detected.
@@ -82,17 +147,11 @@
 ### Git Status
 ```text
 ## main...origin/main
- M AGENTS.md
- M CURRENT_TASK.md
 ?? .codexhub/
-?? docs/RELEASE_DISCIPLINE.md
 ```
 
 ### Changed Files
-- `AGENTS.md`
-- `CURRENT_TASK.md`
 - `.codexhub/`
-- `docs/RELEASE_DISCIPLINE.md`
 <!-- CODEXHUB_STATE_BACKUP_END -->
 
 ## Previous Active CIS
