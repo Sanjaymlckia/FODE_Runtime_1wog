@@ -2024,7 +2024,7 @@
           <div class="v" style="font-size:13px;font-weight:600;line-height:1.6;">
             <div id="mWorkflowPortalSubmitted">Portal Submitted: No</div>
             <div id="mWorkflowDocsVerified">Docs Verified: No</div>
-            <div id="mWorkflowPaymentReceived">Payment Received: No</div>
+            <div id="mWorkflowPaymentReceived">Payment Field Evidence Present: No</div>
             <div id="mWorkflowPaymentVerified">Payment Verified: No</div>
             <div id="mWorkflowEnrolledConfirmed">Enrolled Confirmed: No</div>
           </div>
@@ -3758,14 +3758,12 @@
     }
     function opsQueueDocumentChecklistHtml_(row){
       var r = row || {};
-      if (!Object.prototype.hasOwnProperty.call(r, "Fee_Receipt_File")) {
-        return "<div class='opsDocChecklist'><div class='opsDocChecklistItem muted'>Document checklist unavailable in queue view</div></div>";
-      }
-      var hasReceipt = !!String(r.Fee_Receipt_File || "").trim();
+      var hasPaymentEvidence = !!String(r.Fee_Receipt_File || "").trim();
       return "<div class='opsDocChecklist'>"
-        + "<div class='opsDocChecklistLabel'>" + (hasReceipt ? "Uploaded" : "Missing") + "</div>"
-        + "<div class='opsDocChecklistItem " + (hasReceipt ? "ok" : "warn") + "'>" + (hasReceipt ? "&#10003;" : "&#10007;") + " Payment Receipt</div>"
-        + "<div class='opsDocChecklistLabel'>Unknown</div>"
+        + "<div class='opsDocChecklistLabel'>Payment Evidence</div>"
+        + "<div class='opsDocChecklistItem " + (hasPaymentEvidence ? "ok" : "muted") + "'>" + (hasPaymentEvidence ? "&#10003; Payment field evidence present" : "? No payment file evidence in queue view") + "</div>"
+        + "<div class='opsDocChecklistLabel'>Document Uploads</div>"
+        + "<div class='opsDocChecklistItem muted'>? Payment receipt upload: verify in detail</div>"
         + "<div class='opsDocChecklistItem muted'>? Other required documents: unknown from loaded data</div>"
         + "</div>";
     }
@@ -7302,7 +7300,7 @@ function renderStageDashboard_(items, emptyMessage){
       return [
         "Portal Submitted: " + workflowYesNo_(r.Portal_Submitted),
         "Docs Verified: " + workflowYesNo_(r.Docs_Verified),
-        "Payment Evidence Uploaded: " + workflowYesNo_(r.Payment_Received),
+        "Payment Field Evidence Present: " + workflowYesNo_(r.Payment_Received),
         "Payment Verified (legacy compatibility mirror): " + workflowYesNo_(r.Payment_Verified),
         "Handled By: " + String(r.Handled_By || "-"),
         "Enrolled Confirmed: " + workflowEnrolledLabel_(r)
@@ -8248,7 +8246,7 @@ function renderStageDashboard_(items, emptyMessage){
         : (paymentBadge === "Rejected" ? "Payment Rejected" : "Payment Pending");
       document.getElementById("mWorkflowPortalSubmitted").textContent = "Portal Submitted: " + workflowYesNo_(d.Portal_Submitted);
       document.getElementById("mWorkflowDocsVerified").textContent = "Docs Verified: " + workflowYesNo_(d.Docs_Verified);
-      document.getElementById("mWorkflowPaymentReceived").textContent = "Payment Evidence Uploaded: " + workflowYesNo_(d.Payment_Received);
+      document.getElementById("mWorkflowPaymentReceived").textContent = "Payment Field Evidence Present: " + workflowYesNo_(d.Payment_Received);
       document.getElementById("mWorkflowPaymentVerified").textContent = "Payment Verified (legacy compatibility mirror): " + workflowYesNo_(d.Payment_Verified);
       document.getElementById("mWorkflowEnrolledConfirmed").textContent = "Enrolled Confirmed: " + workflowEnrolledLabel_(d);
       var overrideTag = document.getElementById("mOverallOverride");

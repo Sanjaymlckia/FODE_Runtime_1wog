@@ -2,6 +2,74 @@
 
 ## Active CIS
 
+- `CIS r198: Payment Receipt Evidence Wording Alignment`.
+- Implementation date: `2026-05-27`.
+- Work class: `Runtime release - light UI wording alignment`.
+- Release track: `Track L`.
+- Reason for classification: frontend-only Lifecycle checklist wording; no backend, schema, file processing, or mutation authority changes.
+- Intended runtime identity: `r198 / 198`.
+- Runtime release authorized: `YES`.
+- Allowed edit files:
+  - `AdminUI.html`
+  - `CURRENT_TASK.md`
+  - `Config.js`
+- Explicitly forbidden:
+  - `Admin.js`, backend/schema changes, document processing, AI inspection, file writeback, email/Books/portal/payment/classroom logic changes, broad refactor.
+- Inspection finding:
+  - Lifecycle checklist rendering used `Fee_Receipt_File` to display `Uploaded` and `Payment Receipt`.
+  - selected-applicant detail/modal uses stronger `_docs[].hasFile` file evidence and remains unchanged.
+  - workflow summaries also displayed payment-field state as `Payment Evidence Uploaded`; wording is aligned without changing underlying logic.
+  - `Fee_Receipt_File` is payment field evidence only; it must not be presented as document upload proof.
+- Acceptance targets:
+  - Lifecycle checklist no longer labels `Fee_Receipt_File` as an uploaded Payment Receipt.
+  - the checklist separates `Payment Evidence` from `Document Uploads` and requires detail verification for receipt upload status.
+  - queue/detail workflow summaries label payment-field state as `Payment Field Evidence Present`, not as document upload proof.
+  - Applicant Review modal logic remains unchanged, with `_docs[].hasFile` retained as stronger detail evidence.
+  - Portal Submitted remains separate from document upload evidence.
+  - r193-r197 safety markers and gates remain unchanged; no dangerous action becomes executable.
+  - only `AdminUI.html`, `CURRENT_TASK.md`, and `Config.js` change.
+- Release closure discipline:
+  - close only against this approved scope and acceptance criteria.
+  - classify new findings as `BLOCKER` or `FOLLOW-UP`; do not expand this release for non-blockers.
+- Follow-up register: none identified at implementation start.
+
+## r198 Release Status
+
+- Intended runtime identity: `r198 / 198`.
+- Local identity proof before `clasp version`:
+  - `Config.js:10:  VERSION: "r198",`
+  - `Config.js:12:  DEPLOY_VERSION_NUMBER: 198,`
+- Invariant check: `VERSION == "r" + DEPLOY_VERSION_NUMBER` is PASS for `r198 / 198`.
+- `git diff -- Config.js`: confirms the only identity change is `r197 / 197` to `r198 / 198`.
+- `clasp push`: PASS; output reported `Pushed 8 files.` and did not report `Skipping push`.
+- Remote independent proof outside source root:
+  - cloned into `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog_remote_verify_r198_20260527_01`
+  - remote `Config.js` contains `VERSION: "r198"` and `DEPLOY_VERSION_NUMBER: 198`
+  - remote `AdminUI.html` contains `Payment Evidence`, `Payment field evidence present`, `Document Uploads`, `Payment receipt upload: verify in detail`, and `Payment Field Evidence Present`
+  - remote `AdminUI.html` retains `_docs[].hasFile`, `data-ops-supervisory-write`, and `opsSupervisoryExecutionAllowed_` markers
+- Remote-source gate: PASS; Apps Script platform version creation is authorized for `r198 / 198`.
+
+## r198 Runtime Acceptance Evidence
+
+- Apps Script platform version: `216`.
+- Admin staging deployment: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @216`.
+- Student staging deployment: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @216`.
+- Admin whoami URL: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami`.
+  - PASS: `version="r198"`, `deployVersion=198`, `mismatch=false`.
+- Student whoami URL: `https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec?view=whoami`.
+  - PASS: `version="r198"`, `deployVersion=198`, `mismatch=false`.
+- Track L acceptance: PASS by CIS-permitted local/remote HTML evidence.
+  - Lifecycle checklist displays `Payment Evidence` separately from `Document Uploads`.
+  - `Fee_Receipt_File` produces `Payment field evidence present`, while `Payment receipt upload: verify in detail` remains explicit.
+  - no-evidence rows display `No payment file evidence in queue view`, while still requiring detail verification for receipt upload.
+  - queue/detail workflow summaries use `Payment Field Evidence Present` instead of claiming payment evidence was uploaded.
+  - Applicant Review document evidence remains driven by existing `_docs[].hasFile`; Portal Submitted remains separate from document evidence.
+  - existing supervisory safety markers remain present and no dangerous action was triggered during acceptance.
+- Closure classification: no `BLOCKER` or `FOLLOW-UP` was identified within the approved r198 scope.
+- Release finalization status: PASS; commit, tag, and push authorized.
+
+## Previous Active CIS
+
 - `CIS r197: Document Checklist Visibility`.
 - Implementation date: `2026-05-27`.
 - Work class: `Runtime release - light UI checklist visibility`.
@@ -132,13 +200,13 @@
 <!-- CODEXHUB_STATE_BACKUP_START -->
 ## CodexHub State Backup
 
-- Last state backup timestamp: 2026-05-27 12:30:29
+- Last state backup timestamp: 2026-05-27 13:05:08
 - Project path: `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog`
 - Repository state: DIRTY
 - Current branch: `main`
-- Latest commit: `3ed9cb3 release: r196 document evidence wording cleanup`
-- Latest matching staging tag: `staging-as196`
-- Config version / deploy number: VERSION: r196; DEPLOY_VERSION_NUMBER: 196
+- Latest commit: `eb2fa01 release: r197 document checklist visibility`
+- Latest matching staging tag: `staging-as197`
+- Config version / deploy number: VERSION: r197; DEPLOY_VERSION_NUMBER: 197
 - Current release track: Not detected.
 - Current blocker: None detected.
 - Next exact action: Not detected.
