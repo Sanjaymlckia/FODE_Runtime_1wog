@@ -11,6 +11,20 @@ When unsure, stop and surface uncertainty instead of guessing.
 Rollback prefers deployment repin first.
 Release closure follows `docs/governance/RELEASE_CLOSURE_DISCIPLINE.md`: close only against approved scope, classify new findings as BLOCKER or FOLLOW-UP, and record follow-ups without expanding the current release unless they are true blockers.
 
+## Release Track Classification
+
+Every future CIS must explicitly declare exactly one release track before implementation or release work begins:
+
+- `Track L` - light UI/documentation work, including documentation-only process hardening. Use only when the CIS does not change backend behavior, data mutation authority, send logic, portal security, payment/Books/classroom logic, schema, Script Properties, or deployment architecture.
+  - Requires the CIS-defined allowed files, scoped diff checks, required runtime identity/deployment proof if a runtime release is performed, and acceptance evidence tied to the changed surface.
+  - Codex browser visual capture is not mandatory. Rendered HTML, screenshots, operator-supplied browser evidence, or other CIS-approved visual/source evidence may satisfy acceptance when recorded as PASS/FAIL.
+  - Track L does not waive Admin/Student `whoami` checks for a runtime deployment and does not authorize dangerous actions during acceptance.
+- `Track H` - high-risk or behavior-changing release. Required for backend changes; send/write execution logic; authorization or supervisory gates; portal/security/token logic; Books/payment/classroom mutations; schema or Script Properties; or any change with material live-data risk.
+  - Requires full release identity, remote-source, deployment repin, Admin/Student `whoami`, browser acceptance, safety, rollback, and closure discipline specified by the CIS and this repository.
+  - Acceptance must exercise only approved read-only or explicitly authorized actions; dangerous actions remain prohibited unless the CIS separately approves the exact action.
+
+Documentation-only process hardening is `Track L` and must additionally state `No runtime release`. It must not use an `rNNN` runtime identity, `clasp push`, Apps Script version, deployment repin, or staging tag unless separately authorized later.
+
 Release Identity Gate:
 - Before any `clasp version` command, `Config.js` `VERSION` must already equal the intended release label, for example `r155`.
 - Before any `clasp version` command, `Config.js` `DEPLOY_VERSION_NUMBER` must already equal the intended release number, for example `155`.

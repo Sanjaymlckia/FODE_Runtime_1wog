@@ -1,6 +1,87 @@
-# Current Task
+﻿# Current Task
+
+<!-- CODEXHUB_STATE_BACKUP_START -->
+## CodexHub State Backup
+
+- Last state backup timestamp: 2026-05-27 11:52:30
+- Project path: `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog`
+- Repository state: DIRTY
+- Current branch: `main`
+- Latest commit: `1d37194 release: r195 email correction handoff and communications cleanup`
+- Latest matching staging tag: `staging-as195`
+- Config version / deploy number: VERSION: r195; DEPLOY_VERSION_NUMBER: 195
+- Current release track: Not detected.
+- Current blocker: None detected.
+- Next exact action: Not detected.
+- Operator note: [add operator note]
+
+### Git Status
+```text
+## main...origin/main
+ M AGENTS.md
+ M CURRENT_TASK.md
+?? .codexhub/
+?? docs/RELEASE_DISCIPLINE.md
+```
+
+### Changed Files
+- `AGENTS.md`
+- `CURRENT_TASK.md`
+- `.codexhub/`
+- `docs/RELEASE_DISCIPLINE.md`
+<!-- CODEXHUB_STATE_BACKUP_END -->
 
 ## Active CIS
+
+- `CIS: Release Track Discipline - documentation-only process hardening`.
+- Implementation date: `2026-05-27`.
+- Release classification:
+  - Work class: `Governance / documentation-only`
+  - Release track: `Track L`
+  - Runtime release authorized: `NO - no runtime release`
+  - Runtime identity: unchanged at accepted `r195 / 195`
+  - Deployment/tag actions: forbidden for this CIS
+- Proven local starting state before edits:
+  - git commit `1d37194`
+  - tag at HEAD `staging-as195`
+  - `.codexhub/` already untracked before this CIS
+- Scope:
+  - persist Track L / Track H release classification for future CIS work
+  - persist a current-release classification template
+  - provide a durable release-track checklist without modifying app/runtime behavior
+- Allowed edit files:
+  - `AGENTS.md`
+  - `CURRENT_TASK.md`
+  - `docs/RELEASE_DISCIPLINE.md`
+- Explicitly forbidden:
+  - `Config.js`, `AdminUI.html`, `Admin.js`, any app code
+  - `clasp push`, Apps Script version, deployment repin, and staging tag
+- Acceptance targets:
+  - future runtime CIS must declare `Track L` or `Track H`
+  - `Track L` explicitly permits recorded operator/source/rendered-HTML evidence without requiring Codex browser visual capture
+  - `Track H` retains full safety and runtime verification discipline
+  - no app/runtime files changed and no runtime release performed
+
+## Current-Release Classification Template
+
+Use this block at the start of every future CIS before implementation:
+
+```md
+## Release Classification
+
+- CIS: `<title>`
+- Work class: `<runtime release | documentation-only | audit-only>`
+- Release track: `<Track L | Track H>`
+- Reason for classification: `<specific changed surface and risk>`
+- Intended runtime identity: `<rNNN / NNN | unchanged>`
+- Allowed files: `<exact list>`
+- Forbidden actions/files: `<exact list>`
+- Required acceptance evidence: `<source/HTML/operator/browser/runtime checks>`
+- Runtime release authorized: `<YES | NO - no runtime release>`
+- If YES: require Config identity proof, external remote-source proof, platform version, Admin repin, Student repin, Admin whoami, Student whoami, acceptance PASS, commit/tag/push authorization.
+```
+
+## Previous Active CIS
 
 - `CIS r195: Email Correction Handoff + Communications UX Cleanup`.
 - Implementation date: `2026-05-27`.
