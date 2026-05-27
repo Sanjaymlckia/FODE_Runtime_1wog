@@ -1160,11 +1160,11 @@
             <div class="field"><label>Gate / status reason</label><input type="text" id="opsStageBatchDisabledReason" readonly value="Switch to Admin/Super Admin mode to run gated bulk tools."></div>
           </div>
           <div class="opsActionRow">
-            <button id="btnOpsStageBatchPreview" class="opsActionBtn live" type="button" data-ops-supervisory-write="1" data-ops-base-label="Preview Cohort" onclick="previewStageBatchUi_()">Preview Cohort</button>
-            <button id="btnOpsStageBatchSend" class="opsActionBtn live" type="button" data-ops-supervisory-write="1" data-ops-base-label="Send Stage Batch" onclick="sendStageBatchUi_()">Send Stage Batch</button>
+            <button id="btnOpsStageBatchPreview" class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Preview Cohort" onclick="previewStageBatchUi_()">Preview Cohort</button>
+            <button id="btnOpsStageBatchSend" class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Stage Batch" onclick="sendStageBatchUi_()">Send Stage Batch</button>
             <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Choose Lifecycle Stage</button>
           </div>
-          <div class="opsInspectPanel" id="opsStageBatchInlineNote">Bulk communication is not a normal Operator/Admin action. Use preview/metrics for planning; execution requires supervisory approval.</div>
+          <div class="opsInspectPanel" id="opsStageBatchInlineNote">Bulk communication requires Operations Admin or Super Admin authority, plus preview, confirmation, caps, and backend gates.</div>
           <div id="opsStageBatchSummary" class="opsResultBox hidden"></div>
           <div id="opsStageBatchPreviewDiagnostics" class="opsResultBox hidden"></div>
         </div>
@@ -1390,13 +1390,13 @@
               </div>
               <div class="opsControlGroup write">
                 <div class="opsControlTitle">Send / write gated</div>
-                <p class="opsControlNote">This sends an applicant communication and changes communication state. Supervisory action &mdash; requires approval, preview, confirmation, and audit.</p>
+                <p class="opsControlNote">This sends an applicant communication and changes communication state. Operations action &mdash; requires Operations Admin or Super Admin authority, preview, confirmation, and audit.</p>
                 <div class="opsActionRow">
-                  <button class="opsActionBtn live" type="button" data-ops-supervisory-write="1" data-ops-base-label="Send Reminder" onclick="opsSendApplicantEmail_('reminder','Reminder')">Send Reminder</button>
-                  <button class="opsActionBtn live" type="button" data-ops-supervisory-write="1" data-ops-base-label="Send Missing Documents Request" onclick="opsSendApplicantEmail_('docs_missing','Missing Documents Request')">Send Missing Documents Request</button>
-                  <button class="opsActionBtn live" type="button" data-ops-supervisory-write="1" data-ops-base-label="Send Invoice Reminder" onclick="opsSendApplicantEmail_('payment_followup','Invoice Reminder')">Send Invoice Reminder</button>
-                  <button class="opsActionBtn live" type="button" data-ops-supervisory-write="1" data-ops-base-label="Resend Portal Access" onclick="opsSendApplicantEmail_('legacy_invite','Portal Access')">Resend Portal Access</button>
-                  <button class="opsActionBtn live" type="button" data-ops-supervisory-write="1" data-ops-base-label="Send Custom Email" onclick="opsSendApplicantEmail_('custom_email','Custom Email')">Send Custom Email</button>
+                  <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Reminder" onclick="opsSendApplicantEmail_('reminder','Reminder')">Send Reminder</button>
+                  <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Missing Documents Request" onclick="opsSendApplicantEmail_('docs_missing','Missing Documents Request')">Send Missing Documents Request</button>
+                  <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Invoice Reminder" onclick="opsSendApplicantEmail_('payment_followup','Invoice Reminder')">Send Invoice Reminder</button>
+                  <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Resend Portal Access" onclick="opsSendApplicantEmail_('legacy_invite','Portal Access')">Resend Portal Access</button>
+                  <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Custom Email" onclick="opsSendApplicantEmail_('custom_email','Custom Email')">Send Custom Email</button>
                 </div>
               </div>
             </div>
@@ -1425,7 +1425,7 @@
               <div class="opsControlGroup write">
                 <div class="opsControlTitle">Custom send gated</div>
                 <div class="opsActionRow">
-                  <button class="opsActionBtn live" type="button" data-ops-supervisory-write="1" data-ops-base-label="Send Custom Email" onclick="opsSendApplicantEmail_('custom_email','Custom Email')">Send Custom Email</button>
+                  <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Custom Email" onclick="opsSendApplicantEmail_('custom_email','Custom Email')">Send Custom Email</button>
                 </div>
               </div>
             </div>
@@ -1495,7 +1495,7 @@
             <div class="opsChecklist">
               <div class="opsChecklistRow"><span>Fallback status</span><span class="opsStatusPill ok">Usable with gating</span></div>
               <div class="opsChecklistRow"><span>Phone/contact data exists</span><span class="opsStatusPill muted" id="opsFallbackPhoneState">Unknown until applicant loads</span></div>
-              <div class="opsChecklistRow"><span>CSV/export capability exists</span><span class="opsStatusPill warn">Super Admin-only</span></div>
+              <div class="opsChecklistRow"><span>CSV/export capability exists</span><span class="opsStatusPill warn">Operations/Super Admin</span></div>
               <div class="opsChecklistRow"><span>Email CSV fallback exists</span><span class="opsStatusPill warn">After export snapshot</span></div>
               <div class="opsChecklistRow"><span>Bounce / suppression diagnostics</span><span class="opsStatusPill ok">Mapped</span></div>
               <div class="opsChecklistRow"><span>Last batch label</span><span class="opsStatusPill info" id="waFallbackBatchLabel">&mdash;</span></div>
@@ -1508,17 +1508,17 @@
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Risk and Working Path</h3></div><span class="opsStatusPill warn">Governed path</span></div>
             <div class="opsChecklist">
-              <div class="opsChecklistRow"><span>WhatsApp CSV export</span><span class="opsStatusPill warn">Super Admin confirmation</span></div>
+              <div class="opsChecklistRow"><span>WhatsApp CSV export</span><span class="opsStatusPill warn">Operations/Super Admin confirmation</span></div>
               <div class="opsChecklistRow"><span>WhatsApp CSV email</span><span class="opsStatusPill warn">After export confirmation</span></div>
               <div class="opsChecklistRow"><span>Risk level</span><span class="opsStatusPill warn">Sensitive contact export</span></div>
               <div class="opsChecklistRow"><span>Direct WhatsApp send</span><span class="opsStatusPill danger">Blocked: no verified send function</span></div>
             </div>
             <div class="opsActionRow" style="margin-top:10px;">
-              <button id="opsWaExportBtn" class="opsActionBtn live" type="button" data-ops-supervisory-write="1" data-ops-base-label="Export WhatsApp CSV" onclick="exportWhatsAppFallbackCsv_()">Export WhatsApp CSV</button>
+              <button id="opsWaExportBtn" class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Export WhatsApp CSV" onclick="exportWhatsAppFallbackCsv_()">Export WhatsApp CSV</button>
               <button id="opsWaEmailBtn" class="opsActionBtn live" type="button" data-ops-supervisory-write="1" data-ops-base-label="Email CSV to Admins" onclick="emailWhatsAppFallbackCsv_()">Email CSV to Admins</button>
             </div>
-            <div class="opsResultBox warn">Supervisory action only. Local export contains applicant data. Do not share outside authorised staff. Email path uses the cached export snapshot only. No WhatsApp message is sent by this system.</div>
-            <div class="opsInspectPanel">If you are not Super Admin, this surface remains visible but actions stay labeled Super Admin-only and blocked.</div>
+            <div class="opsResultBox warn">CSV export requires Operations Admin or Super Admin confirmation. Local export contains applicant data. Do not share outside authorised staff. Email path remains Super Admin-only. No WhatsApp message is sent by this system.</div>
+            <div class="opsInspectPanel">Operations Admin may export the governed CSV; emailing that CSV remains Super Admin-only.</div>
             <div id="waFallbackMsg" class="opsResultBox"></div>
           </div>
         </div>
@@ -2220,7 +2220,7 @@
       <div class="muted" style="margin-top:6px;font-size:12px;">Copy Portal Link does not mutate data. Reset Link is Super Admin only and regenerates the portal secret after confirmation. Unlock Editing / Lock Editing are local modal controls only and do not change applicant portal access state. Actual portal access lock/unlock is a separate Super Admin server action.</div>
 
       <details id="superEmailOverrideWrap" style="margin-top:10px;">
-        <summary style="cursor:pointer;font-weight:700;">Super Admin: Override Parent Email (Corrected)</summary>
+        <summary style="cursor:pointer;font-weight:700;">Operations Admin: Correct Parent Email</summary>
         <div class="row" style="margin-top:8px;">
           <div class="field">
             <label>New Email</label>
@@ -2272,6 +2272,8 @@
   <script>
     const ADMIN_ROLE = <?!= JSON.stringify(String(ADMIN_ROLE || "")) ?>;
     const IS_SUPER = <?!= JSON.stringify(!!IS_SUPER) ?>;
+    const IS_OPERATIONS_ADMIN = String(ADMIN_ROLE || "").toUpperCase() === "OPERATIONS";
+    const CAN_RUN_OPERATIONS_ACTIONS = IS_SUPER === true || IS_OPERATIONS_ADMIN === true;
     const SUPER_ADMIN_EMAILS = <?!= JSON.stringify((SUPER_ADMIN_EMAILS || []).map(function(v){ return String(v || ""); })) ?>;
     const ROLE_DECISION_SOURCE = <?!= JSON.stringify(String(ROLE_DECISION_SOURCE || "CONFIG.ADMIN_ROLES")) ?>;
     const CAN_OVERRIDE = <?!= JSON.stringify(!!CAN_OVERRIDE) ?>;
@@ -2437,6 +2439,7 @@
     function detectedRoleLabel_(){
       var role = String(ADMIN_ROLE || "").trim().toUpperCase();
       if (role === "SUPER") return "Super Admin";
+      if (role === "OPERATIONS") return "Operations Admin";
       if (role) return "Admin";
       return "Operator";
     }
@@ -2463,6 +2466,24 @@
     function opsSupervisoryExecutionAllowed_(){
       return IS_SUPER === true && readOpsMode_() === "super";
     }
+    function opsOperationalExecutionAllowed_(){
+      return CAN_RUN_OPERATIONS_ACTIONS === true && (IS_SUPER === true ? readOpsMode_() === "super" : readOpsMode_() === "admin");
+    }
+    function opsOperationalPolicyBlockReason_(){
+      return readOpsMode_() === "operator"
+        ? "Operator mode is read/select/preview only. Switch to Admin Mode for an authorized Operations action."
+        : "Operations Admin or Super Admin mode is required for this gated action.";
+    }
+    function opsBlockOperationalAction_(resultId, title, applicantId){
+      if (opsOperationalExecutionAllowed_()) return false;
+      setOpsResult_(resultId || "opsAdmissionsResult", {
+        result:"BLOCKED",
+        applicantId:String(applicantId || opsApplicantId_() || ""),
+        blockCode:readOpsMode_() === "operator" ? "OPERATOR_PREVIEW_ONLY" : "OPERATIONS_ADMIN_REQUIRED",
+        blockReason:opsOperationalPolicyBlockReason_()
+      }, title || "Operations Action");
+      return true;
+    }
     function opsBlockSupervisoryAction_(resultId, title, applicantId){
       if (opsSupervisoryExecutionAllowed_()) return false;
       setOpsResult_(resultId || "opsAdmissionsResult", {
@@ -2481,6 +2502,14 @@
         btn.disabled = !allowed;
         btn.title = allowed ? "Supervisory action - selected applicant, preview, confirmation, and audit requirements still apply." : reason;
         btn.textContent = allowed ? base : (base + " (Supervisory action)");
+      });
+      var operationsAllowed = opsOperationalExecutionAllowed_();
+      var operationsReason = opsOperationalPolicyBlockReason_();
+      Array.prototype.slice.call(document.querySelectorAll("[data-ops-operational-write='1']")).forEach(function(btn){
+        var base = String(btn.getAttribute("data-ops-base-label") || btn.textContent || "").replace(/\s+\(Operations action\)$/i, "");
+        btn.disabled = !operationsAllowed;
+        btn.title = operationsAllowed ? "Operations action - existing preview, confirmation, caps, and audit requirements still apply." : operationsReason;
+        btn.textContent = operationsAllowed ? base : (base + " (Operations action)");
       });
     }
     function formatPngAmount_(value){
@@ -2506,8 +2535,8 @@
         { id:"openPaymentReview", label:"Open payment verification review", source:"Context Menu / Drawer", surface:"Admin review bridge", fn:"?view=admin&open=ApplicantID", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Opens the existing Admin review path for payment verification." },
         { id:"verifyPayment", label:"Verify selected payment", source:"Classroom / Payment", surface:"Classroom Handover", fn:"admin_setPaymentVerified", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Selected applicant only; requires row context, Super Admin, browser confirmation, and existing server-side payment/docs/freeze gates." },
         { id:"previewEmail", label:"Preview email", source:"Communications / Context Menu", surface:"Communications", fn:"admin_previewApplicantMessage", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Preview only; no send." },
-        { id:"sendReminder", label:"Send reminder", source:"Communications / Context Menu", surface:"Communications", fn:"admin_sendApplicantMessage", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Single-record only; preview, confirmation, Safe Mode, and audit required." },
-        { id:"resendPortalAccess", label:"Resend portal access", source:"Communications / Context Menu", surface:"Communications", fn:"admin_sendApplicantMessage:legacy_invite", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Single-record portal-access communication through existing send gate." },
+        { id:"sendReminder", label:"Send reminder", source:"Communications / Context Menu", surface:"Communications", fn:"admin_sendApplicantMessage", role:"Operations Admin/Super Admin", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Single-record only; preview, confirmation, Safe Mode, and audit required." },
+        { id:"resendPortalAccess", label:"Resend portal access", source:"Communications / Context Menu", surface:"Communications", fn:"admin_sendApplicantMessage:legacy_invite", role:"Operations Admin/Super Admin", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Single-record portal-access communication through existing send gate." },
         { id:"openBilling", label:"Open billing", source:"Context Menu", surface:"Billing / Zoho Books", fn:"client:scroll + admin_previewZohoBooksFodePayload", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Read-only selected-applicant Books preview/status." },
         { id:"openInvoice", label:"Open invoice", source:"Billing / Context Menu", surface:"Billing / Zoho Books", fn:"client:window.open invoice URL", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Opens existing invoice URL only." },
         { id:"refreshBooksStatus", label:"Refresh Books status", source:"Billing / Context Menu", surface:"Billing / Zoho Books", fn:"admin_previewZohoBooksFodePayload", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Read-only status/payload preview." },
@@ -2519,9 +2548,9 @@
         { id:"localEditingLock", label:"Local Editing Lock/Unlock", source:"Legacy Admin modal", surface:"Applicant Review modal", fn:"client:unlockReview_/lockReview_", role:"Operator/Admin", kind:"client-state", status:"enabled", confirm:false, audit:false, reason:"Local modal editing state only. Does not change applicant portal access status." },
         { id:"viewClassroom", label:"View classroom handover", source:"Context Menu", surface:"Classroom Handover", fn:"admin_previewOpsClassroomHandover", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:true, reason:"Preview logs existing handover review event." },
         { id:"notifyClassroom", label:"Notify classroom admin", source:"Classroom", surface:"Classroom Handover", fn:"admin_notifyOpsClassroomAdmin", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Internal single-send only; preview and Safe Mode gate required." },
-        { id:"bulkPreview", label:"Bulk email preview", source:"Super Admin Mode", surface:"Communications", fn:"admin_previewStageBatch", role:"Super Admin/Governance", kind:"bulk-read", status:"enabled-gated", confirm:false, audit:true, reason:"Server already requires Super Admin and preview-only mode, and returns bounded eligible/blocked counts with replay summary." },
-        { id:"bulkSend", label:"Bulk email send", source:"Super Admin Mode", surface:"Communications", fn:"admin_sendStageBatch", role:"Super Admin/Governance", kind:"bulk-write", status:"enabled-gated", confirm:true, audit:true, reason:"Ready for controlled live test in next CIS. Existing backend requires Super Admin, send gates, preview cache parity, explicit confirmation, caps, and idempotency." },
-        { id:"whatsappExport", label:"WhatsApp CSV export", source:"Fallbacks / Super Admin", surface:"WhatsApp Fallback", fn:"admin_exportWhatsAppFallbackCsv", role:"Super Admin/Governance", kind:"export", status:"enabled-gated", confirm:true, audit:true, reason:"Existing export is capped, Super Admin gated, logged, and does not send WhatsApp." },
+        { id:"bulkPreview", label:"Bulk email preview", source:"Bulk Tools", surface:"Communications", fn:"admin_previewStageBatch", role:"Operations Admin/Super Admin", kind:"bulk-read", status:"enabled-gated", confirm:false, audit:true, reason:"Server requires an authorized Operations/Super Admin and returns bounded eligible/blocked counts with replay summary." },
+        { id:"bulkSend", label:"Bulk email send", source:"Bulk Tools", surface:"Communications", fn:"admin_sendStageBatch", role:"Operations Admin/Super Admin", kind:"bulk-write", status:"enabled-gated", confirm:true, audit:true, reason:"Existing backend send gates, preview cache parity, explicit confirmation, caps, and idempotency remain required." },
+        { id:"whatsappExport", label:"WhatsApp CSV export", source:"Fallbacks / Exports", surface:"WhatsApp Fallback", fn:"admin_exportWhatsAppFallbackCsv", role:"Operations Admin/Super Admin", kind:"export", status:"enabled-gated", confirm:true, audit:true, reason:"Existing export is capped, authorized-role gated, logged, and does not send WhatsApp." },
         { id:"whatsappEmailCsv", label:"Email WhatsApp CSV", source:"Fallbacks / Super Admin", surface:"WhatsApp Fallback", fn:"admin_emailWhatsAppFallbackCsv", role:"Super Admin/Governance", kind:"export-send", status:"enabled-gated", confirm:true, audit:true, reason:"Emails cached CSV only to configured admin recipients after export confirmation." },
         { id:"copyApplicantId", label:"Copy ApplicantID", source:"Context Menu", surface:"Clipboard", fn:"navigator.clipboard.writeText", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"No data mutation." },
         { id:"developerRelease", label:"Release/deployment actions", source:"Release Control", surface:"Developer/Release", fn:"external CIS workflow", role:"Developer/Release", kind:"release", status:"deferred", confirm:true, audit:true, reason:"Apps Script UI must not run git, clasp, version, repin, tag, or rollback commands." }
@@ -2610,11 +2639,12 @@
       var el = document.getElementById("opsParityRegister");
       if (!el) return;
       var rows = [
-        ["Admin-only", "Legacy review modal edits, doc/status writes, payment verified, parent email correction, overall override"],
+        ["Admin-only", "Legacy review modal access and read-only document/payment review surfaces"],
         ["Ops-only", "Lifecycle cascade, selected-applicant queue routing, mode-based working shell, WhatsApp/bulk registry surfaces"],
-        ["Shared", "Applicant review bridge, single-record preview/send, billing preview, portal diagnostics, classroom preview/notify"],
-        ["Super Admin / Governance", "High-risk guarded controls, WhatsApp export/email, Safe Mode boundaries, Rules & Config"],
-        ["Still using legacy Admin only", "Docs follow-up bulk UI, detailed modal edit cards, parent-email correction, overall override workflow"],
+        ["Operations Admin / Super Admin", "Parent email correction, single-record applicant send, bounded stage batch preview/send, and WhatsApp CSV export through existing gates"],
+        ["Shared", "Applicant review bridge, communications preview, billing preview, portal diagnostics, and classroom preview"],
+        ["Super Admin / Governance", "Portal/payment/status mutation, WhatsApp CSV email, document follow-up send, Books/config writes, Safe Mode overrides, and Rules & Config"],
+        ["Still using legacy Admin only", "Docs follow-up bulk UI, detailed modal edit cards, and overall override workflow"],
         ["Developer / Release", "Git, clasp, versioning, deployment repin, release metadata, rollback"],
         ["Future migration", "Temporary Super Admin delegation and shared InstitutionConfig/DriveConfig registry"]
       ];
@@ -2628,10 +2658,10 @@
       if (!target) return;
       var items = [
         ["Duplicated action paths", "Applicant review bridge plus legacy Admin review remain intentionally paired; Ops bridges to existing backend functions instead of duplicating business logic."],
-        ["Admin/Ops shared actions", "Portal reset, portal access lock/unlock, WhatsApp export/email, stage batch preview/send, and Books draft/test actions use existing Admin server gates."],
+        ["Operations actions", "Parent email correction, applicant send, WhatsApp CSV export, and stage batch preview/send use explicit Operations/Super Admin server gates."],
         ["Ops-only actions", "Mode switch, lifecycle drill-down, selected-applicant queue context, operator dashboard grouping."],
-        ["Shared actions", "Applicant email preview/send, billing preview, open invoice, portal diagnostics, classroom preview/notify."],
-        ["Legacy Admin only", "Document verification edits, overall override, parent-email correction, payment verification mutation, and deep modal document handling."]
+        ["Shared read actions", "Applicant email preview, billing preview, open invoice, portal diagnostics, and classroom preview."],
+        ["Super-only actions", "Portal reset/access mutation, document/payment verification mutation, overall override, Books/config writes, WhatsApp CSV email, document follow-up send, and classroom notify."]
       ];
       target.innerHTML = items.map(function(row){
         return "<div class='opsChecklistRow'><span>" + esc(row[0]) + "</span><span class='opsStatusPill info'>" + esc(row[1]) + "</span></div>";
@@ -2920,7 +2950,7 @@
       var aging = opsAgingDays_(row) || "Missing source";
       var hasApplicantData = !!(opsApplicantDetailCache || opsQueueRowByApplicantId_(applicantId));
       var dataNote = hasApplicantData ? "" : " | Data unavailable for selected applicant";
-      var superNote = IS_SUPER ? " (Super Admin selected-applicant authority)" : (approved ? " (Safe Mode target)" : " (Admin/operator role restrictions may apply)");
+      var superNote = IS_SUPER ? " (Super Admin selected-applicant authority)" : (IS_OPERATIONS_ADMIN ? " (Operations Admin selected-applicant authority)" : " (Admin/operator role restrictions apply)");
       setOpsText_("cockpitCommContext", "Current Ops applicant: " + applicantId + " - " + applicantName + superNote + " | Effective email: " + (opsSelectedEmail_() || "missing") + " | Date Applied: " + dateInfo.label + " | Aging: " + aging + dataNote);
       setOpsText_("cockpitClassroomContext", "Current Ops applicant: " + applicantId + " - " + applicantName + superNote + " | Date Applied: " + dateInfo.label + " | Aging: " + aging + dataNote);
       setOpsText_("opsStageBatchApplicantContext", applicantId ? (applicantId + " - " + applicantName + (hasApplicantData ? "" : " (data unavailable)")) : "No applicant selected");
@@ -3440,7 +3470,7 @@
       var applicantId = opsApplicantId_();
       var approved = applicantId === OPS_SAFE_MODE_APPROVED_APPLICANT_ID;
       el.innerHTML = opsTemplateDefinitions_().map(function(t){
-        var allowed = IS_SUPER ? "Super Admin selected-applicant send after preview/confirmation" : (approved ? "Safe Mode target after preview" : "Admin/operator role restrictions may apply");
+        var allowed = IS_SUPER ? "Super Admin selected-applicant send after preview/confirmation" : (IS_OPERATIONS_ADMIN ? "Operations Admin send after preview/confirmation/Safe Mode gates" : "Admin/operator role restrictions apply");
         return "<div class='opsTemplateCard" + (selected === t.type ? " active" : "") + "' data-template-type='" + esc(t.type) + "'>"
           + "<h4>" + esc(t.name) + "</h4>"
           + "<p><strong>Purpose:</strong> " + esc(t.purpose) + "</p>"
@@ -3472,9 +3502,9 @@
       if (rec) rec.value = recipient;
       if (subj) subj.value = t.subject;
       if (body) body.value = t.body + "\n\nApplicantID: " + opsApplicantId_();
-      if (safety) safety.value = opsApplicantId_() === OPS_SAFE_MODE_APPROVED_APPLICANT_ID
-        ? "Selected applicant; preview recommended and confirmation required"
-        : (IS_SUPER ? "Super Admin selected-applicant parity; confirmation required" : "Admin/operator role restrictions may apply");
+      if (safety) safety.value = IS_SUPER
+        ? "Super Admin selected-applicant parity; confirmation required"
+        : (IS_OPERATIONS_ADMIN ? "Operations Admin; Safe Mode, preview, and confirmation required" : "Admin/operator role restrictions apply");
       renderOpsCommunicationStatePanel_();
     }
     function renderOpsCommunicationStatePanel_(){
@@ -3493,7 +3523,7 @@
         || opsFirstNonBlank_(row.Effective_Email, row.Parent_Email_Corrected, row.Parent_Email, "No effective email in loaded fields");
       var staleDraft = selectedType === "custom_email" && previewReady && opsActionState.previewDraftSignature !== opsCustomEmailSignature_();
       var blockReason = "";
-      if (!approved && !IS_SUPER) blockReason = "Admin/operator role restrictions may apply.";
+      if (!CAN_RUN_OPERATIONS_ACTIONS) blockReason = "Operations Admin or Super Admin authority is required for send.";
       else if (!previewReady) blockReason = "Preview required before send.";
       else if (staleDraft) blockReason = "Draft changed after preview. Re-preview required.";
       else if (opsActionState.previewResult && opsActionState.previewResult.blockReason) blockReason = String(opsActionState.previewResult.blockReason);
@@ -3510,7 +3540,7 @@
         "<br><strong>Template key/type:</strong> " + esc(selectedType),
         "<br><strong>Preview status:</strong> " + esc(status + " / " + timestamp),
         "<br><strong>Body preview:</strong><div class='opsPreviewBody'>" + esc((body || "Preview/template will populate body").slice(0, 1200)) + "</div>",
-        "<strong>Send authority:</strong> " + esc(IS_SUPER ? "Super Admin selected-applicant parity; target-only Safe Mode block does not apply" : (approved ? "Safe Mode target / selected-record send only" : "Role restricted for non-Super Admin")),
+        "<strong>Send authority:</strong> " + esc(IS_SUPER ? "Super Admin selected-applicant parity; existing supervisory policy applies" : (IS_OPERATIONS_ADMIN ? "Operations Admin; selected-record Safe Mode, preview, and confirmation gates apply" : "Role restricted for normal Admin")),
         "<br><strong>Block reason:</strong> " + esc(blockReason || "Ready for send only after preview and confirmation")
       ].join("");
     }
@@ -3560,9 +3590,9 @@
     function opsApplyEmailCorrection_(){
       var ctx = opsRequireSelectedApplicant_("opsEmailCorrectionResult", "Email Correction", true);
       if (!ctx) return;
-      if (opsBlockSupervisoryAction_("opsEmailCorrectionResult", "Email Correction", ctx.applicantId)) return;
-      if (!IS_SUPER) {
-        setOpsResult_("opsEmailCorrectionResult", { result:"BLOCKED", applicantId:ctx.applicantId, blockCode:"SUPER_ADMIN_REQUIRED", blockReason:"Email correction uses the existing Super Admin override backend." }, "Email Correction");
+      if (opsBlockOperationalAction_("opsEmailCorrectionResult", "Email Correction", ctx.applicantId)) return;
+      if (!CAN_RUN_OPERATIONS_ACTIONS) {
+        setOpsResult_("opsEmailCorrectionResult", { result:"BLOCKED", applicantId:ctx.applicantId, blockCode:"OPERATIONS_ADMIN_REQUIRED", blockReason:"Email correction requires Operations Admin or Super Admin authority." }, "Email Correction");
         return;
       }
       var idEl = document.getElementById("opsEmailCorrectionApplicantId");
@@ -3580,7 +3610,7 @@
         return;
       }
       if (!window.confirm("Update corrected/effective email for " + ctx.applicantId + " to " + newEmail + "?")) return;
-      setOpsResult_("opsEmailCorrectionResult", { result:"GUIDANCE", applicantId:ctx.applicantId, message:"Applying email correction through existing Super Admin backend..." }, "Email Correction");
+      setOpsResult_("opsEmailCorrectionResult", { result:"GUIDANCE", applicantId:ctx.applicantId, message:"Applying email correction through the authorized operational backend..." }, "Email Correction");
       google.script.run
         .withSuccessHandler(function(res){
           var out = res && typeof res === "object" ? res : { ok:false, message:"Invalid email correction response." };
@@ -4570,7 +4600,7 @@
     function opsSendApplicantEmail_(messageType, label){
       var applicantId = opsApplicantId_();
       var msgType = String(messageType || "").trim();
-      if (opsBlockSupervisoryAction_("opsCommunicationResult", "Send " + String(label || msgType), applicantId)) {
+      if (opsBlockOperationalAction_("opsCommunicationResult", "Send " + String(label || msgType), applicantId)) {
         renderOpsCommunicationStatePanel_();
         return;
       }
@@ -5332,7 +5362,7 @@
       if (panel) panel.classList.toggle("hidden", !isEditable);
       if (generateBtn) generateBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy;
       if (insertBtn) insertBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy;
-      if (sendBtn) sendBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy || !previewReady || eligibility.active;
+      if (sendBtn) sendBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy || !previewReady || eligibility.active || !CAN_RUN_OPERATIONS_ACTIONS;
     }
     function requestPortalLinkForComm_(onDone){
       var done = typeof onDone === "function" ? onDone : function(){};
@@ -5609,20 +5639,20 @@
       var emailIssueHint = opsHasEmailIssue_(detail) ? (disableReason || ("Email issue detected. " + opsEmailIssueFallbackHint_(detail))) : "";
       selectEl.disabled = !currentRowNumber || isUiBusy || communicationsState.busy;
       previewBtn.disabled = editableType ? true : controlsDisabled;
-      sendBtn.disabled = editableType ? true : (controlsDisabled || !previewReady || !IS_SUPER);
+      sendBtn.disabled = editableType ? true : (controlsDisabled || !previewReady || !CAN_RUN_OPERATIONS_ACTIONS);
       previewBtn.style.display = editableType ? "none" : "";
       sendBtn.style.display = editableType ? "none" : "";
       if (warningEl) warningEl.classList.toggle("active", editableType);
       previewBtn.textContent = communicationsState.busy ? "Working..." : "Preview";
-      sendBtn.textContent = communicationsState.busy ? "Sending..." : (IS_SUPER ? "Send (Supervisory action)" : "Send (Supervisory action - disabled)");
+      sendBtn.textContent = communicationsState.busy ? "Sending..." : (CAN_RUN_OPERATIONS_ACTIONS ? "Send (Operations action)" : "Send (Operations action - disabled)");
       noteEl.textContent = communicationsState.busy
         ? (previewReady ? "Sending..." : "Loading preview...")
         : (emailIssueHint
           || disableReason
-          || (!IS_SUPER ? "Supervisory action \u2014 requires approval, preview, confirmation, and audit. Normal Admin workflow is preview only."
+          || (!CAN_RUN_OPERATIONS_ACTIONS ? "Operations action \u2014 requires Operations Admin or Super Admin authority, preview, confirmation, and audit. Normal Admin workflow is preview only."
           : ((workflowIsYes_(detail.Portal_Submitted) || workflowIsYes_(detail.Enrolled_Confirmed))
             ? "Applicant already submitted/enrolled; applicant-chasing emails are not required."
-            : (editableType && eligibility.active ? eligibility.text : (previewReady ? "Preview ready. Supervisory confirmation is still required." : "Preview is required before send.")))));
+            : (editableType && eligibility.active ? eligibility.text : (previewReady ? "Preview ready. Operational confirmation is still required." : "Preview is required before send.")))));
       renderCommEditablePanel_();
       renderCommunicationCooldownBanner_(detail);
       renderApplicantStatusOverlay_(detail);
@@ -6230,12 +6260,12 @@
       });
     }
     function sendApplicantMessageUi_(){
-      if (!IS_SUPER) {
+      if (!CAN_RUN_OPERATIONS_ACTIONS) {
         communicationsState.result = {
           ok: true,
           result: "BLOCKED",
-          blockCode: "SUPERVISORY_APPROVAL_REQUIRED",
-          blockReason: "Supervisory action \u2014 requires approval, preview, confirmation, and audit. Normal Admin workflow cannot send applicant communications."
+          blockCode: "OPERATIONS_ADMIN_REQUIRED",
+          blockReason: "Operations action \u2014 requires Operations Admin or Super Admin authority, preview, confirmation, and audit. Normal Admin workflow cannot send applicant communications."
         };
         renderCommunicationsResult_(communicationsState.result);
         updateCommunicationsUi_();
@@ -6260,6 +6290,10 @@
       var previewReady = communicationsState.previewApplicantId === applicantId && communicationsState.previewMessageType === messageType && communicationsState.result && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
       if (!previewReady) return;
       var payload = { applicantId: applicantId, messageType: messageType, confirmManualSingleSend: true };
+      if (IS_OPERATIONS_ADMIN) {
+        payload.sourceSurface = "ops";
+        payload.sourceView = "admin";
+      }
       if (isEditableCommType_(messageType)) Object.assign(payload, getCommEditablePayload_());
       var recipientForConfirm = String((payload.recipient || communicationsState.result.effectiveEmail || "")).trim();
       var messageTypeLabel = messageType === "application_feedback" ? "Application Feedback" : (messageType === "custom_email" ? "Custom Email" : messageType.replaceAll("_", " "));
@@ -6772,9 +6806,9 @@ function renderBatchPanel(){
   var disabledReason = "";
   var currentMode = typeof readOpsMode_ === "function" ? readOpsMode_() : normalizeOpsMode_(opsActionState.mode);
   var operatorMode = currentMode === "operator";
-  var supervisoryMode = opsSupervisoryExecutionAllowed_();
+  var operationalMode = opsOperationalExecutionAllowed_();
   if (operatorMode) disabledReason = "Operator mode is read/select/preview only. Escalate to Admin/Super Admin for this action.";
-  else if (!supervisoryMode) disabledReason = "Bulk communication is not a normal Operator/Admin action. Use preview/metrics for planning; execution requires supervisory approval.";
+  else if (!operationalMode) disabledReason = "Bulk communication requires Operations Admin or Super Admin authority, preview, confirmation, caps, and backend gates.";
   else if (!selectedStage) disabledReason = "Select a lifecycle stage to enable bulk preview.";
   else if (!sendable) disabledReason = batchState.disabledReason || "No batch message is supported for this stage.";
   batchState.disabledReason = disabledReason;
@@ -6808,13 +6842,13 @@ function renderBatchPanel(){
   if (sendAvailabilityEl) sendAvailabilityEl.textContent = sendAvailability;
   if (awarenessEl) awarenessEl.textContent = operatorMode
     ? "Operator mode is read/select/preview only. Escalate to Admin/Super Admin for this action."
-    : "Bulk communication is not a normal Operator/Admin action. Use preview/metrics for planning; execution requires supervisory approval.";
+    : "Bulk communication requires Operations Admin or Super Admin authority, preview, confirmation, caps, and backend gates.";
   if (previewBtn) {
-    previewBtn.disabled = !selectedStage || batchState.busy || !supervisoryMode;
+    previewBtn.disabled = !selectedStage || batchState.busy || !operationalMode;
     previewBtn.textContent = batchState.busy && batchState.action === "preview" ? "Previewing..." : "Preview Cohort";
   }
   if (sendBtn) {
-    sendBtn.disabled = !previewReady || batchState.busy || !supervisoryMode;
+    sendBtn.disabled = !previewReady || batchState.busy || !operationalMode;
     sendBtn.textContent = batchState.busy && batchState.action === "send" ? "Sending..." : "Send Stage Batch";
   }
   if (noteEl) {
@@ -6857,7 +6891,7 @@ function previewStageBatchUi_(){
   var stage = batchState.selectedStage;
   var limit = getStageBatchLimitUi_();
   var offset = getStageBatchOffsetUi_();
-  if (!stage || batchState.busy || !opsSupervisoryExecutionAllowed_()) return;
+  if (!stage || batchState.busy || !opsOperationalExecutionAllowed_()) return;
   batchState.previewRequestSeq = Number(batchState.previewRequestSeq || 0) + 1;
   var requestSeq = batchState.previewRequestSeq;
   var clientRequestId = "preview-client-" + String(Date.now()) + "-" + String(requestSeq);
@@ -6997,7 +7031,7 @@ function sendStageBatchUi_(){
     && Number(batchState.previewOffset || 0) === offset
     && !!String(batchState.previewRequestId || "")
     && batchState.sendable === true;
-  if (!previewReady || batchState.busy || !opsSupervisoryExecutionAllowed_()) {
+  if (!previewReady || batchState.busy || !opsOperationalExecutionAllowed_()) {
     console.log("STAGE_BATCH_SEND_GUARD_BLOCKED", {
       stage: stage,
       previewStage: batchState.previewStage,
@@ -7013,7 +7047,7 @@ function sendStageBatchUi_(){
       countPositive: Number(batchState.previewEligible || 0) > 0,
       sendable: batchState.sendable === true,
       busy: batchState.busy === true,
-      isSuper: IS_SUPER === true,
+      operationsAuthorized: CAN_RUN_OPERATIONS_ACTIONS === true,
       previewReady: previewReady === true
     });
     return;
@@ -8203,12 +8237,15 @@ function renderStageDashboard_(items, emptyMessage){
 
     function setRoleUi(){
       const showSuper = IS_SUPER;
+      const allowOperations = CAN_RUN_OPERATIONS_ACTIONS;
+      const allowOpsSurfaceAction = opsOperationalExecutionAllowed_();
       const superTools = document.getElementById("superTools");
       const btnReset = document.getElementById("btnResetLink");
       const btnLock = document.getElementById("btnLockPortal");
       const btnUnlock = document.getElementById("btnUnlockPortal");
       const btnOpsWaExport = document.getElementById("opsWaExportBtn");
       const btnOpsWaEmail = document.getElementById("opsWaEmailBtn");
+      const btnScanBounces = document.getElementById("btnScanBounces");
       const overallStatusEl = document.getElementById("overallStatus");
       const emailOverrideWrap = document.getElementById("superEmailOverrideWrap");
       if (superTools) superTools.style.display = showSuper ? "flex" : "none";
@@ -8216,12 +8253,16 @@ function renderStageDashboard_(items, emptyMessage){
       if (btnLock) btnLock.textContent = "Lock Editing";
       if (btnUnlock) btnUnlock.textContent = "Unlock Editing";
       if (btnOpsWaExport) {
-        btnOpsWaExport.disabled = !showSuper;
-        btnOpsWaExport.textContent = showSuper ? "Export WhatsApp CSV" : "Export WhatsApp CSV (Super Admin-only)";
+        btnOpsWaExport.disabled = !allowOpsSurfaceAction;
+        btnOpsWaExport.textContent = allowOpsSurfaceAction ? "Export WhatsApp CSV" : "Export WhatsApp CSV (Operations action)";
       }
       if (btnOpsWaEmail) {
         btnOpsWaEmail.disabled = !showSuper;
         btnOpsWaEmail.textContent = showSuper ? "Email CSV to Admins" : "Email CSV to Admins (Super Admin-only)";
+      }
+      if (btnScanBounces) {
+        btnScanBounces.disabled = !showSuper;
+        btnScanBounces.title = showSuper ? "Super Admin-only bounce scan." : "Super Admin required for bounce scan.";
       }
       if (overallStatusEl) {
         overallStatusEl.disabled = !CAN_OVERRIDE;
@@ -8237,7 +8278,7 @@ function renderStageDashboard_(items, emptyMessage){
         warn.style.display = STUDENT_URL_READY ? "none" : "block";
         warnText.textContent = STUDENT_URL_WARNING || "Student URL not configured.";
       }
-      if (emailOverrideWrap) emailOverrideWrap.style.display = showSuper ? "block" : "none";
+      if (emailOverrideWrap) emailOverrideWrap.style.display = allowOperations ? "block" : "none";
       renderOpsRoleDiagnostic_();
       renderOpsModeUi_();
     }
@@ -8738,8 +8779,8 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function applyEmailOverride_(){
-      if (!IS_SUPER) {
-        setMsg("mMsg", "Access denied: SUPER admin required.");
+      if (!CAN_RUN_OPERATIONS_ACTIONS) {
+        setMsg("mMsg", "Access denied: Operations Admin or Super Admin required.");
         return;
       }
       if (!currentRowNumber || !currentDetail) return;
@@ -8893,9 +8934,9 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function exportWhatsAppFallbackCsv_(){
-      if (opsBlockSupervisoryAction_("waFallbackMsg", "WhatsApp CSV Export", opsApplicantId_())) return;
-      if (!IS_SUPER) {
-        setMsg("waFallbackMsg", "SUPER admin required.");
+      if (opsBlockOperationalAction_("waFallbackMsg", "WhatsApp CSV Export", opsApplicantId_())) return;
+      if (!CAN_RUN_OPERATIONS_ACTIONS) {
+        setMsg("waFallbackMsg", "Operations Admin or Super Admin required.");
         return;
       }
       var limitEl = firstExistingEl_("opsWaFallbackLimit", "waFallbackLimit");

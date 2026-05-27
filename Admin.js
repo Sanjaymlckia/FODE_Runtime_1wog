@@ -133,12 +133,24 @@ function getAdminRole_(email) {
   var roles = CONFIG.ADMIN_ROLES || {};
   var role = String(roles[e] || "").toUpperCase();
   if (role === "SUPER") return "SUPER";
+  if (role === "OPERATIONS") return "OPERATIONS";
   return "VERIFIER";
 }
 
 function requireSuperAdmin_(email) {
   if (getAdminRole_(email) !== "SUPER") {
     throw new Error("Access denied: SUPER admin required");
+  }
+}
+
+function isOperationsAdmin_(email) {
+  var role = getAdminRole_(email);
+  return role === "SUPER" || role === "OPERATIONS";
+}
+
+function requireOperationsAdmin_(email) {
+  if (!isOperationsAdmin_(email)) {
+    throw new Error("Access denied: Operations Admin required");
   }
 }
 
@@ -1362,6 +1374,7 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
   try {
   var adminEmail = getCallerEmail_();
   if (!isAdmin_(adminEmail)) return err_("ACCESS_DENIED", "Access denied", dbgId);
+  requireSuperAdmin_(adminEmail);
 
   payload = payload || {};
   var rowNumber = Number(payload.rowNumber || 0);
@@ -1543,6 +1556,7 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
 function admin_setOverallStatus(payload) {
   var adminEmail = getCallerEmail_();
   if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+  requireSuperAdmin_(adminEmail);
 
   payload = payload || {};
   var rowNumber = Number(payload.rowNumber || 0);
@@ -2165,6 +2179,7 @@ function admin_sendDocsFollowupEmails(payload) {
   return withEnvelope_("admin_sendDocsFollowupEmails", function(dbgId) {
     var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) return err_("ACCESS_DENIED", "Access denied", dbgId);
+    requireSuperAdmin_(adminEmail);
     if (CONFIG.DOCS_FOLLOWUP_ENABLE !== true) return ok_({
       summary: { sentCount: 0, failedCount: 0 },
       results: [],
@@ -2311,7 +2326,7 @@ function admin_updateParentEmailCorrected(payload) {
   return withEnvelope_("admin_updateParentEmailCorrected", function (dbgId) {
     var operatorEmail = getCallerEmail_();
     if (!isAdmin_(operatorEmail)) return err_("ACCESS_DENIED", "Access denied", dbgId);
-    requireSuperAdmin_(operatorEmail);
+    requireOperationsAdmin_(operatorEmail);
     if (!(CONFIG && CONFIG.SUPERADMIN_ALLOW_EMAIL_OVERRIDE_POST_DOCS_VERIFIED === true)) {
       return err_("FEATURE_DISABLED", "Email override is disabled by config.", dbgId);
     }
@@ -2934,7 +2949,7 @@ function admin_exportWhatsAppFallbackCsv(payload) {
   return withEnvelope_("admin_exportWhatsAppFallbackCsv", function () {
     var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
-    requireSuperAdmin_(adminEmail);
+    requireOperationsAdmin_(adminEmail);
     var p = payload && typeof payload === "object" ? payload : {};
     var limit = normalizeWhatsAppFallbackLimit_(p.limit || p.batchSize || CONFIG.WHATSAPP_FALLBACK_DEFAULT_LIMIT || 20);
     var filter = normalizeWhatsAppFallbackFilter_(p.filter || "ALL_FALLBACK");
@@ -4549,6 +4564,7 @@ function admin_campaignPrepareLegacyRows(payload) {
   return withEnvelope_("admin_campaignPrepareLegacyRows", function () {
     var adminEmail = getActiveUserEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    requireSuperAdmin_(adminEmail);
     return campaign_prepareLegacyRows_();
   });
 }
@@ -4557,6 +4573,7 @@ function admin_campaignSendLegacyBatch(payload) {
   return withEnvelope_("admin_campaignSendLegacyBatch", function () {
     var adminEmail = getActiveUserEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    requireSuperAdmin_(adminEmail);
     var p = payload || {};
     if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true) {
       var blockCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "PRODUCTION_EMAIL_SENDS_DISABLED";
@@ -4581,6 +4598,7 @@ function admin_campaignSyncResponses(payload) {
   return withEnvelope_("admin_campaignSyncResponses", function () {
     var adminEmail = getActiveUserEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    requireSuperAdmin_(adminEmail);
     return campaign_syncResponses_();
   });
 }
@@ -4589,6 +4607,7 @@ function admin_campaignProcessBounces(payload) {
   return withEnvelope_("admin_campaignProcessBounces", function () {
     var adminEmail = getActiveUserEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    requireSuperAdmin_(adminEmail);
     return admin_scanBounces_();
   });
 }
@@ -4597,6 +4616,7 @@ function admin_runBounceScan(payload) {
   return withEnvelope_("admin_runBounceScan", function () {
     var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    requireSuperAdmin_(adminEmail);
     return admin_scanBounces_();
   });
 }
@@ -5004,6 +5024,7 @@ function admin_campaignSendLegacyFollowups(payload) {
   return withEnvelope_("admin_campaignSendLegacyFollowups", function () {
     var adminEmail = getActiveUserEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    requireSuperAdmin_(adminEmail);
     var p = payload || {};
     if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true) {
       var blockCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "PRODUCTION_EMAIL_SENDS_DISABLED";
@@ -5712,7 +5733,7 @@ function admin_previewStageBatch(payload) {
     try {
       var adminEmail = getCallerEmail_();
       if (!isAdmin_(adminEmail)) throw new Error("Access denied");
-      requireSuperAdmin_(adminEmail);
+      requireOperationsAdmin_(adminEmail);
       var p = payload && typeof payload === "object" ? payload : {};
       var propertyGuard = buildScriptPropertyRegressionGuard_();
       if (!propertyGuard.ok) {
@@ -5965,7 +5986,7 @@ function admin_sendStageBatch(payload) {
     var messageType = "";
     try {
       if (!isAdmin_(adminEmail)) throw new Error("Access denied");
-      requireSuperAdmin_(adminEmail);
+      requireOperationsAdmin_(adminEmail);
       var p = payload && typeof payload === "object" ? payload : {};
       if (isBatchSendEnabled_() !== true) {
         var blockCode = "BATCH_SENDS_DISABLED_PREVIEW_ONLY_MODE";
@@ -6317,7 +6338,12 @@ function admin_sendApplicantMessage(payload) {
   return withEnvelope_("admin_sendApplicantMessage", function (dbgId) {
     var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    requireOperationsAdmin_(adminEmail);
     var p = payload && typeof payload === "object" ? payload : {};
+    if (getAdminRole_(adminEmail) === "OPERATIONS") {
+      p.sourceSurface = "ops";
+      p.sourceView = clean_(p.sourceView || "admin");
+    }
     var applicantId = clean_(p.applicantId || "");
     var requestedType = clean_(p.messageType || "");
     var messageType = normalizeApplicantMessageType_(requestedType);
@@ -6405,6 +6431,7 @@ function admin_runFdAcknowledgementForApplicant(payload) {
       });
     }
     if (!dryRun) {
+      requireSuperAdmin_(adminEmail);
       var confirmedSingleSend = p.confirmFdAcknowledgementSingleSend === true || p.confirmManualSingleSend === true;
       if (confirmedSingleSend !== true || clean_(p.confirmApplicantId || "") !== applicantId) {
         return adminCommBlockedResult_("fd_acknowledgement", "CONFIRM_REQUIRED", dbgId, {
@@ -6557,26 +6584,28 @@ function runOpsSafeModeGate_(actionType, options) {
   var action = clean_(actionType || "");
   var allowAction = (action === "applicant_email_send" && CONFIG.OPS_SAFE_MODE_ALLOW_APPLICANT_EMAIL_SENDS === true)
     || (action === "classroom_notify" && CONFIG.OPS_SAFE_MODE_ALLOW_CLASSROOM_NOTIFY === true);
+  var actionRole = getAdminRole_(adminEmail);
+  var operationsApplicantSendAllowed = actionRole === "OPERATIONS" && action === "applicant_email_send";
   logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_REQUESTED", {
     actionType: action,
     operator: adminEmail,
     applicantId: applicantId,
     debugId: dbgId
   });
-  if (getAdminRole_(adminEmail) !== "SUPER") {
+  if (actionRole !== "SUPER" && !operationsApplicantSendAllowed) {
     logOpsSafeModeEvent_("OPS_SAFE_MODE_ACTION_BLOCKED", {
       actionType: action,
       operator: adminEmail,
       applicantId: applicantId,
       debugId: dbgId,
-      blockCode: "OPS_SAFE_MODE_SUPER_ADMIN_REQUIRED"
+      blockCode: "OPS_SAFE_MODE_AUTHORIZED_ROLE_REQUIRED"
     });
     return {
       ok: false,
       safeMode: true,
       diagnosticsLabel: "OPS_SAFE_MODE_ACTION_BLOCKED",
-      blockCode: "OPS_SAFE_MODE_SUPER_ADMIN_REQUIRED",
-      blockReason: "Ops Safe Mode mutation actions require a Super Admin."
+      blockCode: "OPS_SAFE_MODE_AUTHORIZED_ROLE_REQUIRED",
+      blockReason: "Ops Safe Mode action requires an authorized Operations Admin or Super Admin."
     };
   }
   if (!allowAction) {
@@ -6647,32 +6676,34 @@ function runOpsSafeModeGate_(actionType, options) {
     };
   }
   if (CONFIG.OPS_SAFE_MODE_ENABLED !== true) {
-    logOpsSafeModeEvent_("OPS_SUPER_ADMIN_PARITY_ALLOWED", {
+    var disabledSafeModeAllowedLabel = actionRole === "SUPER" ? "OPS_SUPER_ADMIN_PARITY_ALLOWED" : "OPS_OPERATIONS_ADMIN_ALLOWED";
+    logOpsSafeModeEvent_(disabledSafeModeAllowedLabel, {
       actionType: action,
       operator: adminEmail,
       applicantId: applicantId,
       debugId: dbgId,
-      reason: "ops_safe_mode_disabled_but_super_admin_selected_applicant_parity"
+      reason: actionRole === "SUPER" ? "ops_safe_mode_disabled_but_super_admin_selected_applicant_parity" : "ops_safe_mode_disabled_but_authorized_operations_admin_selected_applicant"
     });
     return {
       ok: true,
       safeMode: false,
-      superAdminParity: true,
-      diagnosticsLabel: "OPS_SUPER_ADMIN_PARITY_ALLOWED"
+      authorizedRole: actionRole,
+      diagnosticsLabel: disabledSafeModeAllowedLabel
     };
   }
-  logOpsSafeModeEvent_("OPS_SUPER_ADMIN_PARITY_ALLOWED", {
+  var allowedLabel = actionRole === "SUPER" ? "OPS_SUPER_ADMIN_PARITY_ALLOWED" : "OPS_OPERATIONS_ADMIN_ALLOWED";
+  logOpsSafeModeEvent_(allowedLabel, {
     actionType: action,
     operator: adminEmail,
     applicantId: applicantId,
     debugId: dbgId,
-    reason: "approved_target_gate_bypassed_for_super_admin_selected_applicant"
+    reason: actionRole === "SUPER" ? "approved_target_gate_bypassed_for_super_admin_selected_applicant" : "authorized_operations_admin_selected_applicant_after_existing_safe_mode_gates"
   });
   return {
     ok: true,
     safeMode: false,
-    superAdminParity: true,
-    diagnosticsLabel: "OPS_SUPER_ADMIN_PARITY_ALLOWED"
+    authorizedRole: actionRole,
+    diagnosticsLabel: allowedLabel
   };
 }
 
@@ -6795,6 +6826,7 @@ function admin_notifyOpsClassroomAdmin(payload) {
   return withEnvelope_("admin_notifyOpsClassroomAdmin", function (dbgId) {
     var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) return err_("ACCESS_DENIED", "Access denied", dbgId);
+    requireSuperAdmin_(adminEmail);
     var p = payload && typeof payload === "object" ? payload : {};
     if (Array.isArray(p.applicantIds) || Array.isArray(p.recipients) || Array.isArray(p.messages)) {
       return adminCommBlockedResult_("notify_classroom_admin", "BULK_NOT_ALLOWED", dbgId, {

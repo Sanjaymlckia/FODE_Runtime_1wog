@@ -7,9 +7,9 @@
  */
 var CONFIG = {
   // Versioning (change control)
-  VERSION: "r199",
+  VERSION: "r200",
 CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alignment",
-  DEPLOY_VERSION_NUMBER: 199,
+  DEPLOY_VERSION_NUMBER: 200,
 BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
 
   // STAGING/PROD data mode routing (working sheet)
@@ -252,6 +252,7 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   // Admin allowlist (must be lowercase emails)
   ADMIN_EMAILS: [
     "sanjay@minervacenters.com",
+    "principal@kundu.ac",
     "enquiries@kundu.ac",
     "fode_kia@kundu.ac",
     "mlc@minervacenters.com",
@@ -260,6 +261,7 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   ],
   ADMIN_ROLES: {
     "sanjay@minervacenters.com": "SUPER",
+    "principal@kundu.ac": "OPERATIONS",
     "enquiries@kundu.ac": "VERIFIER",
     "fode_kia@kundu.ac": "VERIFIER",
     "mlc@minervacenters.com": "VERIFIER",

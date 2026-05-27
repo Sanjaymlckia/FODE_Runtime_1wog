@@ -2,6 +2,94 @@
 
 ## Active CIS
 
+- `CIS r200: Elevated Admin Role`.
+- Implementation date: `2026-05-27`.
+- Work class: `Runtime release - role and permission change`.
+- Release track: `Track H`.
+- Reason for classification: authorization change enabling controlled daily operations for a new non-Super administrator.
+- Intended runtime identity: `r200 / 200`.
+- Runtime release authorized: `YES`.
+- Allowed edit files:
+  - `Config.js`
+  - `Admin.js`
+  - `AdminUI.html`
+  - `CURRENT_TASK.md`
+- Explicitly forbidden:
+  - `Code.js`, `Utils.js`, sender alias, email templates, cooldown logic, recipient logic, Books logic, portal logic, schema, Script Properties, deployment-setting changes, broad refactor, and real bulk send during acceptance.
+- Inspection finding:
+  - backend role classification and action gates live in `Admin.js`; UI role/mode/action gates live in `AdminUI.html`; `Utils.js` has no shared role classification requiring change.
+  - `SUPER_ADMIN_EMAILS` and the override/bypass logic in `Code.js` remain the authority for Super-only mutation powers and are not part of this change.
+  - existing document follow-up sending is presented as Super Admin-only in the UI; r200 closes the permissive backend gap rather than expanding that sender path.
+  - direct RPC review found document/status writes, overall-status writes, legacy campaign mutations/sends, bounce scan, FD live acknowledgement, and classroom notification paths that must remain Super-only; r200 adds matching server guards before enabling the new Operations account.
+- Approved Operations Admin identity:
+  - `principal@kundu.ac` = `OPERATIONS` / displayed as `Operations Admin`.
+  - `principal@kundu.ac` must not be added to `SUPER_ADMIN_EMAILS` or `ELEVATED_OVERRIDE_EMAILS`.
+- Approved Operations Admin capabilities:
+  - email correction through the existing corrected-email audit path.
+  - single-applicant communication preview/send through existing preview, confirmation, and Safe Mode gates.
+  - bounded bulk preview/send through existing preview-cache, confirmation, caps, and backend gates.
+  - queue CSV export and existing WhatsApp fallback CSV export.
+  - document/payment review surfaces only; no document/payment mutation permission.
+- Super Admin-only controls preserved:
+  - portal reset/lock/unlock, Books/API config and writes unless separately gated, Script Properties/config tools, payment verification/payment-freeze bypass, document/status mutation, overall override, legacy campaign mutation/send, bounce scan, classroom notify, FD live acknowledgement, release/runtime governance, destructive cleanup, safety overrides, and existing document follow-up sender.
+- Acceptance targets:
+  - role diagnostic visibly identifies `principal@kundu.ac` as `Operations Admin`.
+  - backend and UI authorize only the approved Operations Admin actions; generic Super Admin gating is not broadened.
+  - Super-only controls remain unavailable to `principal@kundu.ac`.
+  - sender alias remains `FODE Admissions <fode_kia@kundu.ac>`.
+  - no real bulk send is executed during acceptance.
+  - only `Config.js`, `Admin.js`, `AdminUI.html`, and `CURRENT_TASK.md` change.
+- Release closure discipline:
+  - close only against this approved scope and acceptance criteria.
+  - classify new findings as `BLOCKER` or `FOLLOW-UP`; do not expand this release for non-blockers.
+
+## r200 Release Identity Gate
+
+- Intended runtime identity: `r200 / 200`.
+- Local identity proof before `clasp version`:
+  - `Config.js:10:  VERSION: "r200",`
+  - `Config.js:12:  DEPLOY_VERSION_NUMBER: 200,`
+- Invariant check: `VERSION == "r" + DEPLOY_VERSION_NUMBER` is PASS for `r200 / 200`.
+- `git diff -- Config.js`: confirms the identity bump `r199 / 199` to `r200 / 200`, plus only the authorized Operations role allowlist/mapping additions.
+- `clasp push`: PASS; output reported `Pushed 8 files at 3:50:53 pm.` and did not report `Skipping push`.
+- Remote independent proof outside source root:
+  - cloned into `C:\GoogleDRIVE\Codex_Sync\FODE_Runtime_1wog_remote_verify_r200_20260527_01`.
+  - remote `Config.js` contains `VERSION: "r200"` and `DEPLOY_VERSION_NUMBER: 200`.
+  - remote `Config.js` contains `"principal@kundu.ac": "OPERATIONS"`.
+  - remote `SUPER_ADMIN_EMAILS` contains only `"sanjay@minervacenters.com"`; remote `ELEVATED_OVERRIDE_EMAILS` remains empty.
+  - remote sender marker remains `CAMPAIGN_GMAIL_ALIAS: "fode_kia@kundu.ac"`.
+  - remote `Admin.js` contains `requireOperationsAdmin_` on the approved operational endpoints and `requireSuperAdmin_` on document/status, overall override, legacy campaign mutation/send, bounce scan, document follow-up send, FD live acknowledgement, and classroom notify paths.
+  - remote `AdminUI.html` contains `Operations Admin`, `CAN_RUN_OPERATIONS_ACTIONS`, `opsOperationalExecutionAllowed_`, and `data-ops-operational-write` markers while Super-only portal/payment/CSV-email markers remain.
+  - SHA-256 parity PASS for local versus remote `Config.js`, `Admin.js`, and `AdminUI.html`.
+- Remote-source gate: PASS; Apps Script platform version creation is authorized for `r200 / 200`.
+
+## r200 Runtime Acceptance Status
+
+- Apps Script platform version: `218`.
+- Admin staging deployment: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @218`.
+- Student staging deployment: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @218`.
+- Admin whoami URL: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami`.
+  - PASS: `version="r200"`, `deployVersion=200`, `mismatch=false`.
+- Student whoami URL: `https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec?view=whoami`.
+  - PASS: `version="r200"`, `deployVersion=200`, `mismatch=false`.
+- Source and safety proof:
+  - PASS: remote source maps `principal@kundu.ac` to `OPERATIONS`, not `SUPER`, and leaves `ELEVATED_OVERRIDE_EMAILS` empty.
+  - PASS: permitted operational actions use explicit backend and UI Operations gates; discovered unapproved mutation/send paths are server-restricted to Super Admin.
+  - PASS: sender marker remains `CAMPAIGN_GMAIL_ALIAS: "fode_kia@kundu.ac"`.
+  - PASS: no real bulk send, real applicant send, or mutation acceptance action was executed.
+- Controlled authenticated acceptance:
+  - PASS by operator-supplied rendered HTML evidence while signed in as `principal@kundu.ac`.
+  - PASS: rendered identity reports `VERSION / BUILD_VERSION r200`.
+  - PASS: role markers report `IS_SUPER false`, `IS_OPERATIONS_ADMIN true`, and `CAN_RUN_OPERATIONS_ACTIONS true`.
+  - PASS: rendered `SUPER_ADMIN_EMAILS` includes only `sanjay@minervacenters.com`.
+  - PASS: rendered override marker reports `CAN_OVERRIDE false`.
+  - PASS: Super Admin/Governance actions remain separately gated.
+  - PASS: no live send, export, or mutation action was run for acceptance.
+- Closure classification: no unresolved `BLOCKER` or `FOLLOW-UP` identified within approved r200 scope.
+- Release finalization status: PASS; commit, tag, and push authorized.
+
+## Previous Active CIS
+
 - `CIS r199: Communication Cooldown, Workflow Clarity, and Follow-up CSV Fields`.
 - Implementation date: `2026-05-27`.
 - Work class: `Runtime release - light UI wording and local CSV visibility`.
@@ -268,13 +356,13 @@
 <!-- CODEXHUB_STATE_BACKUP_START -->
 ## CodexHub State Backup
 
-- Last state backup timestamp: 2026-05-27 13:23:24
+- Last state backup timestamp: 2026-05-27 14:44:59
 - Project path: `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog`
 - Repository state: DIRTY
 - Current branch: `main`
-- Latest commit: `71260fd release: r198 payment receipt evidence wording alignment`
-- Latest matching staging tag: `staging-as198`
-- Config version / deploy number: VERSION: r198; DEPLOY_VERSION_NUMBER: 198
+- Latest commit: `633b128 release: r199 communication clarity and followup csv fields`
+- Latest matching staging tag: `staging-as199`
+- Config version / deploy number: VERSION: r199; DEPLOY_VERSION_NUMBER: 199
 - Current release track: Not detected.
 - Current blocker: None detected.
 - Next exact action: Not detected.
