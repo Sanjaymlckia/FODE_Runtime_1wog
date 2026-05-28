@@ -2791,6 +2791,7 @@
         var eligibility = deriveSendEligibility(row);
         var ready = opsReadySummary_(invoice, opsIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true, opsIsYes_(row.Enrolled_Confirmed));
         var emailIssueReason = opsEmailIssueReason_(row);
+        var droppedIneligibleReason = opsDroppedIneligibleReason_(row);
         var paymentOk = opsIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true;
         var enrolledOk = opsIsYes_(row.Enrolled_Confirmed);
         return {
@@ -2814,8 +2815,8 @@
           "Invoice Status": invoice.label,
           "Enrolment Status": enrolledOk ? "Enrolled Confirmed" : "Not confirmed as enrolled",
           "Classroom Status": classroomStatusFromRow_(row).label,
-          "Ready / Blocked": ready.label === "Ready" ? "Ready" : "Blocked",
-          "Block Reason": eligibility.active ? "Cooldown active" : (emailIssueReason || (ready.label === "Ready" ? "" : "Unknown")),
+          "Ready / Blocked": droppedIneligibleReason ? "Inactive" : (ready.label === "Ready" ? "Ready" : "Blocked"),
+          "Block Reason": droppedIneligibleReason || (eligibility.active ? "Cooldown active" : (emailIssueReason || (ready.label === "Ready" ? "" : "Unknown"))),
           Student: opsFirstNonBlank_(row.Student_Name, row.First_Name, row.name),
           Date_Applied: opsDateAppliedInfo_(row).label,
           Aging: opsAgingDays_(row) || "",
@@ -3157,6 +3158,36 @@
       var phone = opsFirstNonBlank_(r.Parent_Phone, r.Phone, r.Mobile, r.WhatsApp, r.Contact_Number, r.Phone_Number, "");
       return phone ? "Use phone/WhatsApp fallback while email is blocked." : "No phone/WhatsApp fallback is loaded for this applicant.";
     }
+    function opsDroppedIneligibleReason_(row){
+      var r = row || {};
+      var fields = [
+        ["Pipeline_Stage", r.Pipeline_Stage],
+        ["Operational_Stage", r.Operational_Stage],
+        ["CRM_Stage", r.CRM_Stage],
+        ["Stage", r.Stage],
+        ["Overall_Status", r.Overall_Status]
+      ];
+      for (var i = 0; i < fields.length; i++) {
+        var raw = String(fields[i][1] || "").trim();
+        if (!raw) continue;
+        var normalized = raw.toLowerCase().replace(/[\/_-]+/g, " ").replace(/\s+/g, " ").trim();
+        if (normalized.indexOf("closed lost") >= 0
+          || normalized.indexOf("ineligible") >= 0
+          || normalized.indexOf("not eligible") >= 0
+          || normalized.indexOf("dropped") >= 0
+          || normalized.indexOf("drop out") >= 0
+          || normalized === "dropout"
+          || normalized.indexOf("withdrawn") >= 0
+          || normalized === "withdraw"
+          || normalized.indexOf("disqualified") >= 0) {
+          return fields[i][0] + ": " + raw;
+        }
+      }
+      return "";
+    }
+    function opsIsDroppedIneligible_(row){
+      return !!opsDroppedIneligibleReason_(row);
+    }
     function opsLifecycleDefinitions_(){
       return [
         { key:"fd_received", name:"Application Received / FD Received", mode:"operator workflow", meaning:"External FD intake row has been received and assigned an ApplicantID.", next:"Review Application", matches:function(row){ return opsWorkflowStageKey_(row) === "fd_received"; } },
@@ -3167,11 +3198,13 @@
         { key:"enrolment", name:"Enrolment Pending", mode:"admin guarded", meaning:"Payment is verified and enrolment is not confirmed.", next:"Review Application", matches:function(row){ return opsWorkflowStageKey_(row) === "enrolment"; } },
         { key:"classroom", name:"Classroom Handover", mode:"admin guarded", meaning:"Enrolment/classroom handover is pending or unknown.", next:"Review Application", matches:function(row){ return opsWorkflowStageKey_(row) === "classroom"; } },
         { key:"exceptions", name:"Exceptions / Blocked", mode:"escalation", meaning:"Loaded status indicates blocked, failed, anomalous, or unsafe state.", next:"Review Application", matches:function(row){ return opsWorkflowStageKey_(row) === "exceptions"; } },
-        { key:"email_issue", name:"Email Issue / Contact Correction", mode:"escalation", meaning:"Bounce, suppression, or contact correction is required before email can continue.", next:"Correct Email", matches:function(row){ return opsWorkflowStageKey_(row) === "email_issue"; } }
+        { key:"email_issue", name:"Email Issue / Contact Correction", mode:"escalation", meaning:"Bounce, suppression, or contact correction is required before email can continue.", next:"Correct Email", matches:function(row){ return opsWorkflowStageKey_(row) === "email_issue"; } },
+        { key:"dropped_ineligible", name:"Dropped / Ineligible", mode:"display-only", meaning:"Source lifecycle/status field marks the record as dropped, ineligible, closed-lost, withdrawn, or disqualified; it is separated from active progression queues.", next:"Review source status", matches:function(row){ return opsWorkflowStageKey_(row) === "dropped_ineligible"; } }
       ];
     }
     function opsWorkflowStageKey_(row){
       var r = row || {};
+      if (opsIsDroppedIneligible_(r)) return "dropped_ineligible";
       if (opsHasEmailIssue_(r)) return "email_issue";
       var lastResult = String(r.Last_Contact_Result || r.Email_Status || r.Ack_Email_Status || r.Books_Last_Error || "").toUpperCase();
       if (lastResult.indexOf("FAILED") >= 0 || lastResult.indexOf("BLOCK") >= 0 || lastResult.indexOf("ERROR") >= 0) return "exceptions";
@@ -4007,8 +4040,10 @@
         var portalState = portalAccessStatusFromRow_(row);
         var emailIssueBadges = opsEmailIssueBadges_(row);
         var isEmailIssue = stage.key === "email_issue";
+        var isDroppedIneligible = stage.key === "dropped_ineligible";
+        var droppedIneligibleReason = isDroppedIneligible ? opsDroppedIneligibleReason_(row) : "";
         var usesDocumentEvidenceAction = stage.key === "portal" || stage.key === "docs";
-        var primaryActionLabel = stage.key === "docs" ? "Check portal uploads / contact applicant" : (usesDocumentEvidenceAction ? documentEvidence.action : stage.next);
+        var primaryActionLabel = isDroppedIneligible ? stage.next : (stage.key === "docs" ? "Check portal uploads / contact applicant" : (usesDocumentEvidenceAction ? documentEvidence.action : stage.next));
         var documentChecklistHtml = stage.key === "docs" ? opsQueueDocumentChecklistHtml_(row) : "";
         var currentEmail = opsFirstNonBlank_(row.email, row.Parent_Email, row.parentEmail, row.effectiveEmail, row.Effective_Email, "No email on record");
         var phone = opsFirstNonBlank_(row.Parent_Phone, row.Phone, row.Mobile, row.WhatsApp, row.Contact_Number, row.Phone_Number, "No phone on record");
@@ -4032,8 +4067,9 @@
             + "<span class='opsStatusPill " + (enrolledOk ? "ok" : "warn") + "'>Enrolment / Classroom: " + esc((enrolledOk ? "Enrolled" : "Pending") + " | " + classroom.label) + "</span>"
             + "<span class='opsStatusPill " + (emailIssueBadges.length ? "warn" : "muted") + "'>Email issue: " + esc(emailIssueLabel) + "</span>"
             + (isEmailIssue ? "<div class='opsWorkflowBlockReason'>Block reason: " + esc(opsEmailIssueReason_(row) || "Email correction required") + "</div><div class='opsWorkflowSecondary'>Last action / contacted: " + esc(opsLastActionInfo_(row)) + "</div>" : "")
+            + (isDroppedIneligible ? "<div class='opsWorkflowBlockReason'>Source outcome: " + esc(droppedIneligibleReason || "Dropped / Ineligible") + "</div><div class='opsWorkflowSecondary'>No active progression. Display-only lifecycle classification.</div>" : "")
           + "</div>"
-          + "<div class='opsWorkflowAction'><button class='opsActionBtn live' type='button' data-review-applicant-id='" + esc(applicantId) + "' data-review-applicant-name='" + esc(applicantName) + "' data-workflow-stage-key='" + esc(stage.key) + "'>" + esc(primaryActionLabel) + "</button><div class='opsWorkflowSecondary'>" + esc(isEmailIssue ? "Email correction is handled in Admin Review." : ("Portal: " + (workflowIsYes_(row.Portal_Submitted) ? "Submitted" : portalState.label) + " | Documents: " + documentEvidence.label)) + "</div>" + documentChecklistHtml + "</div>"
+          + "<div class='opsWorkflowAction'><button class='opsActionBtn live' type='button' data-review-applicant-id='" + esc(applicantId) + "' data-review-applicant-name='" + esc(applicantName) + "' data-workflow-stage-key='" + esc(stage.key) + "'>" + esc(primaryActionLabel) + "</button><div class='opsWorkflowSecondary'>" + esc(isDroppedIneligible ? ("No active progression. " + (droppedIneligibleReason || "Source status loaded.")) : (isEmailIssue ? "Email correction is handled in Admin Review." : ("Portal: " + (workflowIsYes_(row.Portal_Submitted) ? "Submitted" : portalState.label) + " | Documents: " + documentEvidence.label))) + "</div>" + documentChecklistHtml + "</div>"
           + "</div>";
       }
       if (workflow) {

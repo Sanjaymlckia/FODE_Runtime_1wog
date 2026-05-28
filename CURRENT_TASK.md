@@ -2,46 +2,99 @@
 
 ## Active CIS
 
-- `CIS r200: Elevated Admin Role`.
-- Implementation date: `2026-05-27`.
-- Work class: `Runtime release - role and permission change`.
+- `CIS r201 Revised: OPS Lifecycle Dropped / Ineligible Stage with Minimal Queue Payload Exposure`.
+- Implementation date: `2026-05-28`.
+- Work class: `Runtime release - OPS lifecycle/UI classification with minimal read-only queue payload exposure`.
 - Release track: `Track H`.
-- Reason for classification: authorization change enabling controlled daily operations for a new non-Super administrator.
-- Intended runtime identity: `r200 / 200`.
-- Runtime release authorized: `YES`.
-- Allowed edit files:
-  - `Config.js`
-  - `Admin.js`
-  - `AdminUI.html`
-  - `CURRENT_TASK.md`
-- Explicitly forbidden:
-  - `Code.js`, `Utils.js`, sender alias, email templates, cooldown logic, recipient logic, Books logic, portal logic, schema, Script Properties, deployment-setting changes, broad refactor, and real bulk send during acceptance.
-- Inspection finding:
-  - backend role classification and action gates live in `Admin.js`; UI role/mode/action gates live in `AdminUI.html`; `Utils.js` has no shared role classification requiring change.
-  - `SUPER_ADMIN_EMAILS` and the override/bypass logic in `Code.js` remain the authority for Super-only mutation powers and are not part of this change.
-  - existing document follow-up sending is presented as Super Admin-only in the UI; r200 closes the permissive backend gap rather than expanding that sender path.
-  - direct RPC review found document/status writes, overall-status writes, legacy campaign mutations/sends, bounce scan, FD live acknowledgement, and classroom notification paths that must remain Super-only; r200 adds matching server guards before enabling the new Operations account.
-- Approved Operations Admin identity:
-  - `principal@kundu.ac` = `OPERATIONS` / displayed as `Operations Admin`.
-  - `principal@kundu.ac` must not be added to `SUPER_ADMIN_EMAILS` or `ELEVATED_OVERRIDE_EMAILS`.
-- Approved Operations Admin capabilities:
-  - email correction through the existing corrected-email audit path.
-  - single-applicant communication preview/send through existing preview, confirmation, and Safe Mode gates.
-  - bounded bulk preview/send through existing preview-cache, confirmation, caps, and backend gates.
-  - queue CSV export and existing WhatsApp fallback CSV export.
-  - document/payment review surfaces only; no document/payment mutation permission.
-- Super Admin-only controls preserved:
-  - portal reset/lock/unlock, Books/API config and writes unless separately gated, Script Properties/config tools, payment verification/payment-freeze bypass, document/status mutation, overall override, legacy campaign mutation/send, bounce scan, classroom notify, FD live acknowledgement, release/runtime governance, destructive cleanup, safety overrides, and existing document follow-up sender.
-- Acceptance targets:
-  - role diagnostic visibly identifies `principal@kundu.ac` as `Operations Admin`.
-  - backend and UI authorize only the approved Operations Admin actions; generic Super Admin gating is not broadened.
-  - Super-only controls remain unavailable to `principal@kundu.ac`.
-  - sender alias remains `FODE Admissions <fode_kia@kundu.ac>`.
-  - no real bulk send is executed during acceptance.
-  - only `Config.js`, `Admin.js`, `AdminUI.html`, and `CURRENT_TASK.md` change.
-- Release closure discipline:
-  - close only against this approved scope and acceptance criteria.
-  - classify new findings as `BLOCKER` or `FOLLOW-UP`; do not expand this release for non-blockers.
+- Reason for classification: the approved scope includes a backend `Admin.js` queue payload change, even though the change is read-only and does not authorize mutation, send/write execution, portal security, Books/payment/classroom logic, schema, Script Properties, or deployment architecture changes.
+- Intended runtime identity: `r201 / 201`.
+- Implementation authorized: `YES`.
+- Runtime release authorized: `NO - implementation only; no clasp push, version, deployment repin, or browser acceptance in this turn`.
+
+### Reason for Revision
+
+- Original `CIS r201: Dropped / Ineligible OPS Lifecycle Stage` was blocked because `AdminUI.html` could not safely derive `Dropped / Ineligible` from the row fields currently loaded into the UI.
+- Existing source-backed terminal stage fields are available server-side in `Admin.js`, but they are not exposed in the stripped OPS queue payload.
+
+### Allowed Edit Files
+
+- `Admin.js`
+- `AdminUI.html`
+- `Config.js`
+- `CURRENT_TASK.md`
+
+### Purpose
+
+- Expose only the minimum existing source-backed lifecycle/status fields needed for client-side OPS lifecycle classification.
+- Add `Dropped / Ineligible` as a display-only lifecycle stage.
+- Preserve active applicant routing and all existing operational gates.
+
+### Hard Limits
+
+- No schema/header changes.
+- No new mutation/write endpoints.
+- No change to send eligibility gates.
+- No change to Super/Admin/Operations permissions.
+- No Books/payment/classroom/portal/email-template changes.
+- No AI/document processing changes.
+- No broad lifecycle refactor.
+
+### Required Implementation Approach
+
+1. In `Admin.js`, add existing row values only to the stripped queue payload:
+   - `Pipeline_Stage`
+   - `Operational_Stage`
+   - `CRM_Stage`
+   - `Stage`
+   - `Overall_Status` only if already present and source-backed
+2. Do not compute new server-side lifecycle decisions unless already existing helper logic can be reused safely.
+3. In `AdminUI.html`, derive `Dropped / Ineligible` only from source-backed terminal/ineligible values.
+4. Preserve existing active lifecycle routing for all non-terminal records.
+5. Treat ambiguous records as active/current existing stage, not `Dropped / Ineligible`.
+6. Add UI label/count/filter only if supported by existing lifecycle controls.
+
+### Stop Conditions
+
+- Needed field is not source-backed.
+- Implementation requires new headers.
+- Implementation requires backend mutation logic.
+- Implementation changes communication eligibility.
+- Implementation changes role/permission gates.
+- More than minimal queue payload exposure is needed.
+
+### Acceptance Targets
+
+- Git diff limited to `Admin.js`, `AdminUI.html`, `Config.js`, and `CURRENT_TASK.md`.
+- OPS shows `Dropped / Ineligible` stage.
+- Known active applicants remain in current active stages.
+- Known terminal/ineligible records route to `Dropped / Ineligible` if their source fields support it.
+- No write action exists for marking dropped/ineligible.
+- No send/export/Books/payment/portal/classroom behavior changes.
+- Admin whoami reports `r201 / 201`, `mismatch=false`, after release.
+- Student whoami reports `r201 / 201`, `mismatch=false`, after release.
+
+### Release Closure Discipline
+
+- Close only against this approved scope and acceptance criteria.
+- Classify new findings as `BLOCKER` or `FOLLOW-UP`; do not expand r201 unless the finding directly prevents the approved lifecycle display objective.
+
+### Implementation Notes
+
+- `Admin.js` exposes only existing source-backed queue payload fields required for UI lifecycle classification:
+  - `Pipeline_Stage`
+  - `Operational_Stage`
+  - `CRM_Stage`
+  - `Stage`
+  - `Overall_Status` only when already present on the row object
+- `AdminUI.html` adds a display-only `Dropped / Ineligible` lifecycle stage using conservative source-field matching for dropped, ineligible, closed-lost, withdrawn, and disqualified outcomes.
+- Ambiguous records remain in their existing active lifecycle routing.
+- No schema/header changes, mutation endpoints, role/permission gates, send eligibility, email template/recipient logic, Books/payment/classroom/portal/security/token logic, deployment settings, AI processing, or document processing were changed.
+- `Config.js` local identity is bumped to `r201 / 201` for the later release identity gate.
+- No `clasp push`, Apps Script version, deployment repin, or browser acceptance was run during implementation.
+
+## Previous Active CIS
+
+- `CIS r200: Elevated Admin Role`.
 
 ## r200 Release Identity Gate
 
@@ -356,11 +409,11 @@
 <!-- CODEXHUB_STATE_BACKUP_START -->
 ## CodexHub State Backup
 
-- Last state backup timestamp: 2026-05-28 08:46:31
+- Last state backup timestamp: 2026-05-28 09:52:30
 - Project path: `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog`
 - Repository state: DIRTY
 - Current branch: `main`
-- Latest commit: `7ba1802 release: r200 elevated admin role`
+- Latest commit: `81e2c99 docs: record r200 resume state and audit reference`
 - Latest matching staging tag: `staging-as200`
 - Config version / deploy number: VERSION: r200; DEPLOY_VERSION_NUMBER: 200
 - Current release track: Not detected.
@@ -372,16 +425,10 @@
 ```text
 ## main...origin/main
  M CURRENT_TASK.md
-?? .codexhub/
-?? audits/FODE_Data_Reviewed_with_Deprecation_Plan.xlsx
-?? audits/~$FODE_Data_Reviewed_with_Deprecation_Plan.xlsx
 ```
 
 ### Changed Files
 - `CURRENT_TASK.md`
-- `.codexhub/`
-- `audits/FODE_Data_Reviewed_with_Deprecation_Plan.xlsx`
-- `audits/~$FODE_Data_Reviewed_with_Deprecation_Plan.xlsx`
 <!-- CODEXHUB_STATE_BACKUP_END -->
 
 ## Previous Active CIS

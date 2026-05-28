@@ -3857,6 +3857,13 @@ function admin_getReviewQueues(payload) {
         qItem.Last_Contact_Result = clean_(rowObj.Last_Contact_Result || "");
         qItem.Last_Contact_DebugId = clean_(rowObj.Last_Contact_DebugId || "");
         qItem.PortalURL = clean_(rowObj.PortalURL || "");
+        qItem.Pipeline_Stage = clean_(rowObj.Pipeline_Stage || "");
+        qItem.Operational_Stage = clean_(rowObj.Operational_Stage || "");
+        qItem.CRM_Stage = clean_(rowObj.CRM_Stage || "");
+        qItem.Stage = clean_(rowObj.Stage || "");
+        if (Object.prototype.hasOwnProperty.call(rowObj, "Overall_Status")) {
+          qItem.Overall_Status = clean_(rowObj.Overall_Status || "");
+        }
 
         debugRows.push({
           id: clean_(rowObj.ApplicantID || rowObj.ID || rowObj["Applicant ID"] || "unknown"),
@@ -3930,7 +3937,7 @@ function admin_getReviewQueues(payload) {
 
       function stripQueue_(items) {
         return (items || []).map(function (it) {
-          return buildQueueRow_(it.rowNumber, it.applicantId, it.name, {
+          var row = buildQueueRow_(it.rowNumber, it.applicantId, it.name, {
             ApplicantID: clean_(it.ApplicantID || it.applicantId || ""),
             parentEmail: clean_(it.parentEmail || ""),
             correctedEmail: clean_(it.correctedEmail || ""),
@@ -3989,8 +3996,15 @@ function admin_getReviewQueues(payload) {
             Last_Contact_Type: clean_(it.Last_Contact_Type || ""),
             Last_Contact_Result: clean_(it.Last_Contact_Result || ""),
             Last_Contact_DebugId: clean_(it.Last_Contact_DebugId || ""),
-            PortalURL: clean_(it.PortalURL || "")
+            PortalURL: clean_(it.PortalURL || ""),
+            Pipeline_Stage: clean_(it.Pipeline_Stage || ""),
+            Operational_Stage: clean_(it.Operational_Stage || ""),
+            CRM_Stage: clean_(it.CRM_Stage || ""),
+            Stage: clean_(it.Stage || ""),
+            Overall_Status: Object.prototype.hasOwnProperty.call(it, "Overall_Status") ? clean_(it.Overall_Status || "") : ""
           });
+          if (!Object.prototype.hasOwnProperty.call(it, "Overall_Status")) delete row.Overall_Status;
+          return row;
         });
       }
       fullData = {
