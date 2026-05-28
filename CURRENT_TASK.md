@@ -2,6 +2,90 @@
 
 ## Active CIS
 
+- `CIS r203: OPS Communications Work-Queue Surface`.
+- Implementation date: `2026-05-28`.
+- Work class: `Runtime release - AdminUI-only communications surface redesign`.
+- Release track: `Track L`.
+- Reason for classification: AdminUI-only UI restructuring plus release identity update; no backend, role gate, send logic, schema, or mutation-path change.
+- Intended runtime identity: `r203 / 203`.
+- Implementation authorized: `YES`.
+- Runtime release authorized: `YES, pending release gates`.
+
+### Baseline
+
+- Expected baseline verified before edits:
+  - `git status -sb`: only `.codexhub/SESSION_CONTEXT.md` and `.codexhub/resume_state/latest.json` dirty.
+  - `git diff --check`: PASS.
+  - `git log --oneline -5`: HEAD `f98894c release: r202 campaign traffic report`.
+  - `staging-as202` tag present.
+- Stop gate passed before edits: no source file outside `.codexhub` was dirty.
+
+### Allowed Edit Files
+
+- `AdminUI.html`
+- `Config.js`
+- `CURRENT_TASK.md`
+
+### Implementation Notes
+
+- `AdminUI.html` changes OPS Communications from template-first to work-queue-first.
+- The new Communications layout is:
+  - left: `Communication Work Queues`
+  - middle: `Records / Selected Applicant Context`
+  - right: `Preview / Edit / Send Gate / Audit`
+  - bottom: bulk communication path and timeline/cooldown/blocker/role status.
+- Work queue entries added:
+  - `Ready to Contact`
+  - `Missing Documents`
+  - `Docs Quote Ready`
+  - `Invoice / Payment Follow-Up`
+  - `Portal Access / Reminder`
+  - `Email Issue / Contact Correction`
+  - `WhatsApp Fallback`
+  - `Cooldown / Recently Contacted`
+  - read-only legacy campaign summary workflow marker.
+- Queue counts are calculated only from already-loaded OPS queue rows when available; otherwise the UI displays `Count unavailable in current loaded data`.
+- Template Quick Look remains available but is secondary under selected queue/action context.
+- `Quote / Fee Estimate` is visible as a workflow/template item and explicitly marked `backend exists, OPS wiring pending`; no quote sender is called.
+- Bulk communication controls are visible from Communications and reuse existing stage batch preview/send functions, buttons, role gates, caps, confirmation, and backend gates.
+- No `Admin.js`, `Code.js`, `Utils.js`, `Routes.js`, `AGENTS.md`, docs, schema/header, role/permission, sender/template backend, email send behavior, cooldown, Books, portal, payment, or classroom logic was changed.
+- No real send/export/mutation was run during implementation.
+
+### Acceptance Status
+
+- Local source checks: PASS.
+  - `git diff --name-only -- AdminUI.html Config.js CURRENT_TASK.md`: `AdminUI.html`, `CURRENT_TASK.md`, `Config.js`.
+  - `git diff --check -- AdminUI.html Config.js CURRENT_TASK.md`: PASS.
+  - `Select-String -Path Config.js -Pattern "VERSION|DEPLOY_VERSION_NUMBER"`: `VERSION: "r203"`, `DEPLOY_VERSION_NUMBER: 203`.
+  - Full dirty scope: only `.codexhub/SESSION_CONTEXT.md`, `.codexhub/resume_state/latest.json`, `AdminUI.html`, `CURRENT_TASK.md`, and `Config.js`.
+- Remote source proof: PASS by operator-confirmed Apps Script editor verification after `clasp push`.
+  - `Config.js` contains `VERSION: "r203"`.
+  - `Config.js` contains `DEPLOY_VERSION_NUMBER: 203`.
+  - `AdminUI.html` contains `Ready to Contact`.
+  - `AdminUI.html` contains `Docs Quote Ready`.
+  - `AdminUI.html` contains `Invoice / Payment Follow-Up`.
+  - `AdminUI.html` contains `Email Issue / Contact Correction`.
+  - `AdminUI.html` contains `Quote / Fee Estimate`.
+  - Safety markers present: `data-ops-operational-write`, `data-ops-supervisory-write`, `opsOperationalExecutionAllowed_`.
+- Apps Script platform version: `221`.
+- Admin staging deployment: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @221`.
+- Student staging deployment: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @221`.
+- Admin whoami URL: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami`.
+  - PASS: embedded authoritative runtime payload reports `version="r203"`, `deployVersion=203`, `mismatch=false`.
+- Student whoami URL: `https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec?view=whoami`.
+  - PASS: embedded authoritative runtime payload reports `version="r203"`, `deployVersion=203`, `mismatch=false`.
+- Browser/source acceptance: PASS by operator-supplied deployed-page HTML evidence.
+  - Communications opened as work-queue-first.
+  - `Communication Work Queues`, `Records / Selected Applicant Context`, and `Preview / Edit / Send Gate / Audit` sections are present.
+  - `Template Quick Look` is demoted to secondary reference.
+  - `Bulk Communication Path` is visible from Communications.
+  - Safety wording is present for Operator, Operations Admin, and Super Admin.
+  - Existing gate markers remain present, including `data-ops-operational-write`.
+  - No send, export, or mutation action was triggered.
+- No real send, export, or mutation action was run during implementation or deployment.
+
+## Previous Active CIS
+
 - `CIS r202: Meta Landing Traffic Bridge + Portal Submission Reporting`.
 - Implementation date: `2026-05-28`.
 - Work class: `Runtime release - read-only Admin/Ops campaign traffic versus application reporting`.
