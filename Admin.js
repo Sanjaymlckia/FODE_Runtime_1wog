@@ -3501,6 +3501,159 @@ function admin_getOperationalDashboardMetrics(payload) {
   return out;
 }
 
+function campaignReportDateKey_(dateObj) {
+  return Utilities.formatDate(dateObj, Session.getScriptTimeZone() || "GMT", "yyyy-MM-dd");
+}
+
+function campaignReportParseDateKey_(value) {
+  var raw = clean_(value || "");
+  var match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  var year = Number(match[1]);
+  var month = Number(match[2]);
+  var day = Number(match[3]);
+  if (!(year > 2000) || month < 1 || month > 12 || day < 1 || day > 31) return null;
+  var parsed = new Date(year, month - 1, day);
+  if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) return null;
+  return parsed;
+}
+
+function resolveCampaignApplicationReportRange_(payload) {
+  var now = new Date();
+  var defaultEnd = campaignReportDateKey_(now);
+  var defaultStartDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+  var defaultStart = campaignReportDateKey_(defaultStartDate);
+  var p = payload && typeof payload === "object" ? payload : {};
+  var startDate = campaignReportParseDateKey_(p.startDate || p.from || defaultStart) || campaignReportParseDateKey_(defaultStart);
+  var endDate = campaignReportParseDateKey_(p.endDate || p.to || defaultEnd) || campaignReportParseDateKey_(defaultEnd);
+  if (startDate.getTime() > endDate.getTime()) {
+    var tmp = startDate;
+    startDate = endDate;
+    endDate = tmp;
+  }
+  var startTs = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0, 0, 0, 0).getTime();
+  var endTs = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999).getTime();
+  return {
+    startDate: campaignReportDateKey_(startDate),
+    endDate: campaignReportDateKey_(endDate),
+    startTs: startTs,
+    endTs: endTs
+  };
+}
+
+function campaignReportRowReceivedInfo_(rowObj) {
+  var row = rowObj || {};
+  var candidates = [
+    { key: "PortalLastUpdateAt", value: row.PortalLastUpdateAt || "" },
+    { key: "adapter_timestamp", value: row.adapter_timestamp || row.adapterTimestamp || "" },
+    { key: "Timestamp", value: row.Timestamp || row.timestamp || "" },
+    { key: "Created_At", value: row.Created_At || row.createdAt || row.created_at || "" },
+    { key: "PortalTokenIssuedAt", value: row.PortalTokenIssuedAt || "" }
+  ];
+  for (var i = 0; i < candidates.length; i++) {
+    var candidate = candidates[i];
+    var ts = parseTime_(candidate.value);
+    if (ts > 0) return { ts: ts, source: candidate.key };
+  }
+  return { ts: 0, source: "" };
+}
+
+function campaignReportPortalSubmitted_(rowObj) {
+  var row = rowObj || {};
+  var raw = clean_(row.Portal_Submitted || "");
+  return nonEmpty_(raw) && raw !== "No";
+}
+
+function isCampaignReportApplicationRow_(rowObj) {
+  var row = rowObj || {};
+  if (!clean_(row.ApplicantID || "")) return false;
+  if (campaignReportPortalSubmitted_(row)) return true;
+  if (isExternalFdIntakeRow_(row)) return true;
+  if (hasStudentActivity_(row)) return true;
+  return !!clean_(row.FD_FormID || row.FormID || "");
+}
+
+function campaignReportValidApplication_(rowObj) {
+  var row = rowObj || {};
+  return clean_(row.Docs_Verified || "") === "Yes"
+    || computeDocVerificationStatus_(row) === "Verified"
+    || clean_(row.Payment_Verified || "") === "Yes"
+    || clean_(row.Registration_Complete || "") === "Yes";
+}
+
+function campaignReportStatusText_(rowObj) {
+  var row = rowObj || {};
+  return [
+    row.Duplicate_Status,
+    row.Duplicate_Flag,
+    row.Is_Duplicate,
+    row.Overall_Status,
+    row.Pipeline_Stage,
+    row.Operational_Stage,
+    row.CRM_Stage,
+    row.Stage
+  ].map(function (value) { return clean_(value || ""); }).filter(Boolean).join(" | ").toLowerCase();
+}
+
+function campaignReportDuplicateBlockedIneligible_(rowObj) {
+  var row = rowObj || {};
+  var duplicateFlag = clean_(row.Is_Duplicate || row.Duplicate_Flag || "");
+  if (/^(yes|true|1)$/i.test(duplicateFlag)) return true;
+  var text = campaignReportStatusText_(rowObj);
+  if (!text) return false;
+  return /duplicate|blocked|ineligible|dropped|disqualified|closed\s*lost|withdrawn|not\s*eligible/.test(text);
+}
+
+function admin_getCampaignApplicationReport(payload) {
+  var adminEmail = getCallerEmail_();
+  if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+  var range = resolveCampaignApplicationReportRange_(payload);
+  var sheet = openDataSheet_();
+  var values = sheet.getDataRange().getValues();
+  var rows = Math.max(0, (values || []).length - 1);
+  var out = {
+    ok: true,
+    readOnly: true,
+    startDate: range.startDate,
+    endDate: range.endDate,
+    portalApplicationsReceived: 0,
+    validPortalApplications: 0,
+    validPortalApplicationsAvailable: false,
+    duplicateBlockedIneligible: 0,
+    duplicateBlockedIneligibleAvailable: false,
+    applicantIdsGenerated: 0,
+    lifecycleStageCounts: {},
+    scannedRows: rows,
+    includedRows: 0,
+    dateSourceFields: ["PortalLastUpdateAt", "adapter_timestamp", "Timestamp", "Created_At", "PortalTokenIssuedAt"]
+  };
+  if (!values || values.length < 2) return out;
+
+  var headers = values[0];
+  var headerMap = headerIndex_(headers);
+  out.validPortalApplicationsAvailable = !!(headerMap.Docs_Verified || headerMap.Payment_Verified || headerMap.Registration_Complete);
+  out.duplicateBlockedIneligibleAvailable = !!(headerMap.Duplicate_Status || headerMap.Duplicate_Flag || headerMap.Is_Duplicate || headerMap.Overall_Status || headerMap.Pipeline_Stage || headerMap.Operational_Stage || headerMap.CRM_Stage || headerMap.Stage);
+
+  for (var r = 1; r < values.length; r++) {
+    var rowObj = campaignRowObjectFromValues_(headers, values[r]);
+    var applicantId = clean_(rowObj.ApplicantID || "");
+    if (!applicantId) continue;
+    var received = campaignReportRowReceivedInfo_(rowObj);
+    if (!(received.ts >= range.startTs && received.ts <= range.endTs)) continue;
+    out.includedRows++;
+    out.applicantIdsGenerated++;
+    if (!isCampaignReportApplicationRow_(rowObj)) continue;
+
+    out.portalApplicationsReceived++;
+    if (out.validPortalApplicationsAvailable && campaignReportValidApplication_(rowObj)) out.validPortalApplications++;
+    if (out.duplicateBlockedIneligibleAvailable && campaignReportDuplicateBlockedIneligible_(rowObj)) out.duplicateBlockedIneligible++;
+
+    var stage = clean_(deriveApplicantLifecycleStage_(rowObj) || deriveOperationalPipelineStage_(rowObj) || "UNKNOWN").toUpperCase() || "UNKNOWN";
+    out.lifecycleStageCounts[stage] = Number(out.lifecycleStageCounts[stage] || 0) + 1;
+  }
+  return out;
+}
+
 function sliceQueueByOffset_(rows, offset, limit) {
   var list = Array.isArray(rows) ? rows : [];
   var from = Math.max(0, Number(offset || 0));

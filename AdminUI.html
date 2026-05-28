@@ -1537,6 +1537,34 @@
           <div class="opsTile"><div class="opsTileTitle">Communications Suppression Report</div><div class="opsTileMeta" id="cockpitReportSuppression">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Communications Suppression Report')">Open Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Communications Suppression Report')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Report</button></div></div>
           <div class="opsTile"><div class="opsTileTitle">Release Truth / Drift Report</div><div class="opsTileMeta" id="cockpitReportRelease">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Release Truth / Drift Report')">Open Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Release Truth / Drift Report')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Report</button></div></div>
         </div>
+        <div class="opsCard" id="opsCampaignTrafficReportCard" style="margin-top:14px;">
+          <div class="opsSectionHeader"><div><h3>FODE Campaign Traffic vs Applications</h3><p>Meta is manual traffic input. FODE portal / FD records remain the application source of truth.</p></div><span class="opsStatusPill info">Read-only aggregate</span></div>
+          <div class="opsDraftGrid">
+            <div class="field"><label>Date from</label><input id="campaignReportStartDate" type="date" onchange="fetchCampaignApplicationReport_(true)"></div>
+            <div class="field"><label>Date to</label><input id="campaignReportEndDate" type="date" onchange="fetchCampaignApplicationReport_(true)"></div>
+            <div class="field"><label>Manual / Meta spend</label><input id="campaignMetaSpend" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" oninput="renderCampaignApplicationCalculations_()"></div>
+            <div class="field"><label>Manual / Meta landed traffic / bridge page views</label><input id="campaignMetaLandedTraffic" type="number" min="0" step="1" inputmode="numeric" placeholder="0" oninput="renderCampaignApplicationCalculations_()"></div>
+            <div class="field"><label>Manual / Meta link clicks</label><input id="campaignMetaLinkClicks" type="number" min="0" step="1" inputmode="numeric" placeholder="Optional" oninput="renderCampaignApplicationCalculations_()"></div>
+            <div class="field"><label>Manual / Meta reach</label><input id="campaignMetaReach" type="number" min="0" step="1" inputmode="numeric" placeholder="Optional"></div>
+            <div class="field"><label>Manual / Meta impressions</label><input id="campaignMetaImpressions" type="number" min="0" step="1" inputmode="numeric" placeholder="Optional"></div>
+            <div class="field"><label>Report status</label><input id="campaignReportStatus" type="text" readonly value="Loading report"></div>
+          </div>
+          <div class="opsMetricGrid" style="margin-top:12px;">
+            <div class="opsMetric"><div class="k">Portal applications received</div><div class="v" id="campaignPortalApplications">loading...</div></div>
+            <div class="opsMetric"><div class="k">Valid portal applications</div><div class="v" id="campaignValidApplications">loading...</div></div>
+            <div class="opsMetric"><div class="k">Duplicate / blocked / ineligible</div><div class="v" id="campaignBlockedApplications">loading...</div></div>
+            <div class="opsMetric"><div class="k">Applicant IDs generated</div><div class="v" id="campaignApplicantIdsGenerated">loading...</div></div>
+            <div class="opsMetric"><div class="k">Landing-to-application conversion</div><div class="v" id="campaignLandingConversion">Not available</div></div>
+            <div class="opsMetric"><div class="k">Cost per application</div><div class="v" id="campaignCostPerApplication">Not available</div></div>
+            <div class="opsMetric"><div class="k">Cost per valid application</div><div class="v" id="campaignCostPerValidApplication">Not available</div></div>
+            <div class="opsMetric"><div class="k">Drop-off after landing</div><div class="v" id="campaignDropoffAfterLanding">Not available</div></div>
+          </div>
+          <div class="opsInspectPanel" id="campaignLifecycleStageCounts">Lifecycle stage counts loading.</div>
+          <div class="opsSafetyNotice">This report returns aggregate counts only. It does not expose applicant PII and does not send, write, export, create files, or change lifecycle state.</div>
+          <div class="opsActionRow">
+            <button class="opsActionBtn live" type="button" onclick="fetchCampaignApplicationReport_(true)">Refresh Campaign Report</button>
+          </div>
+        </div>
         <div id="opsReportResult" class="opsResultBox hidden"></div>
       </section>
       <section id="opsReleaseControl" class="opsSectionPage" data-ops-mode-group="super">
@@ -2406,6 +2434,11 @@
       reviewDrawerOpen: false,
       superAdminMode: false,
       mode: ""
+    };
+    let campaignApplicationReportState = {
+      portalApplicationsReceived: 0,
+      validPortalApplications: 0,
+      validPortalApplicationsAvailable: false
     };
     var OPS_MODE_SESSION_KEY = "fode_ops_mode";
     function availableOpsModes_(){
@@ -9119,6 +9152,117 @@ function renderStageDashboard_(items, emptyMessage){
       var el = document.getElementById(id);
       if (el) el.textContent = opsText_(value);
     }
+    function campaignDateInputValue_(dateObj){
+      var d = dateObj instanceof Date ? dateObj : new Date();
+      var y = d.getFullYear();
+      var m = String(d.getMonth() + 1).padStart(2, "0");
+      var day = String(d.getDate()).padStart(2, "0");
+      return y + "-" + m + "-" + day;
+    }
+    function initCampaignApplicationReportControls_(){
+      var start = document.getElementById("campaignReportStartDate");
+      var end = document.getElementById("campaignReportEndDate");
+      var today = new Date();
+      var weekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
+      if (start && !start.value) start.value = campaignDateInputValue_(weekStart);
+      if (end && !end.value) end.value = campaignDateInputValue_(today);
+    }
+    function campaignManualNumber_(id){
+      var el = document.getElementById(id);
+      if (!el) return null;
+      var raw = String(el.value || "").trim();
+      if (!raw) return null;
+      var num = Number(raw);
+      return Number.isFinite(num) ? num : null;
+    }
+    function campaignNotAvailable_(){
+      return "Not available";
+    }
+    function campaignFormatCount_(value){
+      var num = Number(value);
+      return Number.isFinite(num) ? String(num) : campaignNotAvailable_();
+    }
+    function campaignFormatRate_(num){
+      if (!Number.isFinite(num)) return campaignNotAvailable_();
+      var rounded = Math.round(num * 100) / 100;
+      return (Math.abs(rounded - Math.round(rounded)) < 0.005 ? String(Math.round(rounded)) : rounded.toFixed(2)) + "%";
+    }
+    function campaignFormatCost_(num){
+      return Number.isFinite(num) ? num.toFixed(2) : campaignNotAvailable_();
+    }
+    function renderCampaignApplicationCalculations_(){
+      var portalApplications = Number(campaignApplicationReportState.portalApplicationsReceived || 0);
+      var validAvailable = campaignApplicationReportState.validPortalApplicationsAvailable === true;
+      var validApplications = validAvailable ? Number(campaignApplicationReportState.validPortalApplications || 0) : null;
+      var spend = campaignManualNumber_("campaignMetaSpend");
+      var landed = campaignManualNumber_("campaignMetaLandedTraffic");
+      var conversion = landed && landed > 0 ? (portalApplications / landed) * 100 : NaN;
+      var costPerApplication = spend !== null && portalApplications > 0 ? spend / portalApplications : NaN;
+      var costPerValid = spend !== null && validAvailable && validApplications > 0 ? spend / validApplications : NaN;
+      var dropoff = landed !== null ? landed - portalApplications : NaN;
+      setOpsValue_("campaignLandingConversion", campaignFormatRate_(conversion));
+      setOpsValue_("campaignCostPerApplication", campaignFormatCost_(costPerApplication));
+      setOpsValue_("campaignCostPerValidApplication", campaignFormatCost_(costPerValid));
+      setOpsValue_("campaignDropoffAfterLanding", Number.isFinite(dropoff) ? String(dropoff) : campaignNotAvailable_());
+    }
+    function renderCampaignLifecycleStageCounts_(stageCounts){
+      var el = document.getElementById("campaignLifecycleStageCounts");
+      if (!el) return;
+      var counts = stageCounts && typeof stageCounts === "object" ? stageCounts : {};
+      var keys = Object.keys(counts).sort();
+      if (!keys.length) {
+        el.textContent = "Lifecycle stage counts: no portal applications in selected range.";
+        return;
+      }
+      el.innerHTML = "<strong>Lifecycle stage counts</strong><div class='opsQueueSummaryStrip'>"
+        + keys.map(function(key){
+          return "<span class='opsStatusPill info'>" + esc(key) + ": " + esc(String(counts[key] || 0)) + "</span>";
+        }).join("")
+        + "</div>";
+    }
+    function renderCampaignApplicationReport_(res){
+      var data = res && typeof res === "object" ? res : {};
+      campaignApplicationReportState = {
+        portalApplicationsReceived: Number(data.portalApplicationsReceived || 0),
+        validPortalApplications: Number(data.validPortalApplications || 0),
+        validPortalApplicationsAvailable: data.validPortalApplicationsAvailable === true
+      };
+      setOpsValue_("campaignPortalApplications", campaignApplicationReportState.portalApplicationsReceived);
+      setOpsValue_("campaignValidApplications", campaignApplicationReportState.validPortalApplicationsAvailable ? campaignApplicationReportState.validPortalApplications : campaignNotAvailable_());
+      setOpsValue_("campaignBlockedApplications", data.duplicateBlockedIneligibleAvailable === true ? campaignFormatCount_(data.duplicateBlockedIneligible || 0) : campaignNotAvailable_());
+      setOpsValue_("campaignApplicantIdsGenerated", campaignFormatCount_(data.applicantIdsGenerated || 0));
+      var status = document.getElementById("campaignReportStatus");
+      if (status) status.value = data.ok === true
+        ? ("Loaded " + String(data.startDate || "") + " to " + String(data.endDate || "") + "; " + String(data.scannedRows || 0) + " rows scanned")
+        : "Report unavailable";
+      renderCampaignLifecycleStageCounts_(data.lifecycleStageCounts || {});
+      renderCampaignApplicationCalculations_();
+    }
+    function fetchCampaignApplicationReport_(force){
+      initCampaignApplicationReportControls_();
+      var start = document.getElementById("campaignReportStartDate");
+      var end = document.getElementById("campaignReportEndDate");
+      var status = document.getElementById("campaignReportStatus");
+      if (status) status.value = "Loading report";
+      google.script.run
+        .withSuccessHandler(function(res){
+          renderCampaignApplicationReport_(res || {});
+        })
+        .withFailureHandler(function(err){
+          var message = err && err.message ? err.message : "Campaign report unavailable";
+          ["campaignPortalApplications","campaignValidApplications","campaignBlockedApplications","campaignApplicantIdsGenerated","campaignLandingConversion","campaignCostPerApplication","campaignCostPerValidApplication","campaignDropoffAfterLanding"].forEach(function(id){
+            setOpsValue_(id, message);
+          });
+          if (status) status.value = message;
+          var stageEl = document.getElementById("campaignLifecycleStageCounts");
+          if (stageEl) stageEl.textContent = message;
+        })
+        .admin_getCampaignApplicationReport({
+          startDate: start ? start.value : "",
+          endDate: end ? end.value : "",
+          force: force ? 1 : 0
+        });
+    }
     function renderOperationalDashboardMetrics_(res){
       var data = res && typeof res === "object" ? res : {};
       var pipeline = data.pipelineCounts || {};
@@ -9226,6 +9370,7 @@ function renderStageDashboard_(items, emptyMessage){
       document.addEventListener("DOMContentLoaded", function(){
         fetchRuntimeInfo_();
         fetchOperationalDashboardMetrics_();
+        fetchCampaignApplicationReport_();
         fetchOperationalSafetyStatus_();
         initQueuePanelEvents_();
         bindDocsFollowupControls_();
@@ -9244,6 +9389,7 @@ function renderStageDashboard_(items, emptyMessage){
     } else {
       fetchRuntimeInfo_();
       fetchOperationalDashboardMetrics_();
+      fetchCampaignApplicationReport_();
       fetchOperationalSafetyStatus_();
       initQueuePanelEvents_();
       bindDocsFollowupControls_();

@@ -2,6 +2,84 @@
 
 ## Active CIS
 
+- `CIS r202: Meta Landing Traffic Bridge + Portal Submission Reporting`.
+- Implementation date: `2026-05-28`.
+- Work class: `Runtime release - read-only Admin/Ops campaign traffic versus application reporting`.
+- Release track: `Track H`.
+- Reason for classification: new read-only Admin RPC plus Admin/Ops portal reporting UI surface.
+- Intended runtime identity: `r202 / 202`.
+- Implementation authorized: `YES`.
+- Runtime release authorized: `YES, pending release gates`.
+
+### Allowed Edit Files
+
+- `AdminUI.html`
+- `Admin.js`
+- `Config.js`
+- `CURRENT_TASK.md`
+
+### Scope
+
+- Add the Admin/Ops Reports card `FODE Campaign Traffic vs Applications`.
+- Add read-only RPC `admin_getCampaignApplicationReport`.
+- Return aggregate counts only from existing application rows.
+- Keep Meta fields operator-entered/manual only.
+- Add safe calculations for landing conversion, cost per application, cost per valid application, and drop-off.
+- Update local release identity to `r202 / 202`.
+
+### Implementation Notes
+
+- `Admin.js` adds an Admin-gated read-only aggregate RPC and helper functions.
+- The RPC reads existing sheet data only, scans once for the selected/default date range, and returns counts only.
+- The RPC returns no applicant names, email, phone, row-level records, or other applicant PII.
+- `AdminUI.html` adds the report card in `opsReports`, not in Super Admin release/governance controls.
+- Manual Meta fields are labelled `Manual / Meta`.
+- Zero or blank denominators render as `Not available`; cost calculations do not emit misleading zero-cost values.
+- No sheet schema/header changes, FormDesigner changes, WordPress changes, Books/payment/classroom writes, email/WhatsApp sends, trigger changes, lifecycle/status writes, or appsscript/clasp config changes were made.
+
+### Source / Scope Status
+
+- `git diff --check`: PASS.
+- Scoped implementation diff: `Admin.js`, `AdminUI.html`, `Config.js`, `CURRENT_TASK.md`.
+- BLOCKER before release finalization: `git diff --name-only` also lists pre-existing tracked `.codexhub/SESSION_CONTEXT.md` and `.codexhub/resume_state/latest.json` modifications outside the CIS allowed files.
+- Codex did not edit `.codexhub` and must not include those files in a release commit without explicit direction.
+- Release-scope exception approved by operator on `2026-05-28`: pre-existing tracked `.codexhub/SESSION_CONTEXT.md` and `.codexhub/resume_state/latest.json` changes are treated as local state outside this CIS.
+- Under this exception, do not edit, stage, commit, revert, delete, or normalize those `.codexhub` files.
+- Use targeted release checks and targeted staging only for `Admin.js`, `AdminUI.html`, `Config.js`, and `CURRENT_TASK.md`; do not use `git add -A`.
+
+### Acceptance Status
+
+- Source inspection: PASS for existing Admin/Ops Reports placement and existing Admin read-only RPC patterns.
+- Local implementation: PASS pending deploy/runtime verification.
+- Remote source proof: PASS by operator-confirmed manual Apps Script editor verification for project `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90`.
+  - `Config.js` contains `VERSION: "r202"`.
+  - `Config.js` contains `DEPLOY_VERSION_NUMBER: 202`.
+  - `Admin.js` contains `admin_getCampaignApplicationReport`.
+  - `AdminUI.html` contains `FODE Campaign Traffic vs Applications`.
+  - `AdminUI.html` contains `Manual / Meta`.
+- Apps Script platform version: `220`.
+- Admin staging deployment: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @220`.
+- Student staging deployment: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @220`.
+- Admin whoami URL: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami`.
+  - PASS: embedded authoritative runtime payload reports `version="r202"`, `deployVersion=202`, `mismatch=false`.
+- Student whoami URL: `https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec?view=whoami`.
+  - PASS: embedded authoritative runtime payload reports `version="r202"`, `deployVersion=202`, `mismatch=false`.
+- Browser acceptance: PASS by operator-supplied saved OPS HTML evidence.
+  - PASS: OPS page rendered.
+  - PASS: `FODE Campaign Traffic vs Applications` card is present.
+  - PASS: card is labelled `Read-only aggregate`.
+  - PASS: Meta input is manual and FODE portal / FD records remain the application source of truth.
+  - PASS: report states aggregate counts only, no applicant PII exposure, and no send, write, export, file creation, or lifecycle change.
+  - PASS: no live send/export/mutation action was triggered during acceptance.
+- External operator acceptance for WordPress/Meta bridge: OUTSIDE CODEX, PENDING.
+
+### Next Step
+
+- Release hold: cleared.
+- Finalize Git/tag state for `r202` only; do not include `.codexhub` local state.
+
+## Active CIS
+
 - `CIS r201 Revised: OPS Lifecycle Dropped / Ineligible Stage with Minimal Queue Payload Exposure`.
 - Implementation date: `2026-05-28`.
 - Work class: `Runtime release - OPS lifecycle/UI classification with minimal read-only queue payload exposure`.

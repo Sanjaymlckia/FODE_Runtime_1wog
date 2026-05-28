@@ -74,3 +74,26 @@ Rules:
 - Browser checks must report PASS/FAIL and visible evidence only.
 - If Codex cannot operate the authenticated browser reliably, it must stop and request manual user evidence instead of retrying repeatedly.
 - Manual user screenshots or console output are valid acceptance evidence.
+
+## Non-Repo Clone / Sandbox Boundary Rule
+
+The authoritative FODE Runtime repo is:
+
+E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog
+
+Do not create temp repos, remote verification clones, or non-repo source copies outside this path unless explicitly authorized by the operator.
+
+Forbidden unless explicitly approved:
+- clasp clone into C:\Users\sanja\.codex\memories
+- git clone into temp folders
+- Copy-Item source trees outside the repo
+- creating verification folders outside the authoritative repo
+- using non-repo source copies as release truth
+
+Remote source proof must prefer controlled/manual verification or a non-cloning method.
+
+If a command proposes work outside the authoritative repo, stop and ask the operator with a clear explanation of:
+1. exact target path
+2. why it is needed
+3. whether it creates a second source copy
+4. safer alternative
