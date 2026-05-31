@@ -641,26 +641,28 @@
 <!-- CODEXHUB_STATE_BACKUP_START -->
 ## CodexHub State Backup
 
-- Last state backup timestamp: 2026-05-28 09:52:30
+- Last state backup timestamp: 2026-05-31 20:55:24
 - Project path: `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog`
 - Repository state: DIRTY
 - Current branch: `main`
-- Latest commit: `81e2c99 docs: record r200 resume state and audit reference`
-- Latest matching staging tag: `staging-as200`
-- Config version / deploy number: VERSION: r200; DEPLOY_VERSION_NUMBER: 200
+- Latest commit: `26cbc15 release: r205 shared row facts classifier`
+- Latest matching staging tag: `staging-as205`
+- Config version / deploy number: VERSION: r205; DEPLOY_VERSION_NUMBER: 205
 - Current release track: Not detected.
 - Current blocker: None detected.
 - Next exact action: Not detected.
-- Operator note: [add operator note]
+- Operator note: r
 
 ### Git Status
 ```text
 ## main...origin/main
- M CURRENT_TASK.md
+ M .codexhub/SESSION_CONTEXT.md
+ M .codexhub/resume_state/latest.json
 ```
 
 ### Changed Files
-- `CURRENT_TASK.md`
+- `.codexhub/SESSION_CONTEXT.md`
+- `.codexhub/resume_state/latest.json`
 <!-- CODEXHUB_STATE_BACKUP_END -->
 
 ## Previous Active CIS
