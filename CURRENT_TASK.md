@@ -2,6 +2,55 @@
 
 ## Active CIS
 
+- `CIS r208: AdminUI Include Pattern Proof`.
+- Implementation date: `2026-06-01`.
+- Work class: `Runtime release - AdminUI include/module split proof`.
+- Release track: `Track L`.
+- Reason for classification: UI template/module refactor and release identity update only; no backend, role gate, send/export, schema, deployment architecture, or mutation-path change.
+- Intended runtime identity: `r208 / 208`.
+- Implementation authorized: `YES`.
+- Runtime release authorized: `YES, pending release gates`.
+
+### r208 Baseline
+
+- Started from finalized r207 baseline; `staging-as207` exists.
+- `Config.js` was `r207 / 207` before edits and is bumped to `r208 / 208` for this release.
+- Pre-existing dirty state remains limited to `.codexhub/SESSION_CONTEXT.md` and `.codexhub/resume_state/latest.json`.
+- Parked r204 patch remains audit/reference only and was not reapplied.
+
+### r208 Allowed Edit Files
+
+- `AdminUI.html`
+- `AdminUI_SharedRowFacts.html`
+- `Config.js`
+- `CURRENT_TASK.md`
+
+### r208 Implementation Notes
+
+- Existing backend include helper was not present, and no backend file was edited.
+- Used Apps Script template include syntax directly in `AdminUI.html`: `HtmlService.createHtmlOutputFromFile('AdminUI_SharedRowFacts').getContent()`.
+- Created `AdminUI_SharedRowFacts.html` and moved only `opsBuildRowFacts_(row)` plus row-facts wrapper entry points into it.
+- Preserved function names exactly and left call sites unchanged.
+- No UI controls, backend behavior, role gates, send/export/mutation logic, schema, or Apps Script app configuration were changed.
+
+### r208 Release Evidence
+
+- Local validation: `git diff --check` PASS; expanded AdminUI include script syntax check PASS with `AdminUI_SharedRowFacts.html` substituted into `AdminUI.html`.
+- Scoped runtime diff: `AdminUI.html`, `AdminUI_SharedRowFacts.html`, `CURRENT_TASK.md`, `Config.js`; `Admin.js`, `Code.js`, and `Utils.js` have no diff.
+- Apps Script version count before release: `166`, below stop threshold.
+- Local identity before version: `VERSION: "r208"`, `DEPLOY_VERSION_NUMBER: 208`.
+- Remote-source proof: Apps Script REST API confirmed remote `Config.js` is `r208 / 208`; remote `AdminUI.html` contains the `AdminUI_SharedRowFacts` include; remote `AdminUI_SharedRowFacts.html` exists and contains `opsBuildRowFacts_`; safety markers remain in `AdminUI.html`.
+- Apps Script platform version: `226`.
+- Admin deployment pin: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @226`.
+- Student deployment pin: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @226`.
+- Admin whoami: PASS, `r208 / 208`.
+- Student whoami: PASS, `r208 / 208`.
+- Browser/source acceptance URL: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=ops`.
+- Browser/source acceptance: PASS for OPS shell, Lifecycle Map, Applicant Queue, Communications, Billing, Portal Diagnostics, Classroom, rendered included `opsBuildRowFacts_`, and safety markers.
+- No send/export/mutation action was triggered.
+
+## Previous CIS
+
 - `CIS r207: Row Facts Phase 3 Remaining OPS Surfaces`.
 - Implementation date: `2026-05-31`.
 - Work class: `Runtime release - AdminUI-only row facts adoption across remaining OPS labels`.
