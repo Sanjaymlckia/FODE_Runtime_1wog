@@ -2,6 +2,54 @@
 
 ## Active CIS
 
+- `CIS r207: Row Facts Phase 3 Remaining OPS Surfaces`.
+- Implementation date: `2026-05-31`.
+- Work class: `Runtime release - AdminUI-only row facts adoption across remaining OPS labels`.
+- Release track: `Track L`.
+- Reason for classification: AdminUI-only UI label/refactor work plus release identity update; no backend, role gate, send/export, schema, deployment architecture, or mutation-path change.
+- Intended runtime identity: `r207 / 207`.
+- Implementation authorized: `YES`.
+- Runtime release authorized: `YES, pending release gates`.
+
+### r207 Baseline
+
+- Started from finalized r206 baseline; `staging-as206` exists and `staging-as204` remains absent by design.
+- `Config.js` was `r206 / 206` before edits and is bumped to `r207 / 207` for this release.
+- Pre-existing dirty state remains limited to `.codexhub/SESSION_CONTEXT.md`, `.codexhub/resume_state/latest.json`, and explained `CURRENT_TASK.md` state.
+- Parked r204 patch remains audit/reference only and was not reapplied.
+
+### r207 Allowed Edit Files
+
+- `AdminUI.html`
+- `Config.js`
+- `CURRENT_TASK.md`
+
+### r207 Implementation Notes
+
+- Kept `opsBuildRowFacts_(row)` as the central UI-side facts helper.
+- Added explicit row-facts wrappers/markers for remaining OPS display surfaces: `opsBillingRowFacts_`, `opsPortalDiagnosticsFacts_`, `opsClassroomHandoverFacts_`, and `opsReportRowFacts_`.
+- Routed Billing, Portal Diagnostics, Classroom/Handover, Reports/export display labels, and remaining legacy workflow summaries through shared row facts where safe.
+- Preserved r206 Lifecycle Map, Applicant Queue, and Communications classifier behavior; Ready to Contact remains exclusive and cooldown/recent contact remains waiting/blocked.
+- No `Admin.js`, `Code.js`, `Utils.js`, backend send/export/mutation logic, role gates, sender/cooldown backend logic, Books/portal/payment/classroom backend logic, or schema was changed.
+
+### r207 Release Evidence
+
+- Local validation: `git diff --check` PASS; extracted AdminUI script syntax check PASS after Apps Script template blocks were replaced by local check literals.
+- Scoped runtime diff: `AdminUI.html`, `CURRENT_TASK.md`, `Config.js`; `Admin.js`, `Code.js`, and `Utils.js` have no diff.
+- Apps Script version count before release: `165`, below stop threshold.
+- Local identity before version: `VERSION: "r207"`, `DEPLOY_VERSION_NUMBER: 207`.
+- Remote-source proof: Apps Script REST API confirmed remote `Config.js` is `r207 / 207`; remote `AdminUI.html` contains `opsBuildRowFacts_`, `opsBillingRowFacts_`, `opsPortalDiagnosticsFacts_`, `opsClassroomHandoverFacts_`, `opsReportRowFacts_`, `data-ops-operational-write`, `data-ops-supervisory-write`, and `opsOperationalExecutionAllowed_`.
+- Apps Script platform version: `225`.
+- Admin deployment pin: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @225`.
+- Student deployment pin: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @225`.
+- Admin whoami: PASS, `r207 / 207`.
+- Student whoami: PASS, `r207 / 207`.
+- Browser/source acceptance URL: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=ops`.
+- Browser/source acceptance: PASS for OPS shell, Lifecycle Map, Applicant Queue, Communications, Billing, Portal Diagnostics, Classroom, row-facts adoption markers, and distinct awaiting-upload/uploaded-review/payment-evidence/payment-verified labels. Apps Script served slash-containing labels with escaped `/`, accepted as source-equivalent.
+- No send/export/mutation action was triggered.
+
+## Previous CIS
+
 - `CIS r206: Row Facts Adoption Phase 2`.
 - Implementation date: `2026-05-31`.
 - Work class: `Runtime release - AdminUI-only shared row facts adoption`.
@@ -688,17 +736,17 @@
 <!-- CODEXHUB_STATE_BACKUP_START -->
 ## CodexHub State Backup
 
-- Last state backup timestamp: 2026-05-31 21:21:50
+- Last state backup timestamp: 2026-05-31 22:02:17
 - Project path: `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog`
 - Repository state: DIRTY
 - Current branch: `main`
-- Latest commit: `cbecf4b docs: record apps script version cleanup`
-- Latest matching staging tag: `staging-as205`
-- Config version / deploy number: VERSION: r205; DEPLOY_VERSION_NUMBER: 205
+- Latest commit: `7de0555 release: r206 row facts lifecycle applicant queue adoption`
+- Latest matching staging tag: `staging-as206`
+- Config version / deploy number: VERSION: r206; DEPLOY_VERSION_NUMBER: 206
 - Current release track: Not detected.
 - Current blocker: None detected.
 - Next exact action: Not detected.
-- Operator note: [add operator note]
+- Operator note: r126
 
 ### Git Status
 ```text
