@@ -2,6 +2,53 @@
 
 ## Active CIS
 
+- `CIS r206: Row Facts Adoption Phase 2`.
+- Implementation date: `2026-05-31`.
+- Work class: `Runtime release - AdminUI-only shared row facts adoption`.
+- Release track: `Track L`.
+- Reason for classification: AdminUI-only lifecycle/applicant queue row-facts refactor plus release identity update; no backend, role gate, send/export, schema, or mutation-path change.
+- Intended runtime identity: `r206 / 206`.
+- Implementation authorized: `YES`.
+- Runtime release authorized: `YES, pending release gates`.
+
+### r206 Baseline
+
+- Started from finalized r205 baseline; `staging-as205` exists and `staging-as204` remains absent by design.
+- `Config.js` was `r205 / 205` before edits and is bumped to `r206 / 206` for this release.
+- Pre-existing dirty state: `.codexhub/SESSION_CONTEXT.md`, `.codexhub/resume_state/latest.json`, and `CURRENT_TASK.md` `CODEXHUB_STATE_BACKUP` only; operator cleared this soft blocker and authorized continuing without reverting it.
+- Parked r204 patch remains reference only and was not reapplied.
+
+### r206 Allowed Edit Files
+
+- `AdminUI.html`
+- `Config.js`
+- `CURRENT_TASK.md`
+
+### r206 Implementation Notes
+
+- Kept `opsBuildRowFacts_(row)` as the central UI-side facts helper.
+- Added row-facts adoption wrappers/markers for Lifecycle Map and Applicant Queue: `opsLifecycleStageKeyFromFacts_` and `opsApplicantQueueFacts_`.
+- Routed Lifecycle Map stage matching/counts and Applicant Queue display/context labels through row facts.
+- Added UI-side document/payment state labels so awaiting uploads, uploaded review, document correction, payment evidence, and payment verified remain distinct.
+- Preserved r205 Communications row-facts behavior; no send/export/mutation path was changed or triggered.
+- No `Admin.js`, `Code.js`, `Utils.js`, backend send/export/mutation logic, role gates, sender/cooldown backend logic, Books/portal/payment/classroom backend logic, or schema was changed.
+
+### r206 Release Evidence
+
+- Local validation: `git diff --check` PASS; extracted AdminUI script syntax check PASS after Apps Script template literals were replaced by local check literals.
+- Scoped runtime diff: `AdminUI.html`, `CURRENT_TASK.md`, `Config.js`; `Admin.js`, `Code.js`, and `Utils.js` have no diff.
+- Local identity before version: `VERSION: "r206"`, `DEPLOY_VERSION_NUMBER: 206`.
+- Remote-source proof: Apps Script REST API confirmed remote `Config.js` is `r206 / 206`; remote `AdminUI.html` contains `opsBuildRowFacts_`, `opsLifecycleStageKeyFromFacts_`, `opsApplicantQueueFacts_`, `data-ops-operational-write`, `data-ops-supervisory-write`, and `opsOperationalExecutionAllowed_`.
+- Apps Script platform version: `224`.
+- Admin deployment pin: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @224`.
+- Student deployment pin: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @224`.
+- Admin whoami: PASS, `r206 / 206`.
+- Student whoami: PASS, `r206 / 206`.
+- Browser/source acceptance: PASS from canonical Admin OPS GET/source markers for `opsLifecycleMap`, `opsAdmissionsQueue`, `opsCommunications`, `Awaiting Uploads / Document Evidence Pending`, `Uploaded / Review Required`, `Document Correction Required`, `Payment Evidence`, `Payment Verified`, and `Dropped / Ineligible`.
+- No send/export/mutation action was triggered.
+
+## Previous CIS
+
 - `CIS r205: Shared Row Facts / Classifier Refactor Phase 1`.
 - Implementation date: `2026-05-31`.
 - Work class: `Runtime release - AdminUI-only refactor-readiness correction`.
@@ -641,17 +688,17 @@
 <!-- CODEXHUB_STATE_BACKUP_START -->
 ## CodexHub State Backup
 
-- Last state backup timestamp: 2026-05-31 20:55:24
+- Last state backup timestamp: 2026-05-31 21:21:50
 - Project path: `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog`
 - Repository state: DIRTY
 - Current branch: `main`
-- Latest commit: `26cbc15 release: r205 shared row facts classifier`
+- Latest commit: `cbecf4b docs: record apps script version cleanup`
 - Latest matching staging tag: `staging-as205`
 - Config version / deploy number: VERSION: r205; DEPLOY_VERSION_NUMBER: 205
 - Current release track: Not detected.
 - Current blocker: None detected.
 - Next exact action: Not detected.
-- Operator note: r
+- Operator note: [add operator note]
 
 ### Git Status
 ```text

@@ -2831,44 +2831,44 @@
     }
     function opsQueueExportRows_(){
       return opsAllQueueRows_().map(function(row){
+        var facts = opsApplicantQueueFacts_(row);
         var invoice = opsInvoiceSummary_(row);
-        var stage = opsLifecycleDefinitions_().filter(function(item){ return item.key === opsWorkflowStageKey_(row); })[0];
-        var documentEvidence = opsDocumentEvidenceSummary_(row);
-        var paymentEvidence = opsPaymentEvidenceStatus_(row);
-        var eligibility = deriveSendEligibility(row);
-        var ready = opsReadySummary_(invoice, opsIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true, opsIsYes_(row.Enrolled_Confirmed));
+        var stage = opsLifecycleDefinitions_().filter(function(item){ return item.key === facts.lifecycleState; })[0];
+        var documentEvidence = facts.documentEvidence || opsDocumentEvidenceSummary_(row);
+        var eligibility = facts.communicationEligibility || {};
+        var ready = opsReadySummary_(invoice, facts.paymentVerified, opsIsYes_(row.Enrolled_Confirmed));
         var emailIssueReason = opsEmailIssueReason_(row);
         var droppedIneligibleReason = opsDroppedIneligibleReason_(row);
-        var paymentOk = opsIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true;
+        var paymentOk = facts.paymentVerified;
         var enrolledOk = opsIsYes_(row.Enrolled_Confirmed);
         return {
-          ApplicantID: String(row.applicantId || row.ApplicantID || ""),
-          "Applicant / Student Name": opsFirstNonBlank_(row.Student_Name, row.name, [row.First_Name, row.Last_Name].filter(Boolean).join(" "), "Unknown"),
-          Email: opsFirstNonBlank_(row.Effective_Email, row.effectiveEmail, row.Parent_Email_Corrected, row.correctedEmail, row.Parent_Email, row.parentEmail, row.email, "Unknown"),
-          "Phone / WhatsApp": opsFirstNonBlank_(row.Parent_Phone, row.Phone, row.Mobile, row.WhatsApp, row.Contact_Number, row.Phone_Number, "Unknown"),
-          "Lifecycle Stage": stage ? stage.name : "Unknown",
+          ApplicantID: String(facts.applicantId || ""),
+          "Applicant / Student Name": facts.name || "Unknown",
+          Email: facts.email || "Unknown",
+          "Phone / WhatsApp": facts.phone || "Unknown",
+          "Lifecycle Stage": facts.lifecycleLabel || (stage ? stage.name : "Unknown"),
           "Stage Meaning": stage ? stage.meaning : "Unknown",
-          "Next Action": stage && stage.key === "docs" ? "Check portal uploads / contact applicant" : (stage ? stage.next : "Unknown"),
-          "Communication Status": eligibility.active ? "Cooldown active" : opsFirstNonBlank_(row.Last_Contact_Result, row.Email_Status, row.Ack_Email_Status, "Unknown"),
+          "Next Action": facts.nextActionLabel || (stage ? stage.next : "Unknown"),
+          "Communication Status": eligibility.active ? "Cooldown active" : facts.communicationStatus,
           "Last Contacted At": opsFirstNonBlank_(row.Last_Contacted_At, row.Email_Last_Sent_At, row.Ack_Email_Sent_At, ""),
           "Last Contact Type": opsFirstNonBlank_(row.Last_Contact_Type, ""),
           "Last Contact Subject": opsFirstNonBlank_(row.Last_Contact_Subject, ""),
           "Next Eligible Send": opsFirstNonBlank_(row.Email_Next_Action_Date, ""),
           "Document Evidence Status": documentEvidence.label,
-          "Payment Evidence Status": paymentEvidence,
+          "Payment Evidence Status": facts.paymentStateLabel,
           "Payment Verified": paymentOk ? "Yes" : "No",
-          "Portal Submitted": workflowIsYes_(row.Portal_Submitted) ? "Yes" : "No",
-          "Docs Verified": workflowIsYes_(row.Docs_Verified) ? "Yes" : "No",
+          "Portal Submitted": facts.portalSubmitted ? "Yes" : "No",
+          "Docs Verified": facts.docsVerified ? "Yes" : "No",
           "Invoice Status": invoice.label,
           "Enrolment Status": enrolledOk ? "Enrolled Confirmed" : "Not confirmed as enrolled",
           "Classroom Status": classroomStatusFromRow_(row).label,
           "Ready / Blocked": droppedIneligibleReason ? "Inactive" : (ready.label === "Ready" ? "Ready" : "Blocked"),
           "Block Reason": droppedIneligibleReason || (eligibility.active ? "Cooldown active" : (emailIssueReason || (ready.label === "Ready" ? "" : "Unknown"))),
-          Student: opsFirstNonBlank_(row.Student_Name, row.First_Name, row.name),
+          Student: facts.name,
           Date_Applied: opsDateAppliedInfo_(row).label,
           Aging: opsAgingDays_(row) || "",
-          Docs: opsDocsSummary_(row).label,
-          Payment: paymentOk ? "Payment Verified" : "Payment evidence not verified",
+          Docs: facts.documentStateLabel,
+          Payment: facts.paymentStateLabel,
           Invoice: invoice.label,
           Invoice_Detail: invoice.detail || "",
           Enrolled: enrolledOk ? "Yes" : "No",
@@ -3238,56 +3238,66 @@
     }
     function opsLifecycleDefinitions_(){
       return [
-        { key:"fd_received", name:"Application Received / FD Received", mode:"operator workflow", meaning:"External FD intake row has been received and assigned an ApplicantID.", next:"Review Application", matches:function(row){ return opsWorkflowStageKey_(row) === "fd_received"; } },
-        { key:"portal", name:"Portal Access / Portal Submitted", mode:"operator workflow", meaning:"Portal access or submission is visible; it does not prove documents were uploaded.", next:"Check portal uploads / contact applicant", matches:function(row){ return opsWorkflowStageKey_(row) === "portal"; } },
-        { key:"docs", name:"Documents / Eligibility Check", mode:"operator workflow", meaning:"Document evidence and eligibility state require checking without assuming files exist.", next:"Eligibility check required", matches:function(row){ return opsWorkflowStageKey_(row) === "docs"; } },
-        { key:"payment", name:"Payment Evidence Not Verified", mode:"operator workflow", meaning:"Payment evidence is missing or has not been verified.", next:"Review Payment", matches:function(row){ return opsWorkflowStageKey_(row) === "payment"; } },
-        { key:"invoice", name:"Invoice / Books", mode:"admin guarded", meaning:"Books invoice or billing state needs follow-up.", next:"Review Payment", matches:function(row){ return opsWorkflowStageKey_(row) === "invoice"; } },
-        { key:"enrolment", name:"Enrolment Pending", mode:"admin guarded", meaning:"Payment is verified and enrolment is not confirmed.", next:"Review Application", matches:function(row){ return opsWorkflowStageKey_(row) === "enrolment"; } },
-        { key:"classroom", name:"Classroom Handover", mode:"admin guarded", meaning:"Enrolment/classroom handover is pending or unknown.", next:"Review Application", matches:function(row){ return opsWorkflowStageKey_(row) === "classroom"; } },
-        { key:"exceptions", name:"Exceptions / Blocked", mode:"escalation", meaning:"Loaded status indicates blocked, failed, anomalous, or unsafe state.", next:"Review Application", matches:function(row){ return opsWorkflowStageKey_(row) === "exceptions"; } },
-        { key:"email_issue", name:"Email Issue / Contact Correction", mode:"escalation", meaning:"Bounce, suppression, or contact correction is required before email can continue.", next:"Correct Email", matches:function(row){ return opsWorkflowStageKey_(row) === "email_issue"; } },
-        { key:"dropped_ineligible", name:"Dropped / Ineligible", mode:"display-only", meaning:"Source lifecycle/status field marks the record as dropped, ineligible, closed-lost, withdrawn, or disqualified; it is separated from active progression queues.", next:"Review source status", matches:function(row){ return opsWorkflowStageKey_(row) === "dropped_ineligible"; } }
+        { key:"fd_received", name:"Application Received / FD Received", mode:"operator workflow", meaning:"External FD intake row has been received and assigned an ApplicantID.", next:"Review Application", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "fd_received"; } },
+        { key:"portal", name:"Portal Access / Portal Submitted", mode:"operator workflow", meaning:"Portal access or submission is visible; it does not prove documents were uploaded.", next:"Check portal uploads / contact applicant", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "portal"; } },
+        { key:"docs", name:"Awaiting Uploads / Document Evidence Pending", mode:"operator workflow", meaning:"Portal submission or document requirement is visible, but uploaded document evidence is not loaded.", next:"Request or check uploads", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "docs"; } },
+        { key:"uploaded_review_required", name:"Uploaded / Review Required", mode:"operator workflow", meaning:"Loaded document evidence exists and requires operator review before eligibility can progress.", next:"Eligibility review required", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "uploaded_review_required"; } },
+        { key:"document_correction_required", name:"Document Correction Required", mode:"operator workflow", meaning:"Loaded document status indicates wrong, invalid, rejected, or correction-required evidence.", next:"Request corrected document", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "document_correction_required"; } },
+        { key:"eligibility_review", name:"Eligibility Review", mode:"operator workflow", meaning:"Document evidence is verified or review-ready and eligibility decision remains active.", next:"Complete eligibility check", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "eligibility_review"; } },
+        { key:"payment", name:"Payment Evidence Not Verified", mode:"operator workflow", meaning:"Payment evidence is missing or has not been verified.", next:"Review Payment", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "payment"; } },
+        { key:"invoice", name:"Invoice / Books", mode:"admin guarded", meaning:"Books invoice or billing state needs follow-up.", next:"Review Payment", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "invoice"; } },
+        { key:"enrolment", name:"Enrolment Pending", mode:"admin guarded", meaning:"Payment is verified and enrolment is not confirmed.", next:"Review Application", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "enrolment"; } },
+        { key:"classroom", name:"Classroom Handover", mode:"admin guarded", meaning:"Enrolment/classroom handover is pending or unknown.", next:"Review Application", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "classroom"; } },
+        { key:"exceptions", name:"Exceptions / Blocked", mode:"escalation", meaning:"Loaded status indicates blocked, failed, anomalous, or unsafe state.", next:"Review Application", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "exceptions"; } },
+        { key:"email_issue", name:"Email Issue / Contact Correction", mode:"escalation", meaning:"Bounce, suppression, or contact correction is required before email can continue.", next:"Correct Email", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "email_issue"; } },
+        { key:"dropped_ineligible", name:"Dropped / Ineligible", mode:"display-only", meaning:"Source lifecycle/status field marks the record as dropped, ineligible, closed-lost, withdrawn, or disqualified; it is separated from active progression queues.", next:"Review source status", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "dropped_ineligible"; } }
       ];
     }
     function opsWorkflowStageKey_(row){
+      return opsLifecycleStageKeyFromFacts_(row);
+    }
+    function opsLifecycleStageKeyFromFacts_(row){
+      return opsBuildRowFacts_(row).lifecycleState || "fd_received";
+    }
+    function opsDeriveLifecycleStateFromRawRow_(row, documentState, paymentVerified){
       var r = row || {};
       if (opsIsDroppedIneligible_(r)) return "dropped_ineligible";
       if (opsHasEmailIssue_(r)) return "email_issue";
       var lastResult = String(r.Last_Contact_Result || r.Email_Status || r.Ack_Email_Status || r.Books_Last_Error || "").toUpperCase();
       if (lastResult.indexOf("FAILED") >= 0 || lastResult.indexOf("BLOCK") >= 0 || lastResult.indexOf("ERROR") >= 0) return "exceptions";
-      var paymentOk = opsIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true;
+      var paymentOk = paymentVerified === true || opsIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true;
       var enrolledOk = opsIsYes_(r.Enrolled_Confirmed);
       var invoiceState = opsInvoiceSummary_(r);
-      var docsState = opsDocsSummary_(r);
+      var docState = String(documentState || opsDocumentStateFromRawRow_(r));
       var portalSubmitted = workflowIsYes_(r.Portal_Submitted);
       var portalEvidence = !!opsFirstNonBlank_(r.PortalURL, r.Portal_Status, r.Portal_Link, r.Portal_Token_Status, r.portalLastUpdateAt);
       if (enrolledOk) return "classroom";
       if (paymentOk && !enrolledOk) return "enrolment";
       if (invoiceState.label === "Invoice Raised" || opsInvoiceEmailSummary_(r).label === "Invoice Email Sent" || !!opsFirstNonBlank_(r.Books_Invoice_ID, r.Books_Invoice_Number, r.Books_Push_Status)) return paymentOk ? "enrolment" : "payment";
-      if (docsState.cls === "ok") return paymentOk ? "enrolment" : "payment";
+      if (docState === "document_correction_required") return "document_correction_required";
+      if (docState === "uploaded_review_required") return "uploaded_review_required";
+      if (docState === "eligibility_cleared" || docState === "verified") return paymentOk ? "enrolment" : "payment";
+      if (docState === "eligibility_review") return "eligibility_review";
+      if (docState === "awaiting_uploads") return "docs";
       if (portalSubmitted) return "docs";
       if (portalEvidence || String(r.Email_Status || r.Ack_Email_Status || "").trim()) return "portal";
       if (opsExternalFdFeedMarker_(r)) return "fd_received";
       return "fd_received";
     }
     function opsWorkflowStageLabel_(row){
-      var key = opsWorkflowStageKey_(row);
-      var stage = opsLifecycleDefinitions_().filter(function(s){ return s.key === key; })[0];
-      return stage ? stage.name : "Application Received / FD Received";
+      return opsBuildRowFacts_(row).lifecycleLabel || "Application Received / FD Received";
     }
     function opsRowsForLifecycleStage_(stageKey){
       var rows = opsAllQueueRows_();
-      var stage = opsLifecycleDefinitions_().filter(function(s){ return s.key === stageKey; })[0];
-      return stage ? rows.filter(function(row){ return stage.matches(row || {}); }) : rows;
+      var stage = String(stageKey || "");
+      return stage ? rows.filter(function(row){ return opsLifecycleStageKeyFromFacts_(row || {}) === stage; }) : rows;
     }
     function opsQueueSearchText_(row){
-      var r = row || {};
+      var facts = opsApplicantQueueFacts_(row);
       return [
-        r.applicantId, r.ApplicantID, r.name, r.Student_Name, r.First_Name, r.Last_Name,
-        r.email, r.Parent_Email, r.parentEmail, r.correctedEmail, r.effectiveEmail,
-        r.Phone, r.Parent_Phone, r.Mobile, r.WhatsApp, r.Contact_Number, r.Phone_Number,
-        r.FD_FormID, r.FormID, r.correlation_id
+        facts.applicantId, facts.name, facts.email, facts.phone, facts.lifecycleLabel,
+        facts.documentStateLabel, facts.paymentStateLabel, facts.communicationStatus,
+        facts.nextActionLabel, facts.row.FD_FormID, facts.row.FormID, facts.row.correlation_id
       ].map(function(v){ return String(v == null ? "" : v).toLowerCase(); }).join(" ");
     }
     function opsApplyQueueSearch_(rows){
@@ -3335,12 +3345,13 @@
     }
     function opsStatusPriority_(kind, row){
       var r = row || {};
+      var facts = (kind === "docs" || kind === "payment") ? opsApplicantQueueFacts_(r) : null;
       var text = "";
       if (kind === "ack") text = fdAckStatusFromRow_(r).label;
       else if (kind === "crm") text = crmBackupStatusFromRow_(r).label;
       else if (kind === "portal") text = portalAccessStatusFromRow_(r).label;
-      else if (kind === "docs") text = opsDocsSummary_(r).label;
-      else if (kind === "payment") text = opsIsYes_(r.Payment_Verified) ? "Verified" : (opsIsYes_(r.Payment_Received) ? "Submitted" : "Pending");
+      else if (kind === "docs") text = facts.documentStateLabel;
+      else if (kind === "payment") text = facts.paymentStateLabel;
       else if (kind === "invoice") text = opsInvoiceSummary_(r).label;
       else if (kind === "enrolment") text = opsIsYes_(r.Enrolled_Confirmed) ? "Enrolled" : "Pending";
       else if (kind === "classroom") text = classroomStatusFromRow_(r).label;
@@ -3366,14 +3377,15 @@
     }
     function opsQueueCompareValue_(row, key){
       var r = row || {};
-      if (key === "applicant") return String(r.applicantId || r.ApplicantID || "");
-      if (key === "name") return String(r.name || r.Student_Name || r.First_Name || "");
+      var facts = opsApplicantQueueFacts_(r);
+      if (key === "applicant") return String(facts.applicantId || "");
+      if (key === "name") return String(facts.name || "");
       if (key === "date") {
         var d = Date.parse(String(opsDateAppliedInfo_(r).iso || ""));
         return Number.isFinite(d) ? d : 0;
       }
       if (key === "aging") return Number(r.ageDays || String(opsAgingDays_(r) || "").replace(/\D+/g, "") || 0) || 0;
-      if (key === "stage") return opsLifecycleDefinitions_().map(function(s){ return s.key; }).indexOf(opsWorkflowStageKey_(r));
+      if (key === "stage") return opsLifecycleDefinitions_().map(function(s){ return s.key; }).indexOf(facts.lifecycleState);
       if (key === "last_action") {
         var la = Date.parse(opsLastActionInfo_(r));
         return Number.isFinite(la) ? la : 0;
@@ -3429,7 +3441,7 @@
       var stages = opsLifecycleDefinitions_();
       wrap.innerHTML = stages.map(function(stage){
         var matches = opsRowsForLifecycleStage_(stage.key);
-        var ids = matches.slice(0, 4).map(function(row){ return String(row.applicantId || row.ApplicantID || ""); }).filter(Boolean);
+        var ids = matches.slice(0, 4).map(function(row){ return String(opsApplicantQueueFacts_(row).applicantId || ""); }).filter(Boolean);
         var selectedText = opsApplicantId_() ? ("Selected: " + opsApplicantId_()) : "Selected: none";
         return "<button class='opsStageCard" + (selected === stage.key ? " active" : "") + "' type='button' data-stage-key='" + esc(stage.key) + "'>"
           + "<div class='stageTop'><div class='stageName'>" + esc(stage.name) + "</div><div class='stageCount'>" + String(matches.length) + "</div></div>"
@@ -3466,7 +3478,7 @@
         var rows = selected ? opsRowsForLifecycleStage_(selected) : [];
         var selectedApplicant = opsApplicantId_() || "none";
         detail.innerHTML = stage
-          ? "<strong>" + esc(stage.name) + "</strong><div style='margin-top:6px;'>Count: " + String(rows.length) + "</div><div>Selected applicant: " + esc(selectedApplicant) + "</div><div>Records in view: " + esc(rows.slice(0, 6).map(function(row){ return String(row.applicantId || row.ApplicantID || ""); }).filter(Boolean).join(", ") || "None in loaded queue") + "</div><div>Fields used: loaded applicant row status, invoice, payment, enrolment, portal, and classroom fields.</div><div>Next action: " + esc(stage.next) + "</div>"
+          ? "<strong>" + esc(stage.name) + "</strong><div style='margin-top:6px;'>Count: " + String(rows.length) + "</div><div>Selected applicant: " + esc(selectedApplicant) + "</div><div>Records in view: " + esc(rows.slice(0, 6).map(function(row){ return String(opsApplicantQueueFacts_(row).applicantId || ""); }).filter(Boolean).join(", ") || "None in loaded queue") + "</div><div>Fields used: shared row facts: lifecycleState, documentState, paymentState, communicationEligibility, and nextAction.</div><div>Next action: " + esc(stage.next) + "</div>"
           : "Select a lifecycle stage to inspect records, blockers, and next action.";
       }
     }
@@ -3474,16 +3486,26 @@
       var el = document.getElementById("opsSelectedApplicantMini");
       if (!el) return;
       var d = row || opsApplicantContextRow_() || {};
-      var id = opsApplicantId_();
-      var name = opsApplicantName_();
+      var facts = opsApplicantQueueFacts_(d);
+      var id = facts.applicantId || opsApplicantId_();
+      var name = facts.name || opsApplicantName_();
+      if (!id) {
+        el.innerHTML = [
+          "<div class='opsInfoItem'><div class='k'>Selected Applicant</div><div class='v'>None</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Name</div><div class='v'>No applicant selected</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Lifecycle / Docs</div><div class='v'>Select a queue row</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Payment / Next</div><div class='v'>Select a queue row</div></div>"
+        ].join("");
+        return;
+      }
       var dateInfo = opsDateAppliedInfo_(d);
       var aging = opsAgingDays_(d) || "Missing source";
       var marker = opsDummyMarker_(id, d);
       el.innerHTML = [
         "<div class='opsInfoItem'><div class='k'>Selected Applicant</div><div class='v'>" + esc(id) + "</div></div>",
         "<div class='opsInfoItem'><div class='k'>Name</div><div class='v'>" + esc(name) + "</div></div>",
-        "<div class='opsInfoItem'><div class='k'>Date Applied</div><div class='v' title='" + esc(opsDateAppliedTitle_(d)) + "'>" + esc(dateInfo.label) + "</div></div>",
-        "<div class='opsInfoItem'><div class='k'>Aging / Marker</div><div class='v'>" + esc(aging + " | " + marker) + "</div></div>"
+        "<div class='opsInfoItem'><div class='k'>Lifecycle / Docs</div><div class='v'>" + esc(facts.lifecycleLabel + " | " + facts.documentStateLabel) + "</div></div>",
+        "<div class='opsInfoItem'><div class='k'>Payment / Next</div><div class='v'>" + esc(facts.paymentStateLabel + " | " + facts.nextActionLabel + " | " + aging + " | " + marker + " | " + dateInfo.label) + "</div></div>"
       ].join("");
     }
     function opsBooksFilterDefinitions_(){
@@ -3551,6 +3573,73 @@
       if (opsOperationalExecutionAllowed_()) return "Operations Admin: Operational action. Requires selected records, preview, confirmation, caps, and backend gates.";
       return "Operations Admin or Super Admin mode is required for gated send/export controls.";
     }
+    function opsApplicantQueueFacts_(row){
+      return opsBuildRowFacts_(row);
+    }
+    function opsLoadedDocumentUploadEvidence_(row){
+      var r = row || {};
+      return !!opsFirstNonBlank_(
+        r.Birth_ID_Passport_File, r.Birth_ID_File, r.Passport_File, r.Passport_ID_File,
+        r.Latest_School_Report_File, r.School_Report_File, r.Report_Card_File,
+        r.Transfer_Certificate_File, r.Transfer_File,
+        r.Passport_Photo_File, r.Student_Photo_File, r.Photo_File,
+        r.Document_File, r.Documents_File, r.Document_Evidence_File,
+        r.Birth_ID_Passport_URL, r.Latest_School_Report_URL, r.Transfer_Certificate_URL, r.Passport_Photo_URL,
+        ""
+      );
+    }
+    function opsDocumentStateFromRawRow_(row){
+      var r = row || {};
+      var docEvidence = opsDocumentEvidenceSummary_(r);
+      var rawDocStatus = opsFirstNonBlank_(r.Docs_Status, r.Document_Status, r.Documents_Status, r.Overall_Doc_Status, r.Documents_Ready, r.docsStatus, "");
+      var statusFields = opsFirstNonBlank_(r.Birth_ID_Status, r.Birth_Status, r.Report_Status, r.Photo_Status, r.Transfer_Status, r.Document_Review_Status, r.Eligibility_Status, "");
+      var docText = String((rawDocStatus || "") + " " + statusFields + " " + (docEvidence && docEvidence.label || "")).toLowerCase();
+      var docsVerified = opsIsYes_(r.Docs_Verified) || /verified|approved|cleared/.test(docText);
+      var hasDocumentUpload = opsLoadedDocumentUploadEvidence_(r);
+      var portalSubmitted = opsIsYes_(r.Portal_Submitted);
+      if (docsVerified) return "eligibility_cleared";
+      if (/correction|wrong|reject|invalid|resubmit|reupload/.test(docText)) return "document_correction_required";
+      if (hasDocumentUpload) return "uploaded_review_required";
+      if (/review required|eligibility review|pending eligibility|eligibility pending/.test(docText) && /upload|file|evidence/.test(docText)) return "uploaded_review_required";
+      if (/no file|not upload|missing|required|awaiting/.test(docText) || portalSubmitted) return "awaiting_uploads";
+      return "unknown";
+    }
+    function opsDocumentStateLabel_(state){
+      var s = String(state || "");
+      if (s === "eligibility_cleared" || s === "verified") return "Eligibility Cleared";
+      if (s === "uploaded_review_required") return "Uploaded / Review Required";
+      if (s === "document_correction_required" || s === "correction_required") return "Document Correction Required";
+      if (s === "awaiting_uploads") return "Awaiting Uploads / Document Evidence Pending";
+      if (s === "eligibility_review") return "Eligibility Review";
+      return "Unknown document state";
+    }
+    function opsPaymentStateFromRawRow_(row, paymentVerified, paymentEvidenceState){
+      if (paymentVerified) return "payment_verified";
+      var evidence = String(paymentEvidenceState || opsPaymentEvidenceStatus_(row) || "").toLowerCase();
+      if (evidence.indexOf("evidence present") >= 0 || evidence.indexOf("received") >= 0 || evidence.indexOf("receipt") >= 0) return "payment_evidence_pending_verification";
+      if (evidence.indexOf("no payment evidence") >= 0) return "payment_evidence_pending";
+      return "payment_unknown";
+    }
+    function opsPaymentStateLabel_(state){
+      var s = String(state || "");
+      if (s === "payment_verified") return "Payment Verified";
+      if (s === "payment_evidence_pending_verification") return "Payment Evidence Present / Not Verified";
+      if (s === "payment_evidence_pending") return "Payment Evidence Pending";
+      return "Payment State Unknown";
+    }
+    function opsNextActionFromFacts_(facts){
+      if (!facts || facts.isDroppedOrIneligible) return "No active progression";
+      if (facts.hasEmailIssue) return "Correct Email";
+      if (facts.isCooldownActive || facts.isRecentlyContacted) return "Wait / Review Timeline";
+      if (facts.documentState === "awaiting_uploads") return "Request or check uploads";
+      if (facts.documentState === "uploaded_review_required") return "Eligibility review required";
+      if (facts.documentState === "document_correction_required" || facts.documentState === "correction_required") return "Request corrected document";
+      if (facts.paymentState === "payment_evidence_pending_verification") return "Verify payment evidence";
+      if (facts.paymentState === "payment_evidence_pending") return "Request payment evidence";
+      if (facts.lifecycleState === "portal") return "Check portal submission";
+      if (facts.lifecycleState === "fd_received") return "Review application";
+      return "Review selected applicant";
+    }
     function opsBuildRowFacts_(row){
       var r = row || {};
       var applicantId = opsFirstNonBlank_(r.applicantId, r.ApplicantID, "");
@@ -3565,21 +3654,15 @@
       var lastContactSubject = opsFirstNonBlank_(r.Last_Contact_Subject, "");
       var sendEligibility = {};
       try { sendEligibility = deriveSendEligibility(r) || {}; } catch (_err) { sendEligibility = {}; }
-      var workflowStage = opsWorkflowStageKey_(r);
-      var lifecycleDef = opsLifecycleDefinitions_().filter(function(item){ return item.key === workflowStage; })[0];
       var docEvidence = opsDocumentEvidenceSummary_(r);
-      var rawDocStatus = opsFirstNonBlank_(r.Docs_Status, r.Document_Status, r.Documents_Status, r.Overall_Doc_Status, r.Documents_Ready, r.docsStatus, "");
-      var docText = String((rawDocStatus || "") + " " + (docEvidence && docEvidence.label || "")).toLowerCase();
-      var docsVerified = opsIsYes_(r.Docs_Verified) || /verified|approved/.test(docText);
       var portalSubmitted = opsIsYes_(r.Portal_Submitted);
-      var documentState = "unknown";
-      if (docsVerified) documentState = "verified";
-      else if (/correction|wrong|reject|invalid/.test(docText)) documentState = "correction_required";
-      else if (/upload|file/.test(docText) && /pending|review|required/.test(docText)) documentState = "uploaded_review_required";
-      else if (/no file|not upload|missing/.test(docText) || (portalSubmitted && !docsVerified)) documentState = "awaiting_uploads";
-      else if (workflowStage === "docs") documentState = "awaiting_uploads";
+      var documentState = opsDocumentStateFromRawRow_(r);
+      var docsVerified = documentState === "eligibility_cleared" || documentState === "verified";
       var paymentVerified = opsIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true;
       var paymentEvidenceState = opsPaymentEvidenceStatus_(r);
+      var paymentState = opsPaymentStateFromRawRow_(r, paymentVerified, paymentEvidenceState);
+      var workflowStage = opsDeriveLifecycleStateFromRawRow_(r, documentState, paymentVerified);
+      var lifecycleDef = opsLifecycleDefinitions_().filter(function(item){ return item.key === workflowStage; })[0];
       var droppedIneligible = opsIsDroppedIneligible_(r);
       var recentlyContacted = !!(lastContactAt || nextEligible);
       var cooldownActive = !!(sendEligibility && sendEligibility.active);
@@ -3592,14 +3675,14 @@
       var communicationStatus = "";
       try { communicationStatus = deriveCommunicationStatus(r); } catch (_err2) { communicationStatus = ""; }
       var communicationQueues = {
-        readyToContact: !!(email && !emailIssue && !recentlyContacted && !cooldownActive && !droppedIneligible && documentState !== "awaiting_uploads" && documentState !== "uploaded_review_required" && documentState !== "correction_required"),
+        readyToContact: !!(email && !emailIssue && !recentlyContacted && !cooldownActive && !droppedIneligible && documentState !== "awaiting_uploads" && documentState !== "uploaded_review_required" && documentState !== "document_correction_required" && documentState !== "correction_required"),
         missingDocuments: documentState === "awaiting_uploads",
-        uploadedReviewRequired: documentState === "uploaded_review_required" || documentState === "correction_required",
+        uploadedReviewRequired: documentState === "uploaded_review_required" || documentState === "document_correction_required" || documentState === "correction_required",
         cooldownRecentlyContacted: recentlyContacted || cooldownActive,
         emailIssue: emailIssue,
         whatsappFallback: !!(phone && (!email || emailIssue))
       };
-      return {
+      var facts = {
         row: r,
         applicantId: applicantId,
         name: name,
@@ -3621,18 +3704,67 @@
         portalSubmitted: portalSubmitted,
         docsVerified: docsVerified,
         documentEvidence: docEvidence,
+        hasDocumentUploadEvidence: opsLoadedDocumentUploadEvidence_(r),
         documentState: documentState,
+        documentStateLabel: opsDocumentStateLabel_(documentState),
         paymentEvidence: paymentEvidenceState,
         paymentEvidenceState: paymentEvidenceState,
         paymentVerified: paymentVerified,
+        paymentState: paymentState,
+        paymentStateLabel: opsPaymentStateLabel_(paymentState),
         paymentVerifiedState: paymentVerified ? "verified" : "not_verified",
         droppedIneligible: droppedIneligible,
         isDroppedOrIneligible: droppedIneligible,
         communicationQueues: communicationQueues,
-        primaryAction: communicationQueues.cooldownRecentlyContacted ? "wait" : (communicationQueues.emailIssue ? "correct_email" : (communicationQueues.uploadedReviewRequired ? "open_review" : (communicationQueues.whatsappFallback ? "manual_fallback" : "preview"))),
+        communicationEligibility: sendEligibility,
         lastContactLabel: lastContactLabel,
         blockReason: blockReason,
         communicationStatus: communicationStatus || "Unknown"
+      };
+      facts.primaryAction = communicationQueues.cooldownRecentlyContacted ? "wait" : (communicationQueues.emailIssue ? "correct_email" : (communicationQueues.uploadedReviewRequired ? "open_review" : (communicationQueues.whatsappFallback ? "manual_fallback" : "preview")));
+      facts.nextAction = facts.primaryAction;
+      facts.nextActionLabel = opsNextActionFromFacts_(facts);
+      return {
+        row: facts.row,
+        applicantId: facts.applicantId,
+        name: facts.name,
+        email: facts.email,
+        hasEmail: facts.hasEmail,
+        phone: facts.phone,
+        hasPhone: facts.hasPhone,
+        emailIssue: facts.emailIssue,
+        hasEmailIssue: facts.hasEmailIssue,
+        emailIssueReason: facts.emailIssueReason,
+        nextEligible: facts.nextEligible,
+        recentlyContacted: facts.recentlyContacted,
+        isRecentlyContacted: facts.isRecentlyContacted,
+        cooldownActive: facts.cooldownActive,
+        isCooldownActive: facts.isCooldownActive,
+        workflowStage: facts.workflowStage,
+        lifecycleState: facts.lifecycleState,
+        lifecycleLabel: facts.lifecycleLabel,
+        portalSubmitted: facts.portalSubmitted,
+        docsVerified: facts.docsVerified,
+        documentEvidence: facts.documentEvidence,
+        hasDocumentUploadEvidence: facts.hasDocumentUploadEvidence,
+        documentState: facts.documentState,
+        documentStateLabel: facts.documentStateLabel,
+        paymentEvidence: facts.paymentEvidence,
+        paymentEvidenceState: facts.paymentEvidenceState,
+        paymentVerified: facts.paymentVerified,
+        paymentState: facts.paymentState,
+        paymentStateLabel: facts.paymentStateLabel,
+        paymentVerifiedState: facts.paymentVerifiedState,
+        droppedIneligible: facts.droppedIneligible,
+        isDroppedOrIneligible: facts.isDroppedOrIneligible,
+        communicationQueues: facts.communicationQueues,
+        communicationEligibility: facts.communicationEligibility,
+        primaryAction: facts.primaryAction,
+        nextAction: facts.nextAction,
+        nextActionLabel: facts.nextActionLabel,
+        lastContactLabel: facts.lastContactLabel,
+        blockReason: facts.blockReason,
+        communicationStatus: facts.communicationStatus
       };
     }
     function opsCommunicationHasEmail_(row){
@@ -3646,10 +3778,10 @@
     }
     function opsCommunicationQueueDefinitions_(){
       return [
-        { key:"ready_to_contact", label:"Ready to Contact", messageType:"reminder", actionLevel:"Operator preview only / Operations Admin gated", countAvailable:true, meaning:"Loaded rows with an email, no visible bounce/suppression issue, no recent contact/cooldown evidence, and no review-only/terminal state.", next:"Preview reminder or selected queue action; send only through existing operational gates.", test:function(r){ var facts = opsBuildRowFacts_(r); return facts.hasEmail && !facts.emailIssue && !facts.recentlyContacted && !facts.cooldownActive && !facts.droppedIneligible && facts.documentState !== "awaiting_uploads" && facts.documentState !== "uploaded_review_required" && facts.documentState !== "correction_required"; } },
+        { key:"ready_to_contact", label:"Ready to Contact", messageType:"reminder", actionLevel:"Operator preview only / Operations Admin gated", countAvailable:true, meaning:"Loaded rows with an email, no visible bounce/suppression issue, no recent contact/cooldown evidence, and no review-only/terminal state.", next:"Preview reminder or selected queue action; send only through existing operational gates.", test:function(r){ var facts = opsBuildRowFacts_(r); return facts.hasEmail && !facts.emailIssue && !facts.recentlyContacted && !facts.cooldownActive && !facts.droppedIneligible && facts.documentState !== "awaiting_uploads" && facts.documentState !== "uploaded_review_required" && facts.documentState !== "document_correction_required" && facts.documentState !== "correction_required"; } },
         { key:"missing_documents", label:"Missing Documents", messageType:"docs_missing", actionLevel:"Operations Admin gated", countAvailable:true, meaning:"Awaiting uploads / document evidence pending rows, excluding email issues and recent contact/cooldown rows.", next:"Preview Missing Documents; send only through the existing single-applicant gate.", test:function(r){ var facts = opsBuildRowFacts_(r); return facts.documentState === "awaiting_uploads" && facts.hasEmail && !facts.emailIssue && !facts.recentlyContacted && !facts.cooldownActive && !facts.droppedIneligible; } },
         { key:"docs_quote_ready", label:"Docs Quote Ready", messageType:"quote_fee_estimate", actionLevel:"unavailable / follow-up needed", countAvailable:false, meaning:"Quote / Fee Estimate workflow marker surfaced for OPS visibility.", next:"Quote / Fee Estimate - backend exists, OPS wiring pending.", test:function(){ return false; } },
-        { key:"uploaded_review_required", label:"Uploaded / Review Required", messageType:"custom_email", actionLevel:"review bridge", countAvailable:true, meaning:"Uploaded or correction-required document evidence needs human review before applicant reminders.", next:"Open document review. Do not treat as Missing Documents reminder workload.", test:function(r){ var facts = opsBuildRowFacts_(r); return !facts.droppedIneligible && (facts.documentState === "uploaded_review_required" || facts.documentState === "correction_required"); } },
+        { key:"uploaded_review_required", label:"Uploaded / Review Required", messageType:"custom_email", actionLevel:"review bridge", countAvailable:true, meaning:"Uploaded or correction-required document evidence needs human review before applicant reminders.", next:"Open document review. Do not treat as Missing Documents reminder workload.", test:function(r){ var facts = opsBuildRowFacts_(r); return !facts.droppedIneligible && (facts.documentState === "uploaded_review_required" || facts.documentState === "document_correction_required" || facts.documentState === "correction_required"); } },
         { key:"invoice_payment", label:"Invoice / Payment Follow-Up", messageType:"payment_followup", actionLevel:"Operations Admin gated", countAvailable:true, meaning:"Loaded rows in payment or invoice follow-up stages, excluding email issues and recent contact/cooldown rows.", next:"Preview Invoice Reminder / Payment Follow-Up through the existing single-applicant gate.", test:function(r){ var facts = opsBuildRowFacts_(r); return (facts.workflowStage === "payment" || facts.workflowStage === "invoice") && facts.hasEmail && !facts.emailIssue && !facts.recentlyContacted && !facts.cooldownActive && !facts.droppedIneligible; } },
         { key:"portal_access", label:"Portal Access / Reminder", messageType:"legacy_invite", actionLevel:"Operations Admin gated", countAvailable:true, meaning:"Loaded rows that appear to need portal access or a general portal reminder, excluding email issues and recent contact/cooldown rows.", next:"Preview Portal Access or General Reminder; send only through existing gates.", test:function(r){ var facts = opsBuildRowFacts_(r); return (facts.workflowStage === "fd_received" || facts.workflowStage === "portal") && facts.hasEmail && !facts.emailIssue && !facts.recentlyContacted && !facts.cooldownActive && !facts.droppedIneligible; } },
         { key:"email_issue", label:"Email Issue / Contact Correction", messageType:"custom_email", actionLevel:"Operations Admin gated handoff", countAvailable:true, meaning:"Bounce, suppression, invalid email, or correction-needed rows.", next:"Use Email Correction handoff / Admin Review. Do not send until contact is corrected.", test:function(r){ return opsBuildRowFacts_(r).emailIssue; } },
@@ -4446,33 +4578,31 @@
       var notEnrolledCount = 0;
       var classroomPendingCount = 0;
       if (opsApplicantId_() && !rows.filter(function(row){
-        return String((row && (row.applicantId || row.ApplicantID)) || "").trim() === opsApplicantId_();
+        return String(opsApplicantQueueFacts_(row).applicantId || "").trim() === opsApplicantId_();
       }).length) {
         opsResetSelectedApplicantContext_(false);
       }
       function renderWorkflowRow_(row, stage){
-        var applicantId = String(row.applicantId || row.ApplicantID || "");
-        var applicantName = String(row.name || row.Student_Name || row.First_Name || "Unknown applicant");
+        var facts = opsApplicantQueueFacts_(row);
+        var applicantId = String(facts.applicantId || "");
+        var applicantName = String(facts.name || "Unknown applicant");
         var selected = applicantId === opsApplicantId_();
         var aging = opsAgingDays_(row) || "Missing source";
         var marker = opsDummyMarker_(applicantId, row);
         var invoiceState = opsInvoiceSummary_(row);
-        var docsState = opsDocsSummary_(row);
-        var documentEvidence = opsDocumentEvidenceSummary_(row);
+        var documentEvidence = facts.documentEvidence || opsDocumentEvidenceSummary_(row);
         var ackState = fdAckStatusFromRow_(row);
         var crmState = crmBackupStatusFromRow_(row);
         var portalState = portalAccessStatusFromRow_(row);
         var emailIssueBadges = opsEmailIssueBadges_(row);
-        var isEmailIssue = stage.key === "email_issue";
-        var isDroppedIneligible = stage.key === "dropped_ineligible";
+        var isEmailIssue = facts.lifecycleState === "email_issue";
+        var isDroppedIneligible = facts.isDroppedOrIneligible;
         var droppedIneligibleReason = isDroppedIneligible ? opsDroppedIneligibleReason_(row) : "";
-        var usesDocumentEvidenceAction = stage.key === "portal" || stage.key === "docs";
-        var primaryActionLabel = isDroppedIneligible ? stage.next : (stage.key === "docs" ? "Check portal uploads / contact applicant" : (usesDocumentEvidenceAction ? documentEvidence.action : stage.next));
-        var documentChecklistHtml = stage.key === "docs" ? opsQueueDocumentChecklistHtml_(row) : "";
-        var currentEmail = opsFirstNonBlank_(row.email, row.Parent_Email, row.parentEmail, row.effectiveEmail, row.Effective_Email, "No email on record");
-        var phone = opsFirstNonBlank_(row.Parent_Phone, row.Phone, row.Mobile, row.WhatsApp, row.Contact_Number, row.Phone_Number, "No phone on record");
+        var documentChecklistHtml = facts.documentState === "awaiting_uploads" ? opsQueueDocumentChecklistHtml_(row) : "";
+        var currentEmail = facts.email || "No email on record";
+        var phone = facts.phone || "No phone on record";
         var emailIssueLabel = emailIssueBadges.map(function(badge){ return badge.label; }).join(" / ") || "No email issue";
-        var paymentOk = (opsIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true);
+        var paymentOk = facts.paymentVerified;
         var enrolledOk = opsIsYes_(row.Enrolled_Confirmed);
         var classroom = classroomStatusFromRow_(row);
         if (invoiceState.label === "Invoice Raised") invoiceRaisedCount++;
@@ -4486,20 +4616,20 @@
           + "<div><div class='opsWorkflowCellLabel'>Age</div><span class='opsStatusPill " + opsAgingKind_(row) + "' title='" + esc(opsDateAppliedTitle_(row)) + "'>" + esc(aging) + "</span></div>"
           + "<div class='opsWorkflowStatusGroup'><div class='opsWorkflowCellLabel'>Key Status / Blockers</div>"
             + "<span class='opsStatusPill " + opsPillClass_(ackState.cls) + "'>Ack / CRM / Portal: " + esc(ackState.label + " | " + crmState.label + " | " + portalState.label) + "</span>"
-            + "<span class='opsStatusPill " + documentEvidence.cls + "'>Documents: " + esc(documentEvidence.label) + "</span>"
-            + "<span class='opsStatusPill " + docsState.cls + "'>Eligibility / Payment / Invoice: " + esc(docsState.label + " | " + (paymentOk ? "Payment verified" : "Payment evidence not verified") + " | " + invoiceState.label) + "</span>"
+            + "<span class='opsStatusPill " + (facts.documentState === "eligibility_cleared" ? "ok" : (facts.documentState === "unknown" ? "muted" : "warn")) + "'>Documents: " + esc(facts.documentStateLabel) + "</span>"
+            + "<span class='opsStatusPill " + (paymentOk ? "ok" : (facts.paymentState === "payment_evidence_pending_verification" ? "warn" : "muted")) + "'>Eligibility / Payment / Invoice: " + esc(facts.lifecycleLabel + " | " + facts.paymentStateLabel + " | " + invoiceState.label) + "</span>"
             + "<span class='opsStatusPill " + (enrolledOk ? "ok" : "warn") + "'>Enrolment / Classroom: " + esc((enrolledOk ? "Enrolled" : "Pending") + " | " + classroom.label) + "</span>"
             + "<span class='opsStatusPill " + (emailIssueBadges.length ? "warn" : "muted") + "'>Email issue: " + esc(emailIssueLabel) + "</span>"
             + (isEmailIssue ? "<div class='opsWorkflowBlockReason'>Block reason: " + esc(opsEmailIssueReason_(row) || "Email correction required") + "</div><div class='opsWorkflowSecondary'>Last action / contacted: " + esc(opsLastActionInfo_(row)) + "</div>" : "")
             + (isDroppedIneligible ? "<div class='opsWorkflowBlockReason'>Source outcome: " + esc(droppedIneligibleReason || "Dropped / Ineligible") + "</div><div class='opsWorkflowSecondary'>No active progression. Display-only lifecycle classification.</div>" : "")
           + "</div>"
-          + "<div class='opsWorkflowAction'><button class='opsActionBtn live' type='button' data-review-applicant-id='" + esc(applicantId) + "' data-review-applicant-name='" + esc(applicantName) + "' data-workflow-stage-key='" + esc(stage.key) + "'>" + esc(primaryActionLabel) + "</button><div class='opsWorkflowSecondary'>" + esc(isDroppedIneligible ? ("No active progression. " + (droppedIneligibleReason || "Source status loaded.")) : (isEmailIssue ? "Email correction is handled in Admin Review." : ("Portal: " + (workflowIsYes_(row.Portal_Submitted) ? "Submitted" : portalState.label) + " | Documents: " + documentEvidence.label))) + "</div>" + documentChecklistHtml + "</div>"
+          + "<div class='opsWorkflowAction'><button class='opsActionBtn live' type='button' data-review-applicant-id='" + esc(applicantId) + "' data-review-applicant-name='" + esc(applicantName) + "' data-workflow-stage-key='" + esc(stage.key) + "'>" + esc(facts.nextActionLabel || stage.next) + "</button><div class='opsWorkflowSecondary'>" + esc(isDroppedIneligible ? ("No active progression. " + (droppedIneligibleReason || "Source status loaded.")) : (isEmailIssue ? "Email correction is handled in Admin Review." : ("Portal: " + (facts.portalSubmitted ? "Submitted" : portalState.label) + " | Documents: " + facts.documentStateLabel))) + "</div>" + documentChecklistHtml + "</div>"
           + "</div>";
       }
       if (workflow) {
         var definitions = opsLifecycleDefinitions_();
         workflow.innerHTML = definitions.map(function(stage, idx){
-          var stageRows = rows.filter(stage.matches);
+          var stageRows = rows.filter(function(row){ return opsLifecycleStageKeyFromFacts_(row) === stage.key; });
           var expanded = (idx === 0) || String(opsActionState.queueSearch || "").trim() || opsActionState.lifecycleStage === stage.key || queueExpandState["workflow_" + stage.key] === true;
           if (queueExpandState["workflow_" + stage.key] === false) expanded = false;
           return "<section class='opsLifecycleBand' data-workflow-stage='" + esc(stage.key) + "'>"
@@ -4514,23 +4644,23 @@
       }
       if (body) {
         body.innerHTML = rows.map(function(row){
-          var applicantId = String(row.applicantId || row.ApplicantID || "");
-          var applicantName = String(row.name || row.Student_Name || row.First_Name || "Unknown applicant");
+          var facts = opsApplicantQueueFacts_(row);
+          var applicantId = String(facts.applicantId || "");
+          var applicantName = String(facts.name || "Unknown applicant");
           var selected = applicantId === opsApplicantId_();
           var dateInfo = opsDateAppliedInfo_(row);
           var invoiceState = opsInvoiceSummary_(row);
-          var docsState = opsDocsSummary_(row);
-          var paymentOk = (opsIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true);
+          var paymentOk = facts.paymentVerified;
           var enrolledOk = opsIsYes_(row.Enrolled_Confirmed);
           var classroom = classroomStatusFromRow_(row);
           return "<tr class='opsQueueSelectableRow" + (selected ? " opsQueueSelectedRow" : "") + "' data-applicant-id='" + esc(applicantId) + "' data-applicant-name='" + esc(applicantName) + "' style='cursor:pointer;'>"
             + "<td><div class='opsQueueName'>" + esc(applicantId) + "</div></td>"
-            + "<td><div>" + esc(applicantName) + "</div><div class='opsQueueMeta'>" + esc(String(row.email || row.Parent_Email || "")) + "</div></td>"
+            + "<td><div>" + esc(applicantName) + "</div><div class='opsQueueMeta'>" + esc(facts.email || "No email on record") + "</div></td>"
             + "<td><span class='opsStatusPill info' title='" + esc(opsDateAppliedTitle_(row)) + "'>" + esc(dateInfo.label) + "</span></td>"
             + "<td><span class='opsStatusPill " + opsAgingKind_(row) + "' title='" + esc(opsDateAppliedTitle_(row)) + "'>" + esc(opsAgingDays_(row) || "Missing source") + "</span></td>"
             + "<td><span class='opsStatusPill " + (opsDummyMarker_(applicantId, row).indexOf("Live") >= 0 ? "ok" : "muted") + "'>" + esc(opsDummyMarker_(applicantId, row)) + "</span></td>"
-            + "<td><span class='opsStatusPill " + docsState.cls + "'>" + esc(docsState.label) + "</span></td>"
-            + "<td><span class='opsStatusPill " + (paymentOk ? "ok" : "warn") + "'>" + esc(paymentOk ? "Payment Verified" : "Payment evidence not verified") + "</span></td>"
+            + "<td><span class='opsStatusPill " + (facts.documentState === "eligibility_cleared" ? "ok" : (facts.documentState === "unknown" ? "muted" : "warn")) + "'>" + esc(facts.documentStateLabel) + "</span></td>"
+            + "<td><span class='opsStatusPill " + (paymentOk ? "ok" : (facts.paymentState === "payment_evidence_pending_verification" ? "warn" : "muted")) + "'>" + esc(facts.paymentStateLabel) + "</span></td>"
             + "<td><span class='opsStatusPill " + invoiceState.cls + "'>" + esc(invoiceState.label) + "</span></td>"
             + "<td><span class='opsStatusPill " + (enrolledOk ? "ok" : "warn") + "'>" + esc(enrolledOk ? "Enrolled Confirmed" : "Enrolment Pending") + "</span></td>"
             + "<td><span class='opsStatusPill muted'>" + esc(classroom.label) + "</span></td>"
@@ -4561,7 +4691,7 @@
           + "<span class='opsStatusPill ok'>Payment verified: " + String(paymentVerifiedCount) + "</span>"
           + "<span class='opsStatusPill warn'>Classroom pending/unknown: " + String(classroomPendingCount) + "</span>";
       }
-      var selectedRow = rows.filter(function(row){ return String(row.applicantId || row.ApplicantID || "") === opsApplicantId_(); })[0] || null;
+      var selectedRow = rows.filter(function(row){ return String(opsApplicantQueueFacts_(row).applicantId || "") === opsApplicantId_(); })[0] || null;
       renderOpsSelectedApplicantMini_(selectedRow);
       renderOpsLifecycleCascade_();
       renderOpsBooksFilters_();
@@ -4644,8 +4774,9 @@
           if (!String(d[k] == null ? "" : d[k]).trim()) d[k] = queueRow[k];
         });
       }
+      var facts = opsApplicantQueueFacts_(d);
       var invoiceState = opsInvoiceSummary_(d);
-      var payment = opsIsYes_(d.Payment_Verified) ? "Payment Verified" : "Payment evidence not verified";
+      var payment = facts.paymentStateLabel;
       var enrolled = opsIsYes_(d.Enrolled_Confirmed) ? "Enrolled Confirmed" : "Enrolment Pending";
       var classroom = classroomStatusFromRow_(d).label;
       var amount = opsAmountFromRow_(d);
@@ -4654,14 +4785,14 @@
         ? ("Line Item Summary: " + formatPngAmount_(amount) + " from loaded applicant fee fields. Detailed Books item mapping unavailable in this cockpit.")
         : "Line Item Summary: unavailable from loaded applicant detail.";
       var invoiceNumber = String(d.Books_Invoice_Number || "Unknown");
-      var studentName = opsDetailName_(d);
+      var studentName = facts.name || opsDetailName_(d);
       var emailStatus = String(d.Email_Status || "").trim().toUpperCase();
       var nextAction = String(d.Email_Next_Action_Date || "").trim();
       var bounceFlag = isCommBounceFlagTrue_(d.Email_Bounce_Flag);
-      var portalSubmitted = workflowIsYes_(d.Portal_Submitted);
+      var portalSubmitted = facts.portalSubmitted;
       var dateInfo = opsDateAppliedInfo_(d);
       var aging = opsAgingDays_(d) || "Missing source";
-      var commStatus = bounceFlag ? "Bounce risk" : (emailStatus === "SENT" ? "Recently contacted" : (nextAction ? "Follow-up scheduled" : "Reminder due"));
+      var commStatus = facts.hasEmailIssue ? "Email issue" : (facts.isCooldownActive || facts.isRecentlyContacted ? "Recently contacted / cooldown" : facts.communicationStatus);
       renderOpsSelectedApplicantContext_();
       setOpsText_("cockpitCommApplicantStatus", commStatus);
       setOpsText_("cockpitCommInviteStatus", portalSubmitted ? "Portal submitted" : (emailStatus === "SENT" ? "Invite sent" : "Invite pending"));
@@ -4689,20 +4820,28 @@
         "<div class='opsApplicantCard'>",
         "<div class='opsApplicantHero'>",
         "<div class='opsApplicantTitleRow'>",
-        "<div><div class='opsApplicantTitle'>" + esc(String(d.ApplicantID || "")) + "</div>",
-        "<div class='opsApplicantSub'>" + esc(String(d.First_Name || d.name || "")) + " " + esc(String(d.Last_Name || "")) + "</div></div>",
+        "<div><div class='opsApplicantTitle'>" + esc(facts.applicantId || String(d.ApplicantID || "")) + "</div>",
+        "<div class='opsApplicantSub'>" + esc(studentName) + "</div></div>",
         "<span class='opsStatusPill " + invoiceState.cls + "'>" + esc(invoiceHeroLabel) + "</span>",
         "</div>",
         "</div>",
         "<div class='opsBadgeStack'>"
           + "<span class='opsStatusPill " + invoiceState.cls + "'>" + esc(invoiceState.label) + "</span>"
-          + "<span class='opsStatusPill " + (opsIsYes_(d.Payment_Verified) ? "ok" : "warn") + "'>" + esc(payment) + "</span>"
+          + "<span class='opsStatusPill " + (facts.paymentVerified ? "ok" : (facts.paymentState === "payment_evidence_pending_verification" ? "warn" : "muted")) + "'>" + esc(payment) + "</span>"
+          + "<span class='opsStatusPill " + (facts.documentState === "eligibility_cleared" ? "ok" : (facts.documentState === "unknown" ? "muted" : "warn")) + "'>" + esc(facts.documentStateLabel) + "</span>"
           + "<span class='opsStatusPill " + (opsIsYes_(d.Enrolled_Confirmed) ? "ok" : "warn") + "'>" + esc(enrolled) + "</span>"
           + "<span class='opsStatusPill muted'>" + esc(classroom) + "</span>"
         + "</div>",
         "<div class='opsInfoGrid'>",
-          "<div class='opsInfoItem'><div class='k'>Applicant</div><div class='v'>" + esc(opsDetailName_(d)) + "</div></div>",
-          "<div class='opsInfoItem'><div class='k'>Student</div><div class='v'>" + esc(opsDetailName_(d)) + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Applicant</div><div class='v'>" + esc(facts.applicantId || "Unknown") + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Student</div><div class='v'>" + esc(studentName) + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Email</div><div class='v'>" + esc(facts.email || "No email on record") + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Phone / WhatsApp</div><div class='v'>" + esc(facts.phone || "No phone on record") + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Lifecycle State</div><div class='v'>" + esc(facts.lifecycleLabel) + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Document State</div><div class='v'>" + esc(facts.documentStateLabel) + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Payment State</div><div class='v'>" + esc(facts.paymentStateLabel) + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Communication State</div><div class='v'>" + esc(facts.communicationStatus) + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Next Action</div><div class='v'>" + esc(facts.nextActionLabel) + "</div></div>",
           "<div class='opsInfoItem'><div class='k'>Date Applied</div><div class='v' title='" + esc(opsDateAppliedTitle_(d)) + "'>" + esc(dateInfo.label) + "</div></div>",
           "<div class='opsInfoItem'><div class='k'>Aging</div><div class='v'>" + esc(aging) + "</div></div>",
           "<div class='opsInfoItem'><div class='k'>Invoice Raised / No Invoice</div><div class='v'>" + esc(invoiceState.label) + "</div></div>",
