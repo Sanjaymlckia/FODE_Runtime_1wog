@@ -2,6 +2,76 @@
 
 ## Active CIS
 
+- `CIS r205: Shared Row Facts / Classifier Refactor Phase 1`.
+- Implementation date: `2026-05-31`.
+- Work class: `Runtime release - AdminUI-only refactor-readiness correction`.
+- Release track: `Track L`.
+- Reason for classification: AdminUI-only shared row facts/classifier refactor and release identity update; no backend, role gate, send/export, schema, or mutation-path change.
+- Intended runtime identity: `r205 / 205`.
+- Implementation authorized: `YES`.
+- Runtime release authorized: `NO - implementation only; no clasp push, version, deployment repin, browser acceptance, commit, tag, or push in this turn`.
+
+### Baseline
+
+- Started from clean r203 runtime source at HEAD `bb2b190 / staging-as203`.
+- Parked r204 patch was preserved under `audits/` and treated as reference only; it was not reapplied.
+- Dirty non-source state before edits: `.codexhub/SESSION_CONTEXT.md`, `.codexhub/resume_state/latest.json`, and untracked r204 audit files.
+- `Config.js` was bumped from `r203 / 203` to `r205 / 205` only after implementation began.
+
+### Allowed Edit Files
+
+- `AdminUI.html`
+- `Config.js`
+- `CURRENT_TASK.md`
+
+### Implementation Notes
+
+- Added `opsBuildRowFacts_(row)` in `AdminUI.html` as a shared row-facts helper for OPS Communications.
+- Routed OPS Communications queue classification through row facts for effective email, phone/WhatsApp, email issue, lifecycle stage, document state, recent contact, and cooldown facts.
+- Made actionable communication queues exclude recent-contact/cooldown facts in the client classifier.
+- Made Email Issue rows block direct email queues and route to Email Issue / WhatsApp fallback classification only.
+- Separated `Awaiting Uploads / Document Evidence Pending` from `Uploaded / Review Required` in the row-facts document state used by Communications classification.
+- Routed selected communication record display and template recipient binding through row facts.
+- Added `opsSelectCommunicationRow_(applicantId)` so Communication queue row selection binds ApplicantID/name/email/phone/stage from loaded row facts.
+- Added minimal Communications multi-select state and recipient counts using row facts without adding a new bulk send/export path.
+- Used `docs/FODE_ARCHITECTURE_MAP_r205.md` as the r205 Phase 1 benchmark; parked r204 patch remains reference only and was not reapplied wholesale.
+- No `Admin.js`, `Code.js`, `Utils.js`, backend send/export/mutation logic, role gates, sender/cooldown backend logic, or schema was changed.
+- No live send/export/mutation action was run.
+
+### Acceptance Status
+
+- Benchmark source acceptance against `docs/FODE_ARCHITECTURE_MAP_r205.md`: PASS.
+  - `opsBuildRowFacts_(row)` exists.
+  - Ready to Contact excludes recent/cooldown rows and review-only/terminal states.
+  - Cooldown / Recently Contacted is classified as waiting/blocked, not actionable.
+  - Email Issue rows are excluded from direct email queues.
+  - Awaiting uploads and Uploaded / Review Required use separate row-facts document states.
+  - One selected Communications row derives ApplicantID, email, phone, and lifecycle stage from row facts.
+  - Multi-select recipient loaded/missing counts use row facts.
+  - No Admin.js / Code.js / Utils.js diff.
+- Local source checks: PASS.
+  - `git diff --check`: PASS; CRLF conversion warnings only for existing files.
+  - `Select-String -Path Config.js -Pattern "VERSION|DEPLOY_VERSION_NUMBER"`: `VERSION: "r205"`, `DEPLOY_VERSION_NUMBER: 205`.
+- `clasp push`: PASS.
+  - Output: `Pushed 8 files at 8:15:29 pm.`
+- Remote source proof: PASS via Apps Script API content endpoint; no verification folder or source copy was created.
+  - Remote `Config.js`: `VERSION: "r205"`, `DEPLOY_VERSION_NUMBER: 205`.
+  - Remote `AdminUI.html`: `opsBuildRowFacts_`, Ready/recent-cooldown exclusion, cooldown wait/blocked, Email Issue classifier, Uploaded / Review Required split, `Bulk cohort selected`, and `Email recipients` markers present.
+- Apps Script platform version: `223`.
+- Admin staging deployment: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @223`.
+- Student staging deployment: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @223`.
+- Admin whoami: PASS, `r205 / 205`, `mismatch=false`.
+- Student whoami: PASS, `r205 / 205`, `mismatch=false`.
+- Browser/source acceptance: PASS by read-only deployed OPS source marker checks.
+  - Markers: `r205`, `opsBuildRowFacts_`, `Ready to Contact`, `cooldown_recent` / `Recently Contacted`, `uploaded_review_required` / `Review Required`, `Bulk cohort selected`, `Email recipients`.
+- No send/export/mutation action was run.
+- Git finalization: PASS.
+  - Commit message: `release: r205 shared row facts classifier`.
+  - Tag: `staging-as205`.
+  - Push: PASS.
+
+## Previous Active CIS
+
 - `CIS r203: OPS Communications Work-Queue Surface`.
 - Implementation date: `2026-05-28`.
 - Work class: `Runtime release - AdminUI-only communications surface redesign`.

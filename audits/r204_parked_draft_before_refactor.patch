@@ -1,0 +1,1582 @@
+diff --git a/AdminUI.html b/AdminUI.html
+index e593bc0..ab16b56 100644
+--- a/AdminUI.html
++++ b/AdminUI.html
+@@ -926,9 +926,81 @@
+     .opsMeaningList{ display:flex; flex-direction:column; gap:8px; }
+     .opsMeaningItem{ border:1px solid #e1e9f2; background:#fbfdff; border-radius:8px; padding:10px; font-size:12px; line-height:1.4; color:#40566c; }
+     .opsMeaningItem strong{ color:#17283f; display:block; margin-bottom:3px; }
++    .opsCommQueueGrid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
++    .opsCommQueueCard{
++      width:100%;
++      border:1px solid #dce6ef;
++      background:#fff;
++      color:#20364d;
++      border-radius:8px;
++      padding:12px;
++      text-align:left;
++      cursor:pointer;
++      display:flex;
++      flex-direction:column;
++      gap:8px;
++      min-height:184px;
++    }
++    .opsCommQueueCard.active{ background:#eef5ff; border-color:#9fc1ef; color:#174f95; box-shadow:inset 0 0 0 1px rgba(31,112,234,.08); }
++    .opsCommQueueTop{ display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
++    .opsCommQueueLabel{ font-weight:900; font-size:14px; color:#17283f; line-height:1.3; }
++    .opsCommQueueCard.active .opsCommQueueLabel{ color:#174f95; }
++    .opsCommQueueCount{ font-size:22px; font-weight:900; color:#1f70ea; white-space:nowrap; }
++    .opsCommQueueMeta{ font-size:12px; color:#5f7186; line-height:1.4; }
++    .opsCommQueueMeta strong{ color:#20364d; }
++    .opsCommWorkbench{ display:grid; grid-template-columns:minmax(620px,1.35fr) minmax(340px,.85fr); gap:14px; align-items:start; }
++    .opsCommSelectionBar{
++      display:grid;
++      grid-template-columns:minmax(260px,1fr) auto;
++      gap:12px;
++      align-items:start;
++      margin-bottom:12px;
++    }
++    .opsCommSelectionMeta{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
++    .opsCommActionBar{ display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
++    .opsCommActionSummary{ margin-top:12px; }
++    .opsCommTableNote{ margin-top:10px; color:#6f8194; font-size:12px; }
++    .opsCommTableWrap{ max-height:560px; }
++    .opsCommWorkflowPanel{
++      border:1px solid #dce6ef;
++      background:#fbfdff;
++      border-radius:10px;
++      padding:12px;
++      margin-top:12px;
++    }
++    .opsCommWorkflowTitle{ font-size:13px; font-weight:900; color:#17283f; margin-bottom:10px; }
++    .opsCommWorkflowSteps{ display:grid; grid-template-columns:repeat(3,minmax(180px,1fr)); gap:10px; }
++    .opsCommWorkflowStep{ border:1px solid #e1e9f2; background:#fff; border-radius:8px; padding:10px; }
++    .opsCommWorkflowStep strong{ display:block; color:#17283f; margin-bottom:6px; font-size:12px; }
++    .opsCommWorkflowMeta{ color:#40566c; font-size:12px; line-height:1.4; }
++    .opsCommWorkflowButtons{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
++    .opsCommTable th:first-child,.opsCommTable td:first-child{ width:44px; }
++    .opsCommTable th:last-child,.opsCommTable td:last-child{ min-width:150px; }
++    .opsCommRowName{ font-weight:900; color:#17283f; }
++    .opsCommRowSub{ margin-top:3px; color:#6f8194; font-size:11px; line-height:1.35; }
++    .opsCommCheckbox{ width:16px; height:16px; cursor:pointer; }
++    .opsSectionToggle{
++      width:100%;
++      border:0;
++      background:transparent;
++      color:#17283f;
++      padding:0;
++      display:flex;
++      justify-content:space-between;
++      gap:12px;
++      align-items:flex-start;
++      text-align:left;
++      cursor:pointer;
++    }
++    .opsSectionToggleLabel{ font-size:16px; font-weight:900; color:#17283f; }
++    .opsSectionToggleCopy{ margin:4px 0 0; color:#6f8194; font-size:13px; }
++    .opsSectionToggleState{ color:#1f5aa5; font-size:12px; font-weight:900; white-space:nowrap; }
++    .opsSectionBody.hidden{ display:none; }
++    .opsCommApplicantWarning{ margin-top:10px; color:#6f8194; font-size:12px; }
+     @media (max-width: 1400px){
+       .opsWorkbench{ grid-template-columns:1fr; }
+       .opsLowerGrid{ grid-template-columns:1fr; }
++      .opsCommWorkbench{ grid-template-columns:1fr; }
+       .opsSectionGrid,.opsSectionGrid.two,.opsSectionGrid.mainSplit{ grid-template-columns:1fr; }
+       .opsFilterGrid{ grid-template-columns:1fr; }
+       .opsApplicantMini{ grid-template-columns:repeat(2,minmax(150px,1fr)); }
+@@ -946,6 +1018,9 @@
+       .opsDraftGrid{ grid-template-columns:1fr; }
+       .opsApplicantMini{ grid-template-columns:1fr; }
+       .opsWorkflowToolbar{ grid-template-columns:1fr; }
++      .opsCommSelectionBar{ grid-template-columns:1fr; }
++      .opsCommWorkflowSteps{ grid-template-columns:1fr; }
++      .opsCommActionBar{ justify-content:flex-start; }
+       .opsLifecycleBandHeader{ grid-template-columns:1fr auto; }
+       .opsLifecycleNext,.opsLifecycleAction{ grid-column:1 / -1; }
+       .opsLifecycleAction{ border-left:0; border-top:1px solid #dce7f2; padding:10px 0 0; }
+@@ -1363,42 +1438,45 @@
+           <span class="opsStatusPill warn">Work queue / preview first</span>
+         </div>
+         <div class="opsSafetyNotice">Operator: Preview only. Escalate to Operations Admin for send/export. Operations Admin: Operational action. Requires selected records, preview, confirmation, caps, and backend gates. Super Admin: Supervisory action. High-risk actions remain separately gated.</div>
+-        <div class="opsSectionGrid" style="grid-template-columns:minmax(260px,.85fr) minmax(360px,1.1fr) minmax(340px,1fr);">
+-          <div class="opsCard">
+-            <div class="opsSectionHeader"><div><h3>Communication Work Queues</h3><p>Counts use currently loaded OPS rows only.</p></div><span class="opsStatusPill info">Loaded data</span></div>
+-            <div class="opsFilterList" id="opsCommunicationQueueList"></div>
+-            <div class="opsInspectPanel" id="opsCommunicationQueueInspector">Select a communication queue.</div>
+-          </div>
++        <div class="opsCard">
++          <div class="opsSectionHeader"><div><h3>Communication Work Queues</h3><p>Counts use currently loaded OPS rows only. Queue cards stay at the top of the workbench.</p></div><span class="opsStatusPill info">Loaded data</span></div>
++          <div class="opsCommQueueGrid" id="opsCommunicationQueueList"></div>
++          <div class="opsInspectPanel" id="opsCommunicationQueueInspector">Select a communication queue.</div>
++        </div>
++        <div class="opsCommWorkbench" style="margin-top:14px;">
+           <div class="opsCard">
+-            <div class="opsSectionHeader"><div><h3>Records / Selected Applicant Context</h3><p>Selection follows Applicant Queue, search, lifecycle cards, and communication work queues.</p></div><span class="opsStatusPill info">Selected applicant</span></div>
++            <div class="opsSectionHeader"><div><h3>Selected queue records</h3><p>Client-side multi-select only. Selection is limited to rows already loaded into OPS.</p></div><span class="opsStatusPill info">Working table</span></div>
+             <div class="opsPlaceholder" id="cockpitCommContext">No selected-applicant communication data loaded.</div>
+-            <div class="opsInfoGrid" id="opsCommunicationSelectedPane"></div>
+-            <div class="opsRecordList" id="opsCommunicationQueueRecords" style="margin-top:12px;"></div>
++            <div class="opsInfoGrid" id="opsCommunicationSelectedPane" style="margin-top:12px;"></div>
++            <div id="opsQueueSendWorkflowPanel" style="margin-top:12px;"></div>
++            <div id="opsCommunicationQueueRecords" style="margin-top:12px;"></div>
++            <div class="opsCommApplicantWarning">Applicant Queue multi-select will use the same selection pattern in a later release.</div>
+           </div>
+           <div class="opsCard">
+-            <div class="opsSectionHeader"><div><h3>Preview / Edit / Send Gate / Audit</h3><p>Actions reuse existing communication backends and client gates only.</p></div><span class="opsStatusPill warn">Existing gates</span></div>
++            <div class="opsSectionHeader"><div><h3>Selected Preview Audit</h3><p>Selected record, recipient, preview, and gate evidence.</p></div><span class="opsStatusPill warn">Existing gates</span></div>
+             <div class="opsControlGrid">
+               <div class="opsControlGroup preview">
+-                <div class="opsControlTitle">Preview and handoff</div>
+-                <p class="opsControlNote">Read-only previews and handoffs. These controls do not send email by themselves.</p>
+-                <div class="opsActionRow">
+-                  <button class="opsActionBtn live" type="button" onclick="opsPreviewSelectedCommunicationAction_()">Preview Queue Action</button>
+-                  <button class="opsActionBtn live" type="button" onclick="opsPreviewApplicantEmail_('custom_email','Custom Email')">Preview Custom Email</button>
+-                  <button class="opsActionBtn" type="button" onclick="opsRenderCommunicationTimeline_()">View Message Timeline</button>
+-                  <button class="opsActionBtn live" type="button" onclick="opsOpenLegacyAdminReview_()">Email Correction Handoff</button>
+-                </div>
++                <div class="opsControlTitle">Preview audit</div>
++                <p class="opsControlNote">Read-only support for the Queue Send Workflow.</p>
+                 <div class="opsInspectPanel" id="opsCommunicationStatePanel">Select a queue and applicant to inspect recipient, template, block reason, and Safe Mode state.</div>
+               </div>
+               <div class="opsControlGroup write">
+-                <div class="opsControlTitle">Operational send/export controls</div>
+-                <p class="opsControlNote">Existing operational gates only. Operator mode disables these controls.</p>
+-                <div class="opsActionRow">
+-                  <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Reminder" onclick="opsSendApplicantEmail_('reminder','Reminder')">Send Reminder</button>
+-                  <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Missing Documents Request" onclick="opsSendApplicantEmail_('docs_missing','Missing Documents Request')">Send Missing Documents Request</button>
+-                  <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Invoice Reminder" onclick="opsSendApplicantEmail_('payment_followup','Invoice Reminder')">Send Invoice Reminder</button>
+-                  <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Resend Portal Access" onclick="opsSendApplicantEmail_('legacy_invite','Portal Access')">Resend Portal Access</button>
+-                  <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Custom Email" onclick="opsSendApplicantEmail_('custom_email','Custom Email')">Send Custom Email</button>
+-                  <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Export WhatsApp CSV" onclick="exportWhatsAppFallbackCsv_()">Export WhatsApp CSV</button>
++                <button class="opsSectionToggle" type="button" onclick="opsToggleCommunicationOtherActions_()">
++                  <div>
++                    <div class="opsSectionToggleLabel" id="opsCommunicationOtherActionsToggleLabel">Other existing actions ▸</div>
++                    <p class="opsSectionToggleCopy">Secondary generic controls remain available behind existing role, preview, confirmation, and backend gates.</p>
++                  </div>
++                  <span class="opsStatusPill muted">Collapsed</span>
++                </button>
++                <div class="opsSectionBody hidden" id="opsCommunicationOtherActionsBody" style="margin-top:12px;">
++                  <div class="opsActionRow">
++                    <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Reminder" onclick="opsSendApplicantEmail_('reminder','Reminder')">Send Reminder</button>
++                    <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Missing Documents Request" onclick="opsSendApplicantEmail_('docs_missing','Missing Documents Request')">Send Missing Documents Request</button>
++                    <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Invoice Reminder" onclick="opsSendApplicantEmail_('payment_followup','Invoice Reminder')">Send Invoice Reminder</button>
++                    <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Resend Portal Access" onclick="opsSendApplicantEmail_('legacy_invite','Portal Access')">Resend Portal Access</button>
++                    <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Custom Email" onclick="opsSendApplicantEmail_('custom_email','Custom Email')">Send Custom Email</button>
++                    <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Export WhatsApp CSV" onclick="exportWhatsAppFallbackCsv_()">Export WhatsApp CSV</button>
++                  </div>
+                 </div>
+               </div>
+             </div>
+@@ -1406,41 +1484,65 @@
+           </div>
+         </div>
+         <div class="opsCard" style="margin-top:14px;">
+-          <div class="opsSectionHeader"><div><h3>Template Quick Look</h3><p>Secondary reference under the selected queue/action context.</p></div><span class="opsStatusPill info">Demoted reference</span></div>
+-          <div class="opsTemplateGrid" id="opsTemplateBrowser"></div>
+-          <div class="opsDraftGrid" style="margin-top:12px;">
+-            <div class="field"><label>Recipient</label><input id="opsCustomRecipient" type="text" placeholder="Loaded from selected applicant"></div>
+-            <div class="field"><label>Template selected</label><input id="opsCustomTemplateName" type="text" readonly></div>
+-            <div class="field"><label>Subject</label><input id="opsCustomSubject" type="text" placeholder="Choose template or enter subject"></div>
+-            <div class="field"><label>Send authority</label><input id="opsCustomSafety" type="text" readonly value="Preview recommended; confirmation required"></div>
+-            <textarea id="opsCustomBody" placeholder="Choose template or enter custom body"></textarea>
+-          </div>
+-          <div class="opsActionRow" style="margin-top:10px;">
+-            <button class="opsActionBtn" type="button" onclick="opsApplyTemplateToCustomDraft_()">Start Custom From Template</button>
+-            <button class="opsActionBtn live" type="button" onclick="opsPreviewApplicantEmail_('custom_email','Custom Email')">Preview Custom Email</button>
++          <button class="opsSectionToggle" type="button" onclick="opsToggleCommunicationTemplates_()">
++            <div>
++              <div class="opsSectionToggleLabel" id="opsCommunicationTemplateToggleLabel">Template Quick Look ▸</div>
++              <p class="opsSectionToggleCopy">Secondary reference under the selected queue/action context.</p>
++            </div>
++            <span class="opsStatusPill info">Collapsed by default</span>
++          </button>
++          <div class="opsSectionBody hidden" id="opsCommunicationTemplatePanelBody" style="margin-top:14px;">
++            <div class="opsTemplateGrid" id="opsTemplateBrowser"></div>
++            <div class="opsDraftGrid" style="margin-top:12px;">
++              <div class="field"><label>Recipient</label><input id="opsCustomRecipient" type="text" placeholder="Loaded from selected applicant"></div>
++              <div class="field"><label>Template selected</label><input id="opsCustomTemplateName" type="text" readonly></div>
++              <div class="field"><label>Subject</label><input id="opsCustomSubject" type="text" placeholder="Choose template or enter subject"></div>
++              <div class="field"><label>Send authority</label><input id="opsCustomSafety" type="text" readonly value="Preview recommended; confirmation required"></div>
++              <textarea id="opsCustomBody" placeholder="Choose template or enter custom body"></textarea>
++            </div>
++            <div class="opsActionRow" style="margin-top:10px;">
++              <button class="opsActionBtn" type="button" onclick="opsApplyTemplateToCustomDraft_()">Start Custom From Template</button>
++              <button class="opsActionBtn live" type="button" onclick="opsPreviewApplicantEmail_('custom_email','Custom Email')">Preview Custom Email</button>
++            </div>
+           </div>
+         </div>
+         <div class="opsCard" style="margin-top:14px;">
+-          <div class="opsSectionHeader"><div><h3>Bulk Communication Path</h3><p>Visible from Communications while reusing the existing stage batch preview/send controls and gates.</p></div><span class="opsStatusPill warn">Gated bulk path</span></div>
+-          <div class="opsMetricGrid">
+-            <div class="opsMetric"><div class="k">Selected lifecycle stage</div><div class="v" id="commBulkSelectedStage">&mdash;</div></div>
+-            <div class="opsMetric"><div class="k">Eligible count</div><div class="v" id="commBulkEligible">&mdash;</div></div>
+-            <div class="opsMetric"><div class="k">Blocked count</div><div class="v" id="commBulkBlocked">&mdash;</div></div>
+-            <div class="opsMetric"><div class="k">Preview availability</div><div class="v" id="commBulkPreviewAvailability">&mdash;</div></div>
+-            <div class="opsMetric"><div class="k">Send availability</div><div class="v" id="commBulkSendAvailability">&mdash;</div></div>
+-            <div class="opsMetric"><div class="k">Message type</div><div class="v" id="commBulkMessageType">&mdash;</div></div>
+-            <div class="opsMetric"><div class="k">Backend sendable state</div><div class="v" id="commBulkSendable">&mdash;</div></div>
+-          </div>
+-          <div class="opsActionRow">
+-            <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Choose Lifecycle Stage</button>
+-            <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Preview Cohort" onclick="previewStageBatchUi_()">Preview Cohort</button>
+-            <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Stage Batch" onclick="sendStageBatchUi_()">Send Stage Batch</button>
++          <button class="opsSectionToggle" type="button" onclick="opsToggleCommunicationBulkPath_()">
++            <div>
++              <div class="opsSectionToggleLabel" id="opsCommunicationBulkPathToggleLabel">Bulk Communication Path ▸</div>
++              <p class="opsSectionToggleCopy">Secondary existing stage batch controls, retained behind the Queue Send Workflow.</p>
++            </div>
++            <span class="opsStatusPill muted">Collapsed</span>
++          </button>
++          <div class="opsSectionBody hidden" id="opsCommunicationBulkPathBody" style="margin-top:14px;">
++            <div class="opsMetricGrid">
++              <div class="opsMetric"><div class="k">Selected lifecycle stage</div><div class="v" id="commBulkSelectedStage">&mdash;</div></div>
++              <div class="opsMetric"><div class="k">Eligible count</div><div class="v" id="commBulkEligible">&mdash;</div></div>
++              <div class="opsMetric"><div class="k">Blocked count</div><div class="v" id="commBulkBlocked">&mdash;</div></div>
++              <div class="opsMetric"><div class="k">Preview availability</div><div class="v" id="commBulkPreviewAvailability">&mdash;</div></div>
++              <div class="opsMetric"><div class="k">Send availability</div><div class="v" id="commBulkSendAvailability">&mdash;</div></div>
++              <div class="opsMetric"><div class="k">Message type</div><div class="v" id="commBulkMessageType">&mdash;</div></div>
++              <div class="opsMetric"><div class="k">Backend sendable state</div><div class="v" id="commBulkSendable">&mdash;</div></div>
++            </div>
++            <div class="opsActionRow">
++              <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Choose Lifecycle Stage</button>
++              <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Preview Cohort" onclick="previewStageBatchUi_()">Preview Cohort</button>
++              <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Stage Batch" onclick="sendStageBatchUi_()">Send Stage Batch</button>
++            </div>
++            <div class="opsSafetyNotice">Bulk preview/send remains governed by existing stage batch preview cache, caps, confirmation, role checks, and backend gates. No automatic sends are introduced.</div>
+           </div>
+-          <div class="opsSafetyNotice">Bulk preview/send remains governed by existing stage batch preview cache, caps, confirmation, role checks, and backend gates. No automatic sends are introduced.</div>
+         </div>
+         <div class="opsCard" style="margin-top:14px;">
+-          <div class="opsSectionHeader"><div><h3>Timeline / Cooldown / Blocker / Role Status</h3></div><span class="opsStatusPill info">Selected context</span></div>
+-          <div class="opsQueueSummaryStrip" id="opsCommunicationStatusStrip"></div>
++          <button class="opsSectionToggle" type="button" onclick="opsToggleCommunicationStatusStrip_()">
++            <div>
++              <div class="opsSectionToggleLabel" id="opsCommunicationStatusStripToggleLabel">Timeline / Cooldown / Blocker / Role Status ▸</div>
++              <p class="opsSectionToggleCopy">Secondary selected-context status strip.</p>
++            </div>
++            <span class="opsStatusPill info">Collapsed</span>
++          </button>
++          <div class="opsSectionBody hidden" id="opsCommunicationStatusStripBody" style="margin-top:14px;">
++            <div class="opsQueueSummaryStrip" id="opsCommunicationStatusStrip"></div>
++          </div>
+         </div>
+       </section>
+       <section id="opsClassroom" class="opsSectionPage" data-ops-mode-group="operator admin super">
+@@ -2441,6 +2543,11 @@
+       booksFilter: "all",
+       queueSort: "date_desc",
+       templateType: "reminder",
++      communicationSelectedIds: [],
++      communicationTemplatesExpanded: false,
++      communicationOtherActionsExpanded: false,
++      communicationBulkPathExpanded: false,
++      communicationStatusStripExpanded: false,
+       longPressTimer: null,
+       reviewDrawerOpen: false,
+       superAdminMode: false,
+@@ -2792,7 +2899,7 @@
+     function opsSelectedEmail_(){
+       var d = opsApplicantDetailCache || {};
+       var row = opsApplicantContextRow_() || {};
+-      return opsFirstNonBlank_(d.Effective_Email, d.Parent_Email_Corrected, d.Parent_Email, row.Effective_Email, row.Parent_Email_Corrected, row.Parent_Email);
++      return opsFirstNonBlank_(opsCommunicationEmail_(d), opsCommunicationEmail_(row));
+     }
+     function opsSelectedIdentityLine_(){
+       return opsApplicantId_() + " - " + opsApplicantName_() + (opsSelectedEmail_() ? " <" + opsSelectedEmail_() + ">" : "");
+@@ -3239,7 +3346,7 @@
+       return [
+         { key:"fd_received", name:"Application Received / FD Received", mode:"operator workflow", meaning:"External FD intake row has been received and assigned an ApplicantID.", next:"Review Application", matches:function(row){ return opsWorkflowStageKey_(row) === "fd_received"; } },
+         { key:"portal", name:"Portal Access / Portal Submitted", mode:"operator workflow", meaning:"Portal access or submission is visible; it does not prove documents were uploaded.", next:"Check portal uploads / contact applicant", matches:function(row){ return opsWorkflowStageKey_(row) === "portal"; } },
+-        { key:"docs", name:"Documents / Eligibility Check", mode:"operator workflow", meaning:"Document evidence and eligibility state require checking without assuming files exist.", next:"Eligibility check required", matches:function(row){ return opsWorkflowStageKey_(row) === "docs"; } },
++        { key:"docs", name:"Awaiting Uploads / Document Evidence Pending", mode:"operator workflow", meaning:"Documents may still be missing, unknown, or only partly uploaded. Do not assume eligibility review work exists yet.", next:"Wait, remind when due, or contact applicant", matches:function(row){ return opsWorkflowStageKey_(row) === "docs"; } },
+         { key:"payment", name:"Payment Evidence Not Verified", mode:"operator workflow", meaning:"Payment evidence is missing or has not been verified.", next:"Review Payment", matches:function(row){ return opsWorkflowStageKey_(row) === "payment"; } },
+         { key:"invoice", name:"Invoice / Books", mode:"admin guarded", meaning:"Books invoice or billing state needs follow-up.", next:"Review Payment", matches:function(row){ return opsWorkflowStageKey_(row) === "invoice"; } },
+         { key:"enrolment", name:"Enrolment Pending", mode:"admin guarded", meaning:"Payment is verified and enrolment is not confirmed.", next:"Review Application", matches:function(row){ return opsWorkflowStageKey_(row) === "enrolment"; } },
+@@ -3535,7 +3642,7 @@
+       return [
+         { type:"legacy_invite", name:"Portal Access", purpose:"Resend portal access for incomplete applicants.", stage:"Portal Access / Submission", subject:"FODE Portal Access", body:"Portal access reminder with applicant-specific link when eligible.", vars:"ApplicantID, student name, portal URL", use:"Use when portal access is missing or invite is pending." },
+         { type:"reminder", name:"General Reminder", purpose:"Single-applicant reminder for incomplete intake.", stage:"Applicant / Portal", subject:"FODE Application Reminder", body:"Reminder to complete the current application step.", vars:"ApplicantID, effective email, due state", use:"Use when reminder is due and not suppressed." },
+-        { type:"docs_missing", name:"Missing Documents", purpose:"Request outstanding documents.", stage:"Document / Eligibility Review", subject:"FODE Documents Required", body:"Documents are still required before eligibility can progress.", vars:"ApplicantID, document state", use:"Use when document state is missing or pending." },
++        { type:"docs_missing", name:"Missing Documents", purpose:"Request outstanding documents.", stage:"Awaiting Uploads / Document Evidence Pending", subject:"FODE Documents Required", body:"Documents are still required before eligibility can progress.", vars:"ApplicantID, document state", use:"Use when document evidence is missing or uploads are still pending." },
+         { type:"payment_followup", name:"Invoice Reminder", purpose:"Follow up while payment evidence is not verified.", stage:"Invoice Sent / Payment Evidence Not Verified", subject:"FODE Invoice Payment Reminder", body:"Invoice/payment follow-up for a single applicant.", vars:"ApplicantID, invoice state, amount if loaded", use:"Use when invoice exists and payment is not verified." },
+         { type:"quote_fee_estimate", name:"Quote / Fee Estimate", purpose:"Workflow marker for quote or fee estimate follow-up.", stage:"Docs Quote Ready", subject:"Quote / Fee Estimate", body:"Quote / Fee Estimate - backend exists, OPS wiring pending", vars:"ApplicantID, quote context if available", use:"Backend exists, OPS wiring pending. Do not send from this card." },
+         { type:"custom_email", name:"Custom Email", purpose:"Editable single-record message.", stage:"Any", subject:"Custom subject required", body:"Operator edits subject and body before preview.", vars:"ApplicantID and typed content", use:"Use only after careful preview; confirmation still required." }
+@@ -3550,28 +3657,43 @@
+       if (opsOperationalExecutionAllowed_()) return "Operations Admin: Operational action. Requires selected records, preview, confirmation, caps, and backend gates.";
+       return "Operations Admin or Super Admin mode is required for gated send/export controls.";
+     }
+-    function opsCommunicationHasEmail_(row){
++    function opsCommunicationEmail_(row){
+       var r = row || {};
+-      return !!opsFirstNonBlank_(r.effectiveEmail, r.Effective_Email, r.Parent_Email_Corrected, r.Parent_Email, "");
++      return opsFirstNonBlank_(r.effectiveEmail, r.Effective_Email, r.correctedEmail, r.Parent_Email_Corrected, r.parentEmail, r.Parent_Email, r.email, r.Email, "");
+     }
+-    function opsCommunicationHasPhone_(row){
++    function opsCommunicationPhone_(row){
+       var r = row || {};
+-      return !!opsFirstNonBlank_(r.Parent_Phone, r.Phone, r.Mobile, r.WhatsApp, r.Contact_Number, r.Phone_Number, "");
++      return opsFirstNonBlank_(r.Parent_Phone, r.parentPhone, r.Phone, r.phone, r.Mobile, r.mobile, r.WhatsApp, r.whatsapp, r.Contact_Number, r.contactNumber, r.Phone_Number, r.phoneNumber, "");
+     }
+-    function opsCommunicationRecentlyContacted_(row){
++    function opsCommunicationLastContactEvidence_(row){
+       var r = row || {};
+-      return !!opsFirstNonBlank_(r.Last_Contacted_At, r.Email_Last_Sent_At, r.Ack_Email_Sent_At, r.Email_Next_Action_Date, "");
++      return opsFirstNonBlank_(r.Last_Contacted_At, r.lastContactedAt, r.Email_Last_Sent_At, r.emailLastSentAt, r.Ack_Email_Sent_At, r.ackEmailSentAt, r.Last_Contact_Type, r.lastContactType, r.Last_Contact_Result, r.lastContactResult, "");
++    }
++    function opsCommunicationNextActionDate_(row){
++      var r = row || {};
++      return opsFirstNonBlank_(r.Email_Next_Action_Date, r.emailNextActionDate, r.nextActionDate, "");
++    }
++    function opsCommunicationHasEmail_(row){
++      return !!opsCommunicationEmail_(row);
++    }
++    function opsCommunicationHasPhone_(row){
++      return !!opsCommunicationPhone_(row);
++    }
++    function opsCommunicationRecentlyContacted_(row){
++      return !!(opsCommunicationLastContactEvidence_(row) || opsCommunicationNextActionDate_(row));
+     }
+     function opsCommunicationQueueDefinitions_(){
+       return [
+-        { key:"ready_to_contact", label:"Ready to Contact", messageType:"reminder", actionLevel:"Operator preview only / Operations Admin gated", countAvailable:true, meaning:"Loaded rows with an email and no visible bounce/suppression issue.", next:"Preview reminder or selected queue action; send only through existing operational gates.", test:function(r){ return opsCommunicationHasEmail_(r) && !opsHasEmailIssue_(r); } },
+-        { key:"missing_documents", label:"Missing Documents", messageType:"docs_missing", actionLevel:"Operations Admin gated", countAvailable:true, meaning:"Loaded rows in the document/eligibility workflow or portal-submitted rows without verified documents.", next:"Preview Missing Documents; send only through the existing single-applicant gate.", test:function(r){ return opsWorkflowStageKey_(r) === "docs" || (opsIsYes_(r.Portal_Submitted) && !opsIsYes_(r.Docs_Verified)); } },
++        { key:"ready_to_contact", label:"Actionable Now / Ready to Contact", messageType:"reminder", actionLevel:"Operator preview only / Operations Admin gated", countAvailable:true, meaning:"Loaded rows with an email, no visible bounce/suppression issue, no recent contact evidence, and no active cooldown.", next:"Preview reminder or selected queue action; send only through existing operational gates.", test:function(r){ return opsCommunicationHasEmail_(r) && !opsHasEmailIssue_(r) && !opsCommunicationRecentlyContacted_(r) && !opsCommunicationCooldownActive_(r) && opsCommunicationDocumentState_(r) !== "awaiting_uploads" && opsCommunicationDocumentState_(r) !== "uploaded_review_required" && opsCommunicationDocumentState_(r) !== "correction_required"; } },
++        { key:"missing_documents_due", label:"Missing Documents Reminder Due", messageType:"docs_missing", actionLevel:"Operations Admin gated", countAvailable:true, meaning:"Awaiting uploads / document evidence pending rows where a reminder is due now.", next:"Preview Missing Documents Reminder; send only through the existing single-applicant gate.", test:function(r){ return opsCommunicationDocumentState_(r) === "awaiting_uploads" && !opsCommunicationRecentlyContacted_(r) && !opsCommunicationCooldownActive_(r) && (opsCommunicationHasEmail_(r) || opsCommunicationHasPhone_(r)); } },
++        { key:"missing_documents_waiting", label:"Missing Documents Waiting / Cooldown", messageType:"docs_missing", actionLevel:"wait / blocked", countAvailable:true, meaning:"Awaiting uploads / document evidence pending rows that are still waiting after a recent contact or active cooldown.", next:"Wait, review timeline, or contact applicant manually when appropriate.", test:function(r){ return opsCommunicationDocumentState_(r) === "awaiting_uploads" && (opsCommunicationRecentlyContacted_(r) || opsCommunicationCooldownActive_(r)); } },
++        { key:"uploaded_review_required", label:"Uploaded / Review Required", messageType:"custom_email", actionLevel:"review bridge", countAvailable:true, meaning:"Files appear present and need review, or uploaded evidence appears wrong or incomplete.", next:"Open document review. Do not treat this as reminder-ready until review completes.", test:function(r){ var state = opsCommunicationDocumentState_(r); return state === "uploaded_review_required" || state === "correction_required"; } },
+         { key:"docs_quote_ready", label:"Docs Quote Ready", messageType:"quote_fee_estimate", actionLevel:"unavailable / follow-up needed", countAvailable:false, meaning:"Quote / Fee Estimate workflow marker surfaced for OPS visibility.", next:"Quote / Fee Estimate - backend exists, OPS wiring pending.", test:function(){ return false; } },
+-        { key:"invoice_payment", label:"Invoice / Payment Follow-Up", messageType:"payment_followup", actionLevel:"Operations Admin gated", countAvailable:true, meaning:"Loaded rows in payment or invoice follow-up stages.", next:"Preview Invoice Reminder / Payment Follow-Up through the existing single-applicant gate.", test:function(r){ var stage = opsWorkflowStageKey_(r); return stage === "payment" || stage === "invoice"; } },
+-        { key:"portal_access", label:"Portal Access / Reminder", messageType:"legacy_invite", actionLevel:"Operations Admin gated", countAvailable:true, meaning:"Loaded rows that appear to need portal access or a general portal reminder.", next:"Preview Portal Access or General Reminder; send only through existing gates.", test:function(r){ var stage = opsWorkflowStageKey_(r); return stage === "fd_received" || stage === "portal"; } },
++        { key:"invoice_payment", label:"Invoice / Payment Follow-Up", messageType:"payment_followup", actionLevel:"Operations Admin gated", countAvailable:true, meaning:"Loaded rows in payment or invoice follow-up stages that are not currently blocked by recent contact or cooldown.", next:"Preview Invoice Reminder / Payment Follow-Up through the existing single-applicant gate.", test:function(r){ var stage = opsWorkflowStageKey_(r); return (stage === "payment" || stage === "invoice") && !opsCommunicationRecentlyContacted_(r) && !opsCommunicationCooldownActive_(r); } },
++        { key:"portal_access", label:"Portal Access / Reminder", messageType:"legacy_invite", actionLevel:"Operations Admin gated", countAvailable:true, meaning:"Loaded rows that appear to need portal access or a general portal reminder and are not waiting on recent contact or cooldown.", next:"Preview Portal Access or General Reminder; send only through existing gates.", test:function(r){ var stage = opsWorkflowStageKey_(r); return (stage === "fd_received" || stage === "portal") && !opsCommunicationRecentlyContacted_(r) && !opsCommunicationCooldownActive_(r); } },
+         { key:"email_issue", label:"Email Issue / Contact Correction", messageType:"custom_email", actionLevel:"Operations Admin gated handoff", countAvailable:true, meaning:"Bounce, suppression, invalid email, or correction-needed rows.", next:"Use Email Correction handoff / Admin Review. Do not send until contact is corrected.", test:function(r){ return opsHasEmailIssue_(r); } },
+         { key:"whatsapp_fallback", label:"WhatsApp Fallback", messageType:"custom_email", actionLevel:"Operations Admin gated export", countAvailable:true, meaning:"Loaded rows where phone/WhatsApp fallback is useful because email is missing or blocked.", next:"Export governed CSV only through existing WhatsApp fallback gate; no WhatsApp message is sent by this system.", test:function(r){ return opsCommunicationHasPhone_(r) && (!opsCommunicationHasEmail_(r) || opsHasEmailIssue_(r)); } },
+-        { key:"cooldown_recent", label:"Cooldown / Recently Contacted", messageType:"reminder", actionLevel:"Operator preview only", countAvailable:true, meaning:"Loaded rows with recent/next-action communication evidence.", next:"Inspect timeline, cooldown, and block reason before any escalation.", test:function(r){ return opsCommunicationRecentlyContacted_(r); } },
++        { key:"cooldown_recent", label:"Cooldown / Recently Contacted", messageType:"reminder", actionLevel:"wait / blocked", countAvailable:true, meaning:"Loaded rows with recent/next-action communication evidence or active next-send delay.", next:"Inspect timeline, cooldown, and block reason before any escalation. This queue is not actionable now.", test:function(r){ return opsCommunicationRecentlyContacted_(r) || opsCommunicationCooldownActive_(r); } },
+         { key:"legacy_summary", label:"Read-only Legacy Campaign Summary", messageType:"reminder", actionLevel:"unavailable / follow-up needed", countAvailable:false, meaning:"Read-only legacy campaign summary is acknowledged as a future OPS workflow entry.", next:"No legacy campaign live send/follow-up is exposed here.", test:function(){ return false; } }
+       ];
+     }
+@@ -3585,10 +3707,648 @@
+       if (d.countAvailable === false) return [];
+       return opsAllQueueRows_().filter(function(row){ return d.test(row || {}); });
+     }
++    function opsCommunicationQueueType_(def){
++      var key = String((def && def.key) || "");
++      if (key === "email_issue" || key === "whatsapp_fallback") return "Manual Follow-up";
++      if (key === "cooldown_recent" || key === "missing_documents_waiting") return "Waiting / Cooldown";
++      if (key === "uploaded_review_required") return "Review Required";
++      if (key === "docs_quote_ready" || key === "legacy_summary") return "Placeholder / Pending Wiring";
++      return "Actionable Now";
++    }
++    function opsCommunicationRowId_(row){
++      return String((row && (row.applicantId || row.ApplicantID)) || "").trim();
++    }
++    function opsCommunicationRowName_(row){
++      var r = row || {};
++      return opsFirstNonBlank_(r.name, r.Student_Name, [r.First_Name, r.Last_Name].filter(Boolean).join(" "), r.First_Name, "Unknown applicant");
++    }
++    function opsCommunicationNextEligible_(row, eligibility){
++      return opsFirstNonBlank_(
++        opsCommunicationNextActionDate_(row),
++        eligibility && eligibility.nextEligibleDate,
++        eligibility && eligibility.nextActionDate,
++        "No next eligible date loaded"
++      );
++    }
++    function opsCommunicationEligibility_(row){
++      var eligibility = {};
++      try { eligibility = deriveSendEligibility(row || {}) || {}; } catch (_err) { eligibility = {}; }
++      return eligibility;
++    }
++    function opsCommunicationCooldownActive_(row){
++      return !!(opsCommunicationEligibility_(row).active);
++    }
++    function opsCommunicationDocumentState_(row){
++      var evidence = opsDocumentEvidenceSummary_(row || {});
++      var label = String(evidence.label || "");
++      if (label === "Eligibility Cleared") return "eligibility_cleared";
++      if (label === "Correction Required") return "correction_required";
++      if (label === "Uploaded / Review Required") return "uploaded_review_required";
++      if (label === "Awaiting Uploads / Document Evidence Pending") return "awaiting_uploads";
++      return "unknown";
++    }
++    function opsCommunicationSummaryCounts_(){
++      var rows = opsAllQueueRows_();
++      var counts = { actionable:0, waiting:0, manual:0, review:0 };
++      rows.forEach(function(row){
++        if (opsHasEmailIssue_(row) || (!opsCommunicationHasEmail_(row) && opsCommunicationHasPhone_(row))) {
++          counts.manual += 1;
++          return;
++        }
++        if (opsCommunicationRecentlyContacted_(row) || opsCommunicationCooldownActive_(row)) {
++          counts.waiting += 1;
++          return;
++        }
++        var docState = opsCommunicationDocumentState_(row);
++        if (docState === "uploaded_review_required" || docState === "correction_required") {
++          counts.review += 1;
++          return;
++        }
++        counts.actionable += 1;
++      });
++      return counts;
++    }
++    function opsCommunicationRowAssessment_(def, row){
++      var d = def || opsSelectedCommunicationQueueDef_();
++      var r = row || {};
++      var emailIssue = opsHasEmailIssue_(r);
++      var hasEmail = opsCommunicationHasEmail_(r);
++      var hasPhone = opsCommunicationHasPhone_(r);
++      var eligibility = opsCommunicationEligibility_(r);
++      var cooldownBlocked = !!(eligibility && eligibility.active);
++      var nextEligible = opsCommunicationNextEligible_(r, eligibility);
++      var docState = opsCommunicationDocumentState_(r);
++      var primaryAction = "Review selected applicant";
++      var blocked = false;
++      var reason = "";
++      switch (String(d.key || "")) {
++        case "missing_documents_due":
++          primaryAction = hasEmail ? "Preview Missing Documents Reminder" : "Contact by phone / correct email";
++          blocked = !hasEmail || emailIssue || cooldownBlocked;
++          break;
++        case "missing_documents_waiting":
++          primaryAction = "Wait until next eligible send";
++          blocked = true;
++          reason = cooldownBlocked ? (eligibility.text || "Cooldown active") : "Reminder not due yet.";
++          break;
++        case "invoice_payment":
++          primaryAction = "Preview invoice reminder";
++          blocked = !hasEmail || emailIssue || cooldownBlocked;
++          break;
++        case "portal_access":
++          primaryAction = "Preview portal access or reminder";
++          blocked = !hasEmail || emailIssue || cooldownBlocked;
++          break;
++        case "email_issue":
++          primaryAction = "Manual correction handoff";
++          blocked = true;
++          reason = emailIssue ? (opsEmailIssueReason_(r) || "Correction required before email send.") : "Manual correction review required.";
++          break;
++        case "whatsapp_fallback":
++          primaryAction = "Contact by phone / export follow-up CSV";
++          blocked = !hasPhone;
++          reason = blocked ? "No phone / WhatsApp loaded." : "Client-side follow-up export can use loaded rows only.";
++          break;
++        case "cooldown_recent":
++          primaryAction = "Wait / review timeline";
++          blocked = true;
++          reason = cooldownBlocked ? (eligibility.text || "Cooldown active") : (opsCommunicationBlockReason_(r) || "Recently contacted");
++          break;
++        case "uploaded_review_required":
++          primaryAction = docState === "correction_required" ? "Open document review / correction" : "Open document review";
++          blocked = true;
++          reason = docState === "correction_required" ? "Uploaded evidence appears wrong, incomplete, or needs correction." : "Uploaded document evidence requires review before communication changes.";
++          break;
++        case "docs_quote_ready":
++          primaryAction = "Queue-specific action pending";
++          blocked = true;
++          reason = "Quote / Fee Estimate - backend exists, OPS wiring pending.";
++          break;
++        case "legacy_summary":
++          primaryAction = "Read-only legacy summary";
++          blocked = true;
++          reason = "Records unavailable in current loaded data.";
++          break;
++        default:
++          primaryAction = hasEmail ? "Preview queue action" : "Contact by phone / correct email";
++          blocked = !hasEmail || emailIssue || cooldownBlocked;
++          break;
++      }
++      if (!reason) {
++        if (!hasEmail && String(d.key || "") !== "whatsapp_fallback") reason = hasPhone ? "Email missing. Contact by phone or correct email first." : "No effective email loaded.";
++        else if (emailIssue) reason = opsEmailIssueReason_(r) || "Email issue requires correction.";
++        else if (cooldownBlocked) reason = eligibility.text || "Cooldown active";
++        else reason = "Eligible through existing gates.";
++      }
++      return {
++        eligible: !blocked,
++        blocked: blocked,
++        nextEligible: nextEligible,
++        reason: reason,
++        primaryAction: primaryAction
++      };
++    }
++    function opsCommunicationQueueSummary_(def){
++      var d = def || opsSelectedCommunicationQueueDef_();
++      if (d.countAvailable === false) {
++        return { loadedCount:null, eligibleCount:null, blockedCount:null };
++      }
++      var rows = opsCommunicationQueueRows_(d);
++      var eligible = 0;
++      var blocked = 0;
++      rows.forEach(function(row){
++        var assessment = opsCommunicationRowAssessment_(d, row);
++        if (assessment.eligible) eligible += 1;
++        else blocked += 1;
++      });
++      return { loadedCount:rows.length, eligibleCount:eligible, blockedCount:blocked };
++    }
++    function opsCommunicationPrimaryPreviewLabel_(def){
++      var d = def || opsSelectedCommunicationQueueDef_();
++      switch (String(d.key || "")) {
++        case "missing_documents_due": return "Preview Missing Documents Email for Selected Records";
++        case "missing_documents_waiting": return "Wait until next eligible send";
++        case "invoice_payment": return "Preview Invoice Reminder for Selected Records";
++        case "portal_access": return "Preview Portal Access Email for Selected Records";
++        case "ready_to_contact": return "Preview Reminder Email for Selected Records";
++        case "email_issue": return "Contact by phone / correct email";
++        case "whatsapp_fallback": return "Contact by phone / export follow-up CSV";
++        case "cooldown_recent": return "Review Cooldown State";
++        case "uploaded_review_required": return "Open Document Review";
++        case "docs_quote_ready": return "Preview Quote / Fee Estimate Status";
++        default: return "Preview Selected Message";
++      }
++    }
++    function opsCommunicationBulkSelectionSummary_(rows){
++      var selectedRows = rows || opsCommunicationSelectedRows_();
++      var emailLoaded = 0;
++      var emailMissing = 0;
++      var phoneLoaded = 0;
++      var phoneMissing = 0;
++      selectedRows.forEach(function(row){
++        if (opsCommunicationHasEmail_(row)) emailLoaded += 1;
++        else emailMissing += 1;
++        if (opsCommunicationHasPhone_(row)) phoneLoaded += 1;
++        else phoneMissing += 1;
++      });
++      return {
++        total:selectedRows.length,
++        emailLoaded:emailLoaded,
++        emailMissing:emailMissing,
++        phoneLoaded:phoneLoaded,
++        phoneMissing:phoneMissing
++      };
++    }
++    function opsCommunicationWorkflowSummary_(def, summary, selectedRows){
++      var d = def || opsSelectedCommunicationQueueDef_();
++      var queueSummary = summary || opsCommunicationQueueSummary_(d);
++      var cohort = opsCommunicationBulkSelectionSummary_(selectedRows || opsCommunicationSelectedRows_());
++      var selectedCount = cohort.total;
++      var previewMessage = "";
++      var sendMessage = "";
++      if (String(d.key || "") === "cooldown_recent" || String(d.key || "") === "missing_documents_waiting") {
++        previewMessage = "Waiting / cooldown queue. Review timeline and next eligible date.";
++      } else if (String(d.key || "") === "uploaded_review_required") {
++        previewMessage = "Review required queue. Open one applicant or Admin Review to inspect uploads.";
++      } else if (selectedCount > 1) {
++        previewMessage = "Bulk preview wiring pending. Select one applicant or use existing stage batch preview.";
++      } else if (!selectedCount) {
++        previewMessage = "Select one or more loaded records to prepare the next preview step.";
++      } else {
++        previewMessage = "Single-record preview can reuse the existing preview path.";
++      }
++      switch (String(d.key || "")) {
++        case "email_issue":
++          sendMessage = "Phone/message follow-up and email correction handoff only. Bulk email is not available.";
++          break;
++        case "whatsapp_fallback":
++          sendMessage = "Phone follow-up or governed CSV export only. No WhatsApp message is sent by this system.";
++          break;
++        case "cooldown_recent":
++          sendMessage = "Blocked / wait only. Review cooldown and next eligible date before any escalation.";
++          break;
++        case "missing_documents_waiting":
++          sendMessage = "Waiting / cooldown only. Missing documents reminder is not due yet.";
++          break;
++        case "uploaded_review_required":
++          sendMessage = "Review required only. Uploaded evidence needs review or correction before reminder/send decisions.";
++          break;
++        case "docs_quote_ready":
++          sendMessage = "Quote / Fee Estimate - backend exists, OPS wiring pending.";
++          break;
++        case "legacy_summary":
++          sendMessage = "Read-only legacy summary only. No live send path is exposed here.";
++          break;
++        default:
++          sendMessage = "Send queues stay behind existing operational gates. Operator is preview-only; Operations Admin/Super Admin may use the existing gated controls.";
++          break;
++      }
++      return {
++        selectMessage:"Selected: " + String(selectedCount) + " | Eligible: " + String(queueSummary.eligibleCount == null ? "Unavailable" : queueSummary.eligibleCount) + " | Blocked: " + String(queueSummary.blockedCount == null ? "Unavailable" : queueSummary.blockedCount),
++        previewMessage:previewMessage,
++        sendMessage:sendMessage,
++        recipientsMessage:"Email recipients: " + String(cohort.emailLoaded) + " loaded / " + String(cohort.emailMissing) + " missing"
++      };
++    }
++    function opsCommunicationMessageTypeLabel_(messageType){
++      var key = String(messageType || "").trim();
++      var match = opsTemplateDefinitions_().filter(function(t){ return t.type === key; })[0];
++      return match ? (match.name + " (" + key + ")") : (key ? key.replaceAll("_", " ") : "No message type");
++    }
++    function opsCommunicationStageMapping_(def, row){
++      var d = def || opsSelectedCommunicationQueueDef_();
++      var r = row || {};
++      switch (String(d.key || "")) {
++        case "missing_documents_due":
++        case "missing_documents_waiting":
++          return "Awaiting Uploads / Document Evidence Pending";
++        case "invoice_payment":
++          return "Payment Evidence Not Verified / Invoice / Books";
++        case "portal_access":
++          return "Portal Access / Portal Submitted";
++        case "email_issue":
++          return "Email Issue / Contact Correction";
++        case "whatsapp_fallback":
++          return "Manual Follow-up / WhatsApp Fallback";
++        case "cooldown_recent":
++          return "Cooldown / Recently Contacted";
++        case "uploaded_review_required":
++          return "Uploaded / Review Required";
++        case "docs_quote_ready":
++          return "Docs Quote Ready";
++        case "legacy_summary":
++          return "Read-only Legacy Campaign Summary";
++        default:
++          return opsCommunicationRowId_(r) ? opsCommunicationStageLabel_(r) : "Loaded actionable queue rows";
++      }
++    }
++    function opsCommunicationStageBatchStage_(def, row){
++      var d = def || opsSelectedCommunicationQueueDef_();
++      var r = row || {};
++      var loaded = opsFirstNonBlank_(r.Comm_Stage, "");
++      if (loaded && isBatchSendableStageUi_(loaded)) return String(loaded).trim().toUpperCase();
++      switch (String(d.key || "")) {
++        case "ready_to_contact": return "REMINDER_DUE";
++        case "missing_documents_due": return "DOCS_REQUIRED";
++        case "invoice_payment": return "PAYMENT_REQUIRED";
++        case "portal_access": return "INVITED_AWAITING_RESPONSE";
++        default: return "";
++      }
++    }
++    function opsCommunicationStageBatchLabel_(def, row){
++      var stage = opsCommunicationStageBatchStage_(def, row);
++      return stage || "No existing stage batch mapping";
++    }
++    function opsPrepareStageBatchFromCommunicationQueue_(runPreview){
++      var def = opsSelectedCommunicationQueueDef_();
++      var selectedRows = opsCommunicationSelectedRows_();
++      var displayRow = selectedRows.length === 1 ? selectedRows[0] : (selectedRows[0] || opsApplicantContextRow_() || {});
++      var stage = opsCommunicationStageBatchStage_(def, displayRow);
++      if (!stage) {
++        setOpsResult_("opsCommunicationResult", { result:"BLOCKED", queue:def.label, blockReason:"No existing stage batch mapping is available for this queue." }, "Queue Stage Batch");
++        renderOpsCommunicationWorkspace_();
++        return;
++      }
++      batchState.selectedStage = stage;
++      batchState.priority = mapStagePriorityUi_(stage);
++      batchState.messageType = getBatchMessageTypeForStageUi_(stage);
++      batchState.sendable = isBatchSendableStageUi_(stage);
++      batchState.disabledReason = batchState.sendable ? "" : "No batch message is supported for this stage.";
++      resetBatchPreviewState_(false);
++      renderBatchPanel();
++      renderOpsCommunicationWorkspace_();
++      setOpsResult_("opsCommunicationResult", { result:"OPEN", queue:def.label, stage:stage, messageType:batchState.messageType || "", message:"Existing stage batch context prepared. Preview Cohort still uses existing role, cap, preview-cache, and backend gates." }, "Queue Stage Batch");
++      if (runPreview === true) previewStageBatchUi_();
++    }
++    function opsCommunicationWorkflowPreviewState_(def, displayId, selectedCount){
++      var d = def || opsSelectedCommunicationQueueDef_();
++      var msgType = String(d.messageType || opsSelectedTemplateType_() || "");
++      var result = opsActionState.previewResult || null;
++      var hasMatchingSinglePreview = selectedCount === 1
++        && !!displayId
++        && opsActionState.previewApplicantId === displayId
++        && opsActionState.previewMessageType === msgType
++        && result;
++      var resultLabel = result ? String(result.result || result.status || "UNKNOWN") : "None";
++      if (selectedCount > 1) {
++        return {
++          status:"Bulk preview pending",
++          last:"Bulk cohort not previewed in this panel",
++          diagnostics:"Preview Cohort: use existing stage batch preview after lifecycle stage selection. Send Stage Batch: gated until preview cache exists."
++        };
++      }
++      if (hasMatchingSinglePreview) {
++        return {
++          status:String(result.result || "").toUpperCase() === "PREVIEW" ? "Preview loaded" : "Preview returned " + resultLabel,
++          last:(opsActionState.previewTimestamp || "Preview time unavailable") + " / " + resultLabel,
++          diagnostics:"Preview Diagnostics: " + resultLabel + (result.debugId ? " / debugId " + String(result.debugId) : "")
++        };
++      }
++      return {
++        status:"Preview pending",
++        last:"No matching preview loaded",
++        diagnostics:"Preview Cohort: not loaded. Send Stage Batch: not available until existing preview gates pass."
++      };
++    }
++    function opsCommunicationWorkflowGateReason_(def, selectedRows, displayRow, assessment, summary){
++      var d = def || opsSelectedCommunicationQueueDef_();
++      var rows = selectedRows || [];
++      if (!rows.length) return "Select one or more loaded queue records.";
++      if (String(d.key || "") === "cooldown_recent" || String(d.key || "") === "missing_documents_waiting") return "Waiting/cooldown queue. Review timeline and next eligible send.";
++      if (String(d.key || "") === "email_issue") return "Email/contact correction required before applicant email send.";
++      if (String(d.key || "") === "whatsapp_fallback") return "Phone/WhatsApp fallback only. No direct WhatsApp send is implemented.";
++      if (String(d.key || "") === "docs_quote_ready") return "Quote / Fee Estimate - backend exists, OPS wiring pending.";
++      if (String(d.key || "") === "uploaded_review_required") return "Uploaded evidence requires review before communication changes.";
++      if (rows.length > 1) return opsCommunicationStageBatchStage_(d, displayRow) ? "Bulk cohort selected. Existing stage batch preview/send gates control Preview Cohort and Send Stage Batch." : "Bulk cohort selected, but no existing stage batch mapping is available.";
++      if (assessment && assessment.blocked) return assessment.reason;
++      if (!opsOperationalExecutionAllowed_()) return "Preview/read is available; send/export requires Operations Admin or Super Admin authority.";
++      return "Preview required before any existing gated send action.";
++    }
++    function opsCommunicationWorkflowSendable_(def, selectedRows, assessment){
++      var d = def || opsSelectedCommunicationQueueDef_();
++      var rows = selectedRows || [];
++      if (!rows.length) return "NO - select records";
++      if (String(d.key || "") === "email_issue" || String(d.key || "") === "whatsapp_fallback") return "NO EMAIL SEND - manual/export path only";
++      if (String(d.key || "") === "cooldown_recent" || String(d.key || "") === "missing_documents_waiting") return "NO - waiting/cooldown";
++      if (String(d.key || "") === "docs_quote_ready" || String(d.key || "") === "uploaded_review_required") return "NO - review/pending wiring";
++      if (rows.length > 1) return opsCommunicationStageBatchStage_(d, rows[0] || {}) ? "BULK VIA EXISTING STAGE BATCH GATES" : "NO - no stage batch mapping";
++      return assessment && assessment.eligible ? "YES AFTER PREVIEW + EXISTING GATES" : "NO - blocked";
++    }
++    function opsCommunicationWorkflowNextStep_(def, selectedRows, assessment){
++      var d = def || opsSelectedCommunicationQueueDef_();
++      var rows = selectedRows || [];
++      if (!rows.length) return "Select queue records.";
++      if (String(d.key || "") === "cooldown_recent" || String(d.key || "") === "missing_documents_waiting") return "Wait or review timeline; do not send now.";
++      if (String(d.key || "") === "email_issue") return "Open Email Correction Handoff or export phone follow-up.";
++      if (String(d.key || "") === "whatsapp_fallback") return "Export WhatsApp CSV through existing governed path.";
++      if (String(d.key || "") === "docs_quote_ready") return "Stop: Quote / Fee Estimate wiring is pending.";
++      if (String(d.key || "") === "uploaded_review_required") return "Open document review before any reminder/send decision.";
++      if (rows.length > 1) return opsCommunicationStageBatchStage_(d, rows[0] || {}) ? "Prepare the mapped stage batch, then Preview Cohort if authorized." : "Use selected records for review/export only; no existing batch mapping is available.";
++      return assessment && assessment.eligible ? "Preview the recommended message for the selected applicant." : "Resolve the block reason before preview/send.";
++    }
++    function opsCommunicationPrimaryActionHtml_(def, selectedCount){
++      var d = def || opsSelectedCommunicationQueueDef_();
++      var hasSelection = selectedCount > 0;
++      var batchStage = opsCommunicationStageBatchStage_(d, opsCommunicationSelectedRows_()[0] || opsApplicantContextRow_() || {});
++      if (selectedCount > 1 && batchStage) {
++        return "<button class='opsActionBtn primary live' type='button' data-ops-operational-write='1' data-ops-base-label='Preview Cohort' " + (opsOperationalExecutionAllowed_() ? "" : "disabled ") + "onclick='opsPrepareStageBatchFromCommunicationQueue_(true)'>Preview Cohort</button>";
++      }
++      switch (String(d.key || "")) {
++        case "ready_to_contact":
++          return "<button class='opsActionBtn primary' type='button' " + (hasSelection ? "" : "disabled ") + "onclick='opsPreviewSelectedCommunicationRows_()'>Preview Reminder</button>";
++        case "missing_documents_due":
++          return "<button class='opsActionBtn primary' type='button' " + (hasSelection ? "" : "disabled ") + "onclick='opsPreviewSelectedCommunicationRows_()'>Preview Missing Documents Request</button>";
++        case "invoice_payment":
++          return "<button class='opsActionBtn primary' type='button' " + (hasSelection ? "" : "disabled ") + "onclick='opsPreviewSelectedCommunicationRows_()'>Preview Invoice/Payment Reminder</button>";
++        case "portal_access":
++          return "<button class='opsActionBtn primary' type='button' " + (hasSelection ? "" : "disabled ") + "onclick='opsPreviewSelectedCommunicationRows_()'>Preview Portal Access Reminder</button>";
++        case "email_issue":
++          return "<button class='opsActionBtn primary' type='button' " + (hasSelection ? "" : "disabled ") + "onclick='opsOpenLegacyAdminReview_()'>Open Email Correction Handoff</button><button class='opsActionBtn' type='button' " + (hasSelection ? "" : "disabled ") + "onclick='opsExportSelectedCommunicationCsv_()'>Export phone follow-up only</button>";
++        case "whatsapp_fallback":
++          return "<button class='opsActionBtn primary live' type='button' data-ops-operational-write='1' data-ops-base-label='Export WhatsApp CSV' onclick='exportWhatsAppFallbackCsv_()'>Export WhatsApp CSV only</button>";
++        case "cooldown_recent":
++        case "missing_documents_waiting":
++          return "<button class='opsActionBtn primary' type='button' " + (hasSelection ? "" : "disabled ") + "onclick='opsRenderCommunicationTimeline_()'>Wait / Review Timeline only</button>";
++        case "docs_quote_ready":
++          return "<button class='opsActionBtn primary' type='button' disabled>Quote / Fee Estimate wiring pending</button>";
++        case "uploaded_review_required":
++          return "<button class='opsActionBtn primary' type='button' " + (hasSelection ? "" : "disabled ") + "onclick='opsOpenSelectedCommunicationApplicant_()'>Open Document Review</button>";
++        default:
++          return "<button class='opsActionBtn primary' type='button' " + (hasSelection ? "" : "disabled ") + "onclick='opsPreviewSelectedCommunicationRows_()'>" + esc(opsCommunicationPrimaryPreviewLabel_(d)) + "</button>";
++      }
++    }
++    function opsCommunicationQueueWorkflowPanelHtml_(def, summary, selectedRows, displayRow, assessment){
++      var d = def || opsSelectedCommunicationQueueDef_();
++      var rows = selectedRows || [];
++      var queueSummary = summary || opsCommunicationQueueSummary_(d);
++      var cohort = opsCommunicationBulkSelectionSummary_(rows);
++      var displayId = rows.length === 1 ? opsCommunicationRowId_(rows[0]) : "";
++      var preview = opsCommunicationWorkflowPreviewState_(d, displayId, rows.length);
++      var gateReason = opsCommunicationWorkflowGateReason_(d, rows, displayRow, assessment, queueSummary);
++      var sendable = opsCommunicationWorkflowSendable_(d, rows, assessment);
++      var nextStep = opsCommunicationWorkflowNextStep_(d, rows, assessment);
++      var mappedStage = opsCommunicationStageBatchStage_(d, displayRow);
++      var batchSize = "Batch size " + String(getStageBatchLimitUi_()) + " / " + (rows.length ? String(rows.length) + " selected" : "No selected records");
++      var stageBatchMatches = mappedStage && batchState.selectedStage === mappedStage;
++      var stageBatchState = stageBatchMatches && batchState.previewReady
++        ? ("Preview Cohort loaded: " + String(Number(batchState.previewEligible || 0)) + " eligible / request " + String(batchState.previewRequestId || "unknown"))
++        : (mappedStage ? "Preview Cohort not loaded for " + mappedStage : "Preview Cohort unavailable for this queue");
++      var sendStageState = stageBatchMatches && batchState.previewReady && batchState.sendable ? "Send Stage Batch gated after confirmation" : "Send Stage Batch unavailable until preview/gates pass";
++      var items = [
++        ["Selected queue", d.label],
++        ["Selected Stage", opsCommunicationStageBatchLabel_(d, displayRow)],
++        ["Selected lifecycle/stage mapping", opsCommunicationStageMapping_(d, displayRow)],
++        ["Recommended message type", opsCommunicationMessageTypeLabel_(d.messageType)],
++        ["Sendable", sendable],
++        ["Gate reason", gateReason],
++        ["Batch size / selected count", batchSize],
++        ["Eligible count", queueSummary.eligibleCount == null ? "Unavailable" : String(queueSummary.eligibleCount)],
++        ["Blocked count", queueSummary.blockedCount == null ? "Unavailable" : String(queueSummary.blockedCount)],
++        ["Recipient loaded/missing count", String(cohort.emailLoaded) + " email loaded / " + String(cohort.emailMissing) + " missing; " + String(cohort.phoneLoaded) + " phone loaded / " + String(cohort.phoneMissing) + " missing"],
++        ["Preview status", preview.status],
++        ["Last preview time/result", preview.last],
++        ["Preview Diagnostics", preview.diagnostics],
++        ["Preview Cohort", stageBatchState],
++        ["Send Stage Batch", sendStageState],
++        ["Next required step", nextStep]
++      ];
++      return "<div class='opsCommWorkflowPanel'>"
++        + "<div class='opsCommWorkflowTitle'>Queue Send Workflow</div>"
++        + "<div class='opsInfoGrid'>" + items.map(function(item){
++          return "<div class='opsInfoItem'><div class='k'>" + esc(item[0]) + "</div><div class='v'>" + esc(item[1]) + "</div></div>";
++        }).join("") + "</div>"
++        + "<div class='opsCommWorkflowButtons'>" + opsCommunicationPrimaryActionHtml_(d, rows.length) + "<button class='opsActionBtn' type='button' onclick='opsOpenSelectedCommunicationApplicant_()' " + (rows.length === 1 ? "" : "disabled ") + ">Open selected applicant</button><button class='opsActionBtn' type='button' onclick='opsClearCommunicationSelection_()'>Clear selection</button></div>"
++        + "</div>";
++    }
++    function opsCommunicationSelectedIds_(){
++      return Array.isArray(opsActionState.communicationSelectedIds) ? opsActionState.communicationSelectedIds.slice() : [];
++    }
++    function opsCommunicationSelectedRows_(){
++      var selected = {};
++      opsCommunicationSelectedIds_().forEach(function(id){ selected[String(id || "")] = true; });
++      return opsCommunicationQueueRows_().filter(function(row){ return selected[opsCommunicationRowId_(row)]; });
++    }
++    function opsBindSingleCommunicationSelection_(){
++      var selectedRows = opsCommunicationSelectedRows_();
++      if (selectedRows.length !== 1) return false;
++      var row = selectedRows[0];
++      var applicantId = opsCommunicationRowId_(row);
++      if (!applicantId) return false;
++      opsSelectedApplicantId = applicantId;
++      opsSelectedApplicantName = opsCommunicationRowName_(row);
++      opsSelectedApplicantExplicit = true;
++      opsApplicantDetailCache = null;
++      opsClearSelectedActionState_();
++      return true;
++    }
++    function opsSetCommunicationSelectedIds_(ids){
++      var next = [];
++      var seen = {};
++      (ids || []).forEach(function(id){
++        var key = String(id || "").trim();
++        if (!key || seen[key]) return;
++        seen[key] = true;
++        next.push(key);
++      });
++      opsActionState.communicationSelectedIds = next;
++    }
++    function opsSyncCommunicationSelection_(){
++      var available = {};
++      opsCommunicationQueueRows_().forEach(function(row){
++        var id = opsCommunicationRowId_(row);
++        if (id) available[id] = true;
++      });
++      opsSetCommunicationSelectedIds_(opsCommunicationSelectedIds_().filter(function(id){ return available[id]; }));
++    }
++    function opsToggleCommunicationRowSelection_(applicantId){
++      var key = String(applicantId || "").trim();
++      if (!key) return;
++      var next = opsCommunicationSelectedIds_();
++      var idx = next.indexOf(key);
++      if (idx >= 0) next.splice(idx, 1);
++      else next.push(key);
++      opsSetCommunicationSelectedIds_(next);
++      if (opsBindSingleCommunicationSelection_()) {
++        renderOpsSelectedApplicantContext_();
++        renderOpsClassroomChecklist_();
++        return;
++      }
++      renderOpsCommunicationWorkspace_();
++    }
++    function opsSelectAllEligibleCommunicationRows_(){
++      var rows = opsCommunicationQueueRows_();
++      var def = opsSelectedCommunicationQueueDef_();
++      var ids = rows.filter(function(row){
++        return opsCommunicationRowAssessment_(def, row).eligible;
++      }).map(function(row){ return opsCommunicationRowId_(row); });
++      opsSetCommunicationSelectedIds_(ids);
++      if (opsBindSingleCommunicationSelection_()) {
++        renderOpsSelectedApplicantContext_();
++        renderOpsClassroomChecklist_();
++        return;
++      }
++      renderOpsCommunicationWorkspace_();
++    }
++    function opsClearCommunicationSelection_(){
++      opsSetCommunicationSelectedIds_([]);
++      renderOpsCommunicationWorkspace_();
++    }
++    function opsOpenSelectedCommunicationApplicant_(){
++      var rows = opsCommunicationSelectedRows_();
++      if (!rows.length) {
++        setOpsResult_("opsCommunicationResult", { result:"BLOCKED", blockCode:"NO_SELECTION", blockReason:"Select at least one loaded queue record first." }, "Open Selected Applicant");
++        return;
++      }
++      if (rows.length > 1) {
++        setOpsResult_("opsCommunicationResult", { result:"GUIDANCE", selectedCount:rows.length, message:"Open selected applicant works with one selected record at a time." }, "Open Selected Applicant");
++        return;
++      }
++      var row = rows[0];
++      opsSelectApplicantContext_(opsCommunicationRowId_(row), opsCommunicationRowName_(row));
++    }
++    function opsPreviewSelectedCommunicationRows_(){
++      var rows = opsCommunicationSelectedRows_();
++      if (!rows.length) {
++        setOpsResult_("opsCommunicationResult", { result:"BLOCKED", blockCode:"NO_SELECTION", blockReason:"Select at least one loaded queue record first." }, "Preview Selected");
++        return;
++      }
++      if (rows.length > 1) {
++        setOpsResult_("opsCommunicationResult", { result:"GUIDANCE", selectedCount:rows.length, message:"Bulk preview wiring pending." }, "Preview Selected");
++        return;
++      }
++      var row = rows[0];
++      opsSelectApplicantContext_(opsCommunicationRowId_(row), opsCommunicationRowName_(row));
++      opsPreviewSelectedCommunicationAction_();
++    }
++    function opsExportSelectedCommunicationCsv_(){
++      if (opsBlockOperationalAction_("opsCommunicationResult", "Export Selected Follow-Up CSV")) return;
++      var rows = opsCommunicationSelectedRows_();
++      if (!rows.length) {
++        setOpsResult_("opsCommunicationResult", { result:"BLOCKED", blockCode:"NO_SELECTION", blockReason:"Select at least one loaded queue record first." }, "Export Selected Follow-Up CSV");
++        return;
++      }
++      var def = opsSelectedCommunicationQueueDef_();
++      var lines = [["Queue","ApplicantID","Name","Email","Phone","Lifecycle Stage","Last Contact","Cooldown / Next Eligible","Block Reason","Primary Action"]];
++      rows.forEach(function(row){
++        var assessment = opsCommunicationRowAssessment_(def, row);
++        lines.push([
++          def.label,
++          opsCommunicationRowId_(row),
++          opsCommunicationRowName_(row),
++          opsCommunicationEmail_(row),
++          opsCommunicationPhone_(row),
++          opsCommunicationStageLabel_(row),
++          opsCommunicationLastContact_(row),
++          assessment.nextEligible,
++          assessment.reason,
++          assessment.primaryAction
++        ]);
++      });
++      var csv = lines.map(function(line){
++        return line.map(function(value){
++          return "\"" + String(value == null ? "" : value).replace(/"/g, "\"\"") + "\"";
++        }).join(",");
++      }).join("\r\n");
++      var blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
++      var url = window.URL.createObjectURL(blob);
++      var link = document.createElement("a");
++      link.href = url;
++      link.download = "ops-communications-" + String(def.key || "queue") + "-selected.csv";
++      document.body.appendChild(link);
++      link.click();
++      document.body.removeChild(link);
++      window.URL.revokeObjectURL(url);
++      setOpsResult_("opsCommunicationResult", { result:"LOCAL_EXPORT_ONLY", queue:def.label, selectedCount:rows.length, message:"Client-side CSV export completed from already loaded queue rows only." }, "Export Selected Follow-Up CSV");
++    }
++    function opsToggleCommunicationTemplates_(){
++      opsActionState.communicationTemplatesExpanded = !opsActionState.communicationTemplatesExpanded;
++      renderOpsCommunicationTemplatePanel_();
++    }
++    function renderOpsCommunicationTemplatePanel_(){
++      var body = document.getElementById("opsCommunicationTemplatePanelBody");
++      var label = document.getElementById("opsCommunicationTemplateToggleLabel");
++      var expanded = opsActionState.communicationTemplatesExpanded === true;
++      if (body) body.classList.toggle("hidden", !expanded);
++      if (label) label.textContent = expanded ? "Template Quick Look ▾" : "Template Quick Look ▸";
++    }
++    function opsToggleCommunicationOtherActions_(){
++      opsActionState.communicationOtherActionsExpanded = !opsActionState.communicationOtherActionsExpanded;
++      renderOpsCommunicationOtherActionsPanel_();
++    }
++    function renderOpsCommunicationOtherActionsPanel_(){
++      var body = document.getElementById("opsCommunicationOtherActionsBody");
++      var label = document.getElementById("opsCommunicationOtherActionsToggleLabel");
++      var expanded = opsActionState.communicationOtherActionsExpanded === true;
++      if (body) body.classList.toggle("hidden", !expanded);
++      if (label) label.textContent = expanded ? "Other existing actions ▾" : "Other existing actions ▸";
++    }
++    function opsToggleCommunicationBulkPath_(){
++      opsActionState.communicationBulkPathExpanded = !opsActionState.communicationBulkPathExpanded;
++      renderOpsCommunicationBulkPathPanel_();
++    }
++    function renderOpsCommunicationBulkPathPanel_(){
++      var body = document.getElementById("opsCommunicationBulkPathBody");
++      var label = document.getElementById("opsCommunicationBulkPathToggleLabel");
++      var expanded = opsActionState.communicationBulkPathExpanded === true;
++      if (body) body.classList.toggle("hidden", !expanded);
++      if (label) label.textContent = expanded ? "Bulk Communication Path ▾" : "Bulk Communication Path ▸";
++    }
++    function opsToggleCommunicationStatusStrip_(){
++      opsActionState.communicationStatusStripExpanded = !opsActionState.communicationStatusStripExpanded;
++      renderOpsCommunicationStatusStripPanel_();
++    }
++    function renderOpsCommunicationStatusStripPanel_(){
++      var body = document.getElementById("opsCommunicationStatusStripBody");
++      var label = document.getElementById("opsCommunicationStatusStripToggleLabel");
++      var expanded = opsActionState.communicationStatusStripExpanded === true;
++      if (body) body.classList.toggle("hidden", !expanded);
++      if (label) label.textContent = expanded ? "Timeline / Cooldown / Blocker / Role Status ▾" : "Timeline / Cooldown / Blocker / Role Status ▸";
++    }
+     function opsSetCommunicationQueue_(key){
+       var defs = opsCommunicationQueueDefinitions_();
+       var def = defs.filter(function(item){ return item.key === key; })[0] || defs[0];
+       opsActionState.communicationQueue = def.key;
++      opsSetCommunicationSelectedIds_([]);
+       if (def.messageType) opsActionState.templateType = def.messageType;
+       renderOpsCommunicationWorkspace_();
+       renderOpsTemplateBrowser_();
+@@ -3600,33 +4360,49 @@
+       if (!list) return;
+       var selected = String(opsActionState.communicationQueue || "ready_to_contact");
+       var defs = opsCommunicationQueueDefinitions_();
++      var summaryCounts = opsCommunicationSummaryCounts_();
+       list.innerHTML = defs.map(function(def){
+-        var countText = def.countAvailable === false ? "Count unavailable in current loaded data" : String(opsCommunicationQueueRows_(def).length);
+-        return "<button class='opsFilterBtn" + (selected === def.key ? " active" : "") + "' type='button' data-comm-queue='" + esc(def.key) + "'>"
+-          + "<strong>" + esc(def.label) + "</strong><br><span class='opsWorkflowSecondary'>" + esc(countText) + "</span></button>";
++        var summary = opsCommunicationQueueSummary_(def);
++        var countText = summary.loadedCount == null ? "Records unavailable" : String(summary.loadedCount);
++        return "<button class='opsCommQueueCard" + (selected === def.key ? " active" : "") + "' type='button' data-comm-queue='" + esc(def.key) + "'>"
++          + "<div class='opsCommQueueTop'><div class='opsCommQueueLabel'>" + esc(def.label) + "</div><div class='opsCommQueueCount'>" + esc(countText) + "</div></div>"
++          + "<div class='opsBadgeStack'><span class='opsStatusPill info'>" + esc(opsCommunicationQueueType_(def)) + "</span><span class='opsStatusPill muted'>" + esc(def.actionLevel) + "</span></div>"
++          + "<div class='opsCommQueueMeta'><strong>Meaning:</strong> " + esc(def.meaning) + "</div>"
++          + "<div class='opsCommQueueMeta'><strong>Next action:</strong> " + esc(def.next) + "</div>"
++          + "</button>";
+       }).join("");
+-      Array.prototype.slice.call(list.querySelectorAll(".opsFilterBtn")).forEach(function(btn){
++      Array.prototype.slice.call(list.querySelectorAll(".opsCommQueueCard")).forEach(function(btn){
+         btn.addEventListener("click", function(){ opsSetCommunicationQueue_(String(btn.getAttribute("data-comm-queue") || "")); });
+       });
+       var def = opsSelectedCommunicationQueueDef_();
+-      var countText = def.countAvailable === false ? "Count unavailable in current loaded data" : String(opsCommunicationQueueRows_(def).length);
++      var summary = opsCommunicationQueueSummary_(def);
+       if (detail) {
+         detail.innerHTML = "<strong>" + esc(def.label) + "</strong>"
+-          + "<div style='margin-top:6px;'>Count: " + esc(countText) + "</div>"
++          + "<div class='opsBadgeStack' style='margin-top:8px;'><span class='opsStatusPill info'>Actionable now: " + esc(String(summaryCounts.actionable)) + "</span><span class='opsStatusPill warn'>Waiting / cooldown: " + esc(String(summaryCounts.waiting)) + "</span><span class='opsStatusPill muted'>Manual correction: " + esc(String(summaryCounts.manual)) + "</span><span class='opsStatusPill ok'>Review required: " + esc(String(summaryCounts.review)) + "</span></div>"
++          + "<div style='margin-top:6px;'>Count: " + esc(summary.loadedCount == null ? "Count unavailable in current loaded data" : String(summary.loadedCount)) + "</div>"
++          + "<div>Queue type: " + esc(opsCommunicationQueueType_(def)) + "</div>"
+           + "<div>Meaning: " + esc(def.meaning) + "</div>"
+           + "<div>Next action: " + esc(def.next) + "</div>"
+-          + "<div>Action level: " + esc(def.actionLevel) + "</div>";
++          + "<div>Action level: " + esc(def.actionLevel) + "</div>"
++          + "<div>Queue-specific action: " + esc(def.next) + "</div>";
+       }
+     }
+     function opsCommunicationStageLabel_(row){
+       var stage = opsWorkflowStageKey_(row || {});
++      if (stage === "docs") {
++        var docState = opsCommunicationDocumentState_(row);
++        if (docState === "awaiting_uploads") return "Awaiting Uploads / Document Evidence Pending";
++        if (docState === "uploaded_review_required") return "Uploaded / Review Required";
++        if (docState === "correction_required") return "Correction Required";
++        if (docState === "eligibility_cleared") return "Eligibility Cleared";
++      }
+       var def = opsLifecycleDefinitions_().filter(function(item){ return item.key === stage; })[0];
+       return def ? def.name : (stage || "Unknown");
+     }
+     function opsCommunicationLastContact_(row){
+       var r = row || {};
+-      var type = opsFirstNonBlank_(r.Last_Contact_Type, r.Last_Contact_Result, r.Email_Status, "");
+-      var at = opsFirstNonBlank_(r.Last_Contacted_At, r.Email_Last_Sent_At, r.Ack_Email_Sent_At, "");
++      var type = opsFirstNonBlank_(r.Last_Contact_Type, r.lastContactType, r.Last_Contact_Result, r.lastContactResult, r.Email_Status, r.emailStatus, "");
++      var at = opsFirstNonBlank_(r.Last_Contacted_At, r.lastContactedAt, r.Email_Last_Sent_At, r.emailLastSentAt, r.Ack_Email_Sent_At, r.ackEmailSentAt, "");
+       var subject = opsFirstNonBlank_(r.Last_Contact_Subject, "");
+       return [type, at, subject].filter(Boolean).join(" | ") || "No loaded communication evidence";
+     }
+@@ -3640,53 +4416,128 @@
+     }
+     function renderOpsCommunicationSelectedPane_(){
+       var pane = document.getElementById("opsCommunicationSelectedPane");
++      var workflow = document.getElementById("opsQueueSendWorkflowPanel");
+       var records = document.getElementById("opsCommunicationQueueRecords");
+       var strip = document.getElementById("opsCommunicationStatusStrip");
+       var row = opsApplicantContextRow_() || {};
+       var id = opsApplicantId_();
+       var def = opsSelectedCommunicationQueueDef_();
+       var rows = opsCommunicationQueueRows_(def);
++      var summary = opsCommunicationQueueSummary_(def);
++      opsSyncCommunicationSelection_();
++      var selectedIds = opsCommunicationSelectedIds_();
++      var selectedRows = opsCommunicationSelectedRows_();
++      var selectedCount = selectedRows.length;
++      var selectedRow = selectedRows.length === 1 ? selectedRows[0] : null;
++      var displayRow = selectedRow || row;
++      var displayId = selectedRow ? opsCommunicationRowId_(selectedRow) : id;
++      var selectedAssessment = displayRow ? opsCommunicationRowAssessment_(def, displayRow) : null;
++      var bulkSummary = opsCommunicationBulkSelectionSummary_(selectedRows);
++      var workflowSummary = opsCommunicationWorkflowSummary_(def, summary, selectedRows);
++      if (workflow) workflow.innerHTML = opsCommunicationQueueWorkflowPanelHtml_(def, summary, selectedRows, displayRow, selectedAssessment);
+       if (pane) {
+-        var email = opsFirstNonBlank_(row.effectiveEmail, row.Effective_Email, row.Parent_Email_Corrected, row.Parent_Email, "No email loaded");
+-        var phone = opsFirstNonBlank_(row.Parent_Phone, row.Phone, row.Mobile, row.WhatsApp, row.Contact_Number, row.Phone_Number, "No phone/WhatsApp loaded");
+-        pane.innerHTML = [
+-          ["ApplicantID", id || "No applicant selected"],
+-          ["Name", opsApplicantName_() || opsFirstNonBlank_(row.name, row.Student_Name, row.First_Name, "Unknown")],
++        var email = opsFirstNonBlank_(opsCommunicationEmail_(displayRow), "No email loaded");
++        var phone = opsFirstNonBlank_(opsCommunicationPhone_(displayRow), "No phone/WhatsApp loaded");
++        var items = selectedCount > 1 ? [
++          ["Selected queue", def.label],
++          ["Bulk cohort selected", String(selectedCount) + " records"],
++          ["Email recipients", String(bulkSummary.emailLoaded) + " loaded / " + String(bulkSummary.emailMissing) + " missing"],
++          ["Phone / WhatsApp", String(bulkSummary.phoneLoaded) + " loaded / " + String(bulkSummary.phoneMissing) + " missing"],
++          ["Single applicant", "none"],
++          ["Bulk selection state", "Bulk selection active"],
++          ["Selected template / queue action", def.label + " / " + opsSelectedTemplateType_()],
++          ["Role gate result", opsCommunicationRoleStatus_()]
++        ] : [
++          ["Selected queue", def.label],
++          ["Selected count", String(selectedCount)],
++          ["ApplicantID", displayId || "No applicant selected"],
++          ["Name", selectedRow ? opsCommunicationRowName_(selectedRow) : (opsApplicantName_() || opsFirstNonBlank_(displayRow.name, displayRow.Student_Name, displayRow.First_Name, "Unknown"))],
+           ["Email", email],
+           ["Phone / WhatsApp", phone],
+-          ["Lifecycle stage", id ? opsCommunicationStageLabel_(row) : "No applicant selected"],
+-          ["Communication status", id ? deriveCommunicationStatus(row) : "No applicant selected"],
+-          ["Last communication", id ? opsCommunicationLastContact_(row) : "No applicant selected"],
+-          ["Cooldown / next eligible send", opsFirstNonBlank_(row.Email_Next_Action_Date, "No next eligible date loaded")],
+-          ["Bounce / suppression", opsHasEmailIssue_(row) ? (opsEmailIssueReason_(row) || "Email issue detected") : "No loaded suppression"],
++          ["Lifecycle stage", displayId ? opsCommunicationStageLabel_(displayRow) : "No applicant selected"],
++          ["Communication status", displayId ? deriveCommunicationStatus(displayRow) : "No applicant selected"],
++          ["Last communication", displayId ? opsCommunicationLastContact_(displayRow) : "No applicant selected"],
++          ["Cooldown / next eligible send", selectedAssessment ? selectedAssessment.nextEligible : "No next eligible date loaded"],
++          ["Bounce / suppression", opsHasEmailIssue_(displayRow) ? (opsEmailIssueReason_(displayRow) || "Email issue detected") : "No loaded suppression"],
+           ["Selected template / queue action", def.label + " / " + opsSelectedTemplateType_()],
+-          ["Block reason", id ? opsCommunicationBlockReason_(row) : "No applicant selected"],
++          ["Block reason", selectedAssessment ? selectedAssessment.reason : "No applicant selected"],
+           ["Role gate result", opsCommunicationRoleStatus_()]
+-        ].map(function(item){
++        ];
++        pane.innerHTML = items.map(function(item){
+           return "<div class='opsInfoItem'><div class='k'>" + esc(item[0]) + "</div><div class='v'>" + esc(item[1]) + "</div></div>";
+         }).join("");
+       }
+       if (records) {
++        var queueName = def.label;
++        var queueSummaryPills = [
++          "<span class='opsStatusPill info'>Loaded count: " + esc(summary.loadedCount == null ? "Records unavailable in current loaded data." : String(summary.loadedCount)) + "</span>",
++          "<span class='opsStatusPill muted'>Eligible count: " + esc(summary.eligibleCount == null ? "Unavailable" : String(summary.eligibleCount)) + "</span>",
++          "<span class='opsStatusPill warn'>Blocked count: " + esc(summary.blockedCount == null ? "Unavailable" : String(summary.blockedCount)) + "</span>",
++          "<span class='opsStatusPill ok'>Selected count: " + esc(String(selectedCount)) + "</span>"
++        ].join("");
+         if (def.countAvailable === false) {
+-          records.innerHTML = "<div class='opsPlaceholder'>Count unavailable in current loaded data.</div>";
++          records.innerHTML = "<div class='opsCommSelectionBar'><div><strong>" + esc(queueName) + "</strong><div class='opsCommSelectionMeta'>" + queueSummaryPills + "</div></div><div class='opsCommActionBar'>"
++            + "<button class='opsActionBtn' type='button' onclick='opsSelectAllEligibleCommunicationRows_()'>Select all eligible</button>"
++            + "<button class='opsActionBtn' type='button' onclick='opsClearCommunicationSelection_()'>Clear selection</button>"
++            + "<button class='opsActionBtn' type='button' onclick='opsPreviewSelectedCommunicationRows_()'>Preview selected</button>"
++            + "<button class='opsActionBtn' type='button' onclick='opsOpenSelectedCommunicationApplicant_()'>Open selected applicant</button>"
++            + "<button class='opsActionBtn' type='button' onclick='opsExportSelectedCommunicationCsv_()'>Export selected follow-up CSV</button>"
++            + "</div></div>"
++            + "<div class='opsMeaningList opsCommActionSummary'><div class='opsMeaningItem'><strong>Queue-specific action</strong>" + esc(def.next) + "</div></div>"
++            + "<div class='opsPlaceholder' style='margin-top:12px;'>Records unavailable in current loaded data.</div>";
+         } else if (!rows.length) {
+-          records.innerHTML = "<div class='opsPlaceholder'>No loaded rows match this communication queue.</div>";
++          records.innerHTML = "<div class='opsCommSelectionBar'><div><strong>" + esc(queueName) + "</strong><div class='opsCommSelectionMeta'>" + queueSummaryPills + "</div></div><div class='opsCommActionBar'>"
++            + "<button class='opsActionBtn' type='button' onclick='opsSelectAllEligibleCommunicationRows_()'>Select all eligible</button>"
++            + "<button class='opsActionBtn' type='button' onclick='opsClearCommunicationSelection_()'>Clear selection</button>"
++            + "</div></div>"
++            + "<div class='opsMeaningList opsCommActionSummary'><div class='opsMeaningItem'><strong>Queue-specific action</strong>" + esc(def.next) + "</div></div>"
++            + "<div class='opsPlaceholder' style='margin-top:12px;'>No loaded records for this queue.</div>";
+         } else {
+-          records.innerHTML = rows.slice(0, 12).map(function(r){
+-            var rid = String(r.applicantId || r.ApplicantID || "");
+-            var name = String(r.name || r.Student_Name || r.First_Name || "Unknown applicant");
+-            var active = rid && rid === id;
+-            return "<button class='opsFilterBtn" + (active ? " active" : "") + "' type='button' onclick='opsSelectApplicantContext_(\"" + esc(rid) + "\",\"" + esc(name) + "\");renderOpsCommunicationWorkspace_();'>"
+-              + "<strong>" + esc(rid || "No ApplicantID") + "</strong> - " + esc(name)
+-              + "<br><span class='opsWorkflowSecondary'>" + esc(opsCommunicationStageLabel_(r)) + " | " + esc(opsCommunicationLastContact_(r)) + "</span></button>";
+-          }).join("");
++          var header = "<div class='opsCommSelectionBar'><div><strong>Selected queue: " + esc(queueName) + "</strong><div class='opsCommSelectionMeta'>" + queueSummaryPills + "</div></div><div class='opsCommActionBar'>"
++            + "<button class='opsActionBtn' type='button' onclick='opsSelectAllEligibleCommunicationRows_()'>Select all eligible</button>"
++            + "<button class='opsActionBtn' type='button' onclick='opsClearCommunicationSelection_()'>Clear selection</button>"
++            + "</div></div>";
++          var actionSummary = "<div class='opsMeaningList opsCommActionSummary'>"
++            + "<div class='opsMeaningItem'><strong>Queue-specific action</strong>" + esc(def.next) + "</div>"
++            + "<div class='opsMeaningItem'><strong>Meaning</strong>" + esc(def.meaning) + "</div>"
++            + "<div class='opsMeaningItem'><strong>Queue type</strong>" + esc(opsCommunicationQueueType_(def)) + "</div>"
++            + "</div>";
++          var table = "<div class='opsTableWrap opsCommTableWrap' style='margin-top:12px;'><table class='opsTable opsCommTable'><thead><tr>"
++            + "<th><input class='opsCommCheckbox' type='checkbox' aria-label='Select all eligible' onclick='if(this.checked){opsSelectAllEligibleCommunicationRows_();}else{opsClearCommunicationSelection_();}' " + (summary.eligibleCount > 0 && selectedCount === summary.eligibleCount ? "checked" : "") + "></th>"
++            + "<th>ApplicantID</th><th>Name</th><th>Email</th><th>Phone / WhatsApp</th><th>Lifecycle Stage</th><th>Last Contact</th><th>Cooldown / Next Eligible</th><th>Block Reason</th><th>Primary Action</th></tr></thead><tbody>"
++            + rows.map(function(r){
++              var rid = opsCommunicationRowId_(r);
++              var name = opsCommunicationRowName_(r);
++              var assessment = opsCommunicationRowAssessment_(def, r);
++              var isSelected = selectedIds.indexOf(rid) >= 0;
++              var isContext = rid && rid === id;
++              var emailValue = opsFirstNonBlank_(opsCommunicationEmail_(r), "No email loaded");
++              var phoneValue = opsFirstNonBlank_(opsCommunicationPhone_(r), "No phone/WhatsApp loaded");
++              return "<tr class='" + (isSelected || isContext ? "opsQueueSelectedRow" : "") + "'>"
++                + "<td><input class='opsCommCheckbox' type='checkbox' " + (isSelected ? "checked " : "") + "onclick='opsToggleCommunicationRowSelection_(\"" + esc(rid) + "\")' aria-label='Select " + esc(rid) + "'></td>"
++                + "<td><strong>" + esc(rid || "No ApplicantID") + "</strong></td>"
++                + "<td><div class='opsCommRowName'>" + esc(name) + "</div><div class='opsCommRowSub'>" + esc(isContext ? "Current selected applicant context" : "Queue record") + "</div></td>"
++                + "<td>" + esc(emailValue) + "</td>"
++                + "<td>" + esc(phoneValue) + "</td>"
++                + "<td>" + esc(opsCommunicationStageLabel_(r)) + "</td>"
++                + "<td>" + esc(opsCommunicationLastContact_(r)) + "</td>"
++                + "<td>" + esc(assessment.nextEligible) + "</td>"
++                + "<td>" + esc(assessment.reason) + "</td>"
++                + "<td>" + esc(assessment.primaryAction) + "</td>"
++                + "</tr>";
++            }).join("")
++            + "</tbody></table></div>";
++          records.innerHTML = header + actionSummary + table + "<div class='opsCommTableNote'>Selection state is client-side only. No new backend calls are created from this table.</div>";
+         }
+       }
+       if (strip) {
+         strip.innerHTML = [
+-          ["Timeline", id ? opsCommunicationLastContact_(row) : "No applicant selected", "info"],
+-          ["Cooldown", opsFirstNonBlank_(row.Email_Next_Action_Date, "No next eligible date loaded"), "muted"],
+-          ["Blocker", id ? opsCommunicationBlockReason_(row) : "No applicant selected", opsHasEmailIssue_(row) ? "warn" : "info"],
++          ["Selected queue", def.label, "info"],
++          ["Selected count", String(selectedCount), "ok"],
++          ["Bulk selection", selectedCount > 1 ? ("Bulk cohort selected: " + String(selectedCount)) : "Single-record or empty selection", "info"],
++          ["Timeline", selectedCount > 1 ? "Bulk selection active" : (displayId ? opsCommunicationLastContact_(displayRow) : "No applicant selected"), "info"],
++          ["Cooldown", selectedCount > 1 ? "Review per selected record in table" : (selectedAssessment ? selectedAssessment.nextEligible : "No next eligible date loaded"), "muted"],
++          ["Blocker", selectedCount > 1 ? workflowSummary.previewMessage : (displayId ? (selectedAssessment ? selectedAssessment.reason : opsCommunicationBlockReason_(displayRow)) : "No applicant selected"), selectedCount > 1 ? "warn" : (opsHasEmailIssue_(displayRow) ? "warn" : "info")],
+           ["Role action", opsCommunicationRoleStatus_(), opsOperationalExecutionAllowed_() ? "warn" : "muted"]
+         ].map(function(item){
+           return "<span class='opsStatusPill " + esc(item[2]) + "'>" + esc(item[0] + ": " + item[1]) + "</span>";
+@@ -3703,6 +4554,10 @@
+       setOpsValue_("commBulkSendable", batchState.sendable === true ? "YES" : (batchState.disabledReason || "NO"));
+     }
+     function renderOpsCommunicationWorkspace_(){
++      renderOpsCommunicationTemplatePanel_();
++      renderOpsCommunicationOtherActionsPanel_();
++      renderOpsCommunicationBulkPathPanel_();
++      renderOpsCommunicationStatusStripPanel_();
+       renderOpsCommunicationWorkQueues_();
+       renderOpsCommunicationSelectedPane_();
+       renderOpsCommunicationStatePanel_();
+@@ -3755,7 +4610,7 @@
+       var selected = opsSelectedTemplateType_();
+       var t = opsTemplateDefinitions_().filter(function(x){ return x.type === selected; })[0] || opsTemplateDefinitions_()[0];
+       var d = opsApplicantContextRow_() || {};
+-      var recipient = opsFirstNonBlank_(d.Effective_Email, d.Parent_Email_Corrected, d.Parent_Email, "");
++      var recipient = opsCommunicationEmail_(d);
+       var templateName = document.getElementById("opsCustomTemplateName");
+       var rec = document.getElementById("opsCustomRecipient");
+       var subj = document.getElementById("opsCustomSubject");
+@@ -3775,12 +4630,23 @@
+       var panel = document.getElementById("opsCommunicationStatePanel");
+       if (!panel) return;
+       var row = opsApplicantContextRow_() || {};
++      var def = opsSelectedCommunicationQueueDef_();
++      opsSyncCommunicationSelection_();
++      var selectedRows = opsCommunicationSelectedRows_();
++      var selectedCount = selectedRows.length;
++      var selectedRow = selectedRows.length === 1 ? selectedRows[0] : null;
++      var displayRow = selectedRow || row;
++      var displayId = selectedRow ? opsCommunicationRowId_(selectedRow) : opsApplicantId_();
++      var assessment = displayRow ? opsCommunicationRowAssessment_(def, displayRow) : null;
++      var bulkSummary = opsCommunicationBulkSelectionSummary_(selectedRows);
+       var selectedType = opsSelectedTemplateType_();
+       if (selectedType === "quote_fee_estimate") {
+         panel.innerHTML = [
+           "<strong>Quote / Fee Estimate</strong>",
++          "<br><strong>Selected queue:</strong> " + esc(def.label),
++          "<br><strong>Selected count:</strong> " + esc(String(selectedCount)),
+           "<br><strong>Status:</strong> Backend exists, OPS wiring pending",
+-          "<br><strong>ApplicantID:</strong> " + esc(opsApplicantId_() || "No applicant selected"),
++          "<br><strong>ApplicantID:</strong> " + esc(displayId || "No applicant selected"),
+           "<br><strong>Action:</strong> No quote sender is called from this surface.",
+           "<br><strong>Gate:</strong> Follow-up needed before OPS can preview/send quote safely."
+         ].join("");
+@@ -3788,33 +4654,59 @@
+       }
+       var payload = opsCustomEmailPayload_();
+       var approved = opsApplicantId_() === OPS_SAFE_MODE_APPROVED_APPLICANT_ID;
+-      var previewReady = opsActionState.previewApplicantId === opsApplicantId_()
++      var previewReady = opsActionState.previewApplicantId === displayId
+         && opsActionState.previewMessageType === selectedType
+         && opsActionState.previewResult
+         && String(opsActionState.previewResult.result || "").toUpperCase() === "PREVIEW";
+       var recipient = (previewReady && opsActionState.previewResult.effectiveEmail)
+         || payload.recipient
+-        || opsFirstNonBlank_(row.Effective_Email, row.Parent_Email_Corrected, row.Parent_Email, "No effective email in loaded fields");
++        || opsFirstNonBlank_(opsCommunicationEmail_(displayRow), "No effective email in loaded fields");
+       var staleDraft = selectedType === "custom_email" && previewReady && opsActionState.previewDraftSignature !== opsCustomEmailSignature_();
+       var blockReason = "";
+-      if (!CAN_RUN_OPERATIONS_ACTIONS) blockReason = "Operations Admin or Super Admin authority is required for send.";
++      if (selectedCount > 1) blockReason = "Bulk preview wiring pending. Use one selected record at a time for preview/send.";
++      else if (!CAN_RUN_OPERATIONS_ACTIONS) blockReason = "Operations Admin or Super Admin authority is required for send.";
+       else if (!previewReady) blockReason = "Preview required before send.";
+       else if (staleDraft) blockReason = "Draft changed after preview. Re-preview required.";
+       else if (opsActionState.previewResult && opsActionState.previewResult.blockReason) blockReason = String(opsActionState.previewResult.blockReason);
++      if (assessment && assessment.blocked) blockReason = assessment.reason;
+       var preview = previewReady ? (opsActionState.previewResult || {}) : {};
+       var subject = preview.subject || preview.emailSubject || payload.subject || "Preview/template will populate subject";
+       var body = preview.body || preview.emailBody || preview.messageBody || payload.body || "";
+       var status = previewReady ? "Preview loaded" : "Preview pending";
+       var timestamp = previewReady ? (opsActionState.previewTimestamp || "Preview timestamp unavailable") : "Not previewed";
++      if (selectedCount > 1) {
++        panel.innerHTML = [
++          "<strong>Read-only preview audit</strong>",
++          "<br><strong>Selected queue:</strong> " + esc(def.label),
++          "<br><strong>Bulk cohort selected:</strong> " + esc(String(selectedCount) + " records"),
++          "<br><strong>Single applicant:</strong> none",
++          "<br><strong>Bulk selection state:</strong> Bulk selection active",
++          "<br><strong>Email recipients:</strong> " + esc(String(bulkSummary.emailLoaded) + " loaded / " + String(bulkSummary.emailMissing) + " missing"),
++          "<br><strong>Selected template/action:</strong> " + esc(selectedType + " / " + opsCommunicationPrimaryPreviewLabel_(def)),
++          "<br><strong>Preview status:</strong> " + esc("Bulk preview pending"),
++          "<br><strong>Role gate result:</strong> " + esc(opsCommunicationRoleStatus_()),
++          "<br><strong>Next logical action:</strong> " + esc(opsCommunicationPrimaryPreviewLabel_(def)),
++          "<br><strong>Block reason:</strong> " + esc("Bulk preview wiring pending. Select one applicant or use existing stage batch preview.")
++        ].join("");
++        return;
++      }
+       panel.innerHTML = [
+         "<strong>Read-only preview audit</strong>",
+-        "<br><strong>ApplicantID:</strong> " + esc(opsApplicantId_()),
++        "<br><strong>Selected queue:</strong> " + esc(def.label),
++        "<br><strong>Selected applicant:</strong> " + esc(displayId || "No applicant selected"),
++        "<br><strong>Selected count:</strong> " + esc(String(selectedCount)),
++        "<br><strong>Name:</strong> " + esc(displayId ? opsCommunicationRowName_(displayRow) : "No applicant selected"),
+         "<br><strong>Recipient:</strong> " + esc(recipient),
++        "<br><strong>Phone / WhatsApp:</strong> " + esc(displayId ? opsFirstNonBlank_(opsCommunicationPhone_(displayRow), "No phone/WhatsApp loaded") : "No applicant selected"),
++        "<br><strong>Lifecycle stage:</strong> " + esc(displayId ? opsCommunicationStageLabel_(displayRow) : "No applicant selected"),
+         "<br><strong>Subject:</strong> " + esc(subject),
+-        "<br><strong>Template key/type:</strong> " + esc(selectedType),
++        "<br><strong>Selected template/action:</strong> " + esc(selectedType + " / " + (assessment ? assessment.primaryAction : "Review selected queue")),
+         "<br><strong>Preview status:</strong> " + esc(status + " / " + timestamp),
++        "<br><strong>Last communication:</strong> " + esc(displayId ? opsCommunicationLastContact_(displayRow) : "No applicant selected"),
++        "<br><strong>Cooldown / next eligible send:</strong> " + esc(assessment ? assessment.nextEligible : "No next eligible date loaded"),
+         "<br><strong>Body preview:</strong><div class='opsPreviewBody'>" + esc((body || "Preview/template will populate body").slice(0, 1200)) + "</div>",
+         "<strong>Send authority:</strong> " + esc(IS_SUPER ? "Super Admin selected-applicant parity; existing supervisory policy applies" : (IS_OPERATIONS_ADMIN ? "Operations Admin; selected-record Safe Mode, preview, and confirmation gates apply" : "Role restricted for normal Admin")),
++        "<br><strong>Role gate result:</strong> " + esc(opsCommunicationRoleStatus_()),
+         "<br><strong>Block reason:</strong> " + esc(blockReason || "Ready for send only after preview and confirmation")
+       ].join("");
+     }
+@@ -3842,7 +4734,7 @@
+       var idEl = document.getElementById("opsEmailCorrectionApplicantId");
+       var emailEl = document.getElementById("opsEmailCorrectionNewEmail");
+       if (idEl) idEl.value = id;
+-      if (emailEl) emailEl.value = opsFirstNonBlank_(row.effectiveEmail, row.correctedEmail, row.parentEmail, row.Effective_Email, row.Parent_Email_Corrected, row.Parent_Email, "");
++      if (emailEl) emailEl.value = opsCommunicationEmail_(row);
+       opsRenderEmailCorrectionCandidates_();
+     }
+     function opsRenderEmailCorrectionCandidates_(){
+@@ -3856,8 +4748,8 @@
+       list.innerHTML = rows.map(function(row){
+         var id = String(row.applicantId || row.ApplicantID || "");
+         var name = String(row.name || row.Student_Name || row.First_Name || "Unknown applicant");
+-        var email = opsFirstNonBlank_(row.effectiveEmail, row.correctedEmail, row.parentEmail, row.Effective_Email, row.Parent_Email_Corrected, row.Parent_Email, "No email loaded");
+-        var phone = opsFirstNonBlank_(row.Parent_Phone, row.Phone, row.Mobile, row.WhatsApp, row.Contact_Number, row.Phone_Number, "No phone loaded");
++        var email = opsFirstNonBlank_(opsCommunicationEmail_(row), "No email loaded");
++        var phone = opsFirstNonBlank_(opsCommunicationPhone_(row), "No phone loaded");
+         return "<button class='opsFilterBtn' type='button' onclick='opsSelectEmailCorrectionCandidate_(\"" + esc(id) + "\")'><strong>" + esc(id) + "</strong> - " + esc(name) + "<br><span class='opsWorkflowSecondary'>" + esc(email) + " | " + esc(phone) + "</span></button>";
+       }).join("");
+     }
+@@ -4064,29 +4956,37 @@
+       var r = row || {};
+       var raw = opsFirstNonBlank_(r.Docs_Status, r.Document_Status, r.Documents_Status, r.Overall_Doc_Status, r.Documents_Ready, r.docsStatus);
+       var upper = String(raw || "").toUpperCase();
++      if (upper.indexOf("ILLEGIBLE") >= 0 || upper.indexOf("WRONG") >= 0 || upper.indexOf("MISFILE") >= 0 || upper.indexOf("REJECT") >= 0 || upper.indexOf("CORRECT") >= 0) {
++        return { label:"Correction Required", cls:"warn", action:"Open document review / correction" };
++      }
+       if (workflowIsYes_(r.Docs_Verified) || upper.indexOf("VERIFIED") >= 0 || upper.indexOf("APPROVED") >= 0) {
+-        return { label:"Documents verified", cls:"ok", action:"Eligibility check required" };
++        return { label:"Eligibility Cleared", cls:"ok", action:"Eligibility review complete" };
+       }
+       if (upper.indexOf("NO FILE") >= 0 || upper.indexOf("NOT UPLOAD") >= 0 || upper.indexOf("MISSING") >= 0) {
+-        return { label:"No files uploaded", cls:"warn", action:"Check portal uploads / contact applicant" };
++        return { label:"Awaiting Uploads / Document Evidence Pending", cls:"warn", action:"Wait, remind when due, or contact applicant" };
+       }
+       if ((upper.indexOf("UPLOAD") >= 0 || upper.indexOf("FILE") >= 0) && upper.indexOf("PENDING") >= 0) {
+-        return { label:"Files uploaded - review required", cls:"warn", action:"Eligibility check required" };
++        return { label:"Uploaded / Review Required", cls:"warn", action:"Open document review" };
+       }
+       if (upper.indexOf("PENDING") >= 0) {
+-        return { label:"Pending eligibility check", cls:"warn", action:"Check portal uploads / contact applicant" };
++        return { label:"Awaiting Uploads / Document Evidence Pending", cls:"warn", action:"Wait, remind when due, or contact applicant" };
+       }
+-      return { label:"Unknown evidence state", cls:"muted", action:"Check portal uploads / contact applicant" };
++      return { label:"Awaiting Uploads / Document Evidence Pending", cls:"muted", action:"Wait, remind when due, or contact applicant" };
+     }
+     function opsDetailDocumentEvidenceSummary_(docs){
+       var list = Array.isArray(docs) ? docs : [];
+-      if (!list.length) return { label:"Unknown evidence state", cls:"muted", action:"Check portal uploads / contact applicant" };
++      if (!list.length) return { label:"Awaiting Uploads / Document Evidence Pending", cls:"muted", action:"Wait, remind when due, or contact applicant" };
+       var uploaded = list.filter(function(doc){ return !!(doc && doc.hasFile); });
+-      if (!uploaded.length) return { label:"No files uploaded", cls:"warn", action:"Check portal uploads / contact applicant" };
++      if (!uploaded.length) return { label:"Awaiting Uploads / Document Evidence Pending", cls:"warn", action:"Wait, remind when due, or contact applicant" };
++      var correctionNeeded = uploaded.some(function(doc){
++        var status = String((doc && doc.status) || "").trim().toUpperCase();
++        return status.indexOf("ILLEGIBLE") >= 0 || status.indexOf("WRONG") >= 0 || status.indexOf("MISFILE") >= 0 || status.indexOf("REJECT") >= 0 || status.indexOf("CORRECT") >= 0;
++      });
++      if (correctionNeeded) return { label:"Correction Required", cls:"warn", action:"Open document review / correction" };
+       var allUploadedVerified = uploaded.length === list.length && uploaded.every(function(doc){ return String(doc.status || "").trim().toUpperCase() === "VERIFIED"; });
+       return allUploadedVerified
+-        ? { label:"Documents verified", cls:"ok", action:"Eligibility check required" }
+-        : { label:"Files uploaded - review required", cls:"warn", action:"Eligibility check required" };
++        ? { label:"Eligibility Cleared", cls:"ok", action:"Eligibility review complete" }
++        : { label:"Uploaded / Review Required", cls:"warn", action:"Open document review" };
+     }
+     function opsQueueDocumentChecklistHtml_(row){
+       var r = row || {};
+diff --git a/CURRENT_TASK.md b/CURRENT_TASK.md
+index 8ec9f60..9943f0a 100644
+--- a/CURRENT_TASK.md
++++ b/CURRENT_TASK.md
+@@ -2,6 +2,115 @@
+
+ ## Active CIS
+
++- `CIS r204: OPS Communications Selectable Queue Workbench`.
++- Implementation date: `2026-05-29`.
++- Work class: `Runtime release - AdminUI-only communications workbench usability upgrade`.
++- Release track: `Track L`.
++- Reason for classification: AdminUI-only client-side queue selection/workbench layout plus release identity update; no backend, role gate, send logic, schema, or mutation-path change.
++- Intended runtime identity: `r204 / 204`.
++- Implementation authorized: `YES`.
++- Runtime release authorized: `YES, pending release gates`.
++
++### Baseline
++
++- Expected baseline verified before edits:
++  - `git status -sb`: `.codexhub/SESSION_CONTEXT.md`, `.codexhub/resume_state/latest.json`, and `CURRENT_TASK.md`.
++  - `CURRENT_TASK.md` dirty-state classification: PASS because the pre-existing diff is limited to the `CODEXHUB_STATE_BACKUP` block.
++  - `git log --oneline -5`: HEAD `bb2b190 release: r203 ops communications work queue surface`.
++  - `staging-as203` tag present.
++- Stop gate passed before edits: no source file outside the allowed r204 set required reconciliation.
++
++### Allowed Edit Files
++
++- `AdminUI.html`
++- `Config.js`
++- `CURRENT_TASK.md`
++
++### Implementation Notes
++
++- `AdminUI.html` keeps Communications as a queue-first surface but upgrades it into a selectable workbench.
++- Layout is now:
++  - top: `Communication Work Queues`
++  - middle left: `Selected queue records`
++  - middle right: `Preview / Edit / Send Gate / Audit`
++  - bottom: collapsed `Template Quick Look`, then `Bulk Communication Path`, then queue status strip.
++- Queue cards remain at the top and now show:
++  - loaded count when available
++  - queue meaning
++  - next action
++  - queue type (`Send queue`, `Manual follow-up queue`, `Cooldown / blocked queue`, or `Placeholder / pending wiring`)
++- The selected queue records surface is now a full working table with:
++  - checkbox
++  - `ApplicantID`
++  - `Name`
++  - `Email`
++  - `Phone / WhatsApp`
++  - `Lifecycle Stage`
++  - `Last Contact`
++  - `Cooldown / Next Eligible`
++  - `Block Reason`
++  - `Primary Action`
++- Selection state is client-side only and stays inside `AdminUI.html`.
++- Added client-side controls:
++  - `Select all eligible`
++  - `Clear selection`
++  - `Preview selected`
++  - `Open selected applicant`
++  - `Export selected follow-up CSV`
++- `Preview selected` reuses the existing single-applicant preview path only when exactly one selected record exists; otherwise it reports `Bulk preview wiring pending.`
++- `Export selected follow-up CSV` is local/client-side only from already loaded rows and is still blocked in Operator mode.
++- `Template Quick Look` is collapsed by default and no longer dominates the communications workflow.
++- The right-side audit panel now responds to selected queue and selected record state, including selected count, selected template/action, role gate, block reason, last communication, and cooldown/next eligible send.
++- `Email Issue / Contact Correction` remains manual correction/handoff only.
++- `Cooldown / Recently Contacted` remains blocked/wait only.
++- `Docs Quote Ready` remains visible with `Quote / Fee Estimate - backend exists, OPS wiring pending.`
++- Added note only: `Applicant Queue multi-select will use the same selection pattern in a later release.`
++- Correction pass after failed 5.4 Medium acceptance:
++  - Queue classification now treats loaded last-contact/next-action evidence as waiting/recent-contact evidence, so actionable send queues exclude rows already in recent-contact/cooldown state.
++  - Communication row email/phone extraction is normalized across queue counts, selected panes, table rows, CSV export, email-correction candidates, and preview/audit recipient fallback.
++  - Selecting exactly one communication row now binds that loaded row into selected-applicant context for ApplicantID, name, email, phone, lifecycle stage, and audit display without sending/exporting/mutating.
++  - Multi-select remains client-side and reports `Bulk cohort selected` plus loaded/missing email and phone counts.
++  - Awaiting uploads remains separate from uploaded/review-required eligibility work.
++- Correction pass after failed operator acceptance:
++  - Added `Queue Send Workflow` directly beside/under selected queue records, preserving OPS visual styling while restoring old Admin Stage Batch information parity.
++  - Workflow panel shows selected queue, lifecycle/stage mapping, recommended message type, sendable state, gate reason, batch size / selected count, eligible/blocked counts, recipient loaded/missing count, preview status, last preview time/result, Preview Cohort state, Send Stage Batch state, and next required step.
++  - Queue-specific primary action is now the visible workflow rail action; generic send/export buttons moved into collapsed `Other existing actions`.
++  - Single-record preview/audit now includes ApplicantID, name, recipient email, phone/WhatsApp, and lifecycle stage.
++- Revised r204 CIS/Addendum approved after acceptance remained uncleared:
++  - Ready/contact summary classification now treats recently-contacted or next-action-wait records as waiting/blocked, making `Actionable Now / Ready to Contact` exclusive from `Cooldown / Recently Contacted` in both queue rows and summary buckets.
++  - Queue Send Workflow now includes explicit old Admin Stage Batch `Selected Stage` parity using existing stage-batch stage labels where a safe existing mapping exists.
++  - Batch size / selected count now shows both the existing stage-batch limit and current selected-row count.
++  - Multi-record actionable queues can prepare the existing mapped Stage Batch `Preview Cohort` path through existing client/backend gates; no new bulk send/export logic is introduced.
++- r204 final simplification pass:
++  - Queue Send Workflow remains the only dominant OPS Communications action surface.
++  - Secondary generic actions, Template Quick Look, Bulk Communication Path, and timeline/status strip are collapsed by default.
++  - Right-side audit panel is limited to selected record, recipient, preview, and gate evidence supporting the workflow rail.
++  - No backend send/export/mutation logic or new behavior was added.
++- No `Admin.js`, `Code.js`, `Utils.js`, `Routes.js`, `AGENTS.md`, schema/header, backend send/export/mutation logic, role/permission logic, cooldown logic, template backend logic, Books, portal, payment, or classroom logic was changed.
++- No real send/export/mutation was run during implementation.
++- r204 is parked before remote-source proof, Apps Script versioning, deployment repin, browser acceptance, or Git finalization.
++  - Reason: OPS Communications UX/semantic acceptance remains unresolved in the rendered operator view.
++  - Next task: refactor-readiness architecture mapping and test plan before further UI patching.
++
++### Acceptance Status
++
++- Local source checks: PASS.
++  - `git diff --check`: PASS; CRLF conversion warnings only for existing dirty files.
++- `clasp push`: PASS after final r204 simplification pass.
++  - Output: `Pushed 8 files at 7:06:51 pm.`
++- Remote source proof: PARKED before execution.
++- Apps Script platform version: PARKED / not created for r204.
++- Admin staging deployment: PARKED / not repinned to r204.
++- Student staging deployment: PARKED / not repinned to r204.
++- Admin whoami URL: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami`.
++  - PENDING.
++- Student whoami URL: `https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec?view=whoami`.
++  - PENDING.
++- Browser/source acceptance: PENDING.
++- No real send, export, or mutation action has been run during implementation so far.
++
++## Previous Active CIS
++
+ - `CIS r203: OPS Communications Work-Queue Surface`.
+ - Implementation date: `2026-05-28`.
+ - Work class: `Runtime release - AdminUI-only communications surface redesign`.
+@@ -84,7 +193,7 @@
+   - No send, export, or mutation action was triggered.
+ - No real send, export, or mutation action was run during implementation or deployment.
+
+-## Previous Active CIS
++## Earlier CIS
+
+ - `CIS r202: Meta Landing Traffic Bridge + Portal Submission Reporting`.
+ - Implementation date: `2026-05-28`.
+@@ -571,26 +680,34 @@
+ <!-- CODEXHUB_STATE_BACKUP_START -->
+ ## CodexHub State Backup
+
+-- Last state backup timestamp: 2026-05-28 09:52:30
++- Last state backup timestamp: 2026-05-31 19:18:57
+ - Project path: `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog`
+ - Repository state: DIRTY
+ - Current branch: `main`
+-- Latest commit: `81e2c99 docs: record r200 resume state and audit reference`
+-- Latest matching staging tag: `staging-as200`
+-- Config version / deploy number: VERSION: r200; DEPLOY_VERSION_NUMBER: 200
++- Latest commit: `bb2b190 release: r203 ops communications work queue surface`
++- Latest matching staging tag: `staging-as203`
++- Config version / deploy number: VERSION: r204; DEPLOY_VERSION_NUMBER: 204
+ - Current release track: Not detected.
+ - Current blocker: None detected.
+ - Next exact action: Not detected.
+-- Operator note: [add operator note]
++- Operator note: r204 parked
+
+ ### Git Status
+ ```text
+ ## main...origin/main
++ M .codexhub/SESSION_CONTEXT.md
++ M .codexhub/resume_state/latest.json
++ M AdminUI.html
+  M CURRENT_TASK.md
++ M Config.js
+ ```
+
+ ### Changed Files
++- `.codexhub/SESSION_CONTEXT.md`
++- `.codexhub/resume_state/latest.json`
++- `AdminUI.html`
+ - `CURRENT_TASK.md`
++- `Config.js`
+ <!-- CODEXHUB_STATE_BACKUP_END -->
+
+ ## Previous Active CIS
+diff --git a/Config.js b/Config.js
+index 5c983e7..997d2e9 100644
+--- a/Config.js
++++ b/Config.js
+@@ -7,9 +7,9 @@
+  */
+ var CONFIG = {
+   // Versioning (change control)
+-  VERSION: "r203",
++  VERSION: "r204",
+ CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alignment",
+-  DEPLOY_VERSION_NUMBER: 203,
++  DEPLOY_VERSION_NUMBER: 204,
+ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
+
+   // STAGING/PROD data mode routing (working sheet)
