@@ -2,6 +2,71 @@
 
 ## Active CIS
 
+- `CIS r210A: Dropped / Ineligible Terminal Hardening - Communications, Lifecycle, Applicant Queue Only`.
+- Implementation date: `2026-06-01`.
+- Work class: `Runtime release - AdminUI-only UI semantic hardening`.
+- Release track: `Track L`.
+- Reason for classification: UI-side terminal lifecycle hardening in shared row facts, Lifecycle/Applicant Queue display, and Communications queue predicates; no backend, role gate, send/export, schema, deployment architecture, or mutation-path change.
+- Intended runtime identity: `r210 / 210`.
+- Implementation authorized: `YES`.
+- Runtime release authorized: `YES, pending release gates`.
+
+### r210 Baseline
+
+- Started from finalized r209 baseline; `staging-as209` exists.
+- `Config.js` was `r209 / 209` before edits and is bumped to `r210 / 210` for this release.
+- Pre-existing dirty state remains limited to `.codexhub/SESSION_CONTEXT.md` and `.codexhub/resume_state/latest.json`.
+- Architecture benchmark remains `docs/FODE_ARCHITECTURE_MAP_r205.md`.
+
+### r210 Allowed Edit Files
+
+- `AdminUI.html`
+- `AdminUI_SharedRowFacts.html`
+- `AdminUI_OpsCommunications.html`
+- `Config.js`
+- `CURRENT_TASK.md`
+
+### r210 Implementation Notes
+
+- Added explicit row-facts terminal aliases: `isDroppedIneligible`, `isTerminalLifecycle`, `terminalReason`, and `activeProgressionAllowed`.
+- Routed Communications queue predicates through shared row facts so terminal rows are excluded from sendable/action-oriented queues, including Email Issue handoff and WhatsApp fallback.
+- Kept `Dropped / Ineligible` visible as a display-only Lifecycle/Applicant Queue state and changed the row action button for terminal records to disabled `No active progression`.
+- Did not modify Billing, Classroom, Reports/export, backend RPCs, payloads, send/export/mutation logic, role gates, schema, or Apps Script app configuration.
+- No send/export/mutation action was triggered.
+
+### r210 Release Evidence
+
+- Local validation: `git diff --check` PASS; `AdminUI.html`, `AdminUI_SharedRowFacts.html`, and `AdminUI_OpsCommunications.html` script parse checks PASS.
+- Scoped runtime diff: `AdminUI.html`, `AdminUI_SharedRowFacts.html`, `AdminUI_OpsCommunications.html`, `CURRENT_TASK.md`, `Config.js`; `Admin.js`, `Code.js`, `Utils.js`, `Routes.js`, `appsscript.json`, and `whoami_admin.html` have no diff.
+- Local identity before version: `VERSION: "r210"`, `DEPLOY_VERSION_NUMBER: 210`.
+- `clasp push`: PASS; output reported `Pushed 10 files at 11:21:17 am.` and did not report `Skipping push`.
+- Remote-source proof: PASS via Apps Script REST API content endpoint; no `clasp pull`, `clasp clone`, temp repo, verification folder, or source copy was created.
+  - Remote `Config.js`: `VERSION: "r210"`, `DEPLOY_VERSION_NUMBER: 210`.
+  - Remote `AdminUI_SharedRowFacts.html`: `opsBuildRowFacts_`, `isTerminalLifecycle`, `activeProgressionAllowed`, and `terminalReason` markers present.
+  - Remote `AdminUI_OpsCommunications.html`: terminal-excluding Email Issue and WhatsApp fallback row-facts queue markers present.
+  - Remote `AdminUI.html`: `No active progression` terminal display marker present.
+  - Safety markers present: `data-ops-operational-write`, `data-ops-supervisory-write`, and `opsOperationalExecutionAllowed_`.
+- Apps Script platform version: `230`.
+- Admin deployment pin: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @230`.
+- Student deployment pin: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @230`.
+- Admin whoami: PASS, `r210 / 210`, `mismatch=false`.
+- Student whoami: PASS, `r210 / 210`, `mismatch=false`.
+- Admin OPS source acceptance URL: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=ops`.
+- Source acceptance: PASS for OPS shell, Lifecycle Map, Applicant Queue, Communications, Billing, Portal Diagnostics, Classroom, Reports, r210 marker, terminal row-facts markers, Communications terminal exclusion markers, `No active progression`, and safety markers.
+- Browser/operator acceptance: PASS.
+  - OPS Cockpit loads.
+  - Runtime is `r210 / 210`.
+  - Admin whoami and Student whoami passed.
+  - Main OPS surfaces render.
+  - Dropped/Ineligible terminal hardening is accepted.
+  - No send/export/mutation action was executed.
+- Non-blocking r211+ follow-ups:
+  - WhatsApp records are not visible in the expected workflow.
+  - Bulk email is not properly selecting / selectable by stages.
+  - Admin-level information blocks are interrupting operator workflow.
+
+## Previous CIS
+
 - `CIS r209: Extract OPS Communications Module`.
 - Implementation date: `2026-06-01`.
 - Work class: `Runtime release - AdminUI OPS Communications include extraction`.

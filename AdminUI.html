@@ -4064,7 +4064,10 @@
             + (isEmailIssue ? "<div class='opsWorkflowBlockReason'>Block reason: " + esc(opsEmailIssueReason_(row) || "Email correction required") + "</div><div class='opsWorkflowSecondary'>Last action / contacted: " + esc(opsLastActionInfo_(row)) + "</div>" : "")
             + (isDroppedIneligible ? "<div class='opsWorkflowBlockReason'>Source outcome: " + esc(droppedIneligibleReason || "Dropped / Ineligible") + "</div><div class='opsWorkflowSecondary'>No active progression. Display-only lifecycle classification.</div>" : "")
           + "</div>"
-          + "<div class='opsWorkflowAction'><button class='opsActionBtn live' type='button' data-review-applicant-id='" + esc(applicantId) + "' data-review-applicant-name='" + esc(applicantName) + "' data-workflow-stage-key='" + esc(stage.key) + "'>" + esc(facts.nextActionLabel || stage.next) + "</button><div class='opsWorkflowSecondary'>" + esc(isDroppedIneligible ? ("No active progression. " + (droppedIneligibleReason || "Source status loaded.")) : (isEmailIssue ? "Email correction is handled in Admin Review." : ("Portal: " + (facts.portalSubmitted ? "Submitted" : portalState.label) + " | Documents: " + facts.documentStateLabel))) + "</div>" + documentChecklistHtml + "</div>"
+          + "<div class='opsWorkflowAction'>" + (isDroppedIneligible
+            ? "<button class='opsActionBtn' type='button' disabled>No active progression</button>"
+            : "<button class='opsActionBtn live' type='button' data-review-applicant-id='" + esc(applicantId) + "' data-review-applicant-name='" + esc(applicantName) + "' data-workflow-stage-key='" + esc(stage.key) + "'>" + esc(facts.nextActionLabel || stage.next) + "</button>")
+            + "<div class='opsWorkflowSecondary'>" + esc(isDroppedIneligible ? ("No active progression. " + (droppedIneligibleReason || "Source status loaded.")) : (isEmailIssue ? "Email correction is handled in Admin Review." : ("Portal: " + (facts.portalSubmitted ? "Submitted" : portalState.label) + " | Documents: " + facts.documentStateLabel))) + "</div>" + documentChecklistHtml + "</div>"
           + "</div>";
       }
       if (workflow) {

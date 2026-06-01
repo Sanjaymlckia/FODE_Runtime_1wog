@@ -38,24 +38,29 @@
       var classroomState = opsClassroomStateFromRawRow_(r, paymentVerified);
       var workflowStage = opsDeriveLifecycleStateFromRawRow_(r, documentState, paymentVerified);
       var lifecycleDef = opsLifecycleDefinitions_().filter(function(item){ return item.key === workflowStage; })[0];
-      var droppedIneligible = opsIsDroppedIneligible_(r);
+      var terminalReason = opsDroppedIneligibleReason_(r);
+      var droppedIneligible = !!terminalReason;
+      var terminalLifecycle = droppedIneligible;
+      var activeProgressionAllowed = !terminalLifecycle;
       var recentlyContacted = !!(lastContactAt || nextEligible);
       var cooldownActive = !!(sendEligibility && sendEligibility.active);
       var lastContactLabel = [lastContactType, lastContactAt, lastContactSubject].filter(Boolean).join(" | ") || "No loaded communication evidence";
-      var blockReason = emailIssue
-        ? emailIssueReason
-        : (cooldownActive
-          ? (sendEligibility.text || "Cooldown active")
-          : opsFirstNonBlank_(r.Comm_Block_Reason, r.Last_Contact_Result, r.Books_Last_Error, "No loaded block reason"));
+      var blockReason = terminalLifecycle
+        ? terminalReason
+        : (emailIssue
+          ? emailIssueReason
+          : (cooldownActive
+            ? (sendEligibility.text || "Cooldown active")
+            : opsFirstNonBlank_(r.Comm_Block_Reason, r.Last_Contact_Result, r.Books_Last_Error, "No loaded block reason")));
       var communicationStatus = "";
       try { communicationStatus = deriveCommunicationStatus(r); } catch (_err2) { communicationStatus = ""; }
       var communicationQueues = {
-        readyToContact: !!(email && !emailIssue && !recentlyContacted && !cooldownActive && !droppedIneligible && documentState !== "awaiting_uploads" && documentState !== "uploaded_review_required" && documentState !== "document_correction_required" && documentState !== "correction_required"),
-        missingDocuments: documentState === "awaiting_uploads",
-        uploadedReviewRequired: documentState === "uploaded_review_required" || documentState === "document_correction_required" || documentState === "correction_required",
-        cooldownRecentlyContacted: recentlyContacted || cooldownActive,
-        emailIssue: emailIssue,
-        whatsappFallback: !!(phone && (!email || emailIssue))
+        readyToContact: !!(activeProgressionAllowed && email && !emailIssue && !recentlyContacted && !cooldownActive && documentState !== "awaiting_uploads" && documentState !== "uploaded_review_required" && documentState !== "document_correction_required" && documentState !== "correction_required"),
+        missingDocuments: !!(activeProgressionAllowed && documentState === "awaiting_uploads"),
+        uploadedReviewRequired: !!(activeProgressionAllowed && (documentState === "uploaded_review_required" || documentState === "document_correction_required" || documentState === "correction_required")),
+        cooldownRecentlyContacted: !!(activeProgressionAllowed && (recentlyContacted || cooldownActive)),
+        emailIssue: !!(activeProgressionAllowed && emailIssue),
+        whatsappFallback: !!(activeProgressionAllowed && phone && (!email || emailIssue))
       };
       var facts = {
         row: r,
@@ -96,6 +101,10 @@
         handoverStateLabel: opsClassroomStateLabel_(classroomState),
         droppedIneligible: droppedIneligible,
         isDroppedOrIneligible: droppedIneligible,
+        isDroppedIneligible: droppedIneligible,
+        isTerminalLifecycle: terminalLifecycle,
+        terminalReason: terminalReason,
+        activeProgressionAllowed: activeProgressionAllowed,
         communicationQueues: communicationQueues,
         communicationEligibility: sendEligibility,
         communicationState: communicationStatus || "Unknown",
@@ -103,7 +112,7 @@
         blockReason: blockReason,
         communicationStatus: communicationStatus || "Unknown"
       };
-      facts.primaryAction = communicationQueues.cooldownRecentlyContacted ? "wait" : (communicationQueues.emailIssue ? "correct_email" : (communicationQueues.uploadedReviewRequired ? "open_review" : (communicationQueues.whatsappFallback ? "manual_fallback" : "preview")));
+      facts.primaryAction = terminalLifecycle ? "terminal" : (communicationQueues.cooldownRecentlyContacted ? "wait" : (communicationQueues.emailIssue ? "correct_email" : (communicationQueues.uploadedReviewRequired ? "open_review" : (communicationQueues.whatsappFallback ? "manual_fallback" : "preview"))));
       facts.nextAction = facts.primaryAction;
       facts.nextActionLabel = opsNextActionFromFacts_(facts);
       return {
@@ -145,6 +154,10 @@
         handoverStateLabel: facts.handoverStateLabel,
         droppedIneligible: facts.droppedIneligible,
         isDroppedOrIneligible: facts.isDroppedOrIneligible,
+        isDroppedIneligible: facts.isDroppedIneligible,
+        isTerminalLifecycle: facts.isTerminalLifecycle,
+        terminalReason: facts.terminalReason,
+        activeProgressionAllowed: facts.activeProgressionAllowed,
         communicationQueues: facts.communicationQueues,
         communicationEligibility: facts.communicationEligibility,
         communicationState: facts.communicationState,
