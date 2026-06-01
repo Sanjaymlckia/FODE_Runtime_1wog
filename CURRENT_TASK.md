@@ -2,6 +2,84 @@
 
 ## Active CIS
 
+- `CIS r212: Extract Applicant Queue UI`.
+- Implementation date: `2026-06-01`.
+- Work class: `Runtime release - AdminUI Applicant Queue include extraction`.
+- Release track: `Track L`.
+- Reason for classification: Level 1 AdminUI-only Applicant Queue extraction with revised boundary: markup, CSS, overlay markup, and queue-owned helper JS moved into a dedicated include while shared selected-applicant controller JS remains temporarily in `AdminUI.html`; no backend, role gate, row-facts semantic, Communications behavior, Lifecycle Map behavior, schema, or mutation-path change.
+- Intended runtime identity: `r212 / 212`.
+- Implementation authorized: `YES`.
+- Runtime release authorized: `NO - local implementation and validation only until post-check release authorization`.
+
+### r212 Baseline
+
+- Started from finalized r211 baseline at commit `865fbd5`; `staging-as211` exists.
+- `Config.js` was `r211 / 211` before edits and is bumped only to `r212 / 212` after revised-scope local extraction checks passed.
+- Pre-existing dirty state remains limited to `.codexhub/SESSION_CONTEXT.md` and `.codexhub/resume_state/latest.json`.
+- Known r211+ follow-ups remain out of scope:
+  - WhatsApp records are not visible in expected workflow.
+  - Bulk email is not properly selecting/selectable by stages.
+  - Admin-level information blocks interrupt operator workflow.
+
+### r212 Allowed Edit Files
+
+- `AdminUI.html`
+- `AdminUI_OpsApplicantQueue.html`
+- `Config.js`
+- `CURRENT_TASK.md`
+
+### r212 Implementation Notes
+
+- Created `AdminUI_OpsApplicantQueue.html`.
+- Moved the OPS Applicant Queue section markup out of `AdminUI.html` and replaced it with the standard Apps Script include call in the same location.
+- Moved Applicant Queue-specific CSS into the new include.
+- Moved Applicant Queue overlay markup into the new include:
+  - `opsApplicantContextMenu`
+  - `opsApplicantReviewDrawer`
+- Moved queue-owned helper JS into the new include:
+  - queue export helpers
+  - selected-applicant identity/context helpers
+  - queue row lookup helpers
+  - queue search/sort helpers
+  - queue marker / email-issue / dropped-ineligible helper functions
+  - selected applicant mini-summary renderer
+- Revised r212 boundary accepted: shared selected-applicant controller JS remains temporarily in `AdminUI.html` because it is cross-surface logic used by Applicant Queue, Communications, Billing, Classroom, and Portal Diagnostics.
+- Accepted remaining shared controller functions in `AdminUI.html`:
+  - `opsHideContextMenu_`
+  - `opsShowApplicantContextMenu_`
+  - `opsHandleApplicantMenuAction_`
+  - `opsAttachApplicantRowMenu_`
+  - `renderOpsQueue_`
+  - `renderOpsApplicantSummary_`
+  - `fetchOpsApplicantSummary_`
+  - `opsSetQueueFilter_`
+  - `opsAdminDeepLink_`
+  - `opsOpenLegacyAdminReview_`
+  - `opsCloseApplicantReviewDrawer_`
+  - `opsReviewField_`
+  - `opsRenderApplicantReviewDrawer_`
+  - `opsOpenApplicantReviewDrawer_`
+  - `opsOpenApplicantReview_`
+  - `opsOpenPortalStatus_`
+- Recommended future owner for the remaining shared controller layer: a dedicated shared selected-applicant controller include/module, not the Applicant Queue include.
+- Preserved function names, element IDs, CSS classes, event handlers, global references, selected applicant behavior, lifecycle-stage filtering behavior, and cross-surface selected-applicant interactions.
+- Did not modify Communications include ownership, Lifecycle Map include ownership, backend RPCs, payloads, row-facts semantics, or Dropped/Ineligible rules.
+- No send/export/mutation action was triggered.
+
+### r212 Release Evidence
+
+- Local validation: PASS; revised-scope local checks passed, `Config.js` was confirmed at `r212 / 212`, `AdminUI.html` includes `AdminUI_OpsApplicantQueue.html`, `AdminUI_OpsApplicantQueue.html` contains the extracted Applicant Queue markup/CSS/overlay plus queue-owned helper JS, accepted shared selected-applicant controller functions remain in `AdminUI.html`, only allowed files changed, and no send/export/mutation action was run.
+- Git hygiene addendum: use `git status -sb` and `git ls-files --others --exclude-standard` before any release step because `AdminUI_OpsApplicantQueue.html` is a new file.
+- Remote-source proof: PASS by operator-supplied Apps Script editor evidence confirming `Config.js` = `r212 / 212`, remote `AdminUI_OpsApplicantQueue.html` exists, and remote `AdminUI.html` contains the `AdminUI_OpsApplicantQueue` include.
+- Apps Script platform version: `232`.
+- Admin deployment pin: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @232`.
+- Student deployment pin: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @232`.
+- Admin whoami: PASS, `r212 / 212`, `mismatch=false`.
+- Student whoami: PASS, `r212 / 212`, `mismatch=false`.
+- Browser/operator acceptance: PASS by operator evidence; OPS Cockpit loads, runtime shows `r212 / 212`, Runtime Verified, Admin/Student whoami match, no drift mismatch warning, Lifecycle Cascade renders, Applicant Queue renders after extraction, Dropped / Ineligible remains visible as display-only with count `0` in the loaded queue, Communications/Billing/Portal Diagnostics/Classroom/Reports all render, no red blocking UI error observed, and no send/export/mutation action was executed.
+
+## Previous CIS
+
 - `CIS r211: Extract Lifecycle Map UI`.
 - Implementation date: `2026-06-01`.
 - Work class: `Runtime release - AdminUI Lifecycle Map include extraction`.
@@ -55,8 +133,6 @@
 - Admin whoami: PASS, `r211 / 211`, `mismatch=false`.
 - Student whoami: PASS, `r211 / 211`, `mismatch=false`.
 - Browser/operator acceptance: PASS by operator evidence; OPS Cockpit loads, runtime shows `r211 / 211`, Runtime Verified, Admin/Student whoami match, no drift mismatch warning, Lifecycle Cascade renders from extracted include, Dropped / Ineligible remains display-only, Applicant Queue/Communications/Billing/Portal Diagnostics/Classroom/Reports all render, no red blocking UI error observed, and no send/export/mutation action was executed.
-
-## Previous CIS
 
 - `CIS r210A: Dropped / Ineligible Terminal Hardening - Communications, Lifecycle, Applicant Queue Only`.
 - Implementation date: `2026-06-01`.

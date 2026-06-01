@@ -1,0 +1,618 @@
+<style>
+  .opsQueueSearch{ display:flex; align-items:center; gap:8px; border:1px solid #d8e5f2; background:#fbfdff; border-radius:10px; padding:8px 10px; }
+  .opsQueueSearch input{ width:100%; border:0; outline:0; background:transparent; color:#10263c; font-size:13px; }
+  .opsWorkflowRow.opsQueueSelectedRow{ background:#eef6ff; box-shadow:inset 4px 0 0 #2878f0; }
+  .opsQueueName{ font-weight:900; color:#1f70ea; white-space:nowrap; }
+  .opsQueueMeta{ margin-top:3px; font-size:11px; color:#6f8194; max-width:170px; overflow:hidden; text-overflow:ellipsis; }
+  .opsApplicantCard{ display:flex; flex-direction:column; gap:14px; }
+  .opsApplicantHero{ border:1px solid #dbe8f3; border-radius:13px; padding:14px; background:#fbfdff; }
+  .opsApplicantTitleRow{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+  .opsApplicantTitle{ font-weight:900; font-size:17px; color:#10263c; }
+  .opsApplicantSub{ color:#5d7388; font-size:12px; margin-top:3px; }
+  .opsQueueToolbar{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+  .opsQueueSummaryStrip{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .opsQueueSelectedRow{ background:#eaf2ff !important; outline:2px solid rgba(31,112,234,.45); outline-offset:-2px; }
+  .opsQueueSelectedRow .opsQueueName{ color:#0f4f94; }
+  .opsApplicantMini{ display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); gap:10px; margin-top:10px; }
+  .opsContextMenu{ position:fixed; z-index:9999; min-width:230px; background:#fff; color:#17283f; border:1px solid #cad7e6; border-radius:8px; box-shadow:0 16px 38px rgba(17,39,68,.22); padding:6px; display:none; }
+  .opsContextMenu.open{ display:block; }
+  .opsContextMenu button{ width:100%; border:0; background:transparent; color:inherit; text-align:left; padding:9px 10px; border-radius:6px; font-size:13px; cursor:pointer; }
+  .opsContextMenu button:hover{ background:#eef5ff; }
+  .opsContextMenu button[data-danger="1"]{ color:#8f1f1f; }
+  .opsDrawerBack{ position:fixed; inset:0; z-index:9998; display:none; align-items:stretch; justify-content:flex-end; background:rgba(12,25,42,.42); }
+  .opsDrawerBack.open{ display:flex; }
+  .opsDrawerPanel{ width:min(720px,100vw); height:100vh; background:#fff; color:#102030; box-shadow:-18px 0 48px rgba(17,39,68,.28); display:flex; flex-direction:column; }
+  .opsDrawerHead{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; padding:16px; border-bottom:1px solid #e1e9f2; }
+  .opsDrawerHead h3{ margin:0; font-size:18px; color:#10263c; }
+  .opsDrawerBody{ padding:16px; overflow:auto; display:flex; flex-direction:column; gap:14px; }
+  @media (max-width:980px){
+    .opsApplicantMini{ grid-template-columns:repeat(2,minmax(150px,1fr)); }
+  }
+  @media (max-width:640px){
+    .opsApplicantMini{ grid-template-columns:1fr; }
+  }
+</style>
+<section id="opsAdmissionsQueue" class="opsSectionPage" data-ops-mode-group="operator admin super">
+  <div class="opsPageIntro">
+    <div><h2>Applicant Queue</h2><p>Full-width applicant rows with selected-row context, Admin review bridge, filters, sorting, and browser CSV export.</p></div>
+    <span class="opsStatusPill ok">Working queue</span>
+  </div>
+  <div class="opsCard">
+    <div class="opsSectionHeader">
+      <div><h3>Applicant Rows</h3><p>Selected applicant drives Communications, Billing, Classroom, and Portal diagnostics.</p></div>
+      <span class="opsStatusPill info" id="cockpitAdmissionsSummary">Loading</span>
+    </div>
+    <div class="opsApplicantMini" id="opsSelectedApplicantMini"></div>
+    <div class="opsActionRow">
+      <button class="opsActionBtn live" type="button" onclick="opsOpenApplicantReview_()">Open Applicant Review</button>
+      <button class="opsActionBtn" type="button" onclick="opsSetQueueFilter_('')">All Rows</button>
+      <button class="opsActionBtn" type="button" onclick="opsSetQueueFilter_('ready')">Ready</button>
+      <button class="opsActionBtn" type="button" onclick="opsSetQueueFilter_('blocked')">Blocked</button>
+      <button class="opsActionBtn live" type="button" onclick="opsExportQueueCsv_()">Export Queue CSV (Local Data)</button>
+    </div>
+    <div class="opsWorkflowToolbar">
+      <label class="opsQueueSearch" for="opsQueueSearchInput">
+        <span class="opsStatusPill muted">Search</span>
+        <input id="opsQueueSearchInput" type="search" placeholder="ApplicantID, name, email, or phone" oninput="opsSetQueueSearch_(this.value)" autocomplete="off">
+      </label>
+      <button class="opsActionBtn" type="button" onclick="opsClearQueueSearch_()">Clear Search</button>
+    </div>
+    <div class="opsSafetyNotice">Local export contains applicant data. Do not share outside authorised staff.</div>
+    <div class="opsSortableStrip" id="opsQueueSortHeaders"></div>
+    <div id="opsAdmissionsResult" class="opsResultBox hidden"></div>
+    <div id="opsLifecycleQueue" class="opsLifecycleQueue"></div>
+    <div class="opsTableWrap hidden">
+      <table class="opsTable">
+        <thead>
+          <tr><th>Applicant ID</th><th>Applicant / Student</th><th>Date Applied</th><th>Aging</th><th>Test Marker</th><th>Docs</th><th>Payment</th><th>Invoice</th><th>Enrolment</th><th>Classroom</th><th>Ready?</th></tr>
+        </thead>
+        <tbody id="cockpitQueueBody"><tr><td colspan="11" class="opsPlaceholder">Loading queue...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="opsQueueSummaryStrip" id="opsQueueSummaryStrip"></div>
+    <div class="opsEscalationPanel">
+      <div class="opsSectionHeader"><div><h3>Bulk Communications</h3><p>Admin/Super Admin capability — escalate if needed.</p></div><span class="opsStatusPill warn">Escalation awareness</span></div>
+      <div class="opsResultBox warn" id="opsOperatorBulkAwareness">Escalate to Admin/Super Admin. Operator mode can view this capability but cannot run bulk communication actions.</div>
+      <div class="opsActionRow">
+        <button class="opsActionBtn live" type="button" disabled>Preview Cohort</button>
+        <button class="opsActionBtn live" type="button" disabled>Send Stage Batch</button>
+        <button class="opsActionBtn" type="button" disabled>Escalate to Admin/Super Admin</button>
+      </div>
+    </div>
+    <div class="opsEscalationPanel">
+      <div class="opsSectionHeader"><div><h3>Not Yet Available / Backend Missing</h3><p>Visible controls are separated from the daily intake workflow until their backend path is accepted.</p></div><span class="opsStatusPill muted">Release discipline</span></div>
+      <div class="opsBackendRegister">
+        <div class="opsInfoItem"><div class="k">Working</div><div class="v">Intake queue, Applicant Review, selected context, fd_ack/CRM/portal status visibility.</div></div>
+        <div class="opsInfoItem"><div class="k">Guarded implemented</div><div class="v">Single-applicant communications and Books previews where existing gates allow.</div></div>
+        <div class="opsInfoItem"><div class="k">Not yet implemented</div><div class="v">Broad automation runners, historical processing, CRM-as-authority, and unattended non-fd_ack sends.</div></div>
+        <div class="opsInfoItem"><div class="k">Needs follow-up</div><div class="v">Full OPS adapter diagnostics card and richer reporting/export workflows.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+<div id="opsApplicantContextMenu" class="opsContextMenu" role="menu" aria-label="Applicant row actions"></div>
+<div id="opsApplicantReviewDrawer" class="opsDrawerBack" onclick="if(event.target===this) opsCloseApplicantReviewDrawer_();">
+  <aside class="opsDrawerPanel" role="dialog" aria-modal="true" aria-label="Ops applicant review">
+    <div class="opsDrawerHead">
+      <div>
+        <h3 id="opsReviewDrawerTitle">Applicant Review</h3>
+        <div class="opsPlaceholder" id="opsReviewDrawerSub">Selected applicant context</div>
+      </div>
+      <div class="opsActionRow">
+        <button class="opsActionBtn" type="button" onclick="opsOpenLegacyAdminReview_()">Open Admin Review</button>
+        <button class="opsActionBtn" type="button" onclick="opsCloseApplicantReviewDrawer_()">Close</button>
+      </div>
+    </div>
+    <div id="opsReviewDrawerBody" class="opsDrawerBody">
+      <div class="opsPlaceholder">Select an applicant to load review details.</div>
+    </div>
+  </aside>
+</div>
+<script>
+  function opsQueueExportRows_(){
+    return opsAllQueueRows_().map(function(row){
+      var facts = opsReportRowFacts_(row);
+      var invoice = opsInvoiceSummary_(row);
+      var stage = opsLifecycleDefinitions_().filter(function(item){ return item.key === facts.lifecycleState; })[0];
+      var documentEvidence = facts.documentEvidence || opsDocumentEvidenceSummary_(row);
+      var eligibility = facts.communicationEligibility || {};
+      var ready = opsReadySummary_(invoice, facts.paymentVerified, opsIsYes_(row.Enrolled_Confirmed));
+      var emailIssueReason = opsEmailIssueReason_(row);
+      var droppedIneligibleReason = opsDroppedIneligibleReason_(row);
+      var paymentOk = facts.paymentVerified;
+      var enrolledOk = opsIsYes_(row.Enrolled_Confirmed);
+      return {
+        ApplicantID: String(facts.applicantId || ""),
+        "Applicant / Student Name": facts.name || "Unknown",
+        Email: facts.email || "Unknown",
+        "Phone / WhatsApp": facts.phone || "Unknown",
+        "Lifecycle Stage": facts.lifecycleLabel || (stage ? stage.name : "Unknown"),
+        "Stage Meaning": stage ? stage.meaning : "Unknown",
+        "Next Action": facts.nextActionLabel || (stage ? stage.next : "Unknown"),
+        "Communication Status": eligibility.active ? "Cooldown active" : facts.communicationStatus,
+        "Last Contacted At": opsFirstNonBlank_(row.Last_Contacted_At, row.Email_Last_Sent_At, row.Ack_Email_Sent_At, ""),
+        "Last Contact Type": opsFirstNonBlank_(row.Last_Contact_Type, ""),
+        "Last Contact Subject": opsFirstNonBlank_(row.Last_Contact_Subject, ""),
+        "Next Eligible Send": opsFirstNonBlank_(row.Email_Next_Action_Date, ""),
+        "Document Evidence Status": documentEvidence.label,
+        "Payment Evidence Status": facts.paymentStateLabel,
+        "Payment Verified": paymentOk ? "Yes" : "No",
+        "Portal Submitted": facts.portalSubmitted ? "Yes" : "No",
+        "Docs Verified": facts.docsVerified ? "Yes" : "No",
+        "Invoice Status": invoice.label,
+        "Enrolment Status": enrolledOk ? "Enrolled Confirmed" : "Not confirmed as enrolled",
+        "Classroom Status": facts.classroomStateLabel,
+        "Ready / Blocked": droppedIneligibleReason ? "Inactive" : (ready.label === "Ready" ? "Ready" : "Blocked"),
+        "Block Reason": droppedIneligibleReason || (eligibility.active ? "Cooldown active" : (emailIssueReason || (ready.label === "Ready" ? "" : "Unknown"))),
+        Student: facts.name,
+        Date_Applied: opsDateAppliedInfo_(row).label,
+        Aging: opsAgingDays_(row) || "",
+        Docs: facts.documentStateLabel,
+        Payment: facts.paymentStateLabel,
+        Invoice: invoice.label,
+        Invoice_Detail: invoice.detail || "",
+        Enrolled: enrolledOk ? "Yes" : "No",
+        Classroom: facts.classroomStateLabel
+      };
+    });
+  }
+  function opsExportQueueCsv_(){
+    var rows = opsQueueExportRows_();
+    if (!rows.length) {
+      setOpsResult_("opsAdmissionsResult", { result:"EMPTY", blockReason:"No loaded queue rows are available to export. Refresh the snapshot first." }, "Queue Export");
+      return;
+    }
+    var headers = ["ApplicantID","Applicant / Student Name","Email","Phone / WhatsApp","Lifecycle Stage","Stage Meaning","Next Action","Communication Status","Last Contacted At","Last Contact Type","Last Contact Subject","Next Eligible Send","Document Evidence Status","Payment Evidence Status","Payment Verified","Portal Submitted","Docs Verified","Invoice Status","Enrolment Status","Classroom Status","Ready / Blocked","Block Reason","Date_Applied","Aging"];
+    opsDownloadCsv_("ops-applicant-queue.csv", headers, rows);
+    setOpsResult_("opsAdmissionsResult", { result:"OPEN", message:"Exported loaded queue snapshot locally. Rows: " + String(rows.length) + ". Local export contains applicant data. Do not share outside authorised staff. No Sheets or Drive write occurred." }, "Queue Export");
+  }
+  function opsApplicantId_(){
+    return String((opsApplicantDetailCache && opsApplicantDetailCache.ApplicantID) || opsSelectedApplicantId || "").trim();
+  }
+  function opsApplicantName_(){
+    if (!opsApplicantId_()) return "";
+    var d = opsApplicantDetailCache || {};
+    var first = String((d.First_Name || d.name) || "").trim();
+    var last = String(d.Last_Name || "").trim();
+    var detailName = (first + " " + last).trim();
+    return detailName || String(opsSelectedApplicantName || "");
+  }
+  function opsClearSelectedActionState_(){
+    opsActionState.previewApplicantId = "";
+    opsActionState.previewMessageType = "";
+    opsActionState.previewResult = null;
+    opsActionState.classroomPreviewApplicantId = "";
+    opsActionState.classroomPreviewResult = null;
+  }
+  function opsResetSelectedApplicantContext_(preserveResult){
+    opsSelectedApplicantId = "";
+    opsSelectedApplicantName = "";
+    opsSelectedApplicantExplicit = false;
+    opsApplicantDetailCache = null;
+    opsClearSelectedActionState_();
+    resetCommunicationsState_("", preserveResult === true);
+    renderOpsApplicantSummary_(null);
+    renderOpsSelectedApplicantContext_();
+    renderOpsCommunicationWorkspace_();
+    renderOpsClassroomChecklist_();
+  }
+  function renderOpsSelectedApplicantContext_(){
+    var applicantId = opsApplicantId_();
+    var applicantName = opsApplicantName_();
+    if (!applicantId) {
+      setOpsText_("cockpitCommContext", "No applicant selected. Queue row click, Review, search result, Communications, Billing, Classroom Handover, and portal diagnostics will follow the row you select.");
+      setOpsText_("cockpitClassroomContext", "No applicant selected. Classroom Handover follows explicit queue/review selection only.");
+      setOpsText_("opsStageBatchApplicantContext", "No applicant selected");
+      setOpsPill_("cockpitPortalSelectedApplicant", "No applicant selected", "muted");
+      renderOpsSelectedApplicantMini_(null);
+      renderOpsTemplateBrowser_();
+      opsHydrateEmailCorrection_();
+      return;
+    }
+    var approved = applicantId === OPS_SAFE_MODE_APPROVED_APPLICANT_ID;
+    var row = opsApplicantContextRow_() || {};
+    var facts = opsPortalDiagnosticsFacts_(row);
+    var dateInfo = opsDateAppliedInfo_(row);
+    var aging = opsAgingDays_(row) || "Missing source";
+    var hasApplicantData = !!(opsApplicantDetailCache || opsQueueRowByApplicantId_(applicantId));
+    var dataNote = hasApplicantData ? "" : " | Data unavailable for selected applicant";
+    var superNote = IS_SUPER ? " (Super Admin selected-applicant authority)" : (IS_OPERATIONS_ADMIN ? " (Operations Admin selected-applicant authority)" : " (Admin/operator role restrictions apply)");
+    setOpsText_("cockpitCommContext", "Current Ops applicant: " + applicantId + " - " + applicantName + superNote + " | Effective email: " + (facts.email || "missing") + " | " + facts.communicationStatus + " | Date Applied: " + dateInfo.label + " | Aging: " + aging + dataNote);
+    setOpsText_("cockpitClassroomContext", "Current Ops applicant: " + applicantId + " - " + applicantName + superNote + " | " + facts.classroomStateLabel + " | " + facts.paymentStateLabel + " | Date Applied: " + dateInfo.label + " | Aging: " + aging + dataNote);
+    setOpsText_("opsStageBatchApplicantContext", applicantId ? (applicantId + " - " + applicantName + (hasApplicantData ? "" : " (data unavailable)")) : "No applicant selected");
+    setOpsPill_("cockpitPortalSelectedApplicant", applicantId + " | " + facts.portalStateLabel + " | " + facts.documentStateLabel, approved ? "ok" : opsFactsPillClass_(facts.portalState));
+    renderOpsSelectedApplicantMini_(opsApplicantDetailCache || null);
+    renderOpsTemplateBrowser_();
+    renderOpsCommunicationWorkspace_();
+    opsHydrateEmailCorrection_();
+  }
+  function opsSelectApplicantContext_(applicantId, applicantName){
+    var nextId = String(applicantId || "").trim();
+    if (!nextId) return;
+    opsSelectedApplicantId = nextId;
+    opsSelectedApplicantName = String(applicantName || "").trim() || nextId;
+    opsSelectedApplicantExplicit = true;
+    opsApplicantDetailCache = null;
+    opsClearSelectedActionState_();
+    renderOpsSelectedApplicantContext_();
+    renderOpsCommunicationWorkspace_();
+    renderOpsClassroomChecklist_();
+    renderOpsQueue_();
+    setOpsResult_("opsAdmissionsResult", {
+      result: "SELECTED",
+      applicantId: nextId,
+      message: "Ops applicant context set to " + nextId + ". Communications, Billing Queue, Classroom Handover, and portal diagnostics now follow this selected row."
+    }, "Applicant Selected");
+    fetchOpsApplicantSummary_(nextId);
+  }
+  function opsAllQueueRows_(){
+    var all = []
+      .concat(queueDataState.fdReceived || [], queueDataState.docs || [], queueDataState.awaitingPayment || [], queueDataState.payments || [], queueDataState.anomalies || [], queueDataState.paidApproved || []);
+    var seen = {};
+    return all.filter(function(row){
+      var key = String((row && (row.applicantId || row.ApplicantID)) || "").trim();
+      if (!key || seen[key]) return false;
+      seen[key] = true;
+      return true;
+    });
+  }
+  function opsQueueRowByApplicantId_(applicantId){
+    var target = String(applicantId || "").trim();
+    if (!target) return null;
+    var rows = opsAllQueueRows_();
+    for (var i = 0; i < rows.length; i++) {
+      var rowId = String((rows[i] && (rows[i].applicantId || rows[i].ApplicantID)) || "").trim();
+      if (rowId === target) return rows[i];
+    }
+    return null;
+  }
+  function opsApplicantContextRow_(){
+    return opsQueueRowByApplicantId_(opsApplicantId_()) || opsApplicantDetailCache || null;
+  }
+  function opsDateAppliedInfo_(row){
+    var r = row || {};
+    var queueDisplay = opsFirstNonBlank_(r.receivedDisplay, r.receivedAt);
+    if (queueDisplay) {
+      return {
+        label: queueDisplay,
+        source: opsFirstNonBlank_(r.receivedSource, "queue_received_timestamp"),
+        iso: opsFirstNonBlank_(r.receivedAt, ""),
+        missingReason: ""
+      };
+    }
+    var fallback = opsFirstNonBlank_(r.Date_Applied, r.Application_Date, r.Timestamp, r.Created_At, r.Submitted_At, r.createdAt, r.timestamp, "");
+    if (fallback) {
+      return {
+        label: fallback,
+        source: "detail_fallback_fields",
+        iso: fallback,
+        missingReason: ""
+      };
+    }
+    return {
+      label: "Missing source",
+      source: "",
+      iso: "",
+      missingReason: "Missing queue timestamp fields: PortalTokenIssuedAt, PortalLastUpdateAt, adapter_timestamp, Timestamp, and Created_At."
+    };
+  }
+  function opsDateApplied_(row){
+    return opsDateAppliedInfo_(row).label;
+  }
+  function opsAgingDays_(row){
+    var r = row || {};
+    if (typeof r.ageLabel === "string" && String(r.ageLabel).trim()) return String(r.ageLabel).trim();
+    if (typeof r.ageDays === "number" && isFinite(r.ageDays) && r.ageDays >= 0) {
+      return String(r.ageDays) + " day" + (Number(r.ageDays) === 1 ? "" : "s");
+    }
+    var info = opsDateAppliedInfo_(r);
+    var t = Date.parse(info.iso || info.label || "");
+    if (!Number.isFinite(t)) return info.missingReason ? "Missing source" : "";
+    var days = Math.max(0, Math.floor((Date.now() - t) / 86400000));
+    return String(days) + " day" + (days === 1 ? "" : "s");
+  }
+  function opsAgingBand_(row){
+    var band = String((row && row.ageBand) || "").trim().toLowerCase();
+    if (band === "green" || band === "orange" || band === "red") return band;
+    var label = String(opsAgingDays_(row) || "");
+    var num = Number(label.replace(/[^\d]/g, ""));
+    if (!isFinite(num)) return "unknown";
+    if (num <= 3) return "green";
+    if (num <= 7) return "orange";
+    return "red";
+  }
+  function opsAgingKind_(row){
+    var band = opsAgingBand_(row);
+    if (band === "green") return "ok";
+    if (band === "orange") return "warn";
+    if (band === "red") return "danger";
+    return "muted";
+  }
+  function opsDateAppliedTitle_(row){
+    var info = opsDateAppliedInfo_(row);
+    if (info.missingReason) return info.missingReason;
+    return "Source: " + String(info.source || "Unknown");
+  }
+  function opsExplicitTestMarker_(row, applicantId){
+    var r = row || {};
+    var id = String(applicantId || r.applicantId || r.ApplicantID || "").trim().toUpperCase();
+    var sourceText = [
+      id,
+      r.email,
+      r.Parent_Email,
+      r.First_Name,
+      r.Last_Name,
+      r.name,
+      r.Student_Name,
+      r.FD_FormID,
+      r.FormID,
+      r.adapter_source,
+      r.source,
+      r.Source
+    ].map(function(v){ return String(v == null ? "" : v).trim().toUpperCase(); }).filter(Boolean).join(" ");
+    if (/\bFODE-\d{2}-TEST\b/.test(id) || /\bFODE-\d{2}-DUMMY\b/.test(id)) return true;
+    return /\b(TEST|DUMMY)\b/.test(sourceText);
+  }
+  function opsExternalFdFeedMarker_(row){
+    var r = row || {};
+    var adapterSource = String(r.adapter_source || r.Adapter_Source || "").trim().toLowerCase();
+    var forwarded = String(r.adapter_forwarded || r.Adapter_Forwarded || "").trim().toLowerCase();
+    var hasForwarded = forwarded === "1" || forwarded === "true" || forwarded === "yes";
+    var hasFdEvidence = !!opsFirstNonBlank_(r.FD_FormID, r.FormID, r.correlation_id, r.Correlation_ID, r.__reqId);
+    return adapterSource === "sheet_bound_adapter" && (hasForwarded || hasFdEvidence);
+  }
+  function opsDummyMarker_(applicantId, row){
+    var r = row || {};
+    if (opsExplicitTestMarker_(r, applicantId)) return "Dummy / test";
+    if (opsExternalFdFeedMarker_(r)) return "Live / external FD feed";
+    return "Unclassified";
+  }
+  function opsPhoneState_(row){
+    var phone = opsFirstNonBlank_(row.Phone, row.Parent_Phone, row.Mobile, row.WhatsApp, row.Contact_Number, row.Phone_Number);
+    return phone ? "Phone/contact present" : "No phone/contact in loaded fields";
+  }
+  function opsHasBounceFlag_(row){
+    return isCommBounceFlagTrue_((row && row.Email_Bounce_Flag) || "");
+  }
+  function opsEmailIssueReason_(row){
+    var r = row || {};
+    return opsFirstNonBlank_(
+      r.Email_Bounce_Reason,
+      r.Last_Email_Error,
+      (/^(BOUNCED|SUPPRESSED|DO_NOT_CONTACT)$/i.test(String(r.Email_Status || "").trim()) ? String(r.Email_Status || "").trim() : ""),
+      (/^(BOUNCED|SUPPRESSED)$/i.test(String(r.Email_Verification_Status || "").trim()) ? String(r.Email_Verification_Status || "").trim() : ""),
+      (/^(BOUNCED|SUPPRESSED|FAILED|BLOCKED)$/i.test(String(r.Last_Contact_Result || "").trim()) ? String(r.Last_Contact_Result || "").trim() : "")
+    );
+  }
+  function opsHasEmailIssue_(row){
+    var r = row || {};
+    var emailStatus = String(r.Email_Status || "").trim().toUpperCase();
+    var verification = String(r.Email_Verification_Status || "").trim().toUpperCase();
+    var lastResult = String(r.Last_Contact_Result || "").trim().toUpperCase();
+    return opsHasBounceFlag_(r)
+      || !!opsEmailIssueReason_(r)
+      || emailStatus === "BOUNCED"
+      || emailStatus === "SUPPRESSED"
+      || emailStatus === "DO_NOT_CONTACT"
+      || verification === "BOUNCED"
+      || verification === "INVALID"
+      || verification === "SUPPRESSED"
+      || lastResult === "BOUNCED"
+      || lastResult === "SUPPRESSED";
+  }
+  function opsEmailIssueBadges_(row){
+    var r = row || {};
+    var emailStatus = String(r.Email_Status || "").trim().toUpperCase();
+    var verification = String(r.Email_Verification_Status || "").trim().toUpperCase();
+    var corrected = String(r.Parent_Email_Corrected || r.correctedEmail || "").trim();
+    var out = [];
+    if (opsHasEmailIssue_(r)) out.push({ label:"Email Issue", cls:"warn" });
+    if (opsHasBounceFlag_(r) || emailStatus === "BOUNCED" || verification === "BOUNCED") out.push({ label:"Bounce Detected", cls:"warn" });
+    if (emailStatus === "SUPPRESSED" || verification === "SUPPRESSED" || verification === "INVALID" || emailStatus === "DO_NOT_CONTACT") out.push({ label:"Email Suppressed", cls:"danger" });
+    if (opsHasEmailIssue_(r) && !corrected) out.push({ label:"Correction Required", cls:"warn" });
+    if (corrected) out.push({ label:"Corrected Email Available", cls:"ok" });
+    return out;
+  }
+  function opsEmailIssueFallbackHint_(row){
+    var r = row || {};
+    var phone = opsFirstNonBlank_(r.Parent_Phone, r.Phone, r.Mobile, r.WhatsApp, r.Contact_Number, r.Phone_Number, "");
+    return phone ? "Use phone/WhatsApp fallback while email is blocked." : "No phone/WhatsApp fallback is loaded for this applicant.";
+  }
+  function opsDroppedIneligibleReason_(row){
+    var r = row || {};
+    var fields = [
+      ["Pipeline_Stage", r.Pipeline_Stage],
+      ["Operational_Stage", r.Operational_Stage],
+      ["CRM_Stage", r.CRM_Stage],
+      ["Stage", r.Stage],
+      ["Overall_Status", r.Overall_Status]
+    ];
+    for (var i = 0; i < fields.length; i++) {
+      var raw = String(fields[i][1] || "").trim();
+      if (!raw) continue;
+      var normalized = raw.toLowerCase().replace(/[\/_-]+/g, " ").replace(/\s+/g, " ").trim();
+      if (normalized.indexOf("closed lost") >= 0
+        || normalized.indexOf("ineligible") >= 0
+        || normalized.indexOf("not eligible") >= 0
+        || normalized.indexOf("dropped") >= 0
+        || normalized.indexOf("drop out") >= 0
+        || normalized === "dropout"
+        || normalized.indexOf("withdrawn") >= 0
+        || normalized === "withdraw"
+        || normalized.indexOf("disqualified") >= 0) {
+        return fields[i][0] + ": " + raw;
+      }
+    }
+    return "";
+  }
+  function opsIsDroppedIneligible_(row){
+    return !!opsDroppedIneligibleReason_(row);
+  }
+  function opsQueueSearchText_(row){
+    var facts = opsApplicantQueueFacts_(row);
+    return [
+      facts.applicantId, facts.name, facts.email, facts.phone, facts.lifecycleLabel,
+      facts.documentStateLabel, facts.paymentStateLabel, facts.communicationStatus,
+      facts.nextActionLabel, facts.row.FD_FormID, facts.row.FormID, facts.row.correlation_id
+    ].map(function(v){ return String(v == null ? "" : v).toLowerCase(); }).join(" ");
+  }
+  function opsApplyQueueSearch_(rows){
+    var q = String(opsActionState.queueSearch || "").trim().toLowerCase();
+    if (!q) return rows;
+    return (rows || []).filter(function(row){ return opsQueueSearchText_(row).indexOf(q) >= 0; });
+  }
+  function opsSetQueueSearch_(value){
+    opsActionState.queueSearch = String(value || "");
+    opsActionState.queueFilter = "";
+    opsActionState.lifecycleStage = "";
+    renderOpsQueue_();
+  }
+  function opsClearQueueSearch_(){
+    opsActionState.queueSearch = "";
+    var input = document.getElementById("opsQueueSearchInput");
+    if (input) input.value = "";
+    renderOpsQueue_();
+  }
+  function opsQueueSortParts_(){
+    var raw = String(opsActionState.queueSort || "date_desc");
+    var parts = raw.split("_");
+    var dir = parts.pop() || "desc";
+    return { key: parts.join("_") || "date", dir: dir === "asc" ? "asc" : "desc" };
+  }
+  function opsSetQueueSort_(key, naturalDir){
+    var parts = opsQueueSortParts_();
+    var wanted = String(key || "date");
+    var natural = String(naturalDir || "asc") === "desc" ? "desc" : "asc";
+    var dir = (parts.key === wanted) ? (parts.dir === "asc" ? "desc" : "asc") : natural;
+    opsActionState.queueSort = wanted + "_" + dir;
+    renderOpsQueue_();
+  }
+  function opsQueueSortLabel_(){
+    var parts = opsQueueSortParts_();
+    var labels = {
+      applicant:"ApplicantID", name:"Applicant / Student Name", date:"Date Applied", aging:"Aging",
+      stage:"Lifecycle Stage", ack:"Ack Status", crm:"CRM Status", portal:"Portal Status",
+      docs:"Docs Status", payment:"Payment Status", invoice:"Invoice Status",
+      enrolment:"Enrolment Status", classroom:"Classroom Status", last_action:"Last Action"
+    };
+    if (parts.key === "date") return labels.date + (parts.dir === "desc" ? " ↓ Newest first" : " ↑ Oldest first");
+    if (parts.key === "aging") return labels.aging + (parts.dir === "desc" ? " ↓ Longest waiting first" : " ↑ Newest first");
+    return (labels[parts.key] || parts.key) + (parts.dir === "desc" ? " ↓" : " ↑");
+  }
+  function opsStatusPriority_(kind, row){
+    var r = row || {};
+    var facts = (kind === "docs" || kind === "payment") ? opsApplicantQueueFacts_(r) : null;
+    var text = "";
+    if (kind === "ack") text = fdAckStatusFromRow_(r).label;
+    else if (kind === "crm") text = crmBackupStatusFromRow_(r).label;
+    else if (kind === "portal") text = portalAccessStatusFromRow_(r).label;
+    else if (kind === "docs") text = facts.documentStateLabel;
+    else if (kind === "payment") text = facts.paymentStateLabel;
+    else if (kind === "invoice") text = opsInvoiceSummary_(r).label;
+    else if (kind === "enrolment") text = opsIsYes_(r.Enrolled_Confirmed) ? "Enrolled" : "Pending";
+    else if (kind === "classroom") text = classroomStatusFromRow_(r).label;
+    text = String(text || "").toUpperCase();
+    if (text.indexOf("FAIL") >= 0 || text.indexOf("BLOCK") >= 0 || text.indexOf("ERROR") >= 0) return 0;
+    if (text.indexOf("PENDING") >= 0 || text.indexOf("MISSING") >= 0 || text.indexOf("UNKNOWN") >= 0) return 1;
+    if (text.indexOf("PARTIAL") >= 0 || text.indexOf("SUBMITTED") >= 0 || text.indexOf("DRAFT") >= 0) return 2;
+    if (text.indexOf("SENT") >= 0 || text.indexOf("OK") >= 0 || text.indexOf("VERIFIED") >= 0 || text.indexOf("ENROLLED") >= 0 || text.indexOf("DONE") >= 0) return 3;
+    return 2;
+  }
+  function opsPillClass_(cls){
+    var s = String(cls || "");
+    if (s.indexOf("success") >= 0 || s === "ok") return "ok";
+    if (s.indexOf("warning") >= 0 || s === "warn") return "warn";
+    if (s.indexOf("danger") >= 0 || s === "danger") return "danger";
+    if (s.indexOf("info") >= 0 || s === "info") return "info";
+    return "muted";
+  }
+  function opsLastActionInfo_(row){
+    var r = row || {};
+    var v = opsFirstNonBlank_(r.Last_Contacted_At, r.Email_Last_Sent_At, r.Ack_Email_Sent_At, r.Handled_At, r.Books_Push_At, r.Books_Last_Push_At, r.Enrolled_At, r.Classroom_Handover_At, r.portalLastUpdateAt, r.PortalLastUpdateAt, r.adapter_timestamp);
+    return v ? String(v) : "No recent action";
+  }
+  function opsQueueCompareValue_(row, key){
+    var r = row || {};
+    var facts = opsApplicantQueueFacts_(r);
+    if (key === "applicant") return String(facts.applicantId || "");
+    if (key === "name") return String(facts.name || "");
+    if (key === "date") {
+      var d = Date.parse(String(opsDateAppliedInfo_(r).iso || ""));
+      return Number.isFinite(d) ? d : 0;
+    }
+    if (key === "aging") return Number(r.ageDays || String(opsAgingDays_(r) || "").replace(/\D+/g, "") || 0) || 0;
+    if (key === "stage") return opsLifecycleDefinitions_().map(function(s){ return s.key; }).indexOf(facts.lifecycleState);
+    if (key === "last_action") {
+      var la = Date.parse(opsLastActionInfo_(r));
+      return Number.isFinite(la) ? la : 0;
+    }
+    if (["ack","crm","portal","docs","payment","invoice","enrolment","classroom"].indexOf(key) >= 0) return opsStatusPriority_(key, r);
+    return "";
+  }
+  function opsSortQueueRows_(rows){
+    var parts = opsQueueSortParts_();
+    var key = parts.key;
+    var dir = parts.dir === "asc" ? 1 : -1;
+    return (rows || []).slice().sort(function(a, b){
+      var av = opsQueueCompareValue_(a, key);
+      var bv = opsQueueCompareValue_(b, key);
+      if (typeof av === "number" || typeof bv === "number") {
+        av = Number(av) || 0;
+        bv = Number(bv) || 0;
+        if (av !== bv) return (av > bv ? 1 : -1) * dir;
+      } else {
+        var cmp = String(av || "").localeCompare(String(bv || ""));
+        if (cmp !== 0) return cmp * dir;
+      }
+      var ad = Date.parse(String(opsDateAppliedInfo_(a).iso || ""));
+      var bd = Date.parse(String(opsDateAppliedInfo_(b).iso || ""));
+      if (!Number.isFinite(ad)) ad = 0;
+      if (!Number.isFinite(bd)) bd = 0;
+      if (bd !== ad) return bd - ad;
+      return String(b.applicantId || b.ApplicantID || "").localeCompare(String(a.applicantId || a.ApplicantID || ""));
+    });
+  }
+  function renderOpsQueueSortHeaders_(){
+    var el = document.getElementById("opsQueueSortHeaders");
+    if (!el) return;
+    var parts = opsQueueSortParts_();
+    var headers = [
+      ["applicant","ApplicantID","desc"], ["name","Applicant / Student Name","asc"], ["date","Date Applied","desc"],
+      ["aging","Aging","desc"], ["stage","Lifecycle Stage","asc"], ["ack","Ack Status","asc"],
+      ["crm","CRM Status","asc"], ["portal","Portal Status","asc"], ["docs","Docs Status","asc"],
+      ["payment","Payment Status","asc"], ["invoice","Invoice Status","asc"], ["enrolment","Enrolment Status","asc"],
+      ["classroom","Classroom Status","asc"], ["last_action","Last Action / Last Contacted","desc"]
+    ];
+    el.innerHTML = headers.map(function(h){
+      var active = parts.key === h[0];
+      var label = h[1] + (active ? (parts.dir === "desc" ? " ↓" : " ↑") : "");
+      return "<button class='opsSortableHeader" + (active ? " active" : "") + "' type='button' onclick='opsSetQueueSort_(\"" + esc(h[0]) + "\",\"" + esc(h[2]) + "\")'>" + esc(label) + "</button>";
+    }).join("");
+  }
+  function renderOpsSelectedApplicantMini_(row){
+    var el = document.getElementById("opsSelectedApplicantMini");
+    if (!el) return;
+    var d = row || opsApplicantContextRow_() || {};
+    var facts = opsApplicantQueueFacts_(d);
+    var id = facts.applicantId || opsApplicantId_();
+    var name = facts.name || opsApplicantName_();
+    if (!id) {
+      el.innerHTML = [
+        "<div class='opsInfoItem'><div class='k'>Selected Applicant</div><div class='v'>None</div></div>",
+        "<div class='opsInfoItem'><div class='k'>Name</div><div class='v'>No applicant selected</div></div>",
+        "<div class='opsInfoItem'><div class='k'>Lifecycle / Docs</div><div class='v'>Select a queue row</div></div>",
+        "<div class='opsInfoItem'><div class='k'>Payment / Next</div><div class='v'>Select a queue row</div></div>"
+      ].join("");
+      return;
+    }
+    var dateInfo = opsDateAppliedInfo_(d);
+    var aging = opsAgingDays_(d) || "Missing source";
+    var marker = opsDummyMarker_(id, d);
+    el.innerHTML = [
+      "<div class='opsInfoItem'><div class='k'>Selected Applicant</div><div class='v'>" + esc(id) + "</div></div>",
+      "<div class='opsInfoItem'><div class='k'>Name</div><div class='v'>" + esc(name) + "</div></div>",
+      "<div class='opsInfoItem'><div class='k'>Lifecycle / Docs</div><div class='v'>" + esc(facts.lifecycleLabel + " | " + facts.documentStateLabel) + "</div></div>",
+      "<div class='opsInfoItem'><div class='k'>Payment / Next</div><div class='v'>" + esc(facts.paymentStateLabel + " | " + facts.nextActionLabel + " | " + aging + " | " + marker + " | " + dateInfo.label) + "</div></div>"
+    ].join("");
+  }
+</script>
