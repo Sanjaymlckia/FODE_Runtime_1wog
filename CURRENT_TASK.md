@@ -2,6 +2,60 @@
 
 ## Active CIS
 
+- `CIS r209: Extract OPS Communications Module`.
+- Implementation date: `2026-06-01`.
+- Work class: `Runtime release - AdminUI OPS Communications include extraction`.
+- Release track: `Track L`.
+- Reason for classification: AdminUI-only template/module extraction and release identity update; no backend, role gate, send/export, schema, deployment architecture, or mutation-path change.
+- Intended runtime identity: `r209 / 209`.
+- Implementation authorized: `YES`.
+- Runtime release authorized: `YES, pending release gates`.
+
+### r209 Baseline
+
+- Started from finalized r208 baseline; `staging-as208` exists.
+- `Config.js` was `r208 / 208` before edits and is bumped to `r209 / 209` for this release.
+- Pre-existing dirty state remains limited to `.codexhub/SESSION_CONTEXT.md` and `.codexhub/resume_state/latest.json`.
+- Parked r204 patch remains audit/reference only and was not reapplied.
+
+### r209 Allowed Edit Files
+
+- `AdminUI.html`
+- `AdminUI_OpsCommunications.html`
+- `Config.js`
+- `CURRENT_TASK.md`
+
+### r209 Implementation Notes
+
+- Created `AdminUI_OpsCommunications.html`.
+- Moved OPS Communications queue/workflow/template/handoff render/event functions into the new include file.
+- Moved selected-applicant OPS email preview/send/timeline handlers into the new include file.
+- Implemented the Communications include as a standalone `<script>` include because `HtmlService.createHtmlOutputFromFile()` parses included files as HTML, and raw Communications JavaScript contains HTML string fragments.
+- Left shared row facts in `AdminUI_SharedRowFacts.html`.
+- Left global shell routing, lifecycle, applicant queue, billing, portal diagnostics, classroom, reports, shared safety gates, and stage-batch internals in `AdminUI.html`.
+- Preserved function names exactly and left call sites unchanged.
+- No UI layout, labels, buttons, gates, backend behavior, send/export/preview behavior, schema, or Apps Script app configuration were changed.
+
+### r209 Release Evidence
+
+- Local validation: `git diff --check` PASS; expanded AdminUI syntax check PASS with `AdminUI_SharedRowFacts.html` and `AdminUI_OpsCommunications.html` substituted into `AdminUI.html`.
+- Scoped runtime diff: `AdminUI.html`, `AdminUI_OpsCommunications.html`, `CURRENT_TASK.md`, `Config.js`; `Admin.js`, `Code.js`, `Utils.js`, and `appsscript.json` have no diff.
+- Apps Script version count before release: `167`, below stop threshold.
+- Local identity before version: `VERSION: "r209"`, `DEPLOY_VERSION_NUMBER: 209`.
+- Remote-source proof: Apps Script REST API confirmed remote `Config.js` is `r209 / 209`; remote `AdminUI.html` contains the `AdminUI_OpsCommunications` include; remote `AdminUI_OpsCommunications.html` exists and contains Communications queue/workspace/preview/send functions; remote `AdminUI_SharedRowFacts.html` still exists and contains `opsBuildRowFacts_`; safety markers remain in `AdminUI.html`.
+- Apps Script platform version `227` was created and repinned first, but browser/source acceptance failed with `ROUTE FAILURE` because the raw Communications include was parsed as malformed HTML. It was not accepted.
+- Corrected Apps Script platform version `228` passed acceptance, then final EOF whitespace cleanup was pushed forward for local/remote source parity.
+- Final Apps Script platform version: `229`.
+- Admin deployment pin: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @229`.
+- Student deployment pin: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @229`.
+- Admin whoami: PASS, `r209 / 209`.
+- Student whoami: PASS, `r209 / 209`.
+- Browser/source acceptance URL: `https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=ops`.
+- Browser/source acceptance: PASS for no route failure, OPS shell, Communications, Lifecycle Map, Applicant Queue, Billing, Portal Diagnostics, Classroom, included Communications functions, included row facts, and safety markers.
+- No send/export/mutation action was triggered.
+
+## Previous CIS
+
 - `CIS r208: AdminUI Include Pattern Proof`.
 - Implementation date: `2026-06-01`.
 - Work class: `Runtime release - AdminUI include/module split proof`.
