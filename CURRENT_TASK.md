@@ -2,6 +2,62 @@
 
 ## Active CIS
 
+- `CIS r211: Extract Lifecycle Map UI`.
+- Implementation date: `2026-06-01`.
+- Work class: `Runtime release - AdminUI Lifecycle Map include extraction`.
+- Release track: `Track L`.
+- Reason for classification: Level 1 AdminUI-only include extraction for the OPS Lifecycle Map; no backend, role gate, row-facts semantic, Communications, Applicant Queue, schema, or mutation-path change.
+- Intended runtime identity: `r211 / 211`.
+- Implementation authorized: `YES`.
+- Runtime release authorized: `YES, pending release gates`.
+
+### r211 Baseline
+
+- Started from finalized r210 baseline at commit `75826dc`; `staging-as210` exists.
+- `Config.js` was `r210 / 210` before edits and is bumped only to `r211 / 211` for this release.
+- Pre-existing dirty state remains limited to `.codexhub/SESSION_CONTEXT.md` and `.codexhub/resume_state/latest.json`.
+- Known r211+ follow-ups from r210 remain out of scope:
+  - WhatsApp records are not visible in expected workflow.
+  - Bulk email is not properly selecting/selectable by stages.
+  - Admin-level information blocks interrupt operator workflow.
+
+### r211 Allowed Edit Files
+
+- `AdminUI.html`
+- `AdminUI_OpsLifecycle.html`
+- `Config.js`
+- `CURRENT_TASK.md`
+
+### r211 Implementation Notes
+
+- Created `AdminUI_OpsLifecycle.html`.
+- Moved the OPS Lifecycle Map section markup out of `AdminUI.html` and replaced it with the standard Apps Script include call in the same location.
+- Moved the lifecycle-specific CSS block for `opsStageCascade` / `opsStageCard` into the new include.
+- Moved the lifecycle-specific function block into the new include:
+  - `opsLifecycleDefinitions_`
+  - `opsWorkflowStageKey_`
+  - `opsLifecycleStageKeyFromFacts_`
+  - `opsDeriveLifecycleStateFromRawRow_`
+  - `opsWorkflowStageLabel_`
+  - `opsRowsForLifecycleStage_`
+  - `renderOpsLifecycleCascade_`
+- Preserved function names, element IDs, CSS classes, event handlers, and lifecycle behavior exactly.
+- Did not modify Communications, Applicant Queue extraction boundaries, Billing, Portal Diagnostics, Classroom, Reports, backend RPCs, payloads, row-facts semantics, or Dropped/Ineligible rules.
+- No send/export/mutation action was triggered.
+
+### r211 Release Evidence
+
+- Local validation: PASS; `git diff --check` passed aside from CRLF warnings, `git diff --name-only` remained limited to allowed files plus `.codexhub`, `AdminUI_OpsLifecycle.html` exists, `AdminUI.html` includes `AdminUI_OpsLifecycle`, moved Lifecycle Map source is no longer duplicated in `AdminUI.html`, backend files remained unchanged, `Config.js` changed only to `r211 / 211`, `AdminUI_SharedRowFacts.html` and `AdminUI_OpsCommunications.html` remained unchanged, and no send/export/mutation action was run.
+- Remote-source proof: PASS by operator-supplied Apps Script editor evidence confirming `Config.js` = `r211 / 211`, remote `AdminUI_OpsLifecycle.html` exists and contains the extracted Lifecycle Map code, and remote `AdminUI.html` contains `<?!= HtmlService.createHtmlOutputFromFile('AdminUI_OpsLifecycle').getContent(); ?>`.
+- Apps Script platform version: `231`.
+- Admin deployment pin: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @231`.
+- Student deployment pin: `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @231`.
+- Admin whoami: PASS, `r211 / 211`, `mismatch=false`.
+- Student whoami: PASS, `r211 / 211`, `mismatch=false`.
+- Browser/operator acceptance: PASS by operator evidence; OPS Cockpit loads, runtime shows `r211 / 211`, Runtime Verified, Admin/Student whoami match, no drift mismatch warning, Lifecycle Cascade renders from extracted include, Dropped / Ineligible remains display-only, Applicant Queue/Communications/Billing/Portal Diagnostics/Classroom/Reports all render, no red blocking UI error observed, and no send/export/mutation action was executed.
+
+## Previous CIS
+
 - `CIS r210A: Dropped / Ineligible Terminal Hardening - Communications, Lifecycle, Applicant Queue Only`.
 - Implementation date: `2026-06-01`.
 - Work class: `Runtime release - AdminUI-only UI semantic hardening`.
@@ -64,8 +120,6 @@
   - WhatsApp records are not visible in the expected workflow.
   - Bulk email is not properly selecting / selectable by stages.
   - Admin-level information blocks are interrupting operator workflow.
-
-## Previous CIS
 
 - `CIS r209: Extract OPS Communications Module`.
 - Implementation date: `2026-06-01`.

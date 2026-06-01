@@ -1,0 +1,128 @@
+<style>
+    .opsStageCascade{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px; }
+    .opsStageCard{ border:1px solid #dce6ef; background:#fff; border-radius:8px; padding:12px; text-align:left; cursor:pointer; min-height:178px; display:flex; flex-direction:column; gap:8px; }
+    .opsStageCard:hover{ border-color:#a9c6ee; background:#f8fbff; }
+    .opsStageCard.active{ border-color:#1f70ea; box-shadow:inset 0 0 0 2px rgba(31,112,234,.18); background:#f2f7ff; }
+    .opsStageCard .stageTop{ display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+    .opsStageCard .stageName{ font-weight:900; color:#14263b; line-height:1.25; }
+    .opsStageCard .stageCount{ font-size:22px; font-weight:900; color:#1f70ea; }
+    .opsStageCard .stageMeaning,.opsStageCard .stageNext{ font-size:12px; color:#5f7186; line-height:1.35; }
+    .opsStageCard .stageRecords{ font-size:12px; color:#26384e; line-height:1.35; word-break:break-word; }
+</style>
+<section id="opsLifecycleMap" class="opsSectionPage" data-ops-mode-group="operator">
+  <div class="opsPageIntro">
+    <div><h2>Lifecycle Cascade</h2><p>Top-level operational map. Stage selection filters the applicant queue and preserves selected applicant context.</p></div>
+    <span class="opsStatusPill info">Operational lifecycle</span>
+  </div>
+  <div class="opsCard">
+    <div class="opsStageCascade" id="opsLifecycleStageCards"></div>
+    <div class="opsInspectPanel" id="opsLifecycleInspector">Select a lifecycle stage to inspect records, blockers, and next action.</div>
+  </div>
+</section>
+<script>
+    function opsLifecycleDefinitions_(){
+      return [
+        { key:"fd_received", name:"Application Received / FD Received", mode:"operator workflow", meaning:"External FD intake row has been received and assigned an ApplicantID.", next:"Review Application", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "fd_received"; } },
+        { key:"portal", name:"Portal Access / Portal Submitted", mode:"operator workflow", meaning:"Portal access or submission is visible; it does not prove documents were uploaded.", next:"Check portal uploads / contact applicant", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "portal"; } },
+        { key:"docs", name:"Awaiting Uploads / Document Evidence Pending", mode:"operator workflow", meaning:"Portal submission or document requirement is visible, but uploaded document evidence is not loaded.", next:"Request or check uploads", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "docs"; } },
+        { key:"uploaded_review_required", name:"Uploaded / Review Required", mode:"operator workflow", meaning:"Loaded document evidence exists and requires operator review before eligibility can progress.", next:"Eligibility review required", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "uploaded_review_required"; } },
+        { key:"document_correction_required", name:"Document Correction Required", mode:"operator workflow", meaning:"Loaded document status indicates wrong, invalid, rejected, or correction-required evidence.", next:"Request corrected document", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "document_correction_required"; } },
+        { key:"eligibility_review", name:"Eligibility Review", mode:"operator workflow", meaning:"Document evidence is verified or review-ready and eligibility decision remains active.", next:"Complete eligibility check", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "eligibility_review"; } },
+        { key:"payment", name:"Payment Evidence Not Verified", mode:"operator workflow", meaning:"Payment evidence is missing or has not been verified.", next:"Review Payment", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "payment"; } },
+        { key:"invoice", name:"Invoice / Books", mode:"admin guarded", meaning:"Books invoice or billing state needs follow-up.", next:"Review Payment", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "invoice"; } },
+        { key:"enrolment", name:"Enrolment Pending", mode:"admin guarded", meaning:"Payment is verified and enrolment is not confirmed.", next:"Review Application", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "enrolment"; } },
+        { key:"classroom", name:"Classroom Handover", mode:"admin guarded", meaning:"Enrolment/classroom handover is pending or unknown.", next:"Review Application", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "classroom"; } },
+        { key:"exceptions", name:"Exceptions / Blocked", mode:"escalation", meaning:"Loaded status indicates blocked, failed, anomalous, or unsafe state.", next:"Review Application", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "exceptions"; } },
+        { key:"email_issue", name:"Email Issue / Contact Correction", mode:"escalation", meaning:"Bounce, suppression, or contact correction is required before email can continue.", next:"Correct Email", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "email_issue"; } },
+        { key:"dropped_ineligible", name:"Dropped / Ineligible", mode:"display-only", meaning:"Source lifecycle/status field marks the record as dropped, ineligible, closed-lost, withdrawn, or disqualified; it is separated from active progression queues.", next:"Review source status", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "dropped_ineligible"; } }
+      ];
+    }
+    function opsWorkflowStageKey_(row){
+      return opsLifecycleStageKeyFromFacts_(row);
+    }
+    function opsLifecycleStageKeyFromFacts_(row){
+      return opsBuildRowFacts_(row).lifecycleState || "fd_received";
+    }
+    function opsDeriveLifecycleStateFromRawRow_(row, documentState, paymentVerified){
+      var r = row || {};
+      if (opsIsDroppedIneligible_(r)) return "dropped_ineligible";
+      if (opsHasEmailIssue_(r)) return "email_issue";
+      var lastResult = String(r.Last_Contact_Result || r.Email_Status || r.Ack_Email_Status || r.Books_Last_Error || "").toUpperCase();
+      if (lastResult.indexOf("FAILED") >= 0 || lastResult.indexOf("BLOCK") >= 0 || lastResult.indexOf("ERROR") >= 0) return "exceptions";
+      var paymentOk = paymentVerified === true || opsIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true;
+      var enrolledOk = opsIsYes_(r.Enrolled_Confirmed);
+      var invoiceState = opsInvoiceSummary_(r);
+      var docState = String(documentState || opsDocumentStateFromRawRow_(r));
+      var portalSubmitted = workflowIsYes_(r.Portal_Submitted);
+      var portalEvidence = !!opsFirstNonBlank_(r.PortalURL, r.Portal_Status, r.Portal_Link, r.Portal_Token_Status, r.portalLastUpdateAt);
+      if (enrolledOk) return "classroom";
+      if (paymentOk && !enrolledOk) return "enrolment";
+      if (invoiceState.label === "Invoice Raised" || opsInvoiceEmailSummary_(r).label === "Invoice Email Sent" || !!opsFirstNonBlank_(r.Books_Invoice_ID, r.Books_Invoice_Number, r.Books_Push_Status)) return paymentOk ? "enrolment" : "payment";
+      if (docState === "document_correction_required") return "document_correction_required";
+      if (docState === "uploaded_review_required") return "uploaded_review_required";
+      if (docState === "eligibility_cleared" || docState === "verified") return paymentOk ? "enrolment" : "payment";
+      if (docState === "eligibility_review") return "eligibility_review";
+      if (docState === "awaiting_uploads") return "docs";
+      if (portalSubmitted) return "docs";
+      if (portalEvidence || String(r.Email_Status || r.Ack_Email_Status || "").trim()) return "portal";
+      if (opsExternalFdFeedMarker_(r)) return "fd_received";
+      return "fd_received";
+    }
+    function opsWorkflowStageLabel_(row){
+      return opsBuildRowFacts_(row).lifecycleLabel || "Application Received / FD Received";
+    }
+    function opsRowsForLifecycleStage_(stageKey){
+      var rows = opsAllQueueRows_();
+      var stage = String(stageKey || "");
+      return stage ? rows.filter(function(row){ return opsLifecycleStageKeyFromFacts_(row || {}) === stage; }) : rows;
+    }
+    function renderOpsLifecycleCascade_(){
+      var wrap = document.getElementById("opsLifecycleStageCards");
+      var detail = document.getElementById("opsLifecycleInspector");
+      if (!wrap) return;
+      var selected = String(opsActionState.lifecycleStage || "");
+      var stages = opsLifecycleDefinitions_();
+      wrap.innerHTML = stages.map(function(stage){
+        var matches = opsRowsForLifecycleStage_(stage.key);
+        var ids = matches.slice(0, 4).map(function(row){ return String(opsApplicantQueueFacts_(row).applicantId || ""); }).filter(Boolean);
+        var selectedText = opsApplicantId_() ? ("Selected: " + opsApplicantId_()) : "Selected: none";
+        return "<button class='opsStageCard" + (selected === stage.key ? " active" : "") + "' type='button' data-stage-key='" + esc(stage.key) + "'>"
+          + "<div class='stageTop'><div class='stageName'>" + esc(stage.name) + "</div><div class='stageCount'>" + String(matches.length) + "</div></div>"
+          + "<div class='stageMeaning'>" + esc(stage.meaning) + "</div>"
+          + "<div class='stageRecords'><strong>Records:</strong> " + esc(ids.length ? ids.join(", ") : "None in loaded queue") + "</div>"
+          + "<div class='stageRecords'><strong>" + esc(selectedText) + "</strong></div>"
+          + "<div><span class='opsStatusPill " + (stage.mode.indexOf("backend missing") >= 0 ? "danger" : (stage.mode.indexOf("gated") >= 0 || stage.mode.indexOf("guarded") >= 0 || stage.mode.indexOf("owner") >= 0 ? "warn" : "info")) + "'>" + esc(stage.mode) + "</span></div>"
+          + "<div class='stageNext'>" + esc(stage.next) + "</div>"
+          + "</button>";
+      }).join("");
+      Array.prototype.slice.call(wrap.querySelectorAll(".opsStageCard")).forEach(function(btn){
+        btn.addEventListener("click", function(){
+          var key = String(btn.getAttribute("data-stage-key") || "");
+          opsActionState.lifecycleStage = opsActionState.lifecycleStage === key ? "" : key;
+          opsActionState.queueFilter = opsActionState.lifecycleStage ? ("stage:" + opsActionState.lifecycleStage) : "";
+          if (opsActionState.lifecycleStage) {
+            batchState.selectedStage = key;
+            batchState.priority = mapStagePriorityUi_(key);
+            batchState.messageType = getBatchMessageTypeForStageUi_(key);
+            batchState.sendable = isBatchSendableStageUi_(key);
+            batchState.disabledReason = batchState.sendable ? "" : "No batch message is supported for this stage.";
+            resetBatchPreviewState_(false);
+          } else {
+            clearBatchSelection_(false);
+          }
+          renderOpsLifecycleCascade_();
+          renderOpsQueue_();
+          renderBatchPanel();
+          opsScrollTo_("opsAdmissionsQueue");
+        });
+      });
+      if (detail) {
+        var stage = stages.filter(function(s){ return s.key === selected; })[0];
+        var rows = selected ? opsRowsForLifecycleStage_(selected) : [];
+        var selectedApplicant = opsApplicantId_() || "none";
+        detail.innerHTML = stage
+          ? "<strong>" + esc(stage.name) + "</strong><div style='margin-top:6px;'>Count: " + String(rows.length) + "</div><div>Selected applicant: " + esc(selectedApplicant) + "</div><div>Records in view: " + esc(rows.slice(0, 6).map(function(row){ return String(opsApplicantQueueFacts_(row).applicantId || ""); }).filter(Boolean).join(", ") || "None in loaded queue") + "</div><div>Fields used: shared row facts: lifecycleState, documentState, paymentState, communicationEligibility, and nextAction.</div><div>Next action: " + esc(stage.next) + "</div>"
+          : "Select a lifecycle stage to inspect records, blockers, and next action.";
+      }
+    }
+</script>
