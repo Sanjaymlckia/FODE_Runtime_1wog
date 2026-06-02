@@ -252,6 +252,187 @@
         communicationNextActionAt: communicationNextActionAt
       };
     }
+    function operationalStateStageLabel_(stage){
+      var labels = {
+        RECEIVED: "Received",
+        PORTAL_ISSUED: "Portal Issued",
+        PORTAL_SUBMITTED: "Portal Submitted",
+        DOCS_PENDING: "Docs Pending",
+        DOCS_UNDER_REVIEW: "Docs Under Review",
+        DOCS_CORRECTION_REQUIRED: "Docs Correction Required",
+        DOCS_VERIFIED: "Docs Verified",
+        PAYMENT_EVIDENCE_PENDING: "Payment Evidence Pending",
+        PAYMENT_UNDER_REVIEW: "Payment Under Review",
+        PAYMENT_VERIFIED: "Payment Verified",
+        ENROLMENT_READY: "Enrolment Ready",
+        ENROLLED: "Enrolled",
+        DROPPED: "Dropped",
+        INELIGIBLE: "Ineligible",
+        CLOSED_LOST: "Closed Lost",
+        DUPLICATE: "Duplicate",
+        DO_NOT_CONTACT: "Do Not Contact"
+      };
+      return labels[String(stage || "").trim()] || (String(stage || "").trim() || "Unknown");
+    }
+    function operationalStateDisplayLabel_(stage){
+      var normalized = String(stage || "").trim().toUpperCase();
+      if (normalized === "ENROLMENT_READY") return "Enrolment Pending";
+      return operationalStateStageLabel_(normalized);
+    }
+    function operationalStateDisplayNextAction_(nextAction){
+      var action = String(nextAction || "").trim().toUpperCase();
+      var map = {
+        ISSUE_PORTAL_ACCESS: "Issue portal access",
+        WAIT_FOR_PORTAL_SUBMISSION: "Wait for portal submission",
+        CHECK_PORTAL_UPLOADS: "Check portal uploads",
+        REQUEST_DOCUMENTS: "Request documents",
+        REVIEW_DOCUMENTS: "Review documents",
+        REQUEST_DOCUMENT_CORRECTION: "Request corrected document",
+        REQUEST_PAYMENT_EVIDENCE: "Request payment evidence",
+        REVIEW_PAYMENT: "Review payment",
+        PREPARE_ENROLMENT: "Prepare enrolment",
+        REVIEW_APPLICATION: "Review application",
+        NONE: "No active progression"
+      };
+      if (map[action]) return map[action];
+      return String(nextAction || "").trim() || "Review application";
+    }
+    function opsCurrentReviewQueueBucket_(row){
+      var r = row || {};
+      var applicantId = operationalStateFirstNonBlank_(r.applicantId, r.ApplicantID);
+      var rowNumber = Number(r.rowNumber || r._rowNumber || 0);
+      var bucketMap = [
+        ["fdReceived", "fd_received"],
+        ["docs", "docs"],
+        ["awaitingPayment", "awaiting_payment"],
+        ["payments", "payments"],
+        ["anomalies", "anomalies"],
+        ["paidApproved", "paid_approved"]
+      ];
+      var state = (typeof queueDataState === "object" && queueDataState) ? queueDataState : {};
+      for (var i = 0; i < bucketMap.length; i++) {
+        var rows = Array.isArray(state[bucketMap[i][0]]) ? state[bucketMap[i][0]] : [];
+        for (var j = 0; j < rows.length; j++) {
+          var bucketRow = rows[j] || {};
+          var bucketId = operationalStateFirstNonBlank_(bucketRow.applicantId, bucketRow.ApplicantID);
+          var bucketRowNumber = Number(bucketRow.rowNumber || bucketRow._rowNumber || 0);
+          if ((applicantId && bucketId && applicantId === bucketId) || (rowNumber > 0 && bucketRowNumber > 0 && rowNumber === bucketRowNumber)) {
+            return bucketMap[i][1];
+          }
+        }
+      }
+      return "not_in_loaded_review_queue";
+    }
+    function opsCurrentSendEligibilityState_(row){
+      var eligibility = {};
+      try { eligibility = deriveSendEligibility(row || {}) || {}; } catch (_err) { eligibility = {}; }
+      return eligibility.active ? "COOLDOWN_ACTIVE" : "READY_TO_SEND";
+    }
+    function opsResolverAllowedStagesForQueueBucket_(bucket){
+      var map = {
+        fd_received: ["RECEIVED", "PORTAL_ISSUED"],
+        docs: ["PORTAL_SUBMITTED", "DOCS_PENDING", "DOCS_UNDER_REVIEW", "DOCS_CORRECTION_REQUIRED"],
+        awaiting_payment: ["DOCS_VERIFIED", "PAYMENT_EVIDENCE_PENDING"],
+        payments: ["PAYMENT_UNDER_REVIEW"],
+        anomalies: [],
+        paid_approved: ["PAYMENT_VERIFIED", "ENROLMENT_READY", "ENROLLED"]
+      };
+      return map[String(bucket || "").trim()] || [];
+    }
+    function opsResolverAllowedStagesForLifecycleKey_(key){
+      var map = {
+        fd_received: ["RECEIVED"],
+        portal: ["PORTAL_ISSUED", "PORTAL_SUBMITTED"],
+        docs: ["PORTAL_SUBMITTED", "DOCS_PENDING"],
+        uploaded_review_required: ["DOCS_UNDER_REVIEW"],
+        document_correction_required: ["DOCS_CORRECTION_REQUIRED"],
+        eligibility_review: ["DOCS_VERIFIED", "PAYMENT_EVIDENCE_PENDING", "PAYMENT_UNDER_REVIEW"],
+        payment: ["PAYMENT_EVIDENCE_PENDING", "PAYMENT_UNDER_REVIEW"],
+        invoice: ["PAYMENT_EVIDENCE_PENDING", "PAYMENT_UNDER_REVIEW"],
+        enrolment: ["PAYMENT_VERIFIED", "ENROLMENT_READY"],
+        classroom: ["ENROLLED"],
+        exceptions: [],
+        email_issue: ["DO_NOT_CONTACT"],
+        dropped_ineligible: ["DROPPED", "INELIGIBLE", "CLOSED_LOST", "DUPLICATE", "DO_NOT_CONTACT"]
+      };
+      return map[String(key || "").trim()] || [];
+    }
+    function opsResolverAlignmentStatus_(resolverStage, allowedStages){
+      var stage = String(resolverStage || "").trim();
+      var allowed = Array.isArray(allowedStages) ? allowedStages : [];
+      if (!allowed.length) return "mismatch";
+      return allowed.indexOf(stage) >= 0 ? "aligned" : "mismatch";
+    }
+    function opsResolverProofFromRow_(row, factsOpt){
+      var r = row || {};
+      var facts = (factsOpt && typeof factsOpt === "object") ? factsOpt : {};
+      var resolver = resolveApplicantOperationalState_(r, {});
+      var lifecycleKey = operationalStateFirstNonBlank_(facts.workflowStage, facts.lifecycleState, "");
+      var queueBucket = opsCurrentReviewQueueBucket_(r);
+      var currentSendEligibility = operationalStateFirstNonBlank_(facts.currentSendEligibility, opsCurrentSendEligibilityState_(r), "READY_TO_SEND");
+      var currentStageLabel = operationalStateFirstNonBlank_(facts.lifecycleLabel, lifecycleKey, "");
+      var queueAllowed = opsResolverAllowedStagesForQueueBucket_(queueBucket);
+      var lifecycleAllowed = opsResolverAllowedStagesForLifecycleKey_(lifecycleKey);
+      var queueComparison = opsResolverAlignmentStatus_(resolver.stage, queueAllowed);
+      var lifecycleComparison = opsResolverAlignmentStatus_(resolver.stage, lifecycleAllowed);
+      var sendComparison = ((currentSendEligibility === "READY_TO_SEND" && resolver.communicationState === "READY_TO_SEND")
+        || (currentSendEligibility === "COOLDOWN_ACTIVE" && resolver.communicationState === "COOLDOWN"))
+        ? "aligned"
+        : "mismatch";
+      return {
+        currentStageKey: lifecycleKey || "unknown",
+        currentStageLabel: currentStageLabel || "Unknown",
+        currentQueueBucket: queueBucket,
+        currentSendEligibility: currentSendEligibility,
+        resolverStage: resolver.stage,
+        resolverStageLabel: operationalStateStageLabel_(resolver.stage),
+        resolverNextAction: resolver.nextAction,
+        resolverNextActionAt: resolver.nextActionAt,
+        resolverBlockCode: resolver.blockCode,
+        resolverBlockReason: resolver.blockReason,
+        resolverCommunicationState: resolver.communicationState,
+        queueComparison: queueComparison,
+        lifecycleComparison: lifecycleComparison,
+        sendComparison: sendComparison
+      };
+    }
+    function opsResolverComparisonSummary_(rows){
+      var list = Array.isArray(rows) ? rows : [];
+      var summary = {
+        totalRows: list.length,
+        queueAligned: 0,
+        queueMismatch: 0,
+        lifecycleAligned: 0,
+        lifecycleMismatch: 0,
+        sendAligned: 0,
+        sendMismatch: 0,
+        queueSamples: [],
+        lifecycleSamples: [],
+        sendSamples: []
+      };
+      for (var i = 0; i < list.length; i++) {
+        var row = list[i] || {};
+        var facts = opsBuildRowFacts_(row);
+        var proof = facts && facts.resolverProof ? facts.resolverProof : opsResolverProofFromRow_(row, facts);
+        var applicantId = operationalStateFirstNonBlank_(facts && facts.applicantId, row.ApplicantID, row.applicantId, "unknown");
+        if (proof.queueComparison === "aligned") summary.queueAligned++;
+        else {
+          summary.queueMismatch++;
+          if (summary.queueSamples.length < 5) summary.queueSamples.push(applicantId + ": " + proof.currentQueueBucket + " -> " + proof.resolverStage);
+        }
+        if (proof.lifecycleComparison === "aligned") summary.lifecycleAligned++;
+        else {
+          summary.lifecycleMismatch++;
+          if (summary.lifecycleSamples.length < 5) summary.lifecycleSamples.push(applicantId + ": " + proof.currentStageKey + " -> " + proof.resolverStage);
+        }
+        if (proof.sendComparison === "aligned") summary.sendAligned++;
+        else {
+          summary.sendMismatch++;
+          if (summary.sendSamples.length < 5) summary.sendSamples.push(applicantId + ": " + proof.currentSendEligibility + " -> " + proof.resolverCommunicationState);
+        }
+      }
+      return summary;
+    }
     function opsBuildRowFacts_(row){
       var r = row || {};
       var applicantId = opsFirstNonBlank_(r.applicantId, r.ApplicantID, "");
@@ -293,6 +474,15 @@
             : opsFirstNonBlank_(r.Comm_Block_Reason, r.Last_Contact_Result, r.Books_Last_Error, "No loaded block reason")));
       var communicationStatus = "";
       try { communicationStatus = deriveCommunicationStatus(r); } catch (_err2) { communicationStatus = ""; }
+      var resolverProof = opsResolverProofFromRow_(r, {
+        workflowStage: workflowStage,
+        lifecycleState: workflowStage,
+        lifecycleLabel: lifecycleDef ? lifecycleDef.name : (workflowStage || "Unknown"),
+        currentSendEligibility: sendEligibility.active ? "COOLDOWN_ACTIVE" : "READY_TO_SEND"
+      });
+      var resolverDisplayStageLabel = operationalStateDisplayLabel_(resolverProof && resolverProof.resolverStage);
+      var resolverDisplayNextAction = operationalStateDisplayNextAction_(resolverProof && resolverProof.resolverNextAction);
+      var resolverDisplayBlockReason = operationalStateFirstNonBlank_(resolverProof && resolverProof.resolverBlockReason, blockReason, "No loaded block reason");
       var communicationQueues = {
         readyToContact: !!(activeProgressionAllowed && email && !emailIssue && !recentlyContacted && !cooldownActive && documentState !== "awaiting_uploads" && documentState !== "uploaded_review_required" && documentState !== "document_correction_required" && documentState !== "correction_required"),
         missingDocuments: !!(activeProgressionAllowed && documentState === "awaiting_uploads"),
@@ -349,11 +539,16 @@
         communicationState: communicationStatus || "Unknown",
         lastContactLabel: lastContactLabel,
         blockReason: blockReason,
-        communicationStatus: communicationStatus || "Unknown"
+        communicationStatus: communicationStatus || "Unknown",
+        resolverState: resolverProof,
+        resolverProof: resolverProof,
+        displayStageLabel: resolverDisplayStageLabel || (lifecycleDef ? lifecycleDef.name : (workflowStage || "Unknown")),
+        displayNextActionLabel: resolverDisplayNextAction || "",
+        displayBlockReason: resolverDisplayBlockReason
       };
       facts.primaryAction = terminalLifecycle ? "terminal" : (communicationQueues.cooldownRecentlyContacted ? "wait" : (communicationQueues.emailIssue ? "correct_email" : (communicationQueues.uploadedReviewRequired ? "open_review" : (communicationQueues.whatsappFallback ? "manual_fallback" : "preview"))));
       facts.nextAction = facts.primaryAction;
-      facts.nextActionLabel = opsNextActionFromFacts_(facts);
+      facts.nextActionLabel = facts.displayNextActionLabel || opsNextActionFromFacts_(facts);
       return {
         row: facts.row,
         applicantId: facts.applicantId,
@@ -373,6 +568,7 @@
         workflowStage: facts.workflowStage,
         lifecycleState: facts.lifecycleState,
         lifecycleLabel: facts.lifecycleLabel,
+        displayStageLabel: facts.displayStageLabel,
         portalSubmitted: facts.portalSubmitted,
         portalState: facts.portalState,
         portalStateLabel: facts.portalStateLabel,
@@ -405,7 +601,10 @@
         nextActionLabel: facts.nextActionLabel,
         lastContactLabel: facts.lastContactLabel,
         blockReason: facts.blockReason,
-        communicationStatus: facts.communicationStatus
+        displayBlockReason: facts.displayBlockReason,
+        communicationStatus: facts.communicationStatus,
+        resolverState: facts.resolverState,
+        resolverProof: facts.resolverProof
       };
     }
     function opsCommunicationHasEmail_(row){

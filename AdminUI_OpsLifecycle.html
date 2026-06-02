@@ -69,7 +69,8 @@
       return "fd_received";
     }
     function opsWorkflowStageLabel_(row){
-      return opsBuildRowFacts_(row).lifecycleLabel || "Application Received / FD Received";
+      var facts = opsBuildRowFacts_(row);
+      return facts.displayStageLabel || facts.lifecycleLabel || "Application Received / FD Received";
     }
     function opsRowsForLifecycleStage_(stageKey){
       var rows = opsAllQueueRows_();
@@ -120,8 +121,30 @@
         var stage = stages.filter(function(s){ return s.key === selected; })[0];
         var rows = selected ? opsRowsForLifecycleStage_(selected) : [];
         var selectedApplicant = opsApplicantId_() || "none";
+        var selectedRow = opsApplicantContextRow_() || {};
+        var selectedFacts = opsApplicantQueueFacts_(selectedRow);
+        var proof = selectedFacts && selectedFacts.resolverProof ? selectedFacts.resolverProof : {};
+        var comparison = opsResolverComparisonSummary_(opsAllQueueRows());
+        var queueSamples = comparison.queueSamples.length ? comparison.queueSamples.join("; ") : "None in loaded rows";
+        var lifecycleSamples = comparison.lifecycleSamples.length ? comparison.lifecycleSamples.join("; ") : "None in loaded rows";
+        var sendSamples = comparison.sendSamples.length ? comparison.sendSamples.join("; ") : "None in loaded rows";
         detail.innerHTML = stage
-          ? "<strong>" + esc(stage.name) + "</strong><div style='margin-top:6px;'>Count: " + String(rows.length) + "</div><div>Selected applicant: " + esc(selectedApplicant) + "</div><div>Records in view: " + esc(rows.slice(0, 6).map(function(row){ return String(opsApplicantQueueFacts_(row).applicantId || ""); }).filter(Boolean).join(", ") || "None in loaded queue") + "</div><div>Fields used: shared row facts: lifecycleState, documentState, paymentState, communicationEligibility, and nextAction.</div><div>Next action: " + esc(stage.next) + "</div>"
+          ? "<strong>" + esc(stage.name) + "</strong>"
+            + "<div style='margin-top:6px;'>Count: " + String(rows.length) + "</div>"
+            + "<div>Selected applicant: " + esc(selectedApplicant) + "</div>"
+            + "<div>Records in view: " + esc(rows.slice(0, 6).map(function(row){ return String(opsApplicantQueueFacts_(row).applicantId || ""); }).filter(Boolean).join(", ") || "None in loaded queue") + "</div>"
+            + "<div>Fields used: shared row facts: lifecycleState, documentState, paymentState, communicationEligibility, nextAction, and resolverProof.</div>"
+            + "<div>Next action: " + esc(stage.next) + "</div>"
+            + "<div style='margin-top:10px;'><strong>Selected applicant proof</strong></div>"
+            + "<div>Current stage: " + esc(proof.currentStageLabel || "No applicant selected") + " | Current queue: " + esc(proof.currentQueueBucket || "unknown") + " | Current send: " + esc(proof.currentSendEligibility || "unknown") + "</div>"
+            + "<div>Resolver stage: " + esc(proof.resolverStageLabel || "Unknown") + " | Next: " + esc(proof.resolverNextAction || "Unknown") + " | Block: " + esc((proof.resolverBlockCode || "NO_BLOCK") + " / " + (proof.resolverBlockReason || "No block reason")) + "</div>"
+            + "<div style='margin-top:10px;'><strong>Loaded-row comparison summary</strong></div>"
+            + "<div>Queue bucket vs resolver stage: " + String(comparison.queueAligned) + " aligned / " + String(comparison.queueMismatch) + " mismatch.</div>"
+            + "<div>Lifecycle display vs resolver stage: " + String(comparison.lifecycleAligned) + " aligned / " + String(comparison.lifecycleMismatch) + " mismatch.</div>"
+            + "<div>Ready to Send vs resolver communicationState: " + String(comparison.sendAligned) + " aligned / " + String(comparison.sendMismatch) + " mismatch.</div>"
+            + "<div>Queue mismatch samples: " + esc(queueSamples) + "</div>"
+            + "<div>Lifecycle mismatch samples: " + esc(lifecycleSamples) + "</div>"
+            + "<div>Send mismatch samples: " + esc(sendSamples) + "</div>"
           : "Select a lifecycle stage to inspect records, blockers, and next action.";
       }
     }

@@ -114,13 +114,15 @@
       }
     }
     function opsCommunicationStageLabel_(row){
-      return opsBuildRowFacts_(row).lifecycleLabel;
+      var facts = opsBuildRowFacts_(row);
+      return facts.displayStageLabel || facts.lifecycleLabel;
     }
     function opsCommunicationLastContact_(row){
       return opsBuildRowFacts_(row).lastContactLabel;
     }
     function opsCommunicationBlockReason_(row){
-      return opsBuildRowFacts_(row).blockReason;
+      var facts = opsBuildRowFacts_(row);
+      return facts.displayBlockReason || facts.blockReason;
     }
     function opsSelectCommunicationRow_(applicantId){
       var row = opsQueueRowByApplicantId_(applicantId) || {};
@@ -171,6 +173,7 @@
       var selectedFacts = selectedRows.length === 1 ? opsBuildRowFacts_(selectedRows[0]) : null;
       var displayFacts = selectedFacts || facts;
       var displayId = selectedFacts ? selectedFacts.applicantId : id;
+      var displayProof = displayFacts && displayFacts.resolverProof ? displayFacts.resolverProof : {};
       var recipientCounts = opsCommunicationRecipientCounts_(selectedRows);
       if (pane) {
         var paneItems = selectedRows.length > 1
@@ -186,13 +189,18 @@
           ["Name", displayFacts.name || opsApplicantName_() || "Unknown"],
           ["Email", displayFacts.email || "No email loaded"],
           ["Phone / WhatsApp", displayFacts.phone || "No phone/WhatsApp loaded"],
-          ["Lifecycle stage", displayId ? displayFacts.lifecycleLabel : "No applicant selected"],
+          ["Lifecycle stage", displayId ? (displayFacts.displayStageLabel || displayFacts.lifecycleLabel) : "No applicant selected"],
+          ["Current review queue", displayId ? (displayProof.currentQueueBucket || "not_in_loaded_review_queue") : "No applicant selected"],
           ["Communication status", displayId ? displayFacts.communicationStatus : "No applicant selected"],
+          ["Current send eligibility", displayId ? (displayProof.currentSendEligibility || "unknown") : "No applicant selected"],
           ["Last communication", displayId ? displayFacts.lastContactLabel : "No applicant selected"],
           ["Cooldown / next eligible send", displayFacts.nextEligible || "No next eligible date loaded"],
           ["Bounce / suppression", displayFacts.emailIssue ? displayFacts.emailIssueReason : "No loaded suppression"],
+          ["Resolver stage", displayId ? (displayProof.resolverStageLabel || "Unknown") : "No applicant selected"],
+          ["Resolver next action", displayId ? (displayProof.resolverNextAction || "Unknown") : "No applicant selected"],
+          ["Resolver block", displayId ? ((displayProof.resolverBlockCode || "NO_BLOCK") + " | " + (displayProof.resolverBlockReason || "No block reason")) : "No applicant selected"],
           ["Selected template / queue action", def.label + " / " + opsSelectedTemplateType_()],
-          ["Block reason", displayId ? displayFacts.blockReason : "No applicant selected"],
+          ["Block reason", displayId ? (displayFacts.displayBlockReason || displayFacts.blockReason) : "No applicant selected"],
           ["Role gate result", opsCommunicationRoleStatus_()]
         ];
         pane.innerHTML = paneItems.map(function(item){

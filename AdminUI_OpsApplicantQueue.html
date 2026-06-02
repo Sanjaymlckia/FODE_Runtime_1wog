@@ -126,7 +126,7 @@
         "Applicant / Student Name": facts.name || "Unknown",
         Email: facts.email || "Unknown",
         "Phone / WhatsApp": facts.phone || "Unknown",
-        "Lifecycle Stage": facts.lifecycleLabel || (stage ? stage.name : "Unknown"),
+        "Lifecycle Stage": facts.displayStageLabel || facts.lifecycleLabel || (stage ? stage.name : "Unknown"),
         "Stage Meaning": stage ? stage.meaning : "Unknown",
         "Next Action": facts.nextActionLabel || (stage ? stage.next : "Unknown"),
         "Communication Status": eligibility.active ? "Cooldown active" : facts.communicationStatus,
@@ -143,7 +143,7 @@
         "Enrolment Status": enrolledOk ? "Enrolled Confirmed" : "Not confirmed as enrolled",
         "Classroom Status": facts.classroomStateLabel,
         "Ready / Blocked": droppedIneligibleReason ? "Inactive" : (ready.label === "Ready" ? "Ready" : "Blocked"),
-        "Block Reason": droppedIneligibleReason || (eligibility.active ? "Cooldown active" : (emailIssueReason || (ready.label === "Ready" ? "" : "Unknown"))),
+        "Block Reason": facts.displayBlockReason || droppedIneligibleReason || (eligibility.active ? "Cooldown active" : (emailIssueReason || (ready.label === "Ready" ? "" : "Unknown"))),
         Student: facts.name,
         Date_Applied: opsDateAppliedInfo_(row).label,
         Aging: opsAgingDays_(row) || "",
@@ -451,7 +451,7 @@
   function opsQueueSearchText_(row){
     var facts = opsApplicantQueueFacts_(row);
     return [
-      facts.applicantId, facts.name, facts.email, facts.phone, facts.lifecycleLabel,
+      facts.applicantId, facts.name, facts.email, facts.phone, facts.displayStageLabel, facts.lifecycleLabel,
       facts.documentStateLabel, facts.paymentStateLabel, facts.communicationStatus,
       facts.nextActionLabel, facts.row.FD_FormID, facts.row.FormID, facts.row.correlation_id
     ].map(function(v){ return String(v == null ? "" : v).toLowerCase(); }).join(" ");
@@ -601,18 +601,23 @@
         "<div class='opsInfoItem'><div class='k'>Selected Applicant</div><div class='v'>None</div></div>",
         "<div class='opsInfoItem'><div class='k'>Name</div><div class='v'>No applicant selected</div></div>",
         "<div class='opsInfoItem'><div class='k'>Lifecycle / Docs</div><div class='v'>Select a queue row</div></div>",
-        "<div class='opsInfoItem'><div class='k'>Payment / Next</div><div class='v'>Select a queue row</div></div>"
+        "<div class='opsInfoItem'><div class='k'>Payment / Next</div><div class='v'>Select a queue row</div></div>",
+        "<div class='opsInfoItem'><div class='k'>Current / Resolver</div><div class='v'>Proof unavailable until a row is selected</div></div>",
+        "<div class='opsInfoItem'><div class='k'>Resolver Block</div><div class='v'>Proof unavailable until a row is selected</div></div>"
       ].join("");
       return;
     }
     var dateInfo = opsDateAppliedInfo_(d);
     var aging = opsAgingDays_(d) || "Missing source";
     var marker = opsDummyMarker_(id, d);
+    var proof = facts.resolverProof || {};
     el.innerHTML = [
       "<div class='opsInfoItem'><div class='k'>Selected Applicant</div><div class='v'>" + esc(id) + "</div></div>",
       "<div class='opsInfoItem'><div class='k'>Name</div><div class='v'>" + esc(name) + "</div></div>",
-      "<div class='opsInfoItem'><div class='k'>Lifecycle / Docs</div><div class='v'>" + esc(facts.lifecycleLabel + " | " + facts.documentStateLabel) + "</div></div>",
-      "<div class='opsInfoItem'><div class='k'>Payment / Next</div><div class='v'>" + esc(facts.paymentStateLabel + " | " + facts.nextActionLabel + " | " + aging + " | " + marker + " | " + dateInfo.label) + "</div></div>"
+      "<div class='opsInfoItem'><div class='k'>Lifecycle / Docs</div><div class='v'>" + esc((facts.displayStageLabel || facts.lifecycleLabel) + " | " + facts.documentStateLabel) + "</div></div>",
+      "<div class='opsInfoItem'><div class='k'>Payment / Next</div><div class='v'>" + esc(facts.paymentStateLabel + " | " + facts.nextActionLabel + " | " + aging + " | " + marker + " | " + dateInfo.label) + "</div></div>",
+      "<div class='opsInfoItem'><div class='k'>Current / Resolver</div><div class='v'>" + esc((proof.currentStageLabel || facts.displayStageLabel || facts.lifecycleLabel || "Unknown") + " | " + (proof.currentQueueBucket || "unknown") + " | " + (proof.currentSendEligibility || "unknown") + " -> " + (proof.resolverStageLabel || "Unknown")) + "</div></div>",
+      "<div class='opsInfoItem'><div class='k'>Resolver Block</div><div class='v'>" + esc((facts.nextActionLabel || proof.resolverNextAction || "Unknown") + " | " + (proof.resolverBlockCode || "NO_BLOCK") + " | " + (facts.displayBlockReason || proof.resolverBlockReason || "No block reason")) + "</div></div>"
     ].join("");
   }
 </script>

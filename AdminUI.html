@@ -3358,7 +3358,7 @@
           + "<div class='opsWorkflowStatusGroup'><div class='opsWorkflowCellLabel'>Key Status / Blockers</div>"
             + "<span class='opsStatusPill " + opsPillClass_(ackState.cls) + "'>Ack / CRM / Portal: " + esc(ackState.label + " | " + crmState.label + " | " + portalState.label) + "</span>"
             + "<span class='opsStatusPill " + (facts.documentState === "eligibility_cleared" ? "ok" : (facts.documentState === "unknown" ? "muted" : "warn")) + "'>Documents: " + esc(facts.documentStateLabel) + "</span>"
-            + "<span class='opsStatusPill " + (paymentOk ? "ok" : (facts.paymentState === "payment_evidence_pending_verification" ? "warn" : "muted")) + "'>Eligibility / Payment / Invoice: " + esc(facts.lifecycleLabel + " | " + facts.paymentStateLabel + " | " + invoiceState.label) + "</span>"
+            + "<span class='opsStatusPill " + (paymentOk ? "ok" : (facts.paymentState === "payment_evidence_pending_verification" ? "warn" : "muted")) + "'>Eligibility / Payment / Invoice: " + esc((facts.displayStageLabel || facts.lifecycleLabel) + " | " + facts.paymentStateLabel + " | " + invoiceState.label) + "</span>"
             + "<span class='opsStatusPill " + (facts.classroomState === "classroom_active" ? "ok" : "warn") + "'>Enrolment / Classroom: " + esc((enrolledOk ? "Enrolled" : "Pending") + " | " + classroom.label) + "</span>"
             + "<span class='opsStatusPill " + (emailIssueBadges.length ? "warn" : "muted") + "'>Email issue: " + esc(emailIssueLabel) + "</span>"
             + (isEmailIssue ? "<div class='opsWorkflowBlockReason'>Block reason: " + esc(opsEmailIssueReason_(row) || "Email correction required") + "</div><div class='opsWorkflowSecondary'>Last action / contacted: " + esc(opsLastActionInfo_(row)) + "</div>" : "")
@@ -3581,7 +3581,7 @@
           "<div class='opsInfoItem'><div class='k'>Student</div><div class='v'>" + esc(studentName) + "</div></div>",
           "<div class='opsInfoItem'><div class='k'>Email</div><div class='v'>" + esc(facts.email || "No email on record") + "</div></div>",
           "<div class='opsInfoItem'><div class='k'>Phone / WhatsApp</div><div class='v'>" + esc(facts.phone || "No phone on record") + "</div></div>",
-          "<div class='opsInfoItem'><div class='k'>Lifecycle State</div><div class='v'>" + esc(facts.lifecycleLabel) + "</div></div>",
+          "<div class='opsInfoItem'><div class='k'>Lifecycle State</div><div class='v'>" + esc(facts.displayStageLabel || facts.lifecycleLabel) + "</div></div>",
           "<div class='opsInfoItem'><div class='k'>Document State</div><div class='v'>" + esc(facts.documentStateLabel) + "</div></div>",
           "<div class='opsInfoItem'><div class='k'>Payment State</div><div class='v'>" + esc(facts.paymentStateLabel) + "</div></div>",
           "<div class='opsInfoItem'><div class='k'>Communication State</div><div class='v'>" + esc(facts.communicationStatus) + "</div></div>",
@@ -3716,6 +3716,7 @@
         return;
       }
       var facts = opsPortalDiagnosticsFacts_(d);
+      var proof = facts && facts.resolverProof ? facts.resolverProof : {};
       var docs = Array.isArray(d._docs) ? d._docs : [];
       var documentEvidence = opsDetailDocumentEvidenceSummary_(docs);
       var docRows = docs.length ? docs.map(function(doc){
@@ -3743,9 +3744,14 @@
           opsReviewField_("Parent / Guardian", opsFirstNonBlank_(d.Parent_Name, d.Parent_Full_Name, d.ParentName)),
           opsReviewField_("Effective Email", facts.email || opsFirstNonBlank_(d.Effective_Email, d.Parent_Email_Corrected, d.Parent_Email)),
           opsReviewField_("Phone", facts.phone || opsFirstNonBlank_(d.Parent_Phone, d.Parent_Mobile, d.Phone_Number, d.Mobile)),
+          opsReviewField_("Lifecycle Stage", facts.displayStageLabel || facts.lifecycleLabel),
           opsReviewField_("Portal State", facts.portalStateLabel),
           opsReviewField_("Document State", facts.documentStateLabel),
           opsReviewField_("Next Action", facts.nextActionLabel),
+          opsReviewField_("Block Reason", facts.displayBlockReason || proof.resolverBlockReason || "No loaded block reason"),
+          opsReviewField_("Current Queue / Send", (proof.currentQueueBucket || "not_in_loaded_review_queue") + " | " + (proof.currentSendEligibility || "unknown")),
+          opsReviewField_("Resolver Stage", proof.resolverStageLabel || "Unknown"),
+          opsReviewField_("Resolver Next / Block", (proof.resolverNextAction || "Unknown") + " | " + (proof.resolverBlockCode || "NO_BLOCK")),
           opsReviewField_("Portal Access", facts.portalStateLabel + " | " + opsFirstNonBlank_(d.Portal_Access_Status, d.portalAccess, "Access status not loaded")),
           opsReviewField_("Payment", facts.paymentStateLabel),
           opsReviewField_("Subjects", opsFirstNonBlank_(d.Subjects_Selected_Canonical, d.Selected_Subjects, d.Subjects)),
@@ -4782,21 +4788,31 @@
       }
       var commStatus = deriveCommunicationStatus(d);
       var eligibility = deriveSendEligibility(d);
+      var facts = opsPortalDiagnosticsFacts_(d);
+      var proof = facts && facts.resolverProof ? facts.resolverProof : {};
       stageEl.textContent = deriveApplicantDisplayStage(d);
       commEl.textContent = commStatus || "—";
       eligibilityEl.textContent = eligibility.text;
       strip.classList.remove("hidden");
+      var helperLines = [
+        "Current: " + (proof.currentStageLabel || deriveApplicantDisplayStage(d) || "Unknown")
+          + " | Queue: " + (proof.currentQueueBucket || "not_in_loaded_review_queue")
+          + " | Send: " + (proof.currentSendEligibility || (eligibility.active ? "COOLDOWN_ACTIVE" : "READY_TO_SEND")),
+        "Resolver: " + (proof.resolverStageLabel || "Unknown")
+          + " | Next: " + (facts.nextActionLabel || proof.resolverNextAction || "Unknown")
+          + " | Block: " + ((proof.resolverBlockCode || "NO_BLOCK") + " / " + (facts.displayBlockReason || proof.resolverBlockReason || "No block reason"))
+      ];
       if (isApplicantPendingDocsOrPayment_(d)) {
         var note = "Portal submitted, but required documents or payment evidence are still missing or unverified.";
         if (commStatus === "Feedback Sent — Response Awaited") {
           note += " Follow-up feedback was already sent and a response is awaited.";
         }
-        helper.textContent = note;
-        helper.classList.remove("hidden");
+        helperLines.push(note);
       } else {
-        helper.textContent = "";
-        helper.classList.add("hidden");
+        helperLines.push("Selected-applicant shadow proof only. Current behavior remains on existing lifecycle and communication gates.");
       }
+      helper.textContent = helperLines.join(" ");
+      helper.classList.remove("hidden");
     }
     function renderCommunicationCooldownBanner_(detail){
       var wrap = document.getElementById("commCooldownBanner");
@@ -4945,7 +4961,7 @@
         : { label: "Enrolment Pending", cls: "badge badge-warning" };
       var classroom = { label: facts.classroomStateLabel, cls: facts.classroomState === "classroom_active" ? "badge badge-success" : (facts.classroomState === "classroom_not_ready" ? "badge badge-muted" : "badge badge-warning") };
       var email = invoiceEmailStatusFromRow_(r);
-      var lifecycle = facts.lifecycleLabel;
+      var lifecycle = facts.displayStageLabel || facts.lifecycleLabel;
       var ack = fdAckStatusFromRow_(r);
       var crm = crmBackupStatusFromRow_(r);
       var portal = { label: facts.portalStateLabel, cls: facts.portalState === "portal_pending" ? "badge badge-muted" : "badge badge-success" };
@@ -6549,6 +6565,9 @@ function renderStageDashboard_(items, emptyMessage){
     }
     function deriveApplicantDisplayStage(detail){
       var d = detail || {};
+      var facts = opsPortalDiagnosticsFacts_(d);
+      var displayStage = String((facts && (facts.displayStageLabel || facts.lifecycleLabel)) || "").trim();
+      if (displayStage) return displayStage;
       if (isApplicantPendingDocsOrPayment_(d)) return "Required documents/payment evidence missing or unverified";
       return String(d.Comm_Stage || d.Stage || d.Overall_Status || d.Payment_Badge || "—").trim() || "—";
     }
