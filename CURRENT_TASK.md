@@ -1710,3 +1710,99 @@ New findings discovered during implementation, browser testing, operator testing
 | --- | --- | --- | --- | --- | --- | --- |
 | FU-001 | Narrow automated fd_acknowledgement send gate for post-commit single ApplicantID workflow | r185 | r186 | High | narrow unattended-send exception design | In progress |
 | FU-002 | Mobile-safe Student Portal links for PNG users; canonical /macros/s URL plus copy-paste fallback | r185 | r186 | High | portal link generation review | Pending |
+
+---
+
+## r212_6 Legacy Stage Batch Preview Clarity Fix
+
+- Track: `Track L`
+- Status: `Local UI fix applied; no runtime release yet`
+- Baseline: `r212 / 212`, commit `a738611`, tag `staging-as212`
+- Allowed files for this CIS:
+  - `AdminUI.html`
+  - `CURRENT_TASK.md`
+  - `Config.js`
+- Actual local source changes so far:
+  - `AdminUI.html`
+  - `CURRENT_TASK.md`
+- `Config.js` remains unchanged at `r212 / 212`
+
+### Diagnosis carried into fix
+
+- `Preview Cohort` does not populate `Review Queues`.
+- Preview output renders to:
+  - `opsStageBatchSummary` / `stageBatchSummary`
+  - `opsStageBatchPreviewDiagnostics` / `stageBatchPreviewDiagnostics`
+- Selected stage and batch size were already passing correctly to `previewStageBatchUi_()`.
+- Issue classified as legacy UI contract / visibility problem, not backend failure and not an `r212` extraction regression.
+
+### Local fix scope applied
+
+- Added clear inline contract text near Stage Batch Actions and OPS Bulk Tools:
+  - Preview Cohort result appears in the preview result / diagnostics panel.
+  - Review Queues remains a separate operational listing.
+- Added explicit `Preview Cohort Result` / `Stage Batch Preview Result` labeling.
+- Expanded preview summary text to show:
+  - selected stage
+  - requested batch size / preview limit
+  - eligible preview count
+  - candidate count
+  - sendable-stage state
+- Added safe post-preview scroll/focus to the visible preview result panel.
+
+### Local acceptance snapshot
+
+- `git diff --check`: PASS, no structural diff errors; CRLF warning only
+- `git diff --name-only`: `.codexhub/*`, `AdminUI.html`, `CURRENT_TASK.md`
+- No backend files changed
+- No send/export/mutation executed
+
+### Release state
+
+- Browser/runtime/deployment acceptance: `PENDING`
+- `r213`: `NO-GO` until this legacy stage-batch preview clarity issue is accepted or deployed and validated
+
+### r213A addendum - stage-batch surface-aware resolver
+
+- Root cause confirmed:
+  - shared `firstExistingEl_()` resolution was preferring OPS targets before legacy targets
+  - legacy Admin / Document Verification route could therefore read hidden OPS inputs and write hidden OPS preview output
+- Narrow fix applied in `AdminUI.html` only:
+  - added stage-batch-specific surface resolver
+  - applied resolver to:
+    - preview limit
+    - diagnostic offset
+    - preview summary
+    - preview diagnostics
+    - selected stage
+    - message type
+    - sendable
+    - gate reason
+    - preview/send buttons
+    - inline note
+    - post-preview focus target
+- `Config.js` unchanged and remains `r213 / 213`
+- Review button issue remains classified as separate until proven otherwise
+- Release steps remain blocked pending local acceptance report and browser re-test
+
+### r213B addendum - legacy review button identifier fix
+
+- Track: `Track H`
+- Status: `Local UI binding fix applied; no runtime release yet`
+- Allowed files for this CIS:
+  - `AdminUI.html`
+  - `CURRENT_TASK.md`
+- Root cause confirmed:
+  - legacy `Review Queues` buttons render both `data-applicant-id` and `data-row-number`
+  - queue-review click handling discarded `rowNumber` whenever `applicantId` existed
+  - search-results review path already passed both identifiers to `review()`
+- Narrow fix applied in `AdminUI.html` only:
+  - queue-review now calls `review(rowNumber, applicantId, btn)` when `rowNumber` is valid
+  - safe fallback remains `null` when queue rowNumber is absent/invalid
+- No backend edits
+- No RPC changes
+- No payload changes
+- No row-facts/include-boundary changes
+- No send/export/mutation executed
+- Billing remains out of scope
+- `Config.js` remains unchanged at `r213 / 213`
