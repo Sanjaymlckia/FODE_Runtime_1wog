@@ -1034,28 +1034,25 @@
 <!-- CODEXHUB_STATE_BACKUP_START -->
 ## CodexHub State Backup
 
-- Last state backup timestamp: 2026-05-31 22:02:17
+- Last state backup timestamp: 2026-06-02 20:20:18
 - Project path: `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog`
-- Repository state: DIRTY
+- Repository state: CLEAN
 - Current branch: `main`
-- Latest commit: `7de0555 release: r206 row facts lifecycle applicant queue adoption`
-- Latest matching staging tag: `staging-as206`
-- Config version / deploy number: VERSION: r206; DEPLOY_VERSION_NUMBER: 206
+- Latest commit: `dffffc6 release: r213 stage batch preview clarity`
+- Latest matching staging tag: `staging-as213`
+- Config version / deploy number: VERSION: r213; DEPLOY_VERSION_NUMBER: 213
 - Current release track: Not detected.
 - Current blocker: None detected.
 - Next exact action: Not detected.
-- Operator note: r126
+- Operator note: [add operator note]
 
 ### Git Status
 ```text
 ## main...origin/main
- M .codexhub/SESSION_CONTEXT.md
- M .codexhub/resume_state/latest.json
 ```
 
 ### Changed Files
-- `.codexhub/SESSION_CONTEXT.md`
-- `.codexhub/resume_state/latest.json`
+- None.
 <!-- CODEXHUB_STATE_BACKUP_END -->
 
 ## Previous Active CIS

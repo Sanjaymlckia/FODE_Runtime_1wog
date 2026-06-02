@@ -13,6 +13,245 @@
     function opsReportRowFacts_(row){
       return opsBuildRowFacts_(row);
     }
+    function operationalStateFirstNonBlank_(){
+      for (var i = 0; i < arguments.length; i++) {
+        var value = arguments[i];
+        if (String(value == null ? "" : value).trim()) return String(value).trim();
+      }
+      return "";
+    }
+    function operationalStateIsYes_(value){
+      if (value === true) return true;
+      var s = String(value == null ? "" : value).trim().toLowerCase();
+      return s === "yes" || s === "true" || s === "1" || s === "y";
+    }
+    function operationalStateHasUpload_(value){
+      return !!String(value == null ? "" : value).trim();
+    }
+    function operationalStateTimeMs_(value){
+      var raw = String(value == null ? "" : value).trim();
+      if (!raw) return 0;
+      var ts = new Date(raw).getTime();
+      return isNaN(ts) ? 0 : ts;
+    }
+    function operationalStateNormalizeStatus_(value){
+      return String(value == null ? "" : value).trim().toUpperCase().replace(/[\s-]+/g, "_");
+    }
+    function operationalStateCanonicalStage_(value){
+      var stage = operationalStateNormalizeStatus_(value);
+      var allowed = {
+        RECEIVED: true,
+        PORTAL_ISSUED: true,
+        PORTAL_SUBMITTED: true,
+        DOCS_PENDING: true,
+        DOCS_UNDER_REVIEW: true,
+        DOCS_CORRECTION_REQUIRED: true,
+        DOCS_VERIFIED: true,
+        PAYMENT_EVIDENCE_PENDING: true,
+        PAYMENT_UNDER_REVIEW: true,
+        PAYMENT_VERIFIED: true,
+        ENROLMENT_READY: true,
+        ENROLLED: true,
+        DROPPED: true,
+        INELIGIBLE: true,
+        CLOSED_LOST: true,
+        DUPLICATE: true,
+        DO_NOT_CONTACT: true
+      };
+      return allowed[stage] ? stage : "";
+    }
+    function operationalStateTextIncludes_(value, tokens){
+      var text = String(value == null ? "" : value).trim().toLowerCase();
+      if (!text) return false;
+      for (var i = 0; i < tokens.length; i++) {
+        if (text.indexOf(tokens[i]) >= 0) return true;
+      }
+      return false;
+    }
+    function operationalStateDocState_(row){
+      var r = row || {};
+      var statusText = [
+        r.Docs_Status, r.Document_Status, r.Documents_Status, r.Overall_Doc_Status,
+        r.Document_Review_Status, r.Eligibility_Status, r.Birth_ID_Status,
+        r.Birth_Status, r.Report_Status, r.Photo_Status, r.Transfer_Status
+      ].join(" ");
+      var hasDocEvidence = operationalStateHasUpload_(operationalStateFirstNonBlank_(
+        r.Birth_ID_Passport_File, r.Birth_Certificate_File, r.NID_File, r.Passport_File,
+        r.Latest_School_Report_File, r.School_Report_File, r.Report_File,
+        r.Transfer_Certificate_File, r.Passport_Photo_File, r.Student_Photo_File,
+        r.Document_File, r.Documents_File, r.Document_Evidence_File,
+        r.Birth_ID_Passport_URL, r.Latest_School_Report_URL, r.Transfer_Certificate_URL,
+        r.Passport_Photo_URL
+      ));
+      if (operationalStateIsYes_(r.Docs_Verified) || operationalStateTextIncludes_(statusText, ["verified", "approved", "cleared"])) return "VERIFIED";
+      if (operationalStateTextIncludes_(statusText, ["reject", "wrong", "invalid", "correction", "illegible", "misfiled"])) return "CORRECTION_REQUIRED";
+      if (hasDocEvidence || operationalStateTextIncludes_(statusText, ["pending", "review", "uploaded"])) return "UNDER_REVIEW";
+      return "PENDING";
+    }
+    function operationalStatePaymentState_(row){
+      var r = row || {};
+      var receiptStatus = operationalStateFirstNonBlank_(r.Receipt_Status, r.Payment_Status, r.Payment_Review_Status);
+      var hasPaymentEvidence = operationalStateIsYes_(r.Payment_Received) || operationalStateHasUpload_(r.Fee_Receipt_File);
+      if (operationalStateIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true || operationalStateTextIncludes_(receiptStatus, ["verified", "approved", "cleared"])) return "VERIFIED";
+      if (operationalStateTextIncludes_(receiptStatus, ["reject", "invalid", "failed"])) return "CORRECTION_REQUIRED";
+      if (hasPaymentEvidence || operationalStateTextIncludes_(receiptStatus, ["pending", "review", "received", "uploaded"])) return "UNDER_REVIEW";
+      return "EVIDENCE_PENDING";
+    }
+    function operationalStatePortalState_(row){
+      var r = row || {};
+      var submittedRaw = String(r.Portal_Submitted == null ? "" : r.Portal_Submitted).trim();
+      var submittedStatus = operationalStateNormalizeStatus_(submittedRaw);
+      if (operationalStateIsYes_(submittedRaw) || (submittedRaw && submittedStatus !== "NO" && submittedStatus !== "FALSE" && submittedStatus !== "0")) return "SUBMITTED";
+      if (operationalStateFirstNonBlank_(r.PortalURL, r.Portal_Link, r.PortalTokenHash, r.Portal_Token_Status, r.PortalTokenIssuedAt, r.portalLastUpdateAt, r.PortalLastUpdateAt)) return "ISSUED";
+      return "PENDING";
+    }
+    function operationalStateTerminalStage_(row){
+      var r = row || {};
+      var emailStatus = operationalStateNormalizeStatus_(r.Email_Status);
+      var duplicateText = [r.Duplicate_Status, r.Duplicate_Flag, r.Is_Duplicate].join(" ");
+      var stageText = [
+        r.Operational_Stage, r.Pipeline_Stage, r.CRM_Stage, r.Stage,
+        r.Overall_Status, r.Application_Status, r.Status
+      ].join(" ");
+      if (emailStatus === "DO_NOT_CONTACT") return { stage: "DO_NOT_CONTACT", reason: "Email_Status marks the applicant Do Not Contact." };
+      if (operationalStateIsYes_(r.Do_Not_Contact) || operationalStateIsYes_(r.DO_NOT_CONTACT)) return { stage: "DO_NOT_CONTACT", reason: "Do Not Contact flag is set." };
+      if (operationalStateIsYes_(r.Is_Duplicate) || operationalStateIsYes_(r.Duplicate_Flag) || operationalStateTextIncludes_(duplicateText, ["duplicate"])) return { stage: "DUPLICATE", reason: "Duplicate marker is present." };
+      if (operationalStateTextIncludes_(stageText, ["closed lost", "closed_lost", "withdrawn", "withdraw"])) return { stage: "CLOSED_LOST", reason: "Source stage/status marks the applicant closed or withdrawn." };
+      if (operationalStateTextIncludes_(stageText, ["ineligible", "disqualified", "not eligible"])) return { stage: "INELIGIBLE", reason: "Source stage/status marks the applicant ineligible." };
+      if (operationalStateTextIncludes_(stageText, ["dropped", "drop"])) return { stage: "DROPPED", reason: "Source stage/status marks the applicant dropped." };
+      return null;
+    }
+    function operationalStateBlockFromCommunication_(row, communicationNextActionAt, nowMs){
+      var r = row || {};
+      var email = operationalStateFirstNonBlank_(r.effectiveEmail, r.Effective_Email, r.Parent_Email_Corrected, r.Corrected_Email, r.Parent_Email, r.Email, r.email);
+      var emailStatus = operationalStateNormalizeStatus_(r.Email_Status);
+      var verification = operationalStateNormalizeStatus_(r.Email_Verification_Status);
+      var lastResult = operationalStateNormalizeStatus_(r.Last_Contact_Result);
+      var bounceFlag = operationalStateIsYes_(r.Email_Bounce_Flag);
+      var hasEmailIssue = bounceFlag || emailStatus === "BOUNCED" || emailStatus === "SUPPRESSED" || verification === "BOUNCED" || verification === "SUPPRESSED" || lastResult === "BOUNCED" || lastResult === "SUPPRESSED" || lastResult === "BLOCKED";
+      var nextTs = operationalStateTimeMs_(communicationNextActionAt);
+      if (!email) return { communicationState: "NO_RECIPIENT", blockCode: "NO_RECIPIENT", blockReason: "No effective email is loaded." };
+      if (emailStatus === "DO_NOT_CONTACT" || operationalStateIsYes_(r.Do_Not_Contact) || operationalStateIsYes_(r.DO_NOT_CONTACT)) return { communicationState: "BLOCKED", blockCode: "DO_NOT_CONTACT", blockReason: "Applicant is marked Do Not Contact." };
+      if (hasEmailIssue) return { communicationState: "BLOCKED", blockCode: "EMAIL_ISSUE", blockReason: "Email bounce, suppression, or blocked contact evidence is loaded." };
+      if (nextTs && nextTs > nowMs) return { communicationState: "COOLDOWN", blockCode: "COMMUNICATION_COOLDOWN", blockReason: "Communication next action timestamp is in the future." };
+      return { communicationState: "READY_TO_SEND", blockCode: "", blockReason: "" };
+    }
+    function operationalStateNextActionForStage_(stage){
+      var map = {
+        RECEIVED: "ISSUE_PORTAL_ACCESS",
+        PORTAL_ISSUED: "WAIT_FOR_PORTAL_SUBMISSION",
+        PORTAL_SUBMITTED: "CHECK_PORTAL_UPLOADS",
+        DOCS_PENDING: "REQUEST_DOCUMENTS",
+        DOCS_UNDER_REVIEW: "REVIEW_DOCUMENTS",
+        DOCS_CORRECTION_REQUIRED: "REQUEST_DOCUMENT_CORRECTION",
+        DOCS_VERIFIED: "REQUEST_PAYMENT_EVIDENCE",
+        PAYMENT_EVIDENCE_PENDING: "REQUEST_PAYMENT_EVIDENCE",
+        PAYMENT_UNDER_REVIEW: "REVIEW_PAYMENT",
+        PAYMENT_VERIFIED: "PREPARE_ENROLMENT",
+        ENROLMENT_READY: "PREPARE_ENROLMENT",
+        ENROLLED: "NONE",
+        DROPPED: "NONE",
+        INELIGIBLE: "NONE",
+        CLOSED_LOST: "NONE",
+        DUPLICATE: "NONE",
+        DO_NOT_CONTACT: "NONE"
+      };
+      return map[stage] || "REVIEW_APPLICATION";
+    }
+    function resolveApplicantOperationalState_(row, headersOrContext){
+      var r = row || {};
+      var context = headersOrContext && typeof headersOrContext === "object" ? headersOrContext : {};
+      var nowMs = operationalStateTimeMs_(context.now || context.nowIso || "") || Date.now();
+      var portalState = operationalStatePortalState_(r);
+      var docState = operationalStateDocState_(r);
+      var paymentState = operationalStatePaymentState_(r);
+      var terminal = operationalStateTerminalStage_(r);
+      var communicationNextActionAt = operationalStateFirstNonBlank_(r.Communication_Next_Action_At, r.Email_Next_Action_Date, r.Next_Email_Date, r.Next_Action_Date, r.nextActionDate);
+      var lastCommunicationAt = operationalStateFirstNonBlank_(r.Last_Communication_At, r.Last_Contacted_At, r.Email_Last_Sent_At, r.Ack_Email_Sent_At);
+      var lastStateChangedAt = operationalStateFirstNonBlank_(
+        r.Last_State_Changed_At,
+        r.State_Changed_At,
+        r.Payment_Verified_At,
+        r.Doc_Last_Verified_At,
+        r.Verified_At,
+        r.PortalLastUpdateAt,
+        r.portalLastUpdateAt,
+        r.PortalTokenIssuedAt,
+        r.adapter_timestamp,
+        r.Timestamp,
+        r.Created_At
+      );
+      var comm = operationalStateBlockFromCommunication_(r, communicationNextActionAt, nowMs);
+      var stage = "";
+      var stageReason = "";
+      var canonicalStage = operationalStateCanonicalStage_(r.Operational_Stage);
+
+      if (canonicalStage) {
+        stage = canonicalStage;
+        stageReason = "Operational_Stage contains a canonical shadow state.";
+      } else if (terminal) {
+        stage = terminal.stage;
+        stageReason = terminal.reason;
+      } else if (operationalStateIsYes_(r.Enrolled_Confirmed) || operationalStateHasUpload_(r.Enrolled_At)) {
+        stage = "ENROLLED";
+        stageReason = "Enrolment confirmation evidence is present.";
+      } else if (paymentState === "VERIFIED" && docState === "VERIFIED") {
+        stage = "ENROLMENT_READY";
+        stageReason = "Documents and payment are verified; applicant is ready for enrolment handling.";
+      } else if (paymentState === "VERIFIED") {
+        stage = "PAYMENT_VERIFIED";
+        stageReason = "Payment is verified, but document/enrolment readiness is not fully resolved.";
+      } else if (paymentState === "UNDER_REVIEW" && docState === "VERIFIED") {
+        stage = "PAYMENT_UNDER_REVIEW";
+        stageReason = "Payment evidence is present and awaits verification.";
+      } else if (docState === "VERIFIED") {
+        stage = "PAYMENT_EVIDENCE_PENDING";
+        stageReason = "Documents are verified and payment evidence is not verified.";
+      } else if (docState === "CORRECTION_REQUIRED") {
+        stage = "DOCS_CORRECTION_REQUIRED";
+        stageReason = "Document status indicates correction, rejection, or unusable evidence.";
+      } else if (docState === "UNDER_REVIEW") {
+        stage = "DOCS_UNDER_REVIEW";
+        stageReason = "Document evidence is present and awaits review.";
+      } else if (portalState === "SUBMITTED") {
+        stage = "DOCS_PENDING";
+        stageReason = "Portal submission exists, but required document verification is pending.";
+      } else if (portalState === "ISSUED") {
+        stage = "PORTAL_ISSUED";
+        stageReason = "Portal access evidence exists and portal submission is not loaded.";
+      } else {
+        stage = "RECEIVED";
+        stageReason = "Applicant row is present without portal submission, document review, or payment verification evidence.";
+      }
+
+      var nextAction = operationalStateNextActionForStage_(stage);
+      var actionUsesCommunication = /^(WAIT|REQUEST|ISSUE)/.test(nextAction);
+      var nextActionAt = operationalStateFirstNonBlank_(r.Next_Action_At, actionUsesCommunication ? communicationNextActionAt : "");
+      var nextActionTs = operationalStateTimeMs_(nextActionAt);
+      var terminalNoAction = nextAction === "NONE";
+      var isActionDue = terminalNoAction ? false : (nextActionTs ? nextActionTs <= nowMs : true);
+      var explicitBlockCode = operationalStateFirstNonBlank_(r.Block_Code, "");
+      var explicitBlockReason = operationalStateFirstNonBlank_(r.Block_Reason, "");
+      var blockCode = terminalNoAction ? stage : (explicitBlockCode || (actionUsesCommunication ? comm.blockCode : ""));
+      var blockReason = terminalNoAction ? stageReason : (explicitBlockReason || (actionUsesCommunication ? comm.blockReason : ""));
+
+      return {
+        stage: stage,
+        stageReason: stageReason,
+        nextAction: nextAction,
+        nextActionAt: nextActionAt,
+        isActionDue: !!isActionDue,
+        blockCode: blockCode,
+        blockReason: blockReason,
+        docState: docState,
+        paymentState: paymentState,
+        portalState: portalState,
+        communicationState: comm.communicationState,
+        lastStateChangedAt: lastStateChangedAt,
+        lastCommunicationAt: lastCommunicationAt,
+        communicationNextActionAt: communicationNextActionAt
+      };
+    }
     function opsBuildRowFacts_(row){
       var r = row || {};
       var applicantId = opsFirstNonBlank_(r.applicantId, r.ApplicantID, "");
