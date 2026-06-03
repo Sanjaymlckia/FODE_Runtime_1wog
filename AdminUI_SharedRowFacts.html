@@ -433,6 +433,179 @@
       }
       return summary;
     }
+    function opsReminderAgingValue_(row){
+      var label = String(opsAgingDays_(row) || "").trim();
+      var match = label.match(/(\d+(?:\.\d+)?)/);
+      return {
+        raw: label || "Missing source",
+        days: match ? Number(match[1] || 0) : null
+      };
+    }
+    function opsReminderReasonLabel_(code, detail){
+      var map = {
+        REMINDER_DUE: "Reminder due now.",
+        COOLDOWN_FUTURE_DATE: "Cooldown future date is still blocking follow-up.",
+        PORTAL_ALREADY_SUBMITTED: "Portal already submitted.",
+        DOCS_PAYMENT_STAGE_NOT_COMM_READY: "Docs/payment stage is not communication-ready.",
+        INVALID_OR_MISSING_EMAIL: "Email is missing or invalid.",
+        BOUNCE_OR_DO_NOT_CONTACT: "Bounce/suppression or Do Not Contact is blocking communication.",
+        MAX_ATTEMPTS_REACHED: "Maximum attempts reached.",
+        NO_PREVIOUS_EMAIL: "No previous email evidence is loaded.",
+        MISSING_NEXT_ACTION_DATE: "Previous communication exists but next-action date is missing.",
+        PRIOR_SENT_OR_DUPLICATE_GUARD: "Prior sent state or duplicate/terminal guard is blocking reminder follow-up.",
+        UNKNOWN: "Reminder block reason needs inspection."
+      };
+      return operationalStateFirstNonBlank_(detail, map[code], map.UNKNOWN);
+    }
+    function opsReminderDiagnosticFromRow_(row, factsOrContext){
+      var r = row || {};
+      var facts = (factsOrContext && factsOrContext.row) ? factsOrContext : opsBuildRowFacts_(r);
+      var resolver = resolveApplicantOperationalState_(r, {});
+      var aging = opsReminderAgingValue_(r);
+      var emailStatus = operationalStateNormalizeStatus_(r.Email_Status);
+      var emailVerificationStatus = operationalStateNormalizeStatus_(r.Email_Verification_Status);
+      var lastContactResult = operationalStateNormalizeStatus_(r.Last_Contact_Result);
+      var emailAttemptCountRaw = operationalStateFirstNonBlank_(r.Email_Attempt_Count, r.emailAttemptCount, "");
+      var emailAttemptCount = Number(emailAttemptCountRaw);
+      if (!isFinite(emailAttemptCount)) emailAttemptCount = null;
+      var emailLastSentAt = operationalStateFirstNonBlank_(r.Email_Last_Sent_At, "");
+      var lastContactedAt = operationalStateFirstNonBlank_(r.Last_Contacted_At, "");
+      var ackEmailSentAt = operationalStateFirstNonBlank_(r.Ack_Email_Sent_At, "");
+      var emailNextActionDate = operationalStateFirstNonBlank_(r.Email_Next_Action_Date, r.Next_Email_Date, "");
+      var communicationNextActionAt = operationalStateFirstNonBlank_(
+        r.Communication_Next_Action_At,
+        resolver && resolver.communicationNextActionAt,
+        emailNextActionDate,
+        r.Next_Action_Date,
+        r.nextActionDate,
+        ""
+      );
+      var eligibility = {};
+      try { eligibility = deriveSendEligibility(r) || {}; } catch (_err3) { eligibility = {}; }
+      var lastCommunicationAt = operationalStateFirstNonBlank_(resolver && resolver.lastCommunicationAt, lastContactedAt, emailLastSentAt, ackEmailSentAt, "");
+      var hasPriorEmail = !!operationalStateFirstNonBlank_(emailLastSentAt, lastContactedAt, ackEmailSentAt, "");
+      var bounceOrSuppressed = isCommBounceFlagTrue_(r.Email_Bounce_Flag)
+        || /^(BOUNCED|SUPPRESSED)$/i.test(emailStatus)
+        || /^(BOUNCED|SUPPRESSED)$/i.test(emailVerificationStatus)
+        || /^(BOUNCED|SUPPRESSED|BLOCKED)$/i.test(lastContactResult);
+      var doNotContact = emailStatus === "DO_NOT_CONTACT" || operationalStateIsYes_(r.Do_Not_Contact) || operationalStateIsYes_(r.DO_NOT_CONTACT);
+      var stageCode = String((resolver && resolver.stage) || "").trim().toUpperCase();
+      var reminderReadyStage = stageCode === "RECEIVED" || stageCode === "PORTAL_ISSUED";
+      var docsOrPaymentBlocked = /^DOCS_/.test(stageCode)
+        || /^PAYMENT_/.test(stageCode)
+        || stageCode === "ENROLMENT_READY"
+        || stageCode === "ENROLLED";
+      var terminalDuplicateBlocked = stageCode === "DUPLICATE"
+        || stageCode === "DROPPED"
+        || stageCode === "INELIGIBLE"
+        || stageCode === "CLOSED_LOST";
+      var reasonCode = "";
+      var reasonDetail = "";
+
+      if (doNotContact || stageCode === "DO_NOT_CONTACT") {
+        reasonCode = "BOUNCE_OR_DO_NOT_CONTACT";
+        reasonDetail = "Applicant is marked Do Not Contact.";
+      } else if (bounceOrSuppressed) {
+        reasonCode = "BOUNCE_OR_DO_NOT_CONTACT";
+        reasonDetail = "Bounce/suppression evidence is loaded in email or contact status fields.";
+      } else if (!facts.email || facts.emailIssue) {
+        reasonCode = "INVALID_OR_MISSING_EMAIL";
+        reasonDetail = facts.emailIssueReason || "No effective email is loaded.";
+      } else if (/MAX_ATTEMPTS|ATTEMPTS_EXHAUSTED|ATTEMPT_LIMIT/i.test(emailStatus) || /MAX_ATTEMPTS|ATTEMPTS_EXHAUSTED|ATTEMPT_LIMIT/i.test(lastContactResult)) {
+        reasonCode = "MAX_ATTEMPTS_REACHED";
+        reasonDetail = "Loaded status text indicates attempts are exhausted.";
+      } else if (eligibility && eligibility.active) {
+        reasonCode = "COOLDOWN_FUTURE_DATE";
+        reasonDetail = eligibility.text || "Cooldown active.";
+      } else if (commPortalSubmittedActive_(r)) {
+        reasonCode = "PORTAL_ALREADY_SUBMITTED";
+        reasonDetail = "Portal_Submitted blocks reminder/invite-style communications in the current gate.";
+      } else if (terminalDuplicateBlocked) {
+        reasonCode = "PRIOR_SENT_OR_DUPLICATE_GUARD";
+        reasonDetail = (resolver && resolver.stageReason) || "Duplicate or terminal stage blocks active reminder follow-up.";
+      } else if (docsOrPaymentBlocked) {
+        reasonCode = "DOCS_PAYMENT_STAGE_NOT_COMM_READY";
+        reasonDetail = "Current resolver stage is " + (stageCode || "UNKNOWN") + ", so the next action is not the general reminder path.";
+      } else if (!hasPriorEmail && reminderReadyStage && (resolver && resolver.nextAction === "WAIT_FOR_PORTAL_SUBMISSION")) {
+        reasonCode = "NO_PREVIOUS_EMAIL";
+        reasonDetail = "No previous communication evidence is loaded; this row still looks like initial invite/portal access work.";
+      } else if (hasPriorEmail && !communicationNextActionAt) {
+        reasonCode = "MISSING_NEXT_ACTION_DATE";
+        reasonDetail = "Prior communication exists, but Email_Next_Action_Date / Communication_Next_Action_At is blank.";
+      } else if (!reminderReadyStage && !(facts.communicationQueues && facts.communicationQueues.readyToContact)) {
+        reasonCode = "DOCS_PAYMENT_STAGE_NOT_COMM_READY";
+        reasonDetail = "Current lifecycle/queue position is not on the reminder-ready path.";
+      }
+
+      if (!reasonCode && facts.communicationQueues && facts.communicationQueues.readyToContact) {
+        reasonCode = "REMINDER_DUE";
+        reasonDetail = "Old communication gates show the row as ready to contact now.";
+      }
+      if (!reasonCode) {
+        reasonCode = "UNKNOWN";
+        reasonDetail = "Current row does not expose a single definitive reminder blocker.";
+      }
+
+      return {
+        aging: aging.raw,
+        agingDays: aging.days,
+        emailStatus: String(r.Email_Status || ""),
+        emailAttemptCount: emailAttemptCount,
+        emailLastSentAt: emailLastSentAt,
+        lastContactedAt: lastContactedAt,
+        ackEmailSentAt: ackEmailSentAt,
+        emailNextActionDate: emailNextActionDate,
+        communicationNextActionAt: communicationNextActionAt,
+        resolverStage: stageCode || "",
+        resolverNextAction: String((resolver && resolver.nextAction) || ""),
+        resolverBlockCode: String((resolver && resolver.blockCode) || ""),
+        resolverBlockReason: String((resolver && resolver.blockReason) || ""),
+        lastCommunicationAt: lastCommunicationAt,
+        reminderDue: reasonCode === "REMINDER_DUE",
+        reminderDueLabel: reasonCode === "REMINDER_DUE" ? "YES" : "NO",
+        reasonCode: reasonCode,
+        reasonLabel: opsReminderReasonLabel_(reasonCode, reasonDetail),
+        reasonDetail: reasonDetail,
+        currentSendEligibility: eligibility && eligibility.active ? "COOLDOWN_ACTIVE" : "READY_TO_SEND",
+        hasPriorEmail: hasPriorEmail
+      };
+    }
+    function opsReminderDiagnosticSummary_(rows){
+      var list = Array.isArray(rows) ? rows : [];
+      var summary = {
+        totalLoadedRows: list.length,
+        reminderDueNow: 0,
+        blockedByCooldown: 0,
+        blockedByPortalSubmitted: 0,
+        blockedByDocsPayment: 0,
+        blockedByInvalidMissingEmail: 0,
+        blockedByBounceDoNotContact: 0,
+        blockedByMaxAttempts: 0,
+        unknownNeedsInspection: 0,
+        agedEightPlus: 0,
+        agedEightPlusBlocked: 0,
+        samples: []
+      };
+      for (var i = 0; i < list.length; i++) {
+        var row = list[i] || {};
+        var facts = opsBuildRowFacts_(row);
+        var diag = opsReminderDiagnosticFromRow_(row, facts);
+        if (diag.agingDays != null && diag.agingDays >= 8) summary.agedEightPlus++;
+        if (diag.reminderDue) summary.reminderDueNow++;
+        else {
+          if (diag.agingDays != null && diag.agingDays >= 8) summary.agedEightPlusBlocked++;
+          if (diag.reasonCode === "COOLDOWN_FUTURE_DATE") summary.blockedByCooldown++;
+          else if (diag.reasonCode === "PORTAL_ALREADY_SUBMITTED") summary.blockedByPortalSubmitted++;
+          else if (diag.reasonCode === "DOCS_PAYMENT_STAGE_NOT_COMM_READY" || diag.reasonCode === "NO_PREVIOUS_EMAIL" || diag.reasonCode === "MISSING_NEXT_ACTION_DATE" || diag.reasonCode === "PRIOR_SENT_OR_DUPLICATE_GUARD") summary.blockedByDocsPayment++;
+          else if (diag.reasonCode === "INVALID_OR_MISSING_EMAIL") summary.blockedByInvalidMissingEmail++;
+          else if (diag.reasonCode === "BOUNCE_OR_DO_NOT_CONTACT") summary.blockedByBounceDoNotContact++;
+          else if (diag.reasonCode === "MAX_ATTEMPTS_REACHED") summary.blockedByMaxAttempts++;
+          else summary.unknownNeedsInspection++;
+          if (summary.samples.length < 5) summary.samples.push(String(facts.applicantId || row.ApplicantID || "unknown") + ": " + diag.reasonCode);
+        }
+      }
+      return summary;
+    }
     function opsBuildRowFacts_(row){
       var r = row || {};
       var applicantId = opsFirstNonBlank_(r.applicantId, r.ApplicantID, "");
@@ -544,11 +717,18 @@
         resolverProof: resolverProof,
         displayStageLabel: resolverDisplayStageLabel || (lifecycleDef ? lifecycleDef.name : (workflowStage || "Unknown")),
         displayNextActionLabel: resolverDisplayNextAction || "",
-        displayBlockReason: resolverDisplayBlockReason
+        displayBlockReason: resolverDisplayBlockReason,
+        communicationNextActionAt: operationalStateFirstNonBlank_(r.Communication_Next_Action_At, nextEligible, r.Next_Action_Date, r.nextActionDate, ""),
+        lastCommunicationAt: operationalStateFirstNonBlank_(r.Last_Communication_At, lastContactAt, ""),
+        emailStatus: String(r.Email_Status || ""),
+        emailAttemptCount: operationalStateFirstNonBlank_(r.Email_Attempt_Count, ""),
+        emailLastSentAt: operationalStateFirstNonBlank_(r.Email_Last_Sent_At, ""),
+        ackEmailSentAt: operationalStateFirstNonBlank_(r.Ack_Email_Sent_At, "")
       };
       facts.primaryAction = terminalLifecycle ? "terminal" : (communicationQueues.cooldownRecentlyContacted ? "wait" : (communicationQueues.emailIssue ? "correct_email" : (communicationQueues.uploadedReviewRequired ? "open_review" : (communicationQueues.whatsappFallback ? "manual_fallback" : "preview"))));
       facts.nextAction = facts.primaryAction;
       facts.nextActionLabel = facts.displayNextActionLabel || opsNextActionFromFacts_(facts);
+      facts.reminderDiagnostic = opsReminderDiagnosticFromRow_(r, facts);
       return {
         row: facts.row,
         applicantId: facts.applicantId,
@@ -600,9 +780,16 @@
         nextAction: facts.nextAction,
         nextActionLabel: facts.nextActionLabel,
         lastContactLabel: facts.lastContactLabel,
+        lastCommunicationAt: facts.lastCommunicationAt,
         blockReason: facts.blockReason,
         displayBlockReason: facts.displayBlockReason,
         communicationStatus: facts.communicationStatus,
+        communicationNextActionAt: facts.communicationNextActionAt,
+        emailStatus: facts.emailStatus,
+        emailAttemptCount: facts.emailAttemptCount,
+        emailLastSentAt: facts.emailLastSentAt,
+        ackEmailSentAt: facts.ackEmailSentAt,
+        reminderDiagnostic: facts.reminderDiagnostic,
         resolverState: facts.resolverState,
         resolverProof: facts.resolverProof
       };

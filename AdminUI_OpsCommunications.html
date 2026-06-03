@@ -124,6 +124,24 @@
       var facts = opsBuildRowFacts_(row);
       return facts.displayBlockReason || facts.blockReason;
     }
+    function opsCommunicationReminderSummaryText_(summary){
+      var s = summary || {};
+      var parts = [
+        "Total loaded rows: " + String(Number(s.totalLoadedRows || 0)),
+        "Reminder due now: " + String(Number(s.reminderDueNow || 0)),
+        "Blocked by cooldown: " + String(Number(s.blockedByCooldown || 0)),
+        "Blocked by portal submitted: " + String(Number(s.blockedByPortalSubmitted || 0)),
+        "Blocked by docs/payment condition: " + String(Number(s.blockedByDocsPayment || 0)),
+        "Blocked by invalid/missing email: " + String(Number(s.blockedByInvalidMissingEmail || 0)),
+        "Blocked by bounce/do-not-contact: " + String(Number(s.blockedByBounceDoNotContact || 0)),
+        "Blocked by max attempts: " + String(Number(s.blockedByMaxAttempts || 0)),
+        "Unknown/needs inspection: " + String(Number(s.unknownNeedsInspection || 0)),
+        "Aged 8+ days: " + String(Number(s.agedEightPlus || 0)),
+        "Aged 8+ but blocked: " + String(Number(s.agedEightPlusBlocked || 0))
+      ];
+      if (Array.isArray(s.samples) && s.samples.length) parts.push("Samples: " + s.samples.join(", "));
+      return parts.join(" | ");
+    }
     function opsSelectCommunicationRow_(applicantId){
       var row = opsQueueRowByApplicantId_(applicantId) || {};
       var facts = opsBuildRowFacts_(row);
@@ -163,6 +181,7 @@
       var pane = document.getElementById("opsCommunicationSelectedPane");
       var records = document.getElementById("opsCommunicationQueueRecords");
       var strip = document.getElementById("opsCommunicationStatusStrip");
+      var reminderSummaryEl = document.getElementById("opsReminderTruthSummary");
       var row = opsApplicantContextRow_() || {};
       var facts = opsBuildRowFacts_(row);
       var id = facts.applicantId || opsApplicantId_();
@@ -174,6 +193,8 @@
       var displayFacts = selectedFacts || facts;
       var displayId = selectedFacts ? selectedFacts.applicantId : id;
       var displayProof = displayFacts && displayFacts.resolverProof ? displayFacts.resolverProof : {};
+      var displayReminder = displayFacts && displayFacts.reminderDiagnostic ? displayFacts.reminderDiagnostic : opsReminderDiagnosticFromRow_(displayFacts && displayFacts.row ? displayFacts.row : row, displayFacts);
+      var reminderSummary = opsReminderDiagnosticSummary_(opsAllQueueRows_());
       var recipientCounts = opsCommunicationRecipientCounts_(selectedRows);
       if (pane) {
         var paneItems = selectedRows.length > 1
@@ -182,12 +203,21 @@
             ["Selected count", String(selectedRows.length)],
             ["Email recipients", String(recipientCounts.loaded) + " loaded / " + String(recipientCounts.missing) + " missing"],
             ["Selected template / queue action", def.label + " / " + opsSelectedTemplateType_()],
-            ["Role gate result", opsCommunicationRoleStatus_()]
+            ["Role gate result", opsCommunicationRoleStatus_()],
+            ["Reminder truth summary", opsCommunicationReminderSummaryText_(reminderSummary)]
           ]
           : [
           ["ApplicantID", displayId || "No applicant selected"],
           ["Name", displayFacts.name || opsApplicantName_() || "Unknown"],
           ["Email", displayFacts.email || "No email loaded"],
+          ["Aging / received age", displayId ? (displayReminder.aging || "Missing source") : "No applicant selected"],
+          ["Email_Status", displayId ? (displayReminder.emailStatus || "Blank") : "No applicant selected"],
+          ["Email_Attempt_Count", displayId ? (displayReminder.emailAttemptCount == null ? "Blank" : String(displayReminder.emailAttemptCount)) : "No applicant selected"],
+          ["Email_Last_Sent_At", displayId ? (displayReminder.emailLastSentAt || "Blank") : "No applicant selected"],
+          ["Last_Contacted_At", displayId ? (displayReminder.lastContactedAt || "Blank") : "No applicant selected"],
+          ["Ack_Email_Sent_At", displayId ? (displayReminder.ackEmailSentAt || "Blank") : "No applicant selected"],
+          ["Email_Next_Action_Date", displayId ? (displayReminder.emailNextActionDate || "Blank") : "No applicant selected"],
+          ["Communication_Next_Action_At", displayId ? (displayReminder.communicationNextActionAt || "Blank") : "No applicant selected"],
           ["Phone / WhatsApp", displayFacts.phone || "No phone/WhatsApp loaded"],
           ["Lifecycle stage", displayId ? (displayFacts.displayStageLabel || displayFacts.lifecycleLabel) : "No applicant selected"],
           ["Current review queue", displayId ? (displayProof.currentQueueBucket || "not_in_loaded_review_queue") : "No applicant selected"],
@@ -199,6 +229,8 @@
           ["Resolver stage", displayId ? (displayProof.resolverStageLabel || "Unknown") : "No applicant selected"],
           ["Resolver next action", displayId ? (displayProof.resolverNextAction || "Unknown") : "No applicant selected"],
           ["Resolver block", displayId ? ((displayProof.resolverBlockCode || "NO_BLOCK") + " | " + (displayProof.resolverBlockReason || "No block reason")) : "No applicant selected"],
+          ["Reminder Due?", displayId ? (displayReminder.reminderDueLabel || "NO") : "No applicant selected"],
+          ["Reminder NO reason", displayId ? (displayReminder.reminderDue ? "Reminder due now." : (displayReminder.reasonLabel || "Needs inspection")) : "No applicant selected"],
           ["Selected template / queue action", def.label + " / " + opsSelectedTemplateType_()],
           ["Block reason", displayId ? (displayFacts.displayBlockReason || displayFacts.blockReason) : "No applicant selected"],
           ["Role gate result", opsCommunicationRoleStatus_()]
@@ -207,6 +239,7 @@
           return "<div class='opsInfoItem'><div class='k'>" + esc(item[0]) + "</div><div class='v'>" + esc(item[1]) + "</div></div>";
         }).join("");
       }
+      if (reminderSummaryEl) reminderSummaryEl.textContent = opsCommunicationReminderSummaryText_(reminderSummary);
       if (records) {
         if (def.countAvailable === false) {
           records.innerHTML = "<div class='opsPlaceholder'>Count unavailable in current loaded data.</div>";
@@ -220,6 +253,7 @@
             + "<span class='opsStatusPill " + (recipientCounts.missing ? "warn" : "ok") + "'>Email recipients: " + esc(String(recipientCounts.loaded)) + " loaded / " + esc(String(recipientCounts.missing)) + " missing</span>"
             + "</div>" + rows.slice(0, 12).map(function(r){
             var rowFacts = opsBuildRowFacts_(r);
+            var rowReminder = rowFacts.reminderDiagnostic || opsReminderDiagnosticFromRow_(r, rowFacts);
             var rid = rowFacts.applicantId;
             var name = rowFacts.name || "Unknown applicant";
             var active = rid && rid === id;
@@ -228,7 +262,7 @@
               + "<label><input type='checkbox' onchange='opsToggleCommunicationRowSelection_(\"" + esc(rid) + "\")'" + checked + "> "
               + "<strong>" + esc(rid || "No ApplicantID") + "</strong> - " + esc(name) + "</label>"
               + "<button class='opsActionBtn' type='button' onclick='opsSelectCommunicationRow_(\"" + esc(rid) + "\")'>Open</button>"
-              + "<br><span class='opsWorkflowSecondary'>" + esc(rowFacts.lifecycleLabel) + " | " + esc(rowFacts.lastContactLabel) + "</span></div>";
+              + "<br><span class='opsWorkflowSecondary'>" + esc((rowFacts.displayStageLabel || rowFacts.lifecycleLabel) + " | " + rowFacts.lastContactLabel + " | Reminder Due: " + (rowReminder.reminderDue ? "YES" : "NO") + " | " + rowReminder.reasonCode) + "</span></div>";
           }).join("");
         }
       }
@@ -236,6 +270,8 @@
         strip.innerHTML = [
           ["Timeline", id ? facts.lastContactLabel : "No applicant selected", "info"],
           ["Cooldown", facts.nextEligible || "No next eligible date loaded", "muted"],
+          ["Reminder Due", displayId ? (displayReminder.reminderDue ? "YES" : "NO") : "No applicant selected", displayReminder.reminderDue ? "ok" : "warn"],
+          ["Reminder Truth", displayId ? displayReminder.reasonCode : "No applicant selected", displayReminder.reminderDue ? "ok" : "warn"],
           ["Blocker", id ? facts.blockReason : "No applicant selected", facts.emailIssue ? "warn" : "info"],
           ["Role action", opsCommunicationRoleStatus_(), opsOperationalExecutionAllowed_() ? "warn" : "muted"]
         ].map(function(item){
