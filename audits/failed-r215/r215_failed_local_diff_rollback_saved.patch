@@ -1,0 +1,265 @@
+diff --git a/.codexhub/SESSION_CONTEXT.md b/.codexhub/SESSION_CONTEXT.md
+index f14cd39..2df9713 100644
+--- a/.codexhub/SESSION_CONTEXT.md
++++ b/.codexhub/SESSION_CONTEXT.md
+@@ -6,9 +6,9 @@ Project key: FODE_RUNTIME
+ Registered root: E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog
+ Authoritative CURRENT_TASK.md: E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog\CURRENT_TASK.md
+ Authoritative AGENTS.md: E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog\AGENTS.md
+-Latest known commit/tag: 7ba1802 release: r200 elevated admin role / staging-as200
++Latest known commit/tag: dffffc6 release: r213 stage batch preview clarity / staging-as213
+ Last known runtime/version: refresh context for current release truth
+ Last resume command: not recorded
+-Selected launch profile: 5.5 Low
++Selected launch profile: 5.5 High
+ 
+ Do not update CodexHub CURRENT_TASK.md for project work. Read and write the project CURRENT_TASK.md and AGENTS.md in the registered root.
+diff --git a/.codexhub/resume_state/latest.json b/.codexhub/resume_state/latest.json
+index 61e3db8..5acf67b 100644
+--- a/.codexhub/resume_state/latest.json
++++ b/.codexhub/resume_state/latest.json
+@@ -2,18 +2,18 @@
+   "machine": "SVAIDYA",
+   "repo_path": "E:\\Gdrive\\01_SANJAY\\Codex_Sync\\FODE_Runtime_1wog",
+   "branch": "main",
+-  "head": "81e2c995859ed914193fa04548a1eba6c91ef6c1",
+-  "git_status": "## main...origin/main\n M CURRENT_TASK.md",
++  "head": "9a592835e0b52d217f5be200b352cc01ebd2dbfa",
++  "git_status": "## main...origin/main\n M .codexhub/SESSION_CONTEXT.md\n M .codexhub/resume_state/latest.json\n M AdminUI.html\n M AdminUI_OpsCommunications.html\n M CURRENT_TASK.md\n M Config.js",
+   "current_task": {
+     "path": "E:\\Gdrive\\01_SANJAY\\Codex_Sync\\FODE_Runtime_1wog\\CURRENT_TASK.md",
+     "exists": true,
+-    "last_write_utc": "2026-05-27T23:52:30.1476610Z",
+-    "hash_sha256": "376357FAFAAF0613C2032C554409C049C21F8B94E53FBE1548D8D4C08D594B78",
++    "last_write_utc": "2026-06-03T07:07:01.9825274Z",
++    "hash_sha256": "1D9382C236D7CB3A1DEEC0CCD90303873B85334BF34BD4501C07C3ABD08D0384",
+     "workspace_path": "",
+     "has_next_action": false,
+     "has_state_backup": true,
+-    "state_backup_timestamp": "2026-05-28 09:52:30",
+-    "state_backup_note": "[add operator note]",
++    "state_backup_timestamp": "2026-06-03 17:07:01",
++    "state_backup_note": "FODE r215 rollback complete. Live staging restored to r213 / 213 at @233. Admin OPS manually verified: metrics populate and no red console errors. r215 local diff remains unfinalized and must be repaired offline. Do not redeploy r215 until syntax break around AdminUI/AdminUI_OpsCommunications is isolated.",
+     "state_backup_timestamp_valid": true,
+     "state_backup_is_fresh": true,
+     "appears_current": false
+diff --git a/AdminUI.html b/AdminUI.html
+index 60f7cc2..0a5e396 100644
+--- a/AdminUI.html
++++ b/AdminUI.html
+@@ -1267,7 +1267,6 @@
+             <div class="opsSectionHeader"><div><h3>Communication Work Queues</h3><p>Counts use currently loaded OPS rows only.</p></div><span class="opsStatusPill info">Loaded data</span></div>
+             <div class="opsFilterList" id="opsCommunicationQueueList"></div>
+             <div class="opsInspectPanel" id="opsCommunicationQueueInspector">Select a communication queue.</div>
+-            <div class="opsInspectPanel" id="opsReminderTruthSummary" style="margin-top:12px;">Reminder truth summary loads from currently visible rows.</div>
+           </div>
+           <div class="opsCard">
+             <div class="opsSectionHeader"><div><h3>Records / Selected Applicant Context</h3><p>Selection follows Applicant Queue, search, lifecycle cards, and communication work queues.</p></div><span class="opsStatusPill info">Selected applicant</span></div>
+diff --git a/AdminUI_OpsCommunications.html b/AdminUI_OpsCommunications.html
+index b57424c..b814a10 100644
+--- a/AdminUI_OpsCommunications.html
++++ b/AdminUI_OpsCommunications.html
+@@ -124,23 +124,11 @@
+       var facts = opsBuildRowFacts_(row);
+       return facts.displayBlockReason || facts.blockReason;
+     }
+-    function opsCommunicationReminderSummaryText_(summary){
+-      var s = summary || {};
+-      var parts = [
+-        "Total loaded rows: " + String(Number(s.totalLoadedRows || 0)),
+-        "Reminder due now: " + String(Number(s.reminderDueNow || 0)),
+-        "Blocked by cooldown: " + String(Number(s.blockedByCooldown || 0)),
+-        "Blocked by portal submitted: " + String(Number(s.blockedByPortalSubmitted || 0)),
+-        "Blocked by docs/payment condition: " + String(Number(s.blockedByDocsPayment || 0)),
+-        "Blocked by invalid/missing email: " + String(Number(s.blockedByInvalidMissingEmail || 0)),
+-        "Blocked by bounce/do-not-contact: " + String(Number(s.blockedByBounceDoNotContact || 0)),
+-        "Blocked by max attempts: " + String(Number(s.blockedByMaxAttempts || 0)),
+-        "Unknown/needs inspection: " + String(Number(s.unknownNeedsInspection || 0)),
+-        "Aged 8+ days: " + String(Number(s.agedEightPlus || 0)),
+-        "Aged 8+ but blocked: " + String(Number(s.agedEightPlusBlocked || 0))
+-      ];
+-      if (Array.isArray(s.samples) && s.samples.length) parts.push("Samples: " + s.samples.join(", "));
+-      return parts.join(" | ");
++    function opsIsSuperFlag_(){
++      return typeof IS_SUPER !== "undefined" && IS_SUPER === true;
++    }
++    function opsIsOperationsAdminFlag_(){
++      return typeof IS_OPERATIONS_ADMIN !== "undefined" && IS_OPERATIONS_ADMIN === true;
+     }
+     function opsSelectCommunicationRow_(applicantId){
+       var row = opsQueueRowByApplicantId_(applicantId) || {};
+@@ -181,7 +169,6 @@
+       var pane = document.getElementById("opsCommunicationSelectedPane");
+       var records = document.getElementById("opsCommunicationQueueRecords");
+       var strip = document.getElementById("opsCommunicationStatusStrip");
+-      var reminderSummaryEl = document.getElementById("opsReminderTruthSummary");
+       var row = opsApplicantContextRow_() || {};
+       var facts = opsBuildRowFacts_(row);
+       var id = facts.applicantId || opsApplicantId_();
+@@ -193,8 +180,6 @@
+       var displayFacts = selectedFacts || facts;
+       var displayId = selectedFacts ? selectedFacts.applicantId : id;
+       var displayProof = displayFacts && displayFacts.resolverProof ? displayFacts.resolverProof : {};
+-      var displayReminder = displayFacts && displayFacts.reminderDiagnostic ? displayFacts.reminderDiagnostic : opsReminderDiagnosticFromRow_(displayFacts && displayFacts.row ? displayFacts.row : row, displayFacts);
+-      var reminderSummary = opsReminderDiagnosticSummary_(opsAllQueueRows_());
+       var recipientCounts = opsCommunicationRecipientCounts_(selectedRows);
+       if (pane) {
+         var paneItems = selectedRows.length > 1
+@@ -203,21 +188,12 @@
+             ["Selected count", String(selectedRows.length)],
+             ["Email recipients", String(recipientCounts.loaded) + " loaded / " + String(recipientCounts.missing) + " missing"],
+             ["Selected template / queue action", def.label + " / " + opsSelectedTemplateType_()],
+-            ["Role gate result", opsCommunicationRoleStatus_()],
+-            ["Reminder truth summary", opsCommunicationReminderSummaryText_(reminderSummary)]
++            ["Role gate result", opsCommunicationRoleStatus_()]
+           ]
+           : [
+           ["ApplicantID", displayId || "No applicant selected"],
+           ["Name", displayFacts.name || opsApplicantName_() || "Unknown"],
+           ["Email", displayFacts.email || "No email loaded"],
+-          ["Aging / received age", displayId ? (displayReminder.aging || "Missing source") : "No applicant selected"],
+-          ["Email_Status", displayId ? (displayReminder.emailStatus || "Blank") : "No applicant selected"],
+-          ["Email_Attempt_Count", displayId ? (displayReminder.emailAttemptCount == null ? "Blank" : String(displayReminder.emailAttemptCount)) : "No applicant selected"],
+-          ["Email_Last_Sent_At", displayId ? (displayReminder.emailLastSentAt || "Blank") : "No applicant selected"],
+-          ["Last_Contacted_At", displayId ? (displayReminder.lastContactedAt || "Blank") : "No applicant selected"],
+-          ["Ack_Email_Sent_At", displayId ? (displayReminder.ackEmailSentAt || "Blank") : "No applicant selected"],
+-          ["Email_Next_Action_Date", displayId ? (displayReminder.emailNextActionDate || "Blank") : "No applicant selected"],
+-          ["Communication_Next_Action_At", displayId ? (displayReminder.communicationNextActionAt || "Blank") : "No applicant selected"],
+           ["Phone / WhatsApp", displayFacts.phone || "No phone/WhatsApp loaded"],
+           ["Lifecycle stage", displayId ? (displayFacts.displayStageLabel || displayFacts.lifecycleLabel) : "No applicant selected"],
+           ["Current review queue", displayId ? (displayProof.currentQueueBucket || "not_in_loaded_review_queue") : "No applicant selected"],
+@@ -229,8 +205,6 @@
+           ["Resolver stage", displayId ? (displayProof.resolverStageLabel || "Unknown") : "No applicant selected"],
+           ["Resolver next action", displayId ? (displayProof.resolverNextAction || "Unknown") : "No applicant selected"],
+           ["Resolver block", displayId ? ((displayProof.resolverBlockCode || "NO_BLOCK") + " | " + (displayProof.resolverBlockReason || "No block reason")) : "No applicant selected"],
+-          ["Reminder Due?", displayId ? (displayReminder.reminderDueLabel || "NO") : "No applicant selected"],
+-          ["Reminder NO reason", displayId ? (displayReminder.reminderDue ? "Reminder due now." : (displayReminder.reasonLabel || "Needs inspection")) : "No applicant selected"],
+           ["Selected template / queue action", def.label + " / " + opsSelectedTemplateType_()],
+           ["Block reason", displayId ? (displayFacts.displayBlockReason || displayFacts.blockReason) : "No applicant selected"],
+           ["Role gate result", opsCommunicationRoleStatus_()]
+@@ -239,7 +213,6 @@
+           return "<div class='opsInfoItem'><div class='k'>" + esc(item[0]) + "</div><div class='v'>" + esc(item[1]) + "</div></div>";
+         }).join("");
+       }
+-      if (reminderSummaryEl) reminderSummaryEl.textContent = opsCommunicationReminderSummaryText_(reminderSummary);
+       if (records) {
+         if (def.countAvailable === false) {
+           records.innerHTML = "<div class='opsPlaceholder'>Count unavailable in current loaded data.</div>";
+@@ -253,7 +226,6 @@
+             + "<span class='opsStatusPill " + (recipientCounts.missing ? "warn" : "ok") + "'>Email recipients: " + esc(String(recipientCounts.loaded)) + " loaded / " + esc(String(recipientCounts.missing)) + " missing</span>"
+             + "</div>" + rows.slice(0, 12).map(function(r){
+             var rowFacts = opsBuildRowFacts_(r);
+-            var rowReminder = rowFacts.reminderDiagnostic || opsReminderDiagnosticFromRow_(r, rowFacts);
+             var rid = rowFacts.applicantId;
+             var name = rowFacts.name || "Unknown applicant";
+             var active = rid && rid === id;
+@@ -262,7 +234,7 @@
+               + "<label><input type='checkbox' onchange='opsToggleCommunicationRowSelection_(\"" + esc(rid) + "\")'" + checked + "> "
+               + "<strong>" + esc(rid || "No ApplicantID") + "</strong> - " + esc(name) + "</label>"
+               + "<button class='opsActionBtn' type='button' onclick='opsSelectCommunicationRow_(\"" + esc(rid) + "\")'>Open</button>"
+-              + "<br><span class='opsWorkflowSecondary'>" + esc((rowFacts.displayStageLabel || rowFacts.lifecycleLabel) + " | " + rowFacts.lastContactLabel + " | Reminder Due: " + (rowReminder.reminderDue ? "YES" : "NO") + " | " + rowReminder.reasonCode) + "</span></div>";
++              + "<br><span class='opsWorkflowSecondary'>" + esc(rowFacts.lifecycleLabel) + " | " + esc(rowFacts.lastContactLabel) + "</span></div>";
+           }).join("");
+         }
+       }
+@@ -270,8 +242,6 @@
+         strip.innerHTML = [
+           ["Timeline", id ? facts.lastContactLabel : "No applicant selected", "info"],
+           ["Cooldown", facts.nextEligible || "No next eligible date loaded", "muted"],
+-          ["Reminder Due", displayId ? (displayReminder.reminderDue ? "YES" : "NO") : "No applicant selected", displayReminder.reminderDue ? "ok" : "warn"],
+-          ["Reminder Truth", displayId ? displayReminder.reasonCode : "No applicant selected", displayReminder.reminderDue ? "ok" : "warn"],
+           ["Blocker", id ? facts.blockReason : "No applicant selected", facts.emailIssue ? "warn" : "info"],
+           ["Role action", opsCommunicationRoleStatus_(), opsOperationalExecutionAllowed_() ? "warn" : "muted"]
+         ].map(function(item){
+@@ -333,7 +303,7 @@
+       el.innerHTML = opsTemplateDefinitions_().map(function(t){
+         var allowed = t.type === "quote_fee_estimate"
+           ? "Quote / Fee Estimate - backend exists, OPS wiring pending"
+-          : (IS_SUPER ? "Super Admin selected-applicant send after preview/confirmation" : (IS_OPERATIONS_ADMIN ? "Operations Admin send after preview/confirmation/Safe Mode gates" : "Admin/operator role restrictions apply"));
++          : (opsIsSuperFlag_() ? "Super Admin selected-applicant send after preview/confirmation" : (opsIsOperationsAdminFlag_() ? "Operations Admin send after preview/confirmation/Safe Mode gates" : "Admin/operator role restrictions apply"));
+         return "<div class='opsTemplateCard" + (selected === t.type ? " active" : "") + "' data-template-type='" + esc(t.type) + "'>"
+           + "<h4>" + esc(t.name) + "</h4>"
+           + "<p><strong>Purpose:</strong> " + esc(t.purpose) + "</p>"
+@@ -366,9 +336,9 @@
+       if (subj) subj.value = t.subject;
+       if (body) body.value = t.body + "\n\nApplicantID: " + opsApplicantId_();
+       if (safety && selected === "quote_fee_estimate") safety.value = "Quote / Fee Estimate - backend exists, OPS wiring pending";
+-      else if (safety) safety.value = IS_SUPER
++      else if (safety) safety.value = opsIsSuperFlag_()
+         ? "Super Admin selected-applicant parity; confirmation required"
+-        : (IS_OPERATIONS_ADMIN ? "Operations Admin; Safe Mode, preview, and confirmation required" : "Admin/operator role restrictions apply");
++        : (opsIsOperationsAdminFlag_() ? "Operations Admin; Safe Mode, preview, and confirmation required" : "Admin/operator role restrictions apply");
+       renderOpsCommunicationStatePanel_();
+     }
+     function renderOpsCommunicationStatePanel_(){
+@@ -415,7 +385,7 @@
+         "<br><strong>Template key/type:</strong> " + esc(selectedType),
+         "<br><strong>Preview status:</strong> " + esc(status + " / " + timestamp),
+         "<br><strong>Body preview:</strong><div class='opsPreviewBody'>" + esc((body || "Preview/template will populate body").slice(0, 1200)) + "</div>",
+-        "<strong>Send authority:</strong> " + esc(IS_SUPER ? "Super Admin selected-applicant parity; existing supervisory policy applies" : (IS_OPERATIONS_ADMIN ? "Operations Admin; selected-record Safe Mode, preview, and confirmation gates apply" : "Role restricted for normal Admin")),
++        "<strong>Send authority:</strong> " + esc(opsIsSuperFlag_() ? "Super Admin selected-applicant parity; existing supervisory policy applies" : (opsIsOperationsAdminFlag_() ? "Operations Admin; selected-record Safe Mode, preview, and confirmation gates apply" : "Role restricted for normal Admin")),
+         "<br><strong>Block reason:</strong> " + esc(blockReason || "Ready for send only after preview and confirmation")
+       ].join("");
+     }
+diff --git a/CURRENT_TASK.md b/CURRENT_TASK.md
+index 6d3f916..5c4506e 100644
+--- a/CURRENT_TASK.md
++++ b/CURRENT_TASK.md
+@@ -1034,25 +1034,34 @@
+ <!-- CODEXHUB_STATE_BACKUP_START -->
+ ## CodexHub State Backup
+ 
+-- Last state backup timestamp: 2026-06-02 20:20:18
++- Last state backup timestamp: 2026-06-03 17:07:01
+ - Project path: `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog`
+-- Repository state: CLEAN
++- Repository state: DIRTY
+ - Current branch: `main`
+-- Latest commit: `dffffc6 release: r213 stage batch preview clarity`
+-- Latest matching staging tag: `staging-as213`
+-- Config version / deploy number: VERSION: r213; DEPLOY_VERSION_NUMBER: 213
++- Latest commit: `9a59283 feat: expose cooldown and reminder truth diagnostics`
++- Latest matching staging tag: `staging-as215d`
++- Config version / deploy number: VERSION: r215; DEPLOY_VERSION_NUMBER: 215
+ - Current release track: Not detected.
+ - Current blocker: None detected.
+ - Next exact action: Not detected.
+-- Operator note: [add operator note]
++- Operator note: FODE r215 rollback complete. Live staging restored to r213 / 213 at @233. Admin OPS manually verified: metrics populate and no red console errors. r215 local diff remains unfinalized and must be repaired offline. Do not redeploy r215 until syntax break around AdminUI/AdminUI_OpsCommunications is isolated.
+ 
+ ### Git Status
+ ```text
+ ## main...origin/main
++ M .codexhub/SESSION_CONTEXT.md
++ M .codexhub/resume_state/latest.json
++ M AdminUI.html
++ M AdminUI_OpsCommunications.html
++ M Config.js
+ ```
+ 
+ ### Changed Files
+-- None.
++- `.codexhub/SESSION_CONTEXT.md`
++- `.codexhub/resume_state/latest.json`
++- `AdminUI.html`
++- `AdminUI_OpsCommunications.html`
++- `Config.js`
+ <!-- CODEXHUB_STATE_BACKUP_END -->
+ 
+ ## Previous Active CIS
+diff --git a/Config.js b/Config.js
+index 3a21bc7..8690ab2 100644
+--- a/Config.js
++++ b/Config.js
+@@ -7,9 +7,9 @@
+  */
+ var CONFIG = {
+   // Versioning (change control)
+-  VERSION: "r213",
++  VERSION: "r215",
+ CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alignment",
+-  DEPLOY_VERSION_NUMBER: 213,
++  DEPLOY_VERSION_NUMBER: 215,
+ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
+ 
+   // STAGING/PROD data mode routing (working sheet)
