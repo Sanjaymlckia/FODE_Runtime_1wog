@@ -259,3 +259,212 @@ ROADMAP.md
 AGENTS.md
 
 - rules and invariants
+
+
+## Architecture observations
+
+### 2026-06-04 - Admissions model vs CRM model
+
+Area
+
+FODE / Architecture
+
+Observation
+
+LAP discovery determined that FODE is fundamentally an admissions platform rather than a traditional CRM platform.
+
+Historical evolution introduced CRM-style concepts such as Contacted, CRM_Stage, Deal_ID, Contact_ID, CRM_Response, and communication-driven progression.
+
+Review of operational behavior showed that the primary business process is:
+
+Campaign
+→ Application
+→ Portal
+→ Documents
+→ Payment
+→ Verification
+→ Enrollment
+→ Assignment
+
+rather than a sales/deal pipeline.
+
+Key insight
+
+Portal-centric admissions should remain the primary architectural model.
+
+CRM-style accountability, productivity tracking, ownership tracking, SLA reporting, and future commission models remain valid but should exist as separate layers rather than becoming lifecycle authority.
+
+Reasoning
+
+Separates admissions truth from operational reporting and accountability concerns.
+
+Status
+
+Accepted architectural observation. No implementation approved.
+
+---
+
+### 2026-06-04 - Authority ownership discovery
+
+Area
+
+FODE / LAP
+
+Observation
+
+LAP discovery identified separate authority domains which should not be conflated.
+
+Accepted authority domains:
+
+* Applicant Identity & Intake Authority
+* Portal Authority
+* Drive/File Evidence Authority
+* Document Review Authority
+* Payment Verification Authority
+* Finance Authority
+* Enrollment Authority
+* Assignment Authority
+* Communication Authority
+* Lifecycle Classification Authority
+* Workflow Authority
+* Operator Accountability Authority
+* Runtime Authority
+
+Key insight
+
+Lifecycle, Workflow, Communication, Enrollment, Assignment, and Accountability answer different business questions and should not own each other.
+
+Status
+
+Accepted governance observation. Future implementation subject to separate approval.
+
+---
+
+### 2026-06-04 - Shared Row Facts clarification
+
+Area
+
+FODE / Architecture
+
+Observation
+
+Shared Row Facts emerged as a composition and normalization layer.
+
+Key insight
+
+Shared Row Facts should consume authority.
+
+Shared Row Facts should not become authority.
+
+Responsibilities:
+
+* aggregate facts
+* normalize display data
+* support UI presentation
+* support operational visibility
+
+Non-responsibilities:
+
+* lifecycle ownership
+* payment authority
+* document authority
+* communication authority
+
+Status
+
+Accepted architectural clarification.
+
+## Future enhancements
+
+### LAP Governance Program
+
+Status
+
+Discovery Complete
+
+Artifacts Completed
+
+* Authority Specification v1.1
+* AFOR (Authority Field Ownership Register)
+* ADM (Authority Dependency Map)
+* GCADA (Ghost Code and Authority Debt Audit)
+* Business Authority Validation
+
+Accepted findings
+
+Canonical authorities:
+
+* Receipt_Status (Payment Verification Authority)
+* Doc_Verification_Status plus per-document review statuses (Document Review Authority)
+
+Compatibility projections:
+
+* Payment_Verified
+* Docs_Verified
+
+Future review candidates
+
+* Lifecycle_Stage
+* Registration_Complete
+* CRM_Invoice_Triggered
+* CRM_Response
+* Contact_Response
+* Deal_Response
+* Date_of_Birth
+* Intake Year
+* FD_FormID
+
+Future governance direction
+
+* Authority resolver design
+* Authority drift diagnostics
+* Operator accountability framework
+* Assignment ownership tracking
+* SLA reporting
+* Performance reporting
+* Commission framework
+
+Important
+
+Compatibility fields may remain operationally necessary even when no longer considered canonical authority.
+
+
+## Lessons learned
+
+### 2026-06-04 - Rich status vs compatibility projection
+
+Area
+
+FODE / Governance
+
+Observation
+
+As systems evolve, simple milestone fields may remain after richer review workflows are introduced.
+
+Examples discovered:
+
+Receipt_Status
+→ Payment_Verified
+
+Doc_Verification_Status
+→ Docs_Verified
+
+Lesson
+
+Do not assume the field with the clearest business name is the authority.
+
+Business authority should be determined by:
+
+* write ownership
+* operator decision point
+* current workflow ownership
+* business intent
+
+Reasoning
+
+Compatibility fields can survive for years after richer authority models are introduced and may continue to be widely consumed by UI and operational workflows.
+
+Status
+
+Accepted governance lesson.
+
