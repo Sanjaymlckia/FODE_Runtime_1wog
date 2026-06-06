@@ -20,15 +20,15 @@
     }
     function opsCommunicationQueueDefinitions_(){
       return [
-        { key:"ready_to_contact", label:"Ready to Contact", messageType:"reminder", actionLevel:"Operator preview only / Operations Admin gated", countAvailable:true, meaning:"Loaded rows with an email, no visible bounce/suppression issue, no recent contact/cooldown evidence, and no review-only/terminal state.", next:"Preview reminder or selected queue action; send only through existing operational gates.", test:function(r){ return opsBuildRowFacts_(r).communicationQueues.readyToContact; } },
-        { key:"missing_documents", label:"Missing Documents", messageType:"docs_missing", actionLevel:"Operations Admin gated", countAvailable:true, meaning:"Awaiting uploads / document evidence pending rows, excluding email issues, recent contact/cooldown rows, and terminal records.", next:"Preview Missing Documents; send only through the existing single-applicant gate.", test:function(r){ var facts = opsBuildRowFacts_(r); return facts.communicationQueues.missingDocuments && facts.hasEmail && !facts.emailIssue && !facts.recentlyContacted && !facts.cooldownActive; } },
+        { key:"ready_to_contact", label:"Ready to Contact", messageType:"reminder", actionLevel:"Operator preview only / Operations Admin gated", countAvailable:true, meaning:"Loaded rows with an email, no visible bounce/suppression issue, no recent contact/cooldown evidence, and no review-only/terminal state.", next:"Preview reminder or selected queue action; send only through existing operational gates.", test:function(r){ return opsBuildCommunicationRowFacts_(r).communicationQueues.readyToContact; } },
+        { key:"missing_documents", label:"Missing Documents", messageType:"docs_missing", actionLevel:"Operations Admin gated", countAvailable:true, meaning:"Awaiting uploads / document evidence pending rows, excluding email issues, recent contact/cooldown rows, and terminal records.", next:"Preview Missing Documents; send only through the existing single-applicant gate.", test:function(r){ var facts = opsBuildCommunicationRowFacts_(r); return facts.communicationQueues.missingDocuments && facts.hasEmail && !facts.emailIssue && !facts.recentlyContacted && !facts.cooldownActive; } },
         { key:"docs_quote_ready", label:"Docs Quote Ready", messageType:"quote_fee_estimate", actionLevel:"unavailable / follow-up needed", countAvailable:false, meaning:"Quote / Fee Estimate workflow marker surfaced for OPS visibility.", next:"Quote / Fee Estimate - backend exists, OPS wiring pending.", test:function(){ return false; } },
-        { key:"uploaded_review_required", label:"Uploaded / Review Required", messageType:"custom_email", actionLevel:"review bridge", countAvailable:true, meaning:"Uploaded or correction-required document evidence needs human review before applicant reminders.", next:"Open document review. Do not treat as Missing Documents reminder workload.", test:function(r){ return opsBuildRowFacts_(r).communicationQueues.uploadedReviewRequired; } },
-        { key:"invoice_payment", label:"Invoice / Payment Follow-Up", messageType:"payment_followup", actionLevel:"Operations Admin gated", countAvailable:true, meaning:"Loaded rows in payment or invoice follow-up stages, excluding email issues, recent contact/cooldown rows, and terminal records.", next:"Preview Invoice Reminder / Payment Follow-Up through the existing single-applicant gate.", test:function(r){ var facts = opsBuildRowFacts_(r); return facts.activeProgressionAllowed && (facts.workflowStage === "payment" || facts.workflowStage === "invoice") && facts.hasEmail && !facts.emailIssue && !facts.recentlyContacted && !facts.cooldownActive; } },
-        { key:"portal_access", label:"Portal Access / Reminder", messageType:"legacy_invite", actionLevel:"Operations Admin gated", countAvailable:true, meaning:"Loaded rows that appear to need portal access or a general portal reminder, excluding email issues, recent contact/cooldown rows, and terminal records.", next:"Preview Portal Access or General Reminder; send only through existing gates.", test:function(r){ var facts = opsBuildRowFacts_(r); return facts.activeProgressionAllowed && (facts.workflowStage === "fd_received" || facts.workflowStage === "portal") && facts.hasEmail && !facts.emailIssue && !facts.recentlyContacted && !facts.cooldownActive; } },
-        { key:"email_issue", label:"Email Issue / Contact Correction", messageType:"custom_email", actionLevel:"Operations Admin gated handoff", countAvailable:true, meaning:"Bounce, suppression, invalid email, or correction-needed rows, excluding terminal records.", next:"Use Email Correction handoff / Admin Review. Do not send until contact is corrected.", test:function(r){ return opsBuildRowFacts_(r).communicationQueues.emailIssue; } },
-        { key:"whatsapp_fallback", label:"WhatsApp Fallback", messageType:"custom_email", actionLevel:"Operations Admin gated export", countAvailable:true, meaning:"Loaded rows where phone/WhatsApp fallback is useful because email is missing or blocked, excluding terminal records and recent contact/cooldown rows.", next:"Export governed CSV only through existing WhatsApp fallback gate; no WhatsApp message is sent by this system.", test:function(r){ var facts = opsBuildRowFacts_(r); return facts.communicationQueues.whatsappFallback && !facts.recentlyContacted && !facts.cooldownActive; } },
-        { key:"cooldown_recent", label:"Cooldown / Recently Contacted", messageType:"reminder", actionLevel:"wait / blocked", countAvailable:true, meaning:"Loaded rows with recent/next-action communication evidence or active cooldown, excluding terminal records.", next:"Inspect timeline, cooldown, and block reason before any escalation. This queue is not actionable now.", test:function(r){ return opsBuildRowFacts_(r).communicationQueues.cooldownRecentlyContacted; } },
+        { key:"uploaded_review_required", label:"Uploaded / Review Required", messageType:"custom_email", actionLevel:"review bridge", countAvailable:true, meaning:"Uploaded or correction-required document evidence needs human review before applicant reminders.", next:"Open document review. Do not treat as Missing Documents reminder workload.", test:function(r){ return opsBuildCommunicationRowFacts_(r).communicationQueues.uploadedReviewRequired; } },
+        { key:"invoice_payment", label:"Invoice / Payment Follow-Up", messageType:"payment_followup", actionLevel:"Operations Admin gated", countAvailable:true, meaning:"Loaded rows in payment or invoice follow-up stages, excluding email issues, recent contact/cooldown rows, and terminal records.", next:"Preview Invoice Reminder / Payment Follow-Up through the existing single-applicant gate.", test:function(r){ var facts = opsBuildCommunicationRowFacts_(r); return facts.activeProgressionAllowed && (facts.workflowStage === "payment" || facts.workflowStage === "invoice") && facts.hasEmail && !facts.emailIssue && !facts.recentlyContacted && !facts.cooldownActive; } },
+        { key:"portal_access", label:"Portal Access / Reminder", messageType:"legacy_invite", actionLevel:"Operations Admin gated", countAvailable:true, meaning:"Loaded rows that appear to need portal access or a general portal reminder, excluding email issues, recent contact/cooldown rows, and terminal records.", next:"Preview Portal Access or General Reminder; send only through existing gates.", test:function(r){ var facts = opsBuildCommunicationRowFacts_(r); return facts.activeProgressionAllowed && (facts.workflowStage === "fd_received" || facts.workflowStage === "portal") && facts.hasEmail && !facts.emailIssue && !facts.recentlyContacted && !facts.cooldownActive; } },
+        { key:"email_issue", label:"Email Issue / Contact Correction", messageType:"custom_email", actionLevel:"Operations Admin gated handoff", countAvailable:true, meaning:"Bounce, suppression, invalid email, or correction-needed rows, excluding terminal records.", next:"Use Email Correction handoff / Admin Review. Do not send until contact is corrected.", test:function(r){ return opsBuildCommunicationRowFacts_(r).communicationQueues.emailIssue; } },
+        { key:"whatsapp_fallback", label:"WhatsApp Fallback", messageType:"custom_email", actionLevel:"Operations Admin gated export", countAvailable:true, meaning:"Loaded rows where phone/WhatsApp fallback is useful because email is missing or blocked, excluding terminal records and recent contact/cooldown rows.", next:"Export governed CSV only through existing WhatsApp fallback gate; no WhatsApp message is sent by this system.", test:function(r){ var facts = opsBuildCommunicationRowFacts_(r); return facts.communicationQueues.whatsappFallback && !facts.recentlyContacted && !facts.cooldownActive; } },
+        { key:"cooldown_recent", label:"Cooldown / Recently Contacted", messageType:"reminder", actionLevel:"wait / blocked", countAvailable:true, meaning:"Loaded rows with recent/next-action communication evidence or active cooldown, excluding terminal records.", next:"Inspect timeline, cooldown, and block reason before any escalation. This queue is not actionable now.", test:function(r){ return opsBuildCommunicationRowFacts_(r).communicationQueues.cooldownRecentlyContacted; } },
         { key:"legacy_summary", label:"Read-only Legacy Campaign Summary", messageType:"reminder", actionLevel:"unavailable / follow-up needed", countAvailable:false, meaning:"Read-only legacy campaign summary is acknowledged as a future OPS workflow entry.", next:"No legacy campaign live send/follow-up is exposed here.", test:function(){ return false; } }
       ];
     }
@@ -62,15 +62,113 @@
       var loaded = 0;
       var missing = 0;
       (rows || []).forEach(function(row){
-        if (opsBuildRowFacts_(row).hasEmail) loaded++;
+        if (opsBuildCommunicationRowFacts_(row).hasEmail) loaded++;
         else missing++;
       });
       return { loaded: loaded, missing: missing };
     }
+    function opsCommunicationQueueNeedsSingleApplicant_(def){
+      var key = String((def && def.key) || "");
+      return ["ready_to_contact", "missing_documents", "invoice_payment", "portal_access"].indexOf(key) >= 0;
+    }
+    function opsCommunicationQueueIsNonActionable_(def){
+      var key = String((def && def.key) || "");
+      return ["cooldown_recent", "uploaded_review_required", "email_issue", "whatsapp_fallback", "docs_quote_ready", "legacy_summary"].indexOf(key) >= 0;
+    }
+    function opsCommunicationQueueContextReason_(def){
+      var key = String((def && def.key) || "");
+      if (key === "cooldown_recent") return "Cooldown / Recently Contacted is a wait queue. Inspect timeline and next eligible send; do not preview or send from this queue.";
+      if (key === "uploaded_review_required") return "Uploaded / Review Required is a document review queue. Open review instead of email preview/send.";
+      if (key === "email_issue") return "Email Issue / Contact Correction requires correction handoff before any applicant email preview/send.";
+      if (key === "whatsapp_fallback") return "WhatsApp Fallback uses the governed CSV export path, not applicant email preview/send.";
+      if (key === "docs_quote_ready") return "Quote / Fee Estimate remains unavailable from OPS Communications.";
+      if (key === "legacy_summary") return "Legacy Campaign Summary is read-only and does not expose a live preview/send path.";
+      return "";
+    }
+    function opsRenderCommunicationIaLabels_(){
+      function setCardHeader_(anchorId, title, note, pill){
+        var anchor = document.getElementById(anchorId);
+        if (!anchor) return;
+        var card = anchor.closest ? anchor.closest(".opsCard") : null;
+        if (!card) return;
+        var titleEl = card.querySelector(".opsSectionHeader h3");
+        var noteEl = card.querySelector(".opsSectionHeader p");
+        var pillEl = card.querySelector(".opsSectionHeader .opsStatusPill");
+        if (titleEl) titleEl.textContent = title;
+        if (noteEl) noteEl.textContent = note;
+        if (pillEl) pillEl.textContent = pill;
+      }
+      setCardHeader_(
+        "opsCommunicationQueueList",
+        "Communications Action Cohorts",
+        "Loaded OPS snapshot only. These counts are not total applicant or total lifecycle counts.",
+        "Loaded snapshot"
+      );
+      setCardHeader_(
+        "opsCommunicationSelectedPane",
+        "Selected Applicant Actions",
+        "Single-applicant preview/send context. Queue cohort selection alone is not enough.",
+        "Single applicant"
+      );
+      var queueList = document.getElementById("opsCommunicationQueueList");
+      if (queueList) {
+        var helper = document.getElementById("opsCommunicationIaNote");
+        if (!helper) {
+          helper = document.createElement("div");
+          helper.id = "opsCommunicationIaNote";
+          helper.className = "opsSafetyNotice";
+          helper.style.marginBottom = "12px";
+          queueList.parentNode.insertBefore(helper, queueList);
+        }
+        helper.textContent = "Use Lifecycle Map for total stage counts. Use Applicant Queue for loaded operational drill-down. This Communications screen is for loaded communication action cohorts and selected-applicant reminder/preview actions.";
+      }
+      var result = document.getElementById("opsCommunicationResult");
+      var resultCard = result && result.closest ? result.closest(".opsCard") : null;
+      if (resultCard) {
+        var note = resultCard.querySelector(".opsControlNote");
+        if (note) note.textContent = "Read-only previews and handoffs for one selected applicant. These controls do not send email by themselves.";
+        Array.prototype.slice.call(resultCard.querySelectorAll("button")).forEach(function(btn){
+          var handler = String(btn.getAttribute("onclick") || "");
+          if (handler.indexOf("opsPreviewSelectedCommunicationAction_()") >= 0) {
+            btn.textContent = "Preview Selected Applicant Action";
+            btn.title = "Preview the governed action for one visible selected ApplicantID.";
+          }
+        });
+      }
+    }
+    function opsCommunicationSelectionContext_(){
+      var def = opsSelectedCommunicationQueueDef_();
+      var selectedIds = opsCommunicationSelectedIds_();
+      var selectedRows = opsCommunicationSelectedRows_();
+      var selectedFacts = selectedRows.length === 1 ? opsBuildCommunicationRowFacts_(selectedRows[0]) : null;
+      var selectedApplicantId = opsApplicantId_();
+      var selectedApplicantBound = !!selectedApplicantId;
+      var singleApplicantFromCohort = !!(selectedFacts && selectedFacts.applicantId);
+      var queueIsNonActionable = opsCommunicationQueueIsNonActionable_(def);
+      var queueNeedsSingleApplicant = opsCommunicationQueueNeedsSingleApplicant_(def);
+      var queueReason = opsCommunicationQueueContextReason_(def);
+      return {
+        def: def,
+        selectedIds: selectedIds,
+        selectedRows: selectedRows,
+        selectedFacts: selectedFacts,
+        selectedApplicantId: selectedApplicantId,
+        selectedApplicantBound: selectedApplicantBound,
+        singleApplicantFromCohort: singleApplicantFromCohort,
+        queueIsNonActionable: queueIsNonActionable,
+        queueNeedsSingleApplicant: queueNeedsSingleApplicant,
+        queueReason: queueReason,
+        cohortSelected: selectedRows.length > 1,
+        noSelection: selectedRows.length === 0,
+        singleSelection: selectedRows.length === 1,
+        requiresApplicantForPreview: queueNeedsSingleApplicant,
+        requiresApplicantForCustomEmail: true
+      };
+    }
     function opsBindSingleCommunicationSelection_(){
       var rows = opsCommunicationSelectedRows_();
       if (rows.length !== 1) return false;
-      var facts = opsBuildRowFacts_(rows[0]);
+      var facts = opsBuildCommunicationRowFacts_(rows[0]);
       if (!facts.applicantId) return false;
       opsSelectedApplicantId = facts.applicantId;
       opsSelectedApplicantName = facts.name || facts.applicantId;
@@ -114,14 +212,14 @@
       }
     }
     function opsCommunicationStageLabel_(row){
-      var facts = opsBuildRowFacts_(row);
+      var facts = opsBuildCommunicationRowFacts_(row);
       return facts.displayStageLabel || facts.lifecycleLabel;
     }
     function opsCommunicationLastContact_(row){
-      return opsBuildRowFacts_(row).lastContactLabel;
+      return opsBuildCommunicationRowFacts_(row).lastContactLabel;
     }
     function opsCommunicationBlockReason_(row){
-      var facts = opsBuildRowFacts_(row);
+      var facts = opsBuildCommunicationRowFacts_(row);
       return facts.displayBlockReason || facts.blockReason;
     }
     function opsCommunicationReminderSummaryText_(summary){
@@ -144,7 +242,7 @@
     }
     function opsSelectCommunicationRow_(applicantId){
       var row = opsQueueRowByApplicantId_(applicantId) || {};
-      var facts = opsBuildRowFacts_(row);
+      var facts = opsBuildCommunicationRowFacts_(row);
       opsSetCommunicationSelectedIds_([facts.applicantId || applicantId]);
       opsSelectApplicantContext_(facts.applicantId || applicantId, facts.name || applicantId);
     }
@@ -165,7 +263,7 @@
     }
     function opsSelectAllCommunicationRows_(){
       var rows = opsCommunicationQueueRows_(opsSelectedCommunicationQueueDef_());
-      opsSetCommunicationSelectedIds_(rows.map(function(row){ return opsBuildRowFacts_(row).applicantId; }));
+      opsSetCommunicationSelectedIds_(rows.map(function(row){ return opsBuildCommunicationRowFacts_(row).applicantId; }));
       if (opsBindSingleCommunicationSelection_()) {
         renderOpsSelectedApplicantContext_();
         renderOpsClassroomChecklist_();
@@ -183,13 +281,14 @@
       var strip = document.getElementById("opsCommunicationStatusStrip");
       var reminderSummaryEl = document.getElementById("opsReminderTruthSummary");
       var row = opsApplicantContextRow_() || {};
-      var facts = opsBuildRowFacts_(row);
+      var facts = opsBuildCommunicationRowFacts_(row);
       var id = facts.applicantId || opsApplicantId_();
-      var def = opsSelectedCommunicationQueueDef_();
+      var ctx = opsCommunicationSelectionContext_();
+      var def = ctx.def;
       var rows = opsCommunicationQueueRows_(def);
-      var selectedIds = opsCommunicationSelectedIds_();
-      var selectedRows = opsCommunicationSelectedRows_();
-      var selectedFacts = selectedRows.length === 1 ? opsBuildRowFacts_(selectedRows[0]) : null;
+      var selectedIds = ctx.selectedIds;
+      var selectedRows = ctx.selectedRows;
+      var selectedFacts = ctx.selectedFacts;
       var displayFacts = selectedFacts || facts;
       var displayId = selectedFacts ? selectedFacts.applicantId : id;
       var displayProof = displayFacts && displayFacts.resolverProof ? displayFacts.resolverProof : {};
@@ -197,12 +296,25 @@
       var reminderSummary = opsReminderDiagnosticSummary_(opsAllQueueRows_());
       var recipientCounts = opsCommunicationRecipientCounts_(selectedRows);
       if (pane) {
-        var paneItems = selectedRows.length > 1
+        var paneItems = ctx.cohortSelected
           ? [
             ["Selected cohort", "Bulk cohort selected"],
             ["Selected count", String(selectedRows.length)],
             ["Email recipients", String(recipientCounts.loaded) + " loaded / " + String(recipientCounts.missing) + " missing"],
+            ["Selected applicant context", "No single applicant is selected from this cohort"],
+            ["Queue action mode", ctx.queueIsNonActionable ? "Blocked queue / inspect only" : "Cohort selected; single-applicant preview/send is unavailable"],
             ["Selected template / queue action", def.label + " / " + opsSelectedTemplateType_()],
+            ["What to do next", ctx.queueReason || "Open one applicant for single-record preview, or use the existing bulk cohort path."],
+            ["Role gate result", opsCommunicationRoleStatus_()],
+            ["Reminder truth summary", opsCommunicationReminderSummaryText_(reminderSummary)]
+          ]
+          : ctx.noSelection
+          ? [
+            ["Selected queue", def.label],
+            ["Selected cohort", "No cohort rows selected"],
+            ["Selected applicant context", displayId ? ("Using selected applicant " + displayId) : "No single applicant selected"],
+            ["Queue action mode", ctx.queueIsNonActionable ? "Blocked queue / inspect only" : "Single-applicant preview/send requires one visible ApplicantID"],
+            ["What to do next", ctx.queueReason || (displayId ? "Preview/send may use the current selected applicant." : "Open one applicant from the queue list before preview/send.")],
             ["Role gate result", opsCommunicationRoleStatus_()],
             ["Reminder truth summary", opsCommunicationReminderSummaryText_(reminderSummary)]
           ]
@@ -252,7 +364,7 @@
             + "<span class='opsStatusPill info'>Selected: " + esc(String(selectedIds.length)) + "</span>"
             + "<span class='opsStatusPill " + (recipientCounts.missing ? "warn" : "ok") + "'>Email recipients: " + esc(String(recipientCounts.loaded)) + " loaded / " + esc(String(recipientCounts.missing)) + " missing</span>"
             + "</div>" + rows.slice(0, 12).map(function(r){
-            var rowFacts = opsBuildRowFacts_(r);
+            var rowFacts = opsBuildCommunicationRowFacts_(r);
             var rowReminder = rowFacts.reminderDiagnostic || opsReminderDiagnosticFromRow_(r, rowFacts);
             var rid = rowFacts.applicantId;
             var name = rowFacts.name || "Unknown applicant";
@@ -268,16 +380,53 @@
       }
       if (strip) {
         strip.innerHTML = [
+          ["Queue", def.label + (ctx.cohortSelected ? (" | Cohort " + String(selectedRows.length)) : ""), ctx.queueIsNonActionable ? "warn" : "info"],
+          ["Applicant context", ctx.cohortSelected ? "No single applicant selected" : (id || "No applicant selected"), ctx.cohortSelected ? "warn" : "info"],
           ["Timeline", id ? facts.lastContactLabel : "No applicant selected", "info"],
           ["Cooldown", facts.nextEligible || "No next eligible date loaded", "muted"],
           ["Reminder Due", displayId ? (displayReminder.reminderDue ? "YES" : "NO") : "No applicant selected", displayReminder.reminderDue ? "ok" : "warn"],
           ["Reminder Truth", displayId ? displayReminder.reasonCode : "No applicant selected", displayReminder.reminderDue ? "ok" : "warn"],
-          ["Blocker", id ? facts.blockReason : "No applicant selected", facts.emailIssue ? "warn" : "info"],
+          ["Blocker", ctx.queueReason || (id ? facts.blockReason : "No applicant selected"), (ctx.queueIsNonActionable || facts.emailIssue) ? "warn" : "info"],
           ["Role action", opsCommunicationRoleStatus_(), opsOperationalExecutionAllowed_() ? "warn" : "muted"]
         ].map(function(item){
           return "<span class='opsStatusPill " + esc(item[2]) + "'>" + esc(item[0] + ": " + item[1]) + "</span>";
         }).join("");
       }
+    }
+    function opsRenderCommunicationControlState_(){
+      var root = document.getElementById("opsCommunications");
+      if (!root) return;
+      var ctx = opsCommunicationSelectionContext_();
+      var def = ctx.def;
+      var singleApplicantReady = !!(ctx.selectedFacts && ctx.selectedFacts.applicantId);
+      var customApplicantReady = !!opsApplicantId_();
+      function setButtonState_(pattern, enabled, reason, enabledLabelSuffix){
+        Array.prototype.slice.call(root.querySelectorAll("button")).forEach(function(btn){
+          var handler = String(btn.getAttribute("onclick") || "");
+          if (handler.indexOf(pattern) < 0) return;
+          btn.disabled = !enabled;
+          btn.title = enabled ? (enabledLabelSuffix || btn.title || "") : reason;
+        });
+      }
+      var queuePreviewEnabled = !ctx.queueIsNonActionable && singleApplicantReady;
+      var queuePreviewReason = ctx.queueReason || (ctx.cohortSelected
+        ? "Bulk cohort selected. Open one applicant for single-applicant preview, or use the existing bulk cohort path."
+        : "Preview Queue Action requires one visible selected ApplicantID.");
+      var customPreviewEnabled = customApplicantReady && !ctx.cohortSelected;
+      var customPreviewReason = ctx.cohortSelected
+        ? "Bulk cohort selected does not imply a single applicant. Open one applicant before custom email preview."
+        : "Custom Email preview requires one visible selected ApplicantID.";
+      var sendEnabled = queuePreviewEnabled && !ctx.cohortSelected;
+      var sendReason = ctx.queueReason || (ctx.cohortSelected
+        ? "Bulk cohort selected does not enable single-applicant send."
+        : "Single-applicant send requires one visible selected ApplicantID and preview.");
+      setButtonState_("opsPreviewSelectedCommunicationAction_()", queuePreviewEnabled, queuePreviewReason, "Preview selected queue action for the visible ApplicantID.");
+      setButtonState_("opsPreviewApplicantEmail_('custom_email','Custom Email')", customPreviewEnabled, customPreviewReason, "Preview Custom Email for the selected applicant.");
+      setButtonState_("opsSendApplicantEmail_('reminder','Reminder')", sendEnabled && def.key === "ready_to_contact", sendReason, "Send Reminder for the selected applicant after preview.");
+      setButtonState_("opsSendApplicantEmail_('docs_missing','Missing Documents Request')", sendEnabled && def.key === "missing_documents", sendReason, "Send Missing Documents Request for the selected applicant after preview.");
+      setButtonState_("opsSendApplicantEmail_('payment_followup','Invoice Reminder')", sendEnabled && def.key === "invoice_payment", sendReason, "Send Invoice Reminder for the selected applicant after preview.");
+      setButtonState_("opsSendApplicantEmail_('legacy_invite','Portal Access')", sendEnabled && def.key === "portal_access", sendReason, "Resend Portal Access for the selected applicant after preview.");
+      setButtonState_("opsSendApplicantEmail_('custom_email','Custom Email')", customPreviewEnabled, customPreviewReason, "Send Custom Email for the selected applicant after preview.");
     }
     function renderOpsCommunicationBulkBridge_(){
       setOpsValue_("commBulkSelectedStage", batchState.selectedStage || "Choose from Lifecycle Map");
@@ -289,37 +438,51 @@
       setOpsValue_("commBulkSendable", batchState.sendable === true ? "YES" : (batchState.disabledReason || "NO"));
     }
     function renderOpsCommunicationWorkspace_(){
+      opsRenderCommunicationIaLabels_();
       renderOpsCommunicationWorkQueues_();
       renderOpsCommunicationSelectedPane_();
       renderOpsCommunicationStatePanel_();
       renderOpsCommunicationBulkBridge_();
+      opsRenderCommunicationControlState_();
     }
     function opsPreviewSelectedCommunicationAction_(){
-      var def = opsSelectedCommunicationQueueDef_();
-      var selectedRows = opsCommunicationSelectedRows_();
-      if (selectedRows.length > 1) {
+      var ctx = opsCommunicationSelectionContext_();
+      var def = ctx.def;
+      var selectedRows = ctx.selectedRows;
+      if (ctx.cohortSelected) {
         var counts = opsCommunicationRecipientCounts_(selectedRows);
-        setOpsResult_("opsCommunicationResult", { result:"GUIDANCE", selectedCount:selectedRows.length, message:"Bulk cohort selected. Email recipients: " + String(counts.loaded) + " loaded / " + String(counts.missing) + " missing. Use existing stage batch preview controls for governed bulk preview; this button does not invent a new bulk send path." }, "Bulk Cohort");
+        setOpsResult_("opsCommunicationResult", { result:"GUIDANCE", selectedCount:selectedRows.length, message:(ctx.queueReason ? (ctx.queueReason + " ") : "") + "Bulk cohort selected. Email recipients: " + String(counts.loaded) + " loaded / " + String(counts.missing) + " missing. Open one applicant for single-record preview, or use existing stage batch preview controls for governed bulk cohort preview." }, "Bulk Cohort");
+        renderOpsCommunicationStatePanel_();
+        return;
+      }
+      if (!ctx.selectedFacts || !ctx.selectedFacts.applicantId) {
+        setOpsResult_("opsCommunicationResult", { result:"BLOCKED", blockCode:"APPLICANT_CONTEXT_REQUIRED", blockReason:ctx.queueReason || "Preview Queue Action is a single-applicant preview. Open one applicant from the current queue so ApplicantID, recipient, and block reason are visible." }, "Applicant Context Required");
+        renderOpsCommunicationStatePanel_();
         return;
       }
       if (def.messageType === "quote_fee_estimate") {
         setOpsResult_("opsCommunicationResult", { result:"BLOCKED", blockCode:"OPS_WIRING_PENDING", blockReason:"Quote / Fee Estimate - backend exists, OPS wiring pending. No quote sender is called from this surface." }, "Quote / Fee Estimate");
+        renderOpsCommunicationStatePanel_();
         return;
       }
       if (def.key === "cooldown_recent") {
-        setOpsResult_("opsCommunicationResult", { result:"BLOCKED", applicantId:opsApplicantId_(), blockReason:"Cooldown / Recently Contacted is waiting/blocked, not actionable. Review timeline and next eligible send before escalation." }, "Cooldown / Recently Contacted");
+        setOpsResult_("opsCommunicationResult", { result:"BLOCKED", applicantId:ctx.selectedFacts.applicantId, blockReason:"Cooldown / Recently Contacted is a wait/blocked queue. Review timeline and next eligible send before escalation; do not preview or send from this queue." }, "Cooldown / Recently Contacted");
+        renderOpsCommunicationStatePanel_();
         return;
       }
       if (def.key === "uploaded_review_required") {
-        setOpsResult_("opsCommunicationResult", { result:"BLOCKED", applicantId:opsApplicantId_(), blockReason:"Uploaded / Review Required is a document review queue, not an applicant email queue." }, "Uploaded / Review Required");
+        setOpsResult_("opsCommunicationResult", { result:"BLOCKED", applicantId:ctx.selectedFacts.applicantId, blockReason:"Uploaded / Review Required is a document review queue, not an applicant email queue." }, "Uploaded / Review Required");
+        renderOpsCommunicationStatePanel_();
         return;
       }
       if (def.key === "whatsapp_fallback") {
-        setOpsResult_("opsCommunicationResult", { result:"GUIDANCE", applicantId:opsApplicantId_(), message:"WhatsApp fallback uses the existing governed CSV export path. No WhatsApp message is sent by this system." }, "WhatsApp Fallback");
+        setOpsResult_("opsCommunicationResult", { result:"GUIDANCE", applicantId:ctx.selectedFacts.applicantId, message:"WhatsApp fallback uses the existing governed CSV export path. No WhatsApp message is sent by this system." }, "WhatsApp Fallback");
+        renderOpsCommunicationStatePanel_();
         return;
       }
       if (def.key === "email_issue") {
-        setOpsResult_("opsCommunicationResult", { result:"GUIDANCE", applicantId:opsApplicantId_(), message:"Email Issue / Contact Correction requires correction handoff before applicant email send." }, "Email Correction Handoff");
+        setOpsResult_("opsCommunicationResult", { result:"GUIDANCE", applicantId:ctx.selectedFacts.applicantId, message:"Email Issue / Contact Correction requires correction handoff before applicant email send." }, "Email Correction Handoff");
+        renderOpsCommunicationStatePanel_();
         return;
       }
       opsPreviewApplicantEmail_(def.messageType || opsSelectedTemplateType_(), def.label);
@@ -355,7 +518,8 @@
       var selected = opsSelectedTemplateType_();
       var t = opsTemplateDefinitions_().filter(function(x){ return x.type === selected; })[0] || opsTemplateDefinitions_()[0];
       var d = opsApplicantContextRow_() || {};
-      var recipient = opsBuildRowFacts_(d).email;
+      var ctx = opsCommunicationSelectionContext_();
+      var recipient = ctx.cohortSelected ? "" : opsBuildCommunicationRowFacts_(d).email;
       var templateName = document.getElementById("opsCustomTemplateName");
       var rec = document.getElementById("opsCustomRecipient");
       var subj = document.getElementById("opsCustomSubject");
@@ -364,8 +528,9 @@
       if (templateName) templateName.value = t.name;
       if (rec) rec.value = recipient;
       if (subj) subj.value = t.subject;
-      if (body) body.value = t.body + "\n\nApplicantID: " + opsApplicantId_();
+      if (body) body.value = t.body + (opsApplicantId_() ? ("\n\nApplicantID: " + opsApplicantId_()) : "");
       if (safety && selected === "quote_fee_estimate") safety.value = "Quote / Fee Estimate - backend exists, OPS wiring pending";
+      else if (safety && ctx.cohortSelected) safety.value = "Bulk cohort selected. Open one applicant before custom email preview/send.";
       else if (safety) safety.value = IS_SUPER
         ? "Super Admin selected-applicant parity; confirmation required"
         : (IS_OPERATIONS_ADMIN ? "Operations Admin; Safe Mode, preview, and confirmation required" : "Admin/operator role restrictions apply");
@@ -376,6 +541,7 @@
       if (!panel) return;
       var row = opsApplicantContextRow_() || {};
       var selectedType = opsSelectedTemplateType_();
+      var ctx = opsCommunicationSelectionContext_();
       if (selectedType === "quote_fee_estimate") {
         panel.innerHTML = [
           "<strong>Quote / Fee Estimate</strong>",
@@ -383,6 +549,31 @@
           "<br><strong>ApplicantID:</strong> " + esc(opsApplicantId_() || "No applicant selected"),
           "<br><strong>Action:</strong> No quote sender is called from this surface.",
           "<br><strong>Gate:</strong> Follow-up needed before OPS can preview/send quote safely."
+        ].join("");
+        return;
+      }
+      if (ctx.cohortSelected) {
+        var counts = opsCommunicationRecipientCounts_(ctx.selectedRows);
+        panel.innerHTML = [
+          "<strong>Queue / Cohort Context</strong>",
+          "<br><strong>Selected queue:</strong> " + esc(ctx.def.label),
+          "<br><strong>Selected cohort:</strong> " + esc(String(ctx.selectedRows.length)) + " row(s)",
+          "<br><strong>Single applicant selected:</strong> No",
+          "<br><strong>Recipients in loaded cohort:</strong> " + esc(String(counts.loaded)) + " loaded / " + esc(String(counts.missing)) + " missing",
+          "<br><strong>Preview mode:</strong> This panel shows applicant preview/send state only. A bulk cohort does not imply one selected ApplicantID.",
+          "<br><strong>What to do next:</strong> " + esc(ctx.queueReason || "Open one applicant for single-record preview, or use the existing bulk cohort preview path."),
+          "<br><strong>Block reason:</strong> Single-applicant preview/send is unavailable while a bulk cohort is selected."
+        ].join("");
+        return;
+      }
+      if (!opsApplicantId_()) {
+        panel.innerHTML = [
+          "<strong>Selected Applicant Required</strong>",
+          "<br><strong>Selected queue:</strong> " + esc(ctx.def.label),
+          "<br><strong>Single applicant selected:</strong> No",
+          "<br><strong>Preview mode:</strong> Queue actions and custom email preview are single-applicant previews.",
+          "<br><strong>What to do next:</strong> " + esc(ctx.queueReason || "Open one applicant from the current queue so ApplicantID, recipient, and block reason are visible."),
+          "<br><strong>Block reason:</strong> Applicant ID is required because this panel is for single-applicant preview/send, not cohort preview."
         ].join("");
         return;
       }
@@ -394,13 +585,14 @@
         && String(opsActionState.previewResult.result || "").toUpperCase() === "PREVIEW";
       var recipient = (previewReady && opsActionState.previewResult.effectiveEmail)
         || payload.recipient
-        || opsBuildRowFacts_(row).email
+        || opsBuildCommunicationRowFacts_(row).email
         || "No effective email in loaded fields";
       var staleDraft = selectedType === "custom_email" && previewReady && opsActionState.previewDraftSignature !== opsCustomEmailSignature_();
       var blockReason = "";
       if (!CAN_RUN_OPERATIONS_ACTIONS) blockReason = "Operations Admin or Super Admin authority is required for send.";
       else if (!previewReady) blockReason = "Preview required before send.";
       else if (staleDraft) blockReason = "Draft changed after preview. Re-preview required.";
+      else if (ctx.queueReason) blockReason = ctx.queueReason;
       else if (opsActionState.previewResult && opsActionState.previewResult.blockReason) blockReason = String(opsActionState.previewResult.blockReason);
       var preview = previewReady ? (opsActionState.previewResult || {}) : {};
       var subject = preview.subject || preview.emailSubject || payload.subject || "Preview/template will populate subject";
@@ -517,7 +709,26 @@
       return JSON.stringify(opsCustomEmailPayload_());
     }
     function opsPreviewApplicantEmail_(messageType, label){
+      var ctx = opsCommunicationSelectionContext_();
+      if (ctx.cohortSelected) {
+        setOpsResult_("opsCommunicationResult", {
+          result:"BLOCKED",
+          blockCode:"COHORT_CONTEXT_ONLY",
+          blockReason:"Bulk cohort selected does not imply a single applicant. Open one applicant before previewing email content."
+        }, "Preview Email");
+        renderOpsCommunicationStatePanel_();
+        return;
+      }
       var applicantId = opsApplicantId_();
+      if (!applicantId) {
+        setOpsResult_("opsCommunicationResult", {
+          result:"BLOCKED",
+          blockCode:"APPLICANT_CONTEXT_REQUIRED",
+          blockReason:"Preview Email is a single-applicant preview. Open one applicant so ApplicantID, recipient, and block reason are visible."
+        }, "Preview Email");
+        renderOpsCommunicationStatePanel_();
+        return;
+      }
       var msgType = String(messageType || "reminder").trim();
       var payload = { applicantId: applicantId, messageType: msgType };
       if (msgType === "custom_email") Object.assign(payload, opsCustomEmailPayload_());
@@ -639,4 +850,7 @@
         ].join("\n")
       }, "Communication Timeline");
     }
+    window.setTimeout(function(){
+      try { opsRenderCommunicationIaLabels_(); } catch (_iaLabelErr) {}
+    }, 0);
 </script>
