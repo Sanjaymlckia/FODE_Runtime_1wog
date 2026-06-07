@@ -411,7 +411,7 @@
       var queuePreviewEnabled = !ctx.queueIsNonActionable && singleApplicantReady;
       var queuePreviewReason = ctx.queueReason || (ctx.cohortSelected
         ? "Bulk cohort selected. Open one applicant for single-applicant preview, or use the existing bulk cohort path."
-        : "Preview Queue Action requires one visible selected ApplicantID.");
+        : "Preview Selected Applicant Action requires one visible selected ApplicantID.");
       var customPreviewEnabled = customApplicantReady && !ctx.cohortSelected;
       var customPreviewReason = ctx.cohortSelected
         ? "Bulk cohort selected does not imply a single applicant. Open one applicant before custom email preview."
@@ -456,7 +456,7 @@
         return;
       }
       if (!ctx.selectedFacts || !ctx.selectedFacts.applicantId) {
-        setOpsResult_("opsCommunicationResult", { result:"BLOCKED", blockCode:"APPLICANT_CONTEXT_REQUIRED", blockReason:ctx.queueReason || "Preview Queue Action is a single-applicant preview. Open one applicant from the current queue so ApplicantID, recipient, and block reason are visible." }, "Applicant Context Required");
+        setOpsResult_("opsCommunicationResult", { result:"BLOCKED", blockCode:"APPLICANT_CONTEXT_REQUIRED", blockReason:ctx.queueReason || "Preview Selected Applicant Action is a single-applicant preview. Open one applicant from the current queue so ApplicantID, recipient, and block reason are visible." }, "Applicant Context Required");
         renderOpsCommunicationStatePanel_();
         return;
       }

@@ -1003,21 +1003,21 @@
         <div class="opsWorkspaceSwitch">
           <div class="opsWorkspaceCard" id="opsWorkspaceOperator" data-ops-workspace="operator">
             <h3>Operator Workspace</h3>
-            <p>Lifecycle-first, queue-first intake view with selected applicant context, diagnostics, local export, and guarded action handoffs.</p>
+            <p>Loaded-snapshot intake view with lifecycle drill-down, selected applicant context, diagnostics, local export, and guarded action handoffs. Use Reports / Campaign for full-population totals.</p>
             <div class="opsWorkspaceMeta">
               <span class="opsStatusPill info">Operator Mode</span>
               <span class="opsStatusPill ok">Diagnostics active</span>
               <span class="opsStatusPill warn">Guarded handoffs</span>
             </div>
             <div class="opsWorkspaceGrid">
-              <div class="opsWorkspaceInfo"><div class="k">Primary modules</div><div class="v">Operator Console, Lifecycle Map, Applicant Queue</div></div>
+              <div class="opsWorkspaceInfo"><div class="k">Primary modules</div><div class="v">Operator Console, Loaded Lifecycle Snapshot, Applicant Queue</div></div>
               <div class="opsWorkspaceInfo"><div class="k">Applicant bridge</div><div class="v">Drawer plus Admin review handoff</div></div>
               <div class="opsWorkspaceInfo"><div class="k">Portal visibility</div><div class="v">Diagnostics plus Super Admin reset/lock bridge</div></div>
-              <div class="opsWorkspaceInfo"><div class="k">Action scope</div><div class="v">Selected applicant, local export, and guarded handoffs</div></div>
+              <div class="opsWorkspaceInfo"><div class="k">Action scope</div><div class="v">Loaded snapshot rows, selected applicant, local export, and guarded handoffs</div></div>
             </div>
             <div class="opsActionRow" style="margin-top:14px;">
-              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Open Lifecycle Workspace</button>
-              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsAdmissionsQueue')">Open Applicant Queue</button>
+              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Open Loaded Lifecycle Snapshot</button>
+              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsAdmissionsQueue')">Open Loaded Applicant Queue</button>
               <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsStudentDiagnostics')">Open Portal Diagnostics</button>
             </div>
           </div>
@@ -1439,8 +1439,9 @@
           <div><h2>Reports</h2><p>Operational report menu backed by loaded queue/runtime snapshots. CSV export is local browser-only and does not write Sheets or Drive.</p></div>
           <span class="opsStatusPill info">Local export</span>
         </div>
+        <div class="opsResultBox info">Full applicant population visibility lives in Reports / Campaign aggregates. Lifecycle Map and Applicant Queue show the currently loaded OPS snapshot only.</div>
         <div class="opsTileGrid">
-          <div class="opsTile"><div class="opsTileTitle">Daily Admissions Snapshot</div><div class="opsTileMeta" id="cockpitReportAdmissions">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Daily Admissions Snapshot')">Open Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Daily Admissions Snapshot')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Report</button></div></div>
+          <div class="opsTile"><div class="opsTileTitle">Daily Admissions Snapshot</div><div class="opsTileMeta" id="cockpitReportAdmissions">Full-population aggregate when loaded</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Daily Admissions Snapshot')">Open Full-Population Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Daily Admissions Snapshot')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Guidance Only</button></div></div>
           <div class="opsTile"><div class="opsTileTitle">Invoice Raised vs Sent</div><div class="opsTileMeta" id="cockpitReportInvoiceTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Invoice Raised vs Sent')">Open Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Invoice Raised vs Sent')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Report</button></div></div>
           <div class="opsTile"><div class="opsTileTitle">Payment Verified but Not Enrolled</div><div class="opsTileMeta" id="cockpitReportPaymentTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Payment Verified but Not Enrolled')">Open Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Payment Verified but Not Enrolled')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Report</button></div></div>
           <div class="opsTile"><div class="opsTileTitle">Classroom Handover Pending</div><div class="opsTileMeta" id="cockpitReportClassroomTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Classroom Handover Pending')">Open Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Classroom Handover Pending')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Report</button></div></div>
@@ -3664,12 +3665,15 @@
         })
         .admin_getApplicantDetail_json({ applicantId: targetApplicantId });
     }
+    function opsIsOpsView_(){
+      return String(INITIAL_ADMIN_VIEW || "").trim().toLowerCase() === "ops";
+    }
     function opsRefreshSnapshot_(){
       setOpsText_("cockpitLastRefreshed", opsNowLabel_());
       fetchRuntimeInfo_();
       fetchOperationalDashboardMetrics_();
       fetchOperationalSafetyStatus_();
-      loadReviewQueues();
+      loadReviewQueues({ force: 1 });
       fetchOpsApplicantSummary_();
     }
     function opsSetQueueFilter_(filter){
@@ -6441,7 +6445,7 @@ function renderStageDashboard_(items, emptyMessage){
     function loadReviewQueues(opts){
       var o = (opts && typeof opts === "object") ? opts : {};
       var append = o.append === true;
-      var force = Number(o.force || 0) === 1;
+      var force = Number(o.force || 0) === 1 || (!append && opsIsOpsView_());
       if (!append) loadStageDashboard({ force: force });
       if (!append) {
         resetQueuePagerState_();
@@ -6475,7 +6479,10 @@ function renderStageDashboard_(items, emptyMessage){
               queueDataState.nextOffset = Number(data && data.nextOffset || 0) || 0;
               requestAnimationFrame(function(){
                 renderReviewQueues(queueDataState, { keepPager: append });
+                renderOpsLifecycleCascade_();
                 renderOpsCommunicationWorkspace_();
+                renderOpsSelectedApplicantContext_();
+                renderOpsClassroomChecklist_();
                 updateQueueLoadMoreUi_(false);
               });
             } catch (e) {

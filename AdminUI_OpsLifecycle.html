@@ -11,12 +11,13 @@
 </style>
 <section id="opsLifecycleMap" class="opsSectionPage" data-ops-mode-group="operator">
   <div class="opsPageIntro">
-    <div><h2>Lifecycle Cascade</h2><p>Top-level operational map. Stage selection filters the applicant queue and preserves selected applicant context.</p></div>
-    <span class="opsStatusPill info">Operational lifecycle</span>
+    <div><h2>Loaded Lifecycle Snapshot</h2><p>Stage counts below are from currently loaded OPS rows only. They are not total applicant population counts; use Reports / Campaign for full-population totals.</p></div>
+    <span class="opsStatusPill info">Loaded snapshot only</span>
   </div>
   <div class="opsCard">
+    <div class="opsSafetyNotice" style="margin-bottom:12px;">Legacy stage queue access is preserved here as loaded-row drill-down. Selecting a stage filters the Applicant Queue and selected-applicant context, but does not reclassify lifecycle authority.</div>
     <div class="opsStageCascade" id="opsLifecycleStageCards"></div>
-    <div class="opsInspectPanel" id="opsLifecycleInspector">Select a lifecycle stage to inspect records, blockers, and next action.</div>
+    <div class="opsInspectPanel" id="opsLifecycleInspector">Select a loaded lifecycle stage to inspect snapshot records, blockers, and next action. For complete applicant population totals, open Reports / Campaign.</div>
   </div>
 </section>
 <script>
@@ -124,7 +125,7 @@
         var selectedRow = opsApplicantContextRow_() || {};
         var selectedFacts = opsApplicantQueueFacts_(selectedRow);
         var proof = selectedFacts && selectedFacts.resolverProof ? selectedFacts.resolverProof : {};
-        var comparison = opsResolverComparisonSummary_(opsAllQueueRows());
+        var comparison = opsResolverComparisonSummary_(opsAllQueueRows_());
         var queueSamples = comparison.queueSamples.length ? comparison.queueSamples.join("; ") : "None in loaded rows";
         var lifecycleSamples = comparison.lifecycleSamples.length ? comparison.lifecycleSamples.join("; ") : "None in loaded rows";
         var sendSamples = comparison.sendSamples.length ? comparison.sendSamples.join("; ") : "None in loaded rows";

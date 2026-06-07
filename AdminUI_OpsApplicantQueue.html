@@ -34,30 +34,30 @@
 </style>
 <section id="opsAdmissionsQueue" class="opsSectionPage" data-ops-mode-group="operator admin super">
   <div class="opsPageIntro">
-    <div><h2>Applicant Queue</h2><p>Full-width applicant rows with selected-row context, Admin review bridge, filters, sorting, and browser CSV export.</p></div>
-    <span class="opsStatusPill ok">Working queue</span>
+    <div><h2>Loaded Applicant Queue</h2><p>Loaded OPS snapshot rows with selected-row context, Admin review bridge, filters, sorting, and browser CSV export. This is not the full applicant population.</p></div>
+    <span class="opsStatusPill info">Loaded snapshot only</span>
   </div>
   <div class="opsCard">
     <div class="opsSectionHeader">
-      <div><h3>Applicant Rows</h3><p>Selected applicant drives Communications, Billing, Classroom, and Portal diagnostics.</p></div>
+      <div><h3>Loaded Applicant Rows</h3><p>Selected applicant drives Communications, Billing, Classroom, and Portal diagnostics. Empty selected context means no single applicant is active.</p></div>
       <span class="opsStatusPill info" id="cockpitAdmissionsSummary">Loading</span>
     </div>
     <div class="opsApplicantMini" id="opsSelectedApplicantMini"></div>
     <div class="opsActionRow">
       <button class="opsActionBtn live" type="button" onclick="opsOpenApplicantReview_()">Open Applicant Review</button>
-      <button class="opsActionBtn" type="button" onclick="opsSetQueueFilter_('')">All Rows</button>
-      <button class="opsActionBtn" type="button" onclick="opsSetQueueFilter_('ready')">Ready</button>
-      <button class="opsActionBtn" type="button" onclick="opsSetQueueFilter_('blocked')">Blocked</button>
-      <button class="opsActionBtn live" type="button" onclick="opsExportQueueCsv_()">Export Queue CSV (Local Data)</button>
+      <button class="opsActionBtn" type="button" onclick="opsSetQueueFilter_('')">All Loaded Rows</button>
+      <button class="opsActionBtn" type="button" onclick="opsSetQueueFilter_('ready')">Ready in Loaded Rows</button>
+      <button class="opsActionBtn" type="button" onclick="opsSetQueueFilter_('blocked')">Blocked in Loaded Rows</button>
+      <button class="opsActionBtn live" type="button" onclick="opsExportQueueCsv_()">Export Loaded Snapshot CSV (Local Data)</button>
     </div>
     <div class="opsWorkflowToolbar">
       <label class="opsQueueSearch" for="opsQueueSearchInput">
         <span class="opsStatusPill muted">Search</span>
-        <input id="opsQueueSearchInput" type="search" placeholder="ApplicantID, name, email, or phone" oninput="opsSetQueueSearch_(this.value)" autocomplete="off">
+        <input id="opsQueueSearchInput" type="search" placeholder="Search loaded rows: ApplicantID, name, email, or phone" oninput="opsSetQueueSearch_(this.value)" autocomplete="off">
       </label>
       <button class="opsActionBtn" type="button" onclick="opsClearQueueSearch_()">Clear Search</button>
     </div>
-    <div class="opsSafetyNotice">Local export contains applicant data. Do not share outside authorised staff.</div>
+    <div class="opsSafetyNotice">Loaded snapshot only. Use Loaded Lifecycle Snapshot for stage drill-down, Communications Action Cohorts for reminder previews, and Reports / Campaign for full-population totals. Local export contains applicant data; do not share outside authorised staff.</div>
     <div class="opsSortableStrip" id="opsQueueSortHeaders"></div>
     <div id="opsAdmissionsResult" class="opsResultBox hidden"></div>
     <div id="opsLifecycleQueue" class="opsLifecycleQueue"></div>
@@ -74,8 +74,8 @@
       <div class="opsSectionHeader"><div><h3>Bulk Communications</h3><p>Admin/Super Admin capability — escalate if needed.</p></div><span class="opsStatusPill warn">Escalation awareness</span></div>
       <div class="opsResultBox warn" id="opsOperatorBulkAwareness">Escalate to Admin/Super Admin. Operator mode can view this capability but cannot run bulk communication actions.</div>
       <div class="opsActionRow">
-        <button class="opsActionBtn live" type="button" disabled>Preview Cohort</button>
-        <button class="opsActionBtn live" type="button" disabled>Send Stage Batch</button>
+        <button class="opsActionBtn" type="button" disabled title="Use Communications Bulk Path after selecting a loaded lifecycle stage. This disabled control is guidance only.">Preview Cohort (Guidance Only)</button>
+        <button class="opsActionBtn" type="button" disabled title="Stage batch send remains disabled here. Use the governed Communications bulk path where available.">Send Stage Batch (Disabled Here)</button>
         <button class="opsActionBtn" type="button" disabled>Escalate to Admin/Super Admin</button>
       </div>
     </div>
@@ -96,7 +96,7 @@
     <div class="opsDrawerHead">
       <div>
         <h3 id="opsReviewDrawerTitle">Applicant Review</h3>
-        <div class="opsPlaceholder" id="opsReviewDrawerSub">Selected applicant context</div>
+        <div class="opsPlaceholder" id="opsReviewDrawerSub">No selected applicant. Click a loaded row or open a legacy Admin Review bridge to populate selected-applicant context.</div>
       </div>
       <div class="opsActionRow">
         <button class="opsActionBtn" type="button" onclick="opsOpenLegacyAdminReview_()">Open Admin Review</button>
