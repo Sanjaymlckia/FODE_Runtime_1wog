@@ -182,12 +182,15 @@
       wrap.innerHTML = stages.map(function(stage){
         var matches = opsRowsForLifecycleStage_(stage.key);
         var count = mode === "global" ? opsLifecycleGlobalCountFor_(stage.key) : Number(workingCounts[stage.key] || 0);
-        var ids = matches.slice(0, 4).map(function(row){ return String(opsApplicantQueueFacts_(row).applicantId || ""); }).filter(Boolean);
+        var ids = mode === "working" ? matches.slice(0, 4).map(function(row){ return String(opsApplicantQueueFacts_(row).applicantId || ""); }).filter(Boolean) : [];
+        var recordLine = mode === "working"
+          ? ("<div class='stageRecords'><strong>Loaded samples:</strong> " + esc(ids.length ? ids.join(", ") : "None in loaded queue") + "</div>")
+          : "<div class='stageRecords'><strong>Global count:</strong> Full active admissions population. Working View uses loaded review-queue rows.</div>";
         var selectedText = opsApplicantId_() ? ("Selected: " + opsApplicantId_()) : "Selected: none";
         return "<button class='opsStageCard" + (selected === stage.key ? " active" : "") + "' type='button' data-stage-key='" + esc(stage.key) + "'>"
           + "<div class='stageTop'><div class='stageName'>" + esc(stage.name) + "</div><div class='stageCount'>" + String(count) + "</div></div>"
           + "<div class='stageMeaning'>" + esc(stage.meaning) + "</div>"
-          + "<div class='stageRecords'><strong>" + (mode === "global" ? "Loaded samples:" : "Records:") + "</strong> " + esc(ids.length ? ids.join(", ") : "None in loaded queue") + "</div>"
+          + recordLine
           + "<div class='stageRecords'><strong>" + esc(selectedText) + "</strong></div>"
           + "<div class='stageRecords'><strong>Scope:</strong> " + esc(mode === "global" ? "Full active admissions population count" : "Loaded working snapshot count") + "</div>"
           + "<div><span class='opsStatusPill " + (stage.mode.indexOf("backend missing") >= 0 ? "danger" : (stage.mode.indexOf("gated") >= 0 || stage.mode.indexOf("guarded") >= 0 || stage.mode.indexOf("owner") >= 0 ? "warn" : "info")) + "'>" + esc(stage.mode) + "</span></div>"
@@ -212,7 +215,7 @@
           renderOpsLifecycleCascade_();
           renderOpsQueue_();
           renderBatchPanel();
-          opsScrollTo_("opsAdmissionsQueue");
+          opsScrollTo_(opsActionState.lifecycleStage === "docs" ? "opsAwaitingUploadsActionPanel" : "opsAdmissionsQueue");
         });
       });
       if (detail) {

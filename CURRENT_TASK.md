@@ -1803,3 +1803,20 @@ New findings discovered during implementation, browser testing, operator testing
 - No send/export/mutation executed
 - Billing remains out of scope
 - `Config.js` remains unchanged at `r213 / 213`
+
+---
+
+## r217 - Resolver Parity / Queue Payload Alignment
+
+- Status: `FOLLOW-UP - mandatory after r216 Global/Working count inversion diagnosis`
+- Source finding: r216 Global View uses full-sheet lifecycle summary classification while Working View uses loaded legacy review-queue payload row facts.
+- Target:
+  - Align Global lifecycle classification with Working View row facts.
+  - Review `Admin.js` queue payload for consistent document/status evidence.
+  - Resolve legacy `docsQueueMatch` vs r216 stage meaning.
+  - Target invariant: Global count >= Working count per stage unless a documented filter applies.
+- Constraints:
+  - No schema/header change without separate approval.
+  - No direct sending activation.
+  - No Communications redesign.
+  - No production promotion without accepted release gates.

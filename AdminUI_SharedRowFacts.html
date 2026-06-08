@@ -716,15 +716,23 @@
       var droppedIneligible = !!terminalReason;
       var terminalLifecycle = droppedIneligible;
       var activeProgressionAllowed = !terminalLifecycle;
-      var recentlyContacted = !!(lastContactAt || nextEligible);
-      var cooldownActive = !!(sendEligibility && sendEligibility.active);
+      var nowMs = Date.now();
+      var recentContactWindowDays = 7;
+      var recentContactWindowMs = recentContactWindowDays * 86400000;
+      var lastContactMs = operationalStateTimeMs_(lastContactAt);
+      var communicationNextActionAt = operationalStateFirstNonBlank_(r.Communication_Next_Action_At, nextEligible, r.Next_Action_Date, r.nextActionDate, "");
+      var nextActionMs = operationalStateTimeMs_(communicationNextActionAt);
+      var recentlyContacted = !!(lastContactMs && lastContactMs >= (nowMs - recentContactWindowMs));
+      var historicalContact = !!(lastContactMs && !recentlyContacted);
+      var cooldownActive = !!(nextActionMs && nextActionMs > nowMs);
+      var lastContactAgeDays = lastContactMs ? Math.max(0, Math.floor((nowMs - lastContactMs) / 86400000)) : null;
       var lastContactLabel = [lastContactType, lastContactAt, lastContactSubject].filter(Boolean).join(" | ") || "No loaded communication evidence";
       var blockReason = terminalLifecycle
         ? terminalReason
         : (emailIssue
           ? emailIssueReason
           : (cooldownActive
-            ? (sendEligibility.text || "Cooldown active")
+            ? ("Cooldown active until " + communicationNextActionAt)
             : opsFirstNonBlank_(r.Comm_Block_Reason, r.Last_Contact_Result, r.Books_Last_Error, "No loaded block reason")));
       var communicationStatus = "";
       try { communicationStatus = deriveCommunicationStatus(r); } catch (_err2) { communicationStatus = ""; }
@@ -736,7 +744,7 @@
         workflowStage: workflowStage,
         lifecycleState: workflowStage,
         lifecycleLabel: resolverLifecycleLabel,
-        currentSendEligibility: !email ? "NO_RECIPIENT" : (sendEligibility.active ? "COOLDOWN_ACTIVE" : "READY_TO_SEND"),
+        currentSendEligibility: !email ? "NO_RECIPIENT" : (cooldownActive ? "COOLDOWN_ACTIVE" : "READY_TO_SEND"),
         rowFactsMode: phase1Governed ? "communications_phase1" : (resolverGoverned ? "resolver_governed" : "legacy_shared")
       });
       var resolverDisplayStageLabel = operationalStateDisplayLabel_(resolverProof && resolverProof.resolverStage);
@@ -764,6 +772,10 @@
         nextEligible: nextEligible,
         recentlyContacted: recentlyContacted,
         isRecentlyContacted: recentlyContacted,
+        historicalContact: historicalContact,
+        hasHistoricalContact: historicalContact,
+        lastContactAgeDays: lastContactAgeDays,
+        recentContactWindowDays: recentContactWindowDays,
         cooldownActive: cooldownActive,
         isCooldownActive: cooldownActive,
         workflowStage: workflowStage,
@@ -806,7 +818,7 @@
         displayStageLabel: resolverDisplayStageLabel || resolverLifecycleLabel,
         displayNextActionLabel: resolverDisplayNextAction || "",
         displayBlockReason: resolverDisplayBlockReason,
-        communicationNextActionAt: operationalStateFirstNonBlank_(r.Communication_Next_Action_At, nextEligible, r.Next_Action_Date, r.nextActionDate, ""),
+        communicationNextActionAt: communicationNextActionAt,
         lastCommunicationAt: operationalStateFirstNonBlank_(r.Last_Communication_At, lastContactAt, ""),
         emailStatus: String(r.Email_Status || ""),
         emailAttemptCount: operationalStateFirstNonBlank_(r.Email_Attempt_Count, ""),
@@ -831,6 +843,10 @@
         nextEligible: facts.nextEligible,
         recentlyContacted: facts.recentlyContacted,
         isRecentlyContacted: facts.isRecentlyContacted,
+        historicalContact: facts.historicalContact,
+        hasHistoricalContact: facts.hasHistoricalContact,
+        lastContactAgeDays: facts.lastContactAgeDays,
+        recentContactWindowDays: facts.recentContactWindowDays,
         cooldownActive: facts.cooldownActive,
         isCooldownActive: facts.isCooldownActive,
         workflowStage: facts.workflowStage,

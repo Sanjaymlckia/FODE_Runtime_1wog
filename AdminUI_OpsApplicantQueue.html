@@ -11,6 +11,18 @@
   .opsApplicantSub{ color:#5d7388; font-size:12px; margin-top:3px; }
   .opsQueueToolbar{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
   .opsQueueSummaryStrip{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .opsQueueFilterContext{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:10px 0; }
+  .opsAwaitingUploadsPanel{ border:1px solid #dbe8f3; border-radius:14px; padding:14px; margin:12px 0; background:#f8fbff; }
+  .opsAwaitingUploadsPanel.hidden{ display:none; }
+  .opsAwaitingUploadsPanel:focus{ outline:3px solid rgba(31,112,234,.22); outline-offset:2px; }
+  .opsAwaitingUploadsLists{ display:grid; grid-template-columns:repeat(2,minmax(260px,1fr)); gap:12px; margin-top:12px; }
+  .opsAwaitingUploadsList{ border:1px solid #dbe8f3; border-radius:12px; background:#fff; padding:12px; }
+  .opsAwaitingUploadsList h4{ margin:0 0 8px; color:#14263b; }
+  .opsAwaitingUploadsRow{ border-top:1px solid #edf2f7; padding:9px 0; display:grid; grid-template-columns:minmax(130px,1fr) minmax(170px,1.4fr) minmax(110px,.8fr); gap:8px; align-items:start; }
+  .opsAwaitingUploadsRow:first-of-type{ border-top:0; }
+  .opsAwaitingUploadsRow .k{ font-size:11px; color:#6f8194; text-transform:uppercase; letter-spacing:.03em; font-weight:900; }
+  .opsAwaitingUploadsRow .v{ font-size:13px; color:#17283f; word-break:break-word; }
+  .opsAwaitingUploadsReason{ font-size:12px; color:#6b3a00; margin-top:3px; }
   .opsQueueSelectedRow{ background:#eaf2ff !important; outline:2px solid rgba(31,112,234,.45); outline-offset:-2px; }
   .opsQueueSelectedRow .opsQueueName{ color:#0f4f94; }
   .opsApplicantMini{ display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); gap:10px; margin-top:10px; }
@@ -27,6 +39,7 @@
   .opsDrawerBody{ padding:16px; overflow:auto; display:flex; flex-direction:column; gap:14px; }
   @media (max-width:980px){
     .opsApplicantMini{ grid-template-columns:repeat(2,minmax(150px,1fr)); }
+    .opsAwaitingUploadsLists{ grid-template-columns:1fr; }
   }
   @media (max-width:640px){
     .opsApplicantMini{ grid-template-columns:1fr; }
@@ -39,7 +52,7 @@
   </div>
   <div class="opsCard">
     <div class="opsSectionHeader">
-      <div><h3>Loaded Applicant Rows</h3><p>Selected applicant drives Communications, Billing, Classroom, and Portal diagnostics. Empty selected context means no single applicant is active.</p></div>
+      <div><h3 id="opsQueueTitle">Loaded Applicant Rows</h3><p>Selected applicant drives Communications, Billing, Classroom, and Portal diagnostics. Empty selected context means no single applicant is active.</p></div>
       <span class="opsStatusPill info" id="cockpitAdmissionsSummary">Loading</span>
     </div>
     <div class="opsApplicantMini" id="opsSelectedApplicantMini"></div>
@@ -58,6 +71,39 @@
       <button class="opsActionBtn" type="button" onclick="opsClearQueueSearch_()">Clear Search</button>
     </div>
     <div class="opsSafetyNotice">Loaded snapshot only. Use Lifecycle Map Working View for loaded-row stage drill-down, Lifecycle Map Global View for full active admissions counts, and Communications Action Cohorts for reminder previews. Local export contains applicant data; do not share outside authorised staff.</div>
+    <div class="opsQueueFilterContext" id="opsQueueFilterContext">
+      <span class="opsStatusPill muted" id="opsQueueFilterChip">Filter: All loaded rows</span>
+      <span class="opsStatusPill info" id="opsQueueFilterCount">Loaded working rows</span>
+    </div>
+    <div id="opsAwaitingUploadsActionPanel" class="opsAwaitingUploadsPanel hidden" tabindex="-1" aria-label="Awaiting Uploads Action Panel">
+      <div class="opsSectionHeader">
+        <div>
+          <h3>Awaiting Uploads Action Panel</h3>
+          <p>Action-first loaded snapshot for Document Evidence Pending records. Counts here are derived from loaded OPS rows, not the full applicant population.</p>
+        </div>
+        <span class="opsStatusPill warn" id="opsAwaitingUploadsScope">Awaiting Uploads stage filter</span>
+      </div>
+      <div class="opsSafetyNotice">Reminder eligibility uses existing communications gates and contact cooldown proxies: Email_Last_Sent_At, Last_Contacted_At, Ack_Email_Sent_At, Email_Next_Action_Date, and Communication_Next_Action_At. No direct send is enabled here.</div>
+      <div class="opsQueueSummaryStrip" id="opsAwaitingUploadsSummary"></div>
+      <div class="opsResultBox hidden" id="opsAwaitingUploadsPreviewResult"></div>
+      <div class="opsActionRow">
+        <button class="opsActionBtn live" id="opsPreviewUploadReminderQueueBtn" type="button" onclick="opsPreviewUploadReminderQueue_()">Preview Reminder Queue</button>
+        <button class="opsActionBtn live" id="opsExportUploadReminderQueueBtn" type="button" onclick="opsExportUploadReminderQueueCsv_()">Export CSV - Upload Reminder Queue (Local Data)</button>
+        <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsCommunications')">Open Communications Action Cohorts</button>
+      </div>
+      <div class="opsAwaitingUploadsLists">
+        <div class="opsAwaitingUploadsList">
+          <h4>Upload Reminder Queue</h4>
+          <div class="opsPlaceholder">Sendable loaded records only: email present, no email issue, no active cooldown/recent contact, and overdue more than 3 days.</div>
+          <div id="opsAwaitingUploadsReminderRows"></div>
+        </div>
+        <div class="opsAwaitingUploadsList">
+          <h4>Blocked / Needs Fix</h4>
+          <div class="opsPlaceholder">Records separated because they are not sendable now. Reasons include missing email, email issue, cooldown/recent contact, missing date basis, or not overdue yet.</div>
+          <div id="opsAwaitingUploadsBlockedRows"></div>
+        </div>
+      </div>
+    </div>
     <div class="opsSortableStrip" id="opsQueueSortHeaders"></div>
     <div id="opsAdmissionsResult" class="opsResultBox hidden"></div>
     <div id="opsLifecycleQueue" class="opsLifecycleQueue"></div>
@@ -619,5 +665,180 @@
       "<div class='opsInfoItem'><div class='k'>Working Queue</div><div class='v'>" + esc((proof.currentQueueBucket || "unknown") + " | " + (proof.currentSendEligibility || "unknown")) + "</div></div>",
       "<div class='opsInfoItem'><div class='k'>Block Reason</div><div class='v'>" + esc(facts.displayBlockReason || "No loaded block reason") + "</div></div>"
     ].join("");
+  }
+  function opsAwaitingUploadsActive_(){
+    return String(opsActionState.queueFilter || "") === "stage:docs" || String(opsActionState.lifecycleStage || "") === "docs";
+  }
+  function opsRenderQueueFilterContext_(rowsCount){
+    var title = document.getElementById("opsQueueTitle");
+    var chip = document.getElementById("opsQueueFilterChip");
+    var count = document.getElementById("opsQueueFilterCount");
+    var filter = String(opsActionState.queueFilter || "");
+    var label = "All loaded rows";
+    if (filter === "ready") label = "Ready in loaded rows";
+    else if (filter === "blocked") label = "Blocked in loaded rows";
+    else if (filter.indexOf("stage:") === 0) {
+      var stageKey = filter.slice(6);
+      var stage = opsLifecycleDefinitions_().filter(function(item){ return item.key === stageKey; })[0];
+      label = stage ? stage.name : ("Stage: " + stageKey);
+    }
+    if (title) title.textContent = filter === "stage:docs" ? "Awaiting Uploads Queue - Loaded Working Rows" : "Loaded Applicant Rows";
+    if (chip) {
+      chip.textContent = filter ? ("Active filter: " + label) : "Filter: All loaded rows";
+      chip.className = "opsStatusPill " + (filter ? "info" : "muted");
+    }
+    if (count) count.textContent = "Rows shown: " + String(Number(rowsCount || 0));
+  }
+  function opsAwaitingUploadsDateInfo_(row){
+    var info = opsDateAppliedInfo_(row || {});
+    var raw = String(info.iso || info.label || "");
+    var ms = Date.parse(raw);
+    var ageDays = Number.isFinite(ms) ? Math.max(0, Math.floor((Date.now() - ms) / 86400000)) : null;
+    return {
+      label: info.label || "Missing source",
+      source: info.source || "",
+      ageDays: ageDays,
+      daysOverdue: ageDays === null ? null : Math.max(0, ageDays - 3),
+      overdue: ageDays !== null && ageDays > 3,
+      missingReason: info.missingReason || (ageDays === null ? "Missing or unparseable upload/application date basis." : "")
+    };
+  }
+  function opsAwaitingUploadsBlockReason_(facts, dateInfo){
+    var f = facts || {};
+    var d = dateInfo || {};
+    if (!f.activeProgressionAllowed) return f.terminalReason || "Inactive or terminal lifecycle.";
+    if (!f.hasEmail) return "Missing effective email.";
+    if (f.emailIssue) return f.emailIssueReason || "Email issue or correction required.";
+    if (f.cooldownActive) return f.displayBlockReason || f.blockReason || "Cooldown active; next action date is in the future.";
+    if (f.recentlyContacted) return "Recently contacted within 7 days; wait for next eligible action.";
+    if (d.missingReason) return d.missingReason;
+    if (!d.overdue) return f.historicalContact
+      ? "Not overdue yet. Historical contact exists outside the 7-day recent-contact block."
+      : "Not overdue yet; upload reminder threshold is more than 3 days.";
+    return f.displayBlockReason || f.blockReason || "Not currently sendable.";
+  }
+  function opsAnalyzeAwaitingUploads_(){
+    var rows = opsRowsForLifecycleStage_("docs");
+    var items = rows.map(function(row){
+      var facts = opsBuildCommunicationRowFacts_(row || {});
+      var dateInfo = opsAwaitingUploadsDateInfo_(row || {});
+      var sendable = !!(facts.communicationQueues
+        && facts.communicationQueues.missingDocuments
+        && facts.hasEmail
+        && !facts.emailIssue
+        && !facts.recentlyContacted
+        && !facts.cooldownActive
+        && facts.activeProgressionAllowed
+        && dateInfo.overdue);
+      var reason = sendable ? "Ready for preview/export" : opsAwaitingUploadsBlockReason_(facts, dateInfo);
+      return { row: row, facts: facts, dateInfo: dateInfo, sendable: sendable, reason: reason };
+    });
+    var due = items.filter(function(item){ return item.sendable; });
+    var overdue = items.filter(function(item){ return item.dateInfo.overdue; });
+    var blocked = items.filter(function(item){ return !item.sendable; });
+    var blockers = {};
+    blocked.forEach(function(item){
+      var key = String(item.reason || "Unknown block reason");
+      blockers[key] = (blockers[key] || 0) + 1;
+    });
+    var topBlockers = Object.keys(blockers).sort(function(a, b){ return blockers[b] - blockers[a]; }).slice(0, 5).map(function(key){
+      return { reason: key, count: blockers[key] };
+    });
+    return { rows: rows, items: items, due: due, overdue: overdue, blocked: blocked, topBlockers: topBlockers };
+  }
+  function opsAwaitingUploadsItemHtml_(item, blocked){
+    var facts = item.facts || {};
+    var dateInfo = item.dateInfo || {};
+    var applicantId = facts.applicantId || "";
+    var name = facts.name || "Unknown applicant";
+    var email = facts.email || "No email loaded";
+    var age = dateInfo.ageDays === null ? "Unknown" : (String(dateInfo.ageDays) + " day" + (dateInfo.ageDays === 1 ? "" : "s"));
+    var overdue = dateInfo.daysOverdue === null ? "Unknown" : (String(dateInfo.daysOverdue) + " day" + (dateInfo.daysOverdue === 1 ? "" : "s"));
+    var reason = blocked
+      ? item.reason
+      : (facts.historicalContact
+        ? "Ready for preview/export. Historical contact is older than 7 days and does not block."
+        : "Preview/export only; no send action here.");
+    return "<div class='opsAwaitingUploadsRow' data-awaiting-upload-row='" + esc(applicantId) + "'>"
+      + "<div><div class='k'>Applicant</div><div class='v'><strong>" + esc(applicantId) + "</strong><br>" + esc(name) + "</div></div>"
+      + "<div><div class='k'>Contact</div><div class='v'>" + esc(email) + "<div class='opsAwaitingUploadsReason'>" + esc(reason) + "</div></div></div>"
+      + "<div><div class='k'>Overdue</div><div class='v'>" + esc(overdue) + "<br><span class='opsStatusPill " + (dateInfo.overdue ? "warn" : "muted") + "'>" + esc(age) + "</span></div></div>"
+      + "</div>";
+  }
+  function renderOpsAwaitingUploadsActionPanel_(){
+    var panel = document.getElementById("opsAwaitingUploadsActionPanel");
+    if (!panel) return;
+    if (!opsAwaitingUploadsActive_()) {
+      panel.classList.add("hidden");
+      return;
+    }
+    var analysis = opsAnalyzeAwaitingUploads_();
+    panel.classList.remove("hidden");
+    var summary = document.getElementById("opsAwaitingUploadsSummary");
+    if (summary) {
+      var blockers = analysis.topBlockers.length
+        ? analysis.topBlockers.map(function(item){ return item.reason + " (" + item.count + ")"; }).join(" | ")
+        : "No blocked records in loaded snapshot.";
+      var historicalCount = analysis.items.filter(function(item){ return item.facts && item.facts.historicalContact; }).length;
+      summary.innerHTML = "<span class='opsStatusPill ok'>Reminders Due: " + String(analysis.due.length) + "</span>"
+        + "<span class='opsStatusPill warn'>Overdue >3 days: " + String(analysis.overdue.length) + "</span>"
+        + "<span class='opsStatusPill " + (analysis.blocked.length ? "warn" : "ok") + "'>Blocked: " + String(analysis.blocked.length) + "</span>"
+        + "<span class='opsStatusPill info'>Loaded Awaiting Uploads rows: " + String(analysis.rows.length) + "</span>"
+        + "<span class='opsStatusPill muted'>Historical contact outside 7-day block: " + String(historicalCount) + "</span>"
+        + "<span class='opsStatusPill muted'>Top blockers: " + esc(blockers) + "</span>";
+    }
+    var reminderRows = document.getElementById("opsAwaitingUploadsReminderRows");
+    if (reminderRows) {
+      var blockerSummary = analysis.topBlockers.length
+        ? " Top blockers: " + analysis.topBlockers.map(function(item){ return item.reason + " (" + item.count + ")"; }).join(" | ")
+        : "";
+      reminderRows.innerHTML = analysis.due.length
+        ? analysis.due.slice(0, 50).map(function(item){ return opsAwaitingUploadsItemHtml_(item, false); }).join("")
+        : "<div class='opsPlaceholder' style='padding:10px 0;'>No sendable upload reminders in the loaded snapshot. Check Blocked / Needs Fix for reasons." + esc(blockerSummary) + "</div>";
+    }
+    var blockedRows = document.getElementById("opsAwaitingUploadsBlockedRows");
+    if (blockedRows) {
+      blockedRows.innerHTML = analysis.blocked.length
+        ? analysis.blocked.slice(0, 50).map(function(item){ return opsAwaitingUploadsItemHtml_(item, true); }).join("")
+        : "<div class='opsPlaceholder' style='padding:10px 0;'>No blocked Awaiting Uploads records in the loaded snapshot.</div>";
+    }
+  }
+  function opsPreviewUploadReminderQueue_(){
+    var analysis = opsAnalyzeAwaitingUploads_();
+    var sample = analysis.due.slice(0, 8).map(function(item){
+      return String(item.facts.applicantId || "Unknown") + " - " + String(item.facts.name || "Unknown") + " - " + String(item.facts.email || "No email");
+    });
+    setOpsResult_("opsAwaitingUploadsPreviewResult", {
+      result: analysis.due.length ? "PREVIEW" : "EMPTY",
+      message: "Upload reminder queue preview only. No email was sent, no sheet was written, and no Drive export occurred. Sendable records: " + String(analysis.due.length) + ".",
+      blockReason: analysis.due.length ? "" : "No sendable upload reminders in the loaded snapshot.",
+      body: sample.length ? sample.join("\n") : "No sendable records to preview."
+    }, "Upload Reminder Queue Preview");
+  }
+  function opsExportUploadReminderQueueCsv_(){
+    var analysis = opsAnalyzeAwaitingUploads_();
+    if (!analysis.due.length) {
+      setOpsResult_("opsAwaitingUploadsPreviewResult", { result:"EMPTY", blockReason:"No sendable upload reminders in the loaded snapshot." }, "Upload Reminder CSV Export");
+      return;
+    }
+    var rows = analysis.due.map(function(item){
+      return {
+        ApplicantID: item.facts.applicantId || "",
+        "Applicant / Student Name": item.facts.name || "",
+        "Effective Email": item.facts.email || "",
+        "Days Overdue": item.dateInfo.daysOverdue === null ? "" : item.dateInfo.daysOverdue,
+        "Age Days": item.dateInfo.ageDays === null ? "" : item.dateInfo.ageDays,
+        "Date Basis": item.dateInfo.label || "",
+        "Date Basis Source": item.dateInfo.source || "",
+        "Document State": item.facts.documentStateLabel || "",
+        "Reminder Eligibility": "Preview/export only; no send action."
+      };
+    });
+    var headers = ["ApplicantID","Applicant / Student Name","Effective Email","Days Overdue","Age Days","Date Basis","Date Basis Source","Document State","Reminder Eligibility"];
+    opsDownloadCsv_("awaiting-uploads-reminder-queue.csv", headers, rows);
+    setOpsResult_("opsAwaitingUploadsPreviewResult", {
+      result:"OPEN",
+      message:"Exported upload reminder queue locally. Rows: " + String(rows.length) + ". CSV contains applicant contact data. No Sheets, Drive, send, or backend mutation occurred."
+    }, "Upload Reminder CSV Export");
   }
 </script>

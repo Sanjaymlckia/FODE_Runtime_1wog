@@ -3329,6 +3329,8 @@
       }
       rows = opsSortQueueRows_(opsApplyQueueSearch_(rows));
       renderOpsQueueSortHeaders_();
+      if (typeof opsRenderQueueFilterContext_ === "function") opsRenderQueueFilterContext_(rows.length);
+      if (typeof renderOpsAwaitingUploadsActionPanel_ === "function") renderOpsAwaitingUploadsActionPanel_();
       if (!rows.length) {
         if (body) body.innerHTML = "<tr><td colspan='11' class='opsPlaceholder'>No queue rows loaded yet.</td></tr>";
         if (workflow) workflow.innerHTML = "<div class='opsLifecycleBand'><div class='opsPlaceholder' style='padding:16px;'>No queue rows match the current filters.</div></div>";
@@ -3704,7 +3706,7 @@
       if (!f || f.indexOf("stage:") !== 0) opsActionState.lifecycleStage = "";
       renderOpsLifecycleCascade_();
       renderOpsQueue_();
-      opsScrollTo_("opsAdmissionsQueue");
+      opsScrollTo_(opsActionState.queueFilter === "stage:docs" ? "opsAwaitingUploadsActionPanel" : "opsAdmissionsQueue");
     }
     function opsAdminDeepLink_(applicantId){
       var base = String(CFG_WEBAPP_URL_ADMIN || window.WEBAPP_URL_ADMIN || "").trim();
