@@ -1003,20 +1003,20 @@
         <div class="opsWorkspaceSwitch">
           <div class="opsWorkspaceCard" id="opsWorkspaceOperator" data-ops-workspace="operator">
             <h3>Operator Workspace</h3>
-            <p>Loaded-snapshot intake view with lifecycle drill-down, selected applicant context, diagnostics, local export, and guarded action handoffs. Use Reports / Campaign for full-population totals.</p>
+            <p>OPS intake view with Global Lifecycle counts, Working View drill-down, selected applicant context, diagnostics, local export, and guarded action handoffs.</p>
             <div class="opsWorkspaceMeta">
               <span class="opsStatusPill info">Operator Mode</span>
               <span class="opsStatusPill ok">Diagnostics active</span>
               <span class="opsStatusPill warn">Guarded handoffs</span>
             </div>
             <div class="opsWorkspaceGrid">
-              <div class="opsWorkspaceInfo"><div class="k">Primary modules</div><div class="v">Operator Console, Loaded Lifecycle Snapshot, Applicant Queue</div></div>
+              <div class="opsWorkspaceInfo"><div class="k">Primary modules</div><div class="v">Operator Console, Global Lifecycle Map, Loaded Applicant Queue</div></div>
               <div class="opsWorkspaceInfo"><div class="k">Applicant bridge</div><div class="v">Drawer plus Admin review handoff</div></div>
               <div class="opsWorkspaceInfo"><div class="k">Portal visibility</div><div class="v">Diagnostics plus Super Admin reset/lock bridge</div></div>
               <div class="opsWorkspaceInfo"><div class="k">Action scope</div><div class="v">Loaded snapshot rows, selected applicant, local export, and guarded handoffs</div></div>
             </div>
             <div class="opsActionRow" style="margin-top:14px;">
-              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Open Loaded Lifecycle Snapshot</button>
+              <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Open Lifecycle Map</button>
               <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsAdmissionsQueue')">Open Loaded Applicant Queue</button>
               <button class="opsActionBtn live" type="button" onclick="opsScrollTo_('opsStudentDiagnostics')">Open Portal Diagnostics</button>
             </div>
@@ -1208,6 +1208,7 @@
               <div class="opsMeaningItem"><strong>Unknown</strong>One or more live checks have not returned enough evidence.</div>
             </div>
             <div class="opsInspectPanel" id="cockpitHealthWhy">Waiting for runtime and safety checks.</div>
+            <div class="opsInspectPanel" id="opsLifecycleDiagnostics">Lifecycle resolver diagnostics load after OPS queue data is available.</div>
           </div>
           <div class="opsCard">
             <div class="opsSectionHeader"><div><h3>Accepted Baseline</h3></div><span class="opsStatusPill muted">Current known</span></div>
@@ -1439,7 +1440,7 @@
           <div><h2>Reports</h2><p>Operational report menu backed by loaded queue/runtime snapshots. CSV export is local browser-only and does not write Sheets or Drive.</p></div>
           <span class="opsStatusPill info">Local export</span>
         </div>
-        <div class="opsResultBox info">Full applicant population visibility lives in Reports / Campaign aggregates. Lifecycle Map and Applicant Queue show the currently loaded OPS snapshot only.</div>
+        <div class="opsResultBox info">Lifecycle Map Global View now shows full active admissions lifecycle counts. Reports / Campaign remain broader aggregate surfaces; Applicant Queue remains the loaded OPS working snapshot.</div>
         <div class="opsTileGrid">
           <div class="opsTile"><div class="opsTileTitle">Daily Admissions Snapshot</div><div class="opsTileMeta" id="cockpitReportAdmissions">Full-population aggregate when loaded</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Daily Admissions Snapshot')">Open Full-Population Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Daily Admissions Snapshot')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Guidance Only</button></div></div>
           <div class="opsTile"><div class="opsTileTitle">Invoice Raised vs Sent</div><div class="opsTileMeta" id="cockpitReportInvoiceTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Invoice Raised vs Sent')">Open Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Invoice Raised vs Sent')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Report</button></div></div>
@@ -2871,6 +2872,27 @@
         ""
       );
     }
+    function opsHasUploadEvidenceLike_(value){
+      if (value === null || value === undefined) return false;
+      if (Array.isArray(value)) return value.some(function(item){ return opsHasUploadEvidenceLike_(item); });
+      if (typeof value === "object") {
+        return ["id", "fileId", "url", "fileUrl", "webViewLink", "webContentLink", "link", "driveUrl"].some(function(key){
+          return Object.prototype.hasOwnProperty.call(value, key) && opsHasUploadEvidenceLike_(value[key]);
+        });
+      }
+      var raw = String(value == null ? "" : value).trim();
+      if (!raw) return false;
+      var normalized = raw.toLowerCase().replace(/\s+/g, "");
+      if (normalized === "[]" || normalized === "{}" || normalized === "null" || normalized === "undefined" || normalized === "none" || normalized === "n/a" || normalized === "notuploaded" || normalized === "nofile") return false;
+      if ((raw.charAt(0) === "[" && raw.charAt(raw.length - 1) === "]") || (raw.charAt(0) === "{" && raw.charAt(raw.length - 1) === "}")) {
+        try {
+          return opsHasUploadEvidenceLike_(JSON.parse(raw));
+        } catch (_jsonErr) {
+          return false;
+        }
+      }
+      return /^https?:\/\//i.test(raw) || /^[a-zA-Z0-9_-]{20,}$/.test(raw);
+    }
     function opsDocumentStateFromRawRow_(row){
       var r = row || {};
       var docEvidence = opsDocumentEvidenceSummary_(r);
@@ -2913,7 +2935,7 @@
     function opsPortalStateFromRawRow_(row){
       var r = row || {};
       if (opsIsYes_(r.Portal_Submitted)) return "portal_submitted";
-      if (opsFirstNonBlank_(r.PortalURL, r.Portal_Link, r.PortalTokenHash, r.Portal_Token_Status, r.portalLastUpdateAt)) return "portal_access_sent";
+      if (opsFirstNonBlank_(r.PortalURL, r.Portal_Link, r.Portal_Token_Status, r.portalLastUpdateAt)) return "portal_access_sent";
       return "portal_pending";
     }
     function opsPortalStateLabel_(state){
@@ -3148,7 +3170,7 @@
     }
     function opsQueueDocumentChecklistHtml_(row){
       var r = row || {};
-      var hasPaymentEvidence = !!String(r.Fee_Receipt_File || "").trim();
+      var hasPaymentEvidence = opsHasUploadEvidenceLike_(r.Fee_Receipt_File);
       return "<div class='opsDocChecklist'>"
         + "<div class='opsDocChecklistLabel'>Payment Evidence</div>"
         + "<div class='opsDocChecklistItem " + (hasPaymentEvidence ? "ok" : "muted") + "'>" + (hasPaymentEvidence ? "&#10003; Payment field evidence present" : "? No payment file evidence in queue view") + "</div>"
@@ -3180,7 +3202,7 @@
     function opsPaymentEvidenceStatus_(row){
       var r = row || {};
       if (opsIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true) return "Payment verified";
-      if (opsIsYes_(r.Payment_Received) || String(r.Fee_Receipt_File || "").trim()) return "Payment field evidence present - not verified";
+      if (opsIsYes_(r.Payment_Received) || opsHasUploadEvidenceLike_(r.Fee_Receipt_File)) return "Payment field evidence present - not verified";
       if (Object.prototype.hasOwnProperty.call(r, "Payment_Received") || Object.prototype.hasOwnProperty.call(r, "Fee_Receipt_File")) return "No payment evidence detected in loaded workflow fields";
       return "Unknown";
     }
@@ -3753,10 +3775,8 @@
           opsReviewField_("Portal State", facts.portalStateLabel),
           opsReviewField_("Document State", facts.documentStateLabel),
           opsReviewField_("Next Action", facts.nextActionLabel),
-          opsReviewField_("Block Reason", facts.displayBlockReason || proof.resolverBlockReason || "No loaded block reason"),
+          opsReviewField_("Block Reason", facts.displayBlockReason || "No loaded block reason"),
           opsReviewField_("Current Queue / Send", (proof.currentQueueBucket || "not_in_loaded_review_queue") + " | " + (proof.currentSendEligibility || "unknown")),
-          opsReviewField_("Resolver Stage", proof.resolverStageLabel || "Unknown"),
-          opsReviewField_("Resolver Next / Block", (proof.resolverNextAction || "Unknown") + " | " + (proof.resolverBlockCode || "NO_BLOCK")),
           opsReviewField_("Portal Access", facts.portalStateLabel + " | " + opsFirstNonBlank_(d.Portal_Access_Status, d.portalAccess, "Access status not loaded")),
           opsReviewField_("Payment", facts.paymentStateLabel),
           opsReviewField_("Subjects", opsFirstNonBlank_(d.Subjects_Selected_Canonical, d.Selected_Subjects, d.Subjects)),
@@ -4802,7 +4822,7 @@
       var helperLines = [
         "Current: " + (proof.currentStageLabel || deriveApplicantDisplayStage(d) || "Unknown")
           + " | Queue: " + (proof.currentQueueBucket || "not_in_loaded_review_queue")
-          + " | Send: " + (proof.currentSendEligibility || (eligibility.active ? "COOLDOWN_ACTIVE" : "READY_TO_SEND")),
+          + " | Send: " + (proof.currentSendEligibility || (!facts.hasEmail ? "NO_RECIPIENT" : (eligibility.active ? "COOLDOWN_ACTIVE" : "READY_TO_SEND"))),
         "Resolver: " + (proof.resolverStageLabel || "Unknown")
           + " | Next: " + (facts.nextActionLabel || proof.resolverNextAction || "Unknown")
           + " | Block: " + ((proof.resolverBlockCode || "NO_BLOCK") + " / " + (facts.displayBlockReason || proof.resolverBlockReason || "No block reason"))
@@ -6447,6 +6467,7 @@ function renderStageDashboard_(items, emptyMessage){
       var append = o.append === true;
       var force = Number(o.force || 0) === 1 || (!append && opsIsOpsView_());
       if (!append) loadStageDashboard({ force: force });
+      if (!append && typeof loadOpsLifecycleSummary_ === "function") loadOpsLifecycleSummary_({ force: force });
       if (!append) {
         resetQueuePagerState_();
         resetQueueDataState_();

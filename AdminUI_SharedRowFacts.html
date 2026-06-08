@@ -1,5 +1,5 @@
     function opsApplicantQueueFacts_(row){
-      return opsBuildRowFacts_(row);
+      return opsBuildRowFacts_(row, { consumer: "applicant_queue" });
     }
     function opsBillingRowFacts_(row){
       return opsBuildRowFacts_(row);
@@ -11,7 +11,7 @@
       return opsBuildRowFacts_(row);
     }
     function opsReportRowFacts_(row){
-      return opsBuildRowFacts_(row);
+      return opsBuildRowFacts_(row, { consumer: "applicant_queue" });
     }
     function operationalStateFirstNonBlank_(){
       for (var i = 0; i !== arguments.length; i++) {
@@ -26,7 +26,32 @@
       return s === "yes" || s === "true" || s === "1" || s === "y";
     }
     function operationalStateHasUpload_(value){
-      return !!String(value == null ? "" : value).trim();
+      if (value === null || value === undefined) return false;
+      if (Array.isArray(value)) {
+        for (var i = 0; i !== value.length; i++) {
+          if (operationalStateHasUpload_(value[i])) return true;
+        }
+        return false;
+      }
+      if (typeof value === "object") {
+        var keys = ["id", "fileId", "url", "fileUrl", "webViewLink", "webContentLink", "link", "driveUrl"];
+        for (var k = 0; k !== keys.length; k++) {
+          if (Object.prototype.hasOwnProperty.call(value, keys[k]) && operationalStateHasUpload_(value[keys[k]])) return true;
+        }
+        return false;
+      }
+      var raw = String(value == null ? "" : value).trim();
+      if (!raw) return false;
+      var normalized = raw.toLowerCase().replace(/\s+/g, "");
+      if (normalized === "[]" || normalized === "{}" || normalized === "null" || normalized === "undefined" || normalized === "none" || normalized === "n/a" || normalized === "notuploaded" || normalized === "nofile") return false;
+      if ((raw.charAt(0) === "[" && raw.charAt(raw.length - 1) === "]") || (raw.charAt(0) === "{" && raw.charAt(raw.length - 1) === "}")) {
+        try {
+          return operationalStateHasUpload_(JSON.parse(raw));
+        } catch (_jsonErr) {
+          return false;
+        }
+      }
+      return /^https?:\/\//i.test(raw) || /^[a-zA-Z0-9_-]{20,}$/.test(raw);
     }
     function operationalStateTimeMs_(value){
       var raw = String(value == null ? "" : value).trim();
@@ -108,7 +133,7 @@
       var submittedRaw = String(r.Portal_Submitted == null ? "" : r.Portal_Submitted).trim();
       var submittedStatus = operationalStateNormalizeStatus_(submittedRaw);
       if (operationalStateIsYes_(submittedRaw) || (submittedRaw && submittedStatus !== "NO" && submittedStatus !== "FALSE" && submittedStatus !== "0")) return "SUBMITTED";
-      if (operationalStateFirstNonBlank_(r.PortalURL, r.Portal_Link, r.PortalTokenHash, r.Portal_Token_Status, r.PortalTokenIssuedAt, r.portalLastUpdateAt, r.PortalLastUpdateAt)) return "ISSUED";
+      if (operationalStateFirstNonBlank_(r.PortalURL, r.Portal_Link, r.Portal_Token_Status, r.portalLastUpdateAt, r.PortalLastUpdateAt)) return "ISSUED";
       return "PENDING";
     }
     function operationalStateTerminalStage_(row){
@@ -332,6 +357,9 @@
       return "not_in_loaded_review_queue";
     }
     function opsCurrentSendEligibilityState_(row){
+      var r = row || {};
+      var email = operationalStateFirstNonBlank_(r.effectiveEmail, r.Effective_Email, r.Parent_Email_Corrected, r.Corrected_Email, r.Parent_Email, r.Email, r.email);
+      if (!email) return "NO_RECIPIENT";
       var eligibility = {};
       try { eligibility = deriveSendEligibility(row || {}) || {}; } catch (_err) { eligibility = {}; }
       return eligibility.active ? "COOLDOWN_ACTIVE" : "READY_TO_SEND";
@@ -352,7 +380,7 @@
         fd_received: ["RECEIVED"],
         portal: ["PORTAL_ISSUED", "PORTAL_SUBMITTED"],
         docs: ["PORTAL_SUBMITTED", "DOCS_PENDING"],
-        uploaded_review_required: ["DOCS_UNDER_REVIEW"],
+        uploaded_review_required: ["DOCS_UNDER_REVIEW", "DOCS_CORRECTION_REQUIRED"],
         document_correction_required: ["DOCS_CORRECTION_REQUIRED"],
         eligibility_review: ["DOCS_VERIFIED", "PAYMENT_EVIDENCE_PENDING", "PAYMENT_UNDER_REVIEW"],
         payment: ["PAYMENT_EVIDENCE_PENDING", "PAYMENT_UNDER_REVIEW"],
@@ -374,11 +402,11 @@
     function opsResolverProofFromRow_(row, factsOpt){
       var r = row || {};
       var facts = (factsOpt && typeof factsOpt === "object") ? factsOpt : {};
-      var governed = facts.rowFactsMode === "communications_phase1";
+      var governed = facts.rowFactsMode === "communications_phase1" || facts.rowFactsMode === "resolver_governed";
       var resolver = resolveApplicantOperationalState_(r, governed ? { allowCompatibility: true, allowLegacyShadow: false } : {});
       var lifecycleKey = operationalStateFirstNonBlank_(facts.workflowStage, facts.lifecycleState, "");
       var queueBucket = opsCurrentReviewQueueBucket_(r);
-      var currentSendEligibility = operationalStateFirstNonBlank_(facts.currentSendEligibility, opsCurrentSendEligibilityState_(r), "READY_TO_SEND");
+      var currentSendEligibility = operationalStateFirstNonBlank_(facts.currentSendEligibility, opsCurrentSendEligibilityState_(r), "NO_RECIPIENT");
       var currentStageLabel = operationalStateFirstNonBlank_(facts.lifecycleLabel, lifecycleKey, "");
       var queueAllowed = opsResolverAllowedStagesForQueueBucket_(queueBucket);
       var lifecycleAllowed = opsResolverAllowedStagesForLifecycleKey_(lifecycleKey);
@@ -386,6 +414,7 @@
       var lifecycleComparison = opsResolverAlignmentStatus_(resolver.stage, lifecycleAllowed);
       var sendComparison = ((currentSendEligibility === "READY_TO_SEND" && resolver.communicationState === "READY_TO_SEND")
         || (currentSendEligibility === "COOLDOWN_ACTIVE" && resolver.communicationState === "COOLDOWN"))
+        || (currentSendEligibility === "NO_RECIPIENT" && resolver.communicationState === "NO_RECIPIENT")
         ? "aligned"
         : "mismatch";
       return {
@@ -421,7 +450,7 @@
       };
       for (var i = 0; i !== list.length; i++) {
         var row = list[i] || {};
-        var facts = opsBuildRowFacts_(row);
+        var facts = opsBuildRowFacts_(row, { consumer: "applicant_queue" });
         var proof = facts && facts.resolverProof ? facts.resolverProof : opsResolverProofFromRow_(row, facts);
         var applicantId = operationalStateFirstNonBlank_(facts && facts.applicantId, row.ApplicantID, row.applicantId, "unknown");
         if (proof.queueComparison === "aligned") summary.queueAligned++;
@@ -575,7 +604,7 @@
         reasonCode: reasonCode,
         reasonLabel: opsReminderReasonLabel_(reasonCode, reasonDetail),
         reasonDetail: reasonDetail,
-        currentSendEligibility: eligibility && eligibility.active ? "COOLDOWN_ACTIVE" : "READY_TO_SEND",
+        currentSendEligibility: !facts.hasEmail ? "NO_RECIPIENT" : (eligibility && eligibility.active ? "COOLDOWN_ACTIVE" : "READY_TO_SEND"),
         hasPriorEmail: hasPriorEmail
       };
     }
@@ -656,6 +685,7 @@
       var options = opts || {};
       var consumer = String(options.consumer || "").trim().toLowerCase();
       var phase1Governed = consumer === "communications";
+      var resolverGoverned = phase1Governed || consumer === "lifecycle" || consumer === "applicant_queue";
       var applicantId = opsFirstNonBlank_(r.applicantId, r.ApplicantID, "");
       var name = opsFirstNonBlank_(r.name, r.Student_Name, r.Full_Name, r.First_Name, applicantId);
       var email = opsFirstNonBlank_(r.effectiveEmail, r.Effective_Email, r.Parent_Email_Corrected, r.Corrected_Email, r.Parent_Email, r.Email, r.email, "");
@@ -670,17 +700,17 @@
       try { sendEligibility = deriveSendEligibility(r) || {}; } catch (_err) { sendEligibility = {}; }
       var docEvidence = opsDocumentEvidenceSummary_(r);
       var portalSubmitted = opsIsYes_(r.Portal_Submitted);
-      var resolverState = phase1Governed ? resolveApplicantOperationalState_(r, { allowCompatibility: true, allowLegacyShadow: false }) : null;
-      var documentState = phase1Governed ? opsNormalizedDocumentStateFromResolver_(resolverState && resolverState.docState) : opsDocumentStateFromRawRow_(r);
+      var resolverState = resolverGoverned ? resolveApplicantOperationalState_(r, { allowCompatibility: true, allowLegacyShadow: false }) : null;
+      var documentState = resolverGoverned ? opsNormalizedDocumentStateFromResolver_(resolverState && resolverState.docState) : opsDocumentStateFromRawRow_(r);
       var docsVerified = documentState === "eligibility_cleared" || documentState === "verified";
-      var paymentEvidenceState = phase1Governed ? opsNormalizedPaymentEvidenceStateFromResolver_(resolverState && resolverState.paymentState) : opsPaymentEvidenceStatus_(r);
-      var paymentVerified = phase1Governed
+      var paymentEvidenceState = resolverGoverned ? opsNormalizedPaymentEvidenceStateFromResolver_(resolverState && resolverState.paymentState) : opsPaymentEvidenceStatus_(r);
+      var paymentVerified = resolverGoverned
         ? String(resolverState && resolverState.paymentState || "").trim().toUpperCase() === "VERIFIED"
         : (opsIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true);
       var paymentState = opsPaymentStateFromRawRow_(r, paymentVerified, paymentEvidenceState);
-      var portalState = phase1Governed ? opsNormalizedPortalStateFromResolver_(resolverState && resolverState.portalState) : opsPortalStateFromRawRow_(r);
+      var portalState = resolverGoverned ? opsNormalizedPortalStateFromResolver_(resolverState && resolverState.portalState) : opsPortalStateFromRawRow_(r);
       var classroomState = opsClassroomStateFromRawRow_(r, paymentVerified);
-      var workflowStage = phase1Governed ? opsGovernedWorkflowStageFromResolver_(resolverState && resolverState.stage, r) : opsDeriveLifecycleStateFromRawRow_(r, documentState, paymentVerified);
+      var workflowStage = resolverGoverned ? opsGovernedWorkflowStageFromResolver_(resolverState && resolverState.stage, r) : opsDeriveLifecycleStateFromRawRow_(r, documentState, paymentVerified);
       var lifecycleDef = opsLifecycleDefinitions_().filter(function(item){ return item.key === workflowStage; })[0];
       var terminalReason = opsDroppedIneligibleReason_(r);
       var droppedIneligible = !!terminalReason;
@@ -698,16 +728,16 @@
             : opsFirstNonBlank_(r.Comm_Block_Reason, r.Last_Contact_Result, r.Books_Last_Error, "No loaded block reason")));
       var communicationStatus = "";
       try { communicationStatus = deriveCommunicationStatus(r); } catch (_err2) { communicationStatus = ""; }
-      var resolverLifecycleState = phase1Governed ? String(resolverState && resolverState.stage || "").trim() : workflowStage;
-      var resolverLifecycleLabel = phase1Governed
+      var resolverStageCode = resolverGoverned ? String(resolverState && resolverState.stage || "").trim() : "";
+      var resolverLifecycleLabel = resolverGoverned
         ? operationalStateStageLabel_(resolverState && resolverState.stage)
         : (lifecycleDef ? lifecycleDef.name : (workflowStage || "Unknown"));
       var resolverProof = opsResolverProofFromRow_(r, {
         workflowStage: workflowStage,
-        lifecycleState: resolverLifecycleState,
+        lifecycleState: workflowStage,
         lifecycleLabel: resolverLifecycleLabel,
-        currentSendEligibility: sendEligibility.active ? "COOLDOWN_ACTIVE" : "READY_TO_SEND",
-        rowFactsMode: phase1Governed ? "communications_phase1" : "legacy_shared"
+        currentSendEligibility: !email ? "NO_RECIPIENT" : (sendEligibility.active ? "COOLDOWN_ACTIVE" : "READY_TO_SEND"),
+        rowFactsMode: phase1Governed ? "communications_phase1" : (resolverGoverned ? "resolver_governed" : "legacy_shared")
       });
       var resolverDisplayStageLabel = operationalStateDisplayLabel_(resolverProof && resolverProof.resolverStage);
       var resolverDisplayNextAction = operationalStateDisplayNextAction_(resolverProof && resolverProof.resolverNextAction);
@@ -737,8 +767,9 @@
         cooldownActive: cooldownActive,
         isCooldownActive: cooldownActive,
         workflowStage: workflowStage,
-        lifecycleState: resolverLifecycleState,
+        lifecycleState: workflowStage,
         lifecycleLabel: resolverLifecycleLabel,
+        resolverStageCode: resolverStageCode,
         portalSubmitted: portalSubmitted,
         portalState: portalState,
         portalStateLabel: opsPortalStateLabel_(portalState),
@@ -769,7 +800,7 @@
         lastContactLabel: lastContactLabel,
         blockReason: blockReason,
         communicationStatus: communicationStatus || "Unknown",
-        rowFactsMode: phase1Governed ? "communications_phase1" : "legacy_shared",
+        rowFactsMode: phase1Governed ? "communications_phase1" : (resolverGoverned ? "resolver_governed" : "legacy_shared"),
         resolverState: resolverProof,
         resolverProof: resolverProof,
         displayStageLabel: resolverDisplayStageLabel || resolverLifecycleLabel,

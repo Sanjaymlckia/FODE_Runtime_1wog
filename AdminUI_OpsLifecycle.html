@@ -8,19 +8,39 @@
     .opsStageCard .stageCount{ font-size:22px; font-weight:900; color:#1f70ea; }
     .opsStageCard .stageMeaning,.opsStageCard .stageNext{ font-size:12px; color:#5f7186; line-height:1.35; }
     .opsStageCard .stageRecords{ font-size:12px; color:#26384e; line-height:1.35; word-break:break-word; }
+    .opsLifecycleControls{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .opsLifecycleToggle{ display:flex; flex-wrap:wrap; gap:8px; }
+    .opsLifecycleModeBtn{ border:1px solid #cddded; background:#fff; color:#1d3550; border-radius:999px; padding:8px 12px; font-weight:900; cursor:pointer; }
+    .opsLifecycleModeBtn.active{ background:#1f70ea; border-color:#1f70ea; color:#fff; }
 </style>
 <section id="opsLifecycleMap" class="opsSectionPage" data-ops-mode-group="operator">
   <div class="opsPageIntro">
-    <div><h2>Loaded Lifecycle Snapshot</h2><p>Stage counts below are from currently loaded OPS rows only. They are not total applicant population counts; use Reports / Campaign for full-population totals.</p></div>
-    <span class="opsStatusPill info">Loaded snapshot only</span>
+    <div><h2>Lifecycle Map</h2><p>Global View shows full active admissions population counts. Working View shows only the currently loaded OPS rows.</p></div>
+    <span class="opsStatusPill info" id="opsLifecycleScopePill">Global View</span>
   </div>
   <div class="opsCard">
-    <div class="opsSafetyNotice" style="margin-bottom:12px;">Legacy stage queue access is preserved here as loaded-row drill-down. Selecting a stage filters the Applicant Queue and selected-applicant context, but does not reclassify lifecycle authority.</div>
+    <div class="opsLifecycleControls">
+      <div class="opsLifecycleToggle" aria-label="Lifecycle view mode">
+        <button class="opsLifecycleModeBtn active" id="opsLifecycleGlobalBtn" type="button" onclick="opsSetLifecycleViewMode_('global')">Global View</button>
+        <button class="opsLifecycleModeBtn" id="opsLifecycleWorkingBtn" type="button" onclick="opsSetLifecycleViewMode_('working')">Working View</button>
+      </div>
+      <span class="opsStatusPill info" id="opsLifecycleLoadedMeta">Loading lifecycle summary</span>
+    </div>
+    <div class="opsSafetyNotice" id="opsLifecycleScopeText" style="margin-bottom:12px;">Global View is full active admissions population truth. Working queues remain loaded, filtered, and paginated operational snapshots.</div>
     <div class="opsStageCascade" id="opsLifecycleStageCards"></div>
-    <div class="opsInspectPanel" id="opsLifecycleInspector">Select a loaded lifecycle stage to inspect snapshot records, blockers, and next action. For complete applicant population totals, open Reports / Campaign.</div>
+    <div class="opsInspectPanel" id="opsLifecycleInspector">Select a lifecycle stage. Global counts come from the full active admissions population; loaded record drill-down remains a Working View operation.</div>
   </div>
 </section>
 <script>
+    var opsLifecycleViewMode = "global";
+    var opsLifecycleSummaryState = {
+      ok: false,
+      counts: {},
+      activeApplicantCount: 0,
+      scannedRows: 0,
+      generatedAt: "",
+      source: "pending"
+    };
     function opsLifecycleDefinitions_(){
       return [
         { key:"fd_received", name:"Application Received / FD Received", mode:"operator workflow", meaning:"External FD intake row has been received and assigned an ApplicantID.", next:"Review Application", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "fd_received"; } },
@@ -42,7 +62,7 @@
       return opsLifecycleStageKeyFromFacts_(row);
     }
     function opsLifecycleStageKeyFromFacts_(row){
-      return opsBuildRowFacts_(row).lifecycleState || "fd_received";
+      return opsBuildRowFacts_(row, { consumer: "lifecycle" }).lifecycleState || "fd_received";
     }
     function opsDeriveLifecycleStateFromRawRow_(row, documentState, paymentVerified){
       var r = row || {};
@@ -70,7 +90,7 @@
       return "fd_received";
     }
     function opsWorkflowStageLabel_(row){
-      var facts = opsBuildRowFacts_(row);
+      var facts = opsBuildRowFacts_(row, { consumer: "lifecycle" });
       return facts.displayStageLabel || facts.lifecycleLabel || "Application Received / FD Received";
     }
     function opsRowsForLifecycleStage_(stageKey){
@@ -78,21 +98,98 @@
       var stage = String(stageKey || "");
       return stage ? rows.filter(function(row){ return opsLifecycleStageKeyFromFacts_(row || {}) === stage; }) : rows;
     }
+    function opsSetLifecycleViewMode_(mode){
+      opsLifecycleViewMode = mode === "working" ? "working" : "global";
+      renderOpsLifecycleCascade_();
+    }
+    function opsLifecycleWorkingCounts_(){
+      var counts = {};
+      opsLifecycleDefinitions_().forEach(function(stage){ counts[stage.key] = 0; });
+      opsAllQueueRows_().forEach(function(row){
+        var key = opsLifecycleStageKeyFromFacts_(row || {});
+        if (!Object.prototype.hasOwnProperty.call(counts, key)) counts[key] = 0;
+        counts[key]++;
+      });
+      return counts;
+    }
+    function opsLifecycleLoadedCount_(){
+      return opsAllQueueRows_().length;
+    }
+    function opsLifecycleGlobalCountFor_(key){
+      var counts = (opsLifecycleSummaryState && opsLifecycleSummaryState.counts) || {};
+      return Number(counts[key] || 0);
+    }
+    function renderOpsLifecycleModeUi_(){
+      var mode = opsLifecycleViewMode === "working" ? "working" : "global";
+      var loaded = opsLifecycleLoadedCount_();
+      var total = Number((opsLifecycleSummaryState && opsLifecycleSummaryState.activeApplicantCount) || 0);
+      var globalBtn = document.getElementById("opsLifecycleGlobalBtn");
+      var workingBtn = document.getElementById("opsLifecycleWorkingBtn");
+      var pill = document.getElementById("opsLifecycleScopePill");
+      var meta = document.getElementById("opsLifecycleLoadedMeta");
+      var text = document.getElementById("opsLifecycleScopeText");
+      if (globalBtn) globalBtn.classList.toggle("active", mode === "global");
+      if (workingBtn) workingBtn.classList.toggle("active", mode === "working");
+      if (pill) {
+        pill.textContent = mode === "global" ? "Global View" : "Working View";
+        pill.className = "opsStatusPill " + (mode === "global" ? "ok" : "info");
+      }
+      if (meta) meta.textContent = total
+        ? ("Loaded snapshot: " + String(loaded) + " of " + String(total) + " active applicants")
+        : ("Loaded snapshot: " + String(loaded) + " rows; global summary loading");
+      if (text) text.textContent = mode === "global"
+        ? "Global View uses a read-only full active admissions population summary. It is not derived from the rendered DOM or current page of loaded rows."
+        : "Working View uses currently loaded, filtered, and paginated OPS rows. Loaded snapshot: " + String(loaded) + (total ? (" of " + String(total) + " active applicants.") : " rows.");
+    }
+    function loadOpsLifecycleSummary_(opts){
+      var o = (opts && typeof opts === "object") ? opts : {};
+      google.script.run
+        .withSuccessHandler(function(res){
+          var data = (res && typeof res === "object") ? res : {};
+          opsLifecycleSummaryState = {
+            ok: data.ok === true,
+            counts: (data.counts && typeof data.counts === "object") ? data.counts : {},
+            activeApplicantCount: Number(data.activeApplicantCount || 0),
+            scannedRows: Number(data.scannedRows || 0),
+            generatedAt: String(data.generatedAt || ""),
+            source: String(data.source || "unknown")
+          };
+          renderOpsLifecycleCascade_();
+        })
+        .withFailureHandler(function(err){
+          console.error("[AdminUI] admin_getOpsLifecycleSummary failure:", err);
+          opsLifecycleSummaryState = {
+            ok: false,
+            counts: {},
+            activeApplicantCount: 0,
+            scannedRows: 0,
+            generatedAt: "",
+            source: "failed"
+          };
+          renderOpsLifecycleCascade_();
+        })
+        .admin_getOpsLifecycleSummary({ force: o.force ? 1 : 0 });
+    }
     function renderOpsLifecycleCascade_(){
       var wrap = document.getElementById("opsLifecycleStageCards");
       var detail = document.getElementById("opsLifecycleInspector");
       if (!wrap) return;
+      renderOpsLifecycleModeUi_();
       var selected = String(opsActionState.lifecycleStage || "");
       var stages = opsLifecycleDefinitions_();
+      var mode = opsLifecycleViewMode === "working" ? "working" : "global";
+      var workingCounts = opsLifecycleWorkingCounts_();
       wrap.innerHTML = stages.map(function(stage){
         var matches = opsRowsForLifecycleStage_(stage.key);
+        var count = mode === "global" ? opsLifecycleGlobalCountFor_(stage.key) : Number(workingCounts[stage.key] || 0);
         var ids = matches.slice(0, 4).map(function(row){ return String(opsApplicantQueueFacts_(row).applicantId || ""); }).filter(Boolean);
         var selectedText = opsApplicantId_() ? ("Selected: " + opsApplicantId_()) : "Selected: none";
         return "<button class='opsStageCard" + (selected === stage.key ? " active" : "") + "' type='button' data-stage-key='" + esc(stage.key) + "'>"
-          + "<div class='stageTop'><div class='stageName'>" + esc(stage.name) + "</div><div class='stageCount'>" + String(matches.length) + "</div></div>"
+          + "<div class='stageTop'><div class='stageName'>" + esc(stage.name) + "</div><div class='stageCount'>" + String(count) + "</div></div>"
           + "<div class='stageMeaning'>" + esc(stage.meaning) + "</div>"
-          + "<div class='stageRecords'><strong>Records:</strong> " + esc(ids.length ? ids.join(", ") : "None in loaded queue") + "</div>"
+          + "<div class='stageRecords'><strong>" + (mode === "global" ? "Loaded samples:" : "Records:") + "</strong> " + esc(ids.length ? ids.join(", ") : "None in loaded queue") + "</div>"
           + "<div class='stageRecords'><strong>" + esc(selectedText) + "</strong></div>"
+          + "<div class='stageRecords'><strong>Scope:</strong> " + esc(mode === "global" ? "Full active admissions population count" : "Loaded working snapshot count") + "</div>"
           + "<div><span class='opsStatusPill " + (stage.mode.indexOf("backend missing") >= 0 ? "danger" : (stage.mode.indexOf("gated") >= 0 || stage.mode.indexOf("guarded") >= 0 || stage.mode.indexOf("owner") >= 0 ? "warn" : "info")) + "'>" + esc(stage.mode) + "</span></div>"
           + "<div class='stageNext'>" + esc(stage.next) + "</div>"
           + "</button>";
@@ -122,31 +219,33 @@
         var stage = stages.filter(function(s){ return s.key === selected; })[0];
         var rows = selected ? opsRowsForLifecycleStage_(selected) : [];
         var selectedApplicant = opsApplicantId_() || "none";
-        var selectedRow = opsApplicantContextRow_() || {};
-        var selectedFacts = opsApplicantQueueFacts_(selectedRow);
-        var proof = selectedFacts && selectedFacts.resolverProof ? selectedFacts.resolverProof : {};
-        var comparison = opsResolverComparisonSummary_(opsAllQueueRows_());
-        var queueSamples = comparison.queueSamples.length ? comparison.queueSamples.join("; ") : "None in loaded rows";
-        var lifecycleSamples = comparison.lifecycleSamples.length ? comparison.lifecycleSamples.join("; ") : "None in loaded rows";
-        var sendSamples = comparison.sendSamples.length ? comparison.sendSamples.join("; ") : "None in loaded rows";
+        var globalCount = stage ? opsLifecycleGlobalCountFor_(stage.key) : 0;
+        var workingCount = rows.length;
         detail.innerHTML = stage
           ? "<strong>" + esc(stage.name) + "</strong>"
-            + "<div style='margin-top:6px;'>Count: " + String(rows.length) + "</div>"
+            + "<div style='margin-top:6px;'>Global count: " + String(globalCount) + " | Loaded working rows: " + String(workingCount) + "</div>"
             + "<div>Selected applicant: " + esc(selectedApplicant) + "</div>"
             + "<div>Records in view: " + esc(rows.slice(0, 6).map(function(row){ return String(opsApplicantQueueFacts_(row).applicantId || ""); }).filter(Boolean).join(", ") || "None in loaded queue") + "</div>"
-            + "<div>Fields used: shared row facts: lifecycleState, documentState, paymentState, communicationEligibility, nextAction, and resolverProof.</div>"
+            + "<div>Fields used: shared row facts: lifecycleState, documentState, paymentState, communicationEligibility, and nextAction.</div>"
             + "<div>Next action: " + esc(stage.next) + "</div>"
-            + "<div style='margin-top:10px;'><strong>Selected applicant proof</strong></div>"
-            + "<div>Current stage: " + esc(proof.currentStageLabel || "No applicant selected") + " | Current queue: " + esc(proof.currentQueueBucket || "unknown") + " | Current send: " + esc(proof.currentSendEligibility || "unknown") + "</div>"
-            + "<div>Resolver stage: " + esc(proof.resolverStageLabel || "Unknown") + " | Next: " + esc(proof.resolverNextAction || "Unknown") + " | Block: " + esc((proof.resolverBlockCode || "NO_BLOCK") + " / " + (proof.resolverBlockReason || "No block reason")) + "</div>"
-            + "<div style='margin-top:10px;'><strong>Loaded-row comparison summary</strong></div>"
-            + "<div>Queue bucket vs resolver stage: " + String(comparison.queueAligned) + " aligned / " + String(comparison.queueMismatch) + " mismatch.</div>"
-            + "<div>Lifecycle display vs resolver stage: " + String(comparison.lifecycleAligned) + " aligned / " + String(comparison.lifecycleMismatch) + " mismatch.</div>"
-            + "<div>Ready to Send vs resolver communicationState: " + String(comparison.sendAligned) + " aligned / " + String(comparison.sendMismatch) + " mismatch.</div>"
-            + "<div>Queue mismatch samples: " + esc(queueSamples) + "</div>"
-            + "<div>Lifecycle mismatch samples: " + esc(lifecycleSamples) + "</div>"
-            + "<div>Send mismatch samples: " + esc(sendSamples) + "</div>"
-          : "Select a lifecycle stage to inspect records, blockers, and next action.";
+            + "<div style='margin-top:10px;'>Resolver alignment and mismatch samples are available in System Health diagnostics.</div>"
+          : "Select a lifecycle stage. Global View shows full active admissions population counts; Working View filters loaded rows.";
+        renderOpsLifecycleDiagnostics_();
       }
+    }
+    function renderOpsLifecycleDiagnostics_(){
+      var diag = document.getElementById("opsLifecycleDiagnostics");
+      if (!diag) return;
+      var comparison = opsResolverComparisonSummary_(opsAllQueueRows_());
+      var queueSamples = comparison.queueSamples.length ? comparison.queueSamples.join("; ") : "None in loaded rows";
+      var lifecycleSamples = comparison.lifecycleSamples.length ? comparison.lifecycleSamples.join("; ") : "None in loaded rows";
+      var sendSamples = comparison.sendSamples.length ? comparison.sendSamples.join("; ") : "None in loaded rows";
+      diag.innerHTML = "<strong>Lifecycle resolver diagnostics</strong>"
+        + "<div>Queue bucket vs resolver stage: " + String(comparison.queueAligned) + " aligned / " + String(comparison.queueMismatch) + " mismatch.</div>"
+        + "<div>Lifecycle display vs resolver stage: " + String(comparison.lifecycleAligned) + " aligned / " + String(comparison.lifecycleMismatch) + " mismatch.</div>"
+        + "<div>Ready to Send vs resolver communicationState: " + String(comparison.sendAligned) + " aligned / " + String(comparison.sendMismatch) + " mismatch.</div>"
+        + "<div>Queue mismatch samples: " + esc(queueSamples) + "</div>"
+        + "<div>Lifecycle mismatch samples: " + esc(lifecycleSamples) + "</div>"
+        + "<div>Send mismatch samples: " + esc(sendSamples) + "</div>";
     }
 </script>

@@ -57,7 +57,7 @@
       </label>
       <button class="opsActionBtn" type="button" onclick="opsClearQueueSearch_()">Clear Search</button>
     </div>
-    <div class="opsSafetyNotice">Loaded snapshot only. Use Loaded Lifecycle Snapshot for stage drill-down, Communications Action Cohorts for reminder previews, and Reports / Campaign for full-population totals. Local export contains applicant data; do not share outside authorised staff.</div>
+    <div class="opsSafetyNotice">Loaded snapshot only. Use Lifecycle Map Working View for loaded-row stage drill-down, Lifecycle Map Global View for full active admissions counts, and Communications Action Cohorts for reminder previews. Local export contains applicant data; do not share outside authorised staff.</div>
     <div class="opsSortableStrip" id="opsQueueSortHeaders"></div>
     <div id="opsAdmissionsResult" class="opsResultBox hidden"></div>
     <div id="opsLifecycleQueue" class="opsLifecycleQueue"></div>
@@ -602,8 +602,8 @@
         "<div class='opsInfoItem'><div class='k'>Name</div><div class='v'>No applicant selected</div></div>",
         "<div class='opsInfoItem'><div class='k'>Lifecycle / Docs</div><div class='v'>Select a queue row</div></div>",
         "<div class='opsInfoItem'><div class='k'>Payment / Next</div><div class='v'>Select a queue row</div></div>",
-        "<div class='opsInfoItem'><div class='k'>Current / Resolver</div><div class='v'>Proof unavailable until a row is selected</div></div>",
-        "<div class='opsInfoItem'><div class='k'>Resolver Block</div><div class='v'>Proof unavailable until a row is selected</div></div>"
+        "<div class='opsInfoItem'><div class='k'>Working Queue</div><div class='v'>Select a queue row</div></div>",
+        "<div class='opsInfoItem'><div class='k'>Block Reason</div><div class='v'>Select a queue row</div></div>"
       ].join("");
       return;
     }
@@ -616,8 +616,8 @@
       "<div class='opsInfoItem'><div class='k'>Name</div><div class='v'>" + esc(name) + "</div></div>",
       "<div class='opsInfoItem'><div class='k'>Lifecycle / Docs</div><div class='v'>" + esc((facts.displayStageLabel || facts.lifecycleLabel) + " | " + facts.documentStateLabel) + "</div></div>",
       "<div class='opsInfoItem'><div class='k'>Payment / Next</div><div class='v'>" + esc(facts.paymentStateLabel + " | " + facts.nextActionLabel + " | " + aging + " | " + marker + " | " + dateInfo.label) + "</div></div>",
-      "<div class='opsInfoItem'><div class='k'>Current / Resolver</div><div class='v'>" + esc((proof.currentStageLabel || facts.displayStageLabel || facts.lifecycleLabel || "Unknown") + " | " + (proof.currentQueueBucket || "unknown") + " | " + (proof.currentSendEligibility || "unknown") + " -> " + (proof.resolverStageLabel || "Unknown")) + "</div></div>",
-      "<div class='opsInfoItem'><div class='k'>Resolver Block</div><div class='v'>" + esc((facts.nextActionLabel || proof.resolverNextAction || "Unknown") + " | " + (proof.resolverBlockCode || "NO_BLOCK") + " | " + (facts.displayBlockReason || proof.resolverBlockReason || "No block reason")) + "</div></div>"
+      "<div class='opsInfoItem'><div class='k'>Working Queue</div><div class='v'>" + esc((proof.currentQueueBucket || "unknown") + " | " + (proof.currentSendEligibility || "unknown")) + "</div></div>",
+      "<div class='opsInfoItem'><div class='k'>Block Reason</div><div class='v'>" + esc(facts.displayBlockReason || "No loaded block reason") + "</div></div>"
     ].join("");
   }
 </script>

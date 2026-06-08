@@ -3825,6 +3825,232 @@ function admin_getStageAggregation(payload) {
   return out;
 }
 
+function getOpsLifecycleSummaryCacheKey_(adminEmail) {
+  return "ADMIN_OPS_LIFECYCLE_SUMMARY::" + clean_(adminEmail || "").toLowerCase();
+}
+
+function adminOpsFirstNonBlank_() {
+  for (var i = 0; i < arguments.length; i++) {
+    var value = arguments[i];
+    if (clean_(value || "")) return clean_(value || "");
+  }
+  return "";
+}
+
+function adminOpsIsYes_(value) {
+  return value === true || clean_(value || "").toUpperCase() === "YES";
+}
+
+function adminOpsTextIncludes_(text, pattern) {
+  return pattern.test(String(text || "").toLowerCase());
+}
+
+function adminOpsHasUploadEvidence_(rowObj) {
+  var row = rowObj || {};
+  var fields = [
+    "Birth_ID_Passport_File", "Birth_ID_File", "Passport_File", "Passport_ID_File",
+    "Latest_School_Report_File", "School_Report_File", "Report_Card_File",
+    "Transfer_Certificate_File", "Transfer_File",
+    "Passport_Photo_File", "Student_Photo_File", "Photo_File",
+    "Document_File", "Documents_File", "Document_Evidence_File",
+    "Birth_ID_Passport_URL", "Latest_School_Report_URL", "Transfer_Certificate_URL", "Passport_Photo_URL"
+  ];
+  for (var i = 0; i < fields.length; i++) {
+    if (hasUploadEvidence_(row[fields[i]], fields[i])) return true;
+  }
+  return false;
+}
+
+function adminOpsDroppedIneligibleReason_(rowObj) {
+  var row = rowObj || {};
+  var fields = [
+    ["Pipeline_Stage", row.Pipeline_Stage],
+    ["Operational_Stage", row.Operational_Stage],
+    ["CRM_Stage", row.CRM_Stage],
+    ["Stage", row.Stage],
+    ["Overall_Status", row.Overall_Status],
+    ["Application_Status", row.Application_Status],
+    ["Status", row.Status]
+  ];
+  for (var i = 0; i < fields.length; i++) {
+    var raw = clean_(fields[i][1] || "");
+    if (!raw) continue;
+    var normalized = raw.toLowerCase().replace(/[\/_-]+/g, " ").replace(/\s+/g, " ").trim();
+    if (normalized.indexOf("closed lost") >= 0
+      || normalized.indexOf("ineligible") >= 0
+      || normalized.indexOf("not eligible") >= 0
+      || normalized.indexOf("dropped") >= 0
+      || normalized.indexOf("drop out") >= 0
+      || normalized === "dropout"
+      || normalized.indexOf("withdrawn") >= 0
+      || normalized === "withdraw"
+      || normalized.indexOf("disqualified") >= 0) {
+      return fields[i][0] + ": " + raw;
+    }
+  }
+  return "";
+}
+
+function adminOpsHasEmailIssue_(rowObj) {
+  var row = rowObj || {};
+  var emailStatus = clean_(row.Email_Status || "").toUpperCase();
+  var verification = clean_(row.Email_Verification_Status || "").toUpperCase();
+  var lastResult = clean_(row.Last_Contact_Result || "").toUpperCase();
+  var bounceFlag = isCampaignBounceFlagTrue_(row.Email_Bounce_Flag);
+  return bounceFlag
+    || !!adminOpsFirstNonBlank_(
+      row.Email_Bounce_Reason,
+      row.Last_Email_Error,
+      (/^(BOUNCED|SUPPRESSED|DO_NOT_CONTACT)$/i.test(clean_(row.Email_Status || "")) ? row.Email_Status : ""),
+      (/^(BOUNCED|SUPPRESSED|INVALID)$/i.test(clean_(row.Email_Verification_Status || "")) ? row.Email_Verification_Status : ""),
+      (/^(BOUNCED|SUPPRESSED|FAILED|BLOCKED)$/i.test(clean_(row.Last_Contact_Result || "")) ? row.Last_Contact_Result : "")
+    )
+    || emailStatus === "BOUNCED"
+    || emailStatus === "SUPPRESSED"
+    || emailStatus === "DO_NOT_CONTACT"
+    || verification === "BOUNCED"
+    || verification === "INVALID"
+    || verification === "SUPPRESSED"
+    || lastResult === "BOUNCED"
+    || lastResult === "SUPPRESSED";
+}
+
+function adminOpsDocumentStateFromRow_(rowObj) {
+  var row = rowObj || {};
+  var rawDocStatus = adminOpsFirstNonBlank_(row.Docs_Status, row.Document_Status, row.Documents_Status, row.Overall_Doc_Status, row.Documents_Ready, row.docsStatus, "");
+  var statusFields = adminOpsFirstNonBlank_(row.Birth_ID_Status, row.Birth_Status, row.Report_Status, row.Photo_Status, row.Transfer_Status, row.Document_Review_Status, row.Eligibility_Status, row.Doc_Verification_Status, "");
+  var computed = "";
+  try { computed = computeDocVerificationStatus_(row); } catch (_docErr) {}
+  var docText = String((rawDocStatus || "") + " " + statusFields + " " + computed).toLowerCase();
+  var docsVerified = adminOpsIsYes_(row.Docs_Verified) || computed === "Verified" || /verified|approved|cleared/.test(docText);
+  var hasDocumentUpload = adminOpsHasUploadEvidence_(row);
+  var portalSubmitted = adminOpsIsYes_(row.Portal_Submitted);
+  if (docsVerified) return "eligibility_cleared";
+  if (adminOpsTextIncludes_(docText, /correction|wrong|reject|invalid|resubmit|reupload/)) return "document_correction_required";
+  if (hasDocumentUpload) return "uploaded_review_required";
+  if (adminOpsTextIncludes_(docText, /review required|eligibility review|pending eligibility|eligibility pending/) && adminOpsTextIncludes_(docText, /upload|file|evidence/)) return "uploaded_review_required";
+  if (adminOpsTextIncludes_(docText, /no file|not upload|missing|required|awaiting/) || portalSubmitted) return "awaiting_uploads";
+  return "unknown";
+}
+
+function adminOpsLifecycleStageKeyFromRow_(rowObj) {
+  var row = rowObj || {};
+  var receiptStatus = clean_(row.Receipt_Status || row.Payment_Status || row.Payment_Review_Status || "").toLowerCase();
+  var paymentState = "EVIDENCE_PENDING";
+  if (/reject|invalid|failed/.test(receiptStatus)) paymentState = "CORRECTION_REQUIRED";
+  else if (/verified|approved|cleared/.test(receiptStatus)
+    || adminOpsIsYes_(row.Payment_Verified)
+    || row.Payment_Verified_Bool === true
+    || row.paymentVerified === true) paymentState = "VERIFIED";
+  else if (adminOpsIsYes_(row.Payment_Received)
+    || hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File")
+    || /pending|review|received|uploaded/.test(receiptStatus)) paymentState = "UNDER_REVIEW";
+
+  var invoiceRaised = !!adminOpsFirstNonBlank_(row.Books_Invoice_ID, row.Books_Invoice_Number, row.Books_Push_Status, row.Invoice_Email_Status);
+  var docState = adminOpsDocumentStateFromRow_(row);
+  var resolverDocState = "PENDING";
+  if (docState === "eligibility_cleared" || docState === "verified") resolverDocState = "VERIFIED";
+  else if (docState === "document_correction_required") resolverDocState = "CORRECTION_REQUIRED";
+  else if (docState === "uploaded_review_required") resolverDocState = "UNDER_REVIEW";
+
+  var terminalReason = adminOpsDroppedIneligibleReason_(row);
+  var emailStatus = clean_(row.Email_Status || "").toUpperCase();
+  var resolverStage = "";
+  if (emailStatus === "DO_NOT_CONTACT" || adminOpsIsYes_(row.Do_Not_Contact) || adminOpsIsYes_(row.DO_NOT_CONTACT)) resolverStage = "DO_NOT_CONTACT";
+  else if (terminalReason) resolverStage = "DROPPED";
+  else if (adminOpsIsYes_(row.Enrolled_Confirmed) || adminOpsFirstNonBlank_(row.Enrolled_At)) resolverStage = "ENROLLED";
+  else if (paymentState === "VERIFIED" && resolverDocState === "VERIFIED") resolverStage = "ENROLMENT_READY";
+  else if (paymentState === "VERIFIED") resolverStage = "PAYMENT_VERIFIED";
+  else if (paymentState === "UNDER_REVIEW" && resolverDocState === "VERIFIED") resolverStage = "PAYMENT_UNDER_REVIEW";
+  else if (resolverDocState === "VERIFIED") resolverStage = "PAYMENT_EVIDENCE_PENDING";
+  else if (resolverDocState === "CORRECTION_REQUIRED") resolverStage = "DOCS_CORRECTION_REQUIRED";
+  else if (resolverDocState === "UNDER_REVIEW") resolverStage = "DOCS_UNDER_REVIEW";
+  else {
+    var portalState = "PENDING";
+    if (adminOpsIsYes_(row.Portal_Submitted)) portalState = "SUBMITTED";
+    else if (adminOpsFirstNonBlank_(row.PortalURL, row.Portal_Link, row.Portal_Token_Status, row.portalLastUpdateAt, row.PortalLastUpdateAt)) portalState = "ISSUED";
+    resolverStage = portalState === "SUBMITTED" ? "DOCS_PENDING" : (portalState === "ISSUED" ? "PORTAL_ISSUED" : "RECEIVED");
+  }
+
+  if (resolverStage === "RECEIVED") return "fd_received";
+  if (resolverStage === "PORTAL_ISSUED") return "portal";
+  if (resolverStage === "PORTAL_SUBMITTED" || resolverStage === "DOCS_PENDING") return "docs";
+  if (resolverStage === "DOCS_UNDER_REVIEW" || resolverStage === "DOCS_CORRECTION_REQUIRED") return "uploaded_review_required";
+  if (resolverStage === "PAYMENT_EVIDENCE_PENDING" || resolverStage === "PAYMENT_UNDER_REVIEW") return invoiceRaised ? "invoice" : "payment";
+  if (resolverStage === "PAYMENT_VERIFIED" || resolverStage === "ENROLMENT_READY") return "enrolment";
+  if (resolverStage === "ENROLLED") return "classroom";
+  if (resolverStage === "DO_NOT_CONTACT") return "email_issue";
+  if (resolverStage === "DROPPED" || resolverStage === "INELIGIBLE" || resolverStage === "CLOSED_LOST" || resolverStage === "DUPLICATE") return "dropped_ineligible";
+  if (adminOpsHasEmailIssue_(row)) return "email_issue";
+  var lastResult = clean_(row.Last_Contact_Result || row.Email_Status || row.Ack_Email_Status || row.Books_Last_Error || "").toUpperCase();
+  if (lastResult.indexOf("FAILED") >= 0 || lastResult.indexOf("BLOCK") >= 0 || lastResult.indexOf("ERROR") >= 0) return "exceptions";
+  return "fd_received";
+}
+
+function admin_getOpsLifecycleSummary(payload) {
+  var adminEmail = getCallerEmail_();
+  if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+  var p = payload && typeof payload === "object" ? payload : {};
+  var force = p.force === 1 || p.force === true;
+  var cache = CacheService.getUserCache();
+  var cacheKey = getOpsLifecycleSummaryCacheKey_(adminEmail);
+  if (!force) {
+    try {
+      var cached = cache.get(cacheKey);
+      if (cached) return JSON.parse(cached);
+    } catch (_cacheReadErr) {}
+  }
+
+  var counts = {
+    fd_received: 0,
+    portal: 0,
+    docs: 0,
+    uploaded_review_required: 0,
+    document_correction_required: 0,
+    eligibility_review: 0,
+    payment: 0,
+    invoice: 0,
+    enrolment: 0,
+    classroom: 0,
+    exceptions: 0,
+    email_issue: 0,
+    dropped_ineligible: 0
+  };
+  var sheet = openDataSheet_();
+  var data = sheet.getDataRange().getValues();
+  var scannedRows = Math.max(0, (data || []).length - 1);
+  var activeApplicantCount = 0;
+  if (data && data.length >= 2) {
+    var headers = data[0] || [];
+    for (var r = 1; r < data.length; r++) {
+      var row = data[r] || [];
+      var rowObj = {};
+      for (var c = 0; c < headers.length; c++) {
+        var h = clean_(headers[c]);
+        if (h) rowObj[h] = row[c];
+      }
+      if (!clean_(rowObj.ApplicantID || "")) continue;
+      activeApplicantCount++;
+      var key = adminOpsLifecycleStageKeyFromRow_(rowObj);
+      if (!Object.prototype.hasOwnProperty.call(counts, key)) key = "fd_received";
+      counts[key]++;
+    }
+  }
+
+  var out = {
+    ok: true,
+    mode: "global",
+    source: "full_active_admissions_population",
+    counts: counts,
+    activeApplicantCount: activeApplicantCount,
+    scannedRows: scannedRows,
+    generatedAt: new Date().toISOString(),
+    version: clean_(CONFIG.VERSION || "")
+  };
+  try { cache.put(cacheKey, JSON.stringify(out), 60); } catch (_cacheWriteErr) {}
+  return out;
+}
+
 function admin_getReviewQueues(payload) {
   var adminEmail = getCallerEmail_();
   if (!isAdmin_(adminEmail)) throw new Error("Access denied");
