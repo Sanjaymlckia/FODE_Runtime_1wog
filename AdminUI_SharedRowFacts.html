@@ -668,10 +668,18 @@
     }
     function opsNormalizedDocumentStateFromResolver_(resolverDocState){
       var state = String(resolverDocState || "").trim().toUpperCase();
-      if (state === "VERIFIED") return "eligibility_cleared";
+      if (state === "VERIFIED") return "docs_verified";
       if (state === "CORRECTION_REQUIRED") return "correction_required";
       if (state === "UNDER_REVIEW") return "uploaded_review_required";
       return "awaiting_uploads";
+    }
+    function opsServerDocumentState_(row){
+      var state = String(row && row.opsDocumentState || "").trim();
+      return /^(awaiting_uploads|partially_uploaded|uploaded_review_required|docs_verified|eligibility_cleared|verified|document_correction_required|correction_required)$/i.test(state) ? state.toLowerCase() : "";
+    }
+    function opsServerLifecycleStageKey_(row){
+      var stage = String(row && row.opsLifecycleStageKey || "").trim();
+      return /^(fd_received|portal|docs|uploaded_review_required|document_correction_required|eligibility_review|payment|invoice|enrolment|classroom|exceptions|email_issue|dropped_ineligible)$/i.test(stage) ? stage.toLowerCase() : "";
     }
     function opsNormalizedPaymentEvidenceStateFromResolver_(resolverPaymentState){
       var state = String(resolverPaymentState || "").trim().toUpperCase();
@@ -701,8 +709,10 @@
       var docEvidence = opsDocumentEvidenceSummary_(r);
       var portalSubmitted = opsIsYes_(r.Portal_Submitted);
       var resolverState = resolverGoverned ? resolveApplicantOperationalState_(r, { allowCompatibility: true, allowLegacyShadow: false }) : null;
-      var documentState = resolverGoverned ? opsNormalizedDocumentStateFromResolver_(resolverState && resolverState.docState) : opsDocumentStateFromRawRow_(r);
-      var docsVerified = documentState === "eligibility_cleared" || documentState === "verified";
+      var serverDocumentState = opsServerDocumentState_(r);
+      var serverLifecycleStageKey = opsServerLifecycleStageKey_(r);
+      var documentState = serverDocumentState || (resolverGoverned ? opsNormalizedDocumentStateFromResolver_(resolverState && resolverState.docState) : opsDocumentStateFromRawRow_(r));
+      var docsVerified = documentState === "docs_verified" || documentState === "eligibility_cleared" || documentState === "verified";
       var paymentEvidenceState = resolverGoverned ? opsNormalizedPaymentEvidenceStateFromResolver_(resolverState && resolverState.paymentState) : opsPaymentEvidenceStatus_(r);
       var paymentVerified = resolverGoverned
         ? String(resolverState && resolverState.paymentState || "").trim().toUpperCase() === "VERIFIED"
@@ -710,7 +720,7 @@
       var paymentState = opsPaymentStateFromRawRow_(r, paymentVerified, paymentEvidenceState);
       var portalState = resolverGoverned ? opsNormalizedPortalStateFromResolver_(resolverState && resolverState.portalState) : opsPortalStateFromRawRow_(r);
       var classroomState = opsClassroomStateFromRawRow_(r, paymentVerified);
-      var workflowStage = resolverGoverned ? opsGovernedWorkflowStageFromResolver_(resolverState && resolverState.stage, r) : opsDeriveLifecycleStateFromRawRow_(r, documentState, paymentVerified);
+      var workflowStage = serverLifecycleStageKey || (resolverGoverned ? opsGovernedWorkflowStageFromResolver_(resolverState && resolverState.stage, r) : opsDeriveLifecycleStateFromRawRow_(r, documentState, paymentVerified));
       var lifecycleDef = opsLifecycleDefinitions_().filter(function(item){ return item.key === workflowStage; })[0];
       var terminalReason = opsDroppedIneligibleReason_(r);
       var droppedIneligible = !!terminalReason;
@@ -751,8 +761,8 @@
       var resolverDisplayNextAction = operationalStateDisplayNextAction_(resolverProof && resolverProof.resolverNextAction);
       var resolverDisplayBlockReason = operationalStateFirstNonBlank_(resolverProof && resolverProof.resolverBlockReason, blockReason, "No loaded block reason");
       var communicationQueues = {
-        readyToContact: !!(activeProgressionAllowed && email && !emailIssue && !recentlyContacted && !cooldownActive && documentState !== "awaiting_uploads" && documentState !== "uploaded_review_required" && documentState !== "document_correction_required" && documentState !== "correction_required"),
-        missingDocuments: !!(activeProgressionAllowed && documentState === "awaiting_uploads"),
+        readyToContact: !!(activeProgressionAllowed && email && !emailIssue && !recentlyContacted && !cooldownActive && documentState !== "awaiting_uploads" && documentState !== "partially_uploaded" && documentState !== "uploaded_review_required" && documentState !== "document_correction_required" && documentState !== "correction_required"),
+        missingDocuments: !!(activeProgressionAllowed && (documentState === "awaiting_uploads" || documentState === "partially_uploaded")),
         uploadedReviewRequired: !!(activeProgressionAllowed && (documentState === "uploaded_review_required" || documentState === "document_correction_required" || documentState === "correction_required")),
         cooldownRecentlyContacted: !!(activeProgressionAllowed && (recentlyContacted || cooldownActive)),
         emailIssue: !!(activeProgressionAllowed && emailIssue),
@@ -787,9 +797,13 @@
         portalStateLabel: opsPortalStateLabel_(portalState),
         docsVerified: docsVerified,
         documentEvidence: docEvidence,
-        hasDocumentUploadEvidence: opsLoadedDocumentUploadEvidence_(r),
+        hasDocumentUploadEvidence: r.hasDocumentUploadEvidence === true || String(r.hasDocumentUploadEvidence || "").toLowerCase() === "true" || opsLoadedDocumentUploadEvidence_(r),
         documentState: documentState,
         documentStateLabel: opsDocumentStateLabel_(documentState),
+        requiredDocumentUploadComplete: r.requiredDocumentUploadComplete === true || String(r.requiredDocumentUploadComplete || "").toLowerCase() === "true",
+        uploadedRequiredDocumentCount: Number(r.uploadedRequiredDocumentCount || 0),
+        requiredDocumentCount: Number(r.requiredDocumentCount || 0),
+        missingRequiredDocuments: String(r.missingRequiredDocuments || ""),
         paymentEvidence: paymentEvidenceState,
         paymentEvidenceState: paymentEvidenceState,
         paymentVerified: paymentVerified,
@@ -861,6 +875,10 @@
         hasDocumentUploadEvidence: facts.hasDocumentUploadEvidence,
         documentState: facts.documentState,
         documentStateLabel: facts.documentStateLabel,
+        requiredDocumentUploadComplete: facts.requiredDocumentUploadComplete,
+        uploadedRequiredDocumentCount: facts.uploadedRequiredDocumentCount,
+        requiredDocumentCount: facts.requiredDocumentCount,
+        missingRequiredDocuments: facts.missingRequiredDocuments,
         paymentEvidence: facts.paymentEvidence,
         paymentEvidenceState: facts.paymentEvidenceState,
         paymentVerified: facts.paymentVerified,

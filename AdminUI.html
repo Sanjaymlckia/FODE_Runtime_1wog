@@ -2862,15 +2862,25 @@
 <?!= HtmlService.createHtmlOutputFromFile('AdminUI_SharedRowFacts').getContent(); ?>
     function opsLoadedDocumentUploadEvidence_(row){
       var r = row || {};
-      return !!opsFirstNonBlank_(
-        r.Birth_ID_Passport_File, r.Birth_ID_File, r.Passport_File, r.Passport_ID_File,
-        r.Latest_School_Report_File, r.School_Report_File, r.Report_Card_File,
-        r.Transfer_Certificate_File, r.Transfer_File,
-        r.Passport_Photo_File, r.Student_Photo_File, r.Photo_File,
-        r.Document_File, r.Documents_File, r.Document_Evidence_File,
-        r.Birth_ID_Passport_URL, r.Latest_School_Report_URL, r.Transfer_Certificate_URL, r.Passport_Photo_URL,
-        ""
-      );
+      return !!(opsHasUploadEvidenceLike_(r.Birth_ID_Passport_File)
+        || opsHasUploadEvidenceLike_(r.Birth_ID_File)
+        || opsHasUploadEvidenceLike_(r.Passport_File)
+        || opsHasUploadEvidenceLike_(r.Passport_ID_File)
+        || opsHasUploadEvidenceLike_(r.Latest_School_Report_File)
+        || opsHasUploadEvidenceLike_(r.School_Report_File)
+        || opsHasUploadEvidenceLike_(r.Report_Card_File)
+        || opsHasUploadEvidenceLike_(r.Transfer_Certificate_File)
+        || opsHasUploadEvidenceLike_(r.Transfer_File)
+        || opsHasUploadEvidenceLike_(r.Passport_Photo_File)
+        || opsHasUploadEvidenceLike_(r.Student_Photo_File)
+        || opsHasUploadEvidenceLike_(r.Photo_File)
+        || opsHasUploadEvidenceLike_(r.Document_File)
+        || opsHasUploadEvidenceLike_(r.Documents_File)
+        || opsHasUploadEvidenceLike_(r.Document_Evidence_File)
+        || opsHasUploadEvidenceLike_(r.Birth_ID_Passport_URL)
+        || opsHasUploadEvidenceLike_(r.Latest_School_Report_URL)
+        || opsHasUploadEvidenceLike_(r.Transfer_Certificate_URL)
+        || opsHasUploadEvidenceLike_(r.Passport_Photo_URL));
     }
     function opsHasUploadEvidenceLike_(value){
       if (value === null || value === undefined) return false;
@@ -2893,6 +2903,26 @@
       }
       return /^https?:\/\//i.test(raw) || /^[a-zA-Z0-9_-]{20,}$/.test(raw);
     }
+    function opsRequiredDocumentUploadSummary_(row){
+      var r = row || {};
+      var required = [
+        { field: "Birth_ID_Passport_File", value: r.Birth_ID_Passport_File },
+        { field: "Latest_School_Report_File", value: r.Latest_School_Report_File },
+        { field: "Passport_Photo_File", value: r.Passport_Photo_File }
+      ];
+      var uploaded = [];
+      var missing = [];
+      for (var i = 0; i !== required.length; i++) {
+        if (opsHasUploadEvidenceLike_(required[i].value)) uploaded.push(required[i].field);
+        else missing.push(required[i].field);
+      }
+      return {
+        requiredCount: required.length,
+        uploadedRequiredCount: uploaded.length,
+        missingRequiredDocuments: missing,
+        requiredDocumentUploadComplete: uploaded.length === required.length
+      };
+    }
     function opsDocumentStateFromRawRow_(row){
       var r = row || {};
       var docEvidence = opsDocumentEvidenceSummary_(r);
@@ -2900,18 +2930,19 @@
       var statusFields = opsFirstNonBlank_(r.Birth_ID_Status, r.Birth_Status, r.Report_Status, r.Photo_Status, r.Transfer_Status, r.Document_Review_Status, r.Eligibility_Status, "");
       var docText = String((rawDocStatus || "") + " " + statusFields + " " + (docEvidence && docEvidence.label || "")).toLowerCase();
       var docsVerified = opsIsYes_(r.Docs_Verified) || /verified|approved|cleared/.test(docText);
-      var hasDocumentUpload = opsLoadedDocumentUploadEvidence_(r);
+      var uploadSummary = opsRequiredDocumentUploadSummary_(r);
       var portalSubmitted = opsIsYes_(r.Portal_Submitted);
-      if (docsVerified) return "eligibility_cleared";
+      if (docsVerified) return "docs_verified";
       if (/correction|wrong|reject|invalid|resubmit|reupload/.test(docText)) return "document_correction_required";
-      if (hasDocumentUpload) return "uploaded_review_required";
-      if (/review required|eligibility review|pending eligibility|eligibility pending/.test(docText) && /upload|file|evidence/.test(docText)) return "uploaded_review_required";
+      if (uploadSummary.requiredDocumentUploadComplete) return "uploaded_review_required";
+      if (uploadSummary.uploadedRequiredCount > 0) return "partially_uploaded";
       if (/no file|not upload|missing|required|awaiting/.test(docText) || portalSubmitted) return "awaiting_uploads";
       return "unknown";
     }
     function opsDocumentStateLabel_(state){
       var s = String(state || "");
-      if (s === "eligibility_cleared" || s === "verified") return "Eligibility Cleared";
+      if (s === "docs_verified" || s === "eligibility_cleared" || s === "verified") return "Documents Verified";
+      if (s === "partially_uploaded") return "Partially Uploaded / Missing Required Documents";
       if (s === "uploaded_review_required") return "Uploaded / Review Required";
       if (s === "document_correction_required" || s === "correction_required") return "Document Correction Required";
       if (s === "awaiting_uploads") return "Awaiting Uploads / Document Evidence Pending";

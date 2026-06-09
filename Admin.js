@@ -3861,6 +3861,29 @@ function adminOpsHasUploadEvidence_(rowObj) {
   return false;
 }
 
+function adminOpsRequiredDocumentUploadSummary_(rowObj) {
+  var row = rowObj || {};
+  var required = [
+    { field: "Birth_ID_Passport_File", label: "Birth Certificate / NID / Passport" },
+    { field: "Latest_School_Report_File", label: "Latest School Reports / Documents" },
+    { field: "Passport_Photo_File", label: "Passport Size Colour Photo" }
+  ];
+  var uploaded = [];
+  var missing = [];
+  for (var i = 0; i < required.length; i++) {
+    var item = required[i];
+    if (hasUploadEvidence_(row[item.field], item.field)) uploaded.push(item.field);
+    else missing.push(item.field);
+  }
+  return {
+    requiredCount: required.length,
+    uploadedRequiredCount: uploaded.length,
+    missingRequiredDocuments: missing,
+    uploadedRequiredDocuments: uploaded,
+    requiredDocumentUploadComplete: uploaded.length === required.length
+  };
+}
+
 function adminOpsDroppedIneligibleReason_(rowObj) {
   var row = rowObj || {};
   var fields = [
@@ -3923,12 +3946,12 @@ function adminOpsDocumentStateFromRow_(rowObj) {
   try { computed = computeDocVerificationStatus_(row); } catch (_docErr) {}
   var docText = String((rawDocStatus || "") + " " + statusFields + " " + computed).toLowerCase();
   var docsVerified = adminOpsIsYes_(row.Docs_Verified) || computed === "Verified" || /verified|approved|cleared/.test(docText);
-  var hasDocumentUpload = adminOpsHasUploadEvidence_(row);
+  var uploadSummary = adminOpsRequiredDocumentUploadSummary_(row);
   var portalSubmitted = adminOpsIsYes_(row.Portal_Submitted);
-  if (docsVerified) return "eligibility_cleared";
+  if (docsVerified) return "docs_verified";
   if (adminOpsTextIncludes_(docText, /correction|wrong|reject|invalid|resubmit|reupload/)) return "document_correction_required";
-  if (hasDocumentUpload) return "uploaded_review_required";
-  if (adminOpsTextIncludes_(docText, /review required|eligibility review|pending eligibility|eligibility pending/) && adminOpsTextIncludes_(docText, /upload|file|evidence/)) return "uploaded_review_required";
+  if (uploadSummary.requiredDocumentUploadComplete) return "uploaded_review_required";
+  if (uploadSummary.uploadedRequiredCount > 0) return "partially_uploaded";
   if (adminOpsTextIncludes_(docText, /no file|not upload|missing|required|awaiting/) || portalSubmitted) return "awaiting_uploads";
   return "unknown";
 }
@@ -3949,7 +3972,7 @@ function adminOpsLifecycleStageKeyFromRow_(rowObj) {
   var invoiceRaised = !!adminOpsFirstNonBlank_(row.Books_Invoice_ID, row.Books_Invoice_Number, row.Books_Push_Status, row.Invoice_Email_Status);
   var docState = adminOpsDocumentStateFromRow_(row);
   var resolverDocState = "PENDING";
-  if (docState === "eligibility_cleared" || docState === "verified") resolverDocState = "VERIFIED";
+  if (docState === "eligibility_cleared" || docState === "verified" || docState === "docs_verified") resolverDocState = "VERIFIED";
   else if (docState === "document_correction_required") resolverDocState = "CORRECTION_REQUIRED";
   else if (docState === "uploaded_review_required") resolverDocState = "UNDER_REVIEW";
 
@@ -4187,6 +4210,9 @@ function admin_getReviewQueues(payload) {
         var paymentReceived = paymentEvidencePresent;
         var paymentVerified = paymentVerifiedRaw;
         var enrolledConfirmed = paymentVerified;
+        var opsRequiredDocsSummary = adminOpsRequiredDocumentUploadSummary_(rowObj);
+        var opsDocumentState = adminOpsDocumentStateFromRow_(rowObj);
+        var opsLifecycleStageKey = adminOpsLifecycleStageKeyFromRow_(rowObj);
         var docsQueueMatch = portalSubmitted && !docsVerified;
         var awaitingPaymentQueueMatch = docsVerified && !paymentVerified && !paymentEvidencePresent;
         var paymentsQueueMatch = docsVerified && !paymentVerified && paymentEvidencePresent;
@@ -4200,6 +4226,13 @@ function admin_getReviewQueues(payload) {
         qItem.Payment_Verified = paymentVerified ? "Yes" : "No";
         qItem.Enrolled_Confirmed = enrolledConfirmed ? "Yes" : "No";
         qItem.Fee_Receipt_File = receiptUrl;
+        qItem.opsDocumentState = opsDocumentState;
+        qItem.opsLifecycleStageKey = opsLifecycleStageKey;
+        qItem.hasDocumentUploadEvidence = adminOpsHasUploadEvidence_(rowObj);
+        qItem.requiredDocumentUploadComplete = !!opsRequiredDocsSummary.requiredDocumentUploadComplete;
+        qItem.uploadedRequiredDocumentCount = Number(opsRequiredDocsSummary.uploadedRequiredCount || 0);
+        qItem.requiredDocumentCount = Number(opsRequiredDocsSummary.requiredCount || 0);
+        qItem.missingRequiredDocuments = (opsRequiredDocsSummary.missingRequiredDocuments || []).join(", ");
         qItem.Registration_Complete = clean_(rowObj.Registration_Complete || "") === "Yes" ? "Yes" : "No";
         qItem.Books_Invoice_ID = clean_(rowObj.Books_Invoice_ID || "");
         qItem.Books_Invoice_Number = clean_(rowObj.Books_Invoice_Number || "");
@@ -4252,6 +4285,10 @@ function admin_getReviewQueues(payload) {
           paymentVerified: paymentVerified,
           paymentEvidencePresent: paymentEvidencePresent,
           receipt: paymentEvidencePresent,
+          opsDocumentState: opsDocumentState,
+          opsLifecycleStageKey: opsLifecycleStageKey,
+          uploadedRequiredDocumentCount: opsRequiredDocsSummary.uploadedRequiredCount,
+          missingRequiredDocuments: opsRequiredDocsSummary.missingRequiredDocuments,
           portalTs: clean_(rowObj.PortalLastUpdateAt || ""),
           docsQueue: docsQueueMatch,
           awaitingPaymentQueue: awaitingPaymentQueueMatch,
@@ -4267,6 +4304,8 @@ function admin_getReviewQueues(payload) {
           docsVerified: docsVerified,
           paymentVerifiedRaw: rowObj.Payment_Verified,
           paymentVerified: paymentVerified,
+          opsDocumentState: opsDocumentState,
+          opsLifecycleStageKey: opsLifecycleStageKey,
           paymentEvidencePresent: paymentEvidencePresent,
           awaitingPaymentQueue: awaitingPaymentQueueMatch,
           hasActivity: hasActivity
@@ -4278,6 +4317,8 @@ function admin_getReviewQueues(payload) {
             docsVerified: docsVerified,
             paymentEvidencePresent: paymentEvidencePresent,
             paymentVerified: paymentVerified,
+            opsDocumentState: opsDocumentState,
+            opsLifecycleStageKey: opsLifecycleStageKey,
             docsQueue: docsQueueMatch,
             awaitingPaymentQueue: awaitingPaymentQueueMatch,
             paymentsQueue: paymentsQueueMatch,
@@ -4342,6 +4383,13 @@ function admin_getReviewQueues(payload) {
             docsFollowupSentAt: safeStr_(it.docsFollowupSentAt || ""),
             Portal_Submitted: clean_(it.Portal_Submitted || ""),
             Docs_Verified: clean_(it.Docs_Verified || ""),
+            opsDocumentState: clean_(it.opsDocumentState || ""),
+            opsLifecycleStageKey: clean_(it.opsLifecycleStageKey || ""),
+            hasDocumentUploadEvidence: !!it.hasDocumentUploadEvidence,
+            requiredDocumentUploadComplete: !!it.requiredDocumentUploadComplete,
+            uploadedRequiredDocumentCount: Number(it.uploadedRequiredDocumentCount || 0),
+            requiredDocumentCount: Number(it.requiredDocumentCount || 0),
+            missingRequiredDocuments: clean_(it.missingRequiredDocuments || ""),
             Payment_Received: clean_(it.Payment_Received || ""),
             Payment_Verified: clean_(it.Payment_Verified || ""),
             Enrolled_Confirmed: clean_(it.Enrolled_Confirmed || ""),
