@@ -6075,7 +6075,9 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
         continue;
       }
       blockedTotal++;
-      incrementStageBatchReason_(blockedByReason, resolved && (resolved.blockCode || resolved.code || "BLOCKED"));
+      var blockedCode = clean_(resolved && (resolved.blockCode || resolved.code || "BLOCKED"));
+      var blockedReason = clean_(resolved && (resolved.blockReason || resolved.message || resolved.error || blockedCode));
+      incrementStageBatchReason_(blockedByReason, blockedCode);
       pushStageBatchSample_(blockedApplicantIdsSample, applicantId);
     }
     if (!deterministicPreview) break;
@@ -6177,7 +6179,13 @@ function admin_previewStageBatch(payload) {
       requireOperationsAdmin_(adminEmail);
       var p = payload && typeof payload === "object" ? payload : {};
       var propertyGuard = buildScriptPropertyRegressionGuard_();
+      var propertyGuardWarning = "";
+      var propertyGuardWarningText = "";
       if (!propertyGuard.ok) {
+        if (propertyGuard.warning === "SCRIPT_PROPERTY_COUNT_GREW") {
+          propertyGuardWarning = propertyGuard.warning;
+          propertyGuardWarningText = "Script property count is above the cleanup baseline; batch preview is allowed, but property cleanup review is recommended.";
+        } else {
         stageBatchPreviewLog_("MANUAL_BATCH_PREVIEW_BLOCKED", {
           batchId: "",
           stage: clean_(p.stage || ""),
@@ -6199,6 +6207,7 @@ function admin_previewStageBatch(payload) {
           previewLimit: Number(p.limit || 0),
           propertyGuard: propertyGuard
         }));
+        }
       }
       if (isBatchPreviewModeEnabled_() !== true) {
         stageBatchPreviewLog_("MANUAL_BATCH_PREVIEW_BLOCKED", {
@@ -6282,10 +6291,14 @@ function admin_previewStageBatch(payload) {
       var writtenAt = new Date().toISOString();
       var assemblyStartedAtMs = new Date().getTime();
       var emptyReason = clean_(cohort.emptyReason || "");
+      var previewWarnings = [];
+      if (limitMeta.warning) previewWarnings.push(limitMeta.warning);
+      if (propertyGuardWarningText) previewWarnings.push(propertyGuardWarningText);
       var out = stageBatchPreviewResponse_({
         ok: true,
-        message: emptyReason || (limitMeta.warning ? ("Preview ready. " + limitMeta.warning) : "Preview ready."),
-        warning: limitMeta.warning,
+        message: emptyReason || (previewWarnings.length ? ("Preview ready. " + previewWarnings.join(" ")) : "Preview ready."),
+        warning: previewWarnings.length ? previewWarnings[0] : "",
+        warnings: previewWarnings,
         stage: stage,
         priority: priority,
         batchId: batchId,
@@ -6329,6 +6342,7 @@ function admin_previewStageBatch(payload) {
         blockedByReason: cohort.blockedByReason || {},
         eligibleApplicantIdsSample: [],
         blockedApplicantIdsSample: Array.isArray(cohort.blockedApplicantIdsSample) ? cohort.blockedApplicantIdsSample.slice(0, 10) : [],
+        propertyGuard: propertyGuard,
         emptyReason: emptyReason,
         eligibleCountBounded: cohort.eligibleCountBounded === true,
         elapsedMs: Number(cohort.elapsedMs || 0),

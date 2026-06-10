@@ -1866,7 +1866,7 @@
       <div id="docsSendFailures" class="sendSummary hidden" style="margin-top:6px;"></div>
     </div>
 
-    <div class="card">
+    <div id="legacySearchPanel" class="card hidden">
       <div class="row">
         <div class="field">
           <label>ApplicantID</label>
@@ -1884,7 +1884,7 @@
       <div id="bounceScanSummary" class="sendSummary hidden" style="margin-top:10px;"></div>
     </div>
 
-    <div class="card">
+    <div id="legacyResultsPanel" class="card hidden">
       <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
         <div style="font-weight:900;">Results</div>
         <div class="muted" style="font-size:12px;">Search by ApplicantID for exact match.</div>
@@ -5933,7 +5933,7 @@ function onStageSelected(stageIndex){
     clearBatchSelection_(false);
     renderStageDashboard_(stageDashboardState);
     renderBatchPanel();
-    search();
+    clearResultsPanel_();
     return;
   }
   if (selectedStageFilter === stage) {
@@ -5950,7 +5950,7 @@ function onStageSelected(stageIndex){
   }
   renderStageDashboard_(stageDashboardState);
   renderBatchPanel();
-  search();
+  clearResultsPanel_();
 }
 function renderBatchPreviewDiagnostics_(res){
   var panel = stageBatchSurfaceEl_("opsStageBatchPreviewDiagnostics", "stageBatchPreviewDiagnostics");
@@ -6041,15 +6041,15 @@ function renderStageBatchSummary_(res){
       parts.push('<details style="margin-top:8px;"><summary>Parity Gate Details</summary><pre style="margin-top:8px;">' + esc(JSON.stringify(forensicPayload, null, 2)) + '</pre></details>');
     }
   } else if (isPreview) {
-    if (Number(res.count || 0) > 0) parts.push('<div style="font-weight:800;">Stage Batch Preview Result</div>');
-    else parts.push('<div style="font-weight:800;">Stage Batch Preview Result</div>');
-    parts.push('<div class="muted" style="margin-top:6px;font-size:12px;">Preview Cohort output appears here. Review Queues remains a separate operational listing.</div>');
-    parts.push('<div style="margin-top:6px;">Selected Stage: ' + esc(String(res.stage || batchState.selectedStage || "")) + ' | Message: ' + esc(String(res.messageType || "(none)")) + ' | Sendable Stage: ' + esc(batchState.sendable === true ? "YES" : "NO") + '</div>');
-    parts.push('<div style="margin-top:6px;">Requested Batch Size: ' + esc(String(Number(res.previewLimit || res.limit || 0))) + ' | Eligible Preview Count: ' + esc(String(Number(res.count || 0))) + ' | Candidate Count: ' + esc(String(Number(res.candidateCount != null ? res.candidateCount : res.count || 0))) + '</div>');
+    parts.push('<div style="font-weight:800;">Stage Batch Preview Result</div>');
+    parts.push('<div class="muted" style="margin-top:6px;font-size:12px;">This summary is the authoritative preview for what Send Stage Batch will use from the backend preview cache. Review Queues remains a separate operational listing.</div>');
+    parts.push('<div style="margin-top:6px;">Selected Stage / Queue: ' + esc(String(res.stage || batchState.selectedStage || "")) + ' | Message Type: ' + esc(String(res.messageType || "(none)")) + '</div>');
+    parts.push('<div style="margin-top:6px;">Preview Request ID: ' + esc(String(res.requestId || res.previewRequestId || "")) + ' | Candidate Hash Present: ' + esc(!!String(res.candidateHash || "") ? "YES" : "NO") + ' | Sendable Status: ' + esc(batchState.sendable === true ? "SENDABLE" : "BLOCKED") + '</div>');
+    parts.push('<div style="margin-top:6px;">Total Candidate Count: ' + esc(String(Number(res.candidateCount != null ? res.candidateCount : res.count || 0))) + ' | Eligible Preview Count: ' + esc(String(Number(res.count || 0))) + ' | Requested Batch Size: ' + esc(String(Number(res.previewLimit || res.limit || 0))) + '</div>');
     if (res.batchId) parts.push('<div style="margin-top:6px;">Batch ID: ' + esc(String(res.batchId || "")) + '</div>');
     parts.push('<div style="margin-top:6px;">Request ID: ' + esc(String(res.requestId || "")) + ' | Client Elapsed: ' + esc(String(Number(res.clientElapsedMs || 0))) + ' ms | Server Elapsed: ' + esc(String(Number(res.elapsedMs || 0))) + ' ms</div>');
     parts.push('<div style="margin-top:6px;">Message: ' + esc(String(res.message || "Preview ready.")) + '</div>');
-    parts.push('<div style="margin-top:6px;">Eligible Unsent Found: ' + esc(String(Number(res.eligibleUnsentFound || 0))) + ' | Blocked: ' + esc(String(Number(res.blocked || 0))) + ' | Already Processed: ' + esc(String(Number(res.alreadyProcessedCount || 0))) + ' | Already SENT Excluded: ' + esc(String(Number(res.alreadySentExcluded || 0))) + ' | Failed Excluded: ' + esc(String(Number(res.failedExcluded || 0))) + '</div>');
+    parts.push('<div style="margin-top:6px;">Eligible Unsent Found: ' + esc(String(Number(res.eligibleUnsentFound || 0))) + ' | Blocked Count: ' + esc(String(Number(res.blocked || 0))) + ' | Already Processed: ' + esc(String(Number(res.alreadyProcessedCount || 0))) + ' | Already SENT Excluded: ' + esc(String(Number(res.alreadySentExcluded || 0))) + ' | Failed Excluded: ' + esc(String(Number(res.failedExcluded || 0))) + '</div>');
     parts.push('<div style="margin-top:6px;">Selection Mode: next eligible unsent records' + (res.offsetIgnored ? ' | Diagnostic Offset Ignored: YES' : ' | Diagnostic Offset Ignored: NO') + '</div>');
     if (!Number(res.count || 0) && res.emptyReason) parts.push('<div style="margin-top:6px;">Reason: ' + esc(String(res.emptyReason || "")) + '</div>');
     if (blockedList) parts.push('<div style="margin-top:6px;">Blocked By Reason: ' + blockedList + '</div>');
@@ -6138,10 +6138,14 @@ function renderBatchPanel(){
   if (previewBtn) {
     previewBtn.disabled = !selectedStage || batchState.busy || !operationalMode;
     previewBtn.textContent = batchState.busy && batchState.action === "preview" ? "Previewing..." : "Preview Cohort";
+    previewBtn.style.opacity = previewBtn.disabled ? "0.55" : "1";
   }
   if (sendBtn) {
     sendBtn.disabled = !previewReady || batchState.busy || !operationalMode;
     sendBtn.textContent = batchState.busy && batchState.action === "send" ? "Sending..." : "Send Stage Batch";
+    sendBtn.style.opacity = sendBtn.disabled ? "0.55" : "1";
+    sendBtn.setAttribute("aria-disabled", sendBtn.disabled ? "true" : "false");
+    sendBtn.title = sendBtn.disabled ? (previewReady ? "Send is temporarily unavailable." : "Preview Cohort must complete successfully before send is enabled.") : "Enabled only after successful fresh preview.";
   }
   if (noteEl) {
     if (batchState.busy && batchState.action === "preview") noteEl.textContent = "Loading the next eligible unsent cohort...";
@@ -7022,14 +7026,19 @@ function renderStageDashboard_(items, emptyMessage){
       }
     }
 
-    function clearSearch(){
-      document.getElementById("qApplicantId").value = "";
-      document.getElementById("qEmail").value = "";
-      document.getElementById("tbody").innerHTML = `<tr><td colspan="8" class="muted">No results yet.</td></tr>`;
+    function clearResultsPanel_(){
+      var body = document.getElementById("tbody");
+      if (body) body.innerHTML = `<tr><td colspan="8" class="muted">No results yet.</td></tr>`;
       lastSearchResults = [];
       lastSearchRows = [];
       clearDocsSelection_();
       setMsg("msg","");
+    }
+
+    function clearSearch(){
+      document.getElementById("qApplicantId").value = "";
+      document.getElementById("qEmail").value = "";
+      clearResultsPanel_();
     }
 
     function setReviewButtonLoading_(btn, isLoading){
