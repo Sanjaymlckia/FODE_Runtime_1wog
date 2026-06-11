@@ -1108,8 +1108,8 @@
           <div class="opsSectionHeader"><div><h3>Bulk Tools</h3><p>Admin/Super Admin action layer for bounded cohort preview. Lifecycle mapping stays separate above; live send remains gated by preview, role, caps, and backend checks.</p></div><span class="opsStatusPill warn">Admin / Super Admin</span></div>
           <div class="opsMetricGrid">
             <div class="opsMetric"><div class="k">Selected stage</div><div class="v" id="opsStageBatchSelectedStage">&mdash;</div></div>
-            <div class="opsMetric"><div class="k">Eligible records</div><div class="v" id="opsStageBatchEligible">&mdash;</div></div>
-            <div class="opsMetric"><div class="k">Blocked records</div><div class="v" id="opsStageBatchBlocked">&mdash;</div></div>
+            <div class="opsMetric"><div class="k">Mail Eligible Now</div><div class="v" id="opsStageBatchEligible">&mdash;</div></div>
+            <div class="opsMetric"><div class="k">Blocked for Mail</div><div class="v" id="opsStageBatchBlocked">&mdash;</div></div>
             <div class="opsMetric"><div class="k">Preview availability</div><div class="v" id="opsStageBatchPreviewAvailability">&mdash;</div></div>
             <div class="opsMetric"><div class="k">Send availability</div><div class="v" id="opsStageBatchSendAvailability">&mdash;</div></div>
             <div class="opsMetric"><div class="k">Priority</div><div class="v" id="opsStageBatchPriority">&mdash;</div></div>
@@ -1128,8 +1128,8 @@
             <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Choose Lifecycle Stage</button>
           </div>
           <div class="opsInspectPanel" id="opsStageBatchInlineNote">Bulk communication requires Operations Admin or Super Admin authority, plus preview, confirmation, caps, and backend gates.</div>
-          <div class="opsInspectPanel" style="margin-top:10px;">Preview Cohort Result appears below in the Stage Batch Preview Result / Diagnostics panel. It does not replace the Review Queues table.</div>
-          <div class="opsSectionHeader" style="margin-top:12px;"><div><h3 style="margin:0;font-size:15px;">Stage Batch Preview Result</h3><p style="margin:4px 0 0;">Eligible, blocked, and diagnostic preview output renders here after Preview Cohort completes.</p></div><span class="opsStatusPill info">Separate from Review Queues</span></div>
+          <div class="opsInspectPanel" style="margin-top:10px;">Review Queues show operational workload. Not all rows are currently mail-eligible. Preview Cohort Result appears below in the Stage Batch Preview Result / Diagnostics panel.</div>
+          <div class="opsSectionHeader" style="margin-top:12px;"><div><h3 style="margin:0;font-size:15px;">Stage Batch Preview Result</h3><p style="margin:4px 0 0;">Stage Batch Preview shows mail eligibility for the selected stage.</p></div><span class="opsStatusPill info">Separate from Review Queues</span></div>
           <div id="opsStageBatchSummary" class="opsResultBox hidden" tabindex="-1" aria-live="polite"></div>
           <div id="opsStageBatchPreviewDiagnostics" class="opsResultBox hidden" tabindex="-1" aria-live="polite"></div>
         </div>
@@ -1806,7 +1806,7 @@
 
     <div id="stageBatchPanel" class="card queue-panel">
       <h3>Stage Batch Actions</h3>
-      <div class="muted" style="margin-bottom:10px;">Preview Cohort Result appears below in the Stage Batch Preview Result / Diagnostics panel. It does not replace the Review Queues table.</div>
+      <div class="muted" style="margin-bottom:10px;">Review Queues show operational workload. Not all rows are currently mail-eligible. Preview Cohort Result appears below in the Stage Batch Preview Result / Diagnostics panel.</div>
       <div class="commMeta">
         <div class="box"><div class="k">Selected Stage</div><div class="v" id="stageBatchSelectedStage">&mdash;</div></div>
         <div class="box"><div class="k">Priority</div><div class="v" id="stageBatchPriority">&mdash;</div></div>
@@ -1828,7 +1828,7 @@
         <div id="stageBatchInlineNote" class="muted" style="font-size:12px;">Standard production stage sends automatically use the next eligible unsent records. Diagnostic offset is ignored unless a separate diagnostic flow is introduced.</div>
       </div>
       <div style="font-weight:800;margin-top:12px;">Preview Cohort Result</div>
-      <div class="muted" style="font-size:12px;margin-top:4px;">Use this result panel to inspect selected stage, requested batch size, eligible sample, blocked reasons, and diagnostics. Review Queues remains a separate operational listing.</div>
+      <div class="muted" style="font-size:12px;margin-top:4px;">Stage Batch Preview shows mail eligibility for the selected stage. Review Queues remains a separate operational listing.</div>
       <div id="stageBatchSummary" class="sendSummary hidden" tabindex="-1" aria-live="polite"></div>
       <div id="stageBatchPreviewDiagnostics" class="sendSummary hidden">
         <div style="font-weight:800;">Preview Diagnostics</div>
@@ -1852,6 +1852,7 @@
 
     <div id="reviewQueuesPanel" class="card queue-panel">
       <h3>Review Queues</h3>
+      <div class="muted" style="margin-bottom:10px;">Review Queues show operational workload. Not all rows are currently mail-eligible.</div>
       <div id="queueFdReceived" class="queue-section"></div>
       <div id="queueDocs" class="queue-section"></div>
       <div id="queueAwaitingPayment" class="queue-section"></div>
@@ -6042,7 +6043,7 @@ function renderStageBatchSummary_(res){
     }
   } else if (isPreview) {
     parts.push('<div style="font-weight:800;">Stage Batch Preview Result</div>');
-    parts.push('<div class="muted" style="margin-top:6px;font-size:12px;">This summary is the authoritative preview for what Send Stage Batch will use from the backend preview cache. Review Queues remains a separate operational listing.</div>');
+    parts.push('<div class="muted" style="margin-top:6px;font-size:12px;">This summary is the authoritative mail-eligibility preview for the selected stage. Review Queues remains a separate operational listing.</div>');
     parts.push('<div style="margin-top:6px;">Selected Stage / Queue: ' + esc(String(res.stage || batchState.selectedStage || "")) + ' | Message Type: ' + esc(String(res.messageType || "(none)")) + '</div>');
     parts.push('<div style="margin-top:6px;">Preview Request ID: ' + esc(String(res.requestId || res.previewRequestId || "")) + ' | Candidate Hash Present: ' + esc(!!String(res.candidateHash || "") ? "YES" : "NO") + ' | Sendable Status: ' + esc(batchState.sendable === true ? "SENDABLE" : "BLOCKED") + '</div>');
     parts.push('<div style="margin-top:6px;">Total Candidate Count: ' + esc(String(Number(res.candidateCount != null ? res.candidateCount : res.count || 0))) + ' | Eligible Preview Count: ' + esc(String(Number(res.count || 0))) + ' | Requested Batch Size: ' + esc(String(Number(res.previewLimit || res.limit || 0))) + '</div>');
@@ -6051,7 +6052,8 @@ function renderStageBatchSummary_(res){
     parts.push('<div style="margin-top:6px;">Message: ' + esc(String(res.message || "Preview ready.")) + '</div>');
     parts.push('<div style="margin-top:6px;">Eligible Unsent Found: ' + esc(String(Number(res.eligibleUnsentFound || 0))) + ' | Blocked Count: ' + esc(String(Number(res.blocked || 0))) + ' | Already Processed: ' + esc(String(Number(res.alreadyProcessedCount || 0))) + ' | Already SENT Excluded: ' + esc(String(Number(res.alreadySentExcluded || 0))) + ' | Failed Excluded: ' + esc(String(Number(res.failedExcluded || 0))) + '</div>');
     parts.push('<div style="margin-top:6px;">Selection Mode: next eligible unsent records' + (res.offsetIgnored ? ' | Diagnostic Offset Ignored: YES' : ' | Diagnostic Offset Ignored: NO') + '</div>');
-    if (!Number(res.count || 0) && res.emptyReason) parts.push('<div style="margin-top:6px;">Reason: ' + esc(String(res.emptyReason || "")) + '</div>');
+    if (!Number(res.count || 0)) parts.push('<div style="margin-top:6px;">Reason: No applicants are currently mail-eligible for this stage. Review Queue rows may still appear as part of operational workload.</div>');
+    else if (res.emptyReason) parts.push('<div style="margin-top:6px;">Reason: ' + esc(String(res.emptyReason || "")) + '</div>');
     if (blockedList) parts.push('<div style="margin-top:6px;">Blocked By Reason: ' + blockedList + '</div>');
     if (Array.isArray(res.eligibleApplicantIdsSample) && res.eligibleApplicantIdsSample.length) parts.push('<div style="margin-top:6px;">Eligible Sample: ' + esc(res.eligibleApplicantIdsSample.join(', ')) + '</div>');
     if (Array.isArray(res.blockedApplicantIdsSample) && res.blockedApplicantIdsSample.length) parts.push('<div style="margin-top:6px;">Blocked Sample: ' + esc(res.blockedApplicantIdsSample.join(', ')) + '</div>');
@@ -6474,7 +6476,7 @@ function renderStageDashboard_(items, emptyMessage){
           '<div style="margin-top:8px;">' + renderPriorityBadge_(priority) + '</div>' +
           '<div class="stageCardMeta">' +
             '<span>' + esc(String(Number(item && item.total || 0))) + ' total</span>' +
-            '<span>' + esc(String(Number(item && item.actionable || 0))) + ' actionable</span>' +
+            '<span>' + esc(String(Number(item && item.actionable || 0))) + ' review queue visible</span>' +
             '<span>' + esc(String(Number(item && item.blocked || 0))) + ' blocked</span>' +
           '</div>' +
         '</button>';

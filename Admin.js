@@ -3771,6 +3771,235 @@ function stageAggregationSnapshot_(rowObj) {
   };
 }
 
+function stageBatchTraceFirstDivergence_(info) {
+  var data = info && typeof info === "object" ? info : {};
+  if (data.stageMatch !== true) {
+    return {
+      functionName: "collectStageBatchCohort_",
+      condition: "snapshot.stage !== selectedStage",
+      reason: "Preview excludes the row before resolver checks because the selected stage does not match the row lifecycle stage."
+    };
+  }
+  if (!clean_(data.messageType || "")) {
+    return {
+      functionName: "collectStageBatchCohort_",
+      condition: "!messageType",
+      reason: "Preview stage has no supported batch message type."
+    };
+  }
+  if (data.priorSuccessExcluded === true) {
+    return {
+      functionName: "stageBatchShouldExcludePriorSuccessDefault_",
+      condition: "priorSuccessExcluded === true",
+      reason: "Preview excludes the row because prior send state already satisfies the durable success rule for this stage/message type."
+    };
+  }
+  if (data.failedExcluded === true) {
+    return {
+      functionName: "stageBatchShouldExcludeFailedDefault_",
+      condition: "failedExcluded === true",
+      reason: "Preview excludes the row because prior failure state blocks automatic retry for this message type."
+    };
+  }
+  if (data.resolverEligible !== true) {
+    return {
+      functionName: "resolveApplicantMessageContextFromRow_",
+      condition: clean_(data.resolverBlockCode || "") || "eligible !== true",
+      reason: clean_(data.resolverBlockReason || "") || "Resolver marked the row ineligible."
+    };
+  }
+  if (data.dashboardCanSendNow !== true) {
+    return {
+      functionName: "deriveApplicantActionability_",
+      condition: "dashboard canSendNow !== true",
+      reason: "Dashboard does not currently classify the row as actionable."
+    };
+  }
+  return {
+    functionName: "",
+    condition: "",
+    reason: "No divergence detected for the selected stage and message type."
+  };
+}
+
+function admin_traceStageBatchEligibility(payload) {
+  var dbgId = makeDebugId_();
+  try {
+    var adminEmail = getCallerEmail_();
+    if (!isAdmin_(adminEmail)) {
+      return {
+        ok: false,
+        debugId: dbgId,
+        code: "ACCESS_DENIED",
+        message: "Access denied"
+      };
+    }
+    requireSuperAdmin_(adminEmail);
+
+    var p = payload && typeof payload === "object" ? payload : {};
+    var applicantId = clean_(p.applicantId || p.ApplicantID || "");
+    var selectedStage = normalizeStageBatchStage_(p.stage || p.selectedStage || "");
+    if (!applicantId) {
+      return {
+        ok: false,
+        debugId: dbgId,
+        code: "MISSING_APPLICANT_ID",
+        message: "ApplicantID is required"
+      };
+    }
+
+    var sh = openDataSheet_();
+    var rowNumber = findRowByApplicantId_(sh, applicantId);
+    if (!rowNumber) {
+      return {
+        ok: false,
+        debugId: dbgId,
+        code: "APPLICANT_NOT_FOUND",
+        message: "Applicant not found",
+        applicantId: applicantId
+      };
+    }
+
+    var rowObj = getRowObject_(sh, rowNumber);
+    var dashboardSnapshot = stageAggregationSnapshot_(rowObj);
+    var dashboardStage = clean_(dashboardSnapshot.stage || "");
+    var comparisonStage = selectedStage || dashboardStage;
+    var messageType = normalizeApplicantMessageType_(getBatchMessageTypeForStage_(comparisonStage) || "");
+    var actorRole = getAdminRole_(adminEmail);
+    var communicationState = deriveCommunicationState_(rowObj, messageType, {
+      applicantId: applicantId
+    });
+    var baseState = communicationState && communicationState.base ? communicationState.base : {};
+    var dashboardActionability = deriveApplicantActionability_(rowObj, dashboardStage, {
+      getEffectiveEmail: stageAggregationEffectiveEmail_,
+      isValidEmail: stageAggregationIsValidEmail_,
+      getRecommendedMessageType: stageAggregationRecommendedMessageType_,
+      resolveEligibility: false
+    });
+    var stageMatch = !comparisonStage || clean_(dashboardStage).toUpperCase() === clean_(comparisonStage).toUpperCase();
+    var inviteStatefulFlow = comparisonStage === "INVITE_PENDING" || messageType === "legacy_invite";
+    var priorSuccessExcluded = stageMatch && !!messageType && stageBatchShouldExcludePriorSuccessDefault_(rowObj, comparisonStage, messageType);
+    var failedExcluded = stageMatch && !!messageType && inviteStatefulFlow && stageBatchShouldExcludeFailedDefault_(rowObj, messageType);
+    var resolver = null;
+    if (stageMatch && messageType && !priorSuccessExcluded && !failedExcluded) {
+      resolver = resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sh, messageType, {
+        action: "preview",
+        actorEmail: adminEmail,
+        actorRole: actorRole,
+        applicantId: applicantId,
+        debugId: dbgId,
+        requestId: dbgId
+      });
+    }
+
+    var previewIncluded = stageMatch && !!messageType && !priorSuccessExcluded && !failedExcluded && !!(resolver && resolver.eligible);
+    var firstDivergence = stageBatchTraceFirstDivergence_({
+      stageMatch: stageMatch,
+      messageType: messageType,
+      priorSuccessExcluded: priorSuccessExcluded,
+      failedExcluded: failedExcluded,
+      resolverEligible: !!(resolver && resolver.eligible),
+      resolverBlockCode: resolver && resolver.blockCode,
+      resolverBlockReason: resolver && resolver.blockReason,
+      dashboardCanSendNow: dashboardActionability.canSendNow === true
+    });
+
+    return {
+      ok: true,
+      debugId: dbgId,
+      helper: "admin_traceStageBatchEligibility",
+      readOnly: true,
+      superAdminOnly: true,
+      applicantId: applicantId,
+      rowNumber: Number(rowNumber || 0),
+      selectedStage: comparisonStage,
+      dashboardPath: [
+        "admin_getStageAggregation()",
+        "stageAggregationSnapshot_()",
+        "deriveApplicantActionability_(..., { resolveEligibility: false })"
+      ],
+      previewPath: [
+        "admin_previewStageBatch()",
+        "collectStageBatchCohort_()",
+        "resolveApplicantMessageContextFromRow_()"
+      ],
+      rowState: {
+        effectiveEmail: clean_(baseState.effectiveEmail || stageAggregationEffectiveEmail_(rowObj)),
+        emailStatus: clean_(rowObj.Email_Status || ""),
+        lastContactType: clean_(rowObj.Last_Contact_Type || ""),
+        lastContactResult: clean_(rowObj.Last_Contact_Result || ""),
+        lastContactedAt: clean_(rowObj.Last_Contacted_At || ""),
+        emailNextActionDate: clean_(rowObj.Email_Next_Action_Date || ""),
+        bounceFlag: baseState.bounceFlag === true || isCampaignBounceFlagTrue_(rowObj.Email_Bounce_Flag),
+        bounceReason: clean_(baseState.bounceReason || rowObj.Email_Bounce_Reason || ""),
+        doNotContact: clean_(baseState.emailStatus || normalizeEmailStatus_(rowObj.Email_Status || "")) === "DO_NOT_CONTACT",
+        hasEffectiveEmail: baseState.hasEffectiveEmail === true || !!clean_(stageAggregationEffectiveEmail_(rowObj)),
+        hasValidEffectiveEmail: baseState.hasValidEffectiveEmail === true || stageAggregationIsValidEmail_(stageAggregationEffectiveEmail_(rowObj)),
+        cooldownActive: communicationState.cooldownActive === true,
+        cooldownLastSentAt: clean_(communicationState.cooldownLastSentAt || "")
+      },
+      dashboard: {
+        stage: dashboardStage,
+        actionableMeaning: "operator_actionable",
+        commStatus: clean_(dashboardActionability.commStatus || dashboardSnapshot.commStatus || ""),
+        canSendNow: dashboardActionability.canSendNow === true,
+        recommendedMessageType: clean_(dashboardActionability.recommendedMessageType || ""),
+        actionableReason: dashboardActionability.canSendNow === true
+          ? "Dashboard counts this row as operator-actionable under resolveEligibility=false."
+          : clean_(dashboardActionability.blockReason || "")
+      },
+      preview: {
+        selectedStage: comparisonStage,
+        messageType: messageType,
+        stageMatch: stageMatch,
+        priorSuccessExcluded: priorSuccessExcluded,
+        failedExcluded: failedExcluded,
+        included: previewIncluded,
+        exclusionReason: previewIncluded ? "" : clean_(
+          (firstDivergence && firstDivergence.reason) ||
+          (resolver && resolver.blockReason) ||
+          (!stageMatch ? "Selected stage does not match row lifecycle stage." : "")
+        ),
+        resolver: resolver ? {
+          eligible: resolver.eligible === true,
+          blockCode: clean_(resolver.blockCode || ""),
+          blockReason: clean_(resolver.blockReason || ""),
+          messageType: clean_(resolver.messageType || ""),
+          communicationFamily: clean_(resolver.communicationFamily || ""),
+          portalSubmittedActive: resolver.portalSubmittedActive === true,
+          docsVerified: resolver.docsVerified === true,
+          paymentVerified: resolver.paymentVerified === true
+        } : {
+          eligible: false,
+          blockCode: stageMatch ? (messageType ? (priorSuccessExcluded ? "PRIOR_SUCCESS_EXCLUDED" : (failedExcluded ? "FAILED_RETRY_EXCLUDED" : "")) : "UNKNOWN_MESSAGE_TYPE") : "STAGE_MISMATCH",
+          blockReason: clean_(firstDivergence.reason || "")
+        }
+      },
+      firstDivergence: firstDivergence,
+      analysis: {
+        dashboardActionableMeaning: "Dashboard actionable currently means operator-actionable / needs attention, not guaranteed batch-mail eligible.",
+        previewEligibilityStricter: true,
+        shouldShowSeparateCounts: true,
+        shouldRenameReminderDueIfNeeded: true,
+        opsUsesSameBackendPath: true,
+        sharedBackendFixBenefitsOps: true
+      },
+      opsImpact: {
+        sharedBackendPreviewContract: true,
+        uiChangesRequiredForThisTrace: false,
+        notes: "OPS preview buttons call the same previewStageBatchUi_() path backed by admin_previewStageBatch()."
+      }
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      debugId: dbgId,
+      code: "TRACE_HELPER_ERROR",
+      message: String(e && e.message ? e.message : e)
+    };
+  }
+}
+
 function admin_getStageAggregation(payload) {
   var adminEmail = getCallerEmail_();
   if (!isAdmin_(adminEmail)) throw new Error("Access denied");
@@ -5878,15 +6107,15 @@ function stageBatchEmptyReason_(cohort) {
   if (eligibleUnsentTotal > 0) return "";
   if (!clean_(info.messageType || "")) return "No batch message is supported for this stage.";
   if (totalInStage <= 0) return "No applicants are currently in this stage.";
-  if (alreadySentExcluded >= totalInStage) return "No eligible unsent invite candidates found. All rows in this stage are already marked SENT.";
+  if (alreadySentExcluded >= totalInStage) return "Stage is populated, but all rows are already excluded by prior send state.";
   if (alreadySentExcluded + failedExcluded >= totalInStage && blockedTotal <= 0) {
-    return "No eligible unsent invite candidates found. Remaining rows are already sent or excluded from automatic retry.";
+    return "Stage is populated, but remaining rows are excluded by prior send state or automatic retry rules.";
   }
   var topReason = Object.keys(blockedByReason).sort(function(a, b) {
     return Number(blockedByReason[b] || 0) - Number(blockedByReason[a] || 0);
   })[0] || "";
-  if (topReason) return "No eligible unsent invite candidates found under current rules. Primary block: " + topReason + ".";
-  return "No eligible unsent invite candidates found under current rules.";
+  if (topReason) return "Stage is populated, but no send-eligible candidates remain under current rules. Primary block: " + topReason + ".";
+  return "Stage is populated, but no send-eligible candidates remain under current rules.";
 }
 
 function getStageCursorKey_(stage, messageType) {
@@ -6020,9 +6249,6 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
       nextCursor = r + 2;
       var applicantId = clean_(rowObj.ApplicantID || "");
       if (!applicantId) continue;
-      if (clean_(rowObj.Email_Status || "").toUpperCase() === "SENT") {
-        continue;
-      }
       var candidateStartedAtMs = new Date().getTime();
       var snapshot = stageAggregationSnapshot_(rowObj);
       phaseTimings.candidateSelectionMs += new Date().getTime() - candidateStartedAtMs;
