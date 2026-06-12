@@ -3435,6 +3435,9 @@ function buildOperationalDashboardMetrics_() {
     ok: true,
     formsReceivedToday: 0,
     pendingIntakeReview: 0,
+    openLifecycleRows: 0,
+    rowLoggedCommunicationsToday: 0,
+    emailRowsSentToday: 0,
     docsPending: 0,
     paymentPending: 0,
     emailSentToday: 0,
@@ -3452,10 +3455,14 @@ function buildOperationalDashboardMetrics_() {
     if (!clean_(rowObj.ApplicantID || "")) continue;
     if (isSameLocalDate_(rowObj.Timestamp || rowObj.timestamp || rowObj.adapter_timestamp || rowObj.Created_At || rowObj.PortalTokenIssuedAt || "", now)) out.formsReceivedToday++;
     var pipeline = deriveOperationalPipelineStage_(rowObj);
+    var lifecycleStage = clean_(deriveApplicantLifecycleStage_(rowObj) || "UNKNOWN").toUpperCase() || "UNKNOWN";
     if (Object.prototype.hasOwnProperty.call(pipelineCounts, pipeline)) pipelineCounts[pipeline]++;
     var emailStatus = normalizeEmailStatus_(rowObj.Email_Status || "");
     if (emailStatus && Object.prototype.hasOwnProperty.call(emailStates, emailStatus)) emailStates[emailStatus]++;
-    if (isSameLocalDate_(rowObj.Email_Last_Sent_At || rowObj.Last_Contacted_At || "", now)) out.emailSentToday++;
+    if (lifecycleStage !== "COMPLETE") out.openLifecycleRows++;
+    if (isSameLocalDate_(rowObj.Email_Last_Sent_At || rowObj.Last_Contacted_At || "", now)) out.rowLoggedCommunicationsToday++;
+    if (isSameLocalDate_(rowObj.Email_Last_Sent_At || "", now)) out.emailRowsSentToday++;
+    out.emailSentToday = out.rowLoggedCommunicationsToday;
     var lastResult = clean_(rowObj.Last_Contact_Result || "").toUpperCase();
     if (lastResult === "FAILED") emailStates.FAILED++;
     if (lastResult === "SUPPRESSED") emailStates.SUPPRESSED++;

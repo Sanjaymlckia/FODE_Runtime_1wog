@@ -1682,10 +1682,10 @@
       <div class="muted" style="margin-bottom:10px;">Operator summary only. Current calculations remain unchanged and mix operational backlog, legacy pipeline labels, row-log communication activity, and runtime diagnostics.</div>
 
       <div style="font-weight:800;margin-top:12px;">1. Intake Overview</div>
-      <div class="muted" style="margin:4px 0 10px;">Broad intake awareness only. “Open Legacy Pipeline Rows” is a broad non-terminal backlog count, not a direct intake-review action queue.</div>
+      <div class="muted" style="margin:4px 0 10px;">Lifecycle summary only. “Open Lifecycle Rows” counts non-terminal lifecycle rows using existing lifecycle derivation, not a direct intake-review action queue.</div>
       <div class="commMeta">
         <div class="box"><div class="k">Forms Received Today</div><div class="v" id="opsFormsToday">loading...</div></div>
-        <div class="box"><div class="k">Open Legacy Pipeline Rows</div><div class="v" id="opsPendingReview">loading...</div></div>
+        <div class="box"><div class="k">Open Lifecycle Rows</div><div class="v" id="opsPendingReview">loading...</div></div>
         <div class="box"><div class="k">Queue Backlog</div><div class="v" id="opsQueueBacklog">loading...</div></div>
         <div class="box"><div class="k">Metrics Scan</div><div class="v" id="opsMetricsScan">loading...</div></div>
       </div>
@@ -1709,9 +1709,10 @@
       </div>
 
       <div style="font-weight:800;margin-top:14px;">4. Communication Performance</div>
-      <div class="muted" style="margin:4px 0 10px;">“Row-Logged Communications Today” uses row log timestamps (`Email_Last_Sent_At` / `Last_Contacted_At`). It is not the same authority as Automation Daily Send Count in System Health.</div>
+      <div class="muted" style="margin:4px 0 10px;">Row-log activity and actual email-send row timestamps are shown separately below. Neither is the same authority as Automation Daily Send Count in System Health.</div>
       <div class="commMeta">
-        <div class="box"><div class="k">Row-Logged Communications Today</div><div class="v" id="opsEmailSentToday">loading...</div></div>
+        <div class="box"><div class="k">Row-Logged Activity Today</div><div class="v" id="opsEmailSentToday">loading...</div></div>
+        <div class="box"><div class="k">Email Rows Sent Today</div><div class="v" id="opsEmailRowsSentToday">loading...</div></div>
         <div class="box"><div class="k">SEND_ATTEMPT</div><div class="v" id="emailStateAttempt">loading...</div></div>
         <div class="box"><div class="k">SENT</div><div class="v" id="emailStateSent">loading...</div></div>
         <div class="box"><div class="k">FAILED</div><div class="v" id="emailStateFailed">loading...</div></div>
@@ -8549,10 +8550,11 @@ function renderStageDashboard_(items, emptyMessage){
       var pipeline = data.pipelineCounts || {};
       var emailStates = data.emailStates || {};
       setOpsValue_("opsFormsToday", Number(data.formsReceivedToday || 0));
-      setOpsValue_("opsPendingReview", Number(data.pendingIntakeReview || 0));
+      setOpsValue_("opsPendingReview", Number(data.openLifecycleRows != null ? data.openLifecycleRows : data.pendingIntakeReview || 0));
       setOpsValue_("opsDocsPending", Number(data.docsPending || 0));
       setOpsValue_("opsPaymentPending", Number(data.paymentPending || 0));
-      setOpsValue_("opsEmailSentToday", Number(data.emailSentToday || 0));
+      setOpsValue_("opsEmailSentToday", Number(data.rowLoggedCommunicationsToday != null ? data.rowLoggedCommunicationsToday : data.emailSentToday || 0));
+      setOpsValue_("opsEmailRowsSentToday", Number(data.emailRowsSentToday || 0));
       setOpsValue_("opsEmailFailures", Number(data.emailFailures || 0));
       setOpsValue_("opsWhatsappQueue", Number(data.whatsappFallbackQueue || 0));
       setOpsValue_("opsQueueBacklog", Number(data.queueBacklog || 0));
@@ -8578,7 +8580,7 @@ function renderStageDashboard_(items, emptyMessage){
         })
         .withFailureHandler(function(err){
           var message = err && err.message ? err.message : "Operational dashboard unavailable";
-          ["opsFormsToday","opsPendingReview","opsDocsPending","opsPaymentPending","opsEmailSentToday","opsEmailFailures","opsWhatsappQueue","opsQueueBacklog","opsDuplicateRisk","opsMetricsScan","pipeNewToMlckia","pipeContacted","pipeDocumentsPending","pipePaymentPending","pipeEnrolled","pipeClosedLost","emailStateAttempt","emailStateSent","emailStateFailed","emailStateBounced","emailStateSuppressed","emailStateFallback"].forEach(function(id){
+          ["opsFormsToday","opsPendingReview","opsDocsPending","opsPaymentPending","opsEmailSentToday","opsEmailRowsSentToday","opsEmailFailures","opsWhatsappQueue","opsQueueBacklog","opsDuplicateRisk","opsMetricsScan","pipeNewToMlckia","pipeContacted","pipeDocumentsPending","pipePaymentPending","pipeEnrolled","pipeClosedLost","emailStateAttempt","emailStateSent","emailStateFailed","emailStateBounced","emailStateSuppressed","emailStateFallback"].forEach(function(id){
             setOpsValue_(id, message);
           });
         })
