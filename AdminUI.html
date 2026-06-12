@@ -1682,18 +1682,18 @@
       <div class="muted" style="margin-bottom:10px;">Operator summary only. Current calculations remain unchanged and mix operational backlog, legacy pipeline labels, row-log communication activity, and runtime diagnostics.</div>
 
       <div style="font-weight:800;margin-top:12px;">1. Intake Overview</div>
-      <div class="muted" style="margin:4px 0 10px;">Broad intake awareness only. “Open Pipeline Rows” is not a true intake-review queue.</div>
+      <div class="muted" style="margin:4px 0 10px;">Broad intake awareness only. “Open Legacy Pipeline Rows” is a broad non-terminal backlog count, not a direct intake-review action queue.</div>
       <div class="commMeta">
         <div class="box"><div class="k">Forms Received Today</div><div class="v" id="opsFormsToday">loading...</div></div>
-        <div class="box"><div class="k">Open Pipeline Rows</div><div class="v" id="opsPendingReview">loading...</div></div>
+        <div class="box"><div class="k">Open Legacy Pipeline Rows</div><div class="v" id="opsPendingReview">loading...</div></div>
         <div class="box"><div class="k">Queue Backlog</div><div class="v" id="opsQueueBacklog">loading...</div></div>
         <div class="box"><div class="k">Metrics Scan</div><div class="v" id="opsMetricsScan">loading...</div></div>
       </div>
 
       <div style="font-weight:800;margin-top:14px;">2. Workload &amp; Action Required</div>
-      <div class="muted" style="margin:4px 0 10px;">Legacy operational stage buckets. These indicate review queue visibility, not guaranteed mail eligibility or canonical lifecycle authority.</div>
+      <div class="muted" style="margin:4px 0 10px;">Legacy pipeline summary only. Use Workload Drill-Down for current operational actionability. These legacy stage buckets indicate review queue visibility, not guaranteed mail eligibility or canonical lifecycle authority.</div>
       <div class="commMeta">
-        <div class="box"><div class="k">Unclassified / New To MLCKIA</div><div class="v" id="pipeNewToMlckia">loading...</div></div>
+        <div class="box"><div class="k">Legacy Pipeline: New / Unclassified</div><div class="v" id="pipeNewToMlckia">loading...</div></div>
         <div class="box"><div class="k">Contacted (legacy pipeline)</div><div class="v" id="pipeContacted">loading...</div></div>
         <div class="box"><div class="k">Enrolled (legacy pipeline)</div><div class="v" id="pipeEnrolled">loading...</div></div>
         <div class="box"><div class="k">Closed Lost (legacy pipeline)</div><div class="v" id="pipeClosedLost">loading...</div></div>
@@ -1709,9 +1709,9 @@
       </div>
 
       <div style="font-weight:800;margin-top:14px;">4. Communication Performance</div>
-      <div class="muted" style="margin:4px 0 10px;">“Communication Logged Today” is row-log based. Automation/script send counters remain in System Health.</div>
+      <div class="muted" style="margin:4px 0 10px;">“Row-Logged Communications Today” uses row log timestamps (`Email_Last_Sent_At` / `Last_Contacted_At`). It is not the same authority as Automation Daily Send Count in System Health.</div>
       <div class="commMeta">
-        <div class="box"><div class="k">Communication Logged Today</div><div class="v" id="opsEmailSentToday">loading...</div></div>
+        <div class="box"><div class="k">Row-Logged Communications Today</div><div class="v" id="opsEmailSentToday">loading...</div></div>
         <div class="box"><div class="k">SEND_ATTEMPT</div><div class="v" id="emailStateAttempt">loading...</div></div>
         <div class="box"><div class="k">SENT</div><div class="v" id="emailStateSent">loading...</div></div>
         <div class="box"><div class="k">FAILED</div><div class="v" id="emailStateFailed">loading...</div></div>
@@ -1824,7 +1824,8 @@
 
     <div id="stageDashboardPanel" class="card queue-panel">
       <h3>Workload &amp; Action Required Drill-Down</h3>
-      <div id="stageFilterMeta" class="stageDashboardMeta">Click a legacy operational stage to filter the applicant table. Review queue visibility is not the same as mail eligibility.</div>
+      <div class="muted" style="margin:4px 0 10px;">This drill-down is based on lifecycle/actionability aggregation and may not match legacy pipeline summary counts.</div>
+      <div id="stageFilterMeta" class="stageDashboardMeta">Click a lifecycle/actionability stage to filter the applicant table. Review queue visibility is not the same as mail eligibility.</div>
       <div id="stageDashboardCards" class="stageCards"></div>
     </div>
 
