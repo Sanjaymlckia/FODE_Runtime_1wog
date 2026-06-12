@@ -5,3 +5,4 @@ package.json
 package-lock.json
 playwright-report/
 test-results/
+.local_untracked_audit_hold/
