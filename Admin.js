@@ -5823,9 +5823,13 @@ function readStageBatchPreviewCache_(adminEmail) {
   }
 }
 
+function stageBatchPreviewCacheTtlSeconds_() {
+  return 600;
+}
+
 function writeStageBatchPreviewCache_(adminEmail, value) {
   try {
-    CacheService.getUserCache().put(getStageBatchPreviewCacheKey_(adminEmail), JSON.stringify(value || {}), 600);
+    CacheService.getUserCache().put(getStageBatchPreviewCacheKey_(adminEmail), JSON.stringify(value || {}), stageBatchPreviewCacheTtlSeconds_());
   } catch (_cacheErr) {}
 }
 
@@ -5869,6 +5873,14 @@ function stageBatchCandidateHash_(candidateIds) {
     normalized.push(applicantId);
   }
   return normalized.join("|");
+}
+
+function stageBatchPreviewAgeSeconds_(writtenAt) {
+  var raw = clean_(writtenAt || "");
+  if (!raw) return -1;
+  var parsed = new Date(raw).getTime();
+  if (!(parsed > 0)) return -1;
+  return Math.max(0, Math.floor((Date.now() - parsed) / 1000));
 }
 
 function stageBatchPreviewLog_(label, payload) {
@@ -6692,6 +6704,7 @@ function admin_sendStageBatch(payload) {
       var limit = limitMeta.effective;
       var requestedOffset = clampStageBatchOffset_(p.offset);
       var previewRequestId = clean_(p.previewRequestId || "");
+      var requestCandidateHash = clean_(p.candidateHash || "");
       if (p.confirmSend !== true) {
         return adminCommBlockedResult_("send_stage_batch", "CONFIRM_REQUIRED", requestId, {
           blockReason: "Explicit confirmation is required before batch send.",
@@ -6725,7 +6738,9 @@ function admin_sendStageBatch(payload) {
       var cachedCandidateIdsSample = Array.isArray(previewGate && previewGate.candidateIds)
         ? previewGate.candidateIds.map(function (id) { return clean_(id || ""); }).filter(function (id) { return !!id; }).slice(0, 5)
         : [];
-      var candidateHashPresent = !!clean_(previewGate && previewGate.candidateHash || "");
+      var previewWrittenAt = clean_(previewGate && previewGate.writtenAt || "");
+      var previewAgeSeconds = stageBatchPreviewAgeSeconds_(previewWrittenAt);
+      var previewFreshnessWindowSeconds = stageBatchPreviewCacheTtlSeconds_();
       stageBatchLogSummary_("STAGE_SEND_PREVIEW_PARITY_BEGIN", {
         requestId: requestId,
         previewRequestId: previewRequestId,
@@ -6734,7 +6749,9 @@ function admin_sendStageBatch(payload) {
         limit: limit,
         offset: requestedOffset,
         candidateCount: cachedCandidateCount,
-        candidateHash: clean_(previewGate && previewGate.candidateHash || "")
+        candidateHash: clean_(previewGate && previewGate.candidateHash || ""),
+        previewAgeSeconds: previewAgeSeconds,
+        previewFreshnessWindowSeconds: previewFreshnessWindowSeconds
       });
       var previewCandidateIds = Array.isArray(previewGate && previewGate.candidateIds) ? previewGate.candidateIds.map(function (id) {
         return clean_(id || "");
@@ -6743,8 +6760,11 @@ function admin_sendStageBatch(payload) {
       }) : [];
       var previewCandidateCount = Number(previewGate && previewGate.candidateCount != null ? previewGate.candidateCount : previewCandidateIds.length);
       var previewCandidateHash = clean_(previewGate && previewGate.candidateHash || "");
+      var cachedCandidateHashPresent = !!previewCandidateHash;
+      var payloadCandidateHashPresent = !!requestCandidateHash;
       var computedCandidateHash = stageBatchCandidateHash_(previewCandidateIds);
-      var hashMatch = !candidateHashPresent || previewCandidateHash === computedCandidateHash;
+      var cacheHashMatchesCandidateIds = !cachedCandidateHashPresent || previewCandidateHash === computedCandidateHash;
+      var payloadHashMatchesCache = !cachedCandidateHashPresent || requestCandidateHash === previewCandidateHash;
       function buildPreviewParityDecision_(rejectionSubtype, blockCode, blockReason) {
         return {
           blockCode: clean_(blockCode || "PREVIEW_STALE"),
@@ -6763,13 +6783,51 @@ function admin_sendStageBatch(payload) {
           cachedLimit: cachedLimit,
           cachedCandidateCount: cachedCandidateCount,
           cachedCandidateIdsSample: cachedCandidateIdsSample,
-          candidateHashPresent: candidateHashPresent,
-          hashMatch: hashMatch
+          previewWrittenAt: previewWrittenAt,
+          previewAgeSeconds: previewAgeSeconds,
+          previewFreshnessWindowSeconds: previewFreshnessWindowSeconds,
+          candidateHashPresent: cachedCandidateHashPresent,
+          payloadCandidateHashPresent: payloadCandidateHashPresent,
+          hashMatch: payloadHashMatchesCache,
+          cacheHashMatchesCandidateIds: cacheHashMatchesCandidateIds
         };
+      }
+      function buildPreviewParityBlock_(rejectionSubtype) {
+        switch (clean_(rejectionSubtype || "").toUpperCase()) {
+          case "SNAPSHOT_MISSING":
+          case "PREVIEW_REQUEST_ID_MISSING":
+            return { blockCode: "PREVIEW_REQUIRED", blockReason: "Preview Cohort is required before batch send.", clearCache: false };
+          case "WRITTEN_AT_MISSING":
+          case "WRITTEN_AT_INVALID":
+          case "PREVIEW_EXPIRED":
+            return { blockCode: "PREVIEW_EXPIRED", blockReason: "Preview expired or is stale. Run Preview Cohort again before send.", clearCache: true };
+          case "STAGE_MISMATCH":
+          case "LIMIT_MISMATCH":
+          case "OFFSET_MISMATCH":
+          case "MESSAGE_TYPE_MISMATCH":
+          case "REQUEST_ID_MISMATCH":
+            return { blockCode: "PREVIEW_MISMATCH", blockReason: "Selected stage or preview details no longer match. Run Preview Cohort again.", clearCache: false };
+          case "ELIGIBLE_ZERO":
+            return { blockCode: "PREVIEW_NOT_SENDABLE", blockReason: "Preview has no mail-eligible applicants for send.", clearCache: false };
+          case "CANDIDATE_IDS_MISSING":
+          case "CANDIDATE_COUNT_MISMATCH":
+          case "CANDIDATE_IDS_EMPTY":
+          case "CANDIDATE_HASH_MISSING_CACHED":
+          case "CANDIDATE_HASH_CACHE_MISMATCH":
+            return { blockCode: "PREVIEW_CHANGED_RETRY", blockReason: "Preview authority is incomplete or changed. Run Preview Cohort again before send.", clearCache: true };
+          case "CANDIDATE_HASH_MISSING":
+          case "CANDIDATE_HASH_PAYLOAD_MISMATCH":
+            return { blockCode: "PREVIEW_MISMATCH", blockReason: "Preview authority hash does not match this send request. Run Preview Cohort again.", clearCache: false };
+          default:
+            return { blockCode: "PREVIEW_STALE", blockReason: "A matching preview snapshot is required before send.", clearCache: false };
+        }
       }
       var staleSubtype = "";
       if (!previewGate) staleSubtype = "SNAPSHOT_MISSING";
       else if (!previewRequestId) staleSubtype = "PREVIEW_REQUEST_ID_MISSING";
+      else if (!previewWrittenAt) staleSubtype = "WRITTEN_AT_MISSING";
+      else if (!(previewAgeSeconds >= 0)) staleSubtype = "WRITTEN_AT_INVALID";
+      else if (previewAgeSeconds > previewFreshnessWindowSeconds) staleSubtype = "PREVIEW_EXPIRED";
       else if (cachedStage !== stage) staleSubtype = "STAGE_MISMATCH";
       else if (cachedLimit !== limit) staleSubtype = "LIMIT_MISMATCH";
       else if (cachedOffset !== requestedOffset) staleSubtype = "OFFSET_MISMATCH";
@@ -6777,7 +6835,9 @@ function admin_sendStageBatch(payload) {
       else if (cachedRequestId !== previewRequestId) staleSubtype = "REQUEST_ID_MISMATCH";
       else if (!(Number(previewGate.eligible || 0) > 0)) staleSubtype = "ELIGIBLE_ZERO";
       if (staleSubtype) {
-        var previewStaleDecision = buildPreviewParityDecision_(staleSubtype, "PREVIEW_STALE", "A matching preview snapshot is required before send.");
+        var previewStaleMeta = buildPreviewParityBlock_(staleSubtype);
+        if (previewStaleMeta.clearCache === true) clearStageBatchPreviewCache_(adminEmail);
+        var previewStaleDecision = buildPreviewParityDecision_(staleSubtype, previewStaleMeta.blockCode, previewStaleMeta.blockReason);
         stageBatchLogSummary_("STAGE_SEND_PREVIEW_PARITY_DECISION", Object.assign({
           requestId: requestId,
           decision: "REJECT"
@@ -6800,13 +6860,16 @@ function admin_sendStageBatch(payload) {
       }
       var previewChangedSubtype = "";
       if (!Array.isArray(previewGate.candidateIds)) previewChangedSubtype = "CANDIDATE_IDS_MISSING";
-      else if (!previewGate.writtenAt) previewChangedSubtype = "WRITTEN_AT_MISSING";
       else if (previewCandidateCount !== previewCandidateIds.length) previewChangedSubtype = "CANDIDATE_COUNT_MISMATCH";
       else if (!previewCandidateIds.length) previewChangedSubtype = "CANDIDATE_IDS_EMPTY";
-      else if (candidateHashPresent && !hashMatch) previewChangedSubtype = "CANDIDATE_HASH_MISMATCH";
+      else if (!cachedCandidateHashPresent) previewChangedSubtype = "CANDIDATE_HASH_MISSING_CACHED";
+      else if (!payloadCandidateHashPresent) previewChangedSubtype = "CANDIDATE_HASH_MISSING";
+      else if (!payloadHashMatchesCache) previewChangedSubtype = "CANDIDATE_HASH_PAYLOAD_MISMATCH";
+      else if (!cacheHashMatchesCandidateIds) previewChangedSubtype = "CANDIDATE_HASH_CACHE_MISMATCH";
       if (previewChangedSubtype) {
-        if (previewChangedSubtype !== "CANDIDATE_HASH_MISMATCH") clearStageBatchPreviewCache_(adminEmail);
-        var previewChangedDecision = buildPreviewParityDecision_(previewChangedSubtype, "PREVIEW_CHANGED_RETRY", "Preview snapshot is invalid or changed. Re-run preview before send.");
+        var previewChangedMeta = buildPreviewParityBlock_(previewChangedSubtype);
+        if (previewChangedMeta.clearCache === true) clearStageBatchPreviewCache_(adminEmail);
+        var previewChangedDecision = buildPreviewParityDecision_(previewChangedSubtype, previewChangedMeta.blockCode, previewChangedMeta.blockReason);
         stageBatchLogSummary_("STAGE_SEND_PREVIEW_PARITY_DECISION", Object.assign({
           requestId: requestId,
           decision: "REJECT"
@@ -6846,8 +6909,13 @@ function admin_sendStageBatch(payload) {
         cachedLimit: cachedLimit,
         cachedCandidateCount: cachedCandidateCount,
         cachedCandidateIdsSample: cachedCandidateIdsSample,
-        candidateHashPresent: candidateHashPresent,
-        hashMatch: hashMatch
+        previewWrittenAt: previewWrittenAt,
+        previewAgeSeconds: previewAgeSeconds,
+        previewFreshnessWindowSeconds: previewFreshnessWindowSeconds,
+        candidateHashPresent: cachedCandidateHashPresent,
+        payloadCandidateHashPresent: payloadCandidateHashPresent,
+        hashMatch: payloadHashMatchesCache,
+        cacheHashMatchesCandidateIds: cacheHashMatchesCandidateIds
       });
       stageBatchLogSummary_("STAGE_SEND_PREVIEW_PARITY_MATCH", {
         requestId: requestId,
@@ -6857,7 +6925,9 @@ function admin_sendStageBatch(payload) {
         limit: limit,
         offset: requestedOffset,
         candidateCount: previewCandidateCount,
-        candidateHash: previewCandidateHash || computedCandidateHash
+        candidateHash: previewCandidateHash,
+        previewAgeSeconds: previewAgeSeconds,
+        previewFreshnessWindowSeconds: previewFreshnessWindowSeconds
       });
       stageBatchLogSummary_("STAGE_SEND_START", {
         requestId: requestId,
