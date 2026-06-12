@@ -2404,6 +2404,14 @@
     function opsOperationalExecutionAllowed_(){
       return CAN_RUN_OPERATIONS_ACTIONS === true && (IS_SUPER === true ? readOpsMode_() === "super" : readOpsMode_() === "admin");
     }
+    function stageBatchExecutionAllowed_(){
+      return CAN_RUN_OPERATIONS_ACTIONS === true;
+    }
+    function stageBatchPolicyBlockReason_(){
+      return stageBatchExecutionAllowed_()
+        ? ""
+        : "Operations Admin or Super Admin authority is required for Stage Batch Mail.";
+    }
     function opsOperationalPolicyBlockReason_(){
       return readOpsMode_() === "operator"
         ? "Operator mode is read/select/preview only. Switch to Admin Mode for an authorized Operations action."
@@ -6098,11 +6106,8 @@ function renderBatchPanel(){
   if (msgTypeEl) msgTypeEl.textContent = messageType || "-";
   if (sendableEl) sendableEl.textContent = selectedStage ? (sendable ? "YES" : "NO") : "-";
   var disabledReason = "";
-  var currentMode = typeof readOpsMode_ === "function" ? readOpsMode_() : normalizeOpsMode_(opsActionState.mode);
-  var operatorMode = currentMode === "operator";
-  var operationalMode = opsOperationalExecutionAllowed_();
-  if (operatorMode) disabledReason = "Operator mode is read/select/preview only. Escalate to Admin/Super Admin for this action.";
-  else if (!operationalMode) disabledReason = "Bulk communication requires Operations Admin or Super Admin authority, preview, confirmation, caps, and backend gates.";
+  var stageBatchAllowed = stageBatchExecutionAllowed_();
+  if (!stageBatchAllowed) disabledReason = stageBatchPolicyBlockReason_();
   else if (!selectedStage) disabledReason = "Select a lifecycle stage to enable bulk preview.";
   else if (!sendable) disabledReason = batchState.disabledReason || "No batch message is supported for this stage.";
   batchState.disabledReason = disabledReason;
@@ -6128,22 +6133,22 @@ function renderBatchPanel(){
     ? (disabledReason || (sendable ? "Available" : "Not available"))
     : "Select a lifecycle stage to enable bulk preview.";
   var sendAvailability = selectedStage
-    ? (previewReady ? "Available after confirmation and backend gates" : (disabledReason || "Preview required"))
+    ? (previewReady ? "Available after explicit confirmation and backend gates" : (disabledReason || "Preview required"))
     : "-";
   if (eligibleEl) eligibleEl.textContent = eligibleText;
   if (blockedEl) blockedEl.textContent = blockedText;
   if (previewAvailabilityEl) previewAvailabilityEl.textContent = previewAvailability;
   if (sendAvailabilityEl) sendAvailabilityEl.textContent = sendAvailability;
-  if (awarenessEl) awarenessEl.textContent = operatorMode
-    ? "Operator mode is read/select/preview only. Escalate to Admin/Super Admin for this action."
-    : "Bulk communication requires Operations Admin or Super Admin authority, preview, confirmation, caps, and backend gates.";
+  if (awarenessEl) awarenessEl.textContent = stageBatchAllowed
+    ? "Preview available for authorized Admin/Super Admin. Send available only after valid preview and explicit confirmation. Backend re-checks caps, cooldown, idempotency, and recipient eligibility before sending."
+    : stageBatchPolicyBlockReason_();
   if (previewBtn) {
-    previewBtn.disabled = !selectedStage || batchState.busy || !operationalMode;
+    previewBtn.disabled = !selectedStage || batchState.busy || !stageBatchAllowed;
     previewBtn.textContent = batchState.busy && batchState.action === "preview" ? "Previewing..." : "Preview Cohort";
     previewBtn.style.opacity = previewBtn.disabled ? "0.55" : "1";
   }
   if (sendBtn) {
-    sendBtn.disabled = !previewReady || batchState.busy || !operationalMode;
+    sendBtn.disabled = !previewReady || batchState.busy || !stageBatchAllowed;
     sendBtn.textContent = batchState.busy && batchState.action === "send" ? "Sending..." : "Send Stage Batch";
     sendBtn.style.opacity = sendBtn.disabled ? "0.55" : "1";
     sendBtn.setAttribute("aria-disabled", sendBtn.disabled ? "true" : "false");
@@ -6153,7 +6158,7 @@ function renderBatchPanel(){
     if (batchState.busy && batchState.action === "preview") noteEl.textContent = "Loading the next eligible unsent cohort...";
     else if (batchState.busy && batchState.action === "send") noteEl.textContent = "Sending the next eligible unsent cohort...";
     else if (disabledReason) noteEl.textContent = disabledReason;
-    else if (previewReady) noteEl.textContent = "Ready for controlled live test in next CIS. Preview cache is valid; stage, message type, count, caps, Config gates, and idempotency are enforced before send.";
+    else if (previewReady) noteEl.textContent = "Ready for confirmation. Preview cache is valid; stage, message type, count, caps, cooldown, idempotency, and backend gates are re-checked before send.";
     else noteEl.textContent = "Preview is required before send. Standard production flow uses the next eligible unsent records; diagnostic offset is ignored.";
   }
   renderStageBatchSummary_(batchState.result);
@@ -6190,7 +6195,7 @@ function previewStageBatchUi_(){
   var stage = batchState.selectedStage;
   var limit = getStageBatchLimitUi_();
   var offset = getStageBatchOffsetUi_();
-  if (!stage || batchState.busy || !opsOperationalExecutionAllowed_()) return;
+  if (!stage || batchState.busy || !stageBatchExecutionAllowed_()) return;
   batchState.previewRequestSeq = Number(batchState.previewRequestSeq || 0) + 1;
   var requestSeq = batchState.previewRequestSeq;
   var clientRequestId = "preview-client-" + String(Date.now()) + "-" + String(requestSeq);
@@ -6333,7 +6338,7 @@ function sendStageBatchUi_(){
     && Number(batchState.previewOffset || 0) === offset
     && !!String(batchState.previewRequestId || "")
     && batchState.sendable === true;
-  if (!previewReady || batchState.busy || !opsOperationalExecutionAllowed_()) {
+  if (!previewReady || batchState.busy || !stageBatchExecutionAllowed_()) {
     console.log("STAGE_BATCH_SEND_GUARD_BLOCKED", {
       stage: stage,
       previewStage: batchState.previewStage,
@@ -6350,6 +6355,7 @@ function sendStageBatchUi_(){
       sendable: batchState.sendable === true,
       busy: batchState.busy === true,
       operationsAuthorized: CAN_RUN_OPERATIONS_ACTIONS === true,
+      stageBatchAuthorized: stageBatchExecutionAllowed_() === true,
       previewReady: previewReady === true
     });
     return;
