@@ -1678,31 +1678,40 @@
     </div>
 
     <div id="operationalDashboardPanel" class="card queue-panel">
-      <h3>Operational Dashboard</h3>
-      <div class="muted" style="margin-bottom:10px;">30-second intake awareness. Lifecycle remains separate from operational pipeline stages.</div>
+      <h3>Legacy Admin Dashboard</h3>
+      <div class="muted" style="margin-bottom:10px;">Operator summary only. Current calculations remain unchanged and mix operational backlog, legacy pipeline labels, row-log communication activity, and runtime diagnostics.</div>
+
+      <div style="font-weight:800;margin-top:12px;">1. Intake Overview</div>
+      <div class="muted" style="margin:4px 0 10px;">Broad intake awareness only. “Open Pipeline Rows” is not a true intake-review queue.</div>
       <div class="commMeta">
         <div class="box"><div class="k">Forms Received Today</div><div class="v" id="opsFormsToday">loading...</div></div>
-        <div class="box"><div class="k">Pending Intake Review</div><div class="v" id="opsPendingReview">loading...</div></div>
-        <div class="box"><div class="k">Docs Pending</div><div class="v" id="opsDocsPending">loading...</div></div>
-        <div class="box"><div class="k">Payment Evidence Not Verified</div><div class="v" id="opsPaymentPending">loading...</div></div>
-        <div class="box"><div class="k">Email Sent Today</div><div class="v" id="opsEmailSentToday">loading...</div></div>
-        <div class="box"><div class="k">Email Failures</div><div class="v" id="opsEmailFailures">loading...</div></div>
-        <div class="box"><div class="k">WhatsApp Fallback Queue</div><div class="v" id="opsWhatsappQueue">loading...</div></div>
+        <div class="box"><div class="k">Open Pipeline Rows</div><div class="v" id="opsPendingReview">loading...</div></div>
         <div class="box"><div class="k">Queue Backlog</div><div class="v" id="opsQueueBacklog">loading...</div></div>
-        <div class="box"><div class="k">Duplicate Risk</div><div class="v" id="opsDuplicateRisk">loading...</div></div>
         <div class="box"><div class="k">Metrics Scan</div><div class="v" id="opsMetricsScan">loading...</div></div>
       </div>
-      <h3 style="margin-top:14px;">Pipeline Counts</h3>
+
+      <div style="font-weight:800;margin-top:14px;">2. Workload &amp; Action Required</div>
+      <div class="muted" style="margin:4px 0 10px;">Legacy operational stage buckets. These indicate review queue visibility, not guaranteed mail eligibility or canonical lifecycle authority.</div>
       <div class="commMeta">
-        <div class="box"><div class="k">New To MLCKIA</div><div class="v" id="pipeNewToMlckia">loading...</div></div>
-        <div class="box"><div class="k">Contacted</div><div class="v" id="pipeContacted">loading...</div></div>
-        <div class="box"><div class="k">Documents Pending</div><div class="v" id="pipeDocumentsPending">loading...</div></div>
-        <div class="box"><div class="k">Payment Evidence Not Verified</div><div class="v" id="pipePaymentPending">loading...</div></div>
-        <div class="box"><div class="k">Enrolled</div><div class="v" id="pipeEnrolled">loading...</div></div>
-        <div class="box"><div class="k">Closed Lost</div><div class="v" id="pipeClosedLost">loading...</div></div>
+        <div class="box"><div class="k">Unclassified / New To MLCKIA</div><div class="v" id="pipeNewToMlckia">loading...</div></div>
+        <div class="box"><div class="k">Contacted (legacy pipeline)</div><div class="v" id="pipeContacted">loading...</div></div>
+        <div class="box"><div class="k">Enrolled (legacy pipeline)</div><div class="v" id="pipeEnrolled">loading...</div></div>
+        <div class="box"><div class="k">Closed Lost (legacy pipeline)</div><div class="v" id="pipeClosedLost">loading...</div></div>
       </div>
-      <h3 style="margin-top:14px;">Email State Counts</h3>
+
+      <div style="font-weight:800;margin-top:14px;">3. Document &amp; Payment Status</div>
+      <div class="muted" style="margin:4px 0 10px;">Legacy summary labels preserved. These cards may overlap with the operational pipeline counts above.</div>
       <div class="commMeta">
+        <div class="box"><div class="k">Documents Pending Summary</div><div class="v" id="opsDocsPending">loading...</div></div>
+        <div class="box"><div class="k">Payment Evidence Queue</div><div class="v" id="opsPaymentPending">loading...</div></div>
+        <div class="box"><div class="k">Documents Pending (legacy pipeline)</div><div class="v" id="pipeDocumentsPending">loading...</div></div>
+        <div class="box"><div class="k">Payment Pending (legacy pipeline)</div><div class="v" id="pipePaymentPending">loading...</div></div>
+      </div>
+
+      <div style="font-weight:800;margin-top:14px;">4. Communication Performance</div>
+      <div class="muted" style="margin:4px 0 10px;">“Communication Logged Today” is row-log based. Automation/script send counters remain in System Health.</div>
+      <div class="commMeta">
+        <div class="box"><div class="k">Communication Logged Today</div><div class="v" id="opsEmailSentToday">loading...</div></div>
         <div class="box"><div class="k">SEND_ATTEMPT</div><div class="v" id="emailStateAttempt">loading...</div></div>
         <div class="box"><div class="k">SENT</div><div class="v" id="emailStateSent">loading...</div></div>
         <div class="box"><div class="k">FAILED</div><div class="v" id="emailStateFailed">loading...</div></div>
@@ -1710,62 +1719,77 @@
         <div class="box"><div class="k">SUPPRESSED</div><div class="v" id="emailStateSuppressed">loading...</div></div>
         <div class="box"><div class="k">FALLBACK_PENDING</div><div class="v" id="emailStateFallback">loading...</div></div>
       </div>
-    </div>
 
-    <div id="runtimeSafetyPanel" class="card queue-panel">
-      <h3>Runtime Safety</h3>
+      <div style="font-weight:800;margin-top:14px;">5. Exceptions &amp; Blockers</div>
+      <div class="muted" style="margin:4px 0 10px;">Fallback and risk indicators that typically require manual operator review.</div>
       <div class="commMeta">
-        <div class="box"><div class="k">Runtime Version</div><div class="v" id="opsRuntimeVersion">loading...</div></div>
-        <div class="box"><div class="k">Deploy Version</div><div class="v" id="opsDeployVersion">loading...</div></div>
-        <div class="box"><div class="k">Stabilization Mode</div><div class="v" id="opsStabilizationMode">loading...</div></div>
-        <div class="box"><div class="k">Production Sends</div><div class="v" id="opsProductionSends">loading...</div></div>
-        <div class="box"><div class="k">Trigger Sends</div><div class="v" id="opsTriggerSends">loading...</div></div>
-        <div class="box"><div class="k">Trigger Installed</div><div class="v" id="opsTriggerInstalled">loading...</div></div>
-        <div class="box"><div class="k">Trigger Inspection</div><div class="v" id="opsTriggerInspection">loading...</div></div>
-        <div class="box"><div class="k">Trigger Count</div><div class="v" id="opsTriggerCount">loading...</div></div>
-        <div class="box"><div class="k">Last Automation Run</div><div class="v" id="opsLastAutomationRun">loading...</div></div>
-        <div class="box"><div class="k">Last Successful Run</div><div class="v" id="opsLastSuccessfulRun">loading...</div></div>
-        <div class="box"><div class="k">Last Failed Run</div><div class="v" id="opsLastFailedRun">loading...</div></div>
-        <div class="box"><div class="k">Consecutive Failures</div><div class="v" id="opsConsecutiveFailures">loading...</div></div>
-        <div class="box"><div class="k">Queue Scan Duration</div><div class="v" id="opsQueueScanDuration">loading...</div></div>
-        <div class="box"><div class="k">Batch Size Used</div><div class="v" id="opsBatchSizeUsed">loading...</div></div>
-        <div class="box"><div class="k">Daily Send Count</div><div class="v" id="opsDailySendCount">loading...</div></div>
-        <div class="box"><div class="k">Daily Cap Remaining</div><div class="v" id="opsDailyCapRemaining">loading...</div></div>
-        <div class="box"><div class="k">Last Batch ID</div><div class="v" id="opsLastBatchId">loading...</div></div>
-        <div class="box"><div class="k">Last Batch Result</div><div class="v" id="opsLastBatchResult">loading...</div></div>
+        <div class="box"><div class="k">Email Failures</div><div class="v" id="opsEmailFailures">loading...</div></div>
+        <div class="box"><div class="k">WhatsApp Fallback Queue</div><div class="v" id="opsWhatsappQueue">loading...</div></div>
+        <div class="box"><div class="k">Duplicate Risk</div><div class="v" id="opsDuplicateRisk">loading...</div></div>
       </div>
     </div>
 
-    <div id="propertyHealthPanel" class="card queue-panel">
-      <h3>Property Health</h3>
-      <div class="commMeta">
-        <div class="box"><div class="k">Total Properties</div><div class="v" id="opsPropertyTotal">loading...</div></div>
-        <div class="box"><div class="k">Estimated Size</div><div class="v" id="opsPropertySize">loading...</div></div>
-        <div class="box"><div class="k">COMM_LAST Count</div><div class="v" id="opsCommLastCount">loading...</div></div>
-        <div class="box"><div class="k">Health</div><div class="v" id="opsPropertyHealth">loading...</div></div>
-      </div>
-    </div>
+    <details id="systemHealthPanel" class="card queue-panel">
+      <summary style="cursor:pointer;font-weight:900;">6. System Health</summary>
+      <div class="muted" style="margin:10px 0;">Technical/runtime diagnostics. Configuration truth and trigger inspection truth are shown separately below.</div>
 
-    <div id="emailPipelinePanel" class="card queue-panel">
-      <h3>Email Pipeline Status</h3>
-      <div class="commMeta">
-        <div class="box"><div class="k">Manual Send</div><div class="v" id="opsManualSend">loading...</div></div>
-        <div class="box"><div class="k">Manual Probe Mode</div><div class="v" id="opsManualProbeMode">loading...</div></div>
-        <div class="box"><div class="k">Batch Send</div><div class="v" id="opsBatchSend">loading...</div></div>
-        <div class="box"><div class="k">Trigger Send</div><div class="v" id="opsTriggerSendGate">loading...</div></div>
-        <div class="box"><div class="k">Daily Cap</div><div class="v" id="opsDailyCap">loading...</div></div>
-        <div class="box"><div class="k">Per-Run Cap</div><div class="v" id="opsPerRunCap">loading...</div></div>
-        <div class="box"><div class="k">Last Blocked Reason</div><div class="v" id="opsLastBlockedReason">loading...</div></div>
-        <div class="box"><div class="k">Last Manual Send</div><div class="v" id="opsLastManualSend">loading...</div></div>
-        <div class="box"><div class="k">Last Manual Recipient</div><div class="v" id="opsLastManualRecipient">loading...</div></div>
-        <div class="box"><div class="k">Last Manual Result</div><div class="v" id="opsLastManualResult">loading...</div></div>
-        <div class="box"><div class="k">Idempotency Active</div><div class="v" id="opsIdempotencyActive">loading...</div></div>
-        <div class="box"><div class="k">Bounced Rows</div><div class="v" id="opsBounceRows">loading...</div></div>
-        <div class="box"><div class="k">Hard Bounces</div><div class="v" id="opsHardBounces">loading...</div></div>
-        <div class="box"><div class="k">Temporary Bounces</div><div class="v" id="opsTemporaryBounces">loading...</div></div>
-        <div class="box"><div class="k">Last Bounce Reason</div><div class="v" id="opsLastBounceReason">loading...</div></div>
+      <div id="runtimeSafetyPanel" class="queue-panel">
+        <h3>Runtime Safety</h3>
+        <div class="muted" style="margin-bottom:10px;">Read this as runtime/configuration state. Trigger installation and verification depend on trigger inspection availability.</div>
+        <div class="commMeta">
+          <div class="box"><div class="k">Runtime Version</div><div class="v" id="opsRuntimeVersion">loading...</div></div>
+          <div class="box"><div class="k">Deploy Version</div><div class="v" id="opsDeployVersion">loading...</div></div>
+          <div class="box"><div class="k">Stabilization Mode</div><div class="v" id="opsStabilizationMode">loading...</div></div>
+          <div class="box"><div class="k">Production Sends</div><div class="v" id="opsProductionSends">loading...</div></div>
+          <div class="box"><div class="k">Trigger Send Config</div><div class="v" id="opsTriggerSends">loading...</div></div>
+          <div class="box"><div class="k">Trigger Installed (inspection)</div><div class="v" id="opsTriggerInstalled">loading...</div></div>
+          <div class="box"><div class="k">Trigger Inspection Status</div><div class="v" id="opsTriggerInspection">loading...</div></div>
+          <div class="box"><div class="k">Trigger Count (inspection)</div><div class="v" id="opsTriggerCount">loading...</div></div>
+          <div class="box"><div class="k">Last Automation Run</div><div class="v" id="opsLastAutomationRun">loading...</div></div>
+          <div class="box"><div class="k">Last Successful Run</div><div class="v" id="opsLastSuccessfulRun">loading...</div></div>
+          <div class="box"><div class="k">Last Failed Run</div><div class="v" id="opsLastFailedRun">loading...</div></div>
+          <div class="box"><div class="k">Consecutive Failures</div><div class="v" id="opsConsecutiveFailures">loading...</div></div>
+          <div class="box"><div class="k">Automation Queue Scan Duration</div><div class="v" id="opsQueueScanDuration">loading...</div></div>
+          <div class="box"><div class="k">Automation Batch Size Used</div><div class="v" id="opsBatchSizeUsed">loading...</div></div>
+          <div class="box"><div class="k">Automation Daily Send Count</div><div class="v" id="opsDailySendCount">loading...</div></div>
+          <div class="box"><div class="k">Daily Cap Remaining</div><div class="v" id="opsDailyCapRemaining">loading...</div></div>
+          <div class="box"><div class="k">Last Automation Batch ID</div><div class="v" id="opsLastBatchId">loading...</div></div>
+          <div class="box"><div class="k">Last Automation Batch Result</div><div class="v" id="opsLastBatchResult">loading...</div></div>
+        </div>
       </div>
-    </div>
+
+      <div id="propertyHealthPanel" class="queue-panel" style="margin-top:14px;">
+        <h3>Property Health</h3>
+        <div class="commMeta">
+          <div class="box"><div class="k">Total Properties</div><div class="v" id="opsPropertyTotal">loading...</div></div>
+          <div class="box"><div class="k">Estimated Size</div><div class="v" id="opsPropertySize">loading...</div></div>
+          <div class="box"><div class="k">COMM_LAST Count</div><div class="v" id="opsCommLastCount">loading...</div></div>
+          <div class="box"><div class="k">Property Health</div><div class="v" id="opsPropertyHealth">loading...</div></div>
+        </div>
+      </div>
+
+      <div id="emailPipelinePanel" class="queue-panel" style="margin-top:14px;">
+        <h3>Email Pipeline Status</h3>
+        <div class="muted" style="margin-bottom:10px;">Send gates and counters only. This section does not prove that a current review queue is mail-eligible.</div>
+        <div class="commMeta">
+          <div class="box"><div class="k">Manual Send</div><div class="v" id="opsManualSend">loading...</div></div>
+          <div class="box"><div class="k">Manual Probe Mode</div><div class="v" id="opsManualProbeMode">loading...</div></div>
+          <div class="box"><div class="k">Stage Batch Send Config</div><div class="v" id="opsBatchSend">loading...</div></div>
+          <div class="box"><div class="k">Trigger Send Config</div><div class="v" id="opsTriggerSendGate">loading...</div></div>
+          <div class="box"><div class="k">Daily Cap</div><div class="v" id="opsDailyCap">loading...</div></div>
+          <div class="box"><div class="k">Per-Run Cap</div><div class="v" id="opsPerRunCap">loading...</div></div>
+          <div class="box"><div class="k">Last Blocked Reason</div><div class="v" id="opsLastBlockedReason">loading...</div></div>
+          <div class="box"><div class="k">Last Manual Send</div><div class="v" id="opsLastManualSend">loading...</div></div>
+          <div class="box"><div class="k">Last Manual Recipient</div><div class="v" id="opsLastManualRecipient">loading...</div></div>
+          <div class="box"><div class="k">Last Manual Result</div><div class="v" id="opsLastManualResult">loading...</div></div>
+          <div class="box"><div class="k">Idempotency Active</div><div class="v" id="opsIdempotencyActive">loading...</div></div>
+          <div class="box"><div class="k">Bounced Rows</div><div class="v" id="opsBounceRows">loading...</div></div>
+          <div class="box"><div class="k">Hard Bounces</div><div class="v" id="opsHardBounces">loading...</div></div>
+          <div class="box"><div class="k">Temporary Bounces</div><div class="v" id="opsTemporaryBounces">loading...</div></div>
+          <div class="box"><div class="k">Last Bounce Reason</div><div class="v" id="opsLastBounceReason">loading...</div></div>
+        </div>
+      </div>
+    </details>
 
     <div id="whatsappFallbackPanel" class="card queue-panel">
       <h3>WhatsApp Fallback Queue</h3>
@@ -1799,8 +1823,8 @@
     </div>
 
     <div id="stageDashboardPanel" class="card queue-panel">
-      <h3>Operational Pipeline Dashboard</h3>
-      <div id="stageFilterMeta" class="stageDashboardMeta">Click a stage to filter the applicant table.</div>
+      <h3>Workload &amp; Action Required Drill-Down</h3>
+      <div id="stageFilterMeta" class="stageDashboardMeta">Click a legacy operational stage to filter the applicant table. Review queue visibility is not the same as mail eligibility.</div>
       <div id="stageDashboardCards" class="stageCards"></div>
     </div>
 
