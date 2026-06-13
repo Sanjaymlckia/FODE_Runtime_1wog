@@ -1700,13 +1700,14 @@
       </div>
 
       <div style="font-weight:800;margin-top:14px;">3. Document &amp; Payment Status</div>
-      <div class="muted" style="margin:4px 0 10px;">Legacy summary labels preserved. These cards may overlap with the operational pipeline counts above.</div>
+      <div class="muted" style="margin:4px 0 10px;">Legacy snapshot cards are supporting context only. Review Queues remain the operator-authoritative worklists.</div>
       <div class="commMeta">
-        <div class="box"><div class="k">Documents Pending Summary</div><div class="v" id="opsDocsPending">loading...</div></div>
-        <div class="box"><div class="k">Payment Evidence Queue</div><div class="v" id="opsPaymentPending">loading...</div></div>
-        <div class="box"><div class="k">Documents Pending (legacy pipeline)</div><div class="v" id="pipeDocumentsPending">loading...</div></div>
-        <div class="box"><div class="k">Payment Pending (legacy pipeline)</div><div class="v" id="pipePaymentPending">loading...</div></div>
+        <div class="box"><div class="k">Legacy Docs Pending Snapshot</div><div class="v" id="opsDocsPending">loading...</div></div>
+        <div class="box"><div class="k">Legacy Payment Pending Snapshot</div><div class="v" id="opsPaymentPending">loading...</div></div>
+        <div class="box"><div class="k">Legacy Pipeline: Documents Pending</div><div class="v" id="pipeDocumentsPending">loading...</div></div>
+        <div class="box"><div class="k">Legacy Pipeline: Payment Pending</div><div class="v" id="pipePaymentPending">loading...</div></div>
       </div>
+      <div class="muted" style="margin:8px 0 0;">Use <strong>Documents to Verify</strong> for document review work, <strong>Payments to Verify</strong> for uploaded payment evidence review, and <strong>Awaiting Payment</strong> for missing-payment follow-up. <strong>DOCS_REQUIRED</strong> in the lifecycle drill-down is a lifecycle/actionability stage, not the same authority as the document review queue.</div>
 
       <div style="font-weight:800;margin-top:14px;">4. Communication Performance</div>
       <div class="muted" style="margin:4px 0 10px;">Row-log activity and actual email-send row timestamps are shown separately below. Neither is the same authority as Automation Daily Send Count in System Health.</div>
