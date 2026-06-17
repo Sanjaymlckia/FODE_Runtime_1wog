@@ -1,0 +1,12 @@
+flowchart TD
+  A[Operator Actionability Resolver] --> B[Applicant Action Queue]
+  A --> C[Officer Review Queue]
+  A --> D[Finance Action Queue]
+  A --> E[Escalated Queue]
+  A --> F[Dormant Queue]
+  B --> G[Applicant must upload, pay, correct, or respond]
+  C --> H[Officer must verify complete evidence]
+  D --> I[Finance or admin must review payment issue]
+  E --> J[Overdue unresolved record]
+  F --> K[Final follow-up or dormant handling]
+

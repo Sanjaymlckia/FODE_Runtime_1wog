@@ -1,0 +1,11 @@
+flowchart TD
+  A[Authority Outputs] --> B[Operator Actionability Resolver]
+  B --> C[actionOwner]
+  B --> D[nextAction]
+  B --> E[urgencyLevel]
+  B --> F[urgencyReason]
+  B --> G[recommendedMessageType]
+  B --> H[sourceAuthoritySummary]
+  G --> I[Preview Authority]
+  I --> J[Send Authority]
+
