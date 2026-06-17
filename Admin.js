@@ -3436,6 +3436,8 @@ function buildOperationalDashboardMetrics_() {
     formsReceivedToday: 0,
     pendingIntakeReview: 0,
     openLifecycleRows: 0,
+    awaitingDocuments: 0,
+    readyForReview: 0,
     rowLoggedCommunicationsToday: 0,
     emailRowsSentToday: 0,
     docsPending: 0,
@@ -3456,10 +3458,15 @@ function buildOperationalDashboardMetrics_() {
     if (isSameLocalDate_(rowObj.Timestamp || rowObj.timestamp || rowObj.adapter_timestamp || rowObj.Created_At || rowObj.PortalTokenIssuedAt || "", now)) out.formsReceivedToday++;
     var pipeline = deriveOperationalPipelineStage_(rowObj);
     var lifecycleStage = clean_(deriveApplicantLifecycleStage_(rowObj) || "UNKNOWN").toUpperCase() || "UNKNOWN";
+    var portalSubmitted = nonEmpty_(rowObj.Portal_Submitted || "") && clean_(rowObj.Portal_Submitted || "") !== "No";
+    var completeness = adminOpsRequiredDocumentUploadSummary_(rowObj);
+    var docsReviewVerified = clean_(rowObj.Docs_Verified || "") === "Yes" || computeDocVerificationStatus_(rowObj) === "Verified";
     if (Object.prototype.hasOwnProperty.call(pipelineCounts, pipeline)) pipelineCounts[pipeline]++;
     var emailStatus = normalizeEmailStatus_(rowObj.Email_Status || "");
     if (emailStatus && Object.prototype.hasOwnProperty.call(emailStates, emailStatus)) emailStates[emailStatus]++;
     if (lifecycleStage !== "COMPLETE") out.openLifecycleRows++;
+    if (portalSubmitted && !docsReviewVerified && !(completeness && completeness.requiredDocumentUploadComplete)) out.awaitingDocuments++;
+    if (portalSubmitted && completeness && completeness.requiredDocumentUploadComplete && !docsReviewVerified) out.readyForReview++;
     if (isSameLocalDate_(rowObj.Email_Last_Sent_At || rowObj.Last_Contacted_At || "", now)) out.rowLoggedCommunicationsToday++;
     if (isSameLocalDate_(rowObj.Email_Last_Sent_At || "", now)) out.emailRowsSentToday++;
     out.emailSentToday = out.rowLoggedCommunicationsToday;
@@ -4441,7 +4448,7 @@ function admin_getReviewQueues(payload) {
         var hasActivity = hasStudentActivity_(rowObj);
         var portalSubmittedRaw = clean_(rowObj.Portal_Submitted || "");
         var portalSubmitted = nonEmpty_(portalSubmittedRaw) && portalSubmittedRaw !== "No";
-        var docsVerified = docsVerifiedRaw === "Yes";
+        var docsReviewVerified = docsVerifiedRaw === "Yes" || computeDocVerificationStatus_(rowObj) === "Verified";
         var paymentEvidencePresent = hasUploadEvidence_(rowObj.Fee_Receipt_File, "Fee_Receipt_File");
         var paymentReceived = paymentEvidencePresent;
         var paymentVerified = paymentVerifiedRaw;
@@ -4449,15 +4456,16 @@ function admin_getReviewQueues(payload) {
         var opsRequiredDocsSummary = adminOpsRequiredDocumentUploadSummary_(rowObj);
         var opsDocumentState = adminOpsDocumentStateFromRow_(rowObj);
         var opsLifecycleStageKey = adminOpsLifecycleStageKeyFromRow_(rowObj);
-        var docsQueueMatch = portalSubmitted && !docsVerified;
-        var awaitingPaymentQueueMatch = docsVerified && !paymentVerified && !paymentEvidencePresent;
-        var paymentsQueueMatch = docsVerified && !paymentVerified && paymentEvidencePresent;
-        var anomaliesQueueMatch = paymentVerified && !docsVerified;
+        var requiredDocumentUploadComplete = !!(opsRequiredDocsSummary && opsRequiredDocsSummary.requiredDocumentUploadComplete);
+        var docsQueueMatch = portalSubmitted && requiredDocumentUploadComplete && !docsReviewVerified;
+        var awaitingPaymentQueueMatch = docsVerifiedRaw === "Yes" && !paymentVerified && !paymentEvidencePresent;
+        var paymentsQueueMatch = docsVerifiedRaw === "Yes" && !paymentVerified && paymentEvidencePresent;
+        var anomaliesQueueMatch = paymentVerified && !docsReviewVerified;
         var paidApprovedQueueMatch = paymentVerified;
-        var fdReceivedQueueMatch = isExternalFdIntakeRow_(rowObj) && !portalSubmitted && !docsVerified && !paymentVerified;
+        var fdReceivedQueueMatch = isExternalFdIntakeRow_(rowObj) && !portalSubmitted && !docsReviewVerified && !paymentVerified;
 
         qItem.Portal_Submitted = portalSubmitted ? "Yes" : "No";
-        qItem.Docs_Verified = docsVerified ? "Yes" : "No";
+        qItem.Docs_Verified = docsReviewVerified ? "Yes" : "No";
         qItem.Payment_Received = paymentReceived ? "Yes" : "No";
         qItem.Payment_Verified = paymentVerified ? "Yes" : "No";
         qItem.Enrolled_Confirmed = enrolledConfirmed ? "Yes" : "No";
@@ -4517,7 +4525,7 @@ function admin_getReviewQueues(payload) {
           id: clean_(rowObj.ApplicantID || rowObj.ID || rowObj["Applicant ID"] || "unknown"),
           activity: hasActivity,
           portalSubmitted: portalSubmitted,
-          docsVerified: docsVerified,
+          docsVerified: docsReviewVerified,
           paymentVerified: paymentVerified,
           paymentEvidencePresent: paymentEvidencePresent,
           receipt: paymentEvidencePresent,
@@ -4537,7 +4545,7 @@ function admin_getReviewQueues(payload) {
           applicantId: rowObj.ApplicantID,
           portalSubmitted: portalSubmitted,
           docsVerifiedRaw: rowObj.Docs_Verified,
-          docsVerified: docsVerified,
+          docsVerified: docsReviewVerified,
           paymentVerifiedRaw: rowObj.Payment_Verified,
           paymentVerified: paymentVerified,
           opsDocumentState: opsDocumentState,
@@ -4550,7 +4558,7 @@ function admin_getReviewQueues(payload) {
           Logger.log("R232_QUEUE_CANARY ROW " + JSON.stringify({
             applicantId: applicantId,
             portalSubmitted: portalSubmitted,
-            docsVerified: docsVerified,
+            docsVerified: docsReviewVerified,
             paymentEvidencePresent: paymentEvidencePresent,
             paymentVerified: paymentVerified,
             opsDocumentState: opsDocumentState,

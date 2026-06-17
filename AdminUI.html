@@ -1700,14 +1700,14 @@
       </div>
 
       <div style="font-weight:800;margin-top:14px;">3. Document &amp; Payment Status</div>
-      <div class="muted" style="margin:4px 0 10px;">Legacy snapshot cards are supporting context only. Review Queues remain the operator-authoritative worklists.</div>
+      <div class="muted" style="margin:4px 0 10px;">Awaiting Documents reflects applicant-action incompleteness. Ready For Review reflects officer review workload. Payment cards remain supporting context only.</div>
       <div class="commMeta">
-        <div class="box"><div class="k">Legacy Docs Pending Snapshot</div><div class="v" id="opsDocsPending">loading...</div></div>
+        <div class="box"><div class="k">Awaiting Documents</div><div class="v" id="opsDocsPending">loading...</div></div>
         <div class="box"><div class="k">Legacy Payment Pending Snapshot</div><div class="v" id="opsPaymentPending">loading...</div></div>
-        <div class="box"><div class="k">Legacy Pipeline: Documents Pending</div><div class="v" id="pipeDocumentsPending">loading...</div></div>
+        <div class="box"><div class="k">Ready For Review</div><div class="v" id="pipeDocumentsPending">loading...</div></div>
         <div class="box"><div class="k">Legacy Pipeline: Payment Pending</div><div class="v" id="pipePaymentPending">loading...</div></div>
       </div>
-      <div class="muted" style="margin:8px 0 0;">Use <strong>Documents to Verify</strong> for document review work, <strong>Payments to Verify</strong> for uploaded payment evidence review, and <strong>Awaiting Payment</strong> for missing-payment follow-up. <strong>DOCS_REQUIRED</strong> in the lifecycle drill-down is a lifecycle/actionability stage, not the same authority as the document review queue.</div>
+      <div class="muted" style="margin:8px 0 0;">Use <strong>Documents to Verify</strong> for officer review of submitted applications with all mandatory uploads present, <strong>Payments to Verify</strong> for uploaded payment evidence review, and <strong>Awaiting Payment</strong> for missing-payment follow-up. <strong>DOCS_REQUIRED</strong> in the lifecycle drill-down remains a lifecycle/actionability stage, not the same authority as the document review queue.</div>
 
       <div style="font-weight:800;margin-top:14px;">4. Communication Performance</div>
       <div class="muted" style="margin:4px 0 10px;">Row-log activity and actual email-send row timestamps are shown separately below. Neither is the same authority as Automation Daily Send Count in System Health.</div>
@@ -1879,7 +1879,7 @@
 
     <div id="reviewQueuesPanel" class="card queue-panel">
       <h3>Review Queues</h3>
-      <div class="muted" style="margin-bottom:10px;">Review Queues show operational workload. Not all rows are currently mail-eligible.</div>
+      <div class="muted" style="margin-bottom:10px;">Review Queues show operational workload. Documents to Verify is the officer review-ready queue; submitted records missing mandatory uploads remain applicant-action records and do not appear there.</div>
       <div id="queueFdReceived" class="queue-section"></div>
       <div id="queueDocs" class="queue-section"></div>
       <div id="queueAwaitingPayment" class="queue-section"></div>
@@ -8552,7 +8552,7 @@ function renderStageDashboard_(items, emptyMessage){
       var emailStates = data.emailStates || {};
       setOpsValue_("opsFormsToday", Number(data.formsReceivedToday || 0));
       setOpsValue_("opsPendingReview", Number(data.openLifecycleRows != null ? data.openLifecycleRows : data.pendingIntakeReview || 0));
-      setOpsValue_("opsDocsPending", Number(data.docsPending || 0));
+      setOpsValue_("opsDocsPending", Number(data.awaitingDocuments != null ? data.awaitingDocuments : data.docsPending || 0));
       setOpsValue_("opsPaymentPending", Number(data.paymentPending || 0));
       setOpsValue_("opsEmailSentToday", Number(data.rowLoggedCommunicationsToday != null ? data.rowLoggedCommunicationsToday : data.emailSentToday || 0));
       setOpsValue_("opsEmailRowsSentToday", Number(data.emailRowsSentToday || 0));
@@ -8563,7 +8563,7 @@ function renderStageDashboard_(items, emptyMessage){
       setOpsValue_("opsMetricsScan", Number(data.scannedRows || 0) + " rows / " + Number(data.scanDurationMs || 0) + " ms");
       setOpsValue_("pipeNewToMlckia", Number(pipeline["New To MLCKIA"] || 0));
       setOpsValue_("pipeContacted", Number(pipeline.Contacted || 0));
-      setOpsValue_("pipeDocumentsPending", Number(pipeline["Documents Pending"] || 0));
+      setOpsValue_("pipeDocumentsPending", Number(data.readyForReview != null ? data.readyForReview : pipeline["Documents Pending"] || 0));
       setOpsValue_("pipePaymentPending", Number(pipeline["Payment Pending"] || 0));
       setOpsValue_("pipeEnrolled", Number(pipeline.Enrolled || 0));
       setOpsValue_("pipeClosedLost", Number(pipeline["Closed Lost"] || 0));
