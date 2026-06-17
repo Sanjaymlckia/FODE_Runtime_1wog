@@ -220,6 +220,14 @@
       border-color: rgba(148,163,184,.3);
       color: #d6deea;
     }
+    .actionabilityPanel summary{ cursor:pointer; font-weight:800; }
+    .actionabilitySummary{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; margin:10px 0; }
+    .actionabilityTable{ width:100%; border-collapse:collapse; font-size:12px; margin-top:10px; }
+    .actionabilityTable th,.actionabilityTable td{ border-bottom:1px solid var(--border); padding:7px 6px; text-align:left; vertical-align:top; }
+    .actionabilityTable th{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.02em; }
+    .actionabilityExplain{ color:var(--muted); max-width:360px; }
+    .sortableHeader{ cursor:pointer; user-select:none; }
+    .sortableHeader:hover{ text-decoration:underline; }
     .badge{
       display:inline-block;
       padding:2px 8px;
@@ -1894,30 +1902,59 @@
       <div id="docsSendFailures" class="sendSummary hidden" style="margin-top:6px;"></div>
     </div>
 
-    <div id="legacySearchPanel" class="card hidden">
+    <details id="actionabilityPreviewPanel" class="card queue-panel actionabilityPanel">
+      <summary>Actionability Preview <span class="opsStatusPill warn">Read-Only Experimental</span></summary>
+      <div class="muted" style="margin:8px 0 10px;">Derived, non-authoritative view. Consumes existing authorities to explain who should act next; it does not change queues, lifecycle, communications, or send behavior.</div>
+      <div class="row" style="align-items:center;gap:8px;margin-bottom:8px;">
+        <button id="btnActionabilityRefresh" class="btn small" type="button" onclick="loadActionabilityPreview_({ force: 1 })">Refresh Preview</button>
+        <span id="actionabilityPreviewMeta" class="muted" style="font-size:12px;">Not loaded</span>
+      </div>
+      <div id="actionabilityPreviewSummary" class="actionabilitySummary"></div>
+      <div id="actionabilityPreviewRows" class="muted" style="font-size:12px;">Expand this panel to review derived actionability recommendations.</div>
+    </details>
+
+    <details id="legacySearchPanel" class="card">
+      <summary style="cursor:pointer;font-weight:800;">Applicant Search <span class="opsStatusPill info">Read-only</span></summary>
+      <div class="muted" style="margin:8px 0 10px;">Explicit operator search only. Search does not change queues, authority state, lifecycle, or Stage Batch eligibility.</div>
       <div class="row">
         <div class="field">
           <label>ApplicantID</label>
           <input id="qApplicantId" placeholder="e.g., FODE-26-002879">
         </div>
         <div class="field">
+          <label>Applicant Name</label>
+          <input id="qName" placeholder="e.g., Aidah Duncan">
+        </div>
+        <div class="field">
           <label>Parent Email (Corrected)</label>
           <input id="qEmail" placeholder="e.g., parent@example.com">
+        </div>
+        <div class="field">
+          <label>Phone</label>
+          <input id="qPhone" placeholder="e.g., 7xxxxxxx">
+        </div>
+        <div class="field" style="max-width:260px;">
+          <label>Search Scope</label>
+          <select id="qSearchScope">
+            <option value="direct" selected>Direct search only</option>
+            <option value="stage" disabled>Selected workload stage</option>
+          </select>
         </div>
         <button class="btn accent" onclick="search()">Search</button>
         <button class="btn" onclick="clearSearch()">Clear</button>
         <button id="btnScanBounces" class="btn small" type="button" onclick="runBounceScanUi_()">Scan Bounces</button>
       </div>
+      <div id="searchScopeNote" class="muted" style="margin-top:8px;font-size:12px;">Search scope: Direct search only. Select a workload stage card to enable stage-scoped search.</div>
       <div id="msg" class="muted" style="margin-top:10px;"></div>
       <div id="bounceScanSummary" class="sendSummary hidden" style="margin-top:10px;"></div>
-    </div>
+    </details>
 
     <div id="legacyResultsPanel" class="card hidden">
       <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
         <div style="font-weight:900;">Results</div>
         <div class="muted" style="font-size:12px;">Search by ApplicantID for exact match.</div>
       </div>
-      <div class="bulk-actions-bar" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px;">
+      <div class="bulk-actions-bar hidden" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px;">
         <button id="btnSelectAllEligibleDocs" class="btn small" type="button">Select All Eligible (Docs)</button>
         <button id="btnClearDocsSelection" class="btn small" type="button">Clear Selection</button>
         <button id="btnSendDocsBulk" class="btn small accent" type="button" disabled>Send Docs Quote to Selected</button>
@@ -1929,7 +1966,6 @@
         <table>
           <thead>
             <tr>
-              <th style="width:32px;"></th>
               <th>ApplicantID</th>
               <th>Name</th>
               <th>Doc Status</th>
@@ -1940,7 +1976,7 @@
             </tr>
           </thead>
           <tbody id="tbody">
-            <tr><td colspan="8" class="muted">No results yet.</td></tr>
+            <tr><td colspan="7" class="muted">No results yet.</td></tr>
           </tbody>
         </table>
       </div>
@@ -2311,6 +2347,10 @@
     let lastRequestId = 0;
     let lastSearchResults = [];
     let lastSearchRows = [];
+    let actionabilityPreviewRows = [];
+    let actionabilitySortState = { key: "default", dir: "desc" };
+    let actionabilityPreviewMetaState = { includedRows: 0, scannedRows: 0 };
+    let actionabilityPreviewCountsState = {};
     let selectedDocsRowNumbers = {};
     let lastDocsSendAttemptByApplicantId = {};
     let isDocsSendBusy = false;
@@ -2341,6 +2381,7 @@
     let opsSelectedApplicantId = "";
     let opsSelectedApplicantName = "";
     let opsSelectedApplicantExplicit = false;
+    let legacyQueueSortState = {};
     const OPS_SAFE_MODE_APPROVED_APPLICANT_ID = "<?= String((CONFIG.OPS_SAFE_MODE_APPROVED_TARGET && CONFIG.OPS_SAFE_MODE_APPROVED_TARGET.applicantId) || '') ?>";
     const OPS_SAFE_MODE_TEST_RECIPIENT = "<?= String(CONFIG.OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE || '') ?>";
     let opsActionState = {
@@ -5910,6 +5951,25 @@
       el.textContent = selectedStageFilter
         ? ("Table filter: " + selectedStageFilter + " (click again to clear)")
         : "Click a stage to filter the applicant table.";
+      updateSearchScopeUi_();
+    }
+
+    function updateSearchScopeUi_(){
+      var scopeEl = document.getElementById("qSearchScope");
+      var noteEl = document.getElementById("searchScopeNote");
+      var stageOption = scopeEl ? scopeEl.querySelector('option[value="stage"]') : null;
+      var hasStage = !!String(selectedStageFilter || "").trim();
+      if (stageOption) {
+        stageOption.disabled = !hasStage;
+        stageOption.textContent = hasStage ? ("Selected workload stage - " + selectedStageFilter) : "Selected workload stage";
+      }
+      if (scopeEl && !hasStage && scopeEl.value === "stage") scopeEl.value = "direct";
+      var scope = scopeEl ? String(scopeEl.value || "direct") : "direct";
+      if (noteEl) {
+        noteEl.textContent = scope === "stage" && hasStage
+          ? ("Search scope: Selected workload stage - " + selectedStageFilter + ". Results are read-only and not send-authoritative.")
+          : "Search scope: Direct search only. Select a workload stage card to enable stage-scoped search.";
+      }
     }
     function getBatchMessageTypeForStageUi_(stage){
       var normalized = String(stage || "").trim().toUpperCase();
@@ -6773,10 +6833,55 @@ function renderStageDashboard_(items, emptyMessage){
       return { cls: cls, label: label, title: queueReceivedTitle_(r) };
     }
 
+    function legacyQueueSortLabel_(queueKey, key){
+      var state = legacyQueueSortState[String(queueKey || "")] || { key: "age", dir: "desc" };
+      if (state.key !== key) return "";
+      return state.dir === "asc" ? " ↑" : " ↓";
+    }
+
+    function legacyQueueSortRows_(queueKey, rows){
+      var list = Array.isArray(rows) ? rows.slice() : [];
+      var state = legacyQueueSortState[String(queueKey || "")] || { key: "age", dir: "desc" };
+      var dir = state.dir === "asc" ? 1 : -1;
+      list.sort(function(a, b){
+        var av;
+        var bv;
+        if (state.key === "name") {
+          av = String(a && a.name || "");
+          bv = String(b && b.name || "");
+          return av.localeCompare(bv) * dir;
+        }
+        if (state.key === "received") {
+          av = Date.parse(String((a && (a.receivedAt || a.portalLastUpdateAt || a.portalTokenIssuedAt || a.adapter_timestamp)) || "")) || 0;
+          bv = Date.parse(String((b && (b.receivedAt || b.portalLastUpdateAt || b.portalTokenIssuedAt || b.adapter_timestamp)) || "")) || 0;
+          return (av - bv) * dir;
+        }
+        av = Number(a && a.ageDays || 0);
+        bv = Number(b && b.ageDays || 0);
+        if (av !== bv) return (av - bv) * dir;
+        return String(a && a.name || "").localeCompare(String(b && b.name || ""));
+      });
+      return list;
+    }
+
+    function sortLegacyQueue_(queueKey, key){
+      var qKey = String(queueKey || "");
+      var normalized = String(key || "age");
+      var state = legacyQueueSortState[qKey] || { key: "age", dir: "desc" };
+      if (state.key === normalized) {
+        state.dir = state.dir === "asc" ? "desc" : "asc";
+      } else {
+        state.key = normalized;
+        state.dir = normalized === "name" ? "asc" : "desc";
+      }
+      legacyQueueSortState[qKey] = state;
+      rerenderQueue_(qKey);
+    }
+
     function renderQueueSection(containerId, title, rows, totalCount){
       var el = document.getElementById(containerId);
       if (!el) return;
-      var list = Array.isArray(rows) ? rows : [];
+      var list = legacyQueueSortRows_(containerId, rows);
       var total = Number(totalCount || 0);
       var queueKey = String(containerId || "");
       queueRenderCache[queueKey] = {
@@ -6812,7 +6917,7 @@ function renderStageDashboard_(items, emptyMessage){
           html += "<button class='btn small accent' type='button' data-action='queue-docs-send-selected' " + ((isDocsSendBusy || selectedCount === 0) ? "disabled" : "") + ">" + (isDocsSendBusy ? "Sending..." : "Send Quote to Selected") + "</button>";
           html += "<span class='muted' style='font-size:12px;'>" + String(selectedCount) + " selected</span>";
           html += "</div>";
-          html += "<table class='queue-table'><tr><th style='width:30px;'></th><th>Applicant</th><th>Name</th><th>Workflow</th><th>Status</th><th>Received</th><th>Age</th><th>Docs Follow-Up</th><th>Action</th></tr>";
+          html += "<table class='queue-table'><tr><th style='width:30px;'></th><th>Applicant</th><th class='sortableHeader' onclick='sortLegacyQueue_(\"" + esc(queueKey) + "\",\"name\")'>Name" + esc(legacyQueueSortLabel_(queueKey, "name")) + "</th><th>Workflow</th><th>Status</th><th class='sortableHeader' onclick='sortLegacyQueue_(\"" + esc(queueKey) + "\",\"received\")'>Received" + esc(legacyQueueSortLabel_(queueKey, "received")) + "</th><th class='sortableHeader' onclick='sortLegacyQueue_(\"" + esc(queueKey) + "\",\"age\")'>Age" + esc(legacyQueueSortLabel_(queueKey, "age")) + "</th><th>Docs Follow-Up</th><th>Action</th></tr>";
           pageRows.forEach(function(row){
             var rowNumber = Number(row && row.rowNumber || 0);
             var applicantId = String((row && (row.ApplicantID || row.applicantId)) || "");
@@ -6849,7 +6954,7 @@ function renderStageDashboard_(items, emptyMessage){
             html += "</tr>";
           });
         } else if (queueKey === "queuePayments") {
-          html += "<table class='queue-table'><tr><th>Applicant</th><th>Name</th><th>Workflow</th><th>Status</th><th>Received</th><th>Age</th><th>Payment</th><th>Action</th></tr>";
+          html += "<table class='queue-table'><tr><th>Applicant</th><th class='sortableHeader' onclick='sortLegacyQueue_(\"" + esc(queueKey) + "\",\"name\")'>Name" + esc(legacyQueueSortLabel_(queueKey, "name")) + "</th><th>Workflow</th><th>Status</th><th class='sortableHeader' onclick='sortLegacyQueue_(\"" + esc(queueKey) + "\",\"received\")'>Received" + esc(legacyQueueSortLabel_(queueKey, "received")) + "</th><th class='sortableHeader' onclick='sortLegacyQueue_(\"" + esc(queueKey) + "\",\"age\")'>Age" + esc(legacyQueueSortLabel_(queueKey, "age")) + "</th><th>Payment</th><th>Action</th></tr>";
           pageRows.forEach(function(row){
             var rowNumber = Number(row && row.rowNumber || 0);
             var applicantId = String(row && row.applicantId || "");
@@ -6874,7 +6979,7 @@ function renderStageDashboard_(items, emptyMessage){
             html += "</tr>";
           });
         } else {
-          html += "<table class='queue-table'><tr><th>Applicant</th><th>Name</th><th>Workflow</th><th>Status</th><th>Received</th><th>Age</th><th>Action</th></tr>";
+          html += "<table class='queue-table'><tr><th>Applicant</th><th class='sortableHeader' onclick='sortLegacyQueue_(\"" + esc(queueKey) + "\",\"name\")'>Name" + esc(legacyQueueSortLabel_(queueKey, "name")) + "</th><th>Workflow</th><th>Status</th><th class='sortableHeader' onclick='sortLegacyQueue_(\"" + esc(queueKey) + "\",\"received\")'>Received" + esc(legacyQueueSortLabel_(queueKey, "received")) + "</th><th class='sortableHeader' onclick='sortLegacyQueue_(\"" + esc(queueKey) + "\",\"age\")'>Age" + esc(legacyQueueSortLabel_(queueKey, "age")) + "</th><th>Action</th></tr>";
           pageRows.forEach(function(row){
             var rowNumber = Number(row && row.rowNumber || 0);
             var applicantId = String(row && row.applicantId || "");
@@ -6952,6 +7057,160 @@ function renderStageDashboard_(items, emptyMessage){
       renderQueueSection("queueAnomalies", "Payment-First Anomalies", d.anomalies, counts.anomalies);
       renderQueueSection("queuePaidApproved", "Enrolled / Confirmed", d.paidApproved, counts.paidApproved);
       renderOpsQueue_();
+    }
+
+    function actionabilityOwnerLabel_(key){
+      var normalized = String(key || "").trim().toUpperCase();
+      if (normalized === "APPLICANT") return "Applicant Action";
+      if (normalized === "OFFICER") return "Officer Action";
+      if (normalized === "FINANCE") return "Finance Action";
+      if (normalized === "ADMIN") return "Admin Action";
+      if (normalized === "SYSTEM") return "System Action";
+      if (normalized === "NONE") return "No Action";
+      return normalized || "Unknown";
+    }
+
+    function actionabilityUrgencyRank_(value){
+      var key = String(value || "").trim().toUpperCase();
+      var order = { DORMANT: 5, ESCALATED: 4, OVERDUE: 3, DUE: 2, NORMAL: 1 };
+      return order[key] || 0;
+    }
+
+    function sortedActionabilityRows_(rows){
+      var list = Array.isArray(rows) ? rows.slice() : [];
+      var state = actionabilitySortState || { key: "default", dir: "desc" };
+      var dir = state.dir === "asc" ? 1 : -1;
+      list.sort(function(a, b){
+        var av;
+        var bv;
+        if (state.key === "owner") {
+          av = String(a && a.actionOwner || "");
+          bv = String(b && b.actionOwner || "");
+          return av.localeCompare(bv) * dir;
+        }
+        if (state.key === "nextAction") {
+          av = String(a && a.nextAction || "");
+          bv = String(b && b.nextAction || "");
+          return av.localeCompare(bv) * dir;
+        }
+        if (state.key === "suppressor") {
+          av = String(a && a.suppressor || "");
+          bv = String(b && b.suppressor || "");
+          return av.localeCompare(bv) * dir;
+        }
+        if (state.key === "name") {
+          av = String((a && a.name) || (a && a.applicantId) || "");
+          bv = String((b && b.name) || (b && b.applicantId) || "");
+          return av.localeCompare(bv) * dir;
+        }
+        if (state.key === "age") {
+          av = Number(a && a.ageDays || 0);
+          bv = Number(b && b.ageDays || 0);
+          return (av - bv) * dir;
+        }
+        if (state.key === "urgency") {
+          av = actionabilityUrgencyRank_(a && a.urgencyLevel);
+          bv = actionabilityUrgencyRank_(b && b.urgencyLevel);
+          return (av - bv) * dir;
+        }
+        av = actionabilityUrgencyRank_(a && a.urgencyLevel);
+        bv = actionabilityUrgencyRank_(b && b.urgencyLevel);
+        if (av !== bv) return bv - av;
+        return Number(b && b.ageDays || 0) - Number(a && a.ageDays || 0);
+      });
+      return list;
+    }
+
+    function actionabilitySortLabel_(key){
+      var state = actionabilitySortState || {};
+      if (state.key !== key) return "";
+      return state.dir === "asc" ? " ↑" : " ↓";
+    }
+
+    function sortActionabilityPreview_(key){
+      var normalized = String(key || "default");
+      if (actionabilitySortState.key === normalized) {
+        actionabilitySortState.dir = actionabilitySortState.dir === "asc" ? "desc" : "asc";
+      } else {
+        actionabilitySortState.key = normalized;
+        actionabilitySortState.dir = (normalized === "name" || normalized === "owner" || normalized === "nextAction" || normalized === "suppressor") ? "asc" : "desc";
+      }
+      renderActionabilityPreview_({ preserveRows: true });
+    }
+
+    function renderActionabilityPreview_(res){
+      var data = (res && typeof res === "object") ? res : {};
+      var summaryEl = document.getElementById("actionabilityPreviewSummary");
+      var rowsEl = document.getElementById("actionabilityPreviewRows");
+      var metaEl = document.getElementById("actionabilityPreviewMeta");
+      if (!summaryEl || !rowsEl) return;
+      if (data.preserveRows !== true) {
+        actionabilityPreviewMetaState = {
+          includedRows: Number(data.includedRows || 0),
+          scannedRows: Number(data.scannedRows || 0)
+        };
+        actionabilityPreviewCountsState = data.countsByOwner || {};
+      }
+      var counts = actionabilityPreviewCountsState || {};
+      var owners = ["APPLICANT", "OFFICER", "FINANCE", "ADMIN", "NONE"];
+      summaryEl.innerHTML = owners.map(function(owner){
+        return '<div class="box"><div class="k">' + esc(actionabilityOwnerLabel_(owner)) + '</div><div class="v">' + esc(String(Number(counts[owner] || 0))) + '</div></div>';
+      }).join("");
+      if (data.preserveRows !== true && Array.isArray(data.rows)) actionabilityPreviewRows = data.rows.slice();
+      var rows = sortedActionabilityRows_(actionabilityPreviewRows);
+      if (metaEl) {
+        metaEl.textContent = "Read-only preview: " + String(rows.length) + " shown of " + String(Number(actionabilityPreviewMetaState.includedRows || rows.length || 0)) + " included; " + String(Number(actionabilityPreviewMetaState.scannedRows || 0)) + " scanned.";
+      }
+      if (!rows.length) {
+        rowsEl.innerHTML = '<div class="queue-empty">No actionability rows returned.</div>';
+        return;
+      }
+      var html = '<table class="actionabilityTable"><tr>'
+        + '<th class="sortableHeader" onclick="sortActionabilityPreview_(\'name\')">Applicant' + esc(actionabilitySortLabel_("name")) + '</th>'
+        + '<th class="sortableHeader" onclick="sortActionabilityPreview_(\'owner\')">Owner' + esc(actionabilitySortLabel_("owner")) + '</th>'
+        + '<th class="sortableHeader" onclick="sortActionabilityPreview_(\'nextAction\')">Next Action' + esc(actionabilitySortLabel_("nextAction")) + '</th>'
+        + '<th class="sortableHeader" onclick="sortActionabilityPreview_(\'urgency\')">Urgency' + esc(actionabilitySortLabel_("urgency")) + '</th>'
+        + '<th class="sortableHeader" onclick="sortActionabilityPreview_(\'suppressor\')">Suppressor' + esc(actionabilitySortLabel_("suppressor")) + '</th>'
+        + '<th>Recommended Message</th>'
+        + '<th class="sortableHeader" onclick="sortActionabilityPreview_(\'age\')">Age' + esc(actionabilitySortLabel_("age")) + '</th>'
+        + '<th>Explanation / Authorities</th></tr>';
+      rows.forEach(function(row){
+        var r = row || {};
+        var state = r.authorityState || {};
+        var authorities = Array.isArray(r.sourceAuthorities) ? r.sourceAuthorities.join(" | ") : "";
+        var missing = Array.isArray(state.missingRequiredDocuments) && state.missingRequiredDocuments.length ? (" Missing: " + state.missingRequiredDocuments.join(", ")) : "";
+        var urgency = String(r.urgencyLevel || "NORMAL").toUpperCase();
+        var urgencyClass = (urgency === "ESCALATED" || urgency === "DORMANT") ? "danger" : (urgency === "OVERDUE" ? "warn" : "info");
+        html += '<tr>';
+        html += '<td><strong>' + esc(r.applicantId || "") + '</strong><br><span class="muted">' + esc(r.name || "") + '</span></td>';
+        html += '<td>' + esc(actionabilityOwnerLabel_(r.actionOwner)) + '</td>';
+        html += '<td>' + esc(r.nextAction || "NO_ACTION") + '</td>';
+        html += '<td><span class="opsStatusPill ' + urgencyClass + '">' + esc(urgency) + '</span><br><span class="muted">' + esc(r.urgencyReason || "") + '</span></td>';
+        html += '<td>' + esc(r.suppressor || "-") + '</td>';
+        html += '<td>' + esc(r.recommendedMessageType || "-") + '</td>';
+        html += '<td>' + esc(String(r.ageDays === "" || r.ageDays === null || r.ageDays === undefined ? "-" : r.ageDays + " day(s)")) + '<br><span class="muted">' + esc(r.lastRelevantDateSource || "") + '</span></td>';
+        html += '<td class="actionabilityExplain">' + esc(r.explanation || "") + '<br><span class="muted">' + esc(authorities + missing) + '</span></td>';
+        html += '</tr>';
+      });
+      html += '</table>';
+      rowsEl.innerHTML = html;
+    }
+
+    function loadActionabilityPreview_(opts){
+      var o = (opts && typeof opts === "object") ? opts : {};
+      var metaEl = document.getElementById("actionabilityPreviewMeta");
+      if (metaEl) metaEl.textContent = "Loading read-only preview...";
+      google.script.run
+        .withSuccessHandler(function(res){
+          renderActionabilityPreview_(res || {});
+        })
+        .withFailureHandler(function(err){
+          console.error("[AdminUI] admin_getActionabilityPreview failure:", err);
+          var rowsEl = document.getElementById("actionabilityPreviewRows");
+          if (rowsEl) rowsEl.innerHTML = '<div class="queue-empty">Could not load actionability preview.</div>';
+          if (metaEl) metaEl.textContent = "Actionability preview unavailable.";
+        })
+        .admin_getActionabilityPreview({ limit: 40, force: o.force ? 1 : 0 });
     }
 
     function initQueuePanelEvents_(){
@@ -7077,7 +7336,7 @@ function renderStageDashboard_(items, emptyMessage){
 
     function clearResultsPanel_(){
       var body = document.getElementById("tbody");
-      if (body) body.innerHTML = `<tr><td colspan="8" class="muted">No results yet.</td></tr>`;
+      if (body) body.innerHTML = `<tr><td colspan="7" class="muted">No results yet.</td></tr>`;
       lastSearchResults = [];
       lastSearchRows = [];
       clearDocsSelection_();
@@ -7086,7 +7345,14 @@ function renderStageDashboard_(items, emptyMessage){
 
     function clearSearch(){
       document.getElementById("qApplicantId").value = "";
+      document.getElementById("qName").value = "";
       document.getElementById("qEmail").value = "";
+      document.getElementById("qPhone").value = "";
+      var scopeEl = document.getElementById("qSearchScope");
+      if (scopeEl) scopeEl.value = "direct";
+      updateSearchScopeUi_();
+      var resultsPanel = document.getElementById("legacyResultsPanel");
+      if (resultsPanel) resultsPanel.classList.add("hidden");
       clearResultsPanel_();
     }
 
@@ -7354,9 +7620,17 @@ function renderStageDashboard_(items, emptyMessage){
 
     function search(){
       const applicantId = document.getElementById("qApplicantId").value.trim();
+      const name = document.getElementById("qName").value.trim();
       const email = document.getElementById("qEmail").value.trim();
+      const phone = document.getElementById("qPhone").value.trim();
+      const scopeEl = document.getElementById("qSearchScope");
+      const scope = scopeEl ? String(scopeEl.value || "direct") : "direct";
+      const stage = (scope === "stage" && selectedStageFilter) ? selectedStageFilter : "";
 
       setMsg("msg","Searching...");
+      updateSearchScopeUi_();
+      var resultsPanel = document.getElementById("legacyResultsPanel");
+      if (resultsPanel) resultsPanel.classList.remove("hidden");
       google.script.run
         .withSuccessHandler(res => {
           const rows = (res && res.rows) ? res.rows : [];
@@ -7375,14 +7649,13 @@ function renderStageDashboard_(items, emptyMessage){
           lastSearchRows = rows.slice();
           clearDocsSelection_();
           if (!rows.length){
-            document.getElementById("tbody").innerHTML = `<tr><td colspan="8" class="muted">No matches found.</td></tr>`;
+            document.getElementById("tbody").innerHTML = `<tr><td colspan="7" class="muted">No matches found.</td></tr>`;
             setMsg("msg","No matches.");
             return;
           }
           setMsg("msg", rows.length + " match(es).");
           document.getElementById("tbody").innerHTML = rows.map(r => `
             <tr>
-              <td><input type="checkbox" data-action="docs-select-row" data-row-number="${Number(r.rowNumber || 0)}" data-applicant-id="${esc(r.applicantId)}" data-eligible="${(r.eligibleDocsFollowUp && !isDocsFollowupSent_(r)) ? "1" : "0"}" ${(r.eligibleDocsFollowUp && !isDocsFollowupSent_(r)) ? "" : "disabled"}></td>
               <td>${esc(r.applicantId)}</td>
               <td>${esc(r.name)}</td>
               <td>${esc(r.docStatus)}</td>
@@ -7398,7 +7671,7 @@ function renderStageDashboard_(items, emptyMessage){
           console.error("[AdminUI] admin_searchApplicants failure:", err);
           setMsg("msg","Error: " + (err && err.message ? err.message : err));
         })
-        .admin_searchApplicants({ applicantId, email, stage: selectedStageFilter });
+        .admin_searchApplicants({ applicantId: applicantId, name: name, email: email, phone: phone, stage: stage });
     }
 
     function review(rowNumber, applicantId, triggerBtn){
@@ -8668,6 +8941,7 @@ function renderStageDashboard_(items, emptyMessage){
         renderOpsDriftRegister_();
         loadStageDashboard();
         loadReviewQueues();
+        loadActionabilityPreview_();
         fetchOpsApplicantSummary_();
         initAdminOpenApplicant_();
       });
@@ -8688,6 +8962,7 @@ function renderStageDashboard_(items, emptyMessage){
         renderOpsDriftRegister_();
         loadStageDashboard();
         loadReviewQueues();
+        loadActionabilityPreview_();
         fetchOpsApplicantSummary_();
         initAdminOpenApplicant_();
     }
@@ -8695,6 +8970,12 @@ function renderStageDashboard_(items, emptyMessage){
     var resultsBody = document.getElementById("tbody");
     if (resultsBody) resultsBody.addEventListener("click", onResultsClick_);
     if (resultsBody) resultsBody.addEventListener("change", onResultsChange_);
+    var searchScopeEl = document.getElementById("qSearchScope");
+    if (searchScopeEl && searchScopeEl.dataset.bound !== "1") {
+      searchScopeEl.dataset.bound = "1";
+      searchScopeEl.addEventListener("change", updateSearchScopeUi_);
+      updateSearchScopeUi_();
+    }
 
     function bindDocsFollowupControls_(){
       var selectAllBtn = document.getElementById("btnSelectAllEligibleDocs");

@@ -175,9 +175,11 @@ function admin_searchApplicants(payload) {
   payload = payload || {};
   var applicantId = clean_(payload.applicantId || "");
   var email = clean_(payload.email || "").toLowerCase();
+  var nameQuery = clean_(payload.name || payload.applicantName || "").toLowerCase();
+  var phoneQuery = clean_(payload.phone || "").toLowerCase();
   var stageFilter = clean_(payload.stage || "").toUpperCase();
 
-  if (!applicantId && !email && !stageFilter) return { ok: true, rows: [] };
+  if (!applicantId && !email && !nameQuery && !phoneQuery && !stageFilter) return { ok: true, rows: [] };
 
   var sh = openDataSheet_();
   var values = sh.getDataRange().getValues();
@@ -191,6 +193,7 @@ function admin_searchApplicants(payload) {
   ]);
   var hasParentEmail = !!idx.Parent_Email;
   var hasParentEmailCorrected = !!idx.Parent_Email_Corrected;
+  var hasParentPhone = !!idx.Parent_Phone;
 
   var out = [];
   for (var r = 1; r < values.length; r++) {
@@ -201,10 +204,18 @@ function admin_searchApplicants(payload) {
       if (hk) rowObj[hk] = row[c];
     }
     var rid = clean_(row[idx.ApplicantID - 1]);
+    var firstName = clean_(row[idx.First_Name - 1]);
+    var lastName = clean_(row[idx.Last_Name - 1]);
+    var fullName = (firstName + " " + lastName).trim();
     var parentEmail = hasParentEmail ? clean_(row[idx.Parent_Email - 1]).toLowerCase() : "";
     var correctedEmail = hasParentEmailCorrected ? clean_(row[idx.Parent_Email_Corrected - 1]).toLowerCase() : "";
     var effectiveEmail = correctedEmail || parentEmail;
-    var textMatch = (!applicantId && !email) || (applicantId && rid === applicantId) || (email && effectiveEmail === email);
+    var parentPhone = hasParentPhone ? clean_(row[idx.Parent_Phone - 1]) : "";
+    var textMatch = (!applicantId && !email && !nameQuery && !phoneQuery)
+      || (applicantId && rid.toUpperCase().indexOf(applicantId.toUpperCase()) >= 0)
+      || (email && effectiveEmail.indexOf(email) >= 0)
+      || (nameQuery && fullName.toLowerCase().indexOf(nameQuery) >= 0)
+      || (phoneQuery && parentPhone.toLowerCase().indexOf(phoneQuery) >= 0);
     if (!textMatch) continue;
     var stageInfo = null;
     if (stageFilter) {
@@ -227,8 +238,9 @@ function admin_searchApplicants(payload) {
     out.push({
       rowNumber: r + 1,
       applicantId: rid,
-      name: (clean_(row[idx.First_Name - 1]) + " " + clean_(row[idx.Last_Name - 1])).trim(),
+      name: fullName,
       email: effectiveEmail,
+      phone: parentPhone,
       docStatus: docStage,
       paymentVerified: paymentBadge === "Verified" ? "Payment Verified" : (paymentBadge === "Rejected" ? "Payment Rejected" : "Payment Pending"),
       portalAccess: clean_(row[idx.Portal_Access_Status - 1]) || "Open",
@@ -3698,6 +3710,210 @@ function filterDocumentsToVerifyQueue_(rows) {
     // portalSubmitted && requiredDocumentUploadComplete && !docsVerified.
     return portalSubmitted && requiredDocumentUploadComplete && !docsVerified;
   });
+}
+
+function actionabilityPreviewDateInfo_(rowObj) {
+  var row = rowObj || {};
+  var candidates = [
+    { key: "Email_Next_Action_Date", value: row.Email_Next_Action_Date || "" },
+    { key: "Last_Contacted_At", value: row.Last_Contacted_At || "" },
+    { key: "Email_Last_Sent_At", value: row.Email_Last_Sent_At || "" },
+    { key: "PortalLastUpdateAt", value: row.PortalLastUpdateAt || "" },
+    { key: "Portal_Submitted", value: row.Portal_Submitted || "" },
+    { key: "PortalTokenIssuedAt", value: row.PortalTokenIssuedAt || "" },
+    { key: "adapter_timestamp", value: row.adapter_timestamp || row.adapterTimestamp || "" }
+  ];
+  for (var i = 0; i < candidates.length; i++) {
+    var candidate = candidates[i];
+    var ts = parseTime_(candidate.value);
+    if (!(ts > 0)) continue;
+    return {
+      source: candidate.key,
+      value: new Date(ts).toISOString(),
+      ageDays: Math.max(0, Math.floor((Date.now() - ts) / (24 * 60 * 60 * 1000)))
+    };
+  }
+  return { source: "NONE", value: "", ageDays: "" };
+}
+
+function actionabilityPreviewLastContactAgeDays_(rowObj) {
+  var row = rowObj || {};
+  var ts = parseTime_(row.Last_Contacted_At || row.Email_Last_Sent_At || row.Ack_Email_Sent_At || "");
+  if (!(ts > 0)) return "";
+  return Math.max(0, Math.floor((Date.now() - ts) / (24 * 60 * 60 * 1000)));
+}
+
+function actionabilityPreviewUrgency_(owner, nextAction, dateInfo, suppressor, cooldownActive) {
+  if (owner === "NONE" || nextAction === "NO_ACTION") return { level: "NORMAL", reason: "No operator action is currently required." };
+  if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") {
+    return { level: "ESCALATED", reason: "Applicant action is blocked by contactability issue." };
+  }
+  if (cooldownActive) return { level: "NORMAL", reason: "Communication cooldown or next-action date is still active." };
+  var ageDays = Number(dateInfo && dateInfo.ageDays);
+  if (Number.isFinite(ageDays)) {
+    if (ageDays >= 60) return { level: "DORMANT", reason: "Case has been stale for 60+ days from " + clean_(dateInfo.source || "source date") + "." };
+    if (ageDays >= 21) return { level: "ESCALATED", reason: "Case has been stale for 21+ days from " + clean_(dateInfo.source || "source date") + "." };
+    if (ageDays >= 14) return { level: "OVERDUE", reason: "Case has been stale for 14+ days from " + clean_(dateInfo.source || "source date") + "." };
+    if (ageDays >= 3) return { level: "DUE", reason: "Case has been waiting for 3+ days from " + clean_(dateInfo.source || "source date") + "." };
+  }
+  return { level: "NORMAL", reason: "Case is current or has insufficient date evidence for escalation." };
+}
+
+function buildActionabilityPreviewRow_(rowObj, rowNumber) {
+  var row = rowObj || {};
+  var applicantId = clean_(row.ApplicantID || "");
+  var firstName = clean_(row.First_Name || "");
+  var lastName = clean_(row.Last_Name || "");
+  var name = (firstName + " " + lastName).trim();
+  var effectiveEmail = stageAggregationEffectiveEmail_(row);
+  var hasValidEmail = stageAggregationIsValidEmail_(effectiveEmail);
+  var emailIssue = adminOpsHasEmailIssue_(row);
+  var uploadSummary = adminOpsRequiredDocumentUploadSummary_(row);
+  var docsVerified = isYes_(row.Docs_Verified) || computeDocVerificationStatus_(row) === "Verified";
+  var portalSubmittedRaw = clean_(row.Portal_Submitted || "");
+  var portalSubmitted = nonEmpty_(portalSubmittedRaw) && portalSubmittedRaw !== "No";
+  var paymentEvidencePresent = hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File");
+  var paymentVerified = isYes_(row.Payment_Verified);
+  var enrolled = isYes_(row.Registration_Complete) || isYes_(row.Enrolled_Confirmed) || !!clean_(row.Enrolled_At || "");
+  var lifecycleStage = clean_(deriveApplicantLifecycleStage_(row) || deriveOperationalPipelineStage_(row) || "UNKNOWN").toUpperCase();
+  var documentState = adminOpsDocumentStateFromRow_(row);
+  var dateInfo = actionabilityPreviewDateInfo_(row);
+  var lastContactAgeDays = actionabilityPreviewLastContactAgeDays_(row);
+  var nextActionTs = parseTime_(row.Email_Next_Action_Date || "");
+  var cooldownActive = nextActionTs > Date.now();
+  var owner = "NONE";
+  var nextAction = "NO_ACTION";
+  var recommendedMessageType = "";
+  var suppressor = "";
+  var explanation = "";
+
+  if (!hasValidEmail) suppressor = "NO_EFFECTIVE_EMAIL";
+  else if (emailIssue) suppressor = "EMAIL_BLOCKED_OR_BOUNCED";
+  else if (cooldownActive) suppressor = "COOLDOWN_ACTIVE";
+
+  if (enrolled) {
+    owner = "NONE";
+    nextAction = "NO_ACTION";
+    suppressor = suppressor || "COMPLETED_OR_ENROLLED";
+    explanation = "Application appears enrolled or complete; no actionability recommendation is made.";
+  } else if (!hasValidEmail) {
+    owner = "ADMIN";
+    nextAction = "FIX_CONTACT_DETAILS";
+    explanation = "Applicant action cannot proceed because no valid effective email is available.";
+  } else if (!portalSubmitted || !uploadSummary.requiredDocumentUploadComplete) {
+    owner = "APPLICANT";
+    nextAction = "UPLOAD_REQUIRED_DOCUMENTS";
+    recommendedMessageType = suppressor ? "" : (Number(lastContactAgeDays || 0) >= 14 ? "document_completion_escalation" : "document_completion_reminder");
+    explanation = "Mandatory upload completeness authority shows missing required document evidence.";
+  } else if (!docsVerified) {
+    owner = "OFFICER";
+    nextAction = "REVIEW_DOCUMENTS";
+    suppressor = suppressor || "OFFICER_ACTION_PENDING";
+    explanation = "Mandatory uploads are present, but document review authority is not verified.";
+  } else if (!paymentEvidencePresent && !paymentVerified) {
+    owner = "APPLICANT";
+    nextAction = "SEND_PAYMENT_REMINDER";
+    recommendedMessageType = suppressor ? "" : (Number(lastContactAgeDays || 0) >= 14 ? "payment_escalation" : "payment_reminder");
+    explanation = "Document review is verified, but payment evidence is not present.";
+  } else if (paymentEvidencePresent && !paymentVerified) {
+    owner = "FINANCE";
+    nextAction = "VERIFY_PAYMENT";
+    suppressor = suppressor || "FINANCE_ACTION_PENDING";
+    explanation = "Payment evidence is present, but payment authority has not verified it.";
+  } else if (docsVerified && paymentVerified) {
+    owner = "ADMIN";
+    nextAction = "ENROLL";
+    suppressor = suppressor || "ADMIN_ACTION_PENDING";
+    explanation = "Document and payment authorities appear satisfied; enrollment/admin completion is next.";
+  }
+
+  if (suppressor === "COOLDOWN_ACTIVE") recommendedMessageType = "";
+  var urgency = actionabilityPreviewUrgency_(owner, nextAction, dateInfo, suppressor, cooldownActive);
+  return {
+    rowNumber: rowNumber,
+    applicantId: applicantId,
+    name: name,
+    actionOwner: owner,
+    nextAction: nextAction,
+    urgencyLevel: urgency.level,
+    urgencyReason: urgency.reason,
+    suppressor: suppressor,
+    recommendedMessageType: recommendedMessageType,
+    explanation: explanation,
+    lastRelevantDate: dateInfo.value,
+    lastRelevantDateSource: dateInfo.source,
+    ageDays: dateInfo.ageDays,
+    lastContactAgeDays: lastContactAgeDays,
+    sourceAuthorities: [
+      "Document Completeness: adminOpsRequiredDocumentUploadSummary_",
+      "Document Review: computeDocVerificationStatus_",
+      "Lifecycle: deriveApplicantLifecycleStage_",
+      "Payment: Payment_Verified/Fee_Receipt_File row facts",
+      "Communication: Last_Contact_* / Email_* row facts"
+    ],
+    authorityState: {
+      lifecycleStage: lifecycleStage,
+      documentState: documentState,
+      requiredDocumentUploadComplete: !!uploadSummary.requiredDocumentUploadComplete,
+      uploadedRequiredDocumentCount: Number(uploadSummary.uploadedRequiredCount || 0),
+      requiredDocumentCount: Number(uploadSummary.requiredCount || 0),
+      missingRequiredDocuments: uploadSummary.missingRequiredDocuments || [],
+      docsVerified: !!docsVerified,
+      portalSubmitted: !!portalSubmitted,
+      paymentEvidencePresent: !!paymentEvidencePresent,
+      paymentVerified: !!paymentVerified,
+      hasValidEmail: !!hasValidEmail
+    }
+  };
+}
+
+function compareActionabilityPreviewRows_(a, b) {
+  var order = { DORMANT: 1, ESCALATED: 2, OVERDUE: 3, DUE: 4, NORMAL: 5 };
+  var aRank = order[clean_(a && a.urgencyLevel || "").toUpperCase()] || 99;
+  var bRank = order[clean_(b && b.urgencyLevel || "").toUpperCase()] || 99;
+  if (aRank !== bRank) return aRank - bRank;
+  return Number(b && b.ageDays || 0) - Number(a && a.ageDays || 0);
+}
+
+function admin_getActionabilityPreview(payload) {
+  var adminEmail = getCallerEmail_();
+  if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+  var p = payload && typeof payload === "object" ? payload : {};
+  var limit = Math.max(1, Math.min(100, Number(p.limit || 40)));
+  var sheet = openDataSheet_();
+  var data = sheet.getDataRange().getValues();
+  var out = {
+    ok: true,
+    readOnly: true,
+    experimental: true,
+    generatedAt: new Date().toISOString(),
+    limit: limit,
+    scannedRows: Math.max(0, (data || []).length - 1),
+    includedRows: 0,
+    countsByOwner: { APPLICANT: 0, OFFICER: 0, FINANCE: 0, ADMIN: 0, SYSTEM: 0, NONE: 0 },
+    rows: []
+  };
+  if (!data || data.length < 2) return out;
+  var headers = data[0] || [];
+  var rows = [];
+  for (var r = 1; r < data.length; r++) {
+    var rowValues = data[r] || [];
+    var rowObj = {};
+    for (var c = 0; c < headers.length; c++) {
+      var h = clean_(headers[c]);
+      if (h) rowObj[h] = rowValues[c];
+    }
+    if (!clean_(rowObj.ApplicantID || "")) continue;
+    var item = buildActionabilityPreviewRow_(rowObj, r + 1);
+    var owner = clean_(item.actionOwner || "NONE").toUpperCase() || "NONE";
+    if (!Object.prototype.hasOwnProperty.call(out.countsByOwner, owner)) out.countsByOwner[owner] = 0;
+    out.countsByOwner[owner]++;
+    rows.push(item);
+  }
+  rows.sort(compareActionabilityPreviewRows_);
+  out.includedRows = rows.length;
+  out.rows = rows.slice(0, limit);
+  return out;
 }
 
 function mergeQueuePageMeta_(queues, offset, limit) {
