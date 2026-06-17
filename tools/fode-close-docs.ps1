@@ -3,6 +3,9 @@ param(
   [string]$Release,
 
   [Parameter(Mandatory=$true)]
+  [int]$DeployVersion,
+
+  [Parameter(Mandatory=$true)]
   [string]$Message,
 
   [Parameter(Mandatory=$true)]
@@ -12,16 +15,23 @@ param(
 $ErrorActionPreference = "Stop"
 
 $Repo = "E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog"
+$ExpectedVersion = "r$DeployVersion"
 
-Write-Host "FODE docs close gate" -ForegroundColor Cyan
+Write-Host "FODE runtime close gate" -ForegroundColor Cyan
 Write-Host "Repo: $Repo"
 Write-Host "Release: $Release"
+Write-Host "Expected VERSION: $ExpectedVersion"
+Write-Host "Expected DEPLOY_VERSION_NUMBER: $DeployVersion"
 Write-Host ""
 
 Set-Location $Repo
 
 if (-not (Test-Path ".git")) {
   throw "Not a git repository: $Repo"
+}
+
+if (-not (Test-Path "Config.js")) {
+  throw "Config.js not found. Cannot verify release identity."
 }
 
 Write-Host "Current git status:" -ForegroundColor Yellow
@@ -38,12 +48,40 @@ foreach ($file in $Files) {
 }
 
 Write-Host ""
+Write-Host "Checking Config.js release identity..." -ForegroundColor Yellow
+
+$config = Get-Content "Config.js" -Raw
+
+$versionPattern = 'VERSION\s*:\s*["'']' + [regex]::Escape($ExpectedVersion) + '["'']'
+$deployPattern  = 'DEPLOY_VERSION_NUMBER\s*:\s*' + [regex]::Escape([string]$DeployVersion)
+
+if ($config -notmatch $versionPattern) {
+  throw "Config.js VERSION does not match expected $ExpectedVersion"
+}
+
+if ($config -notmatch $deployPattern) {
+  throw "Config.js DEPLOY_VERSION_NUMBER does not match expected $DeployVersion"
+}
+
+Write-Host "Config.js identity check PASS." -ForegroundColor Green
+
+Write-Host ""
 Write-Host "Running git diff --check..." -ForegroundColor Yellow
 git diff --check
+
+if ($Files -contains "Admin.js") {
+  Write-Host ""
+  Write-Host "Running node --check Admin.js..." -ForegroundColor Yellow
+  node --check Admin.js
+}
 
 Write-Host ""
 Write-Host "Tracked modified files:" -ForegroundColor Yellow
 git diff --name-only
+
+Write-Host ""
+Write-Host "Untracked files:" -ForegroundColor Yellow
+git ls-files --others --exclude-standard
 
 Write-Host ""
 $confirm = Read-Host "Stage ONLY the listed files and commit? Type YES to continue"
@@ -58,6 +96,11 @@ Write-Host ""
 Write-Host "Staged files:" -ForegroundColor Yellow
 git diff --cached --name-only
 
+Write-Host ""
+Write-Host "Staged diff stat:" -ForegroundColor Yellow
+git diff --cached --stat
+
+Write-Host ""
 $confirm2 = Read-Host "Commit with message: '$Message'? Type YES to commit"
 if ($confirm2 -ne "YES") {
   Write-Host "Cancelled after staging. Review with git status." -ForegroundColor Red
@@ -73,3 +116,7 @@ git status -sb
 Write-Host ""
 Write-Host "Latest commit:" -ForegroundColor Yellow
 git log -1 --oneline
+
+Write-Host ""
+Write-Host "Runtime close complete." -ForegroundColor Green
+Write-Host "Reminder: this script does not deploy Apps Script and does not push to origin."
