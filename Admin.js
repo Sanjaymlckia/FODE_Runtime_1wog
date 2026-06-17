@@ -3688,6 +3688,18 @@ function normalizeReviewQueueData_(data) {
   return out;
 }
 
+function filterDocumentsToVerifyQueue_(rows) {
+  return (Array.isArray(rows) ? rows : []).filter(function (row) {
+    var item = row && typeof row === "object" ? row : {};
+    var portalSubmitted = clean_(item.Portal_Submitted || "") === "Yes";
+    var requiredDocumentUploadComplete = item.requiredDocumentUploadComplete === true;
+    var docsVerified = clean_(item.Docs_Verified || "") === "Yes";
+    // r22xB.1: Documents to Verify is officer review-ready only:
+    // portalSubmitted && requiredDocumentUploadComplete && !docsVerified.
+    return portalSubmitted && requiredDocumentUploadComplete && !docsVerified;
+  });
+}
+
 function mergeQueuePageMeta_(queues, offset, limit) {
   var names = ["fdReceived", "docs", "awaitingPayment", "payments", "anomalies", "paidApproved", "postPaymentIssues"];
   var hasMore = false;
@@ -4457,6 +4469,8 @@ function admin_getReviewQueues(payload) {
         var opsDocumentState = adminOpsDocumentStateFromRow_(rowObj);
         var opsLifecycleStageKey = adminOpsLifecycleStageKeyFromRow_(rowObj);
         var requiredDocumentUploadComplete = !!(opsRequiredDocsSummary && opsRequiredDocsSummary.requiredDocumentUploadComplete);
+        // r22xB.1: Documents to Verify is officer review-ready only:
+        // portalSubmitted && requiredDocumentUploadComplete && !docsVerified.
         var docsQueueMatch = portalSubmitted && requiredDocumentUploadComplete && !docsReviewVerified;
         var awaitingPaymentQueueMatch = docsVerifiedRaw === "Yes" && !paymentVerified && !paymentEvidencePresent;
         var paymentsQueueMatch = docsVerifiedRaw === "Yes" && !paymentVerified && paymentEvidencePresent;
@@ -4735,6 +4749,8 @@ function admin_getReviewQueues(payload) {
   }
 
   fullData = normalizeReviewQueueData_(fullData);
+  fullData.docs = filterDocumentsToVerifyQueue_(fullData.docs);
+  fullData.counts.docs = fullData.docs.length;
   var pageMeta = mergeQueuePageMeta_(fullData, offset, limit);
   function refreshDocsFollowupRuntime_(rows) {
     var list = Array.isArray(rows) ? rows : [];
