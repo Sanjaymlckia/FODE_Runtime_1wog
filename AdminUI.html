@@ -551,16 +551,20 @@
     .modal .k{ color:#d7e6ff; }
     .modal label{ color:#e4f0ff; }
     .v{ font-size:13px; margin-top:4px; }
-    .docs{ display:grid; grid-template-columns: 1fr; gap:10px; margin-top:8px; }
+    .docs{ display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:10px; margin-top:8px; }
     .doc{
       padding:10px; border-radius: 12px;
       border: 1px solid rgba(148,163,184,.18);
       background: rgba(11,18,32,.45);
       display:grid;
-      grid-template-columns: 1.2fr .8fr 1fr .6fr;
+      grid-template-columns: minmax(0,1fr);
       gap:10px;
       align-items:start;
     }
+    .docMeta{ font-size:12px; color:var(--muted); line-height:1.45; margin-top:4px; word-break:break-word; }
+    .docActionRow{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; align-items:center; }
+    .docActionRow .btn{ text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+    .docPreviewStatus{ font-size:12px; color:#b9cbe0; margin-top:6px; }
     .docComment{
       min-height:60px;
       height:60px;
@@ -621,6 +625,15 @@
       gap:10px; padding:10px 12px;
       border-bottom:1px solid rgba(148,163,184,.18);
     }
+    .docPreviewFallback{
+      display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+      padding:8px 12px;
+      border-bottom:1px solid rgba(148,163,184,.18);
+      color:#dbeafe;
+      font-size:12px;
+      background:rgba(15,23,42,.72);
+    }
+    .docPreviewFallback .btn{ text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
     .docPreviewFrame{
       flex:1 1 auto;
       width:100%;
@@ -2254,6 +2267,11 @@
       <div class="docPreviewHead">
         <div id="docPreviewTitle" style="font-weight:800;font-size:14px;">Document Preview</div>
         <button type="button" class="btn small" onclick="closeDocPreview_()">Close</button>
+      </div>
+      <div id="docPreviewFallback" class="docPreviewFallback">
+        <span id="docPreviewStatus">Loading preview. If it does not load, use Open or Download.</span>
+        <a id="docPreviewOpenLink" class="btn small" target="_blank" rel="noopener">Open in New Tab</a>
+        <a id="docPreviewDownloadLink" class="btn small" target="_blank" rel="noopener">Download</a>
       </div>
       <iframe id="docPreviewFrame" class="docPreviewFrame" title="Document Preview" src=""></iframe>
     </div>
@@ -4609,26 +4627,74 @@
         var fileKey = String(row.file || "").trim();
         row.fileProxyOpenUrl = buildFileProxyUrlFromPortalInfo_(portalInfo, fileKey, "open");
         row.fileProxyDownloadUrl = buildFileProxyUrlFromPortalInfo_(portalInfo, fileKey, "download");
+        row.previewKind = inferDocPreviewKind_(row);
         return row;
       });
     }
-    function openDocPreview_(label, url){
+    function inferDocPreviewKind_(doc){
+      var d = doc || {};
+      var source = [
+        d.mimeType,
+        d.fileName,
+        d.name,
+        d.url,
+        d.rawValue,
+        d.file
+      ].join(" ").toLowerCase();
+      if (/image\/(png|jpe?g|gif|webp)|\.(png|jpe?g|gif|webp)(\?|#|$)/.test(source)) return "image";
+      if (/application\/pdf|\.pdf(\?|#|$)/.test(source)) return "pdf";
+      return "unknown";
+    }
+    function docPreviewStatusText_(doc){
+      var kind = String((doc && doc.previewKind) || inferDocPreviewKind_(doc)).toLowerCase();
+      if (!doc || !doc.hasFile) return "Preview unavailable until file is uploaded.";
+      if (!doc.fileProxyOpenUrl) return "Preview: resolving secure file link.";
+      if (kind === "image") return "Image preview is available. Download remains the reliable fallback.";
+      if (kind === "pdf") return "PDF preview may be blocked by browser security. Download is the most reliable review path.";
+      return "Preview type unknown. Download is the most reliable review path. Open in New Tab may be blocked by browser security.";
+    }
+    function canInlinePreviewDoc_(doc){
+      return !!(doc && doc.hasFile && doc.fileProxyOpenUrl && String(doc.previewKind || "").toLowerCase() === "image");
+    }
+    let docPreviewTimer = null;
+    function openDocPreview_(label, url, downloadUrl){
       var previewUrl = String(url || "").trim();
       if (!previewUrl) {
-        alert("No preview available");
+        alert("Preview is unavailable. Use Open or Download if available.");
         return;
       }
       var back = document.getElementById("docPreviewBack");
       var title = document.getElementById("docPreviewTitle");
       var frame = document.getElementById("docPreviewFrame");
+      var status = document.getElementById("docPreviewStatus");
+      var openLink = document.getElementById("docPreviewOpenLink");
+      var downloadLink = document.getElementById("docPreviewDownloadLink");
       if (!back || !title || !frame) return;
       title.textContent = label ? ("Preview: " + String(label)) : "Document Preview";
+      if (status) status.textContent = "Loading preview. If it does not load, use Open in New Tab or Download.";
+      if (openLink) openLink.href = previewUrl;
+      if (downloadLink) downloadLink.href = String(downloadUrl || previewUrl);
+      frame.onload = function(){
+        if (docPreviewTimer) {
+          clearTimeout(docPreviewTimer);
+          docPreviewTimer = null;
+        }
+        if (status) status.textContent = "Preview loaded. If the frame is blank or blocked, use Open in New Tab or Download.";
+      };
       frame.src = previewUrl;
       back.classList.remove("hidden");
+      if (docPreviewTimer) clearTimeout(docPreviewTimer);
+      docPreviewTimer = setTimeout(function(){
+        if (status) status.textContent = "Preview may be blocked or slow. Use Open in New Tab for normal review, or Download as fallback.";
+      }, 4500);
     }
     function closeDocPreview_(){
       var back = document.getElementById("docPreviewBack");
       var frame = document.getElementById("docPreviewFrame");
+      if (docPreviewTimer) {
+        clearTimeout(docPreviewTimer);
+        docPreviewTimer = null;
+      }
       if (frame) frame.src = "";
       if (back) back.classList.add("hidden");
     }
@@ -8028,12 +8094,19 @@ function renderStageDashboard_(items, emptyMessage){
         <div class="doc" data-i="${i}">
           <div>
             <div class="docTitle">${esc(x.label)}</div>
-            <div class="muted" style="font-size:12px; margin-top:4px;">
+            <div class="docMeta">
+              ${x.hasFile ? `File evidence present` : `No uploaded file`}
+              ${x.file ? `<br>Field: ${esc(x.file)}` : ``}
+            </div>
+            <div class="docPreviewStatus">
+              ${esc(docPreviewStatusText_(x))}
+            </div>
+            <div class="docActionRow">
               ${x.hasFile
                 ? (x.fileProxyOpenUrl
-                    ? `<a href="${esc(x.fileProxyOpenUrl)}" target="_blank" rel="noopener">Open</a>
-                       <a href="${esc(x.fileProxyDownloadUrl || x.fileProxyOpenUrl)}" target="_blank" rel="noopener">Download</a>
-                       <button type="button" class="btn small docPreviewBtn" data-label="${esc(x.label)}" data-url="${esc(x.fileProxyOpenUrl)}">Preview</button>`
+                    ? `${canInlinePreviewDoc_(x) ? `<button type="button" class="btn small docPreviewBtn" data-label="${esc(x.label)}" data-url="${esc(x.fileProxyOpenUrl)}" data-download-url="${esc(x.fileProxyDownloadUrl || x.fileProxyOpenUrl)}">Preview Image</button>` : `<span class="muted" aria-label="Recommendation">Recommended: Download</span>`}
+                       <a class="btn small accent" href="${esc(x.fileProxyDownloadUrl || x.fileProxyOpenUrl)}" target="_blank" rel="noopener">Download</a>
+                       <a class="btn small" href="${esc(x.fileProxyOpenUrl)}" target="_blank" rel="noopener">Open in New Tab <span class="muted">(browser-dependent)</span></a>`
                     : `<span class="muted">Resolving secure link...</span>`)
                 : `Not uploaded`}
             </div>
@@ -8087,7 +8160,7 @@ function renderStageDashboard_(items, emptyMessage){
       const previewEls = Array.from(document.querySelectorAll(".docPreviewBtn"));
       previewEls.forEach(function(btn){
         btn.addEventListener("click", function(){
-          openDocPreview_(this.getAttribute("data-label") || "", this.getAttribute("data-url") || "");
+          openDocPreview_(this.getAttribute("data-label") || "", this.getAttribute("data-url") || "", this.getAttribute("data-download-url") || "");
         });
       });
     }
