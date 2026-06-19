@@ -3956,6 +3956,57 @@ function buildTokenGatedFileUrl_(baseUrl, applicantId, secret, fieldKey, mode) {
     + "&field=" + encodeURIComponent(clean_(fieldKey || ""));
 }
 
+function documentFileActionSignaturePayload_(applicantId, fieldKey, itemIndex, mode, expiresAtMs) {
+  return [
+    clean_(applicantId || ""),
+    clean_(fieldKey || ""),
+    String(Number(itemIndex)),
+    clean_(mode || "open").toLowerCase() === "download" ? "download" : "open",
+    String(Number(expiresAtMs))
+  ].join("|");
+}
+
+function signDocumentFileAction_(applicantId, fieldKey, itemIndex, mode, expiresAtMs, secret) {
+  var key = clean_(secret || "");
+  if (!key) return "";
+  var payload = documentFileActionSignaturePayload_(applicantId, fieldKey, itemIndex, mode, expiresAtMs);
+  var bytes = Utilities.computeHmacSha256Signature(payload, key);
+  return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/g, "");
+}
+
+function constantTimeStringEquals_(left, right) {
+  var a = String(left || "");
+  var b = String(right || "");
+  var length = Math.max(a.length, b.length);
+  var diff = a.length ^ b.length;
+  for (var i = 0; i < length; i++) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
+function verifyDocumentFileActionSignature_(applicantId, fieldKey, itemIndex, mode, expiresAtMs, signature, secret) {
+  var exp = Number(expiresAtMs);
+  var now = Date.now();
+  if (!isFinite(exp) || exp <= now || exp > now + (10 * 60 * 1000)) return false;
+  var expected = signDocumentFileAction_(applicantId, fieldKey, itemIndex, mode, exp, secret);
+  return !!expected && constantTimeStringEquals_(expected, signature);
+}
+
+function buildSignedDocumentFileActionUrl_(baseUrl, applicantId, fieldKey, itemIndex, mode, expiresAtMs, secret) {
+  var base = clean_(baseUrl || "");
+  var signature = signDocumentFileAction_(applicantId, fieldKey, itemIndex, mode, expiresAtMs, secret);
+  if (!base || !signature) return "";
+  return base
+    + "?view=file"
+    + "&mode=" + encodeURIComponent(clean_(mode || "open").toLowerCase() === "download" ? "download" : "open")
+    + "&id=" + encodeURIComponent(clean_(applicantId || ""))
+    + "&field=" + encodeURIComponent(clean_(fieldKey || ""))
+    + "&idx=" + encodeURIComponent(String(Number(itemIndex)))
+    + "&exp=" + encodeURIComponent(String(Number(expiresAtMs)))
+    + "&sig=" + encodeURIComponent(signature);
+}
+
 function isFileInFolderChain_(file, folderId) {
   var target = clean_(folderId);
   if (!file || !target) return false;

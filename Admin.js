@@ -845,6 +845,111 @@ function admin_getApplicantDocumentManifest(payload) {
   }
 }
 
+function adminDocumentFileActionField_(fieldName) {
+  var target = clean_(fieldName || "");
+  var docs = Array.isArray(CONFIG.DOC_FIELDS) ? CONFIG.DOC_FIELDS : [];
+  for (var i = 0; i < docs.length; i++) {
+    if (clean_(docs[i] && docs[i].file || "") === target) return docs[i];
+  }
+  return null;
+}
+
+function admin_getApplicantDocumentFileAction(payload) {
+  var adminEmail = getCallerEmail_();
+  if (!isAdmin_(adminEmail)) {
+    return { ok: false, code: "ACCESS_DENIED", error: "Access denied" };
+  }
+  try {
+    requireSuperAdmin_(adminEmail);
+  } catch (_authErr) {
+    return { ok: false, code: "ACCESS_DENIED", error: "Access denied" };
+  }
+
+  try {
+    var p = payload && typeof payload === "object" ? payload : {};
+    var applicantId = clean_(p.applicantId || p.ApplicantID || "");
+    var rowNumber = Number(p.rowNumber);
+    var sourceField = clean_(p.sourceField || "");
+    var itemIndex = Number(p.itemIndex);
+    if (!applicantId || !isFinite(rowNumber) || rowNumber < 2 || Math.floor(rowNumber) !== rowNumber) {
+      return { ok: false, code: "INVALID_APPLICANT_CONTEXT", error: "Applicant context is invalid" };
+    }
+    if (!isFinite(itemIndex) || itemIndex < 0 || Math.floor(itemIndex) !== itemIndex) {
+      return { ok: false, code: "INVALID_ITEM_INDEX", error: "Document item index is invalid" };
+    }
+    var docField = adminDocumentFileActionField_(sourceField);
+    if (!docField) {
+      return { ok: false, code: "INVALID_SOURCE_FIELD", error: "Document field is invalid" };
+    }
+
+    var sheet = openDataSheet_();
+    var row = getRowObject_(sheet, rowNumber);
+    var rowApplicantId = clean_(row.ApplicantID || row[CONFIG.APPLICANT_ID_HEADER] || "");
+    if (!rowApplicantId || rowApplicantId !== applicantId) {
+      return { ok: false, code: "APPLICANT_CONTEXT_MISMATCH", error: "Applicant context does not match" };
+    }
+
+    var folderUrl = clean_(row.Folder_Url || row[SCHEMA.FOLDER_URL] || "");
+    var folderId = folderIdFromUrl_(folderUrl);
+    if (!folderId) {
+      return { ok: false, code: "DOCUMENT_SOURCE_UNAVAILABLE", error: "Document source is unavailable" };
+    }
+    var sourceUrls = normalizeToUrlList_(row[sourceField], sourceField);
+    if (itemIndex >= sourceUrls.length) {
+      return { ok: false, code: "ITEM_INDEX_OUT_OF_RANGE", error: "Document item is unavailable" };
+    }
+    var fileId = extractDriveFileId_(sourceUrls[itemIndex]);
+    if (!fileId) {
+      return { ok: false, code: "DOCUMENT_SOURCE_UNAVAILABLE", error: "Document source is unavailable" };
+    }
+    var file;
+    try {
+      file = DriveApp.getFileById(fileId);
+    } catch (_fileErr) {
+      return { ok: false, code: "DOCUMENT_SOURCE_UNAVAILABLE", error: "Document source is unavailable" };
+    }
+    if (!isFileInFolderChain_(file, folderId)) {
+      return { ok: false, code: "DOCUMENT_SOURCE_MISMATCH", error: "Document source does not match applicant context" };
+    }
+
+    var secretRes = getPortalSecretForApplicant_(applicantId);
+    var secret = clean_(secretRes && (secretRes.secret || secretRes.secretPlain) || "");
+    var baseUrl = clean_(CONFIG.WEBAPP_URL_STUDENT || "");
+    if (!secret || !baseUrl) {
+      return { ok: false, code: "SECURE_ACTION_UNAVAILABLE", error: "Secure document action is unavailable" };
+    }
+    var expiresAtMs = Date.now() + (5 * 60 * 1000);
+    var openUrl = buildSignedDocumentFileActionUrl_(
+      baseUrl, applicantId, sourceField, itemIndex, "open", expiresAtMs, secret
+    );
+    var downloadUrl = buildSignedDocumentFileActionUrl_(
+      baseUrl, applicantId, sourceField, itemIndex, "download", expiresAtMs, secret
+    );
+    if (!openUrl || !downloadUrl) {
+      return { ok: false, code: "SECURE_ACTION_UNAVAILABLE", error: "Secure document action is unavailable" };
+    }
+
+    var mimeType = clean_(file.getMimeType ? file.getMimeType() : "");
+    return {
+      ok: true,
+      sourceField: sourceField,
+      itemIndex: itemIndex,
+      label: clean_(docField.label || sourceField),
+      mimeType: mimeType,
+      previewEligible: /^image\//i.test(mimeType),
+      openUrl: openUrl,
+      downloadUrl: downloadUrl,
+      expiresAt: new Date(expiresAtMs).toISOString()
+    };
+  } catch (_err) {
+    return {
+      ok: false,
+      code: "DOCUMENT_ACTION_ERROR",
+      error: "Secure document action could not be built"
+    };
+  }
+}
+
 function getZohoBooksWriteAdminEmails_() {
   var raw = "";
   try {

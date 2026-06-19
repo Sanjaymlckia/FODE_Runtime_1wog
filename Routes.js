@@ -139,11 +139,12 @@ function doGet_file_(e) {
     var params = (e && e.parameter && typeof e.parameter === "object") ? e.parameter : {};
     applicantId = clean_(params.id || "");
     var secret = clean_(params.s || "");
+    var signedAction = !!clean_(params.sig || "");
     fieldKey = clean_(params.field || "");
     mode = clean_(params.mode || "open").toLowerCase();
     if (mode !== "download") mode = "open";
 
-    if (!applicantId || !secret || !fieldKey) {
+    if (!applicantId || !fieldKey || (!secret && !signedAction)) {
       return htmlOutput_(renderFileProxyMessageHtml_("Missing file link parameters.", dbg));
     }
 
@@ -156,14 +157,48 @@ function doGet_file_(e) {
       return htmlOutput_(renderFileProxyMessageHtml_("Invalid file field.", dbg));
     }
 
-    var ss = getWorkingSpreadsheet_();
-    var sheet = mustGetDataSheet_(ss);
-    var found = findPortalRowByIdSecret_(sheet, applicantId, secret);
-    if (!found) {
-      Logger.log("FILE_PROXY_TOKEN_FAIL dbg=" + dbg + " id=" + applicantId + " field=" + fieldKey);
-      return htmlOutput_(renderFileProxyMessageHtml_("Invalid or expired portal link.", dbg));
+    var found = null;
+    var rawValue = "";
+    if (signedAction) {
+      var itemIndex = Number(params.idx);
+      var expiresAtMs = Number(params.exp);
+      var signature = clean_(params.sig || "");
+      var secretRes = getPortalSecretForApplicant_(applicantId);
+      var signingSecret = clean_(secretRes && (secretRes.secret || secretRes.secretPlain) || "");
+      if (!signingSecret || !isFinite(itemIndex) || itemIndex < 0 || Math.floor(itemIndex) !== itemIndex
+          || !verifyDocumentFileActionSignature_(
+            applicantId, fieldKey, itemIndex, mode, expiresAtMs, signature, signingSecret
+          )) {
+        return htmlOutput_(renderFileProxyMessageHtml_("Invalid or expired file action.", dbg));
+      }
+      var ss = getWorkingSpreadsheet_();
+      var sheet = mustGetDataSheet_(ss);
+      var rowNumber = findRowByApplicantId_(sheet, applicantId);
+      if (!rowNumber) {
+        return htmlOutput_(renderFileProxyMessageHtml_("Invalid or expired file action.", dbg));
+      }
+      var record = getRowObject_(sheet, rowNumber);
+      var sourceUrls = normalizeToUrlList_(record[fieldKey], fieldKey);
+      if (itemIndex >= sourceUrls.length) {
+        return htmlOutput_(renderFileProxyMessageHtml_("File unavailable.", dbg));
+      }
+      rawValue = clean_(sourceUrls[itemIndex] || "");
+      var selectedFileId = extractDriveFileId_(rawValue);
+      var selectedFolderId = folderIdFromUrl_(clean_(record.Folder_Url || record[SCHEMA.FOLDER_URL] || ""));
+      var selectedFile = selectedFileId ? DriveApp.getFileById(selectedFileId) : null;
+      if (!selectedFile || !selectedFolderId || !isFileInFolderChain_(selectedFile, selectedFolderId)) {
+        return htmlOutput_(renderFileProxyMessageHtml_("File unavailable.", dbg));
+      }
+    } else {
+      var ss = getWorkingSpreadsheet_();
+      var sheet = mustGetDataSheet_(ss);
+      found = findPortalRowByIdSecret_(sheet, applicantId, secret);
+      if (!found) {
+        Logger.log("FILE_PROXY_TOKEN_FAIL dbg=" + dbg + " id=" + applicantId + " field=" + fieldKey);
+        return htmlOutput_(renderFileProxyMessageHtml_("Invalid or expired portal link.", dbg));
+      }
+      rawValue = clean_((found.record && found.record[fieldKey]) || "");
     }
-    var rawValue = clean_((found.record && found.record[fieldKey]) || "");
     fileId = extractDriveFileId_(rawValue);
     var fileRes = getFileBlobByUrlOrId_(rawValue, dbg, "fileProxy:" + fieldKey);
     if (!fileRes || fileRes.ok !== true || !fileRes.blob) {
