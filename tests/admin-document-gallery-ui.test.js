@@ -16,6 +16,10 @@ expectMatch(/id="documentGallery"/, "Gallery container must exist");
 expectMatch(/Open Document Gallery/, "Gallery label must be present");
 expectMatch(/admin_getApplicantDocumentManifest\(\{ applicantId: applicantId \}\)/, "Manifest must load on explicit gallery request");
 expectMatch(/admin_getApplicantDocumentFileAction\(\{\s*applicantId: applicantId,\s*rowNumber: currentRowNumber,\s*sourceField: String\(sourceField \|\| ""\),\s*itemIndex: Number\(itemIndex\)/s, "Per-file action requests must use applicantId, rowNumber, sourceField, and itemIndex only");
+expectMatch(/function parseSignedFileRouteUrl_\(/, "Preview flow must validate signed file-route URLs before loading the iframe");
+expectMatch(/if \(!parsedPreview\.valid\) \{[\s\S]*Preview link could not be prepared\. Use Open in New Tab or Download\./, "Malformed preview URLs must not be loaded into the iframe");
+expectMatch(/openDocPreview_\(label,\s*res\.openUrl \|\| \"\",\s*res\.downloadUrl \|\| \"\"\)/, "Preview action must use the signed openUrl returned by admin_getApplicantDocumentFileAction");
+expectNoMatch(/openDocPreview_\(label,\s*res\.previewUrl/, "Client must not depend on a separate previewUrl or reconstruct preview links");
 expectNoMatch(/fileId\s*:/, "Client UI must not send raw Drive file IDs");
 expectNoMatch(/folderId\s*:/, "Client UI must not send folder IDs");
 expectNoMatch(/rawValue\s*:/, "Client UI must not send raw evidence values");
@@ -31,6 +35,7 @@ expectMatch(/Secure per-file action unavailable for this mapping\./, "Gallery mu
 console.log("PASS gallery button exists in selected-applicant review modal");
 console.log("PASS gallery loads manifest only after explicit click path");
 console.log("PASS per-file action payload uses sourceField + itemIndex only");
+console.log("PASS gallery preview validates and reuses signed openUrl before iframe navigation");
 console.log("PASS client does not reference raw Drive IDs or raw evidence values in action payloads");
 console.log("PASS existing renderDocCards_ flow remains present");
 console.log("PASS gallery supports image, PDF/download-first, multi-file, and missing-required states");

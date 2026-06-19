@@ -4797,12 +4797,48 @@
       return !!(doc && doc.hasFile && doc.fileProxyOpenUrl && String(doc.previewKind || "").toLowerCase() === "image");
     }
     let docPreviewTimer = null;
+    function parseSignedFileRouteUrl_(url){
+      var candidate = String(url || "").trim();
+      if (!candidate) return { valid: false, href: "", missing: ["url"] };
+      try {
+        var parsed = new URL(candidate, window.location.href);
+        var params = parsed.searchParams;
+        var missing = [];
+        if (String(params.get("view") || "").trim().toLowerCase() !== "file") missing.push("view=file");
+        if (!String(params.get("id") || "").trim()) missing.push("id");
+        if (!String(params.get("field") || "").trim()) missing.push("field");
+        var hasSignedAction = !!String(params.get("sig") || "").trim();
+        var hasPortalSecret = !!String(params.get("s") || "").trim();
+        if (hasSignedAction) {
+          if (!String(params.get("idx") || "").trim()) missing.push("idx");
+          if (!String(params.get("exp") || "").trim()) missing.push("exp");
+        } else if (!hasPortalSecret) {
+          missing.push("sig/s");
+        }
+        return {
+          valid: missing.length === 0,
+          href: parsed.toString(),
+          missing: missing
+        };
+      } catch (_err) {
+        return { valid: false, href: "", missing: ["url"] };
+      }
+    }
+    function syncDocPreviewLinkState_(el, parsed, fallbackHref){
+      if (!el) return;
+      var href = parsed && parsed.valid ? parsed.href : String(fallbackHref || "").trim();
+      if (href) {
+        el.href = href;
+        el.removeAttribute("aria-disabled");
+      } else {
+        el.removeAttribute("href");
+        el.setAttribute("aria-disabled", "true");
+      }
+    }
     function openDocPreview_(label, url, downloadUrl){
       var previewUrl = String(url || "").trim();
-      if (!previewUrl) {
-        alert("Preview is unavailable. Use Open or Download if available.");
-        return;
-      }
+      var parsedPreview = parseSignedFileRouteUrl_(previewUrl);
+      var parsedDownload = parseSignedFileRouteUrl_(String(downloadUrl || previewUrl).trim());
       var back = document.getElementById("docPreviewBack");
       var title = document.getElementById("docPreviewTitle");
       var frame = document.getElementById("docPreviewFrame");
@@ -4811,17 +4847,28 @@
       var downloadLink = document.getElementById("docPreviewDownloadLink");
       if (!back || !title || !frame) return;
       title.textContent = label ? ("Preview: " + String(label)) : "Document Preview";
+      syncDocPreviewLinkState_(openLink, parsedPreview, "");
+      syncDocPreviewLinkState_(downloadLink, parsedDownload, parsedPreview.valid ? parsedPreview.href : "");
+      frame.onload = null;
+      if (!parsedPreview.valid) {
+        if (docPreviewTimer) {
+          clearTimeout(docPreviewTimer);
+          docPreviewTimer = null;
+        }
+        frame.src = "";
+        if (status) status.textContent = "Preview link could not be prepared. Use Open in New Tab or Download.";
+        back.classList.remove("hidden");
+        return;
+      }
       if (status) status.textContent = "Loading preview. If it does not load, use Open in New Tab or Download.";
-      if (openLink) openLink.href = previewUrl;
-      if (downloadLink) downloadLink.href = String(downloadUrl || previewUrl);
       frame.onload = function(){
         if (docPreviewTimer) {
           clearTimeout(docPreviewTimer);
           docPreviewTimer = null;
         }
-        if (status) status.textContent = "Preview loaded. If the frame is blank or blocked, use Open in New Tab or Download.";
+        if (status) status.textContent = "Preview requested. If the frame is blank, blocked, or shows an error, use Open in New Tab or Download.";
       };
-      frame.src = previewUrl;
+      frame.src = parsedPreview.href;
       back.classList.remove("hidden");
       if (docPreviewTimer) clearTimeout(docPreviewTimer);
       docPreviewTimer = setTimeout(function(){
@@ -4835,6 +4882,7 @@
         clearTimeout(docPreviewTimer);
         docPreviewTimer = null;
       }
+      if (frame) frame.onload = null;
       if (frame) frame.src = "";
       if (back) back.classList.add("hidden");
     }
