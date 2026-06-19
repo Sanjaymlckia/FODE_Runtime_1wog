@@ -722,6 +722,7 @@ function admin_getApplicantDocumentManifest(payload) {
         "Secure file URLs could not be generated from the current portal token configuration."
       ));
     }
+    var signedPreviewExpiresAtMs = Date.now() + (5 * 60 * 1000);
 
     var files = [];
     for (var f = 0; f < rawFiles.length; f++) {
@@ -772,6 +773,12 @@ function admin_getApplicantDocumentManifest(payload) {
       var itemIndex = sourceField ? sourceFieldIds.indexOf(meta.fileId) : -1;
       var canBuildFileSpecificProxy = mappingMethod === "row_file_id"
         && itemIndex >= 0;
+      var previewEligible = /^image\//i.test(meta.mimeType);
+      var previewUrl = previewEligible && canBuildFileSpecificProxy && secret && execUrl
+        ? buildSignedDocumentFileActionUrl_(
+          execUrl, rowApplicantId, sourceField, itemIndex, "open", signedPreviewExpiresAtMs, secret
+        )
+        : "";
       if (sourceField && !canBuildFileSpecificProxy) {
         fileWarnings.push(adminDocumentManifestWarning_(
           "FILE_SPECIFIC_PROXY_UNAVAILABLE",
@@ -792,8 +799,9 @@ function admin_getApplicantDocumentManifest(payload) {
         itemIndex: itemIndex >= 0 ? itemIndex : null,
         mappingMethod: mappingMethod,
         suspectedDocumentType: adminDocumentManifestTypeForField_(sourceField),
-        previewEligible: /^image\//i.test(meta.mimeType),
-        thumbnailAvailable: false,
+        previewEligible: previewEligible,
+        thumbnailAvailable: !!previewUrl,
+        previewUrl: previewUrl,
         openUrl: canBuildFileSpecificProxy && secret && execUrl
           ? buildTokenGatedFileUrl_(execUrl, rowApplicantId, secret, sourceField, "open")
           : "",

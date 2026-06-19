@@ -160,6 +160,8 @@ const context = {
   DriveApp: { getFolderById: () => fixtureFolder },
   getPortalSecretForApplicant_: () => ({ found: true, secret: "test-secret" }),
   getExecUrl_: () => "https://example.test/exec",
+  buildSignedDocumentFileActionUrl_: (base, applicantId, field, itemIndex, mode, expiresAtMs, secret) =>
+    `${base}?view=file&mode=${mode}&id=${applicantId}&field=${field}&idx=${itemIndex}&exp=${expiresAtMs}&sig=${secret}`,
   buildTokenGatedFileUrl_: (base, applicantId, secret, field, mode) =>
     `${base}?view=file&mode=${mode}&id=${applicantId}&s=${secret}&field=${field}`
 };
@@ -211,7 +213,21 @@ assert.equal(warningTypes.has("MIME_EXTENSION_MISMATCH"), true);
 assert.equal(warningTypes.has("FILE_SPECIFIC_PROXY_UNAVAILABLE"), false);
 
 const schoolReports = result.files.filter((file) => file.sourceField === "Latest_School_Report_File");
+const passportPhoto = result.files.find((file) => file.sourceField === "Passport_Photo_File");
+const nonImageFiles = result.files.filter((file) => file.mimeType !== "image/png");
 assert.equal(schoolReports.every((file) => !!file.openUrl && !!file.downloadUrl), true);
+assert.ok(passportPhoto, "Expected fixture passport photo file");
+assert.equal(passportPhoto.previewEligible, true);
+assert.equal(passportPhoto.thumbnailAvailable, true);
+assert.match(passportPhoto.previewUrl, /[?&]view=file/i);
+assert.match(passportPhoto.previewUrl, /[?&]mode=open/i);
+assert.match(passportPhoto.previewUrl, /[?&]id=FODE-26-002959/i);
+assert.match(passportPhoto.previewUrl, /[?&]field=Passport_Photo_File/i);
+assert.match(passportPhoto.previewUrl, /[?&]idx=0/i);
+assert.match(passportPhoto.previewUrl, /[?&]exp=/i);
+assert.match(passportPhoto.previewUrl, /[?&](sig|s)=/i);
+assert.equal(nonImageFiles.every((file) => !file.previewUrl), true);
+assert.equal(result.missingExpected.every((item) => !item.previewUrl), true);
 assert.equal(
   JSON.stringify(Array.from(result.files, (file) => file.itemIndex)),
   JSON.stringify([0, 0, 1, 2, 0])
@@ -228,6 +244,10 @@ assert.equal(
 );
 assert.equal(
   JSON.stringify(Array.from(result.files).filter((file) => file.previewEligible).map((file) => file.sourceField)),
+  JSON.stringify(["Passport_Photo_File"])
+);
+assert.equal(
+  JSON.stringify(Array.from(result.files).filter((file) => file.thumbnailAvailable).map((file) => file.sourceField)),
   JSON.stringify(["Passport_Photo_File"])
 );
 assert.equal(

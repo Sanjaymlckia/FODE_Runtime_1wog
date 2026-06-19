@@ -25,6 +25,8 @@ expectNoMatch(/folderId\s*:/, "Client UI must not send folder IDs");
 expectNoMatch(/rawValue\s*:/, "Client UI must not send raw evidence values");
 expectMatch(/function renderDocCards_\(/, "Existing document card renderer must remain present");
 expectMatch(/function renderDocumentGallery_\(/, "Gallery renderer must exist");
+expectMatch(/safeFile\.previewEligible === true && safeFile\.previewUrl/, "Gallery thumbnail renderer must support inline image thumbnails only when a signed previewUrl is present");
+expectMatch(/<img src="\$\{esc\(safeFile\.previewUrl\)\}"/, "Gallery thumbnail branch must render the signed previewUrl rather than reconstructing a raw file link");
 expectMatch(/Latest School Report "\s*\+\s*String\(index \+ 1\)/, "Multi-file school reports should use short operator-facing labels");
 expectMatch(/Fee Receipt/, "Missing fee receipt tile should use a short operator-facing label");
 expectMatch(/Preview Image/, "Image preview affordance must exist");
