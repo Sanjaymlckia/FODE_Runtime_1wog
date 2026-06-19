@@ -1816,29 +1816,28 @@
       <div class="muted" id="studentUrlWarnText" style="margin-top:6px;"></div>
     </div>
 
+    <div id="reviewQueuesPanel" class="card queue-panel">
+      <h3>1. Review Queues</h3>
+      <div class="muted" style="margin-bottom:10px;">Review Queues show operational workload. Documents to Verify is the officer review-ready queue; submitted records missing mandatory uploads remain applicant-action records and do not appear there.</div>
+      <div id="queueFdReceived" class="queue-section"></div>
+      <div id="queueDocs" class="queue-section"></div>
+      <div id="queueAwaitingPayment" class="queue-section"></div>
+      <div id="queuePayments" class="queue-section"></div>
+      <div id="queueAnomalies" class="queue-section"></div>
+      <div id="queuePaidApproved" class="queue-section"></div>
+      <div class="row" style="margin-top:10px;align-items:center;gap:8px;">
+        <button id="btnQueueLoadMore" class="btn small" type="button">Load More</button>
+        <span id="queueLoadMoreMeta" class="muted" style="font-size:12px;"></span>
+      </div>
+      <div id="docsSendSummary" class="sendSummary hidden"></div>
+      <div id="docsSendFailures" class="sendSummary hidden" style="margin-top:6px;"></div>
+    </div>
+
     <div id="operationalDashboardPanel" class="card queue-panel">
       <h3>Admin Dashboard</h3>
-      <div class="muted" style="margin-bottom:10px;">Operator summary only. Counts are derived from the current FODE data sheet and supporting runtime diagnostics. Use drill-downs and review queues for actionable work.</div>
+      <div class="muted" style="margin-bottom:10px;">Operational summary only. Review Queues remains the primary action surface; these sections show current workload, blockers, communications, and supporting intake context.</div>
 
-      <div style="font-weight:800;margin-top:12px;">1. Intake Overview</div>
-      <div class="muted" style="margin:4px 0 10px;">Lifecycle summary only. “Open Lifecycle Rows” counts non-terminal lifecycle rows using existing lifecycle derivation, not a direct intake-review action queue.</div>
-      <div class="commMeta">
-        <div class="box"><div class="k">Forms Received Today</div><div class="v" id="opsFormsToday">loading...</div></div>
-        <div class="box"><div class="k">Open Lifecycle Rows</div><div class="v" id="opsPendingReview">loading...</div></div>
-        <div class="box"><div class="k">Queue Backlog</div><div class="v" id="opsQueueBacklog">loading...</div></div>
-        <div class="box"><div class="k">Metrics Scan</div><div class="v" id="opsMetricsScan">loading...</div></div>
-      </div>
-
-      <div style="font-weight:800;margin-top:14px;">2. Workload &amp; Action Required</div>
-      <div class="muted" style="margin:4px 0 10px;">Compatibility summary only. Use Workload Drill-Down for current operational workload and applicant state. These summary buckets are not canonical lifecycle, queue, or mail-eligibility authority.</div>
-      <div class="commMeta">
-        <div class="box"><div class="k">Summary: New / Unclassified</div><div class="v" id="pipeNewToMlckia">loading...</div></div>
-        <div class="box"><div class="k">Summary: Contacted</div><div class="v" id="pipeContacted">loading...</div></div>
-        <div class="box"><div class="k">Summary: Enrolled</div><div class="v" id="pipeEnrolled">loading...</div></div>
-        <div class="box"><div class="k">Summary: Closed Lost</div><div class="v" id="pipeClosedLost">loading...</div></div>
-      </div>
-
-      <div style="font-weight:800;margin-top:14px;">3. Document &amp; Payment Status</div>
+      <div style="font-weight:800;margin-top:12px;">2. Document &amp; Payment Status</div>
       <div class="muted" style="margin:4px 0 10px;">Awaiting Documents reflects applicant-action incompleteness. Ready For Review reflects officer review workload. Payment cards remain supporting context only.</div>
       <div class="commMeta">
         <div class="box"><div class="k">Awaiting Documents</div><div class="v" id="opsDocsPending">loading...</div></div>
@@ -1847,6 +1846,14 @@
         <div class="box"><div class="k">Summary: Payment Pending</div><div class="v" id="pipePaymentPending">loading...</div></div>
       </div>
       <div class="muted" style="margin:8px 0 0;">Use <strong>Documents to Verify</strong> for officer review of submitted applications with all mandatory uploads present, <strong>Payments to Verify</strong> for uploaded payment evidence review, and <strong>Awaiting Payment</strong> for missing-payment follow-up. <strong>DOCS_REQUIRED</strong> in the lifecycle drill-down remains a lifecycle/actionability stage, not the same authority as the document review queue.</div>
+
+      <div style="font-weight:800;margin-top:14px;">3. Exceptions &amp; Blockers</div>
+      <div class="muted" style="margin:4px 0 10px;">Fallback and risk indicators that typically require manual operator review.</div>
+      <div class="commMeta">
+        <div class="box"><div class="k">Email Failures</div><div class="v" id="opsEmailFailures">loading...</div></div>
+        <div class="box"><div class="k">WhatsApp Fallback Queue</div><div class="v" id="opsWhatsappQueue">loading...</div></div>
+        <div class="box"><div class="k">Duplicate Risk</div><div class="v" id="opsDuplicateRisk">loading...</div></div>
+      </div>
 
       <div style="font-weight:800;margin-top:14px;">4. Communication Performance</div>
       <div class="muted" style="margin:4px 0 10px;">Row-log activity and actual email-send row timestamps are shown separately below. Neither is the same authority as Automation Daily Send Count in System Health.</div>
@@ -1861,74 +1868,25 @@
         <div class="box"><div class="k">FALLBACK_PENDING</div><div class="v" id="emailStateFallback">loading...</div></div>
       </div>
 
-      <div style="font-weight:800;margin-top:14px;">5. Exceptions &amp; Blockers</div>
-      <div class="muted" style="margin:4px 0 10px;">Fallback and risk indicators that typically require manual operator review.</div>
+      <div style="font-weight:800;margin-top:14px;">5. Intake Overview</div>
+      <div class="muted" style="margin:4px 0 10px;">Lifecycle summary only. “Open Lifecycle Rows” counts non-terminal lifecycle rows using existing lifecycle derivation, not a direct intake-review action queue.</div>
       <div class="commMeta">
-        <div class="box"><div class="k">Email Failures</div><div class="v" id="opsEmailFailures">loading...</div></div>
-        <div class="box"><div class="k">WhatsApp Fallback Queue</div><div class="v" id="opsWhatsappQueue">loading...</div></div>
-        <div class="box"><div class="k">Duplicate Risk</div><div class="v" id="opsDuplicateRisk">loading...</div></div>
+        <div class="box"><div class="k">Forms Received Today</div><div class="v" id="opsFormsToday">loading...</div></div>
+        <div class="box"><div class="k">Open Lifecycle Rows</div><div class="v" id="opsPendingReview">loading...</div></div>
+        <div class="box"><div class="k">Queue Backlog</div><div class="v" id="opsQueueBacklog">loading...</div></div>
+        <div class="box"><div class="k">Metrics Scan</div><div class="v" id="opsMetricsScan">loading...</div></div>
       </div>
     </div>
 
-    <details id="systemHealthPanel" class="card queue-panel">
-      <summary style="cursor:pointer;font-weight:900;">6. System Health</summary>
-      <div class="muted" style="margin:10px 0;">Technical/runtime diagnostics. Configuration truth and trigger inspection truth are shown separately below.</div>
-
-      <div id="runtimeSafetyPanel" class="queue-panel">
-        <h3>Runtime Safety</h3>
-        <div class="muted" style="margin-bottom:10px;">Read this as runtime/configuration state. Trigger installation and verification depend on trigger inspection availability.</div>
-        <div class="commMeta">
-          <div class="box"><div class="k">Runtime Version</div><div class="v" id="opsRuntimeVersion">loading...</div></div>
-          <div class="box"><div class="k">Deploy Version</div><div class="v" id="opsDeployVersion">loading...</div></div>
-          <div class="box"><div class="k">Stabilization Mode</div><div class="v" id="opsStabilizationMode">loading...</div></div>
-          <div class="box"><div class="k">Production Sends</div><div class="v" id="opsProductionSends">loading...</div></div>
-          <div class="box"><div class="k">Trigger Send Config</div><div class="v" id="opsTriggerSends">loading...</div></div>
-          <div class="box"><div class="k">Trigger Installed (inspection)</div><div class="v" id="opsTriggerInstalled">loading...</div></div>
-          <div class="box"><div class="k">Trigger Inspection Status</div><div class="v" id="opsTriggerInspection">loading...</div></div>
-          <div class="box"><div class="k">Trigger Count (inspection)</div><div class="v" id="opsTriggerCount">loading...</div></div>
-          <div class="box"><div class="k">Last Automation Run</div><div class="v" id="opsLastAutomationRun">loading...</div></div>
-          <div class="box"><div class="k">Last Successful Run</div><div class="v" id="opsLastSuccessfulRun">loading...</div></div>
-          <div class="box"><div class="k">Last Failed Run</div><div class="v" id="opsLastFailedRun">loading...</div></div>
-          <div class="box"><div class="k">Consecutive Failures</div><div class="v" id="opsConsecutiveFailures">loading...</div></div>
-          <div class="box"><div class="k">Automation Queue Scan Duration</div><div class="v" id="opsQueueScanDuration">loading...</div></div>
-          <div class="box"><div class="k">Automation Batch Size Used</div><div class="v" id="opsBatchSizeUsed">loading...</div></div>
-          <div class="box"><div class="k">Automation Daily Send Count</div><div class="v" id="opsDailySendCount">loading...</div></div>
-          <div class="box"><div class="k">Daily Cap Remaining</div><div class="v" id="opsDailyCapRemaining">loading...</div></div>
-          <div class="box"><div class="k">Last Automation Batch ID</div><div class="v" id="opsLastBatchId">loading...</div></div>
-          <div class="box"><div class="k">Last Automation Batch Result</div><div class="v" id="opsLastBatchResult">loading...</div></div>
-        </div>
-      </div>
-
-      <div id="propertyHealthPanel" class="queue-panel" style="margin-top:14px;">
-        <h3>Property Health</h3>
-        <div class="commMeta">
-          <div class="box"><div class="k">Total Properties</div><div class="v" id="opsPropertyTotal">loading...</div></div>
-          <div class="box"><div class="k">Estimated Size</div><div class="v" id="opsPropertySize">loading...</div></div>
-          <div class="box"><div class="k">COMM_LAST Count</div><div class="v" id="opsCommLastCount">loading...</div></div>
-          <div class="box"><div class="k">Property Health</div><div class="v" id="opsPropertyHealth">loading...</div></div>
-        </div>
-      </div>
-
-      <div id="emailPipelinePanel" class="queue-panel" style="margin-top:14px;">
-        <h3>Email Pipeline Status</h3>
-        <div class="muted" style="margin-bottom:10px;">Send gates and counters only. This section does not prove that a current review queue is mail-eligible.</div>
-        <div class="commMeta">
-          <div class="box"><div class="k">Manual Send</div><div class="v" id="opsManualSend">loading...</div></div>
-          <div class="box"><div class="k">Manual Probe Mode</div><div class="v" id="opsManualProbeMode">loading...</div></div>
-          <div class="box"><div class="k">Stage Batch Send Config</div><div class="v" id="opsBatchSend">loading...</div></div>
-          <div class="box"><div class="k">Trigger Send Config</div><div class="v" id="opsTriggerSendGate">loading...</div></div>
-          <div class="box"><div class="k">Daily Cap</div><div class="v" id="opsDailyCap">loading...</div></div>
-          <div class="box"><div class="k">Per-Run Cap</div><div class="v" id="opsPerRunCap">loading...</div></div>
-          <div class="box"><div class="k">Last Blocked Reason</div><div class="v" id="opsLastBlockedReason">loading...</div></div>
-          <div class="box"><div class="k">Last Manual Send</div><div class="v" id="opsLastManualSend">loading...</div></div>
-          <div class="box"><div class="k">Last Manual Recipient</div><div class="v" id="opsLastManualRecipient">loading...</div></div>
-          <div class="box"><div class="k">Last Manual Result</div><div class="v" id="opsLastManualResult">loading...</div></div>
-          <div class="box"><div class="k">Idempotency Active</div><div class="v" id="opsIdempotencyActive">loading...</div></div>
-          <div class="box"><div class="k">Bounced Rows</div><div class="v" id="opsBounceRows">loading...</div></div>
-          <div class="box"><div class="k">Hard Bounces</div><div class="v" id="opsHardBounces">loading...</div></div>
-          <div class="box"><div class="k">Temporary Bounces</div><div class="v" id="opsTemporaryBounces">loading...</div></div>
-          <div class="box"><div class="k">Last Bounce Reason</div><div class="v" id="opsLastBounceReason">loading...</div></div>
-        </div>
+    <details id="compatibilitySummaryPanel" class="card queue-panel">
+      <summary style="cursor:pointer;font-weight:900;">Compatibility Summary</summary>
+      <div class="muted" style="margin:10px 0;">Compatibility summary only. Use Workload Drill-Down for current operational workload and applicant state. These summary buckets are not canonical lifecycle, queue, or mail-eligibility authority.</div>
+      <div class="commMeta">
+        <div class="box"><div class="k">Summary: New / Unclassified</div><div class="v" id="pipeNewToMlckia">loading...</div></div>
+        <div class="box"><div class="k">Summary: Contacted</div><div class="v" id="pipeContacted">loading...</div></div>
+        <div class="box"><div class="k">Summary: Enrolled</div><div class="v" id="pipeEnrolled">loading...</div></div>
+        <div class="box"><div class="k">Summary: Closed Lost</div><div class="v" id="pipeClosedLost">loading...</div></div>
+        <div class="box"><div class="k">Summary: Payment Pending</div><div class="v" id="pipePaymentPending">loading...</div></div>
       </div>
     </details>
 
@@ -2016,23 +1974,6 @@
       </div>
     </div>
 
-    <div id="reviewQueuesPanel" class="card queue-panel">
-      <h3>Review Queues</h3>
-      <div class="muted" style="margin-bottom:10px;">Review Queues show operational workload. Documents to Verify is the officer review-ready queue; submitted records missing mandatory uploads remain applicant-action records and do not appear there.</div>
-      <div id="queueFdReceived" class="queue-section"></div>
-      <div id="queueDocs" class="queue-section"></div>
-      <div id="queueAwaitingPayment" class="queue-section"></div>
-      <div id="queuePayments" class="queue-section"></div>
-      <div id="queueAnomalies" class="queue-section"></div>
-      <div id="queuePaidApproved" class="queue-section"></div>
-      <div class="row" style="margin-top:10px;align-items:center;gap:8px;">
-        <button id="btnQueueLoadMore" class="btn small" type="button">Load More</button>
-        <span id="queueLoadMoreMeta" class="muted" style="font-size:12px;"></span>
-      </div>
-      <div id="docsSendSummary" class="sendSummary hidden"></div>
-      <div id="docsSendFailures" class="sendSummary hidden" style="margin-top:6px;"></div>
-    </div>
-
     <details id="actionabilityPreviewPanel" class="card queue-panel actionabilityPanel">
       <summary>Actionability Preview <span class="opsStatusPill warn">Read-Only Experimental</span></summary>
       <div class="muted" style="margin:8px 0 10px;">Derived, non-authoritative view. Consumes existing authorities to explain who should act next; it does not change queues, lifecycle, communications, or send behavior.</div>
@@ -2078,6 +2019,68 @@
       <div id="searchScopeNote" class="muted" style="margin-top:8px;font-size:12px;">Search scope: Direct search only. Select a workload stage card to enable stage-scoped search.</div>
       <div id="msg" class="muted" style="margin-top:10px;"></div>
       <div id="bounceScanSummary" class="sendSummary hidden" style="margin-top:10px;"></div>
+    </details>
+
+    <details id="systemHealthPanel" class="card queue-panel">
+      <summary style="cursor:pointer;font-weight:900;">6. System Health</summary>
+      <div class="muted" style="margin:10px 0;">Technical/runtime diagnostics. Configuration truth and trigger inspection truth are shown separately below.</div>
+
+      <div id="runtimeSafetyPanel" class="queue-panel">
+        <h3>Runtime Safety</h3>
+        <div class="muted" style="margin-bottom:10px;">Read this as runtime/configuration state. Trigger installation and verification depend on trigger inspection availability.</div>
+        <div class="commMeta">
+          <div class="box"><div class="k">Runtime Version</div><div class="v" id="opsRuntimeVersion">loading...</div></div>
+          <div class="box"><div class="k">Deploy Version</div><div class="v" id="opsDeployVersion">loading...</div></div>
+          <div class="box"><div class="k">Stabilization Mode</div><div class="v" id="opsStabilizationMode">loading...</div></div>
+          <div class="box"><div class="k">Production Sends</div><div class="v" id="opsProductionSends">loading...</div></div>
+          <div class="box"><div class="k">Trigger Send Config</div><div class="v" id="opsTriggerSends">loading...</div></div>
+          <div class="box"><div class="k">Trigger Installed (inspection)</div><div class="v" id="opsTriggerInstalled">loading...</div></div>
+          <div class="box"><div class="k">Trigger Inspection Status</div><div class="v" id="opsTriggerInspection">loading...</div></div>
+          <div class="box"><div class="k">Trigger Count (inspection)</div><div class="v" id="opsTriggerCount">loading...</div></div>
+          <div class="box"><div class="k">Last Automation Run</div><div class="v" id="opsLastAutomationRun">loading...</div></div>
+          <div class="box"><div class="k">Last Successful Run</div><div class="v" id="opsLastSuccessfulRun">loading...</div></div>
+          <div class="box"><div class="k">Last Failed Run</div><div class="v" id="opsLastFailedRun">loading...</div></div>
+          <div class="box"><div class="k">Consecutive Failures</div><div class="v" id="opsConsecutiveFailures">loading...</div></div>
+          <div class="box"><div class="k">Automation Queue Scan Duration</div><div class="v" id="opsQueueScanDuration">loading...</div></div>
+          <div class="box"><div class="k">Automation Batch Size Used</div><div class="v" id="opsBatchSizeUsed">loading...</div></div>
+          <div class="box"><div class="k">Automation Daily Send Count</div><div class="v" id="opsDailySendCount">loading...</div></div>
+          <div class="box"><div class="k">Daily Cap Remaining</div><div class="v" id="opsDailyCapRemaining">loading...</div></div>
+          <div class="box"><div class="k">Last Automation Batch ID</div><div class="v" id="opsLastBatchId">loading...</div></div>
+          <div class="box"><div class="k">Last Automation Batch Result</div><div class="v" id="opsLastBatchResult">loading...</div></div>
+        </div>
+      </div>
+
+      <div id="propertyHealthPanel" class="queue-panel" style="margin-top:14px;">
+        <h3>Property Health</h3>
+        <div class="commMeta">
+          <div class="box"><div class="k">Total Properties</div><div class="v" id="opsPropertyTotal">loading...</div></div>
+          <div class="box"><div class="k">Estimated Size</div><div class="v" id="opsPropertySize">loading...</div></div>
+          <div class="box"><div class="k">COMM_LAST Count</div><div class="v" id="opsCommLastCount">loading...</div></div>
+          <div class="box"><div class="k">Property Health</div><div class="v" id="opsPropertyHealth">loading...</div></div>
+        </div>
+      </div>
+
+      <div id="emailPipelinePanel" class="queue-panel" style="margin-top:14px;">
+        <h3>Email Pipeline Status</h3>
+        <div class="muted" style="margin-bottom:10px;">Send gates and counters only. This section does not prove that a current review queue is mail-eligible.</div>
+        <div class="commMeta">
+          <div class="box"><div class="k">Manual Send</div><div class="v" id="opsManualSend">loading...</div></div>
+          <div class="box"><div class="k">Manual Probe Mode</div><div class="v" id="opsManualProbeMode">loading...</div></div>
+          <div class="box"><div class="k">Stage Batch Send Config</div><div class="v" id="opsBatchSend">loading...</div></div>
+          <div class="box"><div class="k">Trigger Send Config</div><div class="v" id="opsTriggerSendGate">loading...</div></div>
+          <div class="box"><div class="k">Daily Cap</div><div class="v" id="opsDailyCap">loading...</div></div>
+          <div class="box"><div class="k">Per-Run Cap</div><div class="v" id="opsPerRunCap">loading...</div></div>
+          <div class="box"><div class="k">Last Blocked Reason</div><div class="v" id="opsLastBlockedReason">loading...</div></div>
+          <div class="box"><div class="k">Last Manual Send</div><div class="v" id="opsLastManualSend">loading...</div></div>
+          <div class="box"><div class="k">Last Manual Recipient</div><div class="v" id="opsLastManualRecipient">loading...</div></div>
+          <div class="box"><div class="k">Last Manual Result</div><div class="v" id="opsLastManualResult">loading...</div></div>
+          <div class="box"><div class="k">Idempotency Active</div><div class="v" id="opsIdempotencyActive">loading...</div></div>
+          <div class="box"><div class="k">Bounced Rows</div><div class="v" id="opsBounceRows">loading...</div></div>
+          <div class="box"><div class="k">Hard Bounces</div><div class="v" id="opsHardBounces">loading...</div></div>
+          <div class="box"><div class="k">Temporary Bounces</div><div class="v" id="opsTemporaryBounces">loading...</div></div>
+          <div class="box"><div class="k">Last Bounce Reason</div><div class="v" id="opsLastBounceReason">loading...</div></div>
+        </div>
+      </div>
     </details>
 
     <div id="legacyResultsPanel" class="card hidden">
