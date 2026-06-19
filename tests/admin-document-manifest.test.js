@@ -208,10 +208,24 @@ const warningTypes = new Set([
   ...result.files.flatMap((file) => file.warnings.map((warning) => warning.code))
 ]);
 assert.equal(warningTypes.has("MIME_EXTENSION_MISMATCH"), true);
-assert.equal(warningTypes.has("FILE_SPECIFIC_PROXY_UNAVAILABLE"), true);
+assert.equal(warningTypes.has("FILE_SPECIFIC_PROXY_UNAVAILABLE"), false);
 
 const schoolReports = result.files.filter((file) => file.sourceField === "Latest_School_Report_File");
-assert.equal(schoolReports.every((file) => !file.openUrl && !file.downloadUrl), true);
+assert.equal(schoolReports.every((file) => !!file.openUrl && !!file.downloadUrl), true);
+assert.equal(
+  JSON.stringify(Array.from(result.files, (file) => file.itemIndex)),
+  JSON.stringify([0, 0, 1, 2, 0])
+);
+assert.equal(
+  JSON.stringify(Array.from(result.files, (file) => file.label)),
+  JSON.stringify([
+    "Birth Certificate / NID / Passport",
+    "Latest School Reports / Documents",
+    "Latest School Reports / Documents",
+    "Latest School Reports / Documents",
+    "Passport Size Colour Photo"
+  ])
+);
 assert.equal(
   JSON.stringify(Array.from(result.files).filter((file) => file.previewEligible).map((file) => file.sourceField)),
   JSON.stringify(["Passport_Photo_File"])

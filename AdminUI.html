@@ -587,6 +587,89 @@
     }
     .docTitle{ font-weight:800; font-size:13px; }
     .docWarn{ margin-top:6px; font-size:12px; opacity:.85; color:var(--warn); }
+    .documentGallery{
+      margin-top:10px;
+      border:1px solid rgba(148,163,184,.18);
+      border-radius:14px;
+      background:rgba(15,23,42,.18);
+      padding:12px;
+    }
+    .documentGalleryHeader{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:8px;
+    }
+    .documentGalleryTitle{ font-weight:800; font-size:13px; }
+    .documentGalleryMeta{ font-size:12px; color:var(--muted); }
+    .documentGalleryGrid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+      gap:10px;
+    }
+    .documentGalleryTile{
+      border:1px solid rgba(148,163,184,.18);
+      border-radius:12px;
+      background:rgba(2,6,23,.18);
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      min-height:174px;
+    }
+    .documentGalleryTile.missing{
+      background:rgba(71,85,105,.16);
+      border-style:dashed;
+    }
+    .documentGalleryTileHeader{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:8px;
+    }
+    .documentGalleryTileTitle{ font-weight:800; font-size:13px; }
+    .documentGalleryTileMeta{ font-size:12px; color:var(--muted); line-height:1.4; }
+    .documentGalleryThumb{
+      min-height:96px;
+      border:1px solid rgba(148,163,184,.18);
+      border-radius:12px;
+      background:rgba(15,23,42,.25);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:10px;
+      text-align:center;
+      color:var(--muted);
+      font-size:12px;
+      overflow:hidden;
+    }
+    .documentGalleryThumb img{
+      max-width:100%;
+      max-height:170px;
+      display:block;
+      border-radius:10px;
+    }
+    .documentGalleryActions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      align-items:center;
+      margin-top:auto;
+    }
+    .documentGalleryError{
+      font-size:12px;
+      color:#fca5a5;
+      min-height:18px;
+    }
+    .documentGalleryEmpty{
+      border:1px dashed rgba(148,163,184,.3);
+      border-radius:12px;
+      padding:14px;
+      color:var(--muted);
+      font-size:13px;
+    }
     .overrideTag{
       display:inline-block;
       margin-top:6px;
@@ -2191,6 +2274,20 @@
       <div style="margin-top:12px; font-weight:900;">Documents (status + comment)</div>
       <div class="opsSafetyNotice">Legacy edit/mutation surface. Saving document or status changes is supervisory-gated and not a normal Admin workflow action.</div>
       <div id="docs" class="docs"></div>
+      <div class="row" style="margin-top:10px; align-items:center;">
+        <button id="btnOpenDocumentGallery" class="btn small" type="button" onclick="toggleDocumentGallery_()">Open Document Gallery</button>
+        <div class="muted" style="font-size:12px;">Read-only manifest view. Loads only after explicit operator click and uses secure per-file actions.</div>
+      </div>
+      <div id="documentGallery" class="documentGallery hidden">
+        <div class="documentGalleryHeader">
+          <div>
+            <div class="documentGalleryTitle">Document Gallery</div>
+            <div id="documentGalleryStatus" class="documentGalleryMeta">Read-only. Uses manifest + secure per-file actions.</div>
+          </div>
+          <button id="btnCloseDocumentGallery" class="btn small" type="button" onclick="closeDocumentGallery_()">Close Gallery</button>
+        </div>
+        <div id="documentGalleryBody"></div>
+      </div>
 
       <div class="row" style="margin-top:12px;">
         <div class="field">
@@ -2374,6 +2471,14 @@
     let isDocsSendBusy = false;
     let isBounceScanBusy = false;
     let currentPortalLinkInfo = null;
+    let documentGalleryState = {
+      open: false,
+      loading: false,
+      manifest: null,
+      error: "",
+      actionBusyByKey: {},
+      actionErrorByKey: {}
+    };
     let runtimeInfoCache = null;
     let communicationsState = {
       applicantId: "",
@@ -4697,6 +4802,326 @@
       }
       if (frame) frame.src = "";
       if (back) back.classList.add("hidden");
+    }
+    function resetDocumentGalleryState_(){
+      documentGalleryState = {
+        open: false,
+        loading: false,
+        manifest: null,
+        error: "",
+        actionBusyByKey: {},
+        actionErrorByKey: {}
+      };
+      syncDocumentGalleryUi_();
+    }
+    function documentGalleryCurrentApplicantId_(){
+      return String((currentDetail && currentDetail.ApplicantID) || "").trim();
+    }
+    function documentGalleryFieldLabel_(sourceField, fallbackLabel){
+      var field = String(sourceField || "").trim();
+      var docs = Array.isArray(currentDetail && currentDetail._docs) ? currentDetail._docs : [];
+      for (var i = 0; i < docs.length; i++) {
+        if (String((docs[i] && docs[i].file) || "").trim() === field) {
+          return String((docs[i] && docs[i].label) || fallbackLabel || field || "Document").trim();
+        }
+      }
+      return String(fallbackLabel || field || "Document").trim();
+    }
+    function documentGalleryTileKey_(file, idx){
+      var sourceField = String((file && file.sourceField) || "unmapped").trim() || "unmapped";
+      var itemIndex = Number(file && file.itemIndex);
+      return [sourceField, Number.isFinite(itemIndex) && itemIndex >= 0 ? itemIndex : ("x" + idx), idx].join(":");
+    }
+    function documentGalleryActionKey_(sourceField, itemIndex){
+      return [String(sourceField || "").trim(), String(itemIndex || "")].join(":");
+    }
+    function documentGalleryMissingTileKey_(item, idx){
+      return ["missing", String((item && item.sourceField) || idx), idx].join(":");
+    }
+    function documentGalleryHasSecureAction_(file){
+      return !!(file
+        && String(file.sourceField || "").trim()
+        && Number.isFinite(Number(file.itemIndex))
+        && Number(file.itemIndex) >= 0);
+    }
+    function documentGalleryWarningText_(warnings){
+      var list = Array.isArray(warnings) ? warnings : [];
+      var codes = {};
+      list.forEach(function(item){
+        var code = String(item && item.code || "").trim().toUpperCase();
+        if (code) codes[code] = true;
+      });
+      if (codes.FILE_SPECIFIC_PROXY_UNAVAILABLE) return "Secure per-file actions are unavailable for this document mapping.";
+      if (codes.MIME_EXTENSION_MISMATCH) return "Stored MIME type differs from the filename extension. Use Download for reliable review.";
+      if (codes.UNEXPECTED_PARENT_FOLDER) return "File location needs attention before relying on this evidence.";
+      if (codes.UNMAPPED_FILE) return "File is present in Drive but is not mapped to a configured document field.";
+      return "";
+    }
+    function renderDocumentGalleryThumb_(file, actionKey){
+      var safeFile = file || {};
+      var errorText = String(documentGalleryState.actionErrorByKey[actionKey] || "").trim();
+      if (safeFile.previewEligible === true && safeFile.previewUrl) {
+        return `<img src="${esc(safeFile.previewUrl)}" alt="${esc(safeFile.label || safeFile.fileName || "Document preview")}">`;
+      }
+      if (safeFile.previewEligible === true && documentGalleryHasSecureAction_(safeFile)) {
+        return "Image preview available on demand.";
+      }
+      if (errorText) return esc(errorText);
+      if (safeFile.previewEligible === true) return "Image preview unavailable until a secure action is requested.";
+      return "Download is the primary review path for this file type.";
+    }
+    function bindDocumentGalleryActionButtons_(){
+      Array.from(document.querySelectorAll(".galleryPreviewBtn")).forEach(function(btn){
+        btn.addEventListener("click", function(){
+          runDocumentGalleryAction_(
+            this.getAttribute("data-source-field") || "",
+            this.getAttribute("data-item-index") || "",
+            "preview",
+            this.getAttribute("data-label") || "Document preview"
+          );
+        });
+      });
+      Array.from(document.querySelectorAll(".galleryDownloadBtn")).forEach(function(btn){
+        btn.addEventListener("click", function(){
+          runDocumentGalleryAction_(
+            this.getAttribute("data-source-field") || "",
+            this.getAttribute("data-item-index") || "",
+            "download",
+            this.getAttribute("data-label") || "Document"
+          );
+        });
+      });
+      Array.from(document.querySelectorAll(".galleryOpenBtn")).forEach(function(btn){
+        btn.addEventListener("click", function(){
+          runDocumentGalleryAction_(
+            this.getAttribute("data-source-field") || "",
+            this.getAttribute("data-item-index") || "",
+            "open",
+            this.getAttribute("data-label") || "Document"
+          );
+        });
+      });
+    }
+    function renderDocumentGallery_(){
+      var body = document.getElementById("documentGalleryBody");
+      if (!body) return;
+      var manifest = documentGalleryState.manifest || {};
+      var files = Array.isArray(manifest.files) ? manifest.files : [];
+      var missing = Array.isArray(manifest.missingExpected) ? manifest.missingExpected : [];
+      if (!files.length && !missing.length) {
+        body.innerHTML = `<div class="documentGalleryEmpty">No document manifest entries were returned for this applicant.</div>`;
+        return;
+      }
+      var fileTiles = files.map(function(file, idx){
+        var tileKey = documentGalleryTileKey_(file, idx);
+        var sourceField = String((file && file.sourceField) || "").trim();
+        var itemIndex = Number(file && file.itemIndex);
+        var label = documentGalleryFieldLabel_(sourceField, file && file.label);
+        var actionKey = documentGalleryActionKey_(sourceField, itemIndex);
+        var busy = !!documentGalleryState.actionBusyByKey[actionKey];
+        var errorText = String(documentGalleryState.actionErrorByKey[actionKey] || "").trim();
+        var canAct = documentGalleryHasSecureAction_(file);
+        var warningText = documentGalleryWarningText_(file && file.warnings);
+        var fileMeta = [
+          String((file && file.fileName) || "").trim(),
+          String((file && file.mimeType) || "").trim()
+        ].filter(function(v){ return !!v; }).join(" | ");
+        return `
+          <div class="documentGalleryTile" data-gallery-tile="${esc(tileKey)}">
+            <div class="documentGalleryTileHeader">
+              <div>
+                <div class="documentGalleryTileTitle">${esc(label)}</div>
+                <div class="documentGalleryTileMeta">${esc(fileMeta || "Mapped uploaded evidence")}</div>
+              </div>
+              <span class="statusTag">${esc(file && file.previewEligible === true ? "Image" : "Download first")}</span>
+            </div>
+            <div class="documentGalleryThumb">${renderDocumentGalleryThumb_(file, actionKey)}</div>
+            <div class="documentGalleryTileMeta">
+              ${esc(warningText || (file && file.previewEligible === true
+                ? "Preview Image is available for trusted image MIME types."
+                : "Download is primary. Open in New Tab remains browser-dependent."))}
+            </div>
+            <div class="documentGalleryActions">
+              ${file && file.previewEligible === true && canAct
+                ? `<button type="button" class="btn small galleryPreviewBtn" data-source-field="${esc(sourceField)}" data-item-index="${esc(String(itemIndex))}" data-label="${esc(label)}" ${busy ? "disabled" : ""}>${busy ? "Working..." : "Preview Image"}</button>`
+                : `<span class="muted" aria-label="Recommendation">Recommended: Download</span>`}
+              ${canAct
+                ? `<button type="button" class="btn small accent galleryDownloadBtn" data-source-field="${esc(sourceField)}" data-item-index="${esc(String(itemIndex))}" data-label="${esc(label)}" ${busy ? "disabled" : ""}>${busy ? "Working..." : "Download"}</button>
+                   <button type="button" class="btn small galleryOpenBtn" data-source-field="${esc(sourceField)}" data-item-index="${esc(String(itemIndex))}" data-label="${esc(label)}" ${busy ? "disabled" : ""}>${busy ? "Working..." : "Open in New Tab"}</button>`
+                : `<span class="muted">Secure per-file action unavailable for this mapping.</span>`}
+            </div>
+            <div class="documentGalleryError">${esc(errorText)}</div>
+          </div>
+        `;
+      }).join("");
+      var missingTiles = missing.map(function(item, idx){
+        var label = documentGalleryFieldLabel_(item && item.sourceField, item && item.label);
+        return `
+          <div class="documentGalleryTile missing" data-gallery-tile="${esc(documentGalleryMissingTileKey_(item, idx))}">
+            <div class="documentGalleryTileHeader">
+              <div>
+                <div class="documentGalleryTileTitle">${esc(label)}</div>
+                <div class="documentGalleryTileMeta">Required document</div>
+              </div>
+              <span class="statusTag off">Not Uploaded</span>
+            </div>
+            <div class="documentGalleryThumb">Not Uploaded</div>
+            <div class="documentGalleryTileMeta">This required document is not yet available in the applicant evidence folder.</div>
+            <div class="documentGalleryActions">
+              <span class="muted">Not Uploaded</span>
+            </div>
+            <div class="documentGalleryError"></div>
+          </div>
+        `;
+      }).join("");
+      body.innerHTML = `<div class="documentGalleryGrid">${fileTiles}${missingTiles}</div>`;
+      bindDocumentGalleryActionButtons_();
+    }
+    function syncDocumentGalleryUi_(){
+      var shell = document.getElementById("documentGallery");
+      var status = document.getElementById("documentGalleryStatus");
+      var btn = document.getElementById("btnOpenDocumentGallery");
+      var closeBtn = document.getElementById("btnCloseDocumentGallery");
+      var body = document.getElementById("documentGalleryBody");
+      var hasContext = !!currentRowNumber && !!currentDetail;
+      if (btn) {
+        btn.disabled = !hasContext || documentGalleryState.loading;
+        btn.textContent = documentGalleryState.open ? "Hide Document Gallery" : "Open Document Gallery";
+      }
+      if (closeBtn) closeBtn.disabled = documentGalleryState.loading;
+      if (!shell || !status || !body) return;
+      if (!hasContext) {
+        shell.classList.add("hidden");
+        body.innerHTML = "";
+        status.textContent = "Read-only. Uses manifest + secure per-file actions.";
+        return;
+      }
+      shell.classList.toggle("hidden", !documentGalleryState.open);
+      if (!documentGalleryState.open) return;
+      if (documentGalleryState.loading) {
+        status.textContent = "Loading manifest...";
+        body.innerHTML = `<div class="documentGalleryEmpty">Loading document manifest for ${esc(documentGalleryCurrentApplicantId_())}...</div>`;
+        return;
+      }
+      if (documentGalleryState.error) {
+        status.textContent = documentGalleryState.error;
+        body.innerHTML = `<div class="documentGalleryEmpty">${esc(documentGalleryState.error)}</div>`;
+        return;
+      }
+      if (!documentGalleryState.manifest) {
+        status.textContent = "Read-only. Uses manifest + secure per-file actions.";
+        body.innerHTML = `<div class="documentGalleryEmpty">Open the gallery to load Drive-backed document evidence.</div>`;
+        return;
+      }
+      var files = Array.isArray(documentGalleryState.manifest.files) ? documentGalleryState.manifest.files : [];
+      var missing = Array.isArray(documentGalleryState.manifest.missingExpected) ? documentGalleryState.manifest.missingExpected : [];
+      status.textContent = files.length + " file(s) mapped. " + missing.length + " required document(s) missing.";
+      renderDocumentGallery_();
+    }
+    function loadDocumentGalleryManifest_(){
+      if (!currentDetail) return;
+      var applicantId = documentGalleryCurrentApplicantId_();
+      if (!applicantId) return;
+      documentGalleryState.loading = true;
+      documentGalleryState.error = "";
+      documentGalleryState.manifest = null;
+      documentGalleryState.actionBusyByKey = {};
+      documentGalleryState.actionErrorByKey = {};
+      syncDocumentGalleryUi_();
+      google.script.run
+        .withSuccessHandler(function(res){
+          if (documentGalleryCurrentApplicantId_() !== applicantId) return;
+          documentGalleryState.loading = false;
+          if (!res || res.ok !== true) {
+            documentGalleryState.error = String((res && (res.error || res.message || res.code)) || "Document gallery could not be loaded.");
+            syncDocumentGalleryUi_();
+            return;
+          }
+          documentGalleryState.manifest = res;
+          documentGalleryState.error = "";
+          syncDocumentGalleryUi_();
+        })
+        .withFailureHandler(function(err){
+          if (documentGalleryCurrentApplicantId_() !== applicantId) return;
+          documentGalleryState.loading = false;
+          documentGalleryState.error = String(err && err.message ? err.message : err || "Document gallery could not be loaded.");
+          syncDocumentGalleryUi_();
+        })
+        .admin_getApplicantDocumentManifest({ applicantId: applicantId });
+    }
+    function openDocumentGallery_(){
+      if (!currentRowNumber || !currentDetail) return;
+      documentGalleryState.open = true;
+      syncDocumentGalleryUi_();
+      if (!documentGalleryState.loading && !documentGalleryState.manifest && !documentGalleryState.error) {
+        loadDocumentGalleryManifest_();
+      }
+    }
+    function closeDocumentGallery_(){
+      documentGalleryState.open = false;
+      syncDocumentGalleryUi_();
+    }
+    function toggleDocumentGallery_(){
+      if (documentGalleryState.open) {
+        closeDocumentGallery_();
+      } else {
+        openDocumentGallery_();
+      }
+    }
+    function runDocumentGalleryAction_(sourceField, itemIndex, mode, label){
+      if (!currentRowNumber || !currentDetail) return;
+      var applicantId = documentGalleryCurrentApplicantId_();
+      var key = documentGalleryActionKey_(sourceField, itemIndex);
+      var pendingWindow = null;
+      if (mode !== "preview") {
+        pendingWindow = window.open("about:blank", "_blank", "noopener");
+        if (!pendingWindow) {
+          documentGalleryState.actionErrorByKey[key] = "Browser blocked the requested action.";
+          syncDocumentGalleryUi_();
+          return;
+        }
+      }
+      documentGalleryState.actionBusyByKey[key] = true;
+      delete documentGalleryState.actionErrorByKey[key];
+      syncDocumentGalleryUi_();
+      google.script.run
+        .withSuccessHandler(function(res){
+          if (documentGalleryCurrentApplicantId_() !== applicantId) return;
+          delete documentGalleryState.actionBusyByKey[key];
+          if (!res || res.ok !== true) {
+            if (pendingWindow && !pendingWindow.closed) pendingWindow.close();
+            documentGalleryState.actionErrorByKey[key] = String((res && (res.error || res.message || res.code)) || "Secure action unavailable.");
+            syncDocumentGalleryUi_();
+            return;
+          }
+          delete documentGalleryState.actionErrorByKey[key];
+          syncDocumentGalleryUi_();
+          if (mode === "preview") {
+            openDocPreview_(label, res.openUrl || "", res.downloadUrl || "");
+            return;
+          }
+          var targetUrl = mode === "download" ? String(res.downloadUrl || "") : String(res.openUrl || "");
+          if (!targetUrl) {
+            if (pendingWindow && !pendingWindow.closed) pendingWindow.close();
+            documentGalleryState.actionErrorByKey[key] = "Secure action unavailable.";
+            syncDocumentGalleryUi_();
+            return;
+          }
+          pendingWindow.location = targetUrl;
+        })
+        .withFailureHandler(function(err){
+          if (documentGalleryCurrentApplicantId_() !== applicantId) return;
+          delete documentGalleryState.actionBusyByKey[key];
+          if (pendingWindow && !pendingWindow.closed) pendingWindow.close();
+          documentGalleryState.actionErrorByKey[key] = String(err && err.message ? err.message : err || "Secure action unavailable.");
+          syncDocumentGalleryUi_();
+        })
+        .admin_getApplicantDocumentFileAction({
+          applicantId: applicantId,
+          rowNumber: currentRowNumber,
+          sourceField: String(sourceField || ""),
+          itemIndex: Number(itemIndex)
+        });
     }
     function isCommBounceFlagTrue_(value){
       var raw = String(value || "").trim().toLowerCase();
@@ -7981,6 +8406,7 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function openModal(d){
+      resetDocumentGalleryState_();
       setRoleUi();
       resetModalState_();
       setDirty_(false);
@@ -8085,6 +8511,7 @@ function renderStageDashboard_(items, emptyMessage){
       });
 
       document.getElementById("modalBack").style.display = "flex";
+      syncDocumentGalleryUi_();
       syncModalEditControls_();
     }
 
@@ -8171,6 +8598,7 @@ function renderStageDashboard_(items, emptyMessage){
       currentDetail = null;
       currentPortalLinkInfo = null;
       resetModalState_();
+      resetDocumentGalleryState_();
       setDirty_(false);
       setLinkBusy(false);
       setActionButtonsEnabled(false);

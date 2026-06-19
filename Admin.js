@@ -769,9 +769,9 @@ function admin_getApplicantDocumentManifest(payload) {
       }
       if (sourceField) mappedIds[meta.fileId] = true;
       var sourceFieldIds = sourceField ? (fieldIds[sourceField] || []) : [];
+      var itemIndex = sourceField ? sourceFieldIds.indexOf(meta.fileId) : -1;
       var canBuildFileSpecificProxy = mappingMethod === "row_file_id"
-        && sourceFieldIds.length === 1
-        && sourceFieldIds[0] === meta.fileId;
+        && itemIndex >= 0;
       if (sourceField && !canBuildFileSpecificProxy) {
         fileWarnings.push(adminDocumentManifestWarning_(
           "FILE_SPECIFIC_PROXY_UNAVAILABLE",
@@ -782,12 +782,14 @@ function admin_getApplicantDocumentManifest(payload) {
       files.push({
         fileId: meta.fileId,
         fileName: meta.fileName,
+        label: sourceField ? clean_((fieldByName[sourceField] && fieldByName[sourceField].label) || sourceField) : "",
         mimeType: meta.mimeType,
         sizeBytes: meta.sizeBytes,
         createdTime: meta.createdTime,
         modifiedTime: meta.modifiedTime,
         parentFolderId: meta.parentFolderId,
         sourceField: sourceField,
+        itemIndex: itemIndex >= 0 ? itemIndex : null,
         mappingMethod: mappingMethod,
         suspectedDocumentType: adminDocumentManifestTypeForField_(sourceField),
         previewEligible: /^image\//i.test(meta.mimeType),
