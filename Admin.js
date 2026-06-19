@@ -519,6 +519,332 @@ function admin_getApplicantDetail_json(payload) {
   return json;
 }
 
+function adminDocumentManifestTypeForField_(fieldName) {
+  var map = {
+    Birth_ID_Passport_File: "birth_id",
+    Latest_School_Report_File: "school_report",
+    Transfer_Certificate_File: "transfer_certificate",
+    Passport_Photo_File: "passport_photo",
+    Fee_Receipt_File: "payment_receipt"
+  };
+  return map[clean_(fieldName || "")] || "unknown";
+}
+
+function adminDocumentManifestExtension_(fileName) {
+  var match = clean_(fileName || "").toLowerCase().match(/\.([a-z0-9]+)$/);
+  return match ? match[1] : "";
+}
+
+function adminDocumentManifestMimeExtensionMismatch_(fileName, mimeType) {
+  var ext = adminDocumentManifestExtension_(fileName);
+  var mime = clean_(mimeType || "").toLowerCase();
+  if (!ext || !mime) return false;
+  var expected = {
+    pdf: ["application/pdf"],
+    jpg: ["image/jpeg"],
+    jpeg: ["image/jpeg"],
+    png: ["image/png"],
+    gif: ["image/gif"],
+    webp: ["image/webp"],
+    doc: ["application/msword"],
+    docx: ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
+  };
+  return !!expected[ext] && expected[ext].indexOf(mime) < 0;
+}
+
+function adminDocumentManifestIso_(value) {
+  if (!value) return "";
+  var date = value instanceof Date ? value : new Date(value);
+  return isNaN(date.getTime()) ? "" : date.toISOString();
+}
+
+function adminDocumentManifestFileIds_(value, fieldName) {
+  var ids = [];
+  var seen = {};
+  var urls = normalizeToUrlList_(value, fieldName);
+  for (var i = 0; i < urls.length; i++) {
+    var fileId = extractDriveFileId_(urls[i]);
+    if (!fileId || seen[fileId]) continue;
+    seen[fileId] = true;
+    ids.push(fileId);
+  }
+  return ids;
+}
+
+function adminDocumentManifestParentIds_(file) {
+  var out = [];
+  var parents = file && file.getParents ? file.getParents() : null;
+  while (parents && parents.hasNext()) {
+    var parent = parents.next();
+    var id = clean_(parent && parent.getId ? parent.getId() : "");
+    if (id) out.push(id);
+  }
+  return out;
+}
+
+function adminDocumentManifestFileMetadata_(file, folderId) {
+  var parentIds = adminDocumentManifestParentIds_(file);
+  var sizeBytes = null;
+  try { sizeBytes = Number(file.getSize()); } catch (_sizeErr) {}
+  if (!isFinite(sizeBytes)) sizeBytes = null;
+  return {
+    fileId: clean_(file.getId()),
+    fileName: clean_(file.getName()),
+    mimeType: clean_(file.getMimeType()),
+    sizeBytes: sizeBytes,
+    createdTime: adminDocumentManifestIso_(file.getDateCreated()),
+    modifiedTime: adminDocumentManifestIso_(file.getLastUpdated()),
+    parentFolderId: parentIds.length ? parentIds[0] : "",
+    parentFolderIds: parentIds,
+    expectedFolderId: clean_(folderId || "")
+  };
+}
+
+function adminDocumentManifestPrefixField_(fileName, docFields) {
+  var name = clean_(fileName || "");
+  var docs = Array.isArray(docFields) ? docFields : [];
+  for (var i = 0; i < docs.length; i++) {
+    var field = clean_(docs[i] && docs[i].file || "");
+    if (field && name.indexOf(field + "_") === 0) return field;
+  }
+  return "";
+}
+
+function adminDocumentManifestWarning_(code, detail) {
+  return {
+    code: clean_(code || "UNKNOWN_WARNING"),
+    detail: clean_(detail || "")
+  };
+}
+
+function admin_getApplicantDocumentManifest(payload) {
+  var adminEmail = getCallerEmail_();
+  try {
+    if (!isAdmin_(adminEmail)) {
+      return { ok: false, code: "ACCESS_DENIED", error: "Access denied" };
+    }
+    try {
+      requireSuperAdmin_(adminEmail);
+    } catch (_authErr) {
+      return { ok: false, code: "ACCESS_DENIED", error: "Access denied" };
+    }
+
+    var p = payload && typeof payload === "object" ? payload : {};
+    var applicantId = clean_(p.applicantId || p.ApplicantID || "");
+    if (!applicantId) {
+      return { ok: false, code: "MISSING_APPLICANT_ID", error: "ApplicantID is required" };
+    }
+
+    var sheet = openDataSheet_();
+    var rowNumber = findRowByApplicantId_(sheet, applicantId);
+    if (!rowNumber) {
+      return { ok: false, code: "APPLICANT_NOT_FOUND", applicantId: applicantId, error: "Applicant not found" };
+    }
+
+    var row = getRowObject_(sheet, rowNumber);
+    var rowApplicantId = clean_(row.ApplicantID || row[CONFIG.APPLICANT_ID_HEADER] || applicantId);
+    var applicantName = [clean_(row.First_Name || ""), clean_(row.Last_Name || "")].filter(function (v) {
+      return !!v;
+    }).join(" ");
+    var folderUrl = clean_(row.Folder_Url || row[SCHEMA.FOLDER_URL] || "");
+    var warnings = [];
+    if (!folderUrl) {
+      return {
+        ok: false,
+        code: "MISSING_FOLDER_URL",
+        applicantId: rowApplicantId,
+        applicantName: applicantName,
+        folderUrl: "",
+        files: [],
+        missingExpected: [],
+        warnings: [adminDocumentManifestWarning_("MISSING_FOLDER_URL", "Applicant row has no Folder_Url.")]
+      };
+    }
+
+    var folderId = folderIdFromUrl_(folderUrl);
+    if (!folderId) {
+      return {
+        ok: false,
+        code: "INVALID_FOLDER_URL",
+        applicantId: rowApplicantId,
+        applicantName: applicantName,
+        folderUrl: folderUrl,
+        files: [],
+        missingExpected: [],
+        warnings: [adminDocumentManifestWarning_("INVALID_FOLDER_URL", "Folder_Url does not contain a Drive folder ID.")]
+      };
+    }
+
+    var folder;
+    try {
+      folder = DriveApp.getFolderById(folderId);
+    } catch (folderErr) {
+      return {
+        ok: false,
+        code: "FOLDER_INACCESSIBLE",
+        applicantId: rowApplicantId,
+        applicantName: applicantName,
+        folderId: folderId,
+        folderUrl: folderUrl,
+        files: [],
+        missingExpected: [],
+        warnings: [adminDocumentManifestWarning_("FOLDER_INACCESSIBLE", "Drive folder was not found or is not accessible.")]
+      };
+    }
+
+    var docFields = Array.isArray(CONFIG.DOC_FIELDS) ? CONFIG.DOC_FIELDS : [];
+    var fieldByName = {};
+    var fieldIds = {};
+    var mappedIds = {};
+    for (var d = 0; d < docFields.length; d++) {
+      var doc = docFields[d] || {};
+      var fieldName = clean_(doc.file || "");
+      if (!fieldName) continue;
+      fieldByName[fieldName] = doc;
+      fieldIds[fieldName] = adminDocumentManifestFileIds_(row[fieldName], fieldName);
+    }
+
+    var rawFiles = [];
+    var filesIt = folder.getFiles();
+    while (filesIt.hasNext()) {
+      rawFiles.push(adminDocumentManifestFileMetadata_(filesIt.next(), folderId));
+    }
+
+    var secret = "";
+    try {
+      var secretRes = getPortalSecretForApplicant_(rowApplicantId);
+      if (secretRes && secretRes.ok !== false) secret = clean_(secretRes.secret || secretRes.secretPlain || "");
+    } catch (_secretErr) {}
+    var execUrl = clean_(CONFIG.WEBAPP_URL_STUDENT || getExecUrl_() || "");
+    if (!secret || !execUrl) {
+      warnings.push(adminDocumentManifestWarning_(
+        "SECURE_FILE_URL_UNAVAILABLE",
+        "Secure file URLs could not be generated from the current portal token configuration."
+      ));
+    }
+
+    var files = [];
+    for (var f = 0; f < rawFiles.length; f++) {
+      var meta = rawFiles[f];
+      var sourceField = "";
+      var mappingMethod = "unmapped";
+      var matches = [];
+      for (var field in fieldIds) {
+        if (!Object.prototype.hasOwnProperty.call(fieldIds, field)) continue;
+        if (fieldIds[field].indexOf(meta.fileId) >= 0) matches.push(field);
+      }
+      if (matches.length) {
+        sourceField = matches[0];
+        mappingMethod = "row_file_id";
+        if (matches.length > 1) {
+          warnings.push(adminDocumentManifestWarning_(
+            "DUPLICATE_FIELD_MAPPING",
+            meta.fileId + " is referenced by multiple document fields: " + matches.join(", ")
+          ));
+        }
+      } else {
+        sourceField = adminDocumentManifestPrefixField_(meta.fileName, docFields);
+        if (sourceField) {
+          mappingMethod = "filename_prefix";
+          warnings.push(adminDocumentManifestWarning_("FILE_NOT_REFERENCED_BY_SHEET", meta.fileId));
+          warnings.push(adminDocumentManifestWarning_(
+            "FILENAME_PREFIX_FALLBACK",
+            meta.fileId + " mapped to " + sourceField + " from filename prefix."
+          ));
+        }
+      }
+
+      var fileWarnings = [];
+      if (!sourceField) {
+        fileWarnings.push(adminDocumentManifestWarning_("UNMAPPED_FILE", "File is not mapped to a configured document field."));
+        warnings.push(adminDocumentManifestWarning_("FILE_NOT_REFERENCED_BY_SHEET", meta.fileId));
+      }
+      if (meta.parentFolderIds.indexOf(folderId) < 0) {
+        fileWarnings.push(adminDocumentManifestWarning_("UNEXPECTED_PARENT_FOLDER", meta.parentFolderIds.join(", ")));
+        warnings.push(adminDocumentManifestWarning_("UNEXPECTED_PARENT_FOLDER", meta.fileId));
+      }
+      if (adminDocumentManifestMimeExtensionMismatch_(meta.fileName, meta.mimeType)) {
+        fileWarnings.push(adminDocumentManifestWarning_("MIME_EXTENSION_MISMATCH", meta.fileName + " | " + meta.mimeType));
+        warnings.push(adminDocumentManifestWarning_("MIME_EXTENSION_MISMATCH", meta.fileId));
+      }
+      if (sourceField) mappedIds[meta.fileId] = true;
+      var sourceFieldIds = sourceField ? (fieldIds[sourceField] || []) : [];
+      var canBuildFileSpecificProxy = mappingMethod === "row_file_id"
+        && sourceFieldIds.length === 1
+        && sourceFieldIds[0] === meta.fileId;
+      if (sourceField && !canBuildFileSpecificProxy) {
+        fileWarnings.push(adminDocumentManifestWarning_(
+          "FILE_SPECIFIC_PROXY_UNAVAILABLE",
+          "Existing secure proxy is field-based and cannot identify this file independently."
+        ));
+      }
+
+      files.push({
+        fileId: meta.fileId,
+        fileName: meta.fileName,
+        mimeType: meta.mimeType,
+        sizeBytes: meta.sizeBytes,
+        createdTime: meta.createdTime,
+        modifiedTime: meta.modifiedTime,
+        parentFolderId: meta.parentFolderId,
+        sourceField: sourceField,
+        mappingMethod: mappingMethod,
+        suspectedDocumentType: adminDocumentManifestTypeForField_(sourceField),
+        previewEligible: /^image\//i.test(meta.mimeType),
+        thumbnailAvailable: false,
+        openUrl: canBuildFileSpecificProxy && secret && execUrl
+          ? buildTokenGatedFileUrl_(execUrl, rowApplicantId, secret, sourceField, "open")
+          : "",
+        downloadUrl: canBuildFileSpecificProxy && secret && execUrl
+          ? buildTokenGatedFileUrl_(execUrl, rowApplicantId, secret, sourceField, "download")
+          : "",
+        warnings: fileWarnings
+      });
+    }
+
+    var missingExpected = [];
+    for (var expectedField in fieldByName) {
+      if (!Object.prototype.hasOwnProperty.call(fieldByName, expectedField)) continue;
+      var expectedDoc = fieldByName[expectedField] || {};
+      var ids = fieldIds[expectedField] || [];
+      var mappedCount = 0;
+      for (var x = 0; x < ids.length; x++) {
+        if (mappedIds[ids[x]]) mappedCount++;
+        else warnings.push(adminDocumentManifestWarning_(
+          "SHEET_FILE_ID_NOT_FOUND_IN_FOLDER",
+          expectedField + ": " + ids[x]
+        ));
+      }
+      if (expectedDoc.required !== false && mappedCount === 0) {
+        missingExpected.push({
+          sourceField: expectedField,
+          label: clean_(expectedDoc.label || expectedField),
+          required: true
+        });
+      }
+    }
+
+    return {
+      ok: true,
+      applicantId: rowApplicantId,
+      applicantName: applicantName,
+      folderId: folderId,
+      folderName: clean_(folder.getName()),
+      folderUrl: folderUrl,
+      source: "drive",
+      files: files,
+      missingExpected: missingExpected,
+      warnings: warnings
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      code: "DOCUMENT_MANIFEST_ERROR",
+      error: "Document manifest could not be built."
+    };
+  }
+}
+
 function getZohoBooksWriteAdminEmails_() {
   var raw = "";
   try {
