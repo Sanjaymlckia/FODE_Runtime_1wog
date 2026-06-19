@@ -606,8 +606,8 @@
     .documentGalleryMeta{ font-size:12px; color:var(--muted); }
     .documentGalleryGrid{
       display:grid;
-      grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
-      gap:10px;
+      grid-template-columns:repeat(auto-fit, minmax(248px, 1fr));
+      gap:12px;
     }
     .documentGalleryTile{
       border:1px solid rgba(148,163,184,.18);
@@ -629,8 +629,39 @@
       justify-content:space-between;
       gap:8px;
     }
-    .documentGalleryTileTitle{ font-weight:800; font-size:13px; }
-    .documentGalleryTileMeta{ font-size:12px; color:var(--muted); line-height:1.4; }
+    .documentGalleryTileText{
+      min-width:0;
+      flex:1 1 auto;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .documentGalleryTileTitle{
+      font-weight:800;
+      font-size:13px;
+      line-height:1.35;
+      word-break:break-word;
+    }
+    .documentGalleryTileMeta{
+      font-size:11px;
+      color:var(--muted);
+      line-height:1.35;
+    }
+    .documentGalleryFileName{
+      display:block;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .documentGalleryFileType{
+      display:block;
+      opacity:.9;
+    }
+    .documentGalleryWarning{
+      font-size:11px;
+      color:#cbd5e1;
+      line-height:1.35;
+    }
     .documentGalleryThumb{
       min-height:96px;
       border:1px solid rgba(148,163,184,.18);
@@ -658,8 +689,12 @@
       align-items:center;
       margin-top:auto;
     }
+    .documentGalleryActions .muted[aria-label="Recommendation"]{
+      font-size:11px;
+      white-space:nowrap;
+    }
     .documentGalleryError{
-      font-size:12px;
+      font-size:11px;
       color:#fca5a5;
       min-height:18px;
     }
@@ -4827,6 +4862,18 @@
       }
       return String(fallbackLabel || field || "Document").trim();
     }
+    function documentGalleryOperatorLabel_(sourceField, itemIndex, fallbackLabel){
+      var baseLabel = documentGalleryFieldLabel_(sourceField, fallbackLabel);
+      var field = String(sourceField || "").trim();
+      var index = Number(itemIndex);
+      if (field === "Latest_School_Report_File" && Number.isFinite(index) && index >= 0) {
+        return "Latest School Report " + String(index + 1);
+      }
+      if (field === "Fee_Receipt_File") {
+        return "Fee Receipt";
+      }
+      return baseLabel;
+    }
     function documentGalleryTileKey_(file, idx){
       var sourceField = String((file && file.sourceField) || "unmapped").trim() || "unmapped";
       var itemIndex = Number(file && file.itemIndex);
@@ -4916,27 +4963,28 @@
         var tileKey = documentGalleryTileKey_(file, idx);
         var sourceField = String((file && file.sourceField) || "").trim();
         var itemIndex = Number(file && file.itemIndex);
-        var label = documentGalleryFieldLabel_(sourceField, file && file.label);
+        var label = documentGalleryOperatorLabel_(sourceField, itemIndex, file && file.label);
         var actionKey = documentGalleryActionKey_(sourceField, itemIndex);
         var busy = !!documentGalleryState.actionBusyByKey[actionKey];
         var errorText = String(documentGalleryState.actionErrorByKey[actionKey] || "").trim();
         var canAct = documentGalleryHasSecureAction_(file);
         var warningText = documentGalleryWarningText_(file && file.warnings);
-        var fileMeta = [
-          String((file && file.fileName) || "").trim(),
-          String((file && file.mimeType) || "").trim()
-        ].filter(function(v){ return !!v; }).join(" | ");
+        var fileName = String((file && file.fileName) || "").trim();
+        var mimeType = String((file && file.mimeType) || "").trim();
         return `
           <div class="documentGalleryTile" data-gallery-tile="${esc(tileKey)}">
             <div class="documentGalleryTileHeader">
-              <div>
+              <div class="documentGalleryTileText">
                 <div class="documentGalleryTileTitle">${esc(label)}</div>
-                <div class="documentGalleryTileMeta">${esc(fileMeta || "Mapped uploaded evidence")}</div>
+                <div class="documentGalleryTileMeta">
+                  <span class="documentGalleryFileName" title="${esc(fileName || "Mapped uploaded evidence")}">${esc(fileName || "Mapped uploaded evidence")}</span>
+                  ${mimeType ? `<span class="documentGalleryFileType">${esc(mimeType)}</span>` : ``}
+                </div>
               </div>
               <span class="statusTag">${esc(file && file.previewEligible === true ? "Image" : "Download first")}</span>
             </div>
             <div class="documentGalleryThumb">${renderDocumentGalleryThumb_(file, actionKey)}</div>
-            <div class="documentGalleryTileMeta">
+            <div class="${warningText ? "documentGalleryWarning" : "documentGalleryTileMeta"}">
               ${esc(warningText || (file && file.previewEligible === true
                 ? "Preview Image is available for trusted image MIME types."
                 : "Download is primary. Open in New Tab remains browser-dependent."))}
@@ -4955,15 +5003,15 @@
         `;
       }).join("");
       var missingTiles = missing.map(function(item, idx){
-        var label = documentGalleryFieldLabel_(item && item.sourceField, item && item.label);
+        var label = documentGalleryOperatorLabel_(item && item.sourceField, item && item.itemIndex, item && item.label);
         return `
           <div class="documentGalleryTile missing" data-gallery-tile="${esc(documentGalleryMissingTileKey_(item, idx))}">
             <div class="documentGalleryTileHeader">
-              <div>
+              <div class="documentGalleryTileText">
                 <div class="documentGalleryTileTitle">${esc(label)}</div>
-                <div class="documentGalleryTileMeta">Required document</div>
+                <div class="documentGalleryTileMeta">Missing</div>
               </div>
-              <span class="statusTag off">Not Uploaded</span>
+              <span class="statusTag off">Missing</span>
             </div>
             <div class="documentGalleryThumb">Not Uploaded</div>
             <div class="documentGalleryTileMeta">This required document is not yet available in the applicant evidence folder.</div>
