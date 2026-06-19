@@ -1817,8 +1817,8 @@
     </div>
 
     <div id="operationalDashboardPanel" class="card queue-panel">
-      <h3>Legacy Admin Dashboard</h3>
-      <div class="muted" style="margin-bottom:10px;">Operator summary only. Current calculations remain unchanged and mix operational backlog, legacy pipeline labels, row-log communication activity, and runtime diagnostics.</div>
+      <h3>Admin Dashboard</h3>
+      <div class="muted" style="margin-bottom:10px;">Operator summary only. Counts are derived from the current FODE data sheet and supporting runtime diagnostics. Use drill-downs and review queues for actionable work.</div>
 
       <div style="font-weight:800;margin-top:12px;">1. Intake Overview</div>
       <div class="muted" style="margin:4px 0 10px;">Lifecycle summary only. “Open Lifecycle Rows” counts non-terminal lifecycle rows using existing lifecycle derivation, not a direct intake-review action queue.</div>
@@ -1830,21 +1830,21 @@
       </div>
 
       <div style="font-weight:800;margin-top:14px;">2. Workload &amp; Action Required</div>
-      <div class="muted" style="margin:4px 0 10px;">Legacy pipeline summary only. Use Workload Drill-Down for current operational actionability. These legacy stage buckets indicate review queue visibility, not guaranteed mail eligibility or canonical lifecycle authority.</div>
+      <div class="muted" style="margin:4px 0 10px;">Compatibility summary only. Use Workload Drill-Down for current operational workload and applicant state. These summary buckets are not canonical lifecycle, queue, or mail-eligibility authority.</div>
       <div class="commMeta">
-        <div class="box"><div class="k">Legacy Pipeline: New / Unclassified</div><div class="v" id="pipeNewToMlckia">loading...</div></div>
-        <div class="box"><div class="k">Legacy Pipeline: Contacted</div><div class="v" id="pipeContacted">loading...</div></div>
-        <div class="box"><div class="k">Legacy Pipeline: Enrolled</div><div class="v" id="pipeEnrolled">loading...</div></div>
-        <div class="box"><div class="k">Legacy Pipeline: Closed Lost</div><div class="v" id="pipeClosedLost">loading...</div></div>
+        <div class="box"><div class="k">Summary: New / Unclassified</div><div class="v" id="pipeNewToMlckia">loading...</div></div>
+        <div class="box"><div class="k">Summary: Contacted</div><div class="v" id="pipeContacted">loading...</div></div>
+        <div class="box"><div class="k">Summary: Enrolled</div><div class="v" id="pipeEnrolled">loading...</div></div>
+        <div class="box"><div class="k">Summary: Closed Lost</div><div class="v" id="pipeClosedLost">loading...</div></div>
       </div>
 
       <div style="font-weight:800;margin-top:14px;">3. Document &amp; Payment Status</div>
       <div class="muted" style="margin:4px 0 10px;">Awaiting Documents reflects applicant-action incompleteness. Ready For Review reflects officer review workload. Payment cards remain supporting context only.</div>
       <div class="commMeta">
         <div class="box"><div class="k">Awaiting Documents</div><div class="v" id="opsDocsPending">loading...</div></div>
-        <div class="box"><div class="k">Legacy Payment Pending Snapshot</div><div class="v" id="opsPaymentPending">loading...</div></div>
+        <div class="box"><div class="k">Payment Pending Snapshot</div><div class="v" id="opsPaymentPending">loading...</div></div>
         <div class="box"><div class="k">Ready For Review</div><div class="v" id="pipeDocumentsPending">loading...</div></div>
-        <div class="box"><div class="k">Legacy Pipeline: Payment Pending</div><div class="v" id="pipePaymentPending">loading...</div></div>
+        <div class="box"><div class="k">Summary: Payment Pending</div><div class="v" id="pipePaymentPending">loading...</div></div>
       </div>
       <div class="muted" style="margin:8px 0 0;">Use <strong>Documents to Verify</strong> for officer review of submitted applications with all mandatory uploads present, <strong>Payments to Verify</strong> for uploaded payment evidence review, and <strong>Awaiting Payment</strong> for missing-payment follow-up. <strong>DOCS_REQUIRED</strong> in the lifecycle drill-down remains a lifecycle/actionability stage, not the same authority as the document review queue.</div>
 
@@ -1971,7 +1971,7 @@
     </div>
 
     <div id="stageBatchPanel" class="card queue-panel">
-      <h3>Stage Batch Actions</h3>
+      <h3>Stage Batch Communications</h3>
       <div class="muted" style="margin-bottom:10px;">Review Queues show operational workload. Not all rows are currently mail-eligible. Preview Cohort Result appears below in the Stage Batch Preview Result / Diagnostics panel.</div>
       <div class="commMeta">
         <div class="box"><div class="k">Selected Stage</div><div class="v" id="stageBatchSelectedStage">&mdash;</div></div>
