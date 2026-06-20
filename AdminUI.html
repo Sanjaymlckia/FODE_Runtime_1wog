@@ -1838,12 +1838,12 @@
       <div class="muted" style="margin-bottom:10px;">Operational summary only. Review Queues remains the primary action surface; these sections show current workload, blockers, communications, and supporting intake context.</div>
 
       <div style="font-weight:800;margin-top:12px;">2. Document &amp; Payment Status</div>
-      <div class="muted" style="margin:4px 0 10px;">Awaiting Documents reflects applicant-action incompleteness. Ready For Review reflects officer review workload. Payment cards remain supporting context only.</div>
+      <div class="muted" style="margin:4px 0 10px;">Awaiting Documents reflects applicant-action incompleteness. Ready For Review reflects officer review workload. Payment cards below are supporting pipeline/context snapshots, not review-queue authority.</div>
       <div class="commMeta">
         <div class="box"><div class="k">Awaiting Documents</div><div class="v" id="opsDocsPending">loading...</div></div>
-        <div class="box"><div class="k">Payment Pending Snapshot</div><div class="v" id="opsPaymentPending">loading...</div></div>
+        <div class="box"><div class="k">Payment Pending (Pipeline Snapshot)</div><div class="v" id="opsPaymentPending">loading...</div></div>
         <div class="box"><div class="k">Ready For Review</div><div class="v" id="pipeDocumentsPending">loading...</div></div>
-        <div class="box"><div class="k">Summary: Payment Pending</div><div class="v" id="pipePaymentPending">loading...</div></div>
+        <div class="box"><div class="k">Compatibility: Payment Pending</div><div class="v" id="pipePaymentPending">loading...</div></div>
       </div>
       <div class="muted" style="margin:8px 0 0;">Use <strong>Documents to Verify</strong> for officer review of submitted applications with all mandatory uploads present, <strong>Payments to Verify</strong> for uploaded payment evidence review, and <strong>Awaiting Payment</strong> for missing-payment follow-up. <strong>DOCS_REQUIRED</strong> in the lifecycle drill-down remains a lifecycle/actionability stage, not the same authority as the document review queue.</div>
 
@@ -1856,15 +1856,15 @@
       </div>
 
       <div style="font-weight:800;margin-top:14px;">4. Communication Performance</div>
-      <div class="muted" style="margin:4px 0 10px;">Row-log activity and actual email-send row timestamps are shown separately below. Neither is the same authority as Automation Daily Send Count in System Health.</div>
+      <div class="muted" style="margin:4px 0 10px;">Row-log activity and actual email-send row timestamps are shown separately below. Failed and suppressed counts may reflect both status and last-result evidence. None of these cards is the same authority as Automation Daily Send Count in System Health.</div>
       <div class="commMeta">
-        <div class="box"><div class="k">Row-Logged Activity Today</div><div class="v" id="opsEmailSentToday">loading...</div></div>
+        <div class="box"><div class="k">Row-Logged Contact Activity Today</div><div class="v" id="opsEmailSentToday">loading...</div></div>
         <div class="box"><div class="k">Email Rows Sent Today</div><div class="v" id="opsEmailRowsSentToday">loading...</div></div>
         <div class="box"><div class="k">SEND_ATTEMPT</div><div class="v" id="emailStateAttempt">loading...</div></div>
         <div class="box"><div class="k">SENT</div><div class="v" id="emailStateSent">loading...</div></div>
-        <div class="box"><div class="k">FAILED</div><div class="v" id="emailStateFailed">loading...</div></div>
+        <div class="box"><div class="k">FAILED (Status + Last Result)</div><div class="v" id="emailStateFailed">loading...</div></div>
         <div class="box"><div class="k">BOUNCED</div><div class="v" id="emailStateBounced">loading...</div></div>
-        <div class="box"><div class="k">SUPPRESSED</div><div class="v" id="emailStateSuppressed">loading...</div></div>
+        <div class="box"><div class="k">SUPPRESSED (Status + Last Result)</div><div class="v" id="emailStateSuppressed">loading...</div></div>
         <div class="box"><div class="k">FALLBACK_PENDING</div><div class="v" id="emailStateFallback">loading...</div></div>
       </div>
 
@@ -1886,7 +1886,7 @@
         <div class="box"><div class="k">Summary: Contacted</div><div class="v" id="pipeContacted">loading...</div></div>
         <div class="box"><div class="k">Summary: Enrolled</div><div class="v" id="pipeEnrolled">loading...</div></div>
         <div class="box"><div class="k">Summary: Closed Lost</div><div class="v" id="pipeClosedLost">loading...</div></div>
-        <div class="box"><div class="k">Summary: Payment Pending</div><div class="v" id="pipePaymentPending">loading...</div></div>
+        <div class="box"><div class="k">Compatibility: Payment Pending</div><div class="v" id="pipePaymentPending">loading...</div></div>
       </div>
     </details>
 
@@ -7645,7 +7645,7 @@ function renderStageDashboard_(items, emptyMessage){
       renderQueueSection("queueAwaitingPayment", "Awaiting Payment", d.awaitingPayment, counts.awaitingPayment);
       renderQueueSection("queuePayments", "Payments to Verify", d.payments, counts.payments);
       renderQueueSection("queueAnomalies", "Payment-First Anomalies", d.anomalies, counts.anomalies);
-      renderQueueSection("queuePaidApproved", "Enrolled / Confirmed", d.paidApproved, counts.paidApproved);
+      renderQueueSection("queuePaidApproved", "Payment Verified", d.paidApproved, counts.paidApproved);
       renderOpsQueue_();
     }
 
