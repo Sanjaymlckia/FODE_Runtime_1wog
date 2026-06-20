@@ -30,7 +30,7 @@ expectMatch(/<img src="\$\{esc\(safeFile\.previewUrl\)\}"/, "Gallery thumbnail b
 expectMatch(/Latest School Report "\s*\+\s*String\(index \+ 1\)/, "Multi-file school reports should use short operator-facing labels");
 expectMatch(/Fee Receipt/, "Missing fee receipt tile should use a short operator-facing label");
 expectMatch(/Preview Image/, "Image preview affordance must exist");
-expectMatch(/Recommended: Download/, "PDF or unknown tiles must remain download-primary");
+expectMatch(/Download first|PDF \/ document file - open or download to review\./, "PDF or unknown tiles must remain download-primary");
 expectMatch(/Not Uploaded/, "Missing required documents must render a Not Uploaded state");
 expectMatch(/Secure per-file action unavailable for this mapping\./, "Gallery must handle unmapped or non-indexed files safely");
 
