@@ -4826,6 +4826,75 @@ function fileExtensionFromContentType_(contentType) {
   return map[type] || "";
 }
 
+function describeDocFieldPayloadShape_(payload, field) {
+  var hasField = !!field && payload && Object.prototype.hasOwnProperty.call(payload, field);
+  if (!hasField) {
+    return {
+      present: false,
+      shape: "missing",
+      normalizedUrls: [],
+      normalizedUrlCount: 0
+    };
+  }
+  var rawValue = payload[field];
+  var normalizedUrls = normalizeToUrlList_(rawValue, field);
+  var shape = "non-URL value";
+  if (rawValue == null) {
+    shape = "empty string";
+  } else if (Array.isArray(rawValue)) {
+    shape = rawValue.length ? ("array(" + rawValue.length + ")") : "[]";
+  } else if (typeof rawValue === "string") {
+    var trimmed = rawValue.trim();
+    if (!trimmed) shape = "empty string";
+    else if (trimmed === "[]") shape = "[]";
+    else if (normalizedUrls.length > 0) shape = "URL/string";
+    else shape = "non-URL value";
+  }
+  return {
+    present: true,
+    shape: shape,
+    normalizedUrls: normalizedUrls,
+    normalizedUrlCount: normalizedUrls.length
+  };
+}
+
+function summarizeDocFieldPayloadShapes_(payload, fields) {
+  var inspectedFields = Array.isArray(fields) ? fields.slice() : [];
+  var normalizedUrlsByField = {};
+  var normalizedUrlCounts = {};
+  var fieldShapeSummary = {};
+  var presentFieldCount = 0;
+  var usableUrlCount = 0;
+  for (var i = 0; i < inspectedFields.length; i++) {
+    var field = clean_(inspectedFields[i] || "");
+    if (!field) continue;
+    var summary = describeDocFieldPayloadShape_(payload, field);
+    if (summary.present) presentFieldCount++;
+    normalizedUrlsByField[field] = summary.normalizedUrls || [];
+    normalizedUrlCounts[field] = Number(summary.normalizedUrlCount || 0);
+    fieldShapeSummary[field] = summary.shape || "missing";
+    usableUrlCount += Number(summary.normalizedUrlCount || 0);
+  }
+  return {
+    inspectedFields: inspectedFields,
+    inspectedFieldCount: inspectedFields.length,
+    presentFieldCount: presentFieldCount,
+    allConfiguredFieldsPresent: inspectedFields.length > 0 && presentFieldCount === inspectedFields.length,
+    usableUrlCount: usableUrlCount,
+    normalizedUrlsByField: normalizedUrlsByField,
+    normalizedUrlCounts: normalizedUrlCounts,
+    fieldShapeSummary: fieldShapeSummary
+  };
+}
+
+function shouldLogEmptyDocumentPayloadWarning_(summary, canonicalizedFileCount) {
+  var info = (summary && typeof summary === "object") ? summary : {};
+  return Number(info.inspectedFieldCount || 0) > 0
+    && info.allConfiguredFieldsPresent === true
+    && Number(info.usableUrlCount || 0) === 0
+    && Number(canonicalizedFileCount || 0) === 0;
+}
+
 function canonicalizeFdIntakeFiles_(payload, applicantFolder, logSheet, context) {
   var sourcePayload = payload || {};
   var out = {};
@@ -4846,10 +4915,12 @@ function canonicalizeFdIntakeFiles_(payload, applicantFolder, logSheet, context)
   }).filter(function (field) {
     return !!field;
   });
+  var docFieldSummary = summarizeDocFieldPayloadShapes_(out, fields);
+  var canonicalizedFileCount = 0;
 
   for (var i = 0; i < fields.length; i++) {
     var field = fields[i];
-    var rawUrls = normalizeToUrlList_(out[field], field);
+    var rawUrls = docFieldSummary.normalizedUrlsByField[field] || [];
     if (!rawUrls.length) continue;
     var canonicalUrls = [];
     for (var u = 0; u < rawUrls.length; u++) {
@@ -4908,6 +4979,7 @@ function canonicalizeFdIntakeFiles_(payload, applicantFolder, logSheet, context)
           continue;
         }
         canonicalUrls.push(newUrl);
+        canonicalizedFileCount++;
         fileLog = appendLog_(fileLog, new Date().toISOString()
           + " | " + field
           + " | fetched_and_copied"
@@ -4935,6 +5007,23 @@ function canonicalizeFdIntakeFiles_(payload, applicantFolder, logSheet, context)
       }
     }
     out[field] = canonicalUrls.join("\n");
+  }
+  if (shouldLogEmptyDocumentPayloadWarning_(docFieldSummary, canonicalizedFileCount)) {
+    logActivation_(logSheet, "ACTIVATION_FILE_PAYLOAD_EMPTY_WARNING", {
+      correlation_id: correlationId,
+      applicantId: applicantId,
+      formId: clean_(out.FormID || out.FD_FormID || ""),
+      fieldNamesInspected: docFieldSummary.inspectedFields,
+      rawValueShapeSummary: docFieldSummary.fieldShapeSummary,
+      normalizedUrlCounts: docFieldSummary.normalizedUrlCounts,
+      usableUrlCount: docFieldSummary.usableUrlCount,
+      canonicalizedFileCount: canonicalizedFileCount,
+      allConfiguredFieldsPresent: docFieldSummary.allConfiguredFieldsPresent === true,
+      presentDocFieldCount: docFieldSummary.presentFieldCount,
+      applicantFolderId: folderId,
+      applicantFolderUrl: folderUrl,
+      recommendedOperatorAction: "Documents not received from FormDesigner payload; request applicant to resend/upload documents."
+    });
   }
   out.File_Log = fileLog;
   return out;
