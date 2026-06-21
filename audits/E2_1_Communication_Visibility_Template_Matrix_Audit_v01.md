@@ -1,8 +1,8 @@
 # E2.1 Communication Visibility Template Matrix Audit v01
 
-Status: Discovery only  
-Track: L  
-Runtime changes: None  
+Status: Discovery only
+Track: L
+Runtime changes: None
 Deployment changes: None
 
 ## Scope
