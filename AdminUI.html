@@ -705,84 +705,6 @@
       color:var(--muted);
       font-size:13px;
     }
-    .reviewWorkflowIntro{
-      margin-top:12px;
-      border:1px solid rgba(96,165,250,.28);
-      border-radius:14px;
-      background:rgba(15,23,42,.22);
-      padding:12px 14px;
-    }
-    .reviewWorkflowIntroTitle{
-      font-weight:900;
-      font-size:13px;
-      margin-bottom:6px;
-    }
-    .reviewWorkflowIntroMeta{
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.55;
-    }
-    .reviewWorkflowSection{
-      margin-top:14px;
-      border-top:1px solid rgba(148,163,184,.16);
-      padding-top:14px;
-    }
-    .reviewWorkflowSectionHeader{
-      display:flex;
-      flex-wrap:wrap;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:10px;
-      margin-bottom:8px;
-    }
-    .reviewWorkflowSectionTitle{
-      font-weight:900;
-      font-size:14px;
-      line-height:1.35;
-    }
-    .reviewWorkflowSectionMeta{
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.5;
-      margin-top:4px;
-      max-width:760px;
-    }
-    .reviewWorkflowStep{
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      padding:3px 8px;
-      border-radius:999px;
-      font-size:11px;
-      font-weight:800;
-      color:#dbeafe;
-      background:rgba(30,64,175,.32);
-      border:1px solid rgba(96,165,250,.3);
-      white-space:nowrap;
-    }
-    .reviewWorkflowActionRow{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      align-items:center;
-      margin-top:10px;
-    }
-    .reviewWorkflowSupport{
-      margin-top:8px;
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.5;
-    }
-    .reviewWorkflowSupport .opsSafetyNotice{
-      margin-top:8px;
-    }
-    #reviewSupervisorySection{
-      margin-top:18px;
-      border:1px dashed rgba(148,163,184,.28);
-      border-radius:16px;
-      padding:14px;
-      background:rgba(15,23,42,.14);
-    }
     .overrideTag{
       display:inline-block;
       margin-top:6px;
@@ -2264,272 +2186,213 @@
       </div>
       <div id="applicantHelperNote" class="applicant-helper-note hidden"></div>
 
-      <div class="reviewWorkflowIntro">
-        <div class="reviewWorkflowIntroTitle">Review sequence</div>
-        <div class="reviewWorkflowIntroMeta">Step 1 review evidence, Step 2 mark document outcomes, Step 3 set overall outcome only if needed, Step 4 continue to communications or supervisory / portal actions.</div>
-      </div>
-
-      <div class="reviewWorkflowSection" id="reviewEvidenceSection">
-        <div class="reviewWorkflowSectionHeader">
-          <div>
-            <div class="reviewWorkflowSectionTitle">Evidence Review</div>
-            <div class="reviewWorkflowSectionMeta">Start here. Review uploaded evidence in the document cards first. The gallery stays additive and read-only for easier image and multi-file inspection.</div>
-          </div>
-          <div class="reviewWorkflowStep">Step 1</div>
+      <div class="box" id="communicationsCard" style="margin-top:12px;">
+        <div style="font-weight:900;">Communications</div>
+        <div class="opsSafetyNotice">Supervisory action &mdash; requires approval, preview, confirmation, and audit. Normal Admin workflow is preview only.</div>
+        <div class="commMeta">
+          <div class="box"><div class="k">Applicant ID</div><div class="v" id="commApplicantId">&mdash;</div></div>
+          <div class="box"><div class="k">Effective Email</div><div class="v" id="commEffectiveEmail">&mdash;</div></div>
+          <div class="box"><div class="k">Email Status</div><div class="v" id="commEmailStatus">&mdash;</div></div>
+          <div class="box"><div class="k">Bounce Flag</div><div class="v" id="commBounceFlag">&mdash;</div></div>
+          <div class="box"><div class="k">Bounce Reason</div><div class="v" id="commBounceReason">&mdash;</div></div>
+          <div class="box"><div class="k">Next Eligible Send</div><div class="v" id="commNextActionDate">&mdash;</div></div>
+          <div class="box"><div class="k">Last Contacted At</div><div class="v" id="commLastContactedAt">&mdash;</div></div>
+          <div class="box"><div class="k">Last Contact Type</div><div class="v" id="commLastContactType">&mdash;</div></div>
+          <div class="box"><div class="k">Last Contact By</div><div class="v" id="commLastContactBy">&mdash;</div></div>
+          <div class="box"><div class="k">Last Contact Subject</div><div class="v" id="commLastContactSubject">&mdash;</div></div>
+          <div class="box"><div class="k">Last Contact Result</div><div class="v" id="commLastContactResult">&mdash;</div></div>
         </div>
-        <div id="docs" class="docs"></div>
-        <div class="reviewWorkflowActionRow">
-          <button id="btnOpenDocumentGallery" class="btn small" type="button" onclick="toggleDocumentGallery_()">Open Document Gallery</button>
-          <div class="muted" style="font-size:12px;">Document Gallery is for viewing files only. Record outcomes in Document Decisions.</div>
-        </div>
-        <div id="documentGallery" class="documentGallery hidden">
-          <div class="documentGalleryHeader">
-            <div>
-              <div class="documentGalleryTitle">Document Gallery</div>
-              <div id="documentGalleryStatus" class="documentGalleryMeta">Read-only evidence viewer. Uses manifest + secure per-file actions.</div>
-            </div>
-            <button id="btnCloseDocumentGallery" class="btn small" type="button" onclick="closeDocumentGallery_()">Close Gallery</button>
-          </div>
-          <div id="documentGalleryBody"></div>
-        </div>
-      </div>
-
-      <div class="reviewWorkflowSection" id="reviewDecisionSection">
-        <div class="reviewWorkflowSectionHeader">
-          <div>
-            <div class="reviewWorkflowSectionTitle">Document Decisions</div>
-            <div class="reviewWorkflowSectionMeta">After reviewing evidence above, mark per-document outcomes and comments in the cards, then save document statuses as a separate action.</div>
-          </div>
-          <div class="reviewWorkflowStep">Step 2</div>
-        </div>
-        <div class="reviewWorkflowActionRow">
-          <button id="btnSaveDocs" class="btn accent" onclick="saveDocs()">Save Document Statuses</button>
-          <button id="btnRefreshDetails" class="btn small" onclick="refreshDetails()">Refresh Details</button>
-        </div>
-        <div id="docsRouteHint" class="muted" style="margin-top:8px;font-size:12px;"></div>
-        <div class="reviewWorkflowSupport">
-          <div class="opsSafetyNotice">Legacy edit/mutation surface. Saving document or status changes is supervisory-gated and not a normal Admin workflow action.</div>
-        </div>
-      </div>
-
-      <div class="reviewWorkflowSection" id="reviewOverallSection">
-        <div class="reviewWorkflowSectionHeader">
-          <div>
-            <div class="reviewWorkflowSectionTitle">Overall Review Outcome</div>
-            <div class="reviewWorkflowSectionMeta">Overall outcome is a separate completion layer. It is not the first review step and remains distinct from per-document status saves.</div>
-          </div>
-          <div class="reviewWorkflowStep">Step 3</div>
-        </div>
-        <div id="overallLockInfo" class="box hidden" style="background:#eef6ff;border-color:#bfd8ff;">
-          <div class="k">Overall Status Lock</div>
-          <div class="v" style="font-size:13px;font-weight:600;color:#1f3b63;">Overall status is locked because payment is verified. Unlock the form to make further changes.</div>
-        </div>
-        <div class="row" style="margin-top:12px;">
-          <div class="field">
-            <label>Set Overall Status</label>
-            <select id="overallStatus" title="">
-              <option>Pending</option>
-              <option>Docs_Verified</option>
-              <option>Verified</option>
-              <option>Rejected</option>
-              <option>Fraudulent</option>
+        <div id="commDerivedMeta" class="box hidden" style="margin-top:10px;background:#f8fbff;border-color:#d7e6ff;"></div>
+        <div class="commControls">
+          <div class="field" style="max-width:260px;">
+            <label>Message Type</label>
+            <select id="commMessageType">
+              <option value="legacy_invite">Legacy Invite</option>
+              <option value="reminder">Reminder</option>
+              <option value="application_feedback">Application Feedback</option>
+              <option value="custom_email">Custom Email</option>
             </select>
+          </div>
+          <button id="btnCommPreview" class="btn small" type="button" onclick="previewApplicantMessageUi_('top_preview')">Preview</button>
+          <button id="btnCommSend" class="btn small ok" type="button" onclick="sendApplicantMessageUi_()" disabled>Send</button>
+          <div id="commInlineNote" class="muted" style="font-size:12px;"></div>
+        </div>
+        <div id="legacyEditableWarning" class="legacy-editable-warning">Use the editable email panel below for this message type.</div>
+        <div id="commCooldownBanner" class="communication-cooldown-banner hidden">
+          <div id="commCooldownBannerTitle" class="communication-cooldown-banner__title"></div>
+          <div id="commCooldownBannerBody" class="communication-cooldown-banner__body"></div>
+        </div>
+        <div id="commEditablePanel" class="box commEditablePanel hidden">
+          <div class="commEditablePanelTitle">Editable Email Draft</div>
+          <div class="row">
+            <div class="field" style="flex:1 1 320px;">
+              <label>Recipient Email</label>
+              <input id="commRecipient" type="email" placeholder="parent@example.com">
+            </div>
+            <div class="field" style="flex:1 1 320px;">
+              <label>Email Subject</label>
+              <input id="commSubject" type="text" placeholder="Email subject">
+            </div>
+          </div>
+          <div class="field" style="margin-top:8px;">
+            <label>Email Body</label>
+            <textarea id="commBody" rows="14" placeholder="Email body"></textarea>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <button id="btnCommGenerateEditable" class="btn small" type="button" onclick="previewApplicantMessageUi_('editable_preview')">Generate / Preview Email</button>
+            <button id="btnCommInsertPortalLink" class="btn small" type="button" onclick="insertPortalLinkIntoCommBody_()">Insert Portal Link</button>
+            <button id="btnCommSendEdited" class="btn small ok" type="button" onclick="sendApplicantMessageUi_()" disabled>Send Edited Email</button>
+          </div>
+        </div>
+        <div id="commResult" class="commResultBox hidden"></div>
+        <div id="commDebug" class="commResultBox hidden" style="margin-top:8px;"></div>
+      </div>
+
+      <div id="booksDryRunCard" class="box booksDryRunPanel">
+        <div class="booksDryRunTitle">Zoho Books FODE Preview / Dry Run</div>
+        <div class="booksDryRunNote">No invoice will be created unless live write flags are enabled.</div>
+        <div class="opsSafetyNotice">This may create or send financial records. Verify selected applicant, payer, subjects, and amount before approval. Normal Admin workflow is preview only.</div>
+        <div id="booksInvoiceRaisedBadge" class="booksStatusBadge hidden">
+          <div id="booksInvoiceRaisedTitle" class="booksStatusBadgeTitle"></div>
+          <div id="booksInvoiceRaisedMeta" class="booksStatusBadgeMeta"></div>
+        </div>
+        <? if (IS_SUPER && CONFIG && CONFIG.ENABLE_ZOHO_BOOKS_SECRET_SETUP === true) { ?>
+        <div id="booksSecretSetupPanel" class="box booksDryRunPanel" style="margin-top:10px;">
+          <div class="booksDryRunTitle">Temporary Zoho Books Secret Setup</div>
+          <div class="booksDryRunNote">Temporary Zoho Books secret setup. Values are stored in Script Properties. Values are never displayed back.</div>
+          <div class="row" style="margin-top:10px;">
+            <div class="field" style="flex:1 1 260px;">
+              <label>Client ID</label>
+              <input id="booksClientId" type="password" autocomplete="off">
+            </div>
+            <div class="field" style="flex:1 1 260px;">
+              <label>Client Secret</label>
+              <input id="booksClientSecret" type="password" autocomplete="off">
+            </div>
+            <div class="field" style="flex:1 1 260px;">
+              <label>Refresh Token</label>
+              <input id="booksRefreshToken" type="password" autocomplete="off">
+            </div>
+            <button id="btnBooksSecretSetup" class="btn small danger" type="button" onclick="saveZohoBooksSecretsUi_()">Save OAuth Properties</button>
+          </div>
+          <div id="booksSecretSetupResult" class="booksDryRunPayload hidden"></div>
+        </div>
+        <? } ?>
+        <div class="row" style="margin-top:10px;">
+          <div class="field" style="flex:1 1 260px;">
+            <label>ApplicantID / Row Selector</label>
+            <input id="booksPreviewLookup" type="text" placeholder="FODE-26-002013 or row number">
+          </div>
+          <button id="btnBooksPreflight" class="btn small" type="button" onclick="preflightZohoBooksUi_()">Preflight</button>
+          <button id="btnBooksPreview" class="btn small accent" type="button" onclick="previewZohoBooksPayloadUi_()">Preview Books Payload</button>
+          <button id="btnBooksCreate" class="btn small ok" type="button" onclick="createZohoBooksDraftUi_()" disabled>Create Draft Invoice</button>
+          <button id="btnBooksSendTestEmail" class="btn small warn" type="button" onclick="sendZohoBooksTestInvoiceUi_()" disabled>Send Test Invoice Email</button>
+        </div>
+        <div id="booksActionHint" class="booksActionHint"></div>
+        <div id="booksDryRunBanner" class="booksDryRunBanner hidden"></div>
+        <div class="booksDryRunGrid">
+          <div class="box"><div class="k">Payer</div><div class="v" id="booksPayerSummary">&mdash;</div></div>
+          <div class="box"><div class="k">Student</div><div class="v" id="booksStudentSummary">&mdash;</div></div>
+          <div class="box"><div class="k">Item</div><div class="v" id="booksItemSummary">&mdash;</div></div>
+          <div class="box"><div class="k">Amount</div><div class="v" id="booksAmountSummary">&mdash;</div></div>
+          <div class="box"><div class="k">FODE Reference</div><div class="v" id="booksReferenceSummary">&mdash;</div></div>
+          <div class="box"><div class="k">Idempotency Status</div><div class="v" id="booksIdempotencySummary">&mdash;</div></div>
+        </div>
+        <div id="booksLineSummary" class="booksLineSummary hidden"></div>
+        <div id="booksMissingFields" class="booksDryRunPayload hidden"></div>
+        <div id="booksContactPayload" class="booksDryRunPayload hidden"></div>
+        <div id="booksInvoicePayload" class="booksDryRunPayload hidden"></div>
+      </div>
+
+      <div id="overallLockInfo" class="box hidden" style="background:#eef6ff;border-color:#bfd8ff;">
+        <div class="k">Overall Status Lock</div>
+        <div class="v" style="font-size:13px;font-weight:600;color:#1f3b63;">Overall status is locked because payment is verified. Unlock the form to make further changes.</div>
+      </div>
+
+      <div style="margin-top:12px; font-weight:900;">Documents (status + comment)</div>
+      <div class="opsSafetyNotice">Legacy edit/mutation surface. Saving document or status changes is supervisory-gated and not a normal Admin workflow action.</div>
+      <div id="docs" class="docs"></div>
+      <div class="row" style="margin-top:10px; align-items:center;">
+        <button id="btnOpenDocumentGallery" class="btn small" type="button" onclick="toggleDocumentGallery_()">Open Document Gallery</button>
+        <div class="muted" style="font-size:12px;">Read-only manifest view. Loads only after explicit operator click and uses secure per-file actions.</div>
+      </div>
+      <div id="documentGallery" class="documentGallery hidden">
+        <div class="documentGalleryHeader">
+          <div>
+            <div class="documentGalleryTitle">Document Gallery</div>
+            <div id="documentGalleryStatus" class="documentGalleryMeta">Read-only. Uses manifest + secure per-file actions.</div>
+          </div>
+          <button id="btnCloseDocumentGallery" class="btn small" type="button" onclick="closeDocumentGallery_()">Close Gallery</button>
+        </div>
+        <div id="documentGalleryBody"></div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <div class="field">
+          <label>Set Overall Status</label>
+          <select id="overallStatus" title="">
+            <option>Pending</option>
+            <option>Docs_Verified</option>
+            <option>Verified</option>
+            <option>Rejected</option>
+            <option>Fraudulent</option>
+          </select>
+        </div>
+        <div class="field" style="flex: 2 1 420px;">
+          <label>Overall Reason (only if Rejected/Fraudulent) — stored in each doc comment as you choose</label>
+          <textarea id="overallReason" placeholder="Optional overall note. (We do not write a separate Fraud_Reason column.)"></textarea>
+        </div>
+        <button id="btnSaveOverall" class="btn ok" onclick="saveOverall()">Save Overall</button>
+        <div style="flex:1;"></div>
+        <button id="btnUnlockPortal" class="btn small" onclick="unlockReview_()" title="Local editing lock only. Does not change portal access state.">Unlock Editing</button>
+        <button id="btnLockPortal" class="btn small danger" onclick="lockReview_()" title="Local editing lock only. Does not change portal access state.">Lock Editing</button>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <button id="btnSaveDocs" class="btn accent" onclick="saveDocs()">Save Document Statuses</button>
+        <button id="btnCopyLink" class="btn" onclick="copyPortalLink()">Copy Portal Link</button>
+        <button id="btnResetLink" class="btn warn" onclick="resetPortalLink()" title="Super Admin only. Resets the portal secret and generates a new link.">Reset Link</button>
+        <button id="btnRefreshDetails" class="btn small" onclick="refreshDetails()">Refresh Details</button>
+      </div>
+      <div id="docsRouteHint" class="muted" style="margin-top:8px;font-size:12px;"></div>
+      <div class="muted" style="margin-top:6px;font-size:12px;">Copy Portal Link does not mutate data. Reset Link is Super Admin only and regenerates the portal secret after confirmation. Unlock Editing / Lock Editing are local modal controls only and do not change applicant portal access state. Actual portal access lock/unlock is a separate Super Admin server action.</div>
+
+      <details id="superEmailOverrideWrap" style="margin-top:10px;">
+        <summary style="cursor:pointer;font-weight:700;">Operations Admin: Correct Parent Email</summary>
+        <div class="row" style="margin-top:8px;">
+          <div class="field">
+            <label>New Email</label>
+            <input id="overrideEmail" type="email" placeholder="parent@example.com">
           </div>
           <div class="field" style="flex: 2 1 420px;">
-            <label>Overall Reason (only if Rejected/Fraudulent) — stored in each doc comment as you choose</label>
-            <textarea id="overallReason" placeholder="Optional overall note. (We do not write a separate Fraud_Reason column.)"></textarea>
+            <label>Reason (required)</label>
+            <textarea id="overrideReason" placeholder="Reason for post-verification email override"></textarea>
           </div>
-          <button id="btnSaveOverall" class="btn ok" onclick="saveOverall()">Save Overall</button>
+          <button id="btnApplyEmailOverride" class="btn warn" type="button" onclick="applyEmailOverride_()">Apply Override</button>
         </div>
-        <div class="reviewWorkflowSupport">Use Save Overall only after document evidence has been reviewed and document-status changes are understood. Save Overall remains separate from Save Document Statuses.</div>
+      </details>
+
+      <div id="superTools" class="row" style="margin-top:10px;">
+        <div class="field" style="max-width:130px;">
+          <label>Batch size</label>
+          <input id="bfBatchSize" type="number" min="1" step="1" value="200">
+        </div>
+        <div class="field" style="max-width:130px;">
+          <label>Start row</label>
+          <input id="bfStartRow" type="number" min="2" step="1" value="2">
+        </div>
+        <button id="btnBackfillDry" class="btn small" onclick="backfillBatch('dry')">Dry Run Batch</button>
+        <button id="btnBackfillApply" class="btn small warn" onclick="backfillBatch('apply')">Apply Batch</button>
+        <button id="btnBackfillNext" class="btn small" style="display:none;" disabled onclick="runNextBackfillBatch()">Run Next Batch</button>
+        <select id="exportScope" style="max-width:260px;">
+          <option value="search_first">Export Scope: Search results first</option>
+          <option value="range">Export Scope: Range (Start row + Batch size)</option>
+          <option value="all">Export Scope: All rows</option>
+        </select>
+        <button class="btn small ok" onclick="exportPortalLinksCsv()">Export Portal Links (CSV)</button>
       </div>
 
-      <div class="reviewWorkflowSection" id="reviewCommunicationsSection">
-        <div class="reviewWorkflowSectionHeader">
-          <div>
-            <div class="reviewWorkflowSectionTitle">Communications</div>
-            <div class="reviewWorkflowSectionMeta">Use this after review when you need a single-applicant preview/send decision. Behavior remains unchanged and still follows preview, confirmation, and role gates.</div>
-          </div>
-          <div class="reviewWorkflowStep">Step 4</div>
-        </div>
-        <div class="box" id="communicationsCard" style="margin-top:0;">
-          <div style="font-weight:900;">Communications</div>
-          <div class="opsSafetyNotice">Supervisory action &mdash; requires approval, preview, confirmation, and audit. Normal Admin workflow is preview only.</div>
-          <div class="commMeta">
-            <div class="box"><div class="k">Applicant ID</div><div class="v" id="commApplicantId">&mdash;</div></div>
-            <div class="box"><div class="k">Effective Email</div><div class="v" id="commEffectiveEmail">&mdash;</div></div>
-            <div class="box"><div class="k">Email Status</div><div class="v" id="commEmailStatus">&mdash;</div></div>
-            <div class="box"><div class="k">Bounce Flag</div><div class="v" id="commBounceFlag">&mdash;</div></div>
-            <div class="box"><div class="k">Bounce Reason</div><div class="v" id="commBounceReason">&mdash;</div></div>
-            <div class="box"><div class="k">Next Eligible Send</div><div class="v" id="commNextActionDate">&mdash;</div></div>
-            <div class="box"><div class="k">Last Contacted At</div><div class="v" id="commLastContactedAt">&mdash;</div></div>
-            <div class="box"><div class="k">Last Contact Type</div><div class="v" id="commLastContactType">&mdash;</div></div>
-            <div class="box"><div class="k">Last Contact By</div><div class="v" id="commLastContactBy">&mdash;</div></div>
-            <div class="box"><div class="k">Last Contact Subject</div><div class="v" id="commLastContactSubject">&mdash;</div></div>
-            <div class="box"><div class="k">Last Contact Result</div><div class="v" id="commLastContactResult">&mdash;</div></div>
-          </div>
-          <div id="commDerivedMeta" class="box hidden" style="margin-top:10px;background:#f8fbff;border-color:#d7e6ff;"></div>
-          <div class="commControls">
-            <div class="field" style="max-width:260px;">
-              <label>Message Type</label>
-              <select id="commMessageType">
-                <option value="legacy_invite">Legacy Invite</option>
-                <option value="reminder">Reminder</option>
-                <option value="application_feedback">Application Feedback</option>
-                <option value="custom_email">Custom Email</option>
-              </select>
-            </div>
-            <button id="btnCommPreview" class="btn small" type="button" onclick="previewApplicantMessageUi_('top_preview')">Preview</button>
-            <button id="btnCommSend" class="btn small ok" type="button" onclick="sendApplicantMessageUi_()" disabled>Send</button>
-            <div id="commInlineNote" class="muted" style="font-size:12px;"></div>
-          </div>
-          <div id="legacyEditableWarning" class="legacy-editable-warning">Use the editable email panel below for this message type.</div>
-          <div id="commCooldownBanner" class="communication-cooldown-banner hidden">
-            <div id="commCooldownBannerTitle" class="communication-cooldown-banner__title"></div>
-            <div id="commCooldownBannerBody" class="communication-cooldown-banner__body"></div>
-          </div>
-          <div id="commEditablePanel" class="box commEditablePanel hidden">
-            <div class="commEditablePanelTitle">Editable Email Draft</div>
-            <div class="row">
-              <div class="field" style="flex:1 1 320px;">
-                <label>Recipient Email</label>
-                <input id="commRecipient" type="email" placeholder="parent@example.com">
-              </div>
-              <div class="field" style="flex:1 1 320px;">
-                <label>Email Subject</label>
-                <input id="commSubject" type="text" placeholder="Email subject">
-              </div>
-            </div>
-            <div class="field" style="margin-top:8px;">
-              <label>Email Body</label>
-              <textarea id="commBody" rows="14" placeholder="Email body"></textarea>
-            </div>
-            <div class="row" style="margin-top:8px;">
-              <button id="btnCommGenerateEditable" class="btn small" type="button" onclick="previewApplicantMessageUi_('editable_preview')">Generate / Preview Email</button>
-              <button id="btnCommInsertPortalLink" class="btn small" type="button" onclick="insertPortalLinkIntoCommBody_()">Insert Portal Link</button>
-              <button id="btnCommSendEdited" class="btn small ok" type="button" onclick="sendApplicantMessageUi_()" disabled>Send Edited Email</button>
-            </div>
-          </div>
-          <div id="commResult" class="commResultBox hidden"></div>
-          <div id="commDebug" class="commResultBox hidden" style="margin-top:8px;"></div>
-        </div>
-      </div>
-
-      <div class="reviewWorkflowSection" id="reviewSupervisorySection">
-        <div class="reviewWorkflowSectionHeader">
-          <div>
-            <div class="reviewWorkflowSectionTitle">Portal / Supervisory / Batch Tools</div>
-            <div class="reviewWorkflowSectionMeta">These are later-step tools. They are not part of the normal evidence-review path and should usually be used only after review/save decisions are clear.</div>
-          </div>
-          <div class="reviewWorkflowStep">Later-step tools</div>
-        </div>
-        <div class="reviewWorkflowActionRow">
-          <button id="btnCopyLink" class="btn" onclick="copyPortalLink()">Copy Portal Link</button>
-          <button id="btnResetLink" class="btn warn" onclick="resetPortalLink()" title="Super Admin only. Resets the portal secret and generates a new link.">Reset Link</button>
-          <button id="btnUnlockPortal" class="btn small" onclick="unlockReview_()" title="Local editing lock only. Does not change portal access state.">Unlock Editing</button>
-          <button id="btnLockPortal" class="btn small danger" onclick="lockReview_()" title="Local editing lock only. Does not change portal access state.">Lock Editing</button>
-        </div>
-        <div class="reviewWorkflowSupport">Copy Portal Link does not mutate data. Reset Link is Super Admin only and regenerates the portal secret after confirmation. Unlock Editing / Lock Editing are local modal controls only and do not change applicant portal access state. Actual portal access lock/unlock is a separate Super Admin server action.</div>
-
-        <details id="superEmailOverrideWrap" style="margin-top:10px;">
-          <summary style="cursor:pointer;font-weight:700;">Operations Admin: Correct Parent Email</summary>
-          <div class="row" style="margin-top:8px;">
-            <div class="field">
-              <label>New Email</label>
-              <input id="overrideEmail" type="email" placeholder="parent@example.com">
-            </div>
-            <div class="field" style="flex: 2 1 420px;">
-              <label>Reason (required)</label>
-              <textarea id="overrideReason" placeholder="Reason for post-verification email override"></textarea>
-            </div>
-            <button id="btnApplyEmailOverride" class="btn warn" type="button" onclick="applyEmailOverride_()">Apply Override</button>
-          </div>
-        </details>
-
-        <details style="margin-top:12px;">
-          <summary style="cursor:pointer;font-weight:700;">Billing / Zoho preview tools</summary>
-          <div id="booksDryRunCard" class="box booksDryRunPanel" style="margin-top:10px;">
-            <div class="booksDryRunTitle">Zoho Books FODE Preview / Dry Run</div>
-            <div class="booksDryRunNote">No invoice will be created unless live write flags are enabled.</div>
-            <div class="opsSafetyNotice">This may create or send financial records. Verify selected applicant, payer, subjects, and amount before approval. Normal Admin workflow is preview only.</div>
-            <div id="booksInvoiceRaisedBadge" class="booksStatusBadge hidden">
-              <div id="booksInvoiceRaisedTitle" class="booksStatusBadgeTitle"></div>
-              <div id="booksInvoiceRaisedMeta" class="booksStatusBadgeMeta"></div>
-            </div>
-            <? if (IS_SUPER && CONFIG && CONFIG.ENABLE_ZOHO_BOOKS_SECRET_SETUP === true) { ?>
-            <div id="booksSecretSetupPanel" class="box booksDryRunPanel" style="margin-top:10px;">
-              <div class="booksDryRunTitle">Temporary Zoho Books Secret Setup</div>
-              <div class="booksDryRunNote">Temporary Zoho Books secret setup. Values are stored in Script Properties. Values are never displayed back.</div>
-              <div class="row" style="margin-top:10px;">
-                <div class="field" style="flex:1 1 260px;">
-                  <label>Client ID</label>
-                  <input id="booksClientId" type="password" autocomplete="off">
-                </div>
-                <div class="field" style="flex:1 1 260px;">
-                  <label>Client Secret</label>
-                  <input id="booksClientSecret" type="password" autocomplete="off">
-                </div>
-                <div class="field" style="flex:1 1 260px;">
-                  <label>Refresh Token</label>
-                  <input id="booksRefreshToken" type="password" autocomplete="off">
-                </div>
-                <button id="btnBooksSecretSetup" class="btn small danger" type="button" onclick="saveZohoBooksSecretsUi_()">Save OAuth Properties</button>
-              </div>
-              <div id="booksSecretSetupResult" class="booksDryRunPayload hidden"></div>
-            </div>
-            <? } ?>
-            <div class="row" style="margin-top:10px;">
-              <div class="field" style="flex:1 1 260px;">
-                <label>ApplicantID / Row Selector</label>
-                <input id="booksPreviewLookup" type="text" placeholder="FODE-26-002013 or row number">
-              </div>
-              <button id="btnBooksPreflight" class="btn small" type="button" onclick="preflightZohoBooksUi_()">Preflight</button>
-              <button id="btnBooksPreview" class="btn small accent" type="button" onclick="previewZohoBooksPayloadUi_()">Preview Books Payload</button>
-              <button id="btnBooksCreate" class="btn small ok" type="button" onclick="createZohoBooksDraftUi_()" disabled>Create Draft Invoice</button>
-              <button id="btnBooksSendTestEmail" class="btn small warn" type="button" onclick="sendZohoBooksTestInvoiceUi_()" disabled>Send Test Invoice Email</button>
-            </div>
-            <div id="booksActionHint" class="booksActionHint"></div>
-            <div id="booksDryRunBanner" class="booksDryRunBanner hidden"></div>
-            <div class="booksDryRunGrid">
-              <div class="box"><div class="k">Payer</div><div class="v" id="booksPayerSummary">&mdash;</div></div>
-              <div class="box"><div class="k">Student</div><div class="v" id="booksStudentSummary">&mdash;</div></div>
-              <div class="box"><div class="k">Item</div><div class="v" id="booksItemSummary">&mdash;</div></div>
-              <div class="box"><div class="k">Amount</div><div class="v" id="booksAmountSummary">&mdash;</div></div>
-              <div class="box"><div class="k">FODE Reference</div><div class="v" id="booksReferenceSummary">&mdash;</div></div>
-              <div class="box"><div class="k">Idempotency Status</div><div class="v" id="booksIdempotencySummary">&mdash;</div></div>
-            </div>
-            <div id="booksLineSummary" class="booksLineSummary hidden"></div>
-            <div id="booksMissingFields" class="booksDryRunPayload hidden"></div>
-            <div id="booksContactPayload" class="booksDryRunPayload hidden"></div>
-            <div id="booksInvoicePayload" class="booksDryRunPayload hidden"></div>
-          </div>
-        </details>
-
-        <details style="margin-top:12px;">
-          <summary style="cursor:pointer;font-weight:700;">Batch / export tools</summary>
-          <div id="superTools" class="row" style="margin-top:10px;">
-            <div class="field" style="max-width:130px;">
-              <label>Batch size</label>
-              <input id="bfBatchSize" type="number" min="1" step="1" value="200">
-            </div>
-            <div class="field" style="max-width:130px;">
-              <label>Start row</label>
-              <input id="bfStartRow" type="number" min="2" step="1" value="2">
-            </div>
-            <button id="btnBackfillDry" class="btn small" onclick="backfillBatch('dry')">Dry Run Batch</button>
-            <button id="btnBackfillApply" class="btn small warn" onclick="backfillBatch('apply')">Apply Batch</button>
-            <button id="btnBackfillNext" class="btn small" style="display:none;" disabled onclick="runNextBackfillBatch()">Run Next Batch</button>
-            <select id="exportScope" style="max-width:260px;">
-              <option value="search_first">Export Scope: Search results first</option>
-              <option value="range">Export Scope: Range (Start row + Batch size)</option>
-              <option value="all">Export Scope: All rows</option>
-            </select>
-            <button class="btn small ok" onclick="exportPortalLinksCsv()">Export Portal Links (CSV)</button>
-          </div>
-        </details>
-
-        <div id="portalLinkBox" class="muted" style="margin-top:10px;word-break:break-all;"></div>
-      </div>
+      <div id="portalLinkBox" class="muted" style="margin-top:10px;word-break:break-all;"></div>
       <div id="mMsg" class="muted" style="margin-top:10px;"></div>
     </div>
   </div>
@@ -5175,12 +5038,12 @@
             <div class="${warningText ? "documentGalleryWarning" : "documentGalleryTileMeta"}">
               ${esc(warningText || (file && file.previewEligible === true
                 ? "Preview Image is available for trusted image MIME types."
-                : "PDF / document file - open or download to review."))}
+                : "Download is primary. Open in New Tab remains browser-dependent."))}
             </div>
             <div class="documentGalleryActions">
               ${file && file.previewEligible === true && canAct
                 ? `<button type="button" class="btn small galleryPreviewBtn" data-source-field="${esc(sourceField)}" data-item-index="${esc(String(itemIndex))}" data-label="${esc(label)}" ${busy ? "disabled" : ""}>${busy ? "Working..." : "Preview Image"}</button>`
-                : ``}
+                : `<span class="muted" aria-label="Recommendation">Recommended: Download</span>`}
               ${canAct
                 ? `<button type="button" class="btn small accent galleryDownloadBtn" data-source-field="${esc(sourceField)}" data-item-index="${esc(String(itemIndex))}" data-label="${esc(label)}" ${busy ? "disabled" : ""}>${busy ? "Working..." : "Download"}</button>
                    <button type="button" class="btn small galleryOpenBtn" data-source-field="${esc(sourceField)}" data-item-index="${esc(String(itemIndex))}" data-label="${esc(label)}" ${busy ? "disabled" : ""}>${busy ? "Working..." : "Open in New Tab"}</button>`
@@ -8767,7 +8630,7 @@ function renderStageDashboard_(items, emptyMessage){
             <div class="docActionRow">
               ${x.hasFile
                 ? (x.fileProxyOpenUrl
-                    ? `${canInlinePreviewDoc_(x) ? `<button type="button" class="btn small docPreviewBtn" data-label="${esc(x.label)}" data-url="${esc(x.fileProxyOpenUrl)}" data-download-url="${esc(x.fileProxyDownloadUrl || x.fileProxyOpenUrl)}">Preview Image</button>` : `<span class="muted" aria-label="Recommendation">Download first</span>`}
+                    ? `${canInlinePreviewDoc_(x) ? `<button type="button" class="btn small docPreviewBtn" data-label="${esc(x.label)}" data-url="${esc(x.fileProxyOpenUrl)}" data-download-url="${esc(x.fileProxyDownloadUrl || x.fileProxyOpenUrl)}">Preview Image</button>` : `<span class="muted" aria-label="Recommendation">Recommended: Download</span>`}
                        <a class="btn small accent" href="${esc(x.fileProxyDownloadUrl || x.fileProxyOpenUrl)}" target="_blank" rel="noopener">Download</a>
                        <a class="btn small" href="${esc(x.fileProxyOpenUrl)}" target="_blank" rel="noopener">Open in New Tab <span class="muted">(browser-dependent)</span></a>`
                     : `<span class="muted">Resolving secure link...</span>`)
