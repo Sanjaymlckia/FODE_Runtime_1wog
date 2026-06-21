@@ -6462,6 +6462,319 @@ function normalizeApplicantBatchFilterType_(filterType) {
   return allowed.indexOf(raw) >= 0 ? raw : "";
 }
 
+function getCommunicationSemanticRegistry_() {
+  return [
+    {
+      messageType: "legacy_invite",
+      templateVersion: "1",
+      audienceClass: "APPLICANT_WORKFLOW",
+      semanticIntent: "portal_application_workflow_invitation",
+      operatorLabel: "Application Portal Invitation",
+      conditionPolicyId: "APPLICANT_PORTAL_INVITE",
+      allowedSendModes: ["selected", "batch"],
+      requiresApplicantRow: true,
+      requiresValidEmail: true,
+      requiresContactConsent: false,
+      requiredRole: "EXISTING_SEND_AUTHORITY",
+      editableMode: "limited",
+      batchSafe: true,
+      fallbackInstruction: "Use the existing manual contact fallback when email is unavailable.",
+      operatorWarning: "Applicant workflow only. Do not use as general prospect guidance.",
+      auditMeaning: "Application portal invitation sent to an authoritative applicant record.",
+      subjectBuilderId: "campaignSubjectForAttempt_",
+      bodyBuilderId: "buildCampaignEmailBody_",
+      implementationStatus: "active"
+    },
+    {
+      messageType: "reminder",
+      templateVersion: "1",
+      audienceClass: "APPLICANT_WORKFLOW",
+      semanticIntent: "overloaded_legacy_application_reminder",
+      operatorLabel: "Legacy Application Reminder",
+      conditionPolicyId: "APPLICANT_REMINDER_LEGACY_OVERLOADED",
+      allowedSendModes: ["selected", "batch"],
+      requiresApplicantRow: true,
+      requiresValidEmail: true,
+      requiresContactConsent: false,
+      requiredRole: "EXISTING_SEND_AUTHORITY",
+      editableMode: "limited",
+      batchSafe: true,
+      fallbackInstruction: "Confirm the applicant condition before using this legacy reminder.",
+      operatorWarning: "Overloaded legacy type: currently mapped across response, document, payment, and receipt contexts. Do not add new meanings.",
+      auditMeaning: "Legacy reminder sent; the exact applicant condition must be interpreted from authoritative state and audit context.",
+      subjectBuilderId: "buildApplicantMessage_",
+      bodyBuilderId: "buildReminderEmailBody_",
+      implementationStatus: "active",
+      semanticRisk: "OVERLOADED"
+    },
+    {
+      messageType: "fd_acknowledgement",
+      templateVersion: "1",
+      audienceClass: "APPLICANT_WORKFLOW",
+      semanticIntent: "application_received",
+      operatorLabel: "Application Received",
+      conditionPolicyId: "APPLICATION_RECEIVED",
+      allowedSendModes: ["selected"],
+      requiresApplicantRow: true,
+      requiresValidEmail: true,
+      requiresContactConsent: false,
+      requiredRole: "EXISTING_SEND_AUTHORITY",
+      editableMode: "locked",
+      batchSafe: false,
+      fallbackInstruction: "Use manual contact follow-up when acknowledgement email cannot be delivered.",
+      operatorWarning: "Confirms receipt only. It must not imply acceptance or enrolment.",
+      auditMeaning: "Application receipt acknowledgement; no acceptance decision is represented.",
+      subjectBuilderId: "buildApplicantMessage_",
+      bodyBuilderId: "buildFdAcknowledgementEmailBody_",
+      implementationStatus: "active",
+      semanticAlias: "application_received"
+    },
+    {
+      messageType: "application_feedback",
+      templateVersion: "1",
+      audienceClass: "APPLICANT_WORKFLOW",
+      semanticIntent: "selected_applicant_correction_or_feedback",
+      operatorLabel: "Application Feedback",
+      conditionPolicyId: "APPLICANT_FEEDBACK_SELECTED",
+      allowedSendModes: ["selected"],
+      requiresApplicantRow: true,
+      requiresValidEmail: true,
+      requiresContactConsent: false,
+      requiredRole: "EXISTING_SEND_AUTHORITY",
+      editableMode: "limited",
+      batchSafe: false,
+      fallbackInstruction: "Use manual contact fallback if the applicant cannot receive email.",
+      operatorWarning: "Selected applicant only. Verify corrections against the applicant record before sending.",
+      auditMeaning: "Correction or feedback sent for one authoritative applicant record.",
+      subjectBuilderId: "buildApplicantMessage_",
+      bodyBuilderId: "buildApplicationFeedbackEmailBody_",
+      implementationStatus: "active"
+    },
+    {
+      messageType: "custom_email",
+      templateVersion: "1",
+      audienceClass: "OPERATOR_MANUAL",
+      semanticIntent: "selected_recipient_custom_operator_email",
+      operatorLabel: "Custom Email (Selected Applicant)",
+      conditionPolicyId: "OPERATOR_SELECTED_CUSTOM",
+      allowedSendModes: ["selected"],
+      requiresApplicantRow: true,
+      requiresValidEmail: true,
+      requiresContactConsent: false,
+      requiredRole: "EXISTING_SEND_AUTHORITY",
+      editableMode: "freeform",
+      batchSafe: false,
+      fallbackInstruction: "Use manual contact fallback when email is unavailable.",
+      operatorWarning: "Freeform and selected-recipient only. Never use as a batch message type.",
+      auditMeaning: "Operator-authored email sent to one selected authoritative applicant record.",
+      subjectBuilderId: "operatorEditedSubject",
+      bodyBuilderId: "operatorEditedBody",
+      implementationStatus: "active"
+    },
+    {
+      messageType: "docs_missing",
+      templateVersion: "1",
+      audienceClass: "APPLICANT_WORKFLOW",
+      semanticIntent: "documents_missing_or_not_received",
+      operatorLabel: "Missing Documents Follow-Up",
+      conditionPolicyId: "APPLICANT_DOCUMENTS_MISSING",
+      allowedSendModes: ["selected", "batch"],
+      requiresApplicantRow: true,
+      requiresValidEmail: true,
+      requiresContactConsent: false,
+      requiredRole: "EXISTING_SEND_AUTHORITY",
+      editableMode: "limited",
+      batchSafe: true,
+      fallbackInstruction: "Request document resubmission through an approved manual contact path when email is unavailable.",
+      operatorWarning: "Do not blame the applicant or imply rejection. Batch use requires authoritative document-state filtering.",
+      auditMeaning: "Applicant advised that required documents are missing, unresolved, or not received.",
+      subjectBuilderId: "buildApplicantMessage_",
+      bodyBuilderId: "buildDocsMissingEmailBody_",
+      implementationStatus: "active"
+    },
+    {
+      messageType: "payment_followup",
+      templateVersion: "1",
+      audienceClass: "APPLICANT_WORKFLOW",
+      semanticIntent: "payment_reminder_or_follow_up",
+      operatorLabel: "Payment Follow-Up",
+      conditionPolicyId: "APPLICANT_PAYMENT_OUTSTANDING",
+      allowedSendModes: ["selected", "batch"],
+      requiresApplicantRow: true,
+      requiresValidEmail: true,
+      requiresContactConsent: false,
+      requiredRole: "EXISTING_SEND_AUTHORITY",
+      editableMode: "limited",
+      batchSafe: true,
+      fallbackInstruction: "Use an approved manual contact path when payment follow-up email is unavailable.",
+      operatorWarning: "Must not imply acceptance or enrolment unless separate authority confirms that state.",
+      auditMeaning: "Payment reminder or follow-up sent for an applicant with authoritative outstanding-payment state.",
+      subjectBuilderId: "buildApplicantMessage_",
+      bodyBuilderId: "buildPaymentFollowupEmailBody_",
+      implementationStatus: "active"
+    },
+    {
+      messageType: "prospect_general_guidance",
+      templateVersion: "planned-1",
+      audienceClass: "PROSPECT_GUIDANCE",
+      semanticIntent: "general_fode_guidance_for_interested_people",
+      operatorLabel: "General FODE Guidance",
+      conditionPolicyId: "PROSPECT_AUTHORITY_NOT_IMPLEMENTED",
+      allowedSendModes: ["selected", "batch"],
+      requiresApplicantRow: false,
+      requiresValidEmail: true,
+      requiresContactConsent: true,
+      requiredRole: "NOT_AUTHORIZED",
+      editableMode: "locked",
+      batchSafe: false,
+      fallbackInstruction: "Do not send until lead source, contact basis, suppression, opt-out, preview, and cohort authority are implemented.",
+      operatorWarning: "Planned only. Must not use applicant Stage Batch authority.",
+      auditMeaning: "Reserved for generic prospect guidance without applicant-specific claims.",
+      subjectBuilderId: "",
+      bodyBuilderId: "",
+      implementationStatus: "planned",
+      authorityModel: "PROSPECT_RECIPIENT_AUTHORITY_REQUIRED"
+    },
+    {
+      messageType: "application_receipt_request",
+      templateVersion: "planned-1",
+      audienceClass: "APPLICANT_WORKFLOW",
+      semanticIntent: "request_payment_receipt_or_proof",
+      operatorLabel: "Request Payment Receipt",
+      conditionPolicyId: "APPLICANT_RECEIPT_REQUIRED_NOT_IMPLEMENTED",
+      allowedSendModes: ["selected"],
+      requiresApplicantRow: true,
+      requiresValidEmail: true,
+      requiresContactConsent: false,
+      requiredRole: "NOT_AUTHORIZED",
+      editableMode: "locked",
+      batchSafe: false,
+      fallbackInstruction: "Use existing approved manual handling until receipt-request authority is implemented.",
+      operatorWarning: "Planned only. Payment and receipt state must be authoritative before activation.",
+      auditMeaning: "Reserved for requesting payment receipt or proof from an applicant.",
+      subjectBuilderId: "",
+      bodyBuilderId: "",
+      implementationStatus: "planned"
+    },
+    {
+      messageType: "application_verified_quote",
+      templateVersion: "planned-1",
+      audienceClass: "APPLICANT_WORKFLOW",
+      semanticIntent: "documents_verified_quote_payment_and_subject_guidance",
+      operatorLabel: "Verified Documents - Quote and Payment Guidance",
+      conditionPolicyId: "VERIFIED_QUOTE_AUTHORITY_NOT_IMPLEMENTED",
+      allowedSendModes: ["selected"],
+      requiresApplicantRow: true,
+      requiresValidEmail: true,
+      requiresContactConsent: false,
+      requiredRole: "NOT_AUTHORIZED",
+      editableMode: "locked",
+      batchSafe: false,
+      fallbackInstruction: "Continue the existing separately governed quote workflow until reconciliation is approved.",
+      operatorWarning: "Planned only. Existing docs_verified_quote_email sits outside the normalized applicant-message family.",
+      auditMeaning: "Reserved for quote, payment, and subject guidance after authoritative document verification.",
+      subjectBuilderId: "",
+      bodyBuilderId: "",
+      implementationStatus: "planned",
+      legacyExternalType: "docs_verified_quote_email"
+    },
+    {
+      messageType: "application_acceptance_confirmation",
+      templateVersion: "planned-1",
+      audienceClass: "APPLICANT_WORKFLOW",
+      semanticIntent: "acceptance_or_enrolment_confirmation",
+      operatorLabel: "Acceptance / Enrolment Confirmation",
+      conditionPolicyId: "ACCEPTANCE_AUTHORITY_NOT_IMPLEMENTED",
+      allowedSendModes: ["selected"],
+      requiresApplicantRow: true,
+      requiresValidEmail: true,
+      requiresContactConsent: false,
+      requiredRole: "NOT_AUTHORIZED",
+      editableMode: "locked",
+      batchSafe: false,
+      fallbackInstruction: "Do not communicate acceptance until final acceptance and enrolment authority is defined.",
+      operatorWarning: "High-authority planned type. Actionability or payment evidence alone must not activate it.",
+      auditMeaning: "Reserved for authoritative acceptance or enrolment confirmation.",
+      subjectBuilderId: "",
+      bodyBuilderId: "",
+      implementationStatus: "planned"
+    },
+    {
+      messageType: "application_final_reminder",
+      templateVersion: "planned-1",
+      audienceClass: "APPLICANT_WORKFLOW",
+      semanticIntent: "final_follow_up_before_dormant_or_manual_handling",
+      operatorLabel: "Final Application Reminder",
+      conditionPolicyId: "FINAL_REMINDER_AUTHORITY_NOT_IMPLEMENTED",
+      allowedSendModes: ["selected"],
+      requiresApplicantRow: true,
+      requiresValidEmail: true,
+      requiresContactConsent: false,
+      requiredRole: "NOT_AUTHORIZED",
+      editableMode: "locked",
+      batchSafe: false,
+      fallbackInstruction: "Continue approved manual handling until final-reminder cadence and dormant-state authority are defined.",
+      operatorWarning: "Planned only. Must not be inferred solely from elapsed time or actionability.",
+      auditMeaning: "Reserved for final follow-up before dormant or manual handling.",
+      subjectBuilderId: "",
+      bodyBuilderId: "",
+      implementationStatus: "planned"
+    },
+    {
+      messageType: "contact_fallback_manual",
+      templateVersion: "manual-1",
+      audienceClass: "OPERATOR_MANUAL",
+      semanticIntent: "invalid_email_or_no_effective_email_manual_contact_path",
+      operatorLabel: "Manual Contact Fallback",
+      conditionPolicyId: "NO_EFFECTIVE_EMAIL_MANUAL_FALLBACK",
+      allowedSendModes: ["manual_fallback"],
+      requiresApplicantRow: true,
+      requiresValidEmail: false,
+      requiresContactConsent: true,
+      requiredRole: "EXISTING_MANUAL_FALLBACK_AUTHORITY",
+      editableMode: "limited",
+      batchSafe: false,
+      fallbackInstruction: "Use the approved manual fallback process; this registry entry does not send email.",
+      operatorWarning: "Manual fallback only. It is not a normal email message type.",
+      auditMeaning: "Manual contact fallback required because effective email contact is unavailable.",
+      subjectBuilderId: "",
+      bodyBuilderId: "buildWhatsAppFallbackMessage_",
+      implementationStatus: "manual"
+    }
+  ];
+}
+
+function getCommunicationSemanticDefinition_(messageType) {
+  var requested = clean_(messageType || "").toLowerCase();
+  var registry = getCommunicationSemanticRegistry_();
+  for (var i = 0; i < registry.length; i++) {
+    if (registry[i].messageType === requested) return registry[i];
+  }
+  return null;
+}
+
+function getCommunicationSemanticDefinitionsByStatus_(status) {
+  var requested = clean_(status || "").toLowerCase();
+  return getCommunicationSemanticRegistry_().filter(function (entry) {
+    return clean_(entry.implementationStatus || "").toLowerCase() === requested;
+  });
+}
+
+function isCommunicationTypeBatchSafe_(messageType) {
+  var definition = getCommunicationSemanticDefinition_(messageType);
+  return !!(definition && definition.implementationStatus === "active" && definition.batchSafe === true);
+}
+
+function isCommunicationTypePlanned_(messageType) {
+  var definition = getCommunicationSemanticDefinition_(messageType);
+  return !!(definition && definition.implementationStatus === "planned");
+}
+
+function getCommunicationAllowedSendModes_(messageType) {
+  var definition = getCommunicationSemanticDefinition_(messageType);
+  return definition && Array.isArray(definition.allowedSendModes) ? definition.allowedSendModes.slice() : [];
+}
+
 function communicationCooldownMs_() {
   return Math.max(1, Number(CONFIG.COMMUNICATION_COOLDOWN_MINUTES || 60)) * 60 * 1000;
 }
