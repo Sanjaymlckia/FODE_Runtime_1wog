@@ -141,6 +141,38 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-runtime.ps1 `
 
 Live whoami is runtime truth. `clasp deployments` is metadata only. If the Google wrapper hides inner whoami content from `Invoke-WebRequest`, use the authenticated F: Playwright proof.
 
+### `fode-staging-health-proof.ps1`
+
+Track L read-only wrapper for the authenticated F: Playwright proof lane. It supports:
+
+- `health`: Admin reachability/build health;
+- `hydration60`: waits 60 seconds and requires cleared runtime loading, Review buttons, and no page/console errors;
+- `operator`: opens a Review modal and validates the selected-applicant communication picker without preview/send;
+- `all`: runs all three modes.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\fode-staging-health-proof.ps1 `
+  -AdminUrl "https://script.google.com/macros/s/ADMIN_DEPLOYMENT_ID/exec" `
+  -ExpectedRuntime "r286" `
+  -ExpectedDeploy 286 `
+  -Mode all `
+  -Strict
+```
+
+The wrapper fails closed on Playwright failure, identity mismatch, persistent `Runtime: loading...`, missing Review buttons, blocking page errors, or report content that records failure. It prints timestamped evidence paths under the configured F: report root.
+
+It does not deploy, repin, send, preview, edit Sheets, or mutate Drive. Operator acceptance remains human-reviewed.
+
+The shared communication smoke assertion uses stable message-type values and verifies current approved labels. It no longer depends on the obsolete `/invite/` text fragment.
+
+The F: Playwright lane is currently an external, non-Git proof dependency. The wrapper relies on:
+
+- `F:\Playwright\fode-secure-link-diagnostic\specs\fode-legacy-admin-health.spec.ts` for reachability/build health;
+- `F:\Playwright\fode-secure-link-diagnostic\specs\fode-admin-hydration60.spec.ts` for the 60-second hydration gate;
+- `F:\Playwright\fode-secure-link-diagnostic\specs\fode-admin-communication-smoke.spec.ts` for the read-only selected-applicant communication surface.
+
+These external specs and their auth state are not copied into the FODE runtime repository. Reports, screenshots, traces, and test output remain on F:. Back up or place the F: Playwright project under separate version control before treating it as durable release infrastructure.
+
 ## Approval Gates
 
 Keep separate approvals for:
