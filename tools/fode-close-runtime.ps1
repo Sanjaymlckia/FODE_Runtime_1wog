@@ -17,7 +17,7 @@ $ErrorActionPreference = "Stop"
 $Repo = "E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog"
 $ExpectedVersion = "r$DeployVersion"
 
-Write-Host "FODE runtime close gate" -ForegroundColor Cyan
+Write-Host "FODE runtime/identity close gate" -ForegroundColor Cyan
 Write-Host "Repo: $Repo"
 Write-Host "Release: $Release"
 Write-Host "Expected VERSION: $ExpectedVersion"
@@ -83,6 +83,11 @@ Write-Host ""
 Write-Host "Untracked files:" -ForegroundColor Yellow
 git ls-files --others --exclude-standard
 
+$preStaged = @(git diff --cached --name-only)
+if ($preStaged.Count -gt 0) {
+  throw "Pre-existing staged files detected. Clear the index before using this close gate: $($preStaged -join ', ')"
+}
+
 Write-Host ""
 $confirm = Read-Host "Stage ONLY the listed files and commit? Type YES to continue"
 if ($confirm -ne "YES") {
@@ -94,7 +99,18 @@ git add -- $Files
 
 Write-Host ""
 Write-Host "Staged files:" -ForegroundColor Yellow
-git diff --cached --name-only
+$staged = @(git diff --cached --name-only)
+$staged | ForEach-Object { Write-Host $_ }
+$expectedStaged = @($Files | ForEach-Object { $_.Replace("\", "/") } | Sort-Object -Unique)
+$actualStaged = @($staged | ForEach-Object { $_.Replace("\", "/") } | Sort-Object -Unique)
+if (Compare-Object -ReferenceObject $expectedStaged -DifferenceObject $actualStaged) {
+  throw "Staged files do not exactly match the requested file list."
+}
+
+git diff --cached --check
+if ($LASTEXITCODE -ne 0) {
+  throw "git diff --cached --check failed"
+}
 
 Write-Host ""
 Write-Host "Staged diff stat:" -ForegroundColor Yellow
@@ -119,4 +135,4 @@ git log -1 --oneline
 
 Write-Host ""
 Write-Host "Runtime close complete." -ForegroundColor Green
-Write-Host "Reminder: this script does not deploy Apps Script and does not push to origin."
+Write-Host "Reminder: this script commits exact files only. It does not push, clasp push, create a version, or repin."

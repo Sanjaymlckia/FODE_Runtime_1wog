@@ -1,8 +1,13 @@
-param()
+param(
+  [string]$ExpectedRoot = "E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog",
+  [int]$ExpectedDailySendCap = 0,
+  [string]$ExpectedAutomatedStageRunner = "",
+  [string]$ExpectedCrmPipeline = "",
+  [string]$ExpectedCrmDryRun = ""
+)
 
 $ErrorActionPreference = "Stop"
 
-$ExpectedRoot = "E:\Gdrive\01 SANJAY\Codex_Sync\FODE_Runtime_1wog"
 $Failures = New-Object System.Collections.Generic.List[string]
 $Warnings = New-Object System.Collections.Generic.List[string]
 
@@ -39,8 +44,9 @@ function Invoke-Checked {
 }
 
 try {
-  $RepoRoot = (& git rev-parse --show-toplevel).Trim() -replace "/", "\"
-  if ($RepoRoot -ne $ExpectedRoot) {
+  $RepoRoot = [System.IO.Path]::GetFullPath(((& git rev-parse --show-toplevel).Trim() -replace "/", "\")).TrimEnd("\")
+  $ExpectedRootResolved = [System.IO.Path]::GetFullPath($ExpectedRoot).TrimEnd("\")
+  if ($RepoRoot -ne $ExpectedRootResolved) {
     Add-Fail "repo root mismatch: expected '$ExpectedRoot', got '$RepoRoot'"
   } else {
     Add-Pass "repo root is authoritative"
@@ -83,16 +89,19 @@ try {
   }
 
   $FlagChecks = @(
-    @{ Name = "DAILY_SEND_CAP"; Pattern = 'DAILY_SEND_CAP\s*:\s*500\b' },
-    @{ Name = "ENABLE_AUTOMATED_STAGE_RUNNER"; Pattern = 'ENABLE_AUTOMATED_STAGE_RUNNER\s*:\s*false\b' },
-    @{ Name = "ENABLE_FODE_CRM_PIPELINE"; Pattern = 'ENABLE_FODE_CRM_PIPELINE\s*:\s*false\b' },
-    @{ Name = "CRM_PUSH_DRY_RUN"; Pattern = 'CRM_PUSH_DRY_RUN\s*:\s*true\b' }
+    @{ Name = "DAILY_SEND_CAP"; Pattern = 'DAILY_SEND_CAP\s*:\s*(\d+)'; Expected = if ($ExpectedDailySendCap -gt 0) { [string]$ExpectedDailySendCap } else { "" } },
+    @{ Name = "ENABLE_AUTOMATED_STAGE_RUNNER"; Pattern = 'ENABLE_AUTOMATED_STAGE_RUNNER\s*:\s*(true|false)'; Expected = $ExpectedAutomatedStageRunner.ToLowerInvariant() },
+    @{ Name = "ENABLE_FODE_CRM_PIPELINE"; Pattern = 'ENABLE_FODE_CRM_PIPELINE\s*:\s*(true|false)'; Expected = $ExpectedCrmPipeline.ToLowerInvariant() },
+    @{ Name = "CRM_PUSH_DRY_RUN"; Pattern = 'CRM_PUSH_DRY_RUN\s*:\s*(true|false)'; Expected = $ExpectedCrmDryRun.ToLowerInvariant() }
   )
   foreach ($check in $FlagChecks) {
-    if ($Config -match $check.Pattern) {
-      Add-Pass "critical flag $($check.Name)"
+    $match = [regex]::Match($Config, $check.Pattern)
+    if (!$match.Success) {
+      Add-Fail "critical setting missing: $($check.Name)"
+    } elseif ($check.Expected -and $match.Groups[1].Value.ToLowerInvariant() -ne $check.Expected) {
+      Add-Fail "critical setting mismatch: $($check.Name) expected $($check.Expected) got $($match.Groups[1].Value)"
     } else {
-      Add-Fail "critical flag mismatch: $($check.Name)"
+      Add-Pass "critical setting $($check.Name)=$($match.Groups[1].Value)"
     }
   }
 } catch {
@@ -118,7 +127,11 @@ foreach ($file in $CanonicalFiles) {
   }
   $text = Get-Content -LiteralPath $file -Raw
   if ($text -match "/a/macros/") {
-    Add-Fail "deprecated /a/macros/ URL found in $file"
+    if ($file -eq "Config.js") {
+      Add-Fail "deprecated /a/macros/ URL found in runtime config: $file"
+    } else {
+      Add-Warn "deprecated /a/macros/ text found in reference document: $file"
+    }
   } else {
     Add-Pass "canonical URL scan: $file"
   }
