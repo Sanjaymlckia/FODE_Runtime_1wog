@@ -6567,8 +6567,8 @@ function getCommunicationSemanticRegistry_() {
       fallbackInstruction: "Use manual contact fallback when email is unavailable.",
       operatorWarning: "Freeform and selected-recipient only. Never use as a batch message type.",
       auditMeaning: "Operator-authored email sent to one selected authoritative applicant record.",
-      subjectBuilderId: "operatorEditedSubject",
-      bodyBuilderId: "operatorEditedBody",
+      subjectBuilderId: "buildCustomSelectedEmailSubject_",
+      bodyBuilderId: "buildCustomSelectedEmailBody_",
       implementationStatus: "active"
     },
     {
@@ -6630,8 +6630,8 @@ function getCommunicationSemanticRegistry_() {
       fallbackInstruction: "Do not send until lead source, contact basis, suppression, opt-out, preview, and cohort authority are implemented.",
       operatorWarning: "Planned only. Must not use applicant Stage Batch authority.",
       auditMeaning: "Reserved for generic prospect guidance without applicant-specific claims.",
-      subjectBuilderId: "",
-      bodyBuilderId: "",
+      subjectBuilderId: "buildProspectGeneralGuidanceSubject_",
+      bodyBuilderId: "buildProspectGeneralGuidanceBody_",
       implementationStatus: "planned",
       authorityModel: "PROSPECT_RECIPIENT_AUTHORITY_REQUIRED"
     },
@@ -6652,8 +6652,8 @@ function getCommunicationSemanticRegistry_() {
       fallbackInstruction: "Use existing approved manual handling until receipt-request authority is implemented.",
       operatorWarning: "Planned only. Payment and receipt state must be authoritative before activation.",
       auditMeaning: "Reserved for requesting payment receipt or proof from an applicant.",
-      subjectBuilderId: "",
-      bodyBuilderId: "",
+      subjectBuilderId: "buildApplicationReceiptRequestSubject_",
+      bodyBuilderId: "buildApplicationReceiptRequestBody_",
       implementationStatus: "planned"
     },
     {
@@ -6673,8 +6673,8 @@ function getCommunicationSemanticRegistry_() {
       fallbackInstruction: "Continue the existing separately governed quote workflow until reconciliation is approved.",
       operatorWarning: "Planned only. Existing docs_verified_quote_email sits outside the normalized applicant-message family.",
       auditMeaning: "Reserved for quote, payment, and subject guidance after authoritative document verification.",
-      subjectBuilderId: "",
-      bodyBuilderId: "",
+      subjectBuilderId: "buildApplicationVerifiedQuoteSubject_",
+      bodyBuilderId: "buildApplicationVerifiedQuoteBody_",
       implementationStatus: "planned",
       legacyExternalType: "docs_verified_quote_email"
     },
@@ -6695,8 +6695,8 @@ function getCommunicationSemanticRegistry_() {
       fallbackInstruction: "Do not communicate acceptance until final acceptance and enrolment authority is defined.",
       operatorWarning: "High-authority planned type. Actionability or payment evidence alone must not activate it.",
       auditMeaning: "Reserved for authoritative acceptance or enrolment confirmation.",
-      subjectBuilderId: "",
-      bodyBuilderId: "",
+      subjectBuilderId: "buildApplicationAcceptanceConfirmationSubject_",
+      bodyBuilderId: "buildApplicationAcceptanceConfirmationBody_",
       implementationStatus: "planned"
     },
     {
@@ -6716,8 +6716,8 @@ function getCommunicationSemanticRegistry_() {
       fallbackInstruction: "Continue approved manual handling until final-reminder cadence and dormant-state authority are defined.",
       operatorWarning: "Planned only. Must not be inferred solely from elapsed time or actionability.",
       auditMeaning: "Reserved for final follow-up before dormant or manual handling.",
-      subjectBuilderId: "",
-      bodyBuilderId: "",
+      subjectBuilderId: "buildApplicationFinalReminderSubject_",
+      bodyBuilderId: "buildApplicationFinalReminderBody_",
       implementationStatus: "planned"
     },
     {
@@ -6737,8 +6737,8 @@ function getCommunicationSemanticRegistry_() {
       fallbackInstruction: "Use the approved manual fallback process; this registry entry does not send email.",
       operatorWarning: "Manual fallback only. It is not a normal email message type.",
       auditMeaning: "Manual contact fallback required because effective email contact is unavailable.",
-      subjectBuilderId: "",
-      bodyBuilderId: "buildWhatsAppFallbackMessage_",
+      subjectBuilderId: "buildContactFallbackManualSubject_",
+      bodyBuilderId: "buildContactFallbackManualBody_",
       implementationStatus: "manual"
     }
   ];
@@ -7143,15 +7143,15 @@ function buildDocsMissingEmailBody_(context) {
   return [
     "Dear Parent/Guardian,",
     "",
-    "Your FODE KIA application is still missing required documents or has unresolved document checks.",
+    "We are continuing the review of your FODE KIA application, but one or more required documents are not available or are incomplete in the current application record.",
     "",
-    "Please reopen the portal link below, review the required uploads, and submit the missing or corrected documents:",
+    "This can happen when an upload did not reach us correctly. Please reopen the portal link below and upload or resend the required documents:",
     "",
     String(context.portalUrl || ""),
     "",
     "Applicant ID: " + String(context.applicantId || ""),
     "",
-    "If you need help identifying the required documents, contact FODE Admissions at fode@kundu.ac.",
+    "The application review remains open while the required documents are completed. If you need help identifying them, contact FODE Admissions at fode@kundu.ac.",
     "",
     "FODE Admissions",
     "Kundu International Academy"
@@ -7162,18 +7162,164 @@ function buildPaymentFollowupEmailBody_(context) {
   return [
     "Dear Parent/Guardian,",
     "",
-    "Your FODE KIA application is on record, but payment is still outstanding or pending verification.",
+    "Your FODE KIA application is on record, but payment or payment evidence is still outstanding or awaiting verification.",
     "",
-    "Please use the portal link below to review your application and complete the required payment follow-up steps:",
+    "Please use the portal link below to complete the required payment step or upload a clear copy of the payment receipt for review:",
     "",
     String(context.portalUrl || ""),
     "",
     "Applicant ID: " + String(context.applicantId || ""),
     "",
-    "If payment has already been made, please ensure the receipt is uploaded clearly in the portal.",
+    "If payment and receipt upload are already complete, no further action is required while the evidence is reviewed. This message is a payment follow-up and does not confirm acceptance or enrolment.",
     "",
     "FODE Admissions",
     "Kundu International Academy"
+  ].join("\n");
+}
+
+function buildCustomSelectedEmailSubject_() {
+  return "FODE KIA Information and Next Steps";
+}
+
+function buildCustomSelectedEmailBody_(context) {
+  var ctx = context || {};
+  var row = ctx.rowObj || {};
+  var recipientName = buildParentOrApplicantName_(row);
+  return [
+    "Dear " + recipientName + ",",
+    "",
+    "We are contacting you regarding the selected FODE KIA applicant record.",
+    "",
+    "Please review the application information and any next-step guidance provided by the admissions officer in this message.",
+    "",
+    "Applicant ID: " + String(ctx.applicantId || ""),
+    "",
+    "If you need clarification, contact FODE Admissions at fode@kundu.ac or WhatsApp +675 7860 4013.",
+    "",
+    "Regards,",
+    "FODE KIA Admissions Team"
+  ].join("\n");
+}
+
+function buildProspectGeneralGuidanceSubject_() {
+  return "FODE KIA Information and How to Apply";
+}
+
+function buildProspectGeneralGuidanceBody_(context) {
+  var ctx = context || {};
+  var informationUrl = clean_(ctx.informationUrl || "");
+  var applicationUrl = clean_(ctx.applicationUrl || "");
+  var faqUrl = clean_(ctx.faqUrl || "");
+  return [
+    "Hello,",
+    "",
+    "Thank you for your interest in FODE through Kundu International Academy.",
+    "",
+    "Please review the official FODE information and entry guidance" + (informationUrl ? " here: " + informationUrl : " provided by our admissions team") + ".",
+    "",
+    "When you are ready to apply, complete the online application form carefully" + (applicationUrl ? " here: " + applicationUrl : "") + " and upload the required identification, school records, and other requested documents.",
+    "",
+    "For common questions about subjects, fees, documents, and national examinations, please use the FAQ guidance" + (faqUrl ? ": " + faqUrl : " supplied by FODE Admissions") + ".",
+    "",
+    "For further assistance, contact FODE Admissions at fode@kundu.ac or WhatsApp +675 7860 4013.",
+    "",
+    "If you have already completed these steps, please ignore this message.",
+    "",
+    "FODE KIA Admissions Team"
+  ].join("\n");
+}
+
+function buildApplicationReceiptRequestSubject_() {
+  return "FODE KIA Application - Payment Receipt Required";
+}
+
+function buildApplicationReceiptRequestBody_(context) {
+  var ctx = context || {};
+  return [
+    "Dear Parent/Guardian,",
+    "",
+    "We are reviewing the payment information for your FODE KIA application.",
+    "",
+    "Please upload a clear copy of the payment receipt or payment proof through the approved application portal.",
+    "",
+    "Applicant ID: " + String(ctx.applicantId || ""),
+    "",
+    "This request is for payment evidence only and does not confirm acceptance or enrolment.",
+    "",
+    "FODE KIA Admissions Team"
+  ].join("\n");
+}
+
+function buildApplicationVerifiedQuoteSubject_() {
+  return "FODE KIA Application - Fee and Subject Guidance";
+}
+
+function buildApplicationVerifiedQuoteBody_(context) {
+  var ctx = context || {};
+  return [
+    "Dear Parent/Guardian,",
+    "",
+    "The required application documents have been reviewed for the next quotation and payment-guidance step.",
+    "",
+    "Please review the fee, subject, and payment information supplied with this message.",
+    "",
+    "Applicant ID: " + String(ctx.applicantId || ""),
+    "",
+    "This guidance does not by itself confirm final acceptance, enrolment, or classroom access.",
+    "",
+    "FODE KIA Admissions Team"
+  ].join("\n");
+}
+
+function buildApplicationAcceptanceConfirmationSubject_() {
+  return "FODE KIA Application - Acceptance and Enrolment Confirmation";
+}
+
+function buildApplicationAcceptanceConfirmationBody_(context) {
+  var ctx = context || {};
+  return [
+    "Dear Parent/Guardian,",
+    "",
+    "This message confirms the approved acceptance and enrolment outcome for the applicant identified below.",
+    "",
+    "Applicant ID: " + String(ctx.applicantId || ""),
+    "",
+    "Follow the official next-step instructions supplied with this confirmation.",
+    "",
+    "FODE KIA Admissions Team"
+  ].join("\n");
+}
+
+function buildApplicationFinalReminderSubject_() {
+  return "FODE KIA Application - Final Follow-Up";
+}
+
+function buildApplicationFinalReminderBody_(context) {
+  var ctx = context || {};
+  return [
+    "Dear Parent/Guardian,",
+    "",
+    "This is a final follow-up regarding the outstanding next step for your FODE KIA application.",
+    "",
+    "Applicant ID: " + String(ctx.applicantId || ""),
+    "",
+    "Please contact FODE Admissions if you still wish to continue or need assistance. If we do not hear from you, the application may be referred for manual or dormant-case handling.",
+    "",
+    "FODE KIA Admissions Team"
+  ].join("\n");
+}
+
+function buildContactFallbackManualSubject_() {
+  return "Manual Contact Required";
+}
+
+function buildContactFallbackManualBody_(context) {
+  var ctx = context || {};
+  return [
+    "Operator advisory: email contact is unavailable or invalid for this applicant.",
+    "Applicant ID: " + String(ctx.applicantId || ""),
+    "Use the approved phone or WhatsApp manual-contact process.",
+    "Confirm contact authority and avoid sending sensitive applicant details through an unverified number."
   ].join("\n");
 }
 
@@ -7892,8 +8038,8 @@ function buildApplicantMessage_(context) {
   if (type === "custom_email") {
     return {
       ok: true,
-      subject: "",
-      body: ""
+      subject: buildCustomSelectedEmailSubject_(),
+      body: buildCustomSelectedEmailBody_(ctx)
     };
   }
   if (type === "docs_missing") {

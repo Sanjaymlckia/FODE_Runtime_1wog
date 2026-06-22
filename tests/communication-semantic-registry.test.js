@@ -97,6 +97,14 @@ for (const entry of active) {
   }
 }
 
+for (const entry of [...planned, ...manual]) {
+  assert.ok(entry.subjectBuilderId, `${entry.messageType} needs a planned/manual subject builder reference`);
+  assert.ok(entry.bodyBuilderId, `${entry.messageType} needs a planned/manual body builder reference`);
+  for (const builderId of [entry.subjectBuilderId, entry.bodyBuilderId]) {
+    assert.match(codeSource, new RegExp(`function\\s+${builderId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\(`));
+  }
+}
+
 const customEmail = context.getCommunicationSemanticDefinition_("custom_email");
 assert.equal(customEmail.editableMode, "freeform");
 assert.deepEqual(Array.from(customEmail.allowedSendModes), ["selected"]);
@@ -154,8 +162,80 @@ assert.match(sendSource, /ENABLE_PRODUCTION_EMAIL_SENDS/, "Existing production s
 assert.match(codeSource, /computeEmailIdempotencyKey_/, "Existing idempotency path must remain");
 assert.match(codeSource, /communicationCooldownMs_/, "Existing cooldown path must remain");
 
+const templateFunctionNames = [
+  "buildParentOrApplicantName_",
+  "buildDocsMissingEmailBody_",
+  "buildPaymentFollowupEmailBody_",
+  "buildCustomSelectedEmailSubject_",
+  "buildCustomSelectedEmailBody_",
+  "buildProspectGeneralGuidanceSubject_",
+  "buildProspectGeneralGuidanceBody_",
+  "buildApplicationReceiptRequestSubject_",
+  "buildApplicationReceiptRequestBody_",
+  "buildApplicationVerifiedQuoteSubject_",
+  "buildApplicationVerifiedQuoteBody_",
+  "buildApplicationAcceptanceConfirmationSubject_",
+  "buildApplicationAcceptanceConfirmationBody_",
+  "buildApplicationFinalReminderSubject_",
+  "buildApplicationFinalReminderBody_",
+  "buildContactFallbackManualSubject_",
+  "buildContactFallbackManualBody_"
+];
+const templateContext = {
+  clean_: (value) => String(value == null ? "" : value).trim()
+};
+vm.createContext(templateContext);
+vm.runInContext(templateFunctionNames.map((name) => extractFunction(codeSource, name)).join("\n\n"), templateContext);
+
+const applicantContext = {
+  applicantId: "FODE-26-TEST",
+  portalUrl: "https://portal.example.test/safe",
+  rowObj: {
+    Parent_First_Name: "Test",
+    Parent_Last_Name: "Parent"
+  }
+};
+const docsMissingBody = templateContext.buildDocsMissingEmailBody_(applicantContext);
+assert.match(docsMissingBody, /not available or are incomplete/i);
+assert.match(docsMissingBody, /did not reach us correctly/i);
+assert.match(docsMissingBody, /upload or resend/i);
+assert.doesNotMatch(docsMissingBody, /\breject(?:ed|ion)?\b/i);
+assert.doesNotMatch(docsMissingBody, /\byour (?:fault|failure)\b/i);
+
+const paymentBody = templateContext.buildPaymentFollowupEmailBody_(applicantContext);
+assert.match(paymentBody, /payment receipt/i);
+assert.match(paymentBody, /does not confirm acceptance or enrolment/i);
+assert.doesNotMatch(paymentBody, /\byou (?:are|have been) accepted\b/i);
+
+const customSubject = templateContext.buildCustomSelectedEmailSubject_();
+const customBody = templateContext.buildCustomSelectedEmailBody_(applicantContext);
+assert.ok(customSubject);
+assert.match(customBody, /selected FODE KIA applicant record/i);
+assert.match(customBody, /Applicant ID: FODE-26-TEST/);
+
+const prospectBody = templateContext.buildProspectGeneralGuidanceBody_({
+  informationUrl: "https://example.test/fode",
+  applicationUrl: "https://example.test/apply",
+  faqUrl: "https://example.test/faq"
+});
+assert.match(prospectBody, /complete the online application form carefully/i);
+assert.match(prospectBody, /upload the required identification, school records/i);
+assert.match(prospectBody, /If you have already completed these steps, please ignore this message\./i);
+assert.doesNotMatch(prospectBody, /Applicant ID|your application (?:has|was)|you have been accepted/i);
+assert.doesNotMatch(prospectBody, /\{\{[^}]+\}\}/);
+
+const fdAcknowledgementSource = extractFunction(codeSource, "buildFdAcknowledgementEmailBody_");
+assert.match(fdAcknowledgementSource, /application has been received/i);
+assert.match(fdAcknowledgementSource, /Admissions will review/i);
+assert.doesNotMatch(fdAcknowledgementSource, /\baccepted\b|\benrol(?:led|ment)\b/i);
+
+const reminderSource = extractFunction(codeSource, "buildReminderEmailBody_");
+assert.match(reminderSource, /pending completion/i);
+assert.doesNotMatch(reminderSource, /payment receipt|documents verified|acceptance confirmation/i);
+
 console.log("PASS communication semantic registry active/planned/manual definitions");
 console.log("PASS active types exactly match configured runtime message types");
 console.log("PASS planned types remain rejected by preview/send normalization");
 console.log("PASS custom email selected-only and prospect Stage Batch authority blocked");
 console.log("PASS overloaded reminder mappings and existing send gates remain explicit");
+console.log("PASS active and planned template wording safety");
