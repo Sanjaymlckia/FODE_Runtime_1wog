@@ -179,6 +179,14 @@ for (const messageType of ["legacy_invite", "reminder", "docs_missing", "payment
 for (const messageType of planned.map((entry) => entry.messageType)) {
   assert.doesNotMatch(selectedMessageTypeMarkup, new RegExp(`value="${messageType}"`), `${messageType} must remain hidden from the selected-applicant picker`);
 }
+assert.match(selectedMessageTypeMarkup, /Application Portal Invitation/, "Legacy invite should have an operator-facing application portal label");
+assert.match(selectedMessageTypeMarkup, /Legacy Application Reminder \(Overloaded\)/, "Legacy reminder must disclose its overloaded semantics");
+assert.match(selectedMessageTypeMarkup, /Missing Documents - Selected Applicant/, "Missing-document follow-up must be clearly selected-applicant scoped");
+assert.match(selectedMessageTypeMarkup, /Payment \/ Receipt Follow-Up/, "Payment follow-up must mention receipt handling");
+assert.match(selectedMessageTypeMarkup, /Custom Email - Selected Applicant/, "Custom email must remain visibly selected-applicant scoped");
+assert.match(adminUiSource, /Preview is read-only and does not send email\./, "Selected-applicant preview must clearly state that preview does not send");
+assert.match(adminUiSource, /resultType === 'PREVIEW' && res\.effectiveEmail/, "Preview result must show the resolved recipient");
+assert.match(adminUiSource, /Legacy Application Reminder is overloaded; confirm the applicant condition before use\./, "Operator help must warn about the overloaded reminder");
 
 const previewSource = extractFunction(codeSource, "previewApplicantMessage_");
 const sendSource = extractFunction(codeSource, "sendApplicantMessage_");

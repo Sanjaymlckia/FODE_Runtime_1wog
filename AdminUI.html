@@ -2207,18 +2207,22 @@
           <div class="field" style="max-width:260px;">
             <label>Message Type</label>
             <select id="commMessageType">
-              <option value="legacy_invite">Legacy Invite</option>
-              <option value="reminder">Reminder</option>
-              <option value="docs_missing">Missing Documents Follow-Up</option>
-              <option value="payment_followup">Payment Follow-Up</option>
+              <option value="legacy_invite">Application Portal Invitation</option>
+              <option value="reminder">Legacy Application Reminder (Overloaded)</option>
+              <option value="docs_missing">Missing Documents - Selected Applicant</option>
+              <option value="payment_followup">Payment / Receipt Follow-Up</option>
               <option value="application_feedback">Application Feedback</option>
-              <option value="custom_email">Custom Email</option>
+              <option value="custom_email">Custom Email - Selected Applicant</option>
             </select>
           </div>
           <button id="btnCommPreview" class="btn small" type="button" onclick="previewApplicantMessageUi_('top_preview')">Preview</button>
           <button id="btnCommSend" class="btn small ok" type="button" onclick="sendApplicantMessageUi_()" disabled>Send</button>
           <div id="commInlineNote" class="muted" style="font-size:12px;"></div>
         </div>
+        <div id="commTemplateHelp" class="muted" style="font-size:12px;margin-top:8px;">
+          Selected applicant only. Use Missing Documents for absent or incomplete uploads, Payment / Receipt Follow-Up for outstanding payment evidence, and Custom Email for a reviewed one-off message. Legacy Application Reminder is overloaded; confirm the applicant condition before use.
+        </div>
+        <div class="opsSafetyNotice" style="margin-top:8px;">Preview is read-only and does not send email. Send remains unavailable until an eligible preview is generated and an authorized operator explicitly confirms the send.</div>
         <div id="legacyEditableWarning" class="legacy-editable-warning">Use the editable email panel below for this message type.</div>
         <div id="commCooldownBanner" class="communication-cooldown-banner hidden">
           <div id="commCooldownBannerTitle" class="communication-cooldown-banner__title"></div>
@@ -5459,6 +5463,7 @@
         if (res.blockReason) parts.push('<div style="margin-top:6px;"><strong>Reason:</strong> ' + esc(res.blockReason) + '</div>');
         if (res.debugId) parts.push('<div class="muted" style="margin-top:6px;font-size:12px;"><strong>Debug:</strong> ' + esc(res.debugId) + '</div>');
       }
+      if (resultType === 'PREVIEW' && res.effectiveEmail) parts.push('<div style="margin-top:8px;"><strong>Recipient:</strong> ' + esc(res.effectiveEmail) + '</div>');
       if (resultType === 'PREVIEW' && res.subject) parts.push('<div style="margin-top:8px;"><strong>Subject:</strong> ' + esc(res.subject) + '</div>');
       if (resultType === 'PREVIEW' && res.body) parts.push('<div class="commPreviewBody">' + esc(res.body) + '</div>');
       if (resultType === "SENT") {
