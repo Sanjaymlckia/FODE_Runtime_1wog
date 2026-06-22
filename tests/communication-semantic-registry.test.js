@@ -5,6 +5,7 @@ const vm = require("node:vm");
 const codeSource = fs.readFileSync("Code.js", "utf8");
 const configSource = fs.readFileSync("Config.js", "utf8");
 const adminSource = fs.readFileSync("Admin.js", "utf8");
+const adminUiSource = fs.readFileSync("AdminUI.html", "utf8");
 
 function extractFunction(source, name) {
   const marker = `function ${name}`;
@@ -126,6 +127,20 @@ assert.equal(Object.hasOwn(prospect, "subject"), false);
 assert.equal(Object.hasOwn(prospect, "body"), false);
 assert.doesNotMatch(JSON.stringify(prospect), /\{\{[^}]+\}\}/);
 
+const examFeeReminder = context.getCommunicationSemanticDefinition_("application_exam_fee_reminder");
+assert.ok(examFeeReminder, "Planned National Exam Fee reminder must exist");
+assert.equal(examFeeReminder.audienceClass, "APPLICANT_WORKFLOW");
+assert.equal(examFeeReminder.implementationStatus, "planned");
+assert.equal(examFeeReminder.requiresApplicantRow, true);
+assert.equal(examFeeReminder.requiresValidEmail, true);
+assert.equal(examFeeReminder.requiresExamFeeDueAuthority, true);
+assert.equal(examFeeReminder.requiresSubjectConfirmation, true);
+assert.equal(examFeeReminder.currentFeePerSubjectKina, 150);
+assert.equal(examFeeReminder.batchSafe, false);
+assert.equal(context.isCommunicationTypeBatchSafe_("application_exam_fee_reminder"), false);
+assert.equal(context.normalizeApplicantMessageType_("application_exam_fee_reminder"), "");
+assert.match(examFeeReminder.operatorWarning, /confirm the subject count/i);
+
 for (const entry of registry.filter((item) => item.audienceClass === "APPLICANT_WORKFLOW")) {
   assert.equal(entry.requiresApplicantRow, true, `${entry.messageType} must require an applicant row`);
 }
@@ -152,6 +167,18 @@ for (const stage of ["INVITED_AWAITING_RESPONSE", "REMINDER_DUE", "DOCS_REQUIRED
   assert.match(stageMapper, new RegExp(`case\\s+"${stage}"`), `${stage} mapping must remain visible to the overload test`);
 }
 assert.match(stageMapper, /return\s+"reminder"/, "Current overloaded reminder stage mapping must remain explicitly detected");
+assert.doesNotMatch(stageMapper, /application_exam_fee_reminder/, "Exam fee reminder must not be Stage Batch mapped");
+assert.doesNotMatch(stageMapper, /docs_missing|payment_followup/, "H3 must not remap Stage Batch to selected-applicant template types");
+
+const selectedMessageTypeSelect = adminUiSource.match(/<select id="commMessageType">([\s\S]*?)<\/select>/);
+assert.ok(selectedMessageTypeSelect, "Selected-applicant message type picker must exist");
+const selectedMessageTypeMarkup = selectedMessageTypeSelect[1];
+for (const messageType of ["legacy_invite", "reminder", "docs_missing", "payment_followup", "application_feedback", "custom_email"]) {
+  assert.match(selectedMessageTypeMarkup, new RegExp(`value="${messageType}"`), `${messageType} must be available in the selected-applicant picker`);
+}
+for (const messageType of planned.map((entry) => entry.messageType)) {
+  assert.doesNotMatch(selectedMessageTypeMarkup, new RegExp(`value="${messageType}"`), `${messageType} must remain hidden from the selected-applicant picker`);
+}
 
 const previewSource = extractFunction(codeSource, "previewApplicantMessage_");
 const sendSource = extractFunction(codeSource, "sendApplicantMessage_");
@@ -176,6 +203,8 @@ const templateFunctionNames = [
   "buildApplicationVerifiedQuoteBody_",
   "buildApplicationAcceptanceConfirmationSubject_",
   "buildApplicationAcceptanceConfirmationBody_",
+  "buildApplicationExamFeeReminderSubject_",
+  "buildApplicationExamFeeReminderBody_",
   "buildApplicationFinalReminderSubject_",
   "buildApplicationFinalReminderBody_",
   "buildContactFallbackManualSubject_",
@@ -224,6 +253,12 @@ assert.match(prospectBody, /If you have already completed these steps, please ig
 assert.doesNotMatch(prospectBody, /Applicant ID|your application (?:has|was)|you have been accepted/i);
 assert.doesNotMatch(prospectBody, /\{\{[^}]+\}\}/);
 
+const examFeeBody = templateContext.buildApplicationExamFeeReminderBody_({ applicantId: "FODE-26-TEST" });
+assert.match(examFeeBody, /National Exam Fee/i);
+assert.match(examFeeBody, /K150 per subject/i);
+assert.match(examFeeBody, /subject count must be checked/i);
+assert.doesNotMatch(examFeeBody, /you (?:are|have been) accepted|you are enrolled/i);
+
 const fdAcknowledgementSource = extractFunction(codeSource, "buildFdAcknowledgementEmailBody_");
 assert.match(fdAcknowledgementSource, /application has been received/i);
 assert.match(fdAcknowledgementSource, /Admissions will review/i);
@@ -239,3 +274,4 @@ console.log("PASS planned types remain rejected by preview/send normalization");
 console.log("PASS custom email selected-only and prospect Stage Batch authority blocked");
 console.log("PASS overloaded reminder mappings and existing send gates remain explicit");
 console.log("PASS active and planned template wording safety");
+console.log("PASS selected-applicant docs/payment exposure and inert exam-fee semantics");

@@ -6700,6 +6700,30 @@ function getCommunicationSemanticRegistry_() {
       implementationStatus: "planned"
     },
     {
+      messageType: "application_exam_fee_reminder",
+      templateVersion: "planned-1",
+      audienceClass: "APPLICANT_WORKFLOW",
+      semanticIntent: "national_exam_fee_due_reminder",
+      operatorLabel: "National Exam Fee Reminder",
+      conditionPolicyId: "EXAM_FEE_DUE_AUTHORITY_NOT_IMPLEMENTED",
+      allowedSendModes: ["selected"],
+      requiresApplicantRow: true,
+      requiresValidEmail: true,
+      requiresContactConsent: false,
+      requiredRole: "NOT_AUTHORIZED",
+      editableMode: "locked",
+      batchSafe: false,
+      fallbackInstruction: "Do not send until exam-fee-due authority and the applicant subject count are confirmed.",
+      operatorWarning: "Planned only. K150 per subject is the current operator-known fee; confirm the subject count before calculating or communicating an applicant-specific amount.",
+      auditMeaning: "Reserved for National Exam Fee reminders backed by authoritative fee-due and subject-count evidence.",
+      subjectBuilderId: "buildApplicationExamFeeReminderSubject_",
+      bodyBuilderId: "buildApplicationExamFeeReminderBody_",
+      implementationStatus: "planned",
+      requiresExamFeeDueAuthority: true,
+      requiresSubjectConfirmation: true,
+      currentFeePerSubjectKina: 150
+    },
+    {
       messageType: "application_final_reminder",
       templateVersion: "planned-1",
       audienceClass: "APPLICANT_WORKFLOW",
@@ -7285,6 +7309,27 @@ function buildApplicationAcceptanceConfirmationBody_(context) {
     "Applicant ID: " + String(ctx.applicantId || ""),
     "",
     "Follow the official next-step instructions supplied with this confirmation.",
+    "",
+    "FODE KIA Admissions Team"
+  ].join("\n");
+}
+
+function buildApplicationExamFeeReminderSubject_() {
+  return "FODE National Exam Fee - Subject Confirmation Required";
+}
+
+function buildApplicationExamFeeReminderBody_(context) {
+  var ctx = context || {};
+  return [
+    "Dear Parent/Guardian,",
+    "",
+    "This is a planned reminder concerning the Department of Education FODE National Exam Fee.",
+    "",
+    "The current operator-known fee is K150 per subject. The applicant's confirmed subject count must be checked before any personalised total is communicated.",
+    "",
+    "Applicant ID: " + String(ctx.applicantId || ""),
+    "",
+    "This reminder does not confirm acceptance, enrolment, or exam registration.",
     "",
     "FODE KIA Admissions Team"
   ].join("\n");
