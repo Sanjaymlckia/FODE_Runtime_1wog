@@ -36,6 +36,15 @@ function extractFunction(source, name) {
 const adminFunctions = [
   "adminDocumentFileActionField_",
   "adminResolveApplicantDocumentFile_",
+  "adminDocumentGalleryRenditionHash_",
+  "adminDocumentGalleryRenditionFolder_",
+  "adminDocumentGalleryRenditionSourceStamp_",
+  "adminDocumentGalleryRenditionKey_",
+  "adminDocumentGalleryRenditionFileName_",
+  "adminDocumentGalleryFindStoredRendition_",
+  "adminDocumentGalleryFetchPdfThumbnailBlob_",
+  "adminDocumentGalleryBuildPngRenditionBlob_",
+  "adminDocumentGalleryGetOrCreateStoredRendition_",
   "admin_getApplicantDocumentImageRendition",
   "admin_getApplicantDocumentFileAction"
 ].map((name) => extractFunction(adminSource, name)).join("\n\n");
@@ -83,12 +92,12 @@ for (const pattern of [
   "GmailApp",
   "sendEmail(",
   "logAudit_(",
-  "log_(",
-  "createFile(",
-  "createFolder("
+  "log_("
 ]) {
   assert.equal(adminFunctions.includes(pattern), false, `Forbidden Admin contract side effect: ${pattern}`);
 }
+assert.match(adminFunctions, /createFile\(pngBlob\)/, "Stored rendition path may create only controlled PNG files");
+assert.match(adminFunctions, /parent\.createFolder\(folderName\)/, "Stored rendition path may create only the controlled rendition folder");
 
 const applicantId = "FODE-26-002959";
 const folderId = "11Uyp813DuF39yk5-dQj3JzCh1Q8frhGg";
@@ -126,10 +135,16 @@ const fileForId = (id) => ({
   getMimeType: () => fileMime[id] || "application/octet-stream",
   getSize: () => 1024,
   getBlob: () => ({
-    getAs: (mime) => ({
-      getBytes: () => mime === "image/png" ? [137, 80, 78, 71] : [1, 2, 3],
-      getContentType: () => mime
-    }),
+    getAs: (mime) => {
+      const blob = {
+        name: "source-rendition.png",
+        getName: function() { return this.name; },
+        setName: function(name) { this.name = name; return this; },
+        getBytes: () => mime === "image/png" ? [137, 80, 78, 71] : [1, 2, 3],
+        getContentType: () => mime
+      };
+      return blob;
+    },
     getBytes: () => [255, 216, 255],
     getContentType: () => fileMime[id] || "application/octet-stream"
   }),
@@ -145,8 +160,12 @@ const fileForId = (id) => ({
   }
 });
 const utilities = {
+  DigestAlgorithm: { SHA_256: "sha256" },
+  Charset: { UTF_8: "utf8" },
   computeHmacSha256Signature: (payload, secret) =>
     Array.from(crypto.createHmac("sha256", secret).update(payload).digest()),
+  computeDigest: (_algorithm, payload) =>
+    Array.from(crypto.createHash("sha256").update(String(payload || "")).digest()),
   base64Encode: (bytes) => Buffer.from(bytes).toString("base64"),
   base64EncodeWebSafe: (bytes) =>
     Buffer.from(bytes).toString("base64").replace(/\+/g, "-").replace(/\//g, "_")
@@ -154,6 +173,52 @@ const utilities = {
 
 let sheetReads = 0;
 let driveReads = 0;
+let createdRenditionCount = 0;
+let createdFolderCount = 0;
+const storedRenditions = {};
+const renditionFile = (name, bytes = [137, 80, 78, 71]) => ({
+  getName: () => name,
+  getBlob: () => ({
+    getBytes: () => bytes,
+    getContentType: () => "image/png"
+  })
+});
+const renditionFolder = {
+  getName: () => "FODE_Runtime_Gallery_Renditions",
+  getFilesByName: (name) => {
+    let consumed = false;
+    return {
+      hasNext: () => !consumed && !!storedRenditions[name],
+      next: () => {
+        consumed = true;
+        return storedRenditions[name];
+      }
+    };
+  },
+  createFile: (blob) => {
+    createdRenditionCount += 1;
+    const name = blob.getName ? blob.getName() : "rendition.png";
+    const file = renditionFile(name, blob.getBytes ? blob.getBytes() : [137, 80, 78, 71]);
+    storedRenditions[name] = file;
+    return file;
+  }
+};
+const renditionParentFolder = {
+  getFoldersByName: (_name) => {
+    let consumed = false;
+    return {
+      hasNext: () => !consumed && createdFolderCount > 0,
+      next: () => {
+        consumed = true;
+        return renditionFolder;
+      }
+    };
+  },
+  createFolder: (_name) => {
+    createdFolderCount += 1;
+    return renditionFolder;
+  }
+};
 const context = {
   console,
   Date,
@@ -163,6 +228,10 @@ const context = {
   CONFIG: {
     APPLICANT_ID_HEADER: "ApplicantID",
     WEBAPP_URL_STUDENT: "https://student.example/exec",
+    ROOT_FOLDER_ID: "root-folder",
+    DOCUMENT_GALLERY_RENDITION_PARENT_FOLDER_ID: "rendition-parent",
+    DOCUMENT_GALLERY_RENDITION_FOLDER_NAME: "FODE_Runtime_Gallery_Renditions",
+    DOCUMENT_GALLERY_RENDITION_MAX_BYTES: 12 * 1024 * 1024,
     DOC_FIELDS: [
       { label: "Birth Certificate / NID / Passport", file: "Birth_ID_Passport_File" },
       { label: "Latest School Reports / Documents", file: "Latest_School_Report_File", multiple: true },
@@ -187,6 +256,10 @@ const context = {
     getFileById: (id) => {
       driveReads += 1;
       return fileForId(id);
+    },
+    getFolderById: (id) => {
+      if (id === "rendition-parent") return renditionParentFolder;
+      throw new Error(`unexpected folder ${id}`);
     }
   },
   isFileInFolderChain_: (file, expectedFolderId) => {
@@ -196,7 +269,30 @@ const context = {
     }
     return false;
   },
-  getPortalSecretForApplicant_: () => ({ secret: "server-only-secret" })
+  getPortalSecretForApplicant_: () => ({ secret: "server-only-secret" }),
+  adminDocumentManifestIso_: (date) => date.toISOString(),
+  driveApiGet_: (_path, _params) => ({
+    ok: true,
+    json: { thumbnailLink: "https://lh3.googleusercontent.com/pdf-thumb=s220" }
+  }),
+  oauthHeaders_: () => ({ Authorization: "Bearer test" }),
+  UrlFetchApp: {
+    fetch: () => ({
+      getResponseCode: () => 200,
+      getBlob: () => ({
+        getAs: (mime) => {
+          const blob = {
+            name: "pdf-thumb.png",
+            getName: function() { return this.name; },
+            setName: function(name) { this.name = name; return this; },
+            getBytes: () => mime === "image/png" ? [137, 80, 78, 71, 13] : [1, 2, 3],
+            getContentType: () => mime
+          };
+          return blob;
+        }
+      })
+    })
+  }
 };
 vm.createContext(context);
 vm.runInContext(`${utilityFunctions}\n\n${adminFunctions}`, context);
@@ -265,9 +361,23 @@ const imageRendition = context.admin_getApplicantDocumentImageRendition({
 });
 assert.equal(imageRendition.ok, true);
 assert.equal(imageRendition.renditionMimeType, "image/png");
-assert.equal(imageRendition.renditionStorage, "transient-data-url");
-assert.equal(imageRendition.stalePolicy, "regenerate-on-request");
+assert.equal(imageRendition.renditionKind, "image-png");
+assert.equal(imageRendition.renditionStorage, "controlled-drive-folder");
+assert.equal(imageRendition.renditionFolderName, "FODE_Runtime_Gallery_Renditions");
+assert.match(imageRendition.renditionKey, /^[A-Za-z0-9_-]{20,}$/);
+assert.equal(imageRendition.generated, true);
+assert.equal(imageRendition.stalePolicy, "reuse-if-source-key-matches; regenerate-on-source-replacement");
 assert.match(imageRendition.dataUrl, /^data:image\/png;base64,/);
+assert.equal(createdRenditionCount, 1);
+const imageRenditionReuse = context.admin_getApplicantDocumentImageRendition({
+  rowNumber: 50,
+  applicantId,
+  sourceField: "Passport_Photo_File",
+  itemIndex: 0
+});
+assert.equal(imageRenditionReuse.ok, true);
+assert.equal(imageRenditionReuse.generated, false);
+assert.equal(createdRenditionCount, 1, "Existing source-key-matched image rendition must be reused");
 const imageRenditionDto = JSON.stringify(imageRendition);
 for (const sensitive of [
   folderId,
@@ -284,7 +394,11 @@ const pdfRendition = context.admin_getApplicantDocumentImageRendition({
   sourceField: "Birth_ID_Passport_File",
   itemIndex: 0
 });
-assert.equal(pdfRendition.code, "UNSUPPORTED_RENDITION_TYPE");
+assert.equal(pdfRendition.ok, true);
+assert.equal(pdfRendition.renditionKind, "pdf-first-page-png");
+assert.equal(pdfRendition.renditionMimeType, "image/png");
+assert.equal(pdfRendition.renditionStorage, "controlled-drive-folder");
+assert.match(pdfRendition.dataUrl, /^data:image\/png;base64,/);
 
 const routeContext = {
   ...context,
@@ -353,4 +467,4 @@ console.log("PASS invalid index, field, applicant context, and folder membership
 console.log("PASS signed route tamper resistance");
 console.log("PASS image rendition uses verifier/applicant/source/item authority without exposing Drive IDs");
 console.log("PASS sanitized DTO contains no Drive IDs, raw URLs, folder IDs, or secrets");
-console.log("PASS no Admin contract writes, sends, cache/properties mutation, or audit logging");
+console.log("PASS no sends, sheet writes, cache/properties mutation, or audit logging; Drive writes are limited to controlled PNG renditions");

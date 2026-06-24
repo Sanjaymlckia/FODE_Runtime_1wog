@@ -5195,21 +5195,30 @@
       if (codes.UNMAPPED_FILE) return "File is present in Drive but is not mapped to a configured document field.";
       return "";
     }
+    function documentGalleryCanRenderVisual_(file){
+      return !!(file && (file.renditionEligible === true || file.previewEligible === true));
+    }
+    function documentGalleryVisualLabel_(file){
+      var mimeType = String((file && file.mimeType) || "").trim();
+      if (/^application\/pdf$/i.test(mimeType)) return "PDF preview - first page.";
+      if (file && file.previewEligible === true) return "Image preview ready.";
+      return "Visual preview ready.";
+    }
     function renderDocumentGalleryThumb_(file, actionKey){
       var safeFile = file || {};
       var errorText = String(documentGalleryState.actionErrorByKey[actionKey] || "").trim();
       var rendition = documentGalleryState.renditionByKey[actionKey] || null;
       var renditionBusy = !!documentGalleryState.renditionBusyByKey[actionKey];
       var renditionError = String(documentGalleryState.renditionErrorByKey[actionKey] || "").trim();
-      if (safeFile.previewEligible === true && rendition && rendition.dataUrl) {
+      if (documentGalleryCanRenderVisual_(safeFile) && rendition && rendition.dataUrl) {
         var label = String(safeFile.label || safeFile.fileName || "Document image preview");
         var meta = String(safeFile.fileName || (rendition && rendition.renditionMimeType) || safeFile.mimeType || "Image document");
         return `<button type="button" class="documentGalleryZoomBtn galleryImageZoomBtn" data-rendition-key="${esc(actionKey)}" data-label="${esc(label)}" data-meta="${esc(meta)}" aria-label="Enlarge ${esc(label)}">Enlarge</button><img src="${esc(rendition.dataUrl)}" alt="${esc(label)}">`;
       }
-      if (safeFile.previewEligible === true && renditionBusy) return "Preparing image preview...";
-      if (safeFile.previewEligible === true && renditionError) return esc(renditionError);
-      if (safeFile.previewEligible === true && documentGalleryHasSecureAction_(safeFile)) {
-        return "Image preview will load in this tile.";
+      if (documentGalleryCanRenderVisual_(safeFile) && renditionBusy) return "Generating PNG preview...";
+      if (documentGalleryCanRenderVisual_(safeFile) && renditionError) return esc(renditionError);
+      if (documentGalleryCanRenderVisual_(safeFile) && documentGalleryHasSecureAction_(safeFile)) {
+        return "PNG preview will load in this tile.";
       }
       if (errorText) return esc(errorText);
       if (safeFile.previewEligible === true) return "Image preview unavailable until a secure action is requested.";
@@ -5258,7 +5267,7 @@
       });
     }
     function loadDocumentGalleryImageRendition_(file){
-      if (!currentRowNumber || !currentDetail || !file || file.previewEligible !== true) return;
+      if (!currentRowNumber || !currentDetail || !documentGalleryCanRenderVisual_(file)) return;
       if (!documentGalleryHasSecureAction_(file)) return;
       var applicantId = documentGalleryCurrentApplicantId_();
       var sourceField = String(file.sourceField || "");
@@ -5279,7 +5288,8 @@
             dataUrl: String(res.dataUrl || ""),
             renditionMimeType: String(res.renditionMimeType || ""),
             renditionStorage: String(res.renditionStorage || ""),
-            stalePolicy: String(res.stalePolicy || "")
+            stalePolicy: String(res.stalePolicy || ""),
+            renditionKind: String(res.renditionKind || "")
           };
           delete documentGalleryState.renditionErrorByKey[key];
           syncDocumentGalleryUi_();
@@ -5327,9 +5337,15 @@
         var warningText = documentGalleryWarningText_(file && file.warnings);
         var fileName = String((file && file.fileName) || "").trim();
         var mimeType = String((file && file.mimeType) || "").trim();
-        var isImage = !!(file && file.previewEligible === true);
-        var tileClass = isImage ? "documentGalleryTile image" : "documentGalleryTile";
-        var thumbClass = isImage && file && file.previewUrl ? "documentGalleryThumb image" : "documentGalleryThumb";
+        var isVisual = documentGalleryCanRenderVisual_(file);
+        var tileClass = isVisual ? "documentGalleryTile image" : "documentGalleryTile";
+        var thumbClass = isVisual ? "documentGalleryThumb image" : "documentGalleryThumb";
+        var statusText = isVisual
+          ? (/^application\/pdf$/i.test(mimeType) ? "PDF preview" : "Image")
+          : "Download first";
+        var helperText = warningText || (isVisual
+          ? documentGalleryVisualLabel_(file)
+          : "Download is primary. Open in New Tab remains browser-dependent.");
         return `
           <div class="${tileClass}" data-gallery-tile="${esc(tileKey)}">
             <div class="documentGalleryTileHeader">
@@ -5341,13 +5357,11 @@
                   ${mimeType ? `<span class="documentGalleryFileType">Type: ${esc(mimeType)}</span>` : ``}
                 </div>
               </div>
-              <span class="statusTag">${esc(file && file.previewEligible === true ? "Image" : "Download first")}</span>
+              <span class="statusTag">${esc(statusText)}</span>
             </div>
             <div class="${thumbClass}">${renderDocumentGalleryThumb_(file, actionKey)}</div>
             <div class="${warningText ? "documentGalleryWarning" : "documentGalleryTileMeta"}">
-              ${esc(warningText || (file && file.previewEligible === true
-                ? "Preview Image is available for trusted image MIME types."
-                : "Download is primary. Open in New Tab remains browser-dependent."))}
+              ${esc(helperText)}
             </div>
             <div class="documentGalleryActions">
               ${file && file.previewEligible === true && canAct

@@ -249,7 +249,23 @@ assert.equal(
 );
 assert.equal(
   JSON.stringify(Array.from(result.files).filter((file) => file.thumbnailAvailable).map((file) => file.sourceField)),
-  JSON.stringify(["Passport_Photo_File"])
+  JSON.stringify([
+    "Birth_ID_Passport_File",
+    "Latest_School_Report_File",
+    "Latest_School_Report_File",
+    "Latest_School_Report_File",
+    "Passport_Photo_File"
+  ])
+);
+assert.equal(
+  JSON.stringify(Array.from(result.files).filter((file) => file.renditionEligible).map((file) => file.renditionKind)),
+  JSON.stringify([
+    "pdf-first-page-png",
+    "pdf-first-page-png",
+    "pdf-first-page-png",
+    "pdf-first-page-png",
+    "image-png"
+  ])
 );
 assert.equal(
   JSON.stringify(result).includes("drive.google.com/file/d/"),

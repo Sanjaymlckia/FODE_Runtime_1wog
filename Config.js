@@ -7,9 +7,9 @@
  */
 var CONFIG = {
   // Versioning (change control)
-  VERSION: "r290",
+  VERSION: "r291",
 CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alignment",
-  DEPLOY_VERSION_NUMBER: 290,
+  DEPLOY_VERSION_NUMBER: 291,
 BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
 
   // STAGING/PROD data mode routing (working sheet)
@@ -54,6 +54,10 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   DRIVE_UPLOAD_BASE: "https://www.googleapis.com/upload/drive/v3",
   DRIVE_FIELDS_FOLDER: "id,name,webViewLink",
   DRIVE_FIELDS_FILE: "id,name,webViewLink,parents",
+  DOCUMENT_GALLERY_RENDITION_FOLDER_ID: "",
+  DOCUMENT_GALLERY_RENDITION_FOLDER_NAME: "FODE_Runtime_Gallery_Renditions",
+  DOCUMENT_GALLERY_RENDITION_PARENT_FOLDER_ID: "1vGD3DoOv1hlxYoTIfrNCZqAnrVKmghuB",
+  DOCUMENT_GALLERY_RENDITION_MAX_BYTES: 12 * 1024 * 1024,
   YEAR_FOLDER: "2025",
   
   // Portal Secrets File

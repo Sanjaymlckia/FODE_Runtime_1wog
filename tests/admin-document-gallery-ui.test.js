@@ -41,8 +41,10 @@ expectMatch(/var sourceText = sourceField \? \("Source: " \+ sourceField/, "Gall
 expectMatch(/<span class="documentGalleryFileType">\$\{esc\(sourceText\)\}<\/span>/, "Gallery tiles must render source field and item index context");
 expectMatch(/<span class="documentGalleryFileType">Type: \$\{esc\(mimeType\)\}<\/span>/, "Gallery tiles must show file type context");
 expectMatch(/admin_getApplicantDocumentImageRendition/, "Gallery must request server-prepared image renditions for inline visual display");
-expectMatch(/safeFile\.previewEligible === true && rendition && rendition\.dataUrl/, "Gallery thumbnail renderer must display image renditions only when a server-prepared data URL is present");
+expectMatch(/function documentGalleryCanRenderVisual_\(/, "Gallery must include a shared image/PDF visual-render eligibility helper");
+expectMatch(/documentGalleryCanRenderVisual_\(safeFile\) && rendition && rendition\.dataUrl/, "Gallery thumbnail renderer must display image/PDF renditions only when a server-prepared data URL is present");
 expectMatch(/<img src="\$\{esc\(rendition\.dataUrl\)\}"/, "Gallery thumbnail branch must render the server-prepared image data URL rather than a raw file link");
+expectMatch(/PDF preview - first page\./, "PDF files with renditions must be labelled as first-page previews");
 expectMatch(/class="documentGalleryZoomBtn galleryImageZoomBtn"/, "Image gallery tiles must provide an explicit enlarge control");
 expectMatch(/function openGalleryLightbox_\(/, "Image gallery must support click-to-enlarge lightbox behavior");
 expectMatch(/function parseGalleryRenditionDataUrl_\(/, "Gallery lightbox must validate image data URLs before display");

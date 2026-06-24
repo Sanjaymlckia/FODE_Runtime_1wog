@@ -781,6 +781,8 @@ function admin_getApplicantDocumentManifest(payload) {
       var canBuildFileSpecificProxy = mappingMethod === "row_file_id"
         && itemIndex >= 0;
       var previewEligible = /^image\//i.test(meta.mimeType);
+      var renditionEligible = previewEligible || /^application\/pdf$/i.test(meta.mimeType);
+      var renditionKind = previewEligible ? "image-png" : (/^application\/pdf$/i.test(meta.mimeType) ? "pdf-first-page-png" : "");
       var previewUrl = previewEligible && canBuildFileSpecificProxy && secret && execUrl
         ? buildSignedDocumentFileActionUrl_(
           execUrl, rowApplicantId, sourceField, itemIndex, "open", signedPreviewExpiresAtMs, secret
@@ -807,7 +809,9 @@ function admin_getApplicantDocumentManifest(payload) {
         mappingMethod: mappingMethod,
         suspectedDocumentType: adminDocumentManifestTypeForField_(sourceField),
         previewEligible: previewEligible,
-        thumbnailAvailable: !!previewUrl,
+        renditionEligible: renditionEligible && canBuildFileSpecificProxy,
+        renditionKind: renditionKind,
+        thumbnailAvailable: !!(renditionEligible && canBuildFileSpecificProxy),
         previewUrl: previewUrl,
         openUrl: canBuildFileSpecificProxy && secret && execUrl
           ? buildTokenGatedFileUrl_(execUrl, rowApplicantId, secret, sourceField, "open")
@@ -930,6 +934,123 @@ function adminResolveApplicantDocumentFile_(payload) {
   };
 }
 
+function adminDocumentGalleryRenditionHash_(value) {
+  var bytes = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    clean_(value || ""),
+    Utilities.Charset.UTF_8
+  );
+  return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/g, "").slice(0, 32);
+}
+
+function adminDocumentGalleryRenditionFolder_() {
+  var configuredId = clean_(CONFIG.DOCUMENT_GALLERY_RENDITION_FOLDER_ID || "");
+  if (configuredId) return DriveApp.getFolderById(configuredId);
+  var parentId = clean_(CONFIG.DOCUMENT_GALLERY_RENDITION_PARENT_FOLDER_ID || CONFIG.ROOT_FOLDER_ID || "");
+  if (!parentId) throw new Error("DOCUMENT_GALLERY_RENDITION_PARENT_FOLDER_ID missing");
+  var parent = DriveApp.getFolderById(parentId);
+  var folderName = clean_(CONFIG.DOCUMENT_GALLERY_RENDITION_FOLDER_NAME || "FODE_Runtime_Gallery_Renditions");
+  var existing = parent.getFoldersByName(folderName);
+  if (existing.hasNext()) return existing.next();
+  return parent.createFolder(folderName);
+}
+
+function adminDocumentGalleryRenditionSourceStamp_(file) {
+  var updated = "";
+  try {
+    updated = file && file.getLastUpdated ? adminDocumentManifestIso_(file.getLastUpdated()) : "";
+  } catch (_updatedErr) {}
+  var sizeBytes = 0;
+  try {
+    sizeBytes = Number(file && file.getSize ? file.getSize() : 0);
+  } catch (_sizeErr) {}
+  return {
+    fileId: clean_(file && file.getId ? file.getId() : ""),
+    fileName: clean_(file && file.getName ? file.getName() : ""),
+    updated: clean_(updated || ""),
+    sizeBytes: sizeBytes
+  };
+}
+
+function adminDocumentGalleryRenditionKey_(resolved, mimeType) {
+  var stamp = adminDocumentGalleryRenditionSourceStamp_(resolved.file);
+  var raw = [
+    clean_(resolved.applicantId || ""),
+    clean_(resolved.sourceField || ""),
+    String(Number(resolved.itemIndex || 0)),
+    clean_(stamp.fileId || ""),
+    clean_(stamp.updated || ""),
+    String(Number(stamp.sizeBytes || 0)),
+    clean_(mimeType || "")
+  ].join("|");
+  return adminDocumentGalleryRenditionHash_(raw);
+}
+
+function adminDocumentGalleryRenditionFileName_(resolved, key) {
+  var applicant = clean_(resolved.applicantId || "applicant").replace(/[^A-Za-z0-9_-]+/g, "_");
+  var field = clean_(resolved.sourceField || "document").replace(/[^A-Za-z0-9_-]+/g, "_");
+  var index = String(Number(resolved.itemIndex || 0));
+  return [applicant, field, index, clean_(key || "rendition")].join("__") + ".png";
+}
+
+function adminDocumentGalleryFindStoredRendition_(folder, fileName) {
+  var files = folder.getFilesByName(fileName);
+  return files.hasNext() ? files.next() : null;
+}
+
+function adminDocumentGalleryFetchPdfThumbnailBlob_(file) {
+  var fileId = clean_(file && file.getId ? file.getId() : "");
+  if (!fileId) throw new Error("PDF file ID unavailable");
+  var meta = driveApiGet_("/files/" + encodeURIComponent(fileId), {
+    fields: "id,name,mimeType,thumbnailLink,size,modifiedTime"
+  });
+  var thumb = clean_(meta && meta.json && meta.json.thumbnailLink || "");
+  if (!meta || meta.ok !== true || !thumb) throw new Error("PDF thumbnailLink unavailable");
+  var thumbUrl = thumb.replace(/=s\d+(-c)?/i, "=s1200");
+  var resp = UrlFetchApp.fetch(thumbUrl, {
+    headers: oauthHeaders_(),
+    muteHttpExceptions: true
+  });
+  var status = Number(resp.getResponseCode ? resp.getResponseCode() : 0);
+  if (status < 200 || status >= 300) throw new Error("PDF thumbnail fetch failed: " + status);
+  return resp.getBlob();
+}
+
+function adminDocumentGalleryBuildPngRenditionBlob_(file, mimeType) {
+  var sourceBlob = /^application\/pdf$/i.test(mimeType)
+    ? adminDocumentGalleryFetchPdfThumbnailBlob_(file)
+    : file.getBlob();
+  var pngBlob = sourceBlob.getAs("image/png");
+  if (!pngBlob) throw new Error("PNG rendition conversion unavailable");
+  return pngBlob;
+}
+
+function adminDocumentGalleryGetOrCreateStoredRendition_(resolved, mimeType) {
+  var folder = adminDocumentGalleryRenditionFolder_();
+  var key = adminDocumentGalleryRenditionKey_(resolved, mimeType);
+  var fileName = adminDocumentGalleryRenditionFileName_(resolved, key);
+  var existing = adminDocumentGalleryFindStoredRendition_(folder, fileName);
+  if (existing) {
+    return {
+      file: existing,
+      key: key,
+      fileName: fileName,
+      folderName: clean_(folder.getName ? folder.getName() : ""),
+      generated: false
+    };
+  }
+  var pngBlob = adminDocumentGalleryBuildPngRenditionBlob_(resolved.file, mimeType);
+  pngBlob.setName(fileName);
+  var created = folder.createFile(pngBlob);
+  return {
+    file: created,
+    key: key,
+    fileName: fileName,
+    folderName: clean_(folder.getName ? folder.getName() : ""),
+    generated: true
+  };
+}
+
 function admin_getApplicantDocumentImageRendition(payload) {
   var adminEmail = getCallerEmail_();
   try {
@@ -943,28 +1064,20 @@ function admin_getApplicantDocumentImageRendition(payload) {
     if (!resolved || resolved.ok !== true) return resolved;
     var file = resolved.file;
     var mimeType = clean_(file.getMimeType ? file.getMimeType() : "");
-    if (!/^image\//i.test(mimeType)) {
-      return { ok: false, code: "UNSUPPORTED_RENDITION_TYPE", error: "Only image files can be rendered in-gallery." };
+    var isImage = /^image\//i.test(mimeType);
+    var isPdf = /^application\/pdf$/i.test(mimeType);
+    if (!isImage && !isPdf) {
+      return { ok: false, code: "UNSUPPORTED_RENDITION_TYPE", error: "Only image and PDF files can be rendered in-gallery." };
     }
     var maxBytes = Number((CONFIG && CONFIG.DOCUMENT_GALLERY_RENDITION_MAX_BYTES) || 6000000);
     var sizeBytes = Number(file.getSize ? file.getSize() : 0);
     if (maxBytes > 0 && sizeBytes > maxBytes) {
-      return { ok: false, code: "RENDITION_TOO_LARGE", error: "Image is too large for inline gallery rendering. Use Open or Download." };
+      return { ok: false, code: "RENDITION_TOO_LARGE", error: "File is too large for inline gallery rendering. Use Open or Download." };
     }
 
-    var sourceBlob = file.getBlob();
-    var renditionBlob = null;
-    var renditionMimeType = "image/png";
-    try {
-      renditionBlob = sourceBlob.getAs("image/png");
-    } catch (_pngErr) {
-      renditionBlob = sourceBlob;
-      renditionMimeType = clean_(sourceBlob.getContentType ? sourceBlob.getContentType() : mimeType) || mimeType || "application/octet-stream";
-    }
-    if (!/^image\//i.test(renditionMimeType)) {
-      return { ok: false, code: "RENDITION_UNAVAILABLE", error: "Image rendition could not be prepared." };
-    }
-    var bytes = renditionBlob.getBytes();
+    var stored = adminDocumentGalleryGetOrCreateStoredRendition_(resolved, mimeType);
+    var blob = stored.file.getBlob();
+    var bytes = blob.getBytes();
     return {
       ok: true,
       sourceField: resolved.sourceField,
@@ -972,10 +1085,14 @@ function admin_getApplicantDocumentImageRendition(payload) {
       label: clean_(resolved.docField.label || resolved.sourceField),
       fileName: clean_(file.getName ? file.getName() : ""),
       sourceMimeType: mimeType,
-      renditionMimeType: renditionMimeType,
-      renditionStorage: "transient-data-url",
-      stalePolicy: "regenerate-on-request",
-      dataUrl: "data:" + renditionMimeType + ";base64," + Utilities.base64Encode(bytes)
+      renditionMimeType: "image/png",
+      renditionKind: isPdf ? "pdf-first-page-png" : "image-png",
+      renditionStorage: "controlled-drive-folder",
+      renditionFolderName: clean_(stored.folderName || ""),
+      renditionKey: clean_(stored.key || ""),
+      generated: stored.generated === true,
+      stalePolicy: "reuse-if-source-key-matches; regenerate-on-source-replacement",
+      dataUrl: "data:image/png;base64," + Utilities.base64Encode(bytes)
     };
   } catch (_err) {
     return {
