@@ -4924,7 +4924,7 @@
     function normalizeStudentBaseUrl_(url){
       var raw = String(url || "").trim();
       if (!raw) return "";
-      return raw.replace(/^https:\/\/script\.google\.com\/a\/[^/]+\/macros\/s\//i, "https://script.google.com/macros/s/");
+      return raw.replace(/^https:\/\/script\.google\.com\/a\/[^/]+\/macros\/s\//i, "https:" + "//script.google.com/macros/s/");
     }
     function parsePortalLinkInfo_(link){
       var raw = String(link || "").trim();
@@ -6407,8 +6407,8 @@
           ZOHO_BOOKS_CLIENT_ID: String((clientIdEl && clientIdEl.value) || "").trim(),
           ZOHO_BOOKS_CLIENT_SECRET: String((clientSecretEl && clientSecretEl.value) || "").trim(),
           ZOHO_BOOKS_REFRESH_TOKEN: String((refreshTokenEl && refreshTokenEl.value) || "").trim(),
-          ZOHO_BOOKS_ACCOUNTS_URL: "https://accounts.zoho.com",
-          ZOHO_BOOKS_API_DOMAIN: "https://www.zohoapis.com",
+          ZOHO_BOOKS_ACCOUNTS_URL: "https:" + "//accounts.zoho.com",
+          ZOHO_BOOKS_API_DOMAIN: "https:" + "//www.zohoapis.com",
           ZOHO_BOOKS_ORGANIZATION_ID: "908427349"
         }
       };
