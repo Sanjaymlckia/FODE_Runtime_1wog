@@ -871,6 +871,121 @@ function adminDocumentFileActionField_(fieldName) {
   return null;
 }
 
+function adminResolveApplicantDocumentFile_(payload) {
+  var p = payload && typeof payload === "object" ? payload : {};
+  var applicantId = clean_(p.applicantId || p.ApplicantID || "");
+  var rowNumber = Number(p.rowNumber);
+  var sourceField = clean_(p.sourceField || "");
+  var itemIndex = Number(p.itemIndex);
+  if (!applicantId || !isFinite(rowNumber) || rowNumber < 2 || Math.floor(rowNumber) !== rowNumber) {
+    return { ok: false, code: "INVALID_APPLICANT_CONTEXT", error: "Applicant context is invalid" };
+  }
+  if (!isFinite(itemIndex) || itemIndex < 0 || Math.floor(itemIndex) !== itemIndex) {
+    return { ok: false, code: "INVALID_ITEM_INDEX", error: "Document item index is invalid" };
+  }
+  var docField = adminDocumentFileActionField_(sourceField);
+  if (!docField) {
+    return { ok: false, code: "INVALID_SOURCE_FIELD", error: "Document field is invalid" };
+  }
+
+  var sheet = openDataSheet_();
+  var row = getRowObject_(sheet, rowNumber);
+  var rowApplicantId = clean_(row.ApplicantID || row[CONFIG.APPLICANT_ID_HEADER] || "");
+  if (!rowApplicantId || rowApplicantId !== applicantId) {
+    return { ok: false, code: "APPLICANT_CONTEXT_MISMATCH", error: "Applicant context does not match" };
+  }
+
+  var folderUrl = clean_(row.Folder_Url || row[SCHEMA.FOLDER_URL] || "");
+  var folderId = folderIdFromUrl_(folderUrl);
+  if (!folderId) {
+    return { ok: false, code: "DOCUMENT_SOURCE_UNAVAILABLE", error: "Document source is unavailable" };
+  }
+  var sourceUrls = normalizeToUrlList_(row[sourceField], sourceField);
+  if (itemIndex >= sourceUrls.length) {
+    return { ok: false, code: "ITEM_INDEX_OUT_OF_RANGE", error: "Document item is unavailable" };
+  }
+  var fileId = extractDriveFileId_(sourceUrls[itemIndex]);
+  if (!fileId) {
+    return { ok: false, code: "DOCUMENT_SOURCE_UNAVAILABLE", error: "Document source is unavailable" };
+  }
+  var file;
+  try {
+    file = DriveApp.getFileById(fileId);
+  } catch (_fileErr) {
+    return { ok: false, code: "DOCUMENT_SOURCE_UNAVAILABLE", error: "Document source is unavailable" };
+  }
+  if (!isFileInFolderChain_(file, folderId)) {
+    return { ok: false, code: "DOCUMENT_SOURCE_MISMATCH", error: "Document source does not match applicant context" };
+  }
+
+  return {
+    ok: true,
+    applicantId: applicantId,
+    rowNumber: rowNumber,
+    sourceField: sourceField,
+    itemIndex: itemIndex,
+    docField: docField,
+    file: file,
+    folderId: folderId
+  };
+}
+
+function admin_getApplicantDocumentImageRendition(payload) {
+  var adminEmail = getCallerEmail_();
+  try {
+    requireDocumentVerifier_(adminEmail);
+  } catch (_authErr) {
+    return { ok: false, code: "ACCESS_DENIED", error: "Access denied: document verifier required" };
+  }
+
+  try {
+    var resolved = adminResolveApplicantDocumentFile_(payload);
+    if (!resolved || resolved.ok !== true) return resolved;
+    var file = resolved.file;
+    var mimeType = clean_(file.getMimeType ? file.getMimeType() : "");
+    if (!/^image\//i.test(mimeType)) {
+      return { ok: false, code: "UNSUPPORTED_RENDITION_TYPE", error: "Only image files can be rendered in-gallery." };
+    }
+    var maxBytes = Number((CONFIG && CONFIG.DOCUMENT_GALLERY_RENDITION_MAX_BYTES) || 6000000);
+    var sizeBytes = Number(file.getSize ? file.getSize() : 0);
+    if (maxBytes > 0 && sizeBytes > maxBytes) {
+      return { ok: false, code: "RENDITION_TOO_LARGE", error: "Image is too large for inline gallery rendering. Use Open or Download." };
+    }
+
+    var sourceBlob = file.getBlob();
+    var renditionBlob = null;
+    var renditionMimeType = "image/png";
+    try {
+      renditionBlob = sourceBlob.getAs("image/png");
+    } catch (_pngErr) {
+      renditionBlob = sourceBlob;
+      renditionMimeType = clean_(sourceBlob.getContentType ? sourceBlob.getContentType() : mimeType) || mimeType || "application/octet-stream";
+    }
+    if (!/^image\//i.test(renditionMimeType)) {
+      return { ok: false, code: "RENDITION_UNAVAILABLE", error: "Image rendition could not be prepared." };
+    }
+    var bytes = renditionBlob.getBytes();
+    return {
+      ok: true,
+      sourceField: resolved.sourceField,
+      itemIndex: resolved.itemIndex,
+      label: clean_(resolved.docField.label || resolved.sourceField),
+      fileName: clean_(file.getName ? file.getName() : ""),
+      sourceMimeType: mimeType,
+      renditionMimeType: renditionMimeType,
+      renditionStorage: "transient-data-url",
+      stalePolicy: "regenerate-on-request",
+      dataUrl: "data:" + renditionMimeType + ";base64," + Utilities.base64Encode(bytes)
+    };
+  } catch (_err) {
+    return {
+      ok: false,
+      code: "DOCUMENT_IMAGE_RENDITION_ERROR",
+      error: "Document image preview could not be prepared"
+    };
+  }
+}
+
 function admin_getApplicantDocumentFileAction(payload) {
   var adminEmail = getCallerEmail_();
   try {
@@ -880,51 +995,13 @@ function admin_getApplicantDocumentFileAction(payload) {
   }
 
   try {
-    var p = payload && typeof payload === "object" ? payload : {};
-    var applicantId = clean_(p.applicantId || p.ApplicantID || "");
-    var rowNumber = Number(p.rowNumber);
-    var sourceField = clean_(p.sourceField || "");
-    var itemIndex = Number(p.itemIndex);
-    if (!applicantId || !isFinite(rowNumber) || rowNumber < 2 || Math.floor(rowNumber) !== rowNumber) {
-      return { ok: false, code: "INVALID_APPLICANT_CONTEXT", error: "Applicant context is invalid" };
-    }
-    if (!isFinite(itemIndex) || itemIndex < 0 || Math.floor(itemIndex) !== itemIndex) {
-      return { ok: false, code: "INVALID_ITEM_INDEX", error: "Document item index is invalid" };
-    }
-    var docField = adminDocumentFileActionField_(sourceField);
-    if (!docField) {
-      return { ok: false, code: "INVALID_SOURCE_FIELD", error: "Document field is invalid" };
-    }
-
-    var sheet = openDataSheet_();
-    var row = getRowObject_(sheet, rowNumber);
-    var rowApplicantId = clean_(row.ApplicantID || row[CONFIG.APPLICANT_ID_HEADER] || "");
-    if (!rowApplicantId || rowApplicantId !== applicantId) {
-      return { ok: false, code: "APPLICANT_CONTEXT_MISMATCH", error: "Applicant context does not match" };
-    }
-
-    var folderUrl = clean_(row.Folder_Url || row[SCHEMA.FOLDER_URL] || "");
-    var folderId = folderIdFromUrl_(folderUrl);
-    if (!folderId) {
-      return { ok: false, code: "DOCUMENT_SOURCE_UNAVAILABLE", error: "Document source is unavailable" };
-    }
-    var sourceUrls = normalizeToUrlList_(row[sourceField], sourceField);
-    if (itemIndex >= sourceUrls.length) {
-      return { ok: false, code: "ITEM_INDEX_OUT_OF_RANGE", error: "Document item is unavailable" };
-    }
-    var fileId = extractDriveFileId_(sourceUrls[itemIndex]);
-    if (!fileId) {
-      return { ok: false, code: "DOCUMENT_SOURCE_UNAVAILABLE", error: "Document source is unavailable" };
-    }
-    var file;
-    try {
-      file = DriveApp.getFileById(fileId);
-    } catch (_fileErr) {
-      return { ok: false, code: "DOCUMENT_SOURCE_UNAVAILABLE", error: "Document source is unavailable" };
-    }
-    if (!isFileInFolderChain_(file, folderId)) {
-      return { ok: false, code: "DOCUMENT_SOURCE_MISMATCH", error: "Document source does not match applicant context" };
-    }
+    var resolved = adminResolveApplicantDocumentFile_(payload);
+    if (!resolved || resolved.ok !== true) return resolved;
+    var applicantId = resolved.applicantId;
+    var sourceField = resolved.sourceField;
+    var itemIndex = resolved.itemIndex;
+    var docField = resolved.docField;
+    var file = resolved.file;
 
     var secretRes = getPortalSecretForApplicant_(applicantId);
     var secret = clean_(secretRes && (secretRes.secret || secretRes.secretPlain) || "");

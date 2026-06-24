@@ -35,6 +35,8 @@ function extractFunction(source, name) {
 
 const adminFunctions = [
   "adminDocumentFileActionField_",
+  "adminResolveApplicantDocumentFile_",
+  "admin_getApplicantDocumentImageRendition",
   "admin_getApplicantDocumentFileAction"
 ].map((name) => extractFunction(adminSource, name)).join("\n\n");
 
@@ -49,14 +51,18 @@ const utilityFunctions = [
 
 const routeFunction = extractFunction(routesSource, "doGet_file_");
 const adminFunction = extractFunction(adminSource, "admin_getApplicantDocumentFileAction");
+const renditionFunction = extractFunction(adminSource, "admin_getApplicantDocumentImageRendition");
+const resolverFunction = extractFunction(adminSource, "adminResolveApplicantDocumentFile_");
 assert.ok(
-  adminFunction.indexOf("requireDocumentVerifier_(adminEmail)") < adminFunction.indexOf("openDataSheet_()"),
-  "Document verifier authorization must precede Sheet access"
+  adminFunction.indexOf("requireDocumentVerifier_(adminEmail)") < adminFunction.indexOf("adminResolveApplicantDocumentFile_(payload)"),
+  "Document verifier authorization must precede file-action resolver access"
 );
 assert.ok(
-  adminFunction.indexOf("requireDocumentVerifier_(adminEmail)") < adminFunction.indexOf("DriveApp.getFileById"),
-  "Document verifier authorization must precede Drive access"
+  renditionFunction.indexOf("requireDocumentVerifier_(adminEmail)") < renditionFunction.indexOf("adminResolveApplicantDocumentFile_(payload)"),
+  "Document verifier authorization must precede image-rendition resolver access"
 );
+assert.match(resolverFunction, /openDataSheet_\(\)/, "Private resolver must perform Sheet lookup after public verifier gates");
+assert.match(resolverFunction, /DriveApp\.getFileById/, "Private resolver must perform Drive lookup after public verifier gates");
 const routeSignatureCheck = routeFunction.indexOf("verifyDocumentFileActionSignature_");
 assert.ok(routeSignatureCheck >= 0, "Signed route verification must exist");
 assert.ok(
@@ -90,7 +96,8 @@ const fileIds = {
   birth: "1APiWZve1hJLOTTuHbMAuIq9f471g4R7j",
   report0: "1TOWyeveMYjK2jcWDGtStHj0KGjM4slUx",
   report1: "1ph1oPdCTsBd6t8q98pn0o9fV0bPmrV7B",
-  report2: "1Y638GeHnf1S4tvmGXzi58lnbNsnjccwO"
+  report2: "1Y638GeHnf1S4tvmGXzi58lnbNsnjccwO",
+  photo: "1vHCwlc-j2WVM9H4xDngJvCs8oDx2xMOb"
 };
 const driveUrl = (id) => `https://drive.google.com/file/d/${id}/view`;
 const row = {
@@ -101,19 +108,31 @@ const row = {
     driveUrl(fileIds.report0),
     driveUrl(fileIds.report1),
     driveUrl(fileIds.report2)
-  ].join("\n")
+  ].join("\n"),
+  Passport_Photo_File: driveUrl(fileIds.photo)
 };
 const clean = (value) => String(value == null ? "" : value).trim();
 const fileMime = {
   [fileIds.birth]: "application/pdf",
   [fileIds.report0]: "application/pdf",
   [fileIds.report1]: "application/pdf",
-  [fileIds.report2]: "application/pdf"
+  [fileIds.report2]: "application/pdf",
+  [fileIds.photo]: "image/jpeg"
 };
 let parentOverride = folderId;
 const fileForId = (id) => ({
   getId: () => id,
+  getName: () => id === fileIds.photo ? "Passport_Photo_File_20260621.jpg" : "document.pdf",
   getMimeType: () => fileMime[id] || "application/octet-stream",
+  getSize: () => 1024,
+  getBlob: () => ({
+    getAs: (mime) => ({
+      getBytes: () => mime === "image/png" ? [137, 80, 78, 71] : [1, 2, 3],
+      getContentType: () => mime
+    }),
+    getBytes: () => [255, 216, 255],
+    getContentType: () => fileMime[id] || "application/octet-stream"
+  }),
   getParents: () => {
     let consumed = false;
     return {
@@ -146,7 +165,8 @@ const context = {
     WEBAPP_URL_STUDENT: "https://student.example/exec",
     DOC_FIELDS: [
       { label: "Birth Certificate / NID / Passport", file: "Birth_ID_Passport_File" },
-      { label: "Latest School Reports / Documents", file: "Latest_School_Report_File", multiple: true }
+      { label: "Latest School Reports / Documents", file: "Latest_School_Report_File", multiple: true },
+      { label: "Passport Size Colour Photo", file: "Passport_Photo_File" }
     ]
   },
   SCHEMA: { FOLDER_URL: "Folder_Url" },
@@ -237,6 +257,35 @@ assert.equal(dtoText.includes("drive.google.com"), false);
 assert.equal(single.sourceField, "Birth_ID_Passport_File");
 assert.equal(single.mimeType, "application/pdf");
 
+const imageRendition = context.admin_getApplicantDocumentImageRendition({
+  rowNumber: 50,
+  applicantId,
+  sourceField: "Passport_Photo_File",
+  itemIndex: 0
+});
+assert.equal(imageRendition.ok, true);
+assert.equal(imageRendition.renditionMimeType, "image/png");
+assert.equal(imageRendition.renditionStorage, "transient-data-url");
+assert.equal(imageRendition.stalePolicy, "regenerate-on-request");
+assert.match(imageRendition.dataUrl, /^data:image\/png;base64,/);
+const imageRenditionDto = JSON.stringify(imageRendition);
+for (const sensitive of [
+  folderId,
+  fileIds.photo,
+  driveUrl(fileIds.photo),
+  "server-only-secret",
+  "drive.google.com"
+]) {
+  assert.equal(imageRenditionDto.includes(sensitive), false, `Rendition DTO must not contain ${sensitive}`);
+}
+const pdfRendition = context.admin_getApplicantDocumentImageRendition({
+  rowNumber: 50,
+  applicantId,
+  sourceField: "Birth_ID_Passport_File",
+  itemIndex: 0
+});
+assert.equal(pdfRendition.code, "UNSUPPORTED_RENDITION_TYPE");
+
 const routeContext = {
   ...context,
   Session: {
@@ -302,5 +351,6 @@ console.log("PASS single-file itemIndex 0");
 console.log("PASS multi-file itemIndex 0, 1, 2 distinct");
 console.log("PASS invalid index, field, applicant context, and folder membership");
 console.log("PASS signed route tamper resistance");
+console.log("PASS image rendition uses verifier/applicant/source/item authority without exposing Drive IDs");
 console.log("PASS sanitized DTO contains no Drive IDs, raw URLs, folder IDs, or secrets");
 console.log("PASS no Admin contract writes, sends, cache/properties mutation, or audit logging");

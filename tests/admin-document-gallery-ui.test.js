@@ -20,6 +20,7 @@ expectMatch(/id="btnSaveDocs"[\s\S]*id="dirtyWarn"/, "Unsaved warning must be vi
 expectMatch(/id="reviewSecondaryTools"[\s\S]*Contact fallback \/ CRM \/ admin support details/, "Secondary support details must be collapsed below the primary document and communication flow");
 expectMatch(/admin_getApplicantDocumentManifest\(\{ applicantId: applicantId \}\)/, "Manifest must load on explicit gallery request");
 expectMatch(/admin_getApplicantDocumentFileAction\(\{\s*applicantId: applicantId,\s*rowNumber: currentRowNumber,\s*sourceField: String\(sourceField \|\| ""\),\s*itemIndex: Number\(itemIndex\)/s, "Per-file action requests must use applicantId, rowNumber, sourceField, and itemIndex only");
+expectMatch(/admin_getApplicantDocumentImageRendition\(\{\s*applicantId: applicantId,\s*rowNumber: currentRowNumber,\s*sourceField: sourceField,\s*itemIndex: itemIndex\s*\}\)/s, "Image rendition requests must use applicantId, rowNumber, sourceField, and itemIndex only");
 expectMatch(/function parseSignedFileRouteUrl_\(/, "Preview flow must validate signed file-route URLs before loading the iframe");
 expectMatch(/if \(!parsedPreview\.valid\) \{[\s\S]*Preview link could not be prepared\. Use Open in New Tab or Download\./, "Malformed preview URLs must not be loaded into the iframe");
 expectMatch(/openDocPreview_\(label,\s*res\.openUrl \|\| \"\",\s*res\.downloadUrl \|\| \"\"\)/, "Preview action must use the signed openUrl returned by admin_getApplicantDocumentFileAction");
@@ -39,11 +40,12 @@ expectMatch(/Fee_Receipt_File[\s\S]*return 50/, "Gallery should sort payment evi
 expectMatch(/var sourceText = sourceField \? \("Source: " \+ sourceField/, "Gallery tiles must prepare source field and item index context");
 expectMatch(/<span class="documentGalleryFileType">\$\{esc\(sourceText\)\}<\/span>/, "Gallery tiles must render source field and item index context");
 expectMatch(/<span class="documentGalleryFileType">Type: \$\{esc\(mimeType\)\}<\/span>/, "Gallery tiles must show file type context");
-expectMatch(/safeFile\.previewEligible === true && safeFile\.previewUrl/, "Gallery thumbnail renderer must support inline image thumbnails only when a signed previewUrl is present");
-expectMatch(/<img src="\$\{esc\(safeFile\.previewUrl\)\}"/, "Gallery thumbnail branch must render the signed previewUrl rather than reconstructing a raw file link");
+expectMatch(/admin_getApplicantDocumentImageRendition/, "Gallery must request server-prepared image renditions for inline visual display");
+expectMatch(/safeFile\.previewEligible === true && rendition && rendition\.dataUrl/, "Gallery thumbnail renderer must display image renditions only when a server-prepared data URL is present");
+expectMatch(/<img src="\$\{esc\(rendition\.dataUrl\)\}"/, "Gallery thumbnail branch must render the server-prepared image data URL rather than a raw file link");
 expectMatch(/class="documentGalleryZoomBtn galleryImageZoomBtn"/, "Image gallery tiles must provide an explicit enlarge control");
 expectMatch(/function openGalleryLightbox_\(/, "Image gallery must support click-to-enlarge lightbox behavior");
-expectMatch(/parseSignedFileRouteUrl_\(url\)/, "Gallery lightbox must validate signed file-route URLs before display");
+expectMatch(/function parseGalleryRenditionDataUrl_\(/, "Gallery lightbox must validate image data URLs before display");
 expectMatch(/id="galleryLightboxBack"/, "Gallery lightbox shell must exist");
 expectMatch(/documentGalleryTile image/, "Image files must render as visually larger gallery cards");
 expectMatch(/documentGalleryThumb image/, "Image files must render in a larger visual thumbnail region");
@@ -59,7 +61,9 @@ expectMatch(/Secure per-file action unavailable for this mapping\./, "Gallery mu
 console.log("PASS gallery button exists in selected-applicant review modal");
 console.log("PASS gallery loads manifest only after explicit click path");
 console.log("PASS per-file action payload uses sourceField + itemIndex only");
+console.log("PASS image rendition payload uses sourceField + itemIndex only");
 console.log("PASS gallery preview validates and reuses signed openUrl before iframe navigation");
+console.log("PASS gallery image tiles use server-prepared data URL renditions");
 console.log("PASS client does not reference raw Drive IDs or raw evidence values in action payloads");
 console.log("PASS existing renderDocCards_ flow remains present");
 console.log("PASS r288 review modal document workflow action bar and secondary collapse source checks");

@@ -2687,7 +2687,10 @@
       manifest: null,
       error: "",
       actionBusyByKey: {},
-      actionErrorByKey: {}
+      actionErrorByKey: {},
+      renditionByKey: {},
+      renditionBusyByKey: {},
+      renditionErrorByKey: {}
     };
     let runtimeInfoCache = null;
     let communicationsState = {
@@ -5066,8 +5069,13 @@
       if (frame) frame.src = "";
       if (back) back.classList.add("hidden");
     }
+    function parseGalleryRenditionDataUrl_(url){
+      var candidate = String(url || "").trim();
+      if (!/^data:image\/[a-z0-9.+-]+;base64,/i.test(candidate)) return { valid: false, href: "" };
+      return { valid: true, href: candidate };
+    }
     function openGalleryLightbox_(url, label, meta){
-      var parsed = parseSignedFileRouteUrl_(url);
+      var parsed = parseGalleryRenditionDataUrl_(url);
       var back = document.getElementById("galleryLightboxBack");
       var image = document.getElementById("galleryLightboxImage");
       var title = document.getElementById("galleryLightboxTitle");
@@ -5099,7 +5107,10 @@
         manifest: null,
         error: "",
         actionBusyByKey: {},
-        actionErrorByKey: {}
+        actionErrorByKey: {},
+        renditionByKey: {},
+        renditionBusyByKey: {},
+        renditionErrorByKey: {}
       };
       syncDocumentGalleryUi_();
     }
@@ -5187,13 +5198,18 @@
     function renderDocumentGalleryThumb_(file, actionKey){
       var safeFile = file || {};
       var errorText = String(documentGalleryState.actionErrorByKey[actionKey] || "").trim();
-      if (safeFile.previewEligible === true && safeFile.previewUrl) {
+      var rendition = documentGalleryState.renditionByKey[actionKey] || null;
+      var renditionBusy = !!documentGalleryState.renditionBusyByKey[actionKey];
+      var renditionError = String(documentGalleryState.renditionErrorByKey[actionKey] || "").trim();
+      if (safeFile.previewEligible === true && rendition && rendition.dataUrl) {
         var label = String(safeFile.label || safeFile.fileName || "Document image preview");
-        var meta = String(safeFile.fileName || safeFile.mimeType || "Image document");
-        return `<button type="button" class="documentGalleryZoomBtn galleryImageZoomBtn" data-preview-url="${esc(safeFile.previewUrl)}" data-label="${esc(label)}" data-meta="${esc(meta)}" aria-label="Enlarge ${esc(label)}">Enlarge</button><img src="${esc(safeFile.previewUrl)}" alt="${esc(label)}">`;
+        var meta = String(safeFile.fileName || (rendition && rendition.renditionMimeType) || safeFile.mimeType || "Image document");
+        return `<button type="button" class="documentGalleryZoomBtn galleryImageZoomBtn" data-rendition-key="${esc(actionKey)}" data-label="${esc(label)}" data-meta="${esc(meta)}" aria-label="Enlarge ${esc(label)}">Enlarge</button><img src="${esc(rendition.dataUrl)}" alt="${esc(label)}">`;
       }
+      if (safeFile.previewEligible === true && renditionBusy) return "Preparing image preview...";
+      if (safeFile.previewEligible === true && renditionError) return esc(renditionError);
       if (safeFile.previewEligible === true && documentGalleryHasSecureAction_(safeFile)) {
-        return "Image preview available on demand.";
+        return "Image preview will load in this tile.";
       }
       if (errorText) return esc(errorText);
       if (safeFile.previewEligible === true) return "Image preview unavailable until a secure action is requested.";
@@ -5232,12 +5248,58 @@
       });
       Array.from(document.querySelectorAll(".galleryImageZoomBtn")).forEach(function(btn){
         btn.addEventListener("click", function(){
+          var rendition = documentGalleryState.renditionByKey[this.getAttribute("data-rendition-key") || ""] || {};
           openGalleryLightbox_(
-            this.getAttribute("data-preview-url") || "",
+            rendition.dataUrl || "",
             this.getAttribute("data-label") || "Document image",
             this.getAttribute("data-meta") || ""
           );
         });
+      });
+    }
+    function loadDocumentGalleryImageRendition_(file){
+      if (!currentRowNumber || !currentDetail || !file || file.previewEligible !== true) return;
+      if (!documentGalleryHasSecureAction_(file)) return;
+      var applicantId = documentGalleryCurrentApplicantId_();
+      var sourceField = String(file.sourceField || "");
+      var itemIndex = Number(file.itemIndex);
+      var key = documentGalleryActionKey_(sourceField, itemIndex);
+      if (documentGalleryState.renditionByKey[key] || documentGalleryState.renditionBusyByKey[key] || documentGalleryState.renditionErrorByKey[key]) return;
+      documentGalleryState.renditionBusyByKey[key] = true;
+      google.script.run
+        .withSuccessHandler(function(res){
+          if (documentGalleryCurrentApplicantId_() !== applicantId) return;
+          delete documentGalleryState.renditionBusyByKey[key];
+          if (!res || res.ok !== true || !String(res.dataUrl || "").trim()) {
+            documentGalleryState.renditionErrorByKey[key] = String((res && (res.error || res.message || res.code)) || "Image preview unavailable. Use Open or Download.");
+            syncDocumentGalleryUi_();
+            return;
+          }
+          documentGalleryState.renditionByKey[key] = {
+            dataUrl: String(res.dataUrl || ""),
+            renditionMimeType: String(res.renditionMimeType || ""),
+            renditionStorage: String(res.renditionStorage || ""),
+            stalePolicy: String(res.stalePolicy || "")
+          };
+          delete documentGalleryState.renditionErrorByKey[key];
+          syncDocumentGalleryUi_();
+        })
+        .withFailureHandler(function(err){
+          if (documentGalleryCurrentApplicantId_() !== applicantId) return;
+          delete documentGalleryState.renditionBusyByKey[key];
+          documentGalleryState.renditionErrorByKey[key] = String(err && err.message ? err.message : err || "Image preview unavailable. Use Open or Download.");
+          syncDocumentGalleryUi_();
+        })
+        .admin_getApplicantDocumentImageRendition({
+          applicantId: applicantId,
+          rowNumber: currentRowNumber,
+          sourceField: sourceField,
+          itemIndex: itemIndex
+        });
+    }
+    function queueDocumentGalleryImageRenditions_(files){
+      (Array.isArray(files) ? files : []).forEach(function(file){
+        loadDocumentGalleryImageRendition_(file);
       });
     }
     function renderDocumentGallery_(){
@@ -5322,6 +5384,7 @@
       }).join("");
       body.innerHTML = `<div class="documentGalleryGrid">${fileTiles}${missingTiles}</div>`;
       bindDocumentGalleryActionButtons_();
+      queueDocumentGalleryImageRenditions_(sortedFiles);
     }
     function syncDocumentGalleryUi_(){
       var shell = document.getElementById("documentGallery");
@@ -5373,6 +5436,9 @@
       documentGalleryState.manifest = null;
       documentGalleryState.actionBusyByKey = {};
       documentGalleryState.actionErrorByKey = {};
+      documentGalleryState.renditionByKey = {};
+      documentGalleryState.renditionBusyByKey = {};
+      documentGalleryState.renditionErrorByKey = {};
       syncDocumentGalleryUi_();
       google.script.run
         .withSuccessHandler(function(res){
