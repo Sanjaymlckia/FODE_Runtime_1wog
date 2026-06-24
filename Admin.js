@@ -154,6 +154,16 @@ function requireOperationsAdmin_(email) {
   }
 }
 
+function isDocumentVerifier_(email) {
+  return isAdmin_(email);
+}
+
+function requireDocumentVerifier_(email) {
+  if (!isDocumentVerifier_(email)) {
+    throw new Error("Access denied: document verifier required");
+  }
+}
+
 function isStudentUrlConfigured_() {
   var studentBase = clean_(CONFIG.WEBAPP_URL_STUDENT || "");
   if (!studentBase) return false;
@@ -620,13 +630,10 @@ function adminDocumentManifestWarning_(code, detail) {
 function admin_getApplicantDocumentManifest(payload) {
   var adminEmail = getCallerEmail_();
   try {
-    if (!isAdmin_(adminEmail)) {
-      return { ok: false, code: "ACCESS_DENIED", error: "Access denied" };
-    }
     try {
-      requireSuperAdmin_(adminEmail);
+      requireDocumentVerifier_(adminEmail);
     } catch (_authErr) {
-      return { ok: false, code: "ACCESS_DENIED", error: "Access denied" };
+      return { ok: false, code: "ACCESS_DENIED", error: "Access denied: document verifier required" };
     }
 
     var p = payload && typeof payload === "object" ? payload : {};
@@ -866,13 +873,10 @@ function adminDocumentFileActionField_(fieldName) {
 
 function admin_getApplicantDocumentFileAction(payload) {
   var adminEmail = getCallerEmail_();
-  if (!isAdmin_(adminEmail)) {
-    return { ok: false, code: "ACCESS_DENIED", error: "Access denied" };
-  }
   try {
-    requireSuperAdmin_(adminEmail);
+    requireDocumentVerifier_(adminEmail);
   } catch (_authErr) {
-    return { ok: false, code: "ACCESS_DENIED", error: "Access denied" };
+    return { ok: false, code: "ACCESS_DENIED", error: "Access denied: document verifier required" };
   }
 
   try {
@@ -1826,8 +1830,11 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
   dbgId = String(dbgId || adminDebugId_());
   try {
   var adminEmail = getCallerEmail_();
-  if (!isAdmin_(adminEmail)) return err_("ACCESS_DENIED", "Access denied", dbgId);
-  requireSuperAdmin_(adminEmail);
+  try {
+    requireDocumentVerifier_(adminEmail);
+  } catch (_authErr) {
+    return err_("ACCESS_DENIED", "Access denied: document verifier required", dbgId);
+  }
 
   payload = payload || {};
   var rowNumber = Number(payload.rowNumber || 0);
@@ -1887,6 +1894,32 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
       comment: comment
     });
   }
+  var canWritePaymentAuthority = canBypassPaymentFreeze_(adminEmail);
+  var writePrepared = [];
+  for (var wp = 0; wp < prepared.length; wp++) {
+    var writeItem = prepared[wp];
+    var writeStatusField = writeItem && writeItem.mapping ? String(writeItem.mapping.status || "") : "";
+    var writeCommentField = writeItem && writeItem.mapping ? String(writeItem.mapping.comment || "") : "";
+    if (writeStatusField === cols.receipt) {
+      var receiptStatusBefore = clean_(currentRowObj[writeStatusField] || "");
+      var receiptCommentBefore = writeCommentField ? clean_(currentRowObj[writeCommentField] || "") : "";
+      var receiptChanged = writeItem.status !== receiptStatusBefore || writeItem.comment !== receiptCommentBefore;
+      if (receiptChanged && !canWritePaymentAuthority) {
+        logAudit_("PAYMENT_STATUS_ROLE_BLOCK", {
+          endpoint: "admin_updateDocStatuses",
+          applicantId: applicantId,
+          rowNumber: rowNumber,
+          actor: adminEmail || "",
+          debugId: dbgId,
+          changedFields: [writeStatusField, writeCommentField].filter(function(v) { return !!v; })
+        });
+        return err_("PAYMENT_AUTHORITY_REQUIRED", "Payment/receipt status updates require Super Admin authority.", dbgId);
+      }
+      if (!receiptChanged && !canWritePaymentAuthority) continue;
+    }
+    writePrepared.push(writeItem);
+  }
+  prepared = writePrepared;
 
   var wantsReceiptVerified = false;
   var beforePaymentVerified = isPaymentVerifiedDerived_(currentRowObj) === true;
@@ -1981,9 +2014,21 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
   log_(openLogSheet_(), "ADMIN_DOC_UPDATE", "row=" + rowNumber + " by=" + (adminEmail || "admin") + " docStage=" + docStage + " payment=" + paymentBadge + " overall=" + overallComputed);
   log_(openLogSheet_(), "DOC_STATUS_SAVE", JSON.stringify({
     applicantId: applicantId,
+    rowNumber: rowNumber,
+    actor: adminEmail || "",
     receiptStatus: clean_(refreshedRow.Receipt_Status || ""),
     docStageComputed: docStage,
     overallComputed: overallComputed,
+    changedFields: prepared.map(function(item) {
+      return item && item.mapping ? {
+        statusField: String(item.mapping.status || ""),
+        commentField: String(item.mapping.comment || ""),
+        previousStatus: clean_(priorRowObj[item.mapping.status] || ""),
+        newStatus: clean_(finalRowObj[item.mapping.status] || ""),
+        previousComment: clean_(priorRowObj[item.mapping.comment] || ""),
+        newComment: clean_(finalRowObj[item.mapping.comment] || "")
+      } : null;
+    }).filter(function(item) { return !!item; }),
     dbgId: dbgId
   }));
   return ok_({

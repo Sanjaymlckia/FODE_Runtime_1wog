@@ -2488,6 +2488,7 @@
     const IS_SUPER = <?!= JSON.stringify(!!IS_SUPER) ?>;
     const IS_OPERATIONS_ADMIN = String(ADMIN_ROLE || "").toUpperCase() === "OPERATIONS";
     const CAN_RUN_OPERATIONS_ACTIONS = IS_SUPER === true || IS_OPERATIONS_ADMIN === true;
+    const CAN_SAVE_DOCUMENT_STATUSES = !!String(ADMIN_ROLE || "").trim();
     const SUPER_ADMIN_EMAILS = <?!= JSON.stringify((SUPER_ADMIN_EMAILS || []).map(function(v){ return String(v || ""); })) ?>;
     const ROLE_DECISION_SOURCE = <?!= JSON.stringify(String(ROLE_DECISION_SOURCE || "CONFIG.ADMIN_ROLES")) ?>;
     const CAN_OVERRIDE = <?!= JSON.stringify(!!CAN_OVERRIDE) ?>;
@@ -4759,7 +4760,12 @@
       if (overallReasonEl) overallReasonEl.disabled = !allowEdit;
 
       var btnSaveDocs = document.getElementById("btnSaveDocs");
-      if (btnSaveDocs) btnSaveDocs.disabled = !allowEdit;
+      if (btnSaveDocs) {
+        btnSaveDocs.disabled = !allowEdit || !CAN_SAVE_DOCUMENT_STATUSES;
+        btnSaveDocs.title = CAN_SAVE_DOCUMENT_STATUSES
+          ? "Save document verification statuses. Audit records the signed-in operator email."
+          : "Access denied: configured document verifier required.";
+      }
 
       var btnSaveOverall = document.getElementById("btnSaveOverall");
       var overallStatusEl = document.getElementById("overallStatus");
@@ -6480,13 +6486,18 @@
         const el = document.getElementById(id);
         if (el) el.disabled = !enabled;
       });
-      ["btnSaveOverall", "btnSaveDocs"].forEach(function(id){
-        const el = document.getElementById(id);
-        if (el && !IS_SUPER) {
-          el.disabled = true;
-          el.title = "Supervisory action \u2014 requires approval, confirmation, and audit.";
-        }
-      });
+      const overallBtn = document.getElementById("btnSaveOverall");
+      if (overallBtn && !IS_SUPER) {
+        overallBtn.disabled = true;
+        overallBtn.title = "Supervisory action \u2014 requires approval, confirmation, and audit.";
+      }
+      const docsBtn = document.getElementById("btnSaveDocs");
+      if (docsBtn && !CAN_SAVE_DOCUMENT_STATUSES) {
+        docsBtn.disabled = true;
+        docsBtn.title = "Access denied: configured document verifier required.";
+      } else if (docsBtn && CAN_SAVE_DOCUMENT_STATUSES) {
+        docsBtn.title = "Save document verification statuses. Audit records the signed-in operator email.";
+      }
       applyPortalLockControls_(currentDetail);
       syncModalEditControls_();
       updateDirtyGuardUi_();
@@ -8819,8 +8830,8 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function saveDocs(){
-      if (!IS_SUPER) {
-        setMsg("mMsg", "Supervisory action \u2014 requires approval, confirmation, and audit. Normal Admin workflow cannot save document/status mutations.");
+      if (!CAN_SAVE_DOCUMENT_STATUSES) {
+        setMsg("mMsg", "Access denied: configured document verifier required to save document statuses.");
         return;
       }
       if (!currentRowNumber || !currentDetail) return;

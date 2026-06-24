@@ -45,14 +45,14 @@ const helperNames = [
 
 const implementationSource = helperNames.map(extractFunction).join("\n\n");
 const manifestSource = extractFunction("admin_getApplicantDocumentManifest");
-assert.match(manifestSource, /requireSuperAdmin_\(adminEmail\)/, "Super Admin gate must remain present");
+assert.match(manifestSource, /requireDocumentVerifier_\(adminEmail\)/, "Document verifier gate must remain present");
 assert.ok(
-  manifestSource.indexOf("requireSuperAdmin_(adminEmail)") < manifestSource.indexOf("openDataSheet_()"),
-  "Super Admin authorization must occur before sheet access"
+  manifestSource.indexOf("requireDocumentVerifier_(adminEmail)") < manifestSource.indexOf("openDataSheet_()"),
+  "Document verifier authorization must occur before sheet access"
 );
 assert.ok(
-  manifestSource.indexOf("requireSuperAdmin_(adminEmail)") < manifestSource.indexOf("DriveApp.getFolderById"),
-  "Super Admin authorization must occur before Drive access"
+  manifestSource.indexOf("requireDocumentVerifier_(adminEmail)") < manifestSource.indexOf("DriveApp.getFolderById"),
+  "Document verifier authorization must occur before Drive access"
 );
 
 const forbiddenPatterns = [
@@ -151,6 +151,7 @@ const context = {
   getCallerEmail_: () => "super@example.test",
   isAdmin_: () => true,
   requireSuperAdmin_: () => {},
+  requireDocumentVerifier_: () => {},
   openDataSheet_: () => ({}),
   findRowByApplicantId_: () => 50,
   getRowObject_: () => fixtureRow,
@@ -171,7 +172,7 @@ vm.runInContext(implementationSource, context);
 
 let unauthorizedSheetReads = 0;
 let unauthorizedDriveReads = 0;
-context.requireSuperAdmin_ = () => { throw new Error("Access denied: SUPER admin required"); };
+context.requireDocumentVerifier_ = () => { throw new Error("Access denied: document verifier required"); };
 context.openDataSheet_ = () => { unauthorizedSheetReads += 1; return {}; };
 context.DriveApp = {
   getFolderById: () => {
@@ -185,7 +186,7 @@ assert.equal(unauthorized.code, "ACCESS_DENIED");
 assert.equal(unauthorizedSheetReads, 0);
 assert.equal(unauthorizedDriveReads, 0);
 
-context.requireSuperAdmin_ = () => {};
+context.requireDocumentVerifier_ = () => {};
 context.openDataSheet_ = () => ({});
 context.DriveApp = { getFolderById: () => fixtureFolder };
 
@@ -257,7 +258,7 @@ assert.equal(
 );
 
 console.log("PASS static/source validation");
-console.log("PASS Super Admin authorization boundary");
+console.log("PASS document verifier authorization boundary");
 console.log("PASS no writes, sends, cache, Script Properties, byte reads, or withEnvelope_");
 console.log("PASS fixture FODE-26-002959");
 console.log(JSON.stringify({

@@ -50,12 +50,12 @@ const utilityFunctions = [
 const routeFunction = extractFunction(routesSource, "doGet_file_");
 const adminFunction = extractFunction(adminSource, "admin_getApplicantDocumentFileAction");
 assert.ok(
-  adminFunction.indexOf("requireSuperAdmin_(adminEmail)") < adminFunction.indexOf("openDataSheet_()"),
-  "Super Admin authorization must precede Sheet access"
+  adminFunction.indexOf("requireDocumentVerifier_(adminEmail)") < adminFunction.indexOf("openDataSheet_()"),
+  "Document verifier authorization must precede Sheet access"
 );
 assert.ok(
-  adminFunction.indexOf("requireSuperAdmin_(adminEmail)") < adminFunction.indexOf("DriveApp.getFileById"),
-  "Super Admin authorization must precede Drive access"
+  adminFunction.indexOf("requireDocumentVerifier_(adminEmail)") < adminFunction.indexOf("DriveApp.getFileById"),
+  "Document verifier authorization must precede Drive access"
 );
 const routeSignatureCheck = routeFunction.indexOf("verifyDocumentFileActionSignature_");
 assert.ok(routeSignatureCheck >= 0, "Signed route verification must exist");
@@ -154,6 +154,7 @@ const context = {
   getCallerEmail_: () => "super@example.test",
   isAdmin_: () => true,
   requireSuperAdmin_: () => {},
+  requireDocumentVerifier_: () => {},
   openDataSheet_: () => {
     sheetReads += 1;
     return {};
@@ -180,7 +181,7 @@ const context = {
 vm.createContext(context);
 vm.runInContext(`${utilityFunctions}\n\n${adminFunctions}`, context);
 
-context.requireSuperAdmin_ = () => { throw new Error("denied"); };
+context.requireDocumentVerifier_ = () => { throw new Error("denied"); };
 const denied = context.admin_getApplicantDocumentFileAction({
   rowNumber: 50,
   applicantId,
@@ -190,7 +191,7 @@ const denied = context.admin_getApplicantDocumentFileAction({
 assert.equal(denied.code, "ACCESS_DENIED");
 assert.equal(sheetReads, 0);
 assert.equal(driveReads, 0);
-context.requireSuperAdmin_ = () => {};
+context.requireDocumentVerifier_ = () => {};
 
 function request(sourceField, itemIndex, overrides = {}) {
   return context.admin_getApplicantDocumentFileAction({
