@@ -345,12 +345,55 @@
       padding:16px;
       backdrop-filter: blur(10px);
       box-shadow: 0 22px 60px rgba(0,0,0,.36), 0 0 0 1px rgba(191,219,254,.05);
+      display:flex;
+      flex-direction:column;
     }
     .modalHead{
       display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
       margin-bottom: 10px;
     }
     .kv{ display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:10px; margin: 10px 0 12px 0; }
+    .reviewWorkflowSection{ margin-top:12px; }
+    .reviewWorkflowIdentity{ order:10; }
+    .reviewDocumentWorkflow{ order:20; }
+    #communicationsCard{ order:30; }
+    #booksDryRunCard{ order:40; }
+    .reviewSecondaryWorkflow{ order:50; }
+    .reviewFooterWorkflow{ order:60; }
+    .reviewSectionTitle{
+      margin-top:12px;
+      font-weight:900;
+      font-size:14px;
+      color:#f4f9ff;
+    }
+    .reviewSectionNote{
+      margin-top:6px;
+      font-size:12px;
+      color:#b9cbe0;
+      line-height:1.45;
+    }
+    .documentReviewActionBar{
+      position:sticky;
+      top:0;
+      z-index:4;
+      margin:10px 0;
+      padding:10px;
+      border-radius:12px;
+      border:1px solid rgba(245,158,11,.30);
+      background:rgba(8,18,32,.98);
+      box-shadow:0 10px 24px rgba(0,0,0,.24), inset 0 0 0 1px rgba(148,163,184,.08);
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .documentReviewActionBar .dirtyWarn{
+      margin:0;
+      padding:6px 9px;
+      border-radius:999px;
+      background:rgba(120,53,15,.28);
+      border:1px solid rgba(245,158,11,.32);
+    }
     .box{
       padding:10px; border-radius: 12px;
       border: 1px solid rgba(148,163,184,.18);
@@ -2167,7 +2210,6 @@
       <div class="box">
         <div class="k">Audit</div>
         <div class="v" id="mAudit">—</div>
-        <div id="dirtyWarn" class="dirtyWarn hidden">⚠ Unsaved changes — click "Save Document Statuses"</div>
       </div>
 
       <div id="applicantStatusStrip" class="applicant-status-strip hidden">
@@ -2317,14 +2359,10 @@
         <div id="booksInvoicePayload" class="booksDryRunPayload hidden"></div>
       </div>
 
-      <div id="overallLockInfo" class="box hidden" style="background:#eef6ff;border-color:#bfd8ff;">
-        <div class="k">Overall Status Lock</div>
-        <div class="v" style="font-size:13px;font-weight:600;color:#1f3b63;">Overall status is locked because payment is verified. Unlock the form to make further changes.</div>
-      </div>
+      <div id="documentReviewWorkflow" class="reviewDocumentWorkflow">
+      <div class="reviewSectionTitle">Document Evidence and Verification</div>
+      <div class="reviewSectionNote">Review uploaded evidence first, then update document statuses. The save warning and save button stay attached to this document-verification workflow.</div>
 
-      <div style="margin-top:12px; font-weight:900;">Documents (status + comment)</div>
-      <div class="opsSafetyNotice">Legacy edit/mutation surface. Saving document or status changes is supervisory-gated and not a normal Admin workflow action.</div>
-      <div id="docs" class="docs"></div>
       <div class="row" style="margin-top:10px; align-items:center;">
         <button id="btnOpenDocumentGallery" class="btn small" type="button" onclick="toggleDocumentGallery_()">Open Document Gallery</button>
         <div class="muted" style="font-size:12px;">Read-only manifest view. Loads only after explicit operator click and uses secure per-file actions.</div>
@@ -2339,6 +2377,15 @@
         </div>
         <div id="documentGalleryBody"></div>
       </div>
+
+      <div id="overallLockInfo" class="box hidden" style="background:#eef6ff;border-color:#bfd8ff;">
+        <div class="k">Overall Status Lock</div>
+        <div class="v" style="font-size:13px;font-weight:600;color:#1f3b63;">Overall status is locked because payment is verified. Unlock the form to make further changes.</div>
+      </div>
+
+      <div style="margin-top:12px; font-weight:900;">Documents (status + comment)</div>
+      <div class="opsSafetyNotice">Legacy edit/mutation surface. Saving document or status changes is supervisory-gated and not a normal Admin workflow action.</div>
+      <div id="docs" class="docs"></div>
 
       <div class="row" style="margin-top:12px;">
         <div class="field">
@@ -2361,15 +2408,23 @@
         <button id="btnLockPortal" class="btn small danger" onclick="lockReview_()" title="Local editing lock only. Does not change portal access state.">Lock Editing</button>
       </div>
 
-      <div class="row" style="margin-top:10px;">
+      <div class="documentReviewActionBar">
         <button id="btnSaveDocs" class="btn accent" onclick="saveDocs()">Save Document Statuses</button>
+        <div id="dirtyWarn" class="dirtyWarn hidden">⚠ Unsaved document-status changes</div>
+        <button id="btnRefreshDetails" class="btn small" onclick="refreshDetails()">Refresh Details</button>
+        <button class="btn small" onclick="closeModal()">Close Review</button>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
         <button id="btnCopyLink" class="btn" onclick="copyPortalLink()">Copy Portal Link</button>
         <button id="btnResetLink" class="btn warn" onclick="resetPortalLink()" title="Super Admin only. Resets the portal secret and generates a new link.">Reset Link</button>
-        <button id="btnRefreshDetails" class="btn small" onclick="refreshDetails()">Refresh Details</button>
       </div>
       <div id="docsRouteHint" class="muted" style="margin-top:8px;font-size:12px;"></div>
       <div class="muted" style="margin-top:6px;font-size:12px;">Copy Portal Link does not mutate data. Reset Link is Super Admin only and regenerates the portal secret after confirmation. Unlock Editing / Lock Editing are local modal controls only and do not change applicant portal access state. Actual portal access lock/unlock is a separate Super Admin server action.</div>
+      </div>
 
+      <details id="reviewSecondaryTools" class="reviewSecondaryWorkflow">
+      <summary style="cursor:pointer;font-weight:800;">Contact fallback / CRM / admin support details</summary>
       <details id="superEmailOverrideWrap" style="margin-top:10px;">
         <summary style="cursor:pointer;font-weight:700;">Operations Admin: Correct Parent Email</summary>
         <div class="row" style="margin-top:8px;">
@@ -2404,9 +2459,12 @@
         </select>
         <button class="btn small ok" onclick="exportPortalLinksCsv()">Export Portal Links (CSV)</button>
       </div>
+      </details>
 
-      <div id="portalLinkBox" class="muted" style="margin-top:10px;word-break:break-all;"></div>
-      <div id="mMsg" class="muted" style="margin-top:10px;"></div>
+      <div class="reviewFooterWorkflow">
+        <div id="portalLinkBox" class="muted" style="margin-top:10px;word-break:break-all;"></div>
+        <div id="mMsg" class="muted" style="margin-top:10px;"></div>
+      </div>
     </div>
   </div>
 
@@ -4938,6 +4996,32 @@
       }
       return baseLabel;
     }
+    function documentGallerySortRank_(item){
+      var field = String((item && item.sourceField) || "").trim();
+      var label = String((item && item.label) || "").toLowerCase();
+      var fileName = String((item && item.fileName) || "").toLowerCase();
+      var haystack = [field.toLowerCase(), label, fileName].join(" ");
+      if (field === "Passport_Photo_File" || /passport.*photo|student.*photo|\bphoto\b/.test(haystack)) return 10;
+      if (field === "Birth_ID_Passport_File" || /birth|certificate|nid|passport|\bid\b/.test(haystack)) return 20;
+      if (field === "Latest_School_Report_File" || /school.*report|report/.test(haystack)) return 30;
+      if (field === "Transfer_Certificate_File" || /transfer/.test(haystack)) return 40;
+      if (field === "Fee_Receipt_File" || /receipt|payment|fee/.test(haystack)) return 50;
+      return 90;
+    }
+    function documentGallerySortedItems_(items){
+      return (Array.isArray(items) ? items.slice() : []).sort(function(a, b){
+        var rankA = documentGallerySortRank_(a);
+        var rankB = documentGallerySortRank_(b);
+        if (rankA !== rankB) return rankA - rankB;
+        var fieldA = String((a && a.sourceField) || "");
+        var fieldB = String((b && b.sourceField) || "");
+        if (fieldA !== fieldB) return fieldA < fieldB ? -1 : 1;
+        var idxA = Number(a && a.itemIndex);
+        var idxB = Number(b && b.itemIndex);
+        if (Number.isFinite(idxA) && Number.isFinite(idxB) && idxA !== idxB) return idxA - idxB;
+        return 0;
+      });
+    }
     function documentGalleryTileKey_(file, idx){
       var sourceField = String((file && file.sourceField) || "unmapped").trim() || "unmapped";
       var itemIndex = Number(file && file.itemIndex);
@@ -5023,11 +5107,14 @@
         body.innerHTML = `<div class="documentGalleryEmpty">No document manifest entries were returned for this applicant.</div>`;
         return;
       }
-      var fileTiles = files.map(function(file, idx){
+      var sortedFiles = documentGallerySortedItems_(files);
+      var sortedMissing = documentGallerySortedItems_(missing);
+      var fileTiles = sortedFiles.map(function(file, idx){
         var tileKey = documentGalleryTileKey_(file, idx);
         var sourceField = String((file && file.sourceField) || "").trim();
         var itemIndex = Number(file && file.itemIndex);
         var label = documentGalleryOperatorLabel_(sourceField, itemIndex, file && file.label);
+        var sourceText = sourceField ? ("Source: " + sourceField + (Number.isFinite(itemIndex) ? (" #" + String(itemIndex + 1)) : "")) : "Source: mapped evidence";
         var actionKey = documentGalleryActionKey_(sourceField, itemIndex);
         var busy = !!documentGalleryState.actionBusyByKey[actionKey];
         var errorText = String(documentGalleryState.actionErrorByKey[actionKey] || "").trim();
@@ -5041,8 +5128,9 @@
               <div class="documentGalleryTileText">
                 <div class="documentGalleryTileTitle">${esc(label)}</div>
                 <div class="documentGalleryTileMeta">
+                  <span class="documentGalleryFileType">${esc(sourceText)}</span>
                   <span class="documentGalleryFileName" title="${esc(fileName || "Mapped uploaded evidence")}">${esc(fileName || "Mapped uploaded evidence")}</span>
-                  ${mimeType ? `<span class="documentGalleryFileType">${esc(mimeType)}</span>` : ``}
+                  ${mimeType ? `<span class="documentGalleryFileType">Type: ${esc(mimeType)}</span>` : ``}
                 </div>
               </div>
               <span class="statusTag">${esc(file && file.previewEligible === true ? "Image" : "Download first")}</span>
@@ -5066,14 +5154,14 @@
           </div>
         `;
       }).join("");
-      var missingTiles = missing.map(function(item, idx){
+      var missingTiles = sortedMissing.map(function(item, idx){
         var label = documentGalleryOperatorLabel_(item && item.sourceField, item && item.itemIndex, item && item.label);
         return `
           <div class="documentGalleryTile missing" data-gallery-tile="${esc(documentGalleryMissingTileKey_(item, idx))}">
             <div class="documentGalleryTileHeader">
               <div class="documentGalleryTileText">
                 <div class="documentGalleryTileTitle">${esc(label)}</div>
-                <div class="documentGalleryTileMeta">Missing</div>
+                <div class="documentGalleryTileMeta">Source: ${esc(String((item && item.sourceField) || "required document"))}</div>
               </div>
               <span class="statusTag off">Missing</span>
             </div>
