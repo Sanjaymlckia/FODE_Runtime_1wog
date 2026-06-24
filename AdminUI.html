@@ -2213,6 +2213,13 @@
               <option value="payment_followup">Payment / Receipt Follow-Up</option>
               <option value="application_feedback">Application Feedback</option>
               <option value="custom_email">Custom Email - Selected Applicant</option>
+              <option value="application_acceptance_confirmation">Acceptance Confirmation - Selected Applicant</option>
+              <option value="application_verified_quote">Verified Quote / Fee Guidance - Selected Applicant</option>
+              <option value="application_final_reminder">Final Reminder - Selected Applicant</option>
+              <option value="application_exam_fee_reminder">National Exam Fee Reminder - Selected Applicant</option>
+              <option value="prospect_general_guidance">Prospect General Guidance - Selected Applicant</option>
+              <option value="application_receipt_request">Payment Receipt Request - Selected Applicant</option>
+              <option value="contact_fallback_manual">Manual Contact Fallback - Selected Applicant</option>
             </select>
           </div>
           <button id="btnCommPreview" class="btn small" type="button" onclick="previewApplicantMessageUi_('top_preview')">Preview</button>
@@ -2222,14 +2229,14 @@
         <div id="commTemplateHelp" class="muted" style="font-size:12px;margin-top:8px;">
           Selected applicant only. Use Missing Documents for absent or incomplete uploads, Payment / Receipt Follow-Up for outstanding payment evidence, and Custom Email for a reviewed one-off message. Legacy Application Reminder is overloaded; confirm the applicant condition before use.
         </div>
-        <div class="opsSafetyNotice" style="margin-top:8px;">Preview is read-only and does not send email. Send remains unavailable until an eligible preview is generated and an authorized operator explicitly confirms the send.</div>
+        <div class="opsSafetyNotice" style="margin-top:8px;">The editable draft below shows the generated language before send. Subject and body may be reviewed and adjusted before final confirmation.</div>
         <div id="legacyEditableWarning" class="legacy-editable-warning">Use the editable email panel below for this message type.</div>
         <div id="commCooldownBanner" class="communication-cooldown-banner hidden">
           <div id="commCooldownBannerTitle" class="communication-cooldown-banner__title"></div>
           <div id="commCooldownBannerBody" class="communication-cooldown-banner__body"></div>
         </div>
         <div id="commEditablePanel" class="box commEditablePanel hidden">
-          <div class="commEditablePanelTitle">Editable Email Draft</div>
+          <div class="commEditablePanelTitle">Editable Email Draft / Template Preview</div>
           <div class="row">
             <div class="field" style="flex:1 1 320px;">
               <label>Recipient Email</label>
@@ -5272,7 +5279,7 @@
     }
     function isEditableCommType_(messageType){
       var t = String(messageType || "").trim();
-      return t === "application_feedback" || t === "custom_email";
+      return ["legacy_invite", "reminder", "application_feedback", "custom_email", "docs_missing", "payment_followup", "application_acceptance_confirmation", "application_verified_quote", "application_final_reminder", "application_exam_fee_reminder", "prospect_general_guidance", "application_receipt_request", "contact_fallback_manual"].indexOf(t) >= 0;
     }
     function getCommEditableFields_(){
       return {
@@ -5300,6 +5307,15 @@
         if (fields.subject) fields.subject.placeholder = "Enter subject";
         if (fields.body) fields.body.placeholder = "Enter custom email body";
       }
+    }
+    function clearCommEditableDraft_(messageType){
+      var fields = getCommEditableFields_();
+      var selectedType = String(messageType || getSelectedCommMessageType_() || "");
+      if (fields.recipient) fields.recipient.value = String((currentDetail && (currentDetail.Effective_Email || currentDetail.Parent_Email_Corrected || currentDetail.Parent_Email)) || "");
+      if (fields.subject) fields.subject.value = "";
+      if (fields.body) fields.body.value = "";
+      if (fields.subject) fields.subject.placeholder = selectedType === "custom_email" ? "Enter subject" : "Generate preview to populate default subject";
+      if (fields.body) fields.body.placeholder = selectedType === "custom_email" ? "Enter custom email body" : "Generate preview to populate default body";
     }
     function renderCommEditablePanel_(){
       var panel = document.getElementById("commEditablePanel");
@@ -6121,6 +6137,9 @@
     function onCommunicationsMessageTypeChange_(){
       setSelectedCommMessageType_(getSelectedCommMessageType_());
       resetCommunicationsForSelection_(false);
+      if (currentDetail && getSelectedCommMessageType_() !== "custom_email") {
+        previewApplicantMessageUi_("type_change_refresh");
+      }
     }
     function runCommunicationsAction_(fnName, payload, onOk){
       communicationsState.busy = true;
@@ -6189,7 +6208,7 @@
       var applicantId = String(currentDetail.ApplicantID || "").trim();
       var messageType = getSelectedCommMessageType_();
       var payload = { applicantId: applicantId, messageType: messageType };
-      if (isEditableCommType_(messageType)) Object.assign(payload, getCommEditablePayload_());
+      if (isEditableCommType_(messageType) && String(buttonSource || "") !== "top_preview") Object.assign(payload, getCommEditablePayload_());
       communicationsState.lastPreviewButton = String(buttonSource || "");
       communicationsState.lastPayload = resafeJson_(payload);
       communicationsState.lastRawResponse = null;

@@ -6615,155 +6615,155 @@ function getCommunicationSemanticRegistry_() {
     },
     {
       messageType: "prospect_general_guidance",
-      templateVersion: "planned-1",
+      templateVersion: "manual-selected-1",
       audienceClass: "PROSPECT_GUIDANCE",
       semanticIntent: "general_fode_guidance_for_interested_people",
       operatorLabel: "General FODE Guidance",
-      conditionPolicyId: "PROSPECT_AUTHORITY_NOT_IMPLEMENTED",
-      allowedSendModes: ["selected", "batch"],
-      requiresApplicantRow: false,
+      conditionPolicyId: "PROSPECT_MANUAL_SELECTED",
+      allowedSendModes: ["selected"],
+      requiresApplicantRow: true,
       requiresValidEmail: true,
       requiresContactConsent: true,
-      requiredRole: "NOT_AUTHORIZED",
-      editableMode: "locked",
+      requiredRole: "EXISTING_SEND_AUTHORITY",
+      editableMode: "limited",
       batchSafe: false,
-      fallbackInstruction: "Do not send until lead source, contact basis, suppression, opt-out, preview, and cohort authority are implemented.",
-      operatorWarning: "Planned only. Must not use applicant Stage Batch authority.",
-      auditMeaning: "Reserved for generic prospect guidance without applicant-specific claims.",
+      fallbackInstruction: "Use only as an operator-controlled selected-recipient message. Do not use applicant Stage Batch authority.",
+      operatorWarning: "Manual selected-applicant gate only. Must not use applicant Stage Batch authority.",
+      auditMeaning: "Operator-reviewed general FODE guidance sent from a selected-recipient context.",
       subjectBuilderId: "buildProspectGeneralGuidanceSubject_",
       bodyBuilderId: "buildProspectGeneralGuidanceBody_",
-      implementationStatus: "planned",
-      authorityModel: "PROSPECT_RECIPIENT_AUTHORITY_REQUIRED"
+      implementationStatus: "active",
+      authorityModel: "SELECTED_RECIPIENT_MANUAL_AUTHORITY"
     },
     {
       messageType: "application_receipt_request",
-      templateVersion: "planned-1",
+      templateVersion: "manual-selected-1",
       audienceClass: "APPLICANT_WORKFLOW",
       semanticIntent: "request_payment_receipt_or_proof",
       operatorLabel: "Request Payment Receipt",
-      conditionPolicyId: "APPLICANT_RECEIPT_REQUIRED_NOT_IMPLEMENTED",
+      conditionPolicyId: "APPLICANT_RECEIPT_REQUIRED_MANUAL_SELECTED",
       allowedSendModes: ["selected"],
       requiresApplicantRow: true,
       requiresValidEmail: true,
       requiresContactConsent: false,
-      requiredRole: "NOT_AUTHORIZED",
-      editableMode: "locked",
+      requiredRole: "EXISTING_SEND_AUTHORITY",
+      editableMode: "limited",
       batchSafe: false,
-      fallbackInstruction: "Use existing approved manual handling until receipt-request authority is implemented.",
-      operatorWarning: "Planned only. Payment and receipt state must be authoritative before activation.",
-      auditMeaning: "Reserved for requesting payment receipt or proof from an applicant.",
+      fallbackInstruction: "Use selected-applicant manual preview/send only after confirming payment evidence is required.",
+      operatorWarning: "Payment and receipt state must be checked before sending.",
+      auditMeaning: "Payment receipt or proof requested for one selected applicant.",
       subjectBuilderId: "buildApplicationReceiptRequestSubject_",
       bodyBuilderId: "buildApplicationReceiptRequestBody_",
-      implementationStatus: "planned"
+      implementationStatus: "active"
     },
     {
       messageType: "application_verified_quote",
-      templateVersion: "planned-1",
+      templateVersion: "manual-selected-1",
       audienceClass: "APPLICANT_WORKFLOW",
       semanticIntent: "documents_verified_quote_payment_and_subject_guidance",
       operatorLabel: "Verified Documents - Quote and Payment Guidance",
-      conditionPolicyId: "VERIFIED_QUOTE_AUTHORITY_NOT_IMPLEMENTED",
+      conditionPolicyId: "VERIFIED_QUOTE_MANUAL_SELECTED",
       allowedSendModes: ["selected"],
       requiresApplicantRow: true,
       requiresValidEmail: true,
       requiresContactConsent: false,
-      requiredRole: "NOT_AUTHORIZED",
-      editableMode: "locked",
+      requiredRole: "EXISTING_SEND_AUTHORITY",
+      editableMode: "limited",
       batchSafe: false,
-      fallbackInstruction: "Continue the existing separately governed quote workflow until reconciliation is approved.",
-      operatorWarning: "Planned only. Existing docs_verified_quote_email sits outside the normalized applicant-message family.",
-      auditMeaning: "Reserved for quote, payment, and subject guidance after authoritative document verification.",
+      fallbackInstruction: "Use selected-applicant manual preview/send only after quote/payment guidance has been checked.",
+      operatorWarning: "Existing docs_verified_quote_email remains separate. Do not imply final acceptance.",
+      auditMeaning: "Quote, payment, and subject guidance sent for one selected applicant after operator review.",
       subjectBuilderId: "buildApplicationVerifiedQuoteSubject_",
       bodyBuilderId: "buildApplicationVerifiedQuoteBody_",
-      implementationStatus: "planned",
+      implementationStatus: "active",
       legacyExternalType: "docs_verified_quote_email"
     },
     {
       messageType: "application_acceptance_confirmation",
-      templateVersion: "planned-1",
+      templateVersion: "manual-selected-1",
       audienceClass: "APPLICANT_WORKFLOW",
       semanticIntent: "acceptance_or_enrolment_confirmation",
       operatorLabel: "Acceptance / Enrolment Confirmation",
-      conditionPolicyId: "ACCEPTANCE_AUTHORITY_NOT_IMPLEMENTED",
+      conditionPolicyId: "ACCEPTANCE_MANUAL_SELECTED",
       allowedSendModes: ["selected"],
       requiresApplicantRow: true,
       requiresValidEmail: true,
       requiresContactConsent: false,
-      requiredRole: "NOT_AUTHORIZED",
-      editableMode: "locked",
+      requiredRole: "EXISTING_SEND_AUTHORITY",
+      editableMode: "limited",
       batchSafe: false,
-      fallbackInstruction: "Do not communicate acceptance until final acceptance and enrolment authority is defined.",
-      operatorWarning: "High-authority planned type. Actionability or payment evidence alone must not activate it.",
-      auditMeaning: "Reserved for authoritative acceptance or enrolment confirmation.",
+      fallbackInstruction: "Send only when final acceptance and enrolment authority has been checked by the operator.",
+      operatorWarning: "High-authority selected-applicant message. Do not send from payment or actionability alone.",
+      auditMeaning: "Acceptance or enrolment confirmation sent for one selected applicant after operator review.",
       subjectBuilderId: "buildApplicationAcceptanceConfirmationSubject_",
       bodyBuilderId: "buildApplicationAcceptanceConfirmationBody_",
-      implementationStatus: "planned"
+      implementationStatus: "active"
     },
     {
       messageType: "application_exam_fee_reminder",
-      templateVersion: "planned-1",
+      templateVersion: "manual-selected-1",
       audienceClass: "APPLICANT_WORKFLOW",
       semanticIntent: "national_exam_fee_due_reminder",
       operatorLabel: "National Exam Fee Reminder",
-      conditionPolicyId: "EXAM_FEE_DUE_AUTHORITY_NOT_IMPLEMENTED",
+      conditionPolicyId: "EXAM_FEE_DUE_MANUAL_SELECTED",
       allowedSendModes: ["selected"],
       requiresApplicantRow: true,
       requiresValidEmail: true,
       requiresContactConsent: false,
-      requiredRole: "NOT_AUTHORIZED",
-      editableMode: "locked",
+      requiredRole: "EXISTING_SEND_AUTHORITY",
+      editableMode: "limited",
       batchSafe: false,
-      fallbackInstruction: "Do not send until exam-fee-due authority and the applicant subject count are confirmed.",
-      operatorWarning: "Planned only. K150 per subject is the current operator-known fee; confirm the subject count before calculating or communicating an applicant-specific amount.",
-      auditMeaning: "Reserved for National Exam Fee reminders backed by authoritative fee-due and subject-count evidence.",
+      fallbackInstruction: "Confirm exam-fee-due authority and subject count before sending.",
+      operatorWarning: "K150 per subject is the current operator-known fee; confirm the subject count before calculating or communicating an applicant-specific amount.",
+      auditMeaning: "National Exam Fee reminder sent for one selected applicant after fee and subject-count review.",
       subjectBuilderId: "buildApplicationExamFeeReminderSubject_",
       bodyBuilderId: "buildApplicationExamFeeReminderBody_",
-      implementationStatus: "planned",
+      implementationStatus: "active",
       requiresExamFeeDueAuthority: true,
       requiresSubjectConfirmation: true,
       currentFeePerSubjectKina: 150
     },
     {
       messageType: "application_final_reminder",
-      templateVersion: "planned-1",
+      templateVersion: "manual-selected-1",
       audienceClass: "APPLICANT_WORKFLOW",
       semanticIntent: "final_follow_up_before_dormant_or_manual_handling",
       operatorLabel: "Final Application Reminder",
-      conditionPolicyId: "FINAL_REMINDER_AUTHORITY_NOT_IMPLEMENTED",
+      conditionPolicyId: "FINAL_REMINDER_MANUAL_SELECTED",
       allowedSendModes: ["selected"],
       requiresApplicantRow: true,
       requiresValidEmail: true,
       requiresContactConsent: false,
-      requiredRole: "NOT_AUTHORIZED",
-      editableMode: "locked",
+      requiredRole: "EXISTING_SEND_AUTHORITY",
+      editableMode: "limited",
       batchSafe: false,
-      fallbackInstruction: "Continue approved manual handling until final-reminder cadence and dormant-state authority are defined.",
-      operatorWarning: "Planned only. Must not be inferred solely from elapsed time or actionability.",
-      auditMeaning: "Reserved for final follow-up before dormant or manual handling.",
+      fallbackInstruction: "Use only after operator review of cadence and applicant state.",
+      operatorWarning: "Must not be inferred solely from elapsed time or generic actionability.",
+      auditMeaning: "Final follow-up sent for one selected applicant after operator review.",
       subjectBuilderId: "buildApplicationFinalReminderSubject_",
       bodyBuilderId: "buildApplicationFinalReminderBody_",
-      implementationStatus: "planned"
+      implementationStatus: "active"
     },
     {
       messageType: "contact_fallback_manual",
-      templateVersion: "manual-1",
+      templateVersion: "manual-selected-1",
       audienceClass: "OPERATOR_MANUAL",
       semanticIntent: "invalid_email_or_no_effective_email_manual_contact_path",
       operatorLabel: "Manual Contact Fallback",
       conditionPolicyId: "NO_EFFECTIVE_EMAIL_MANUAL_FALLBACK",
-      allowedSendModes: ["manual_fallback"],
+      allowedSendModes: ["selected"],
       requiresApplicantRow: true,
       requiresValidEmail: false,
       requiresContactConsent: true,
       requiredRole: "EXISTING_MANUAL_FALLBACK_AUTHORITY",
       editableMode: "limited",
       batchSafe: false,
-      fallbackInstruction: "Use the approved manual fallback process; this registry entry does not send email.",
-      operatorWarning: "Manual fallback only. It is not a normal email message type.",
-      auditMeaning: "Manual contact fallback required because effective email contact is unavailable.",
+      fallbackInstruction: "Use the approved phone or WhatsApp manual-contact process. This selected surface records and previews the operator guidance only.",
+      operatorWarning: "Manual fallback only. Do not use as a bulk email message type.",
+      auditMeaning: "Manual contact fallback guidance prepared because effective email contact is unavailable.",
       subjectBuilderId: "buildContactFallbackManualSubject_",
       bodyBuilderId: "buildContactFallbackManualBody_",
-      implementationStatus: "manual"
+      implementationStatus: "active"
     }
   ];
 }
@@ -7169,13 +7169,15 @@ function buildDocsMissingEmailBody_(context) {
     "",
     "We are continuing the review of your FODE KIA application, but one or more required documents are not available or are incomplete in the current application record.",
     "",
-    "This can happen when an upload did not reach us correctly. Please reopen the portal link below and upload or resend the required documents:",
+    "Your application cannot be fully reviewed or processed until the required documents are uploaded. If these documents remain missing, your admission processing may be delayed or blocked.",
+    "",
+    "This can happen when an upload did not reach us correctly. Please reopen the portal link below and upload or resend the missing required documents as soon as possible:",
     "",
     String(context.portalUrl || ""),
     "",
     "Applicant ID: " + String(context.applicantId || ""),
     "",
-    "The application review remains open while the required documents are completed. If you need help identifying them, contact FODE Admissions at fode@kundu.ac.",
+    "The application review cannot continue until the documents are received. If you need help identifying or uploading them, contact FODE Admissions at fode@kundu.ac.",
     "",
     "FODE Admissions",
     "Kundu International Academy"
@@ -8099,6 +8101,55 @@ function buildApplicantMessage_(context) {
       ok: true,
       subject: "FODE KIA Application - Payment Follow-Up",
       body: buildPaymentFollowupEmailBody_(ctx)
+    };
+  }
+  if (type === "application_acceptance_confirmation") {
+    return {
+      ok: true,
+      subject: buildApplicationAcceptanceConfirmationSubject_(),
+      body: buildApplicationAcceptanceConfirmationBody_(ctx)
+    };
+  }
+  if (type === "application_verified_quote") {
+    return {
+      ok: true,
+      subject: buildApplicationVerifiedQuoteSubject_(),
+      body: buildApplicationVerifiedQuoteBody_(ctx)
+    };
+  }
+  if (type === "application_final_reminder") {
+    return {
+      ok: true,
+      subject: buildApplicationFinalReminderSubject_(),
+      body: buildApplicationFinalReminderBody_(ctx)
+    };
+  }
+  if (type === "application_exam_fee_reminder") {
+    return {
+      ok: true,
+      subject: buildApplicationExamFeeReminderSubject_(),
+      body: buildApplicationExamFeeReminderBody_(ctx)
+    };
+  }
+  if (type === "prospect_general_guidance") {
+    return {
+      ok: true,
+      subject: buildProspectGeneralGuidanceSubject_(),
+      body: buildProspectGeneralGuidanceBody_(ctx)
+    };
+  }
+  if (type === "application_receipt_request") {
+    return {
+      ok: true,
+      subject: buildApplicationReceiptRequestSubject_(),
+      body: buildApplicationReceiptRequestBody_(ctx)
+    };
+  }
+  if (type === "contact_fallback_manual") {
+    return {
+      ok: true,
+      subject: buildContactFallbackManualSubject_(),
+      body: buildContactFallbackManualBody_(ctx)
     };
   }
   return { ok: false, code: "UNKNOWN_MESSAGE_TYPE", subject: "", body: "" };
@@ -9204,6 +9255,20 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
   var hasEditedBody = typeof options.editedBody === "string" && !!clean_(options.editedBody || "");
   var previewSubject = hasEditedSubject ? String(options.editedSubject) : String(built.subject || "");
   var previewBody = hasEditedBody ? String(options.editedBody) : String(built.body || "");
+  if (context.messageType === "custom_email" && (!hasEditedSubject || !hasEditedBody)) {
+    return {
+      ok: true,
+      action: "preview",
+      eligible: false,
+      result: "BLOCKED",
+      blockCode: !hasEditedSubject ? "MISSING_SUBJECT" : "MISSING_BODY",
+      blockReason: !hasEditedSubject ? "Custom email subject is required." : "Custom email body is required.",
+      applicantId: clean_(context.applicantId || ""),
+      messageType: clean_(context.messageType || ""),
+      effectiveEmail: previewRecipient,
+      debugId: clean_(context.debugId || newDebugId_())
+    };
+  }
   var preview = {
     ok: true,
     action: "preview",

@@ -121,16 +121,17 @@ const prospect = context.getCommunicationSemanticDefinition_("prospect_general_g
 assert.equal(prospect.audienceClass, "PROSPECT_GUIDANCE");
 assert.equal(prospect.requiresContactConsent, true);
 assert.equal(prospect.batchSafe, false);
-assert.equal(prospect.authorityModel, "PROSPECT_RECIPIENT_AUTHORITY_REQUIRED");
+assert.equal(prospect.implementationStatus, "active");
+assert.equal(prospect.authorityModel, "SELECTED_RECIPIENT_MANUAL_AUTHORITY");
 assert.match(prospect.operatorWarning, /must not use applicant Stage Batch authority/i);
 assert.equal(Object.hasOwn(prospect, "subject"), false);
 assert.equal(Object.hasOwn(prospect, "body"), false);
 assert.doesNotMatch(JSON.stringify(prospect), /\{\{[^}]+\}\}/);
 
 const examFeeReminder = context.getCommunicationSemanticDefinition_("application_exam_fee_reminder");
-assert.ok(examFeeReminder, "Planned National Exam Fee reminder must exist");
+assert.ok(examFeeReminder, "Manual selected-applicant National Exam Fee reminder must exist");
 assert.equal(examFeeReminder.audienceClass, "APPLICANT_WORKFLOW");
-assert.equal(examFeeReminder.implementationStatus, "planned");
+assert.equal(examFeeReminder.implementationStatus, "active");
 assert.equal(examFeeReminder.requiresApplicantRow, true);
 assert.equal(examFeeReminder.requiresValidEmail, true);
 assert.equal(examFeeReminder.requiresExamFeeDueAuthority, true);
@@ -138,7 +139,7 @@ assert.equal(examFeeReminder.requiresSubjectConfirmation, true);
 assert.equal(examFeeReminder.currentFeePerSubjectKina, 150);
 assert.equal(examFeeReminder.batchSafe, false);
 assert.equal(context.isCommunicationTypeBatchSafe_("application_exam_fee_reminder"), false);
-assert.equal(context.normalizeApplicantMessageType_("application_exam_fee_reminder"), "");
+assert.equal(context.normalizeApplicantMessageType_("application_exam_fee_reminder"), "application_exam_fee_reminder");
 assert.match(examFeeReminder.operatorWarning, /confirm the subject count/i);
 
 for (const entry of registry.filter((item) => item.audienceClass === "APPLICANT_WORKFLOW")) {
@@ -150,7 +151,23 @@ for (const entry of planned) {
   assert.equal(context.normalizeApplicantMessageType_(entry.messageType), "", `${entry.messageType} must remain rejected by preview/send normalization`);
   assert.equal(entry.requiredRole, "NOT_AUTHORIZED");
 }
-assert.equal(context.normalizeApplicantMessageType_(manual[0].messageType), "", "Manual fallback must not become a normal email message type");
+
+const manualSelectedTypes = [
+  "application_acceptance_confirmation",
+  "application_verified_quote",
+  "application_final_reminder",
+  "application_exam_fee_reminder",
+  "prospect_general_guidance",
+  "application_receipt_request",
+  "contact_fallback_manual"
+];
+for (const messageType of manualSelectedTypes) {
+  const entry = context.getCommunicationSemanticDefinition_(messageType);
+  assert.equal(entry.implementationStatus, "active", `${messageType} must be enabled for manual selected-applicant preview/send`);
+  assert.deepEqual(Array.from(entry.allowedSendModes), ["selected"], `${messageType} must remain selected-applicant only`);
+  assert.equal(entry.batchSafe, false, `${messageType} must not become batch-safe`);
+  assert.equal(context.normalizeApplicantMessageType_(messageType), messageType, `${messageType} must normalize for selected-applicant manual gates`);
+}
 
 for (const entry of active) {
   const auditIdentity = {
@@ -173,7 +190,7 @@ assert.doesNotMatch(stageMapper, /docs_missing|payment_followup/, "H3 must not r
 const selectedMessageTypeSelect = adminUiSource.match(/<select id="commMessageType">([\s\S]*?)<\/select>/);
 assert.ok(selectedMessageTypeSelect, "Selected-applicant message type picker must exist");
 const selectedMessageTypeMarkup = selectedMessageTypeSelect[1];
-for (const messageType of ["legacy_invite", "reminder", "docs_missing", "payment_followup", "application_feedback", "custom_email"]) {
+for (const messageType of ["legacy_invite", "reminder", "docs_missing", "payment_followup", "application_feedback", "custom_email", ...manualSelectedTypes]) {
   assert.match(selectedMessageTypeMarkup, new RegExp(`value="${messageType}"`), `${messageType} must be available in the selected-applicant picker`);
 }
 for (const messageType of planned.map((entry) => entry.messageType)) {
@@ -184,18 +201,26 @@ assert.match(selectedMessageTypeMarkup, /Legacy Application Reminder \(Overloade
 assert.match(selectedMessageTypeMarkup, /Missing Documents - Selected Applicant/, "Missing-document follow-up must be clearly selected-applicant scoped");
 assert.match(selectedMessageTypeMarkup, /Payment \/ Receipt Follow-Up/, "Payment follow-up must mention receipt handling");
 assert.match(selectedMessageTypeMarkup, /Custom Email - Selected Applicant/, "Custom email must remain visibly selected-applicant scoped");
-assert.match(adminUiSource, /Preview is read-only and does not send email\./, "Selected-applicant preview must clearly state that preview does not send");
+assert.match(adminUiSource, /Editable Email Draft \/ Template Preview/, "Selected-applicant templates must populate an editable preview surface");
+assert.match(adminUiSource, /Subject and body may be reviewed and adjusted before final confirmation/, "Selected-applicant preview must clearly support operator editing before send");
 assert.match(adminUiSource, /resultType === 'PREVIEW' && res\.effectiveEmail/, "Preview result must show the resolved recipient");
 assert.match(adminUiSource, /Legacy Application Reminder is overloaded; confirm the applicant condition before use\./, "Operator help must warn about the overloaded reminder");
+assert.match(adminUiSource, /setCommEditableDraft_\(communicationsState\.result, messageType\)/, "Generated preview must be copied into editable fields");
+assert.match(adminUiSource, /Object\.assign\(payload, getCommEditablePayload_\(\)\)/, "Send payload must use final editable subject/body values");
+assert.match(adminUiSource, /previewApplicantMessageUi_\("type_change_refresh"\)/, "Changing message type must refresh editable subject/body preview");
 
 const previewSource = extractFunction(codeSource, "previewApplicantMessage_");
 const sendSource = extractFunction(codeSource, "sendApplicantMessage_");
+const adminPreviewSource = extractFunction(adminSource, "admin_previewApplicantMessage");
+const adminSendSource = extractFunction(adminSource, "admin_sendApplicantMessage");
 assert.match(previewSource, /resolveApplicantMessageContext_/, "Preview must continue through existing context authority");
 assert.match(sendSource, /resolveApplicantMessageContext_/, "Send must continue through existing context authority");
 assert.match(sendSource, /isSystemStabilizationModeActive_/, "Existing stabilization send gate must remain");
 assert.match(sendSource, /ENABLE_PRODUCTION_EMAIL_SENDS/, "Existing production send gate must remain");
 assert.match(codeSource, /computeEmailIdempotencyKey_/, "Existing idempotency path must remain");
 assert.match(codeSource, /communicationCooldownMs_/, "Existing cooldown path must remain");
+assert.match(adminPreviewSource, /hasOwnProperty\.call\(p, "subject"\)/, "Preview wrapper must not pass implicit blank subject over generated templates");
+assert.match(adminSendSource, /hasOwnProperty\.call\(p, "subject"\)/, "Send wrapper must not pass implicit blank subject over generated templates");
 
 const templateFunctionNames = [
   "buildParentOrApplicantName_",
@@ -234,6 +259,9 @@ const applicantContext = {
 };
 const docsMissingBody = templateContext.buildDocsMissingEmailBody_(applicantContext);
 assert.match(docsMissingBody, /not available or are incomplete/i);
+assert.match(docsMissingBody, /cannot be fully reviewed or processed until the required documents are uploaded/i);
+assert.match(docsMissingBody, /admission processing may be delayed or blocked/i);
+assert.match(docsMissingBody, /application review cannot continue until the documents are received/i);
 assert.match(docsMissingBody, /did not reach us correctly/i);
 assert.match(docsMissingBody, /upload or resend/i);
 assert.doesNotMatch(docsMissingBody, /\breject(?:ed|ion)?\b/i);
@@ -278,8 +306,8 @@ assert.doesNotMatch(reminderSource, /payment receipt|documents verified|acceptan
 
 console.log("PASS communication semantic registry active/planned/manual definitions");
 console.log("PASS active types exactly match configured runtime message types");
-console.log("PASS planned types remain rejected by preview/send normalization");
+console.log("PASS expanded manual selected-applicant types normalize for selected-only gates");
 console.log("PASS custom email selected-only and prospect Stage Batch authority blocked");
 console.log("PASS overloaded reminder mappings and existing send gates remain explicit");
-console.log("PASS active and planned template wording safety");
-console.log("PASS selected-applicant docs/payment exposure and inert exam-fee semantics");
+console.log("PASS selected-applicant editable binding and send payload safeguards");
+console.log("PASS active template wording safety and docs-missing consequence language");

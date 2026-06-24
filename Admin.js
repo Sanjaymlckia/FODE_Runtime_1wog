@@ -7761,15 +7761,16 @@ function admin_previewApplicantMessage(payload) {
         blockReason: "Unsupported message type."
       });
     }
-    return previewApplicantMessage_(applicantId, messageType, {
+    var previewOptions = {
       actorEmail: actor.actorEmail,
       actorRole: actor.actorRole,
       batchLabel: clean_(p.batchLabel || ""),
       debugId: clean_(p.debugId || dbgId),
-      editedRecipient: clean_(p.recipient || ""),
-      editedSubject: String(p.subject || ""),
-      editedBody: String(p.body || "")
-    });
+      editedRecipient: clean_(p.recipient || "")
+    };
+    if (Object.prototype.hasOwnProperty.call(p, "subject")) previewOptions.editedSubject = String(p.subject || "");
+    if (Object.prototype.hasOwnProperty.call(p, "body")) previewOptions.editedBody = String(p.body || "");
+    return previewApplicantMessage_(applicantId, messageType, previewOptions);
   });
 }
 
@@ -7825,16 +7826,17 @@ function admin_sendApplicantMessage(payload) {
     var opsRecipientOverride = opsGate && opsGate.safeMode === true
       ? clean_(CONFIG.OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE || "")
       : "";
-    var sendResult = sendApplicantMessage_(applicantId, messageType, {
+    var sendOptions = {
       actorEmail: actor.actorEmail,
       actorRole: actor.actorRole,
       batchLabel: clean_(p.batchLabel || ""),
       debugId: clean_(p.debugId || dbgId),
       manualSingleSendProbe: true,
-      editedRecipient: opsRecipientOverride || clean_(p.recipient || ""),
-      editedSubject: String(p.subject || ""),
-      editedBody: String(p.body || "")
-    });
+      editedRecipient: opsRecipientOverride || clean_(p.recipient || "")
+    };
+    if (Object.prototype.hasOwnProperty.call(p, "subject")) sendOptions.editedSubject = String(p.subject || "");
+    if (Object.prototype.hasOwnProperty.call(p, "body")) sendOptions.editedBody = String(p.body || "");
+    var sendResult = sendApplicantMessage_(applicantId, messageType, sendOptions);
     if (opsGate && opsGate.safeMode === true) {
       logOpsSafeModeEvent_(String(sendResult && sendResult.result || "").toUpperCase() === "SENT"
         ? "OPS_SAFE_MODE_ACTION_COMPLETED"
