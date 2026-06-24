@@ -97,7 +97,7 @@ for (const pattern of [
   assert.equal(adminFunctions.includes(pattern), false, `Forbidden Admin contract side effect: ${pattern}`);
 }
 assert.match(adminFunctions, /createFile\(pngBlob\)/, "Stored rendition path may create only controlled PNG files");
-assert.match(adminFunctions, /parent\.createFolder\(folderName\)/, "Stored rendition path may create only the controlled rendition folder");
+assert.equal(adminFunctions.includes("createFolder("), false, "Applicant-folder rendition path must not create central folders");
 
 const applicantId = "FODE-26-002959";
 const folderId = "11Uyp813DuF39yk5-dQj3JzCh1Q8frhGg";
@@ -174,7 +174,6 @@ const utilities = {
 let sheetReads = 0;
 let driveReads = 0;
 let createdRenditionCount = 0;
-let createdFolderCount = 0;
 const storedRenditions = {};
 const renditionFile = (name, bytes = [137, 80, 78, 71]) => ({
   getName: () => name,
@@ -184,7 +183,7 @@ const renditionFile = (name, bytes = [137, 80, 78, 71]) => ({
   })
 });
 const renditionFolder = {
-  getName: () => "FODE_Runtime_Gallery_Renditions",
+  getName: () => "keziah_waffi_2026-05-25",
   getFilesByName: (name) => {
     let consumed = false;
     return {
@@ -203,22 +202,6 @@ const renditionFolder = {
     return file;
   }
 };
-const renditionParentFolder = {
-  getFoldersByName: (_name) => {
-    let consumed = false;
-    return {
-      hasNext: () => !consumed && createdFolderCount > 0,
-      next: () => {
-        consumed = true;
-        return renditionFolder;
-      }
-    };
-  },
-  createFolder: (_name) => {
-    createdFolderCount += 1;
-    return renditionFolder;
-  }
-};
 const context = {
   console,
   Date,
@@ -229,8 +212,7 @@ const context = {
     APPLICANT_ID_HEADER: "ApplicantID",
     WEBAPP_URL_STUDENT: "https://student.example/exec",
     ROOT_FOLDER_ID: "root-folder",
-    DOCUMENT_GALLERY_RENDITION_PARENT_FOLDER_ID: "rendition-parent",
-    DOCUMENT_GALLERY_RENDITION_FOLDER_NAME: "FODE_Runtime_Gallery_Renditions",
+    DOCUMENT_GALLERY_RENDITION_FOLDER_NAME: "Applicant folder FODE_PREVIEW files",
     DOCUMENT_GALLERY_RENDITION_MAX_BYTES: 12 * 1024 * 1024,
     DOC_FIELDS: [
       { label: "Birth Certificate / NID / Passport", file: "Birth_ID_Passport_File" },
@@ -258,7 +240,7 @@ const context = {
       return fileForId(id);
     },
     getFolderById: (id) => {
-      if (id === "rendition-parent") return renditionParentFolder;
+      if (id === folderId) return renditionFolder;
       throw new Error(`unexpected folder ${id}`);
     }
   },
@@ -362,9 +344,10 @@ const imageRendition = context.admin_getApplicantDocumentImageRendition({
 assert.equal(imageRendition.ok, true);
 assert.equal(imageRendition.renditionMimeType, "image/png");
 assert.equal(imageRendition.renditionKind, "image-png");
-assert.equal(imageRendition.renditionStorage, "controlled-drive-folder");
-assert.equal(imageRendition.renditionFolderName, "FODE_Runtime_Gallery_Renditions");
+assert.equal(imageRendition.renditionStorage, "applicant-folder");
+assert.equal(imageRendition.renditionFolderName, "keziah_waffi_2026-05-25");
 assert.match(imageRendition.renditionKey, /^[A-Za-z0-9_-]{20,}$/);
+assert.match(Object.keys(storedRenditions)[0] || "", /^FODE-26-002959__FODE_PREVIEW__Passport_Photo_File__item0__[A-Za-z0-9_-]+\.png$/);
 assert.equal(imageRendition.generated, true);
 assert.equal(imageRendition.stalePolicy, "reuse-if-source-key-matches; regenerate-on-source-replacement");
 assert.match(imageRendition.dataUrl, /^data:image\/png;base64,/);
@@ -397,7 +380,7 @@ const pdfRendition = context.admin_getApplicantDocumentImageRendition({
 assert.equal(pdfRendition.ok, true);
 assert.equal(pdfRendition.renditionKind, "pdf-first-page-png");
 assert.equal(pdfRendition.renditionMimeType, "image/png");
-assert.equal(pdfRendition.renditionStorage, "controlled-drive-folder");
+assert.equal(pdfRendition.renditionStorage, "applicant-folder");
 assert.match(pdfRendition.dataUrl, /^data:image\/png;base64,/);
 
 const routeContext = {
@@ -467,4 +450,4 @@ console.log("PASS invalid index, field, applicant context, and folder membership
 console.log("PASS signed route tamper resistance");
 console.log("PASS image rendition uses verifier/applicant/source/item authority without exposing Drive IDs");
 console.log("PASS sanitized DTO contains no Drive IDs, raw URLs, folder IDs, or secrets");
-console.log("PASS no sends, sheet writes, cache/properties mutation, or audit logging; Drive writes are limited to controlled PNG renditions");
+console.log("PASS no sends, sheet writes, cache/properties mutation, or audit logging; Drive writes are limited to applicant-folder FODE_PREVIEW PNG renditions");

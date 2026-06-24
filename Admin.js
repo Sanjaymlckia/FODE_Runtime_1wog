@@ -943,29 +943,10 @@ function adminDocumentGalleryRenditionHash_(value) {
   return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/g, "").slice(0, 32);
 }
 
-function adminDocumentGalleryRenditionFolder_() {
-  var configuredId = clean_(CONFIG.DOCUMENT_GALLERY_RENDITION_FOLDER_ID || "");
-  if (configuredId) return DriveApp.getFolderById(configuredId);
-  var lock = null;
-  try {
-    lock = LockService.getScriptLock();
-    lock.waitLock(10000);
-  } catch (_lockErr) {
-    lock = null;
-  }
-  try {
-  var parentId = clean_(CONFIG.DOCUMENT_GALLERY_RENDITION_PARENT_FOLDER_ID || CONFIG.ROOT_FOLDER_ID || "");
-  if (!parentId) throw new Error("DOCUMENT_GALLERY_RENDITION_PARENT_FOLDER_ID missing");
-  var parent = DriveApp.getFolderById(parentId);
-  var folderName = clean_(CONFIG.DOCUMENT_GALLERY_RENDITION_FOLDER_NAME || "FODE_Runtime_Gallery_Renditions");
-  var existing = parent.getFoldersByName(folderName);
-  if (existing.hasNext()) return existing.next();
-  return parent.createFolder(folderName);
-  } finally {
-    try {
-      if (lock) lock.releaseLock();
-    } catch (_releaseErr) {}
-  }
+function adminDocumentGalleryRenditionFolder_(folderIdValue) {
+  var folderId = clean_(folderIdValue || "");
+  if (!folderId) throw new Error("Applicant folder ID missing for document rendition");
+  return DriveApp.getFolderById(folderId);
 }
 
 function adminDocumentGalleryRenditionSourceStamp_(file) {
@@ -1003,7 +984,7 @@ function adminDocumentGalleryRenditionFileName_(resolved, key) {
   var applicant = clean_(resolved.applicantId || "applicant").replace(/[^A-Za-z0-9_-]+/g, "_");
   var field = clean_(resolved.sourceField || "document").replace(/[^A-Za-z0-9_-]+/g, "_");
   var index = String(Number(resolved.itemIndex || 0));
-  return [applicant, field, index, clean_(key || "rendition")].join("__") + ".png";
+  return [applicant, "FODE_PREVIEW", field, "item" + index, clean_(key || "rendition")].join("__") + ".png";
 }
 
 function adminDocumentGalleryFindStoredRendition_(folder, fileName) {
@@ -1039,7 +1020,7 @@ function adminDocumentGalleryBuildPngRenditionBlob_(file, mimeType) {
 }
 
 function adminDocumentGalleryGetOrCreateStoredRendition_(resolved, mimeType) {
-  var folder = adminDocumentGalleryRenditionFolder_();
+  var folder = adminDocumentGalleryRenditionFolder_(resolved.folderId);
   var key = adminDocumentGalleryRenditionKey_(resolved, mimeType);
   var fileName = adminDocumentGalleryRenditionFileName_(resolved, key);
   var existing = adminDocumentGalleryFindStoredRendition_(folder, fileName);
@@ -1100,7 +1081,7 @@ function admin_getApplicantDocumentImageRendition(payload) {
       sourceMimeType: mimeType,
       renditionMimeType: "image/png",
       renditionKind: isPdf ? "pdf-first-page-png" : "image-png",
-      renditionStorage: "controlled-drive-folder",
+      renditionStorage: "applicant-folder",
       renditionFolderName: clean_(stored.folderName || ""),
       renditionKey: clean_(stored.key || ""),
       generated: stored.generated === true,

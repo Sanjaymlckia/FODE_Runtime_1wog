@@ -608,6 +608,35 @@
     .docActionRow{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; align-items:center; }
     .docActionRow .btn{ text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
     .docPreviewStatus{ font-size:12px; color:#b9cbe0; margin-top:6px; }
+    .docVisualPreview{
+      min-height:220px;
+      border:1px solid rgba(148,163,184,.18);
+      border-radius:12px;
+      background:#020617;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:var(--muted);
+      font-size:12px;
+      text-align:center;
+      overflow:hidden;
+      position:relative;
+      margin-top:8px;
+    }
+    .docVisualPreview img{
+      width:100%;
+      height:100%;
+      min-height:220px;
+      max-height:340px;
+      object-fit:contain;
+      display:block;
+      transition:transform .16s ease, filter .16s ease;
+    }
+    .docVisualPreview:hover img,
+    .docVisualPreview:focus-within img{
+      transform:scale(1.04);
+      filter:contrast(1.04) saturate(1.04);
+    }
     .docComment{
       min-height:60px;
       height:60px;
@@ -2688,6 +2717,11 @@
       error: "",
       actionBusyByKey: {},
       actionErrorByKey: {},
+      renditionByKey: {},
+      renditionBusyByKey: {},
+      renditionErrorByKey: {}
+    };
+    let docCardRenditionState = {
       renditionByKey: {},
       renditionBusyByKey: {},
       renditionErrorByKey: {}
@@ -4971,6 +5005,7 @@
     function docPreviewStatusText_(doc){
       var kind = String((doc && doc.previewKind) || inferDocPreviewKind_(doc)).toLowerCase();
       if (!doc || !doc.hasFile) return "Preview unavailable until file is uploaded.";
+      if (canRenderDocCardVisual_(doc)) return kind === "pdf" ? "PDF preview copy - first page. Original remains available." : "PNG preview copy available. Original remains available.";
       if (!doc.fileProxyOpenUrl) return "Preview: resolving secure file link.";
       if (kind === "image") return "Image preview is available. Download remains the reliable fallback.";
       if (kind === "pdf") return "PDF preview may be blocked by browser security. Download is the most reliable review path.";
@@ -4978,6 +5013,75 @@
     }
     function canInlinePreviewDoc_(doc){
       return !!(doc && doc.hasFile && doc.fileProxyOpenUrl && String(doc.previewKind || "").toLowerCase() === "image");
+    }
+    function canRenderDocCardVisual_(doc){
+      var kind = String((doc && doc.previewKind) || inferDocPreviewKind_(doc)).toLowerCase();
+      return !!(doc && doc.hasFile && doc.file && (kind === "image" || kind === "pdf"));
+    }
+    function docCardRenditionKey_(doc){
+      return [String((doc && doc.file) || "").trim(), "0"].join(":");
+    }
+    function renderDocCardVisual_(doc){
+      if (!canRenderDocCardVisual_(doc)) return "";
+      var key = docCardRenditionKey_(doc);
+      var rendition = docCardRenditionState.renditionByKey[key] || null;
+      var busy = !!docCardRenditionState.renditionBusyByKey[key];
+      var errorText = String(docCardRenditionState.renditionErrorByKey[key] || "").trim();
+      var label = String((doc && doc.label) || "Document preview");
+      var meta = String((doc && (doc.fileName || doc.mimeType || doc.file)) || "Preview copy");
+      if (rendition && rendition.dataUrl) {
+        return `<div class="docVisualPreview">
+          <button type="button" class="documentGalleryZoomBtn docCardZoomBtn" data-rendition-key="${esc(key)}" data-label="${esc(label)}" data-meta="${esc(meta)}" aria-label="Enlarge ${esc(label)}">Enlarge</button>
+          <img src="${esc(rendition.dataUrl)}" alt="${esc(label)} preview copy">
+        </div>`;
+      }
+      if (busy) return `<div class="docVisualPreview">Generating preview...</div>`;
+      if (errorText) return `<div class="docVisualPreview">${esc(errorText)}<br>Use Download or Open Original.</div>`;
+      return `<div class="docVisualPreview">Generating preview...</div>`;
+    }
+    function loadDocCardRendition_(doc){
+      if (!currentRowNumber || !currentDetail || !canRenderDocCardVisual_(doc)) return;
+      var applicantId = documentGalleryCurrentApplicantId_();
+      var sourceField = String((doc && doc.file) || "").trim();
+      var itemIndex = 0;
+      var key = docCardRenditionKey_(doc);
+      if (!sourceField || docCardRenditionState.renditionByKey[key] || docCardRenditionState.renditionBusyByKey[key] || docCardRenditionState.renditionErrorByKey[key]) return;
+      docCardRenditionState.renditionBusyByKey[key] = true;
+      google.script.run
+        .withSuccessHandler(function(res){
+          if (documentGalleryCurrentApplicantId_() !== applicantId) return;
+          delete docCardRenditionState.renditionBusyByKey[key];
+          if (!res || res.ok !== true || !String(res.dataUrl || "").trim()) {
+            docCardRenditionState.renditionErrorByKey[key] = String((res && (res.error || res.message || res.code)) || "Preview unavailable.");
+            renderDocCards_(enrichDocsWithProxyUrls_(Array.isArray(currentDetail && currentDetail._docs) ? currentDetail._docs : [], currentPortalLinkInfo));
+            return;
+          }
+          docCardRenditionState.renditionByKey[key] = {
+            dataUrl: String(res.dataUrl || ""),
+            renditionKind: String(res.renditionKind || ""),
+            renditionStorage: String(res.renditionStorage || ""),
+            renditionKey: String(res.renditionKey || "")
+          };
+          delete docCardRenditionState.renditionErrorByKey[key];
+          renderDocCards_(enrichDocsWithProxyUrls_(Array.isArray(currentDetail && currentDetail._docs) ? currentDetail._docs : [], currentPortalLinkInfo));
+        })
+        .withFailureHandler(function(err){
+          if (documentGalleryCurrentApplicantId_() !== applicantId) return;
+          delete docCardRenditionState.renditionBusyByKey[key];
+          docCardRenditionState.renditionErrorByKey[key] = String(err && err.message ? err.message : err || "Preview unavailable.");
+          renderDocCards_(enrichDocsWithProxyUrls_(Array.isArray(currentDetail && currentDetail._docs) ? currentDetail._docs : [], currentPortalLinkInfo));
+        })
+        .admin_getApplicantDocumentImageRendition({
+          applicantId: applicantId,
+          rowNumber: currentRowNumber,
+          sourceField: sourceField,
+          itemIndex: itemIndex
+        });
+    }
+    function queueDocCardRenditions_(docs){
+      (Array.isArray(docs) ? docs : []).forEach(function(doc){
+        loadDocCardRendition_(doc);
+      });
     }
     let docPreviewTimer = null;
     function parseSignedFileRouteUrl_(url){
@@ -5108,6 +5212,11 @@
         error: "",
         actionBusyByKey: {},
         actionErrorByKey: {},
+        renditionByKey: {},
+        renditionBusyByKey: {},
+        renditionErrorByKey: {}
+      };
+      docCardRenditionState = {
         renditionByKey: {},
         renditionBusyByKey: {},
         renditionErrorByKey: {}
@@ -8972,6 +9081,7 @@ function renderStageDashboard_(items, emptyMessage){
             <div class="docPreviewStatus">
               ${esc(docPreviewStatusText_(x))}
             </div>
+            ${renderDocCardVisual_(x)}
             <div class="docActionRow">
               ${x.hasFile
                 ? (x.fileProxyOpenUrl
@@ -9034,6 +9144,18 @@ function renderStageDashboard_(items, emptyMessage){
           openDocPreview_(this.getAttribute("data-label") || "", this.getAttribute("data-url") || "", this.getAttribute("data-download-url") || "");
         });
       });
+      const zoomEls = Array.from(document.querySelectorAll(".docCardZoomBtn"));
+      zoomEls.forEach(function(btn){
+        btn.addEventListener("click", function(){
+          var rendition = docCardRenditionState.renditionByKey[this.getAttribute("data-rendition-key") || ""] || {};
+          openGalleryLightbox_(
+            rendition.dataUrl || "",
+            this.getAttribute("data-label") || "Document preview",
+            this.getAttribute("data-meta") || ""
+          );
+        });
+      });
+      queueDocCardRenditions_(list);
     }
 
     function closeModal(){
