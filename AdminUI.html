@@ -5005,7 +5005,11 @@
     function docPreviewStatusText_(doc){
       var kind = String((doc && doc.previewKind) || inferDocPreviewKind_(doc)).toLowerCase();
       if (!doc || !doc.hasFile) return "Preview unavailable until file is uploaded.";
-      if (canRenderDocCardVisual_(doc)) return kind === "pdf" ? "PDF preview copy - first page. Original remains available." : "PNG preview copy available. Original remains available.";
+      if (canRenderDocCardVisual_(doc)) {
+        if (kind === "pdf") return "PDF preview copy - first page. Original remains available.";
+        if (kind === "image") return "PNG preview copy available. Original remains available.";
+        return "Preview copy will be generated. Original remains available.";
+      }
       if (!doc.fileProxyOpenUrl) return "Preview: resolving secure file link.";
       if (kind === "image") return "Image preview is available. Download remains the reliable fallback.";
       if (kind === "pdf") return "PDF preview may be blocked by browser security. Download is the most reliable review path.";
@@ -5014,9 +5018,20 @@
     function canInlinePreviewDoc_(doc){
       return !!(doc && doc.hasFile && doc.fileProxyOpenUrl && String(doc.previewKind || "").toLowerCase() === "image");
     }
+    function isDocCardRenditionCandidate_(doc){
+      if (!doc || !doc.hasFile) return false;
+      var field = String(doc.file || "").trim();
+      return [
+        "Birth_ID_Passport_File",
+        "Latest_School_Report_File",
+        "Transfer_Certificate_File",
+        "Passport_Photo_File",
+        "Fee_Receipt_File"
+      ].indexOf(field) >= 0;
+    }
     function canRenderDocCardVisual_(doc){
       var kind = String((doc && doc.previewKind) || inferDocPreviewKind_(doc)).toLowerCase();
-      return !!(doc && doc.hasFile && doc.file && (kind === "image" || kind === "pdf"));
+      return !!(doc && doc.hasFile && doc.file && ((kind === "image" || kind === "pdf") || isDocCardRenditionCandidate_(doc)));
     }
     function docCardRenditionKey_(doc){
       return [String((doc && doc.file) || "").trim(), "0"].join(":");
@@ -8755,7 +8770,6 @@ function renderStageDashboard_(items, emptyMessage){
             return;
           }
           console.log("[AdminUI] SIG detail_json handler typeof=", typeof res);
-          console.log("[AdminUI] detail response raw:", res);
           if (typeof res === "string") {
             try {
               res = JSON.parse(res);
@@ -8764,6 +8778,13 @@ function renderStageDashboard_(items, emptyMessage){
             }
           }
           var apiResult = handleApiResult_(res, "detail");
+          try {
+            console.log("[AdminUI] detail response summary:", {
+              ok: !!(apiResult && apiResult.ok),
+              applicantId: String((apiResult && apiResult.data && apiResult.data.ApplicantID) || ""),
+              docCount: Array.isArray(apiResult && apiResult.data && apiResult.data._docs) ? apiResult.data._docs.length : 0
+            });
+          } catch (_e) {}
           if (!apiResult || apiResult.ok !== true) {
             clearDocsLoading_("Detail request failed");
             setActionButtonsEnabled(false);
