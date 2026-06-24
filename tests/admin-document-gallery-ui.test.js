@@ -57,6 +57,11 @@ expectMatch(/<img src="\$\{esc\(rendition\.dataUrl\)\}"/, "Gallery thumbnail bra
 expectMatch(/PDF preview - first page\./, "PDF files with renditions must be labelled as first-page previews");
 expectMatch(/class="documentGalleryZoomBtn galleryImageZoomBtn"/, "Image gallery tiles must provide an explicit enlarge control");
 expectMatch(/function openGalleryLightbox_\(/, "Image gallery must support click-to-enlarge lightbox behavior");
+expectMatch(/function zoomGalleryLightbox_\(/, "Large preview overlay must support zoom in/out controls");
+expectMatch(/function fitGalleryLightbox_\(/, "Large preview overlay must support fit-to-screen control");
+expectMatch(/id="galleryLightboxOpenOriginal"/, "Large preview overlay must keep Open Original available when a safe URL is supplied");
+expectMatch(/width:min\(92vw, 1500px\)/, "Large preview overlay should use most of the viewport width");
+expectMatch(/height:min\(90vh, 1100px\)/, "Large preview overlay should use most of the viewport height");
 expectMatch(/function parseGalleryRenditionDataUrl_\(/, "Gallery lightbox must validate image data URLs before display");
 expectMatch(/id="galleryLightboxBack"/, "Gallery lightbox shell must exist");
 expectMatch(/documentGalleryTile image/, "Image files must render as visually larger gallery cards");

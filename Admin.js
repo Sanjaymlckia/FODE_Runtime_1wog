@@ -1045,6 +1045,76 @@ function adminDocumentGalleryGetOrCreateStoredRendition_(resolved, mimeType) {
   };
 }
 
+function adminDocumentGalleryInspectStoredRendition_(resolved, mimeType) {
+  var folder = adminDocumentGalleryRenditionFolder_(resolved.folderId);
+  var key = adminDocumentGalleryRenditionKey_(resolved, mimeType);
+  var fileName = adminDocumentGalleryRenditionFileName_(resolved, key);
+  var existing = adminDocumentGalleryFindStoredRendition_(folder, fileName);
+  return {
+    exists: !!existing,
+    key: key,
+    fileName: fileName,
+    folderName: clean_(folder.getName ? folder.getName() : "")
+  };
+}
+
+function adminDocumentGalleryPrepareStoredRendition_(resolved) {
+  var file = resolved && resolved.file;
+  var mimeType = clean_(file && file.getMimeType ? file.getMimeType() : "");
+  var isImage = /^image\//i.test(mimeType);
+  var isPdf = /^application\/pdf$/i.test(mimeType);
+  if (!isImage && !isPdf) {
+    return { ok: false, code: "UNSUPPORTED_RENDITION_TYPE", error: "Only image and PDF files can be rendered in-gallery." };
+  }
+  var maxBytes = Number((CONFIG && CONFIG.DOCUMENT_GALLERY_RENDITION_MAX_BYTES) || 6000000);
+  var sizeBytes = Number(file && file.getSize ? file.getSize() : 0);
+  if (maxBytes > 0 && sizeBytes > maxBytes) {
+    return { ok: false, code: "RENDITION_TOO_LARGE", error: "File is too large for inline gallery rendering. Use Open or Download." };
+  }
+  var stored = adminDocumentGalleryGetOrCreateStoredRendition_(resolved, mimeType);
+  return {
+    ok: true,
+    sourceField: resolved.sourceField,
+    itemIndex: resolved.itemIndex,
+    label: clean_(resolved.docField && resolved.docField.label || resolved.sourceField),
+    fileName: clean_(file && file.getName ? file.getName() : ""),
+    sourceMimeType: mimeType,
+    renditionMimeType: "image/png",
+    renditionKind: isPdf ? "pdf-first-page-png" : "image-png",
+    renditionStorage: "applicant-folder",
+    renditionFolderName: clean_(stored.folderName || ""),
+    renditionKey: clean_(stored.key || ""),
+    renditionFileName: clean_(stored.fileName || ""),
+    generated: stored.generated === true,
+    stalePolicy: "reuse-if-source-key-matches; regenerate-on-source-replacement",
+    file: stored.file
+  };
+}
+
+function adminDocumentGalleryInspectRenditionCandidate_(resolved) {
+  var file = resolved && resolved.file;
+  var mimeType = clean_(file && file.getMimeType ? file.getMimeType() : "");
+  var isImage = /^image\//i.test(mimeType);
+  var isPdf = /^application\/pdf$/i.test(mimeType);
+  if (!isImage && !isPdf) {
+    return { ok: false, code: "UNSUPPORTED_RENDITION_TYPE", error: "Only image and PDF files can be rendered in-gallery." };
+  }
+  var maxBytes = Number((CONFIG && CONFIG.DOCUMENT_GALLERY_RENDITION_MAX_BYTES) || 6000000);
+  var sizeBytes = Number(file && file.getSize ? file.getSize() : 0);
+  if (maxBytes > 0 && sizeBytes > maxBytes) {
+    return { ok: false, code: "RENDITION_TOO_LARGE", error: "File is too large for inline gallery rendering. Use Open or Download." };
+  }
+  var inspected = adminDocumentGalleryInspectStoredRendition_(resolved, mimeType);
+  return {
+    ok: true,
+    sourceMimeType: mimeType,
+    renditionKind: isPdf ? "pdf-first-page-png" : "image-png",
+    renditionFileName: inspected.fileName,
+    renditionKey: inspected.key,
+    exists: inspected.exists
+  };
+}
+
 function admin_getApplicantDocumentImageRendition(payload) {
   var adminEmail = getCallerEmail_();
   try {
@@ -1056,36 +1126,24 @@ function admin_getApplicantDocumentImageRendition(payload) {
   try {
     var resolved = adminResolveApplicantDocumentFile_(payload);
     if (!resolved || resolved.ok !== true) return resolved;
-    var file = resolved.file;
-    var mimeType = clean_(file.getMimeType ? file.getMimeType() : "");
-    var isImage = /^image\//i.test(mimeType);
-    var isPdf = /^application\/pdf$/i.test(mimeType);
-    if (!isImage && !isPdf) {
-      return { ok: false, code: "UNSUPPORTED_RENDITION_TYPE", error: "Only image and PDF files can be rendered in-gallery." };
-    }
-    var maxBytes = Number((CONFIG && CONFIG.DOCUMENT_GALLERY_RENDITION_MAX_BYTES) || 6000000);
-    var sizeBytes = Number(file.getSize ? file.getSize() : 0);
-    if (maxBytes > 0 && sizeBytes > maxBytes) {
-      return { ok: false, code: "RENDITION_TOO_LARGE", error: "File is too large for inline gallery rendering. Use Open or Download." };
-    }
-
-    var stored = adminDocumentGalleryGetOrCreateStoredRendition_(resolved, mimeType);
-    var blob = stored.file.getBlob();
+    var prepared = adminDocumentGalleryPrepareStoredRendition_(resolved);
+    if (!prepared || prepared.ok !== true) return prepared;
+    var blob = prepared.file.getBlob();
     var bytes = blob.getBytes();
     return {
       ok: true,
-      sourceField: resolved.sourceField,
-      itemIndex: resolved.itemIndex,
-      label: clean_(resolved.docField.label || resolved.sourceField),
-      fileName: clean_(file.getName ? file.getName() : ""),
-      sourceMimeType: mimeType,
+      sourceField: prepared.sourceField,
+      itemIndex: prepared.itemIndex,
+      label: prepared.label,
+      fileName: prepared.fileName,
+      sourceMimeType: prepared.sourceMimeType,
       renditionMimeType: "image/png",
-      renditionKind: isPdf ? "pdf-first-page-png" : "image-png",
+      renditionKind: prepared.renditionKind,
       renditionStorage: "applicant-folder",
-      renditionFolderName: clean_(stored.folderName || ""),
-      renditionKey: clean_(stored.key || ""),
-      generated: stored.generated === true,
-      stalePolicy: "reuse-if-source-key-matches; regenerate-on-source-replacement",
+      renditionFolderName: prepared.renditionFolderName,
+      renditionKey: prepared.renditionKey,
+      generated: prepared.generated === true,
+      stalePolicy: prepared.stalePolicy,
       dataUrl: "data:image/png;base64," + Utilities.base64Encode(bytes)
     };
   } catch (_err) {
@@ -1095,6 +1153,169 @@ function admin_getApplicantDocumentImageRendition(payload) {
       error: "Document image preview could not be prepared"
     };
   }
+}
+
+function adminResolveApplicantDocumentFileFromRow_(rowObj, rowNumber, applicantId, sourceField, itemIndex) {
+  var row = rowObj || {};
+  var id = clean_(applicantId || row.ApplicantID || row[CONFIG.APPLICANT_ID_HEADER] || "");
+  var field = clean_(sourceField || "");
+  var index = Number(itemIndex);
+  var docField = adminDocumentFileActionField_(field);
+  if (!id || !docField || !isFinite(index) || index < 0 || Math.floor(index) !== index) {
+    return { ok: false, code: "INVALID_DOCUMENT_CONTEXT" };
+  }
+  var folderUrl = clean_(row.Folder_Url || row[SCHEMA.FOLDER_URL] || "");
+  var folderId = folderIdFromUrl_(folderUrl);
+  if (!folderId) return { ok: false, code: "DOCUMENT_FOLDER_MISSING" };
+  var sourceUrls = normalizeToUrlList_(row[field], field);
+  if (index >= sourceUrls.length) return { ok: false, code: "DOCUMENT_ITEM_MISSING" };
+  var fileId = extractDriveFileId_(sourceUrls[index]);
+  if (!fileId) return { ok: false, code: "DOCUMENT_FILE_ID_MISSING" };
+  var file;
+  try {
+    file = DriveApp.getFileById(fileId);
+  } catch (_fileErr) {
+    return { ok: false, code: "DOCUMENT_SOURCE_UNAVAILABLE" };
+  }
+  if (!isFileInFolderChain_(file, folderId)) return { ok: false, code: "DOCUMENT_SOURCE_MISMATCH" };
+  return {
+    ok: true,
+    applicantId: id,
+    rowNumber: Number(rowNumber),
+    sourceField: field,
+    itemIndex: index,
+    docField: docField,
+    file: file,
+    folderId: folderId
+  };
+}
+
+function adminDocumentPreviewBackfillBatch_(payload, execute) {
+  var adminEmail = getCallerEmail_();
+  try {
+    requireDocumentVerifier_(adminEmail);
+  } catch (_authErr) {
+    return { ok: false, code: "ACCESS_DENIED", error: "Access denied: document verifier required" };
+  }
+
+  var p = payload && typeof payload === "object" ? payload : {};
+  var startRow = Math.max(2, Number(p.startRow || p.offset || 2));
+  var batchSize = Math.max(1, Math.min(25, Number(p.batchSize || p.limit || 10)));
+  var startedAt = Date.now();
+  var summary = {
+    mode: execute ? "execute" : "dry-run",
+    startRow: startRow,
+    batchSize: batchSize,
+    rowsScanned: 0,
+    applicantFoldersFound: 0,
+    sourceFilesFound: 0,
+    previewsAlreadyPresent: 0,
+    previewsWouldCreate: 0,
+    previewsCreated: 0,
+    skippedUnsupported: 0,
+    skippedMissingFolder: 0,
+    skippedMissingFile: 0,
+    failedConversions: 0,
+    items: []
+  };
+
+  try {
+    var sh = openDataSheet_();
+    var lastRow = sh.getLastRow();
+    var lastCol = sh.getLastColumn();
+    if (lastRow < startRow) {
+      summary.nextStartRow = "";
+      summary.elapsedMs = Date.now() - startedAt;
+      return { ok: true, summary: summary };
+    }
+    var headers = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+    var idx = headerIndex_(headers);
+    var count = Math.min(batchSize, lastRow - startRow + 1);
+    var values = sh.getRange(startRow, 1, count, lastCol).getValues();
+    var docs = Array.isArray(CONFIG.DOC_FIELDS) ? CONFIG.DOC_FIELDS : [];
+    for (var r = 0; r < values.length; r++) {
+      var rowNumber = startRow + r;
+      var rowObj = {};
+      for (var c = 0; c < headers.length; c++) {
+        var h = clean_(headers[c]);
+        if (h) rowObj[h] = values[r][c];
+      }
+      var applicantId = clean_(rowObj.ApplicantID || rowObj[CONFIG.APPLICANT_ID_HEADER] || "");
+      if (!applicantId) continue;
+      summary.rowsScanned++;
+      if (!folderIdFromUrl_(clean_(rowObj.Folder_Url || ""))) summary.skippedMissingFolder++;
+      else summary.applicantFoldersFound++;
+
+      for (var d = 0; d < docs.length; d++) {
+        var field = clean_(docs[d] && docs[d].file || "");
+        if (!field) continue;
+        var urls = normalizeToUrlList_(rowObj[field], field);
+        for (var i = 0; i < urls.length; i++) {
+          var item = {
+            applicantId: applicantId,
+            rowNumber: rowNumber,
+            sourceField: field,
+            itemIndex: i,
+            action: ""
+          };
+          var resolved = adminResolveApplicantDocumentFileFromRow_(rowObj, rowNumber, applicantId, field, i);
+          if (!resolved || resolved.ok !== true) {
+            if (resolved && resolved.code === "DOCUMENT_FOLDER_MISSING") summary.skippedMissingFolder++;
+            else summary.skippedMissingFile++;
+            item.action = clean_(resolved && resolved.code || "SKIPPED");
+            summary.items.push(item);
+            continue;
+          }
+          summary.sourceFilesFound++;
+          try {
+            var prepared = execute
+              ? adminDocumentGalleryPrepareStoredRendition_(resolved)
+              : adminDocumentGalleryInspectRenditionCandidate_(resolved);
+            if (!prepared || prepared.ok !== true) {
+              summary.skippedUnsupported++;
+              item.action = clean_(prepared && prepared.code || "UNSUPPORTED_RENDITION_TYPE");
+              summary.items.push(item);
+              continue;
+            }
+            if (execute ? prepared.generated === true : prepared.exists !== true) {
+              if (execute) {
+                summary.previewsCreated++;
+                item.action = "created";
+              } else {
+                summary.previewsWouldCreate++;
+                item.action = "would_create";
+              }
+            } else {
+              summary.previewsAlreadyPresent++;
+              item.action = "already_present";
+            }
+            item.renditionFileName = clean_(prepared.renditionFileName || "");
+            item.renditionKind = clean_(prepared.renditionKind || "");
+            summary.items.push(item);
+          } catch (err) {
+            summary.failedConversions++;
+            item.action = "failed";
+            item.error = clean_(err && err.message ? err.message : String(err));
+            summary.items.push(item);
+          }
+        }
+      }
+    }
+    summary.nextStartRow = (startRow + values.length <= lastRow) ? (startRow + values.length) : "";
+    summary.elapsedMs = Date.now() - startedAt;
+    return { ok: true, summary: summary };
+  } catch (errOuter) {
+    summary.elapsedMs = Date.now() - startedAt;
+    return { ok: false, code: "DOCUMENT_PREVIEW_BACKFILL_ERROR", error: clean_(errOuter && errOuter.message ? errOuter.message : String(errOuter)), summary: summary };
+  }
+}
+
+function admin_dryRunDocumentPreviewBackfill(payload) {
+  return adminDocumentPreviewBackfillBatch_(payload, false);
+}
+
+function admin_runDocumentPreviewBackfillBatch(payload) {
+  return adminDocumentPreviewBackfillBatch_(payload, true);
 }
 
 function admin_getApplicantDocumentFileAction(payload) {

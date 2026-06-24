@@ -48,9 +48,10 @@ function normalizeToUrlList(value) {
   return raw.split(/\r?\n|,/).map(clean).filter((url) => /^https?:/i.test(url));
 }
 
-function makeContext() {
+function makeContext(options = {}) {
   const events = [];
   const filesCreated = [];
+  const previewCalls = [];
   const folder = {
     getId: () => "folder-123",
     getUrl: () => "https://drive.google.com/drive/folders/folder-123",
@@ -60,6 +61,9 @@ function makeContext() {
       const file = {
         getId: () => fileId,
         getUrl: () => `https://drive.google.com/file/d/${fileId}/view`,
+        getMimeType: () => "application/pdf",
+        getName: () => fileName,
+        getSize: () => 1024,
         setName: () => {}
       };
       filesCreated.push({ fileId, fileName });
@@ -109,12 +113,27 @@ function makeContext() {
     },
     fileExtensionFromContentType_: (type) => (type === "application/pdf" ? "pdf" : ""),
     fileExtensionFromUrl_: (url) => (String(url).match(/\.([a-z0-9]+)(?:$|\?)/i) || [])[1] || "",
-    fileExtensionFromName_: (name) => (String(name).match(/\.([a-z0-9]+)$/i) || [])[1] || ""
+    fileExtensionFromName_: (name) => (String(name).match(/\.([a-z0-9]+)$/i) || [])[1] || "",
+    adminDocumentGalleryPrepareStoredRendition_: (resolved) => {
+      if (options.previewThrows) throw new Error("preview failed");
+      previewCalls.push({
+        applicantId: resolved.applicantId,
+        sourceField: resolved.sourceField,
+        itemIndex: resolved.itemIndex,
+        fileId: resolved.file.getId()
+      });
+      return {
+        ok: true,
+        renditionKind: "pdf-first-page-png",
+        renditionFileName: `${resolved.applicantId}__FODE_PREVIEW__${resolved.sourceField}__item${resolved.itemIndex}__test.png`,
+        generated: true
+      };
+    }
   };
 
   vm.createContext(context);
   vm.runInContext(implementationSource, context);
-  return { context, events, folder, filesCreated };
+  return { context, events, folder, filesCreated, previewCalls };
 }
 
 const emptyCase = makeContext();
@@ -169,6 +188,17 @@ assert.equal(
 );
 assert.match(successResult.Latest_School_Report_File, /https:\/\/drive\.google\.com\/file\/d\/file-1\/view/);
 assert.match(successResult.File_Log, /fetched_and_copied/);
+assert.deepEqual(successCase.previewCalls, [{
+  applicantId: "FODE-26-003158",
+  sourceField: "Latest_School_Report_File",
+  itemIndex: 0,
+  fileId: "file-1"
+}], "Successful canonical copy should attempt applicant-folder preview generation");
+assert.equal(
+  successCase.events.some((event) => event.label === "ACTIVATION_FILE_PREVIEW_RENDITION_READY"),
+  true,
+  "Successful preview hook should log non-fatal preview readiness"
+);
 
 const missingFieldCase = makeContext();
 const missingFieldPayload = {
@@ -192,3 +222,17 @@ assert.equal(
 console.log("PASS empty payload warning for 003157-style case");
 console.log("PASS no empty payload warning for 003158-style canonicalized case");
 console.log("PASS missing configured field does not trigger warning");
+
+const previewFailureCase = makeContext({ previewThrows: true });
+const previewFailureResult = previewFailureCase.context.canonicalizeFdIntakeFiles_(successPayload, previewFailureCase.folder, {}, {
+  correlationId: "238946",
+  applicantId: "FODE-26-003158"
+});
+assert.match(previewFailureResult.Latest_School_Report_File, /https:\/\/drive\.google\.com\/file\/d\/file-1\/view/);
+assert.match(previewFailureResult.File_Log, /fetched_and_copied/);
+assert.equal(
+  previewFailureCase.events.some((event) => event.label === "ACTIVATION_FILE_PREVIEW_RENDITION_SKIP"),
+  true,
+  "Preview generation failure should be logged without blocking canonicalization"
+);
+console.log("PASS preview generation failure is non-fatal to canonicalization");

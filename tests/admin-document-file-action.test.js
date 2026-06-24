@@ -45,6 +45,9 @@ const adminFunctions = [
   "adminDocumentGalleryFetchPdfThumbnailBlob_",
   "adminDocumentGalleryBuildPngRenditionBlob_",
   "adminDocumentGalleryGetOrCreateStoredRendition_",
+  "adminDocumentGalleryInspectStoredRendition_",
+  "adminDocumentGalleryPrepareStoredRendition_",
+  "adminDocumentGalleryInspectRenditionCandidate_",
   "admin_getApplicantDocumentImageRendition",
   "admin_getApplicantDocumentFileAction"
 ].map((name) => extractFunction(adminSource, name)).join("\n\n");

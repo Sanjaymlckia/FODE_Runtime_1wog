@@ -4978,6 +4978,49 @@ function canonicalizeFdIntakeFiles_(payload, applicantFolder, logSheet, context)
           });
           continue;
         }
+        try {
+          var docFieldForPreview = null;
+          var docFieldsForPreview = Array.isArray(CONFIG.DOC_FIELDS) ? CONFIG.DOC_FIELDS : [];
+          for (var dfp = 0; dfp < docFieldsForPreview.length; dfp++) {
+            if (clean_(docFieldsForPreview[dfp] && docFieldsForPreview[dfp].file || "") === field) {
+              docFieldForPreview = docFieldsForPreview[dfp];
+              break;
+            }
+          }
+          var previewResult = adminDocumentGalleryPrepareStoredRendition_({
+            ok: true,
+            applicantId: applicantId,
+            rowNumber: 0,
+            sourceField: field,
+            itemIndex: u,
+            docField: docFieldForPreview || { file: field, label: field },
+            file: newFile,
+            folderId: folderId
+          });
+          logActivation_(logSheet, previewResult && previewResult.ok === true ? "ACTIVATION_FILE_PREVIEW_RENDITION_READY" : "ACTIVATION_FILE_PREVIEW_RENDITION_SKIP", {
+            correlation_id: correlationId,
+            applicantId: applicantId,
+            field: field,
+            itemIndex: u,
+            newFileId: clean_(newFile.getId() || ""),
+            folderId: folderId,
+            code: clean_(previewResult && previewResult.code || ""),
+            renditionKind: clean_(previewResult && previewResult.renditionKind || ""),
+            renditionFileName: clean_(previewResult && previewResult.renditionFileName || ""),
+            generated: !!(previewResult && previewResult.generated)
+          });
+        } catch (previewErr) {
+          logActivation_(logSheet, "ACTIVATION_FILE_PREVIEW_RENDITION_SKIP", {
+            correlation_id: correlationId,
+            applicantId: applicantId,
+            field: field,
+            itemIndex: u,
+            newFileId: clean_(newFile.getId() || ""),
+            folderId: folderId,
+            reason: "preview_generation_failed",
+            error: String(previewErr && previewErr.message ? previewErr.message : previewErr)
+          });
+        }
         canonicalUrls.push(newUrl);
         canonicalizedFileCount++;
         fileLog = appendLog_(fileLog, new Date().toISOString()

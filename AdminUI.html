@@ -821,8 +821,9 @@
       padding:18px;
     }
     .galleryLightboxPanel{
-      width:min(94vw, 1320px);
-      max-height:94vh;
+      width:min(92vw, 1500px);
+      height:min(90vh, 1100px);
+      max-height:90vh;
       border-radius:16px;
       border:1px solid rgba(148,163,184,.22);
       background:rgba(15,23,42,.98);
@@ -838,6 +839,13 @@
       padding:10px 12px;
       border-bottom:1px solid rgba(148,163,184,.18);
     }
+    .galleryLightboxControls{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      justify-content:flex-end;
+      align-items:center;
+    }
     .galleryLightboxTitle{
       font-weight:800;
       font-size:14px;
@@ -852,15 +860,18 @@
       display:flex;
       align-items:center;
       justify-content:center;
-      min-height:280px;
+      flex:1;
+      min-height:0;
       background:#000;
       padding:10px;
+      overflow:auto;
     }
     .galleryLightboxBody img{
       max-width:100%;
-      max-height:calc(94vh - 86px);
+      max-height:100%;
       object-fit:contain;
       display:block;
+      transform-origin:center center;
     }
     .overrideTag{
       display:inline-block;
@@ -2604,7 +2615,13 @@
           <div id="galleryLightboxTitle" class="galleryLightboxTitle">Document Image</div>
           <div id="galleryLightboxMeta" class="galleryLightboxMeta">Secure signed preview URL. No raw Drive link is exposed.</div>
         </div>
-        <button type="button" class="btn small" onclick="closeGalleryLightbox_()">Close</button>
+        <div class="galleryLightboxControls">
+          <button type="button" class="btn small" onclick="zoomGalleryLightbox_(0.2)">Zoom In</button>
+          <button type="button" class="btn small" onclick="zoomGalleryLightbox_(-0.2)">Zoom Out</button>
+          <button type="button" class="btn small" onclick="fitGalleryLightbox_()">Fit</button>
+          <a id="galleryLightboxOpenOriginal" class="btn small hidden" target="_blank" rel="noopener">Open Original</a>
+          <button type="button" class="btn small" onclick="closeGalleryLightbox_()">Close</button>
+        </div>
       </div>
       <div class="galleryLightboxBody">
         <img id="galleryLightboxImage" src="" alt="Document image preview">
@@ -2720,6 +2737,9 @@
       renditionByKey: {},
       renditionBusyByKey: {},
       renditionErrorByKey: {}
+    };
+    let galleryLightboxState = {
+      zoom: 1
     };
     let docCardRenditionState = {
       renditionByKey: {},
@@ -5046,7 +5066,7 @@
       var meta = String((doc && (doc.fileName || doc.mimeType || doc.file)) || "Preview copy");
       if (rendition && rendition.dataUrl) {
         return `<div class="docVisualPreview">
-          <button type="button" class="documentGalleryZoomBtn docCardZoomBtn" data-rendition-key="${esc(key)}" data-label="${esc(label)}" data-meta="${esc(meta)}" aria-label="Enlarge ${esc(label)}">Enlarge</button>
+          <button type="button" class="documentGalleryZoomBtn docCardZoomBtn" data-rendition-key="${esc(key)}" data-label="${esc(label)}" data-meta="${esc(meta)}" data-original-url="${esc(doc && doc.fileProxyOpenUrl || "")}" aria-label="Enlarge ${esc(label)}">Enlarge</button>
           <img src="${esc(rendition.dataUrl)}" alt="${esc(label)} preview copy">
         </div>`;
       }
@@ -5193,17 +5213,45 @@
       if (!/^data:image\/[a-z0-9.+-]+;base64,/i.test(candidate)) return { valid: false, href: "" };
       return { valid: true, href: candidate };
     }
-    function openGalleryLightbox_(url, label, meta){
+    function applyGalleryLightboxZoom_(){
+      var image = document.getElementById("galleryLightboxImage");
+      var zoom = Number(galleryLightboxState.zoom || 1);
+      if (!isFinite(zoom) || zoom <= 0) zoom = 1;
+      if (image) image.style.transform = "scale(" + String(zoom) + ")";
+    }
+    function zoomGalleryLightbox_(delta){
+      var next = Number(galleryLightboxState.zoom || 1) + Number(delta || 0);
+      galleryLightboxState.zoom = Math.max(0.5, Math.min(3, next));
+      applyGalleryLightboxZoom_();
+    }
+    function fitGalleryLightbox_(){
+      galleryLightboxState.zoom = 1;
+      applyGalleryLightboxZoom_();
+    }
+    function openGalleryLightbox_(url, label, meta, originalUrl){
       var parsed = parseGalleryRenditionDataUrl_(url);
       var back = document.getElementById("galleryLightboxBack");
       var image = document.getElementById("galleryLightboxImage");
       var title = document.getElementById("galleryLightboxTitle");
       var metaEl = document.getElementById("galleryLightboxMeta");
+      var originalEl = document.getElementById("galleryLightboxOpenOriginal");
       if (!back || !image || !parsed.valid) return;
+      galleryLightboxState.zoom = 1;
       image.src = parsed.href;
       image.alt = label ? String(label) : "Document image preview";
+      image.style.transform = "scale(1)";
       if (title) title.textContent = label ? String(label) : "Document Image";
       if (metaEl) metaEl.textContent = meta ? String(meta) : "Secure signed preview URL. No raw Drive link is exposed.";
+      if (originalEl) {
+        var openUrl = String(originalUrl || "").trim();
+        if (openUrl) {
+          originalEl.href = openUrl;
+          originalEl.classList.remove("hidden");
+        } else {
+          originalEl.removeAttribute("href");
+          originalEl.classList.add("hidden");
+        }
+      }
       back.classList.remove("hidden");
       var closeBtn = back.querySelector("button");
       if (closeBtn && typeof closeBtn.focus === "function") closeBtn.focus();
@@ -5211,7 +5259,14 @@
     function closeGalleryLightbox_(){
       var back = document.getElementById("galleryLightboxBack");
       var image = document.getElementById("galleryLightboxImage");
+      var originalEl = document.getElementById("galleryLightboxOpenOriginal");
       if (image) image.src = "";
+      if (image) image.style.transform = "scale(1)";
+      if (originalEl) {
+        originalEl.removeAttribute("href");
+        originalEl.classList.add("hidden");
+      }
+      galleryLightboxState.zoom = 1;
       if (back) back.classList.add("hidden");
     }
     window.addEventListener("keydown", function(event){
@@ -9172,7 +9227,8 @@ function renderStageDashboard_(items, emptyMessage){
           openGalleryLightbox_(
             rendition.dataUrl || "",
             this.getAttribute("data-label") || "Document preview",
-            this.getAttribute("data-meta") || ""
+            this.getAttribute("data-meta") || "",
+            this.getAttribute("data-original-url") || ""
           );
         });
       });
