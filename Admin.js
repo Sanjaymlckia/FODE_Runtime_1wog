@@ -946,6 +946,14 @@ function adminDocumentGalleryRenditionHash_(value) {
 function adminDocumentGalleryRenditionFolder_() {
   var configuredId = clean_(CONFIG.DOCUMENT_GALLERY_RENDITION_FOLDER_ID || "");
   if (configuredId) return DriveApp.getFolderById(configuredId);
+  var lock = null;
+  try {
+    lock = LockService.getScriptLock();
+    lock.waitLock(10000);
+  } catch (_lockErr) {
+    lock = null;
+  }
+  try {
   var parentId = clean_(CONFIG.DOCUMENT_GALLERY_RENDITION_PARENT_FOLDER_ID || CONFIG.ROOT_FOLDER_ID || "");
   if (!parentId) throw new Error("DOCUMENT_GALLERY_RENDITION_PARENT_FOLDER_ID missing");
   var parent = DriveApp.getFolderById(parentId);
@@ -953,6 +961,11 @@ function adminDocumentGalleryRenditionFolder_() {
   var existing = parent.getFoldersByName(folderName);
   if (existing.hasNext()) return existing.next();
   return parent.createFolder(folderName);
+  } finally {
+    try {
+      if (lock) lock.releaseLock();
+    } catch (_releaseErr) {}
+  }
 }
 
 function adminDocumentGalleryRenditionSourceStamp_(file) {
