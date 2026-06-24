@@ -649,8 +649,8 @@
     .documentGalleryMeta{ font-size:12px; color:var(--muted); }
     .documentGalleryGrid{
       display:grid;
-      grid-template-columns:repeat(auto-fit, minmax(248px, 1fr));
-      gap:12px;
+      grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
+      gap:14px;
     }
     .documentGalleryTile{
       border:1px solid rgba(148,163,184,.18);
@@ -661,6 +661,9 @@
       flex-direction:column;
       gap:8px;
       min-height:174px;
+    }
+    .documentGalleryTile.image{
+      min-height:340px;
     }
     .documentGalleryTile.missing{
       background:rgba(71,85,105,.16);
@@ -706,7 +709,7 @@
       line-height:1.35;
     }
     .documentGalleryThumb{
-      min-height:96px;
+      min-height:104px;
       border:1px solid rgba(148,163,184,.18);
       border-radius:12px;
       background:rgba(15,23,42,.25);
@@ -719,11 +722,45 @@
       font-size:12px;
       overflow:hidden;
     }
+    .documentGalleryThumb.image{
+      min-height:240px;
+      padding:0;
+      background:#020617;
+      position:relative;
+      cursor:zoom-in;
+    }
     .documentGalleryThumb img{
       max-width:100%;
       max-height:170px;
       display:block;
       border-radius:10px;
+    }
+    .documentGalleryThumb.image img{
+      width:100%;
+      height:100%;
+      min-height:240px;
+      max-height:360px;
+      object-fit:contain;
+      border-radius:12px;
+      transition:transform .16s ease, filter .16s ease;
+    }
+    .documentGalleryThumb.image:hover img,
+    .documentGalleryThumb.image:focus-within img{
+      transform:scale(1.04);
+      filter:contrast(1.04) saturate(1.04);
+    }
+    .documentGalleryZoomBtn{
+      position:absolute;
+      right:8px;
+      bottom:8px;
+      border:1px solid rgba(148,163,184,.38);
+      border-radius:999px;
+      background:rgba(15,23,42,.86);
+      color:#e5e7eb;
+      padding:5px 8px;
+      font-size:11px;
+      font-weight:800;
+      cursor:zoom-in;
     }
     .documentGalleryActions{
       display:flex;
@@ -747,6 +784,54 @@
       padding:14px;
       color:var(--muted);
       font-size:13px;
+    }
+    .galleryLightboxBack{
+      position:fixed; inset:0; z-index:10000;
+      background:rgba(0,0,0,.78);
+      display:flex; align-items:center; justify-content:center;
+      padding:18px;
+    }
+    .galleryLightboxPanel{
+      width:min(94vw, 1320px);
+      max-height:94vh;
+      border-radius:16px;
+      border:1px solid rgba(148,163,184,.22);
+      background:rgba(15,23,42,.98);
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+    .galleryLightboxHead{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:10px 12px;
+      border-bottom:1px solid rgba(148,163,184,.18);
+    }
+    .galleryLightboxTitle{
+      font-weight:800;
+      font-size:14px;
+      line-height:1.35;
+    }
+    .galleryLightboxMeta{
+      color:var(--muted);
+      font-size:12px;
+      margin-top:2px;
+    }
+    .galleryLightboxBody{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:280px;
+      background:#000;
+      padding:10px;
+    }
+    .galleryLightboxBody img{
+      max-width:100%;
+      max-height:calc(94vh - 86px);
+      object-fit:contain;
+      display:block;
     }
     .overrideTag{
       display:inline-block;
@@ -2480,6 +2565,21 @@
         <a id="docPreviewDownloadLink" class="btn small" target="_blank" rel="noopener">Download</a>
       </div>
       <iframe id="docPreviewFrame" class="docPreviewFrame" title="Document Preview" src=""></iframe>
+    </div>
+  </div>
+
+  <div id="galleryLightboxBack" class="galleryLightboxBack hidden" onclick="if(event.target===this) closeGalleryLightbox_();">
+    <div class="galleryLightboxPanel" role="dialog" aria-modal="true" aria-labelledby="galleryLightboxTitle">
+      <div class="galleryLightboxHead">
+        <div>
+          <div id="galleryLightboxTitle" class="galleryLightboxTitle">Document Image</div>
+          <div id="galleryLightboxMeta" class="galleryLightboxMeta">Secure signed preview URL. No raw Drive link is exposed.</div>
+        </div>
+        <button type="button" class="btn small" onclick="closeGalleryLightbox_()">Close</button>
+      </div>
+      <div class="galleryLightboxBody">
+        <img id="galleryLightboxImage" src="" alt="Document image preview">
+      </div>
     </div>
   </div>
 
@@ -4966,6 +5066,32 @@
       if (frame) frame.src = "";
       if (back) back.classList.add("hidden");
     }
+    function openGalleryLightbox_(url, label, meta){
+      var parsed = parseSignedFileRouteUrl_(url);
+      var back = document.getElementById("galleryLightboxBack");
+      var image = document.getElementById("galleryLightboxImage");
+      var title = document.getElementById("galleryLightboxTitle");
+      var metaEl = document.getElementById("galleryLightboxMeta");
+      if (!back || !image || !parsed.valid) return;
+      image.src = parsed.href;
+      image.alt = label ? String(label) : "Document image preview";
+      if (title) title.textContent = label ? String(label) : "Document Image";
+      if (metaEl) metaEl.textContent = meta ? String(meta) : "Secure signed preview URL. No raw Drive link is exposed.";
+      back.classList.remove("hidden");
+      var closeBtn = back.querySelector("button");
+      if (closeBtn && typeof closeBtn.focus === "function") closeBtn.focus();
+    }
+    function closeGalleryLightbox_(){
+      var back = document.getElementById("galleryLightboxBack");
+      var image = document.getElementById("galleryLightboxImage");
+      if (image) image.src = "";
+      if (back) back.classList.add("hidden");
+    }
+    window.addEventListener("keydown", function(event){
+      if (event && event.key === "Escape") {
+        closeGalleryLightbox_();
+      }
+    });
     function resetDocumentGalleryState_(){
       documentGalleryState = {
         open: false,
@@ -5062,7 +5188,9 @@
       var safeFile = file || {};
       var errorText = String(documentGalleryState.actionErrorByKey[actionKey] || "").trim();
       if (safeFile.previewEligible === true && safeFile.previewUrl) {
-        return `<img src="${esc(safeFile.previewUrl)}" alt="${esc(safeFile.label || safeFile.fileName || "Document preview")}">`;
+        var label = String(safeFile.label || safeFile.fileName || "Document image preview");
+        var meta = String(safeFile.fileName || safeFile.mimeType || "Image document");
+        return `<button type="button" class="documentGalleryZoomBtn galleryImageZoomBtn" data-preview-url="${esc(safeFile.previewUrl)}" data-label="${esc(label)}" data-meta="${esc(meta)}" aria-label="Enlarge ${esc(label)}">Enlarge</button><img src="${esc(safeFile.previewUrl)}" alt="${esc(label)}">`;
       }
       if (safeFile.previewEligible === true && documentGalleryHasSecureAction_(safeFile)) {
         return "Image preview available on demand.";
@@ -5102,6 +5230,15 @@
           );
         });
       });
+      Array.from(document.querySelectorAll(".galleryImageZoomBtn")).forEach(function(btn){
+        btn.addEventListener("click", function(){
+          openGalleryLightbox_(
+            this.getAttribute("data-preview-url") || "",
+            this.getAttribute("data-label") || "Document image",
+            this.getAttribute("data-meta") || ""
+          );
+        });
+      });
     }
     function renderDocumentGallery_(){
       var body = document.getElementById("documentGalleryBody");
@@ -5128,8 +5265,11 @@
         var warningText = documentGalleryWarningText_(file && file.warnings);
         var fileName = String((file && file.fileName) || "").trim();
         var mimeType = String((file && file.mimeType) || "").trim();
+        var isImage = !!(file && file.previewEligible === true);
+        var tileClass = isImage ? "documentGalleryTile image" : "documentGalleryTile";
+        var thumbClass = isImage && file && file.previewUrl ? "documentGalleryThumb image" : "documentGalleryThumb";
         return `
-          <div class="documentGalleryTile" data-gallery-tile="${esc(tileKey)}">
+          <div class="${tileClass}" data-gallery-tile="${esc(tileKey)}">
             <div class="documentGalleryTileHeader">
               <div class="documentGalleryTileText">
                 <div class="documentGalleryTileTitle">${esc(label)}</div>
@@ -5141,7 +5281,7 @@
               </div>
               <span class="statusTag">${esc(file && file.previewEligible === true ? "Image" : "Download first")}</span>
             </div>
-            <div class="documentGalleryThumb">${renderDocumentGalleryThumb_(file, actionKey)}</div>
+            <div class="${thumbClass}">${renderDocumentGalleryThumb_(file, actionKey)}</div>
             <div class="${warningText ? "documentGalleryWarning" : "documentGalleryTileMeta"}">
               ${esc(warningText || (file && file.previewEligible === true
                 ? "Preview Image is available for trusted image MIME types."

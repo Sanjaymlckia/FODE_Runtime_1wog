@@ -41,6 +41,14 @@ expectMatch(/<span class="documentGalleryFileType">\$\{esc\(sourceText\)\}<\/spa
 expectMatch(/<span class="documentGalleryFileType">Type: \$\{esc\(mimeType\)\}<\/span>/, "Gallery tiles must show file type context");
 expectMatch(/safeFile\.previewEligible === true && safeFile\.previewUrl/, "Gallery thumbnail renderer must support inline image thumbnails only when a signed previewUrl is present");
 expectMatch(/<img src="\$\{esc\(safeFile\.previewUrl\)\}"/, "Gallery thumbnail branch must render the signed previewUrl rather than reconstructing a raw file link");
+expectMatch(/class="documentGalleryZoomBtn galleryImageZoomBtn"/, "Image gallery tiles must provide an explicit enlarge control");
+expectMatch(/function openGalleryLightbox_\(/, "Image gallery must support click-to-enlarge lightbox behavior");
+expectMatch(/parseSignedFileRouteUrl_\(url\)/, "Gallery lightbox must validate signed file-route URLs before display");
+expectMatch(/id="galleryLightboxBack"/, "Gallery lightbox shell must exist");
+expectMatch(/documentGalleryTile image/, "Image files must render as visually larger gallery cards");
+expectMatch(/documentGalleryThumb image/, "Image files must render in a larger visual thumbnail region");
+expectMatch(/grid-template-columns:repeat\(auto-fit, minmax\(280px, 1fr\)\)/, "Gallery grid must use wider responsive visual cards");
+expectMatch(/min-height:240px/, "Image thumbnails must have a larger operator-identification visual area");
 expectMatch(/Latest School Report "\s*\+\s*String\(index \+ 1\)/, "Multi-file school reports should use short operator-facing labels");
 expectMatch(/Fee Receipt/, "Missing fee receipt tile should use a short operator-facing label");
 expectMatch(/Preview Image/, "Image preview affordance must exist");
