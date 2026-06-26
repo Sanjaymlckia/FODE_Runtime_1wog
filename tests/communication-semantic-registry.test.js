@@ -217,13 +217,27 @@ assert.match(previewSource, /resolveApplicantMessageContext_/, "Preview must con
 assert.match(sendSource, /resolveApplicantMessageContext_/, "Send must continue through existing context authority");
 assert.match(sendSource, /isSystemStabilizationModeActive_/, "Existing stabilization send gate must remain");
 assert.match(sendSource, /ENABLE_PRODUCTION_EMAIL_SENDS/, "Existing production send gate must remain");
+assert.match(sendSource, /ACTION_REQUIRED_PLACEHOLDER/, "Operational selected-applicant sends must block unresolved ACTION REQUIRED placeholders");
+assert.match(sendSource, /communicationRequiresResolvedActionPlaceholders_/, "Operational placeholder send block must be scoped by message type");
+assert.match(sendSource, /hasUnresolvedActionRequiredPlaceholder_/, "Send gate must inspect final editable subject/body for unresolved placeholders");
 assert.match(codeSource, /computeEmailIdempotencyKey_/, "Existing idempotency path must remain");
 assert.match(codeSource, /communicationCooldownMs_/, "Existing cooldown path must remain");
 assert.match(adminPreviewSource, /hasOwnProperty\.call\(p, "subject"\)/, "Preview wrapper must not pass implicit blank subject over generated templates");
 assert.match(adminSendSource, /hasOwnProperty\.call\(p, "subject"\)/, "Send wrapper must not pass implicit blank subject over generated templates");
 
 const templateFunctionNames = [
+  "buildApplicantFullName_",
   "buildParentOrApplicantName_",
+  "actionRequiredPlaceholder_",
+  "firstNonEmptyRowValue_",
+  "applicantGradeOrPlaceholder_",
+  "applicantSubjectsOrPlaceholder_",
+  "applicantPaymentQuoteOrPlaceholder_",
+  "paymentInstructionsOrPlaceholder_",
+  "hasUnresolvedActionRequiredPlaceholder_",
+  "communicationRequiresResolvedActionPlaceholders_",
+  "feedbackStatusNeedsAttention_",
+  "buildDocumentAttentionLines_",
   "buildDocsMissingEmailBody_",
   "buildPaymentFollowupEmailBody_",
   "buildCustomSelectedEmailSubject_",
@@ -244,7 +258,18 @@ const templateFunctionNames = [
   "buildContactFallbackManualBody_"
 ];
 const templateContext = {
-  clean_: (value) => String(value == null ? "" : value).trim()
+  CONFIG: {
+    DOC_FIELDS: [
+      { label: "Birth Certificate / NID / Passport", file: "Birth_ID_Passport_File", status: "Birth_ID_Status", comment: "Birth_ID_Comment" },
+      { label: "Latest School Reports / Documents", file: "Latest_School_Report_File", status: "Report_Status", comment: "Report_Comment" },
+      { label: "Passport Size Colour Photo", file: "Passport_Photo_File", status: "Photo_Status", comment: "Photo_Comment" },
+      { label: "Admission Fee Payment Receipt", file: "Fee_Receipt_File", status: "Receipt_Status", comment: "Receipt_Comment" }
+    ],
+    COMMUNICATION_ALLOWED_MESSAGE_TYPES: allowedTypes
+  },
+  clean_: (value) => String(value == null ? "" : value).trim(),
+  hasUploadEvidence_: (value) => !!String(value == null ? "" : value).trim(),
+  normalizeApplicantMessageType_: context.normalizeApplicantMessageType_
 };
 vm.createContext(templateContext);
 vm.runInContext(templateFunctionNames.map((name) => extractFunction(codeSource, name)).join("\n\n"), templateContext);
@@ -253,12 +278,21 @@ const applicantContext = {
   applicantId: "FODE-26-TEST",
   portalUrl: "https://portal.example.test/safe",
   rowObj: {
+    First_Name: "Test",
+    Last_Name: "Student",
     Parent_First_Name: "Test",
-    Parent_Last_Name: "Parent"
+    Parent_Last_Name: "Parent",
+    Birth_ID_Passport_File: "https://example.test/birth.pdf",
+    Birth_ID_Status: "Verified",
+    Latest_School_Report_File: "",
+    Report_Status: "Pending",
+    Report_Comment: "Please upload the latest school report."
   }
 };
 const docsMissingBody = templateContext.buildDocsMissingEmailBody_(applicantContext);
 assert.match(docsMissingBody, /not available or are incomplete/i);
+assert.match(docsMissingBody, /Applicant ID: FODE-26-TEST/);
+assert.match(docsMissingBody, /Latest School Reports \/ Documents: not received or not available in the current application record\./);
 assert.match(docsMissingBody, /cannot be fully reviewed or processed until the required documents are uploaded/i);
 assert.match(docsMissingBody, /admission processing may be delayed or blocked/i);
 assert.match(docsMissingBody, /application review cannot continue until the documents are received/i);
@@ -268,9 +302,49 @@ assert.doesNotMatch(docsMissingBody, /\breject(?:ed|ion)?\b/i);
 assert.doesNotMatch(docsMissingBody, /\byour (?:fault|failure)\b/i);
 
 const paymentBody = templateContext.buildPaymentFollowupEmailBody_(applicantContext);
-assert.match(paymentBody, /payment receipt/i);
-assert.match(paymentBody, /does not confirm acceptance or enrolment/i);
+assert.match(paymentBody, /Applicant ID: FODE-26-TEST/);
+assert.match(paymentBody, /Documents have been reviewed, but payment evidence is still pending/i);
+assert.match(paymentBody, /\[ACTION REQUIRED: confirm grade\]/);
+assert.match(paymentBody, /\[ACTION REQUIRED: confirm subjects\]/);
+assert.match(paymentBody, /\[ACTION REQUIRED: insert payment\/quote amount\]/);
+assert.match(paymentBody, /\[ACTION REQUIRED: confirm payment instructions\]/);
+assert.match(paymentBody, /Upload or send the payment receipt\/evidence/i);
+assert.match(paymentBody, /Enrolment\/payment processing will continue only after payment evidence is received and verified/i);
 assert.doesNotMatch(paymentBody, /\byou (?:are|have been) accepted\b/i);
+
+const quoteBody = templateContext.buildApplicationVerifiedQuoteBody_(applicantContext);
+assert.match(quoteBody, /completed document verification/i);
+assert.match(quoteBody, /Applicant ID: FODE-26-TEST/);
+assert.match(quoteBody, /\[ACTION REQUIRED: confirm grade\]/);
+assert.match(quoteBody, /\[ACTION REQUIRED: confirm subjects\]/);
+assert.match(quoteBody, /\[ACTION REQUIRED: insert payment\/quote amount\]/);
+assert.match(quoteBody, /payment receipt\/evidence/i);
+assert.match(quoteBody, /Next steps:/);
+
+const acceptanceBody = templateContext.buildApplicationAcceptanceConfirmationBody_(applicantContext);
+assert.match(acceptanceBody, /Applicant ID: FODE-26-TEST/);
+assert.match(acceptanceBody, /\[ACTION REQUIRED: confirm grade\]/);
+assert.match(acceptanceBody, /\[ACTION REQUIRED: confirm subjects\]/);
+assert.match(acceptanceBody, /\[ACTION REQUIRED: insert payment\/quote amount\]/);
+assert.match(acceptanceBody, /\[ACTION REQUIRED: confirm acceptance\/enrolment status\]/);
+assert.match(acceptanceBody, /Next steps:/);
+
+const receiptRequestBody = templateContext.buildApplicationReceiptRequestBody_(applicantContext);
+assert.match(receiptRequestBody, /Applicant ID: FODE-26-TEST/);
+assert.match(receiptRequestBody, /Payment evidence \/ receipt is still required/i);
+assert.match(receiptRequestBody, /upload a clear copy/i);
+assert.match(receiptRequestBody, /does not confirm acceptance or enrolment/i);
+
+const finalReminderBody = templateContext.buildApplicationFinalReminderBody_(applicantContext);
+assert.match(finalReminderBody, /Applicant ID: FODE-26-TEST/);
+assert.match(finalReminderBody, /\[ACTION REQUIRED: state outstanding action\]/);
+assert.match(finalReminderBody, /\[ACTION REQUIRED: confirm deadline or urgency\]/);
+
+assert.equal(templateContext.hasUnresolvedActionRequiredPlaceholder_("", paymentBody), true);
+assert.equal(templateContext.hasUnresolvedActionRequiredPlaceholder_("", paymentBody.replace(/\[ACTION REQUIRED: [^\]]+\]/g, "operator confirmed")), false);
+assert.equal(templateContext.communicationRequiresResolvedActionPlaceholders_("payment_followup"), true);
+assert.equal(templateContext.communicationRequiresResolvedActionPlaceholders_("application_verified_quote"), true);
+assert.equal(templateContext.communicationRequiresResolvedActionPlaceholders_("custom_email"), false);
 
 const customSubject = templateContext.buildCustomSelectedEmailSubject_();
 const customBody = templateContext.buildCustomSelectedEmailBody_(applicantContext);
