@@ -173,6 +173,91 @@ The F: Playwright lane is currently an external, non-Git proof dependency. The w
 
 These external specs and their auth state are not copied into the FODE runtime repository. Reports, screenshots, traces, and test output remain on F:. Back up or place the F: Playwright project under separate version control before treating it as durable release infrastructure.
 
+### `fode-dr-manifest.ps1`
+
+Track L disaster recovery scaffold and manifest generator. It creates the F: recovery workspace and writes local recovery manifests/checklists:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\fode-dr-manifest.ps1 -IncludeClaspDeployments
+```
+
+Default target:
+
+`F:\FODE_DR_Backup`
+
+Created folders:
+
+- `source_repo_snapshots`
+- `apps_script_manifests`
+- `sheet_exports`
+- `drive_inventory_reports`
+- `applicant_document_inventory`
+- `playwright_acceptance_reports`
+- `release_proofs`
+- `restore_drills`
+- `manifests`
+- `logs`
+
+Outputs:
+
+- `F:\FODE_DR_Backup\manifests\fode_runtime_recovery_manifest_v01.json`
+- `F:\FODE_DR_Backup\manifests\fode_runtime_recovery_manifest_v01.md`
+- `F:\FODE_DR_Backup\manifests\restore_checklist_v01.md`
+
+The script reads local repo/config metadata and optionally `clasp deployments`. It does not deploy, repin, create Apps Script versions, export Sheets, copy Drive files, send email, or touch production/Student/OPS.
+
+### `fode-dr-backup.ps1`
+
+Track L DR backup operations wrapper. It is dry-run by default:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\fode-dr-backup.ps1 -Mode Plan
+```
+
+Supported modes:
+
+- `RepoSnapshot`: creates a local ZIP only when `-Execute` is supplied.
+- `AppsScriptManifest`: writes a local metadata manifest only when `-Execute` is supplied.
+- `SheetExportPlan`: prints Sheet export requirements; does not export.
+- `DriveInventoryPlan`: prints Drive inventory requirements; does not read/copy Drive.
+- `ApplicantDocumentInventoryPlan`: prints applicant document inventory schema; does not read/copy Drive.
+- `ArchivePlaywrightReports`: copies one explicit F: Playwright report folder only when `-Execute -PlaywrightReportPath ...` are supplied.
+
+This script intentionally does not implement live Sheet export or Drive inventory execution yet. Those require a separate CIS because they touch live data services, even if read-only.
+
+### `fode-release-record.ps1`
+
+Track L release evidence recorder. After an accepted runtime release, it creates timestamped JSON and Markdown proof records under:
+
+`F:\FODE_DR_Backup\release_proofs`
+
+Plan mode shows the output paths and values without creating files:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\fode-release-record.ps1 `
+  -Plan `
+  -RuntimeVersion "r301" `
+  -DeployVersion "301" `
+  -AppsScriptVersion "301" `
+  -ReleaseClassification "Track H" `
+  -AcceptanceStatus "PASS"
+```
+
+Execute mode writes the release record only:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\fode-release-record.ps1 `
+  -Execute `
+  -RuntimeVersion "r301" `
+  -DeployVersion "301" `
+  -AppsScriptVersion "301" `
+  -ReleaseClassification "Track H" `
+  -AcceptanceStatus "PASS" `
+  -HealthProofPath "F:\Playwright\fode-secure-link-diagnostic\reports\..."
+```
+
+The recorder reuses `F:\FODE_DR_Backup\manifests\fode_runtime_recovery_manifest_v01.json` when present and accepts explicit overrides. It does not call Apps Script, Google Drive, or Google Sheets APIs. It does not deploy, repin, create Apps Script versions, export Sheets, copy Drive files, send email, or touch production/Student/OPS.
+
 ## Approval Gates
 
 Keep separate approvals for:
