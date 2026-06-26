@@ -45,6 +45,8 @@ assert.match(updateDocs, /NO_DOCUMENT_STATUS_FIELDS_WRITTEN/, "Backend must not 
 assert.match(updateDocs, /documentStatuses:\s*refreshedDocStatuses/, "Save response must include refreshed status-field values");
 assert.match(updateDocs, /documentStatusFields:\s*refreshedDocStatusFields/, "Save response must include refreshed document status DTOs");
 assert.match(updateDocs, /changedFields:[\s\S]*previousStatus[\s\S]*newStatus/, "Save response must expose previous/new status fields for proof");
+assert.match(updateDocs, /cols\.docsCompat[\s\S]*docStage === "Verified" \? "Yes" : ""/, "Document save must sync Docs_Verified when computed required documents are verified");
+assert.match(updateDocs, /paymentVerified \? "Yes" : ""/, "Document save must not mark payment verified unless payment authority computes verified");
 
 assert.match(statusMapper, /if \(key === "VERIFIED"\) return "Verified"/, "Route VERIFIED key must persist as UI-readable Verified");
 assert.match(statusMapper, /if \(key === "REJECTED"\) return "Rejected"/, "Route REJECTED key must persist as UI-readable Rejected");
@@ -60,3 +62,4 @@ assert.match(verifiedCheck, /docStatusKeyToStoredValue_\(value\) === "Verified"/
 console.log("PASS document status save payload includes selected mapped fields");
 console.log("PASS document status save rejects zero-write success");
 console.log("PASS document status persistence stores UI-readable status values");
+console.log("PASS document status save syncs Docs_Verified without marking payment verified");

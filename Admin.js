@@ -2401,6 +2401,7 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
   var overallComputed = computeOverallStatus_(refreshedRow);
   if (cols.paymentCompat) setCell_(sh, rowNumber, idx, cols.paymentCompat, paymentVerified ? "Yes" : "");
   if (cols.docStage) setCell_(sh, rowNumber, idx, cols.docStage, docStage);
+  if (cols.docsCompat) setCell_(sh, rowNumber, idx, cols.docsCompat, docStage === "Verified" ? "Yes" : "");
   if (cols.overall) setCell_(sh, rowNumber, idx, cols.overall, overallComputed);
   setCell_(sh, rowNumber, idx, "Doc_Last_Verified_At", new Date());
   setCell_(sh, rowNumber, idx, "Doc_Last_Verified_By", adminEmail || "admin");
@@ -2678,6 +2679,7 @@ function admin_setPaymentVerified_impl_(payload, dbgId) {
   var computedOverall = computeOverallStatus_(refreshedRow);
   if (cols.paymentCompat) setCell_(sh, rowNumber, idx, cols.paymentCompat, paymentVerified ? "Yes" : "");
   if (cols.docStage) setCell_(sh, rowNumber, idx, cols.docStage, docStage);
+  if (cols.docsCompat) setCell_(sh, rowNumber, idx, cols.docsCompat, docStage === "Verified" ? "Yes" : "");
   if (cols.overall) setCell_(sh, rowNumber, idx, cols.overall, computedOverall);
   setCell_(sh, rowNumber, idx, "Doc_Last_Verified_At", new Date());
   setCell_(sh, rowNumber, idx, "Doc_Last_Verified_By", adminEmail || "admin");
@@ -3572,6 +3574,7 @@ function getCol_(idx, candidates) {
 function resolveStatusCols_(idx) {
   return {
     docStage: getCol_(idx, ["Doc_Verification_Status"]),
+    docsCompat: getCol_(idx, ["Docs_Verified"]),
     overall: getCol_(idx, ["Overall_Status"]),
     paymentCompat: getCol_(idx, ["Payment_Verified"]),
     receipt: getCol_(idx, ["Receipt_Status"])
@@ -5612,8 +5615,8 @@ function admin_getReviewQueues(payload) {
         // r22xB.1: Documents to Verify is officer review-ready only:
         // portalSubmitted && requiredDocumentUploadComplete && !docsVerified.
         var docsQueueMatch = portalSubmitted && requiredDocumentUploadComplete && !docsReviewVerified;
-        var awaitingPaymentQueueMatch = docsVerifiedRaw === "Yes" && !paymentVerified && !paymentEvidencePresent;
-        var paymentsQueueMatch = docsVerifiedRaw === "Yes" && !paymentVerified && paymentEvidencePresent;
+        var awaitingPaymentQueueMatch = docsReviewVerified && !paymentVerified && !paymentEvidencePresent;
+        var paymentsQueueMatch = docsReviewVerified && !paymentVerified && paymentEvidencePresent;
         var anomaliesQueueMatch = paymentVerified && !docsReviewVerified;
         var paidApprovedQueueMatch = paymentVerified;
         var fdReceivedQueueMatch = isExternalFdIntakeRow_(rowObj) && !portalSubmitted && !docsReviewVerified && !paymentVerified;
