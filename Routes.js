@@ -49,6 +49,18 @@ function doPost_portalUpload_(e) {
   return portal_uploadMultipart_(e);
 }
 
+function docStatusKeyToStoredValue_(statusKey) {
+  var key = clean_(statusKey || "").toUpperCase();
+  if (key === "VERIFIED") return "Verified";
+  if (key === "REJECTED") return "Rejected";
+  if (key === "FRAUDULENT") return "Fraudulent";
+  return "Pending";
+}
+
+function isVerifiedDocStatusValue_(value) {
+  return docStatusKeyToStoredValue_(value) === "Verified";
+}
+
 function adminVerifyDocument(applicantId, fieldName, newStatus, adminUser, comment) {
   applicantId = clean_(applicantId);
   fieldName = clean_(fieldName);
@@ -63,6 +75,7 @@ function adminVerifyDocument(applicantId, fieldName, newStatus, adminUser, comme
   if (!CONFIG.DOC_STATUS[newStatus]) {
     throw new Error("Invalid status. Allowed: " + Object.keys(CONFIG.DOC_STATUS).join(", "));
   }
+  var storedStatus = docStatusKeyToStoredValue_(newStatus);
 
   var ss = getWorkingSpreadsheet_();
   var sheet = mustGetSheet_(ss, CONFIG.DATA_SHEET);
@@ -80,7 +93,7 @@ function adminVerifyDocument(applicantId, fieldName, newStatus, adminUser, comme
 
   // Build patch
   var patch = {};
-  patch[docMeta.status] = newStatus;
+  patch[docMeta.status] = storedStatus;
 
   if (docMeta.comment && headerMap[docMeta.comment]) {
     patch[docMeta.comment] = comment || "";
@@ -101,8 +114,8 @@ function adminVerifyDocument(applicantId, fieldName, newStatus, adminUser, comme
   for (var r = 0; r < requiredFields.length; r++) {
     var f2 = requiredFields[r];
     var meta2 = docMetaByField_(f2);
-    var st = (f2 === fieldName) ? newStatus : clean_(rowObj[meta2.status] || "");
-    if (st !== "VERIFIED") { allOk = false; break; }
+    var st = (f2 === fieldName) ? storedStatus : clean_(rowObj[meta2.status] || "");
+    if (!isVerifiedDocStatusValue_(st)) { allOk = false; break; }
   }
 
   if (headerMap[SCHEMA.DOCS_VERIFIED]) {
@@ -117,9 +130,9 @@ function adminVerifyDocument(applicantId, fieldName, newStatus, adminUser, comme
 
   applyPatch_(sheet, rowIndex, patch);
 
-  log_(logSheet, "ADMIN VERIFY", applicantId + " | " + fieldName + " | " + newStatus);
+  log_(logSheet, "ADMIN VERIFY", applicantId + " | " + fieldName + " | " + storedStatus);
 
-  return { ok: true, applicantId: applicantId, field: fieldName, status: newStatus, docsVerified: allOk ? "Yes" : "" };
+  return { ok: true, applicantId: applicantId, field: fieldName, status: storedStatus, docsVerified: allOk ? "Yes" : "" };
 }
 
 function doGet_file_(e) {

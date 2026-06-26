@@ -2329,6 +2329,9 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
     writePrepared.push(writeItem);
   }
   prepared = writePrepared;
+  if (!prepared.length) {
+    return err_("NO_DOCUMENT_STATUS_FIELDS_WRITTEN", "No document status fields were written.", dbgId);
+  }
 
   var wantsReceiptVerified = false;
   var beforePaymentVerified = isPaymentVerifiedDerived_(currentRowObj) === true;
@@ -2402,6 +2405,21 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
   setCell_(sh, rowNumber, idx, "Doc_Last_Verified_At", new Date());
   setCell_(sh, rowNumber, idx, "Doc_Last_Verified_By", adminEmail || "admin");
   var finalRowObj = getRowObject_(sh, rowNumber);
+  var refreshedDocStatuses = {};
+  var refreshedDocStatusFields = [];
+  var refreshedDocMappings = Array.isArray(CONFIG.DOC_FIELDS) ? CONFIG.DOC_FIELDS : [];
+  for (var rd = 0; rd < refreshedDocMappings.length; rd++) {
+    var rdMap = refreshedDocMappings[rd] || {};
+    if (!rdMap.status) continue;
+    refreshedDocStatuses[rdMap.status] = normalizeDocStatus_(finalRowObj[rdMap.status] || "");
+    refreshedDocStatusFields.push({
+      file: String(rdMap.file || ""),
+      statusField: String(rdMap.status || ""),
+      commentField: String(rdMap.comment || ""),
+      status: normalizeDocStatus_(finalRowObj[rdMap.status] || ""),
+      comment: rdMap.comment ? clean_(finalRowObj[rdMap.comment] || "") : ""
+    });
+  }
   var actions = runVerificationAutomations_(sh, rowNumber, idx, priorRowObj, finalRowObj, dbgId);
   captureOperatorAttribution_(sh, rowNumber, idx, {
     action: "DOCS_UPDATE",
@@ -2449,6 +2467,17 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
     paymentVerified: paymentVerified ? "Yes" : "",
     overallStatusComputed: overallComputed,
     overallStatus: overallComputed,
+    documentStatuses: refreshedDocStatuses,
+    documentStatusFields: refreshedDocStatusFields,
+    changedFields: prepared.map(function(item) {
+      return item && item.mapping ? {
+        file: String(item.mapping.file || ""),
+        statusField: String(item.mapping.status || ""),
+        commentField: String(item.mapping.comment || ""),
+        previousStatus: normalizeDocStatus_(priorRowObj[item.mapping.status] || ""),
+        newStatus: normalizeDocStatus_(finalRowObj[item.mapping.status] || "")
+      } : null;
+    }).filter(function(item) { return !!item; }),
     actions: actions,
     emailTriggered: !!(actions && actions.emailTriggered),
     warnings: ((actions && Array.isArray(actions.warnings)) ? actions.warnings : []).concat(workflowWarnings),
