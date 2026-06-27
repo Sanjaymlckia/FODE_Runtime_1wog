@@ -4478,7 +4478,7 @@ function deriveFodeCrmStageFromRow_(rowObj) {
   var row = rowObj || {};
   var overallStatus = clean_(row.Overall_Status || row["Overall Status"] || row.Status || row["Application Status"] || "");
   var registrationComplete = clean_(row.Registration_Complete || "") === "Yes";
-  var paymentVerified = clean_(row.Payment_Verified || "") === "Yes" || (typeof derivePaymentBadge_ === 'function' && derivePaymentBadge_(row) === "Verified");
+  var paymentVerified = (typeof derivePaymentBadge_ === 'function' && derivePaymentBadge_(row) === "Verified");
   var queueState = typeof classifyAdminQueueState_ === 'function' ? clean_(classifyAdminQueueState_(row) || "") : "";
   var admissionGranted = registrationComplete || queueState === "enrolled_ready" || (/approved|granted|enrolled_ready/i.test(overallStatus) && paymentVerified);
 
@@ -6024,20 +6024,18 @@ function classifyAdminQueue_(row) {
     row["Application Status"]
   ) || "").trim();
 
-  var paymentRaw = String(firstNonEmpty_(
-    row.Payment_Verified,
-    row.Payment_Status,
-    row["Payment Verified"]
-  ) || "").trim();
+  var paymentBadge = typeof derivePaymentBadge_ === "function" ? derivePaymentBadge_(row) : receiptStatus;
 
   var docsComplete = [birthStatus, reportStatus, photoStatus, transferStatus, receiptStatus]
     .filter(function(v) { return v !== ""; })
     .every(function(v) { return /verified/i.test(v); });
 
   var docsVerified = /verified/i.test(docVerificationStatus) || docsComplete;
-  var paymentVerified =
-    /yes|true|verified|paid/i.test(paymentRaw);
-  var hasAnyPayment = paymentVerified || /yes|true|received|paid/i.test(paymentRaw);
+  var paymentVerified = paymentBadge === "Verified";
+  var hasAnyPayment = paymentVerified
+    || paymentBadge === "Rejected"
+    || /pending|review|received|uploaded|reject|invalid|failed/i.test(receiptStatus)
+    || (typeof hasUploadEvidence_ === "function" && hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File"));
 
   if (!docsVerified && hasAnyPayment) return "payment_first_anomalies";
   if (docsVerified && paymentVerified) {
@@ -6073,6 +6071,8 @@ function mapAdminQueueRow_(row) {
     row.Payment_Status,
     row.Payment
   ) || "").trim();
+  var paymentBadge = typeof derivePaymentBadge_ === "function" ? derivePaymentBadge_(row) : paymentVerifiedRaw;
+  var paymentVerified = paymentBadge === "Verified";
 
   var overallStatus = String(firstNonEmpty_(
     row.Overall_Status,
@@ -6099,10 +6099,10 @@ function mapAdminQueueRow_(row) {
     applicantId: applicantId,
     name: fullName,
     docStatus: docVerificationStatus || overallStatus,
-    paymentStatus: /yes|true|verified|paid/i.test(paymentVerifiedRaw) ? "Payment Verified" : "Pending",
+    paymentStatus: paymentVerified ? "Payment Verified" : "Pending",
     portalStatus: portalStatus,
     docsFollowUp: docsFollowUp,
-    eligibleDocsFollowUp: /verified/i.test(docVerificationStatus || overallStatus) && !/yes|true|verified|paid/i.test(paymentVerifiedRaw)
+    eligibleDocsFollowUp: /verified/i.test(docVerificationStatus || overallStatus) && !paymentVerified
   };
 }
 
@@ -6779,7 +6779,7 @@ function communicationDocsMissing_(rowObj) {
 
 function communicationPaymentOutstanding_(rowObj) {
   var row = rowObj || {};
-  return !(derivePaymentBadge_(row) === "Verified" || clean_(row.Payment_Verified || "") === "Yes");
+  return derivePaymentBadge_(row) !== "Verified";
 }
 
 function communicationFamilyForMessageType_(messageType) {
@@ -7061,7 +7061,7 @@ function deriveCommunicationState_(rowObj, messageType, opts) {
     bounceFlag: isCampaignBounceFlagTrue_(row.Email_Bounce_Flag),
     bounceReason: clean_(row.Email_Bounce_Reason || ""),
     docsVerified: computeDocVerificationStatus_(row) === "Verified" || clean_(row.Docs_Verified || "") === "Yes",
-    paymentVerified: derivePaymentBadge_(row) === "Verified" || clean_(row.Payment_Verified || "") === "Yes",
+    paymentVerified: derivePaymentBadge_(row) === "Verified",
     docsMissing: communicationDocsMissing_(row),
     paymentOutstanding: communicationPaymentOutstanding_(row),
     requiresPortalUrl: communicationRequiresPortalUrl_(normalizedType),
@@ -7943,7 +7943,7 @@ function deriveApplicantLifecycleStage_(rowObj) {
   var bounceFlag = isCampaignBounceFlagTrue_(row.Email_Bounce_Flag);
   var docsVerified = computeDocVerificationStatus_(row) === "Verified" || clean_(row.Docs_Verified || "") === "Yes";
   var paymentBadge = derivePaymentBadge_(row);
-  var paymentVerified = paymentBadge === "Verified" || clean_(row.Payment_Verified || "") === "Yes";
+  var paymentVerified = paymentBadge === "Verified";
   var receiptEvidencePresent = hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File");
   var attemptCount = campaignAttemptCount_(row);
   var nextActionTs = parseTime_(row.Email_Next_Action_Date || "");

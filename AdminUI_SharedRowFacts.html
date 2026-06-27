@@ -125,7 +125,6 @@
       if (operationalStateTextIncludes_(receiptStatus, ["verified", "approved", "cleared"])) return "VERIFIED";
       if (operationalStateTextIncludes_(receiptStatus, ["reject", "invalid", "failed"])) return "CORRECTION_REQUIRED";
       if (hasPaymentEvidence || operationalStateTextIncludes_(receiptStatus, ["pending", "review", "received", "uploaded"])) return "UNDER_REVIEW";
-      if (allowCompatibility && (operationalStateIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true)) return "VERIFIED";
       return "EVIDENCE_PENDING";
     }
     function operationalStatePortalState_(row){
@@ -716,7 +715,7 @@
       var paymentEvidenceState = resolverGoverned ? opsNormalizedPaymentEvidenceStateFromResolver_(resolverState && resolverState.paymentState) : opsPaymentEvidenceStatus_(r);
       var paymentVerified = resolverGoverned
         ? String(resolverState && resolverState.paymentState || "").trim().toUpperCase() === "VERIFIED"
-        : (opsIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true);
+        : operationalStatePaymentState_(r, { allowCompatibility: false }) === "VERIFIED";
       var paymentState = opsPaymentStateFromRawRow_(r, paymentVerified, paymentEvidenceState);
       var portalState = resolverGoverned ? opsNormalizedPortalStateFromResolver_(resolverState && resolverState.portalState) : opsPortalStateFromRawRow_(r);
       var classroomState = opsClassroomStateFromRawRow_(r, paymentVerified);

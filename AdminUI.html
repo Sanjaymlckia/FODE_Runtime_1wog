@@ -3452,7 +3452,7 @@
       if (upper === "YES" || upper === "ENROLLED" || upper === "COMPLETE") return "classroom_active";
       if (upper.indexOf("NOTIF") >= 0 || upper.indexOf("HANDOVER") >= 0 || upper.indexOf("SENT") >= 0) return "classroom_handover_notified";
       if (opsIsYes_(r.Enrolled_Confirmed)) return "classroom_handover_ready";
-      if (paymentVerified === true || opsIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true) return "enrolment_ready";
+      if (paymentVerified === true) return "enrolment_ready";
       return "classroom_not_ready";
     }
     function opsClassroomStateLabel_(state){
@@ -3702,7 +3702,8 @@
     }
     function opsPaymentEvidenceStatus_(row){
       var r = row || {};
-      if (opsIsYes_(r.Payment_Verified) || r.Payment_Verified_Bool === true || r.paymentVerified === true) return "Payment verified";
+      var receiptStatus = String(r.Receipt_Status || r.Payment_Status || r.Payment_Review_Status || "").toLowerCase();
+      if (/verified|approved|cleared/.test(receiptStatus)) return "Payment verified";
       if (opsIsYes_(r.Payment_Received) || opsHasUploadEvidenceLike_(r.Fee_Receipt_File)) return "Payment field evidence present - not verified";
       if (Object.prototype.hasOwnProperty.call(r, "Payment_Received") || Object.prototype.hasOwnProperty.call(r, "Fee_Receipt_File")) return "No payment evidence detected in loaded workflow fields";
       return "Unknown";
@@ -3821,7 +3822,7 @@
         } else {
           rows = rows.filter(function(row){
             var invoiceState = opsInvoiceSummary_(row);
-            var paymentOk = (opsIsYes_(row.Payment_Verified) || row.Payment_Verified_Bool === true || row.paymentVerified === true);
+            var paymentOk = opsBillingRowFacts_(row).paymentVerified;
             var enrolledOk = opsIsYes_(row.Enrolled_Confirmed);
             var ready = opsReadySummary_(invoiceState, paymentOk, enrolledOk);
             return filter === "ready" ? ready.cls === "ok" : ready.cls !== "ok";
@@ -6924,7 +6925,7 @@
       const overallLockInfo = document.getElementById("overallLockInfo");
       const d = detail || currentDetail || null;
       if (!btnUnlock || !btnLock || !d) return;
-      const paymentBadge = d.Payment_Badge || ((d.paymentVerified === true || d.Payment_Verified_Bool) ? "Verified" : "Pending");
+      const paymentBadge = d.Payment_Badge || (d.paymentVerified === true ? "Verified" : "Pending");
       const paymentLocked = paymentBadge === "Verified";
       const bypassActive = isModalBypassActive_();
       btnUnlock.title = paymentLocked
@@ -7851,7 +7852,7 @@ function renderStageDashboard_(items, emptyMessage){
       var portalSubmitted = workflowYesNo_(d.Portal_Submitted) === "Yes";
       var docsVerified = workflowYesNo_(d.Docs_Verified) === "Yes";
       var paymentEvidenceUploaded = workflowYesNo_(d.Payment_Received) === "Yes";
-      var paymentVerified = workflowYesNo_(d.Payment_Verified) === "Yes" || d.Payment_Verified_Bool === true || d.paymentVerified === true;
+      var paymentVerified = d.paymentVerified === true || d.isPaymentVerified === true || String(d.Payment_Badge || "").toLowerCase() === "verified";
       return portalSubmitted && (!docsVerified || !paymentEvidenceUploaded || !paymentVerified);
     }
     function deriveApplicantDisplayStage(detail){
@@ -9069,7 +9070,7 @@ function renderStageDashboard_(items, emptyMessage){
       var docComputed = d.Doc_Verification_Status_Computed || d.Doc_Verification_Status || "Pending";
       var paymentBadge = d.Payment_Badge || (facts.paymentVerified ? "Verified" : "Pending");
       modalState.isSuperAdmin = !!(d.isSuperAdmin === true || IS_SUPER);
-      modalState.isPaymentVerified = !!(d.isPaymentVerified === true || d.paymentVerified === true || d.Payment_Verified_Bool || facts.paymentVerified || paymentBadge === "Verified");
+      modalState.isPaymentVerified = !!(d.isPaymentVerified === true || d.paymentVerified === true || facts.paymentVerified || paymentBadge === "Verified");
       modalState.isLocked = true;
       modalState.bypassPaymentFreeze = false;
       document.getElementById("mOverall").textContent = String(docComputed || "Pending");

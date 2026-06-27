@@ -454,11 +454,13 @@ function admin_getApplicantDetail(payload) {
     detailObj.Payment_Received = hasUploadEvidence_(detailObj.Fee_Receipt_File, "Fee_Receipt_File") ? "Yes" : "No";
     detailObj.Docs_Verified = clean_(detailObj.Docs_Verified || "") === "Yes" ? "Yes" : "No";
     detailObj.Portal_Submitted = (nonEmpty_(clean_(detailObj.Portal_Submitted || "")) && clean_(detailObj.Portal_Submitted || "") !== "No") ? "Yes" : "No";
-    detailObj.Payment_Verified = clean_(detailObj.Payment_Verified || "") === "Yes" ? "Yes" : "No";
-    detailObj.Enrolled_Confirmed = detailObj.Payment_Verified === "Yes" ? "Yes" : "No";
-    detailObj.Payment_Verified_Bool = detailObj.Payment_Verified === "Yes";
-    detailObj.paymentVerified = detailObj.Payment_Verified === "Yes";
-    detailObj.isPaymentVerified = detailObj.Payment_Verified === "Yes";
+    var paymentVerifiedRaw = clean_(detailObj.Payment_Verified || "") === "Yes";
+    detailObj.Payment_Verified_Raw = paymentVerifiedRaw ? "Yes" : "No";
+    detailObj.Payment_Verified = paymentVerifiedBool ? "Yes" : "No";
+    detailObj.Enrolled_Confirmed = clean_(detailObj.Enrolled_Confirmed || "") === "Yes" ? "Yes" : "No";
+    detailObj.Payment_Verified_Bool = paymentVerifiedBool;
+    detailObj.paymentVerified = paymentVerifiedBool;
+    detailObj.isPaymentVerified = paymentVerifiedBool;
     detailObj.invoiceRaised = !!clean_(detailObj.Books_Invoice_ID || "");
     detailObj.Books_Last_Push_At = clean_(detailObj.Books_Last_Push_At || detailObj.Books_Push_At || "");
     detailObj.Invoice_Email_Status = "UNKNOWN";
@@ -3533,8 +3535,8 @@ function runVerificationAutomations_(sh, rowNumber, idx, beforeRowObj, afterRowO
   }
 
   try {
-    var payBefore = isYes_(beforeRow.Payment_Verified) || isPaymentVerifiedDerived_(beforeRow) === true;
-    var payAfter = isYes_(afterRow.Payment_Verified) || isPaymentVerifiedDerived_(afterRow) === true;
+    var payBefore = isPaymentVerifiedDerived_(beforeRow) === true;
+    var payAfter = isPaymentVerifiedDerived_(afterRow) === true;
     if (!payBefore && payAfter) {
       logS4aOutboundTrace_("S4A_CRM_SUSPECT_PATH", {
         sourceFunction: "runVerificationAutomations_",
@@ -4256,8 +4258,8 @@ function isQueueCandidateRow_(rowObj) {
 
   var portalSubmittedRaw = clean_(row.Portal_Submitted || "");
   var portalSubmitted = nonEmpty_(portalSubmittedRaw) && portalSubmittedRaw !== "No";
-  var docsVerified = clean_(row.Docs_Verified || "") === "Yes";
-  var paymentVerified = clean_(row.Payment_Verified || "") === "Yes";
+  var docsVerified = clean_(row.Docs_Verified || "") === "Yes" || computeDocVerificationStatus_(row) === "Verified";
+  var paymentVerified = derivePaymentBadge_(row) === "Verified";
 
   return isExternalFdIntakeRow_(row) || portalSubmitted || docsVerified || paymentVerified;
 }
@@ -4310,7 +4312,7 @@ function deriveOperationalPipelineStage_(rowObj) {
 
   var portalSubmitted = nonEmpty_(row.Portal_Submitted || "") && clean_(row.Portal_Submitted || "") !== "No";
   var docsVerified = clean_(row.Docs_Verified || "") === "Yes" || computeDocVerificationStatus_(row) === "Verified";
-  var paymentVerified = clean_(row.Payment_Verified || "") === "Yes";
+  var paymentVerified = derivePaymentBadge_(row) === "Verified";
   var registrationComplete = clean_(row.Registration_Complete || "") === "Yes";
   var receiptPresent = hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File");
   var emailStatus = normalizeEmailStatus_(row.Email_Status || "");
@@ -4530,7 +4532,7 @@ function campaignReportValidApplication_(rowObj) {
   var row = rowObj || {};
   return clean_(row.Docs_Verified || "") === "Yes"
     || computeDocVerificationStatus_(row) === "Verified"
-    || clean_(row.Payment_Verified || "") === "Yes"
+    || derivePaymentBadge_(row) === "Verified"
     || clean_(row.Registration_Complete || "") === "Yes";
 }
 
@@ -4700,7 +4702,8 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
   var portalSubmittedRaw = clean_(row.Portal_Submitted || "");
   var portalSubmitted = nonEmpty_(portalSubmittedRaw) && portalSubmittedRaw !== "No";
   var paymentEvidencePresent = hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File");
-  var paymentVerified = isYes_(row.Payment_Verified);
+  var paymentBadge = derivePaymentBadge_(row);
+  var paymentVerified = paymentBadge === "Verified";
   var enrolled = isYes_(row.Registration_Complete) || isYes_(row.Enrolled_Confirmed) || !!clean_(row.Enrolled_At || "");
   var lifecycleStage = clean_(deriveApplicantLifecycleStage_(row) || deriveOperationalPipelineStage_(row) || "UNKNOWN").toUpperCase();
   var documentState = adminOpsDocumentStateFromRow_(row);
@@ -4775,7 +4778,7 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
       "Document Completeness: adminOpsRequiredDocumentUploadSummary_",
       "Document Review: computeDocVerificationStatus_",
       "Lifecycle: deriveApplicantLifecycleStage_",
-      "Payment: Payment_Verified/Fee_Receipt_File row facts",
+      "Payment: Receipt_Status/Fee_Receipt_File canonical row facts",
       "Communication: Last_Contact_* / Email_* row facts"
     ],
     authorityState: {
@@ -5357,12 +5360,10 @@ function adminOpsDocumentStateFromRow_(rowObj) {
 function adminOpsLifecycleStageKeyFromRow_(rowObj) {
   var row = rowObj || {};
   var receiptStatus = clean_(row.Receipt_Status || row.Payment_Status || row.Payment_Review_Status || "").toLowerCase();
+  var paymentBadge = derivePaymentBadge_(row);
   var paymentState = "EVIDENCE_PENDING";
   if (/reject|invalid|failed/.test(receiptStatus)) paymentState = "CORRECTION_REQUIRED";
-  else if (/verified|approved|cleared/.test(receiptStatus)
-    || adminOpsIsYes_(row.Payment_Verified)
-    || row.Payment_Verified_Bool === true
-    || row.paymentVerified === true) paymentState = "VERIFIED";
+  else if (/verified|approved|cleared/.test(receiptStatus) || paymentBadge === "Verified") paymentState = "VERIFIED";
   else if (adminOpsIsYes_(row.Payment_Received)
     || hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File")
     || /pending|review|received|uploaded/.test(receiptStatus)) paymentState = "UNDER_REVIEW";
@@ -8654,7 +8655,7 @@ function buildOpsClassroomHandoverContext_(applicantId, dbgId) {
   var firstName = clean_(rowObj.First_Name || rowObj.Student_First_Name || rowObj.name || "");
   var lastName = clean_(rowObj.Last_Name || rowObj.Student_Last_Name || "");
   var studentName = clean_((firstName + " " + lastName).trim() || rowObj.Student_Name || rowObj.Full_Name || id);
-  var paymentVerified = clean_(rowObj.Payment_Verified || "").toUpperCase() === "YES" || rowObj.Payment_Verified_Bool === true || rowObj.paymentVerified === true;
+  var paymentVerified = derivePaymentBadge_(rowObj) === "Verified";
   var enrolledConfirmed = clean_(rowObj.Enrolled_Confirmed || "").toUpperCase() === "YES";
   if (!paymentVerified || !enrolledConfirmed) {
     return {
