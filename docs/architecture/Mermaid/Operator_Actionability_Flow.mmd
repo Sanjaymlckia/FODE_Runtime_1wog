@@ -1,11 +1,19 @@
 flowchart TD
-  A[Authority Outputs] --> B[Operator Actionability Resolver]
-  B --> C[actionOwner]
-  B --> D[nextAction]
-  B --> E[urgencyLevel]
-  B --> F[urgencyReason]
-  B --> G[recommendedMessageType]
-  B --> H[sourceAuthoritySummary]
-  G --> I[Preview Authority]
-  I --> J[Send Authority]
+  A["Authority outputs"] --> B["Operator Actionability Resolver<br/>derived/read-only"]
+  A --> A1["Document status + Docs_Verified"]
+  A --> A2["Payment/receipt state"]
+  A --> A3["Communication state"]
+  A --> A4["Queue classification"]
 
+  B --> C["actionOwner<br/>future canonical field"]
+  B --> D["nextAction<br/>future canonical field"]
+  B --> E["urgencyLevel<br/>future canonical field"]
+  B --> F["urgencyReason<br/>future canonical field"]
+  B --> G["recommendedMessageType<br/>recommendation only"]
+  B --> H["sourceAuthoritySummary"]
+
+  G --> I["Preview authority"]
+  I --> J["Send authority"]
+  K["Admin Dashboard"] --> B
+  L["OPS frozen reference"] -.-> B
+  M["LAP automation<br/>future"] -.-> B

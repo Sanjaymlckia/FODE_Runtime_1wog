@@ -1,7 +1,20 @@
 flowchart LR
-  A[Authority Truth] --> B[Actionability Recommendation]
-  B --> C[Preview Cohort]
-  C --> D[Operator Confirmation]
-  D --> E[Send Authority]
-  E --> F[Audit Log]
+  A["Authority truth"] --> B["Actionability recommendation<br/>read-only"]
+  B --> C["Communication semantic registry"]
 
+  C --> D["Selected-applicant templates"]
+  C --> E["Stage Batch mappings"]
+  C --> F["Planned/manual types<br/>inert until approved"]
+
+  D --> G["Preview/Edit surface"]
+  G --> H["Send authority<br/>role + caps + cooldown + confirmation"]
+
+  E --> I["Preview cohort"]
+  I --> J["Operator confirmation"]
+  J --> H
+
+  H --> K["Audit/log meaning"]
+  L["custom_email"] --> D
+  LNOTE["selected-only<br/>not batch-safe"] -.-> L
+  M["Prospect guidance<br/>future, not applicant Stage Batch"] -.-> F
+  N["Contactability evidence<br/>partial/future warning source"] -.-> H

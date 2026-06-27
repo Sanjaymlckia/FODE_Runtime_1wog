@@ -1,12 +1,24 @@
 flowchart TD
-  A[Operator Actionability Resolver] --> B[Applicant Action Queue]
-  A --> C[Officer Review Queue]
-  A --> D[Finance Action Queue]
-  A --> E[Escalated Queue]
-  A --> F[Dormant Queue]
-  B --> G[Applicant must upload, pay, correct, or respond]
-  C --> H[Officer must verify complete evidence]
-  D --> I[Finance or admin must review payment issue]
-  E --> J[Overdue unresolved record]
-  F --> K[Final follow-up or dormant handling]
+  A["Raw row facts + authority outputs"] --> B["Review queues<br/>current Admin surface"]
 
+  B --> C["Application Received / FD Received"]
+  B --> D["Documents to Verify"]
+  B --> E["Awaiting Payment"]
+  B --> F["Payments to Verify"]
+  B --> G["Payment-First Anomalies"]
+  B --> H["Payment Verified"]
+
+  C --> C1["Applicant action / intake context"]
+  D --> D1["Officer review of document statuses"]
+  E --> E1["Applicant payment action"]
+  F --> F1["Finance/admin payment evidence review"]
+  G --> G1["Exception/blocker review"]
+  H --> H1["Post-payment/classroom handover context"]
+
+  I["Future owner/action queue model"] -.-> J["Applicant Action Queue"]
+  I -.-> K["Officer Review Queue"]
+  I -.-> L["Finance Action Queue"]
+  I -.-> M["Escalated Queue"]
+  I -.-> N["Dormant Queue"]
+
+  O["Stage Batch send eligibility<br/>separate from queue visibility"] -.-> B

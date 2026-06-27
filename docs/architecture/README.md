@@ -1,9 +1,9 @@
 # FODE Runtime Architecture
 
-Status: r23B consolidation draft
+Status: r301+ architecture sync
 Scope: documentation and governance only
 
-This folder is the proposed consolidated architecture entrypoint for FODE Runtime.
+This folder is the consolidated architecture entrypoint for FODE Runtime.
 
 Runtime source, Apps Script deployment, queues, communications, Sheets, and send behavior are not changed by this documentation package.
 
@@ -41,6 +41,24 @@ Raw Facts
 -> Dashboard / Queues / Communications
 ```
 
+## r301+ Runtime Truth
+
+As of the r301 baseline, Legacy/Admin is the live operational authority surface. OPS is frozen as a reference/secondary surface. FormDesigner remains the current intake path, while Google Forms replacement remains future work.
+
+Protected live surfaces include document verification, signed document routes, applicant-folder preview/gallery/lightbox, payment verification, Zoho Books, communication semantic registry, Stage Batch separation, runtime identity, release governance, and DR tooling.
+
+Partial/future surfaces include classroom acceptance/handover authority, LAP automation, contactability/bounce ingestion, AI-assisted document precheck, and Google Forms replacement.
+
+## Documentation Impact Rule
+
+Every future CIS that changes runtime architecture, state transitions, queues, authority, protected surfaces, release governance, communication semantics, payment/Zoho, document verification, intake, DR, or OPS boundaries must explicitly state whether these files need updating:
+
+- Mermaid diagrams
+- Roadmap
+- Architecture authority documents
+- Lifecycle/state diagram
+- Protected Surface Register
+
 ## Current Google Drive Folder
 
 Synced workspace folder:
@@ -50,4 +68,3 @@ https://drive.google.com/drive/folders/1P2FkxEQ9oQsk1I1Pyj7lazkaXly049lW?usp=sha
 Local synced path:
 
 `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog`
-

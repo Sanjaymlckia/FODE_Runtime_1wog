@@ -1,14 +1,27 @@
 flowchart TD
-  A[Shared Row Facts] --> B[Lifecycle Authority]
-  A --> C[Document Completeness Authority]
-  A --> D[Document Review Authority]
-  A --> E[Payment Authority]
-  A --> F[Communication Authority]
-  A --> G[Enrollment Authority]
-  B --> H[Operator Actionability Resolver]
+  A["Shared row facts"] --> B["Lifecycle / queue authority"]
+  A --> C["Document completeness authority"]
+  A --> D["Document review authority"]
+  A --> E["Payment authority"]
+  A --> F["Communication authority"]
+  A --> G["Classroom / enrolment authority<br/>partial/future"]
+  A --> I["Signed document route authority"]
+  A --> J["Preview rendition authority<br/>derived evidence only"]
+  A --> K["Zoho Books workflow<br/>protected payment-adjacent"]
+  A --> L["Contactability evidence<br/>partial/future"]
+
+  B --> H["Operator actionability resolver<br/>derived/read-only"]
   C --> H
   D --> H
   E --> H
   F --> H
-  G --> H
+  G -.-> H
+  I --> H
+  J --> H
+  K --> E
+  L --> F
 
+  H --> M["Admin operator surfaces"]
+  F --> N["Stage Batch preview/send gates"]
+  F --> O["Selected-applicant communication gates"]
+  P["OPS frozen reference"] -.-> H

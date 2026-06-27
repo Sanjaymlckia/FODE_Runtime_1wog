@@ -1,13 +1,13 @@
 # Architecture Overview
 
-Status: r23B consolidation draft
+Status: r301+ architecture sync
 Scope: architecture documentation only
 
 ## Purpose
 
 FODE Runtime separates domain truth from workflow interpretation.
 
-Recent LAP work clarified several authority boundaries:
+The r301+ runtime clarifies several protected authority boundaries:
 
 - Lifecycle Authority
 - Document Completeness Authority
@@ -16,8 +16,12 @@ Recent LAP work clarified several authority boundaries:
 - Communication Authority
 - Enrollment Authority
 - Shared Row Facts Layer
-- Legacy Admin Surface
+- Admin Dashboard / Legacy Admin Surface
 - Frozen OPS Surface
+- Signed Document Routes
+- Applicant-Folder Preview Renditions
+- Zoho Books Workflow
+- Disaster Recovery Tooling
 
 The next documented layer is the Operator Actionability Resolver.
 
@@ -38,29 +42,49 @@ How urgent is it?
 Should communication be recommended?
 ```
 
-## Target Architecture
+## Current Target Architecture
 
 ```text
-Raw Row Facts
+Intake Sources
+-> Raw Row Facts
 -> Shared Row Facts
 -> Authority Layer
 -> Operator Actionability Resolver
 -> Operator Surfaces
+-> Action Backends
 ```
 
 Operator surfaces include:
 
-- Legacy Admin Dashboard
+- Admin Dashboard / Legacy Admin
 - Review Queues
 - Applicant Detail / Review Modal
+- Document Gallery and Lightbox
 - Stage Batch Preview
 - Communications Preview
 - Escalation views
+
+Current intake sources:
+
+- FormDesigner, currently live
+- Portal/document uploads, where applicable
+- Google Forms replacement, planned future path only
+
+Protected live action backends include:
+
+- document status save and `Docs_Verified` rollup
+- signed document open/download/preview routes
+- applicant-folder `FODE_PREVIEW` generation
+- selected-applicant communication preview/send gates
+- Stage Batch preview/send gates
+- payment verification and Zoho Books
+- DR/release evidence tooling
 
 ## Layer Responsibilities
 
 | Layer | Responsibility | Mutates Data |
 |---|---|---|
+| Intake Sources | FormDesigner and future Google Forms intake | External to runtime |
 | Raw Facts | Sheet values, uploads, payment rows, communication fields | No |
 | Shared Row Facts | normalized row facts for shared consumers | No |
 | Authority Layer | derives domain truth | No by default |
@@ -68,9 +92,23 @@ Operator surfaces include:
 | Operator Surfaces | displays, requests actions, and shows confirmations | No by display alone |
 | Action Backends | execute approved mutations/sends | Yes, only when explicitly invoked |
 
+## r301+ Protected Live Surfaces
+
+Do not prune, archive, or refactor these surfaces without a dedicated CIS and proof:
+
+- runtime identity and release gates
+- document verification and queue rollup
+- signed file routes
+- preview/gallery/lightbox and applicant-folder preview renditions
+- payment verification and Zoho Books
+- communication semantic registry and selected-applicant templates
+- Stage Batch preview/send separation
+- FormDesigner intake and canonicalization
+- DR tooling and baseline governance
+
 ## OPS Boundary
 
-Legacy Admin remains the primary operational surface.
+Admin Dashboard / Legacy Admin remains the primary operational surface.
 
 OPS is frozen as a secondary/reference surface:
 
@@ -81,6 +119,17 @@ OPS is frozen as a secondary/reference surface:
 - critical bug fixes only
 
 OPS should survive only as a cleaner view over proven shared backend authority.
+
+## Future/Partial Surfaces
+
+These surfaces are not removal candidates:
+
+- Google Forms replacement
+- contactability and bounce evidence ingestion
+- LAP scheduled automation
+- classroom acceptance and handover authority
+- AI-assisted document precheck, advisory only
+- broader actionability owner/next-action queue model
 
 ## Source Documents
 
@@ -95,4 +144,6 @@ This document consolidates direction from:
 - `audits/r225A_document_payment_queue_count_authority_audit_v01.md`
 - `audits/r226A_ops_dependency_and_strategic_decision_v01.md`
 - `audits/r226B_ops_freeze_boundary_note_v01.md`
-
+- `audits/f1_runtime_surface_dead_code_audit_v01.md`
+- `audits/f2a_runtime_call_graph_archive_plan_v01.md`
+- `audits/f2a5_architecture_reconciliation_protected_surface_register_v01.md`

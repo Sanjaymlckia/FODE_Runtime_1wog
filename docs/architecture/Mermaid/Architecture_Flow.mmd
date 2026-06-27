@@ -1,9 +1,30 @@
 flowchart TD
-  A[Raw Row Facts] --> B[Shared Row Facts]
-  B --> C[Authority Layer]
-  C --> D[Operator Actionability Resolver]
-  D --> E[Dashboard]
-  D --> F[Queues]
-  D --> G[Communications]
-  D --> H[Escalations]
+  FD["FormDesigner intake<br/>current live source"] --> RF["Raw row facts"]
+  PORTAL["Portal/document uploads"] --> RF
+  GF["Google Forms replacement<br/>future"] -.-> RF
 
+  RF --> SF["Shared row facts"]
+  SF --> AUTH["Authority layer"]
+
+  AUTH --> DOC["Document verification<br/>status + Docs_Verified rollup"]
+  AUTH --> PAY["Payment verification<br/>receipt/payment authority"]
+  AUTH --> COMM["Communication authority<br/>semantic registry + send gates"]
+  AUTH --> FILES["Signed document routes<br/>open/download/preview"]
+  AUTH --> ZOHO["Zoho Books<br/>protected live workflow"]
+
+  FILES --> PREVIEW["Applicant-folder FODE_PREVIEW<br/>gallery + lightbox"]
+
+  DOC --> ACTION["Operator actionability resolver<br/>derived/read-only"]
+  PAY --> ACTION
+  COMM --> ACTION
+  PREVIEW --> ACTION
+
+  ACTION --> ADMIN["Admin Dashboard / Legacy Admin<br/>live authority surface"]
+  ACTION --> QUEUES["Review queues"]
+  ACTION --> STAGE["Stage Batch communications<br/>separate authority"]
+  ACTION --> ESC["Escalations / blockers"]
+
+  OPS["OPS<br/>frozen reference surface"] -.-> AUTH
+  DR["DR tooling + governance<br/>baseline protection"] -.-> ADMIN
+  AI["AI precheck<br/>future advisory only"] -.-> DOC
+  LAP["LAP automation<br/>partial/future scaffold"] -.-> ACTION
