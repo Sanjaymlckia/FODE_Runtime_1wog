@@ -22,14 +22,11 @@ Release actions are out of scope. This audit is based only on `Code.js`, `Admin.
   - `diag` -> `respondDiag_`
   - `whoami` -> `doGet_whoami_`
   - `file` -> `doGet_file_`
-  - `driveapiprobe` -> `doGet_driveApiProbe_`
-  - `drivedeepprobe` -> `doGet_driveDeepProbe_`
-  - `driveprobe` -> `doGet_driveProbe_`
-  - `portalsmoke` -> `doGet_portalSmoke_`
-  - `uploadsmoke` -> `doGet_uploadSmoke_`
   - `admin` -> `renderAdminApp_`
 - Blank routes default to Admin app on Admin deployment and Student portal on Student deployment.
 - Unknown routes fall back to Admin app on Admin deployment and Student portal on Student deployment.
+
+F2C note: the historical diagnostic/smoke route entries `driveapiprobe`, `drivedeepprobe`, `driveprobe`, `portalsmoke`, and `uploadsmoke` were archived from `resolveDoGetHandler_()` after proof showed no active AdminUI, test, tooling, DR/release, or operator dependency in the repository.
 
 ### Admin routes
 

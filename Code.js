@@ -553,11 +553,6 @@ function resolveDoGetHandler_(view, isAdminDeployment) {
   if (route === "diag") return respondDiag_;
   if (route === "whoami") return doGet_whoami_;
   if (route === "file") return doGet_file_;
-  if (route === "driveapiprobe") return doGet_driveApiProbe_;
-  if (route === "drivedeepprobe") return doGet_driveDeepProbe_;
-  if (route === "driveprobe") return doGet_driveProbe_;
-  if (route === "portalsmoke") return doGet_portalSmoke_;
-  if (route === "uploadsmoke") return doGet_uploadSmoke_;
   if (route === "ops") return renderAdminApp_;
   if (route === "admin") return renderAdminApp_;
   if (!route) return isAdminDeployment ? renderAdminApp_ : renderPortalAppFromDoGet_;
