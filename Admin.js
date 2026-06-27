@@ -5559,6 +5559,7 @@ function admin_getReviewQueues(payload) {
         var parentPhone = clean_(rowObj.Parent_Phone || rowObj.Mobile || rowObj.WhatsApp || rowObj.Contact_Number || rowObj.Phone || rowObj.Phone_Number || "");
 
         var paymentVerifiedRaw = clean_(rowObj.Payment_Verified || "") === "Yes";
+        var paymentBadge = derivePaymentBadge_(rowObj);
         var receiptUrl = clean_(rowObj.Fee_Receipt_File || "");
         var docsVerifiedRaw = clean_(rowObj.Docs_Verified || "");
         var mandatoryDocIssue = hasMandatoryDocIssue_(rowObj, idx);
@@ -5606,7 +5607,7 @@ function admin_getReviewQueues(payload) {
         var docsReviewVerified = docsVerifiedRaw === "Yes" || computeDocVerificationStatus_(rowObj) === "Verified";
         var paymentEvidencePresent = hasUploadEvidence_(rowObj.Fee_Receipt_File, "Fee_Receipt_File");
         var paymentReceived = paymentEvidencePresent;
-        var paymentVerified = paymentVerifiedRaw;
+        var paymentVerified = paymentBadge === "Verified";
         var enrolledConfirmed = paymentVerified;
         var opsRequiredDocsSummary = adminOpsRequiredDocumentUploadSummary_(rowObj);
         var opsDocumentState = adminOpsDocumentStateFromRow_(rowObj);
@@ -5625,6 +5626,8 @@ function admin_getReviewQueues(payload) {
         qItem.Docs_Verified = docsReviewVerified ? "Yes" : "No";
         qItem.Payment_Received = paymentReceived ? "Yes" : "No";
         qItem.Payment_Verified = paymentVerified ? "Yes" : "No";
+        qItem.Payment_Verified_Raw = paymentVerifiedRaw ? "Yes" : "No";
+        qItem.Payment_Badge = paymentBadge;
         qItem.Enrolled_Confirmed = enrolledConfirmed ? "Yes" : "No";
         qItem.Fee_Receipt_File = receiptUrl;
         qItem.opsDocumentState = opsDocumentState;

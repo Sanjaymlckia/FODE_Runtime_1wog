@@ -92,9 +92,9 @@ for (const item of paymentCases) {
   assert.equal(row.Payment_Verified, item.expectedCompatAfterOverall, `${item.name}: compatibility projection must follow canonical receipt badge`);
 }
 
-function classifyWithCurrentQueueLogic(row) {
+function classifyWithCanonicalQueueLogic(row) {
   const docsReviewVerified = row.Docs_Verified === "Yes" || row.computedDocStatus === "Verified";
-  const paymentVerified = row.Payment_Verified === "Yes";
+  const paymentVerified = row.Receipt_Status === "Verified";
   const paymentEvidencePresent = Boolean(row.Fee_Receipt_File);
   return {
     awaitingPayment: docsReviewVerified && !paymentVerified && !paymentEvidencePresent,
@@ -105,27 +105,39 @@ function classifyWithCurrentQueueLogic(row) {
 }
 
 assert.deepEqual(
-  classifyWithCurrentQueueLogic({ Docs_Verified: "Yes", Receipt_Status: "Pending", Payment_Verified: "", Fee_Receipt_File: "https://receipt" }),
+  classifyWithCanonicalQueueLogic({ Docs_Verified: "Yes", Receipt_Status: "Pending", Payment_Verified: "", Fee_Receipt_File: "https://receipt" }),
   { awaitingPayment: false, payments: true, anomalies: false, paidApproved: false },
   "docs verified + receipt present + payment not verified must route to Payments to Verify"
 );
 assert.deepEqual(
-  classifyWithCurrentQueueLogic({ Docs_Verified: "Yes", Receipt_Status: "Verified", Payment_Verified: "Yes", Fee_Receipt_File: "" }),
+  classifyWithCanonicalQueueLogic({ Docs_Verified: "Yes", Receipt_Status: "Verified", Payment_Verified: "", Fee_Receipt_File: "" }),
   { awaitingPayment: false, payments: false, anomalies: false, paidApproved: true },
-  "docs verified + raw payment verified + missing receipt currently routes as paid-approved compatibility state"
+  "docs verified + canonical payment verified + missing receipt routes as paid-approved payment authority state"
 );
 assert.deepEqual(
-  classifyWithCurrentQueueLogic({ Docs_Verified: "", computedDocStatus: "Pending", Receipt_Status: "Verified", Payment_Verified: "Yes", Fee_Receipt_File: "https://receipt" }),
+  classifyWithCanonicalQueueLogic({ Docs_Verified: "Yes", Receipt_Status: "", Payment_Verified: "Yes", Fee_Receipt_File: "" }),
+  { awaitingPayment: true, payments: false, anomalies: false, paidApproved: false },
+  "raw Payment_Verified yes with blank Receipt_Status must not classify as payment verified"
+);
+assert.deepEqual(
+  classifyWithCanonicalQueueLogic({ Docs_Verified: "Yes", Receipt_Status: "Rejected", Payment_Verified: "Yes", Fee_Receipt_File: "https://receipt" }),
+  { awaitingPayment: false, payments: true, anomalies: false, paidApproved: false },
+  "raw Payment_Verified yes with rejected Receipt_Status must not classify as payment verified"
+);
+assert.deepEqual(
+  classifyWithCanonicalQueueLogic({ Docs_Verified: "", computedDocStatus: "Pending", Receipt_Status: "Verified", Payment_Verified: "Yes", Fee_Receipt_File: "https://receipt" }),
   { awaitingPayment: false, payments: false, anomalies: true, paidApproved: true },
-  "payment-first anomaly remains visible when raw payment is verified before document verification"
+  "payment-first anomaly remains visible when canonical payment is verified before document verification"
 );
 
 const reviewQueues = extractFunction(adminSource, "admin_getReviewQueues");
 const updateDocs = extractFunction(adminSource, "admin_updateDocStatuses_impl_");
 const setPayment = extractFunction(adminSource, "admin_setPaymentVerified_impl_");
 
-assert.match(reviewQueues, /paymentVerifiedRaw = clean_\(rowObj\.Payment_Verified \|\| ""\) === "Yes"/, "Current queues must keep raw Payment_Verified dependency explicit until F3D resolves it");
-assert.match(reviewQueues, /paymentVerified = paymentVerifiedRaw/, "Current queues classify payment stage from raw compatibility state");
+assert.match(reviewQueues, /paymentVerifiedRaw = clean_\(rowObj\.Payment_Verified \|\| ""\) === "Yes"/, "Queues may retain raw Payment_Verified as compatibility evidence");
+assert.match(reviewQueues, /var paymentBadge = derivePaymentBadge_\(rowObj\)/, "Queues must derive payment badge from canonical receipt status");
+assert.match(reviewQueues, /paymentVerified = paymentBadge === "Verified"/, "Queues must classify payment stage from canonical payment badge");
+assert.doesNotMatch(reviewQueues, /paymentVerified = paymentVerifiedRaw/, "Queues must not classify payment stage from raw compatibility state");
 assert.match(updateDocs, /var paymentBadge = derivePaymentBadge_\(refreshedRow\)/, "Document save must derive payment display from canonical receipt status");
 assert.match(updateDocs, /setCell_\(sh, rowNumber, idx, cols\.paymentCompat, paymentVerified \? "Yes" : ""\)/, "Document save may only project Payment_Verified compatibility from derived payment state");
 assert.doesNotMatch(updateDocs, /setCell_\([^)]*"Receipt_Status"/, "Document save must not write canonical Receipt_Status");
@@ -133,5 +145,5 @@ assert.match(setPayment, /setCell_\(sh, rowNumber, idx, "Receipt_Status", "Verif
 assert.doesNotMatch(setPayment, /setCell_\([^)]*"Docs_Verified"/, "Payment verification must not write Docs_Verified");
 
 console.log("PASS canonical payment helper ignores raw Payment_Verified drift");
-console.log("PASS current queue compatibility drift behavior is captured for F3D");
+console.log("PASS payment queues ignore raw Payment_Verified drift for classification");
 console.log("PASS document and payment save authority boundaries remain separated");

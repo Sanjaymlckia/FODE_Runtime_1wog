@@ -34,7 +34,8 @@ const updateDocs = extractFunction(adminSource, "admin_updateDocStatuses_impl_")
 const setPayment = extractFunction(adminSource, "admin_setPaymentVerified_impl_");
 
 assert.match(reviewQueues, /docsReviewVerified = docsVerifiedRaw === "Yes" \|\| computeDocVerificationStatus_\(rowObj\) === "Verified"/, "Review queues must tolerate computed document verification when Docs_Verified is stale");
-assert.match(reviewQueues, /paymentVerifiedRaw = clean_\(rowObj\.Payment_Verified \|\| ""\) === "Yes"/, "Review queues currently expose the raw Payment_Verified compatibility dependency for F3C proof");
+assert.match(reviewQueues, /paymentVerifiedRaw = clean_\(rowObj\.Payment_Verified \|\| ""\) === "Yes"/, "Review queues preserve raw Payment_Verified as compatibility evidence only");
+assert.match(reviewQueues, /var paymentBadge = derivePaymentBadge_\(rowObj\)/, "Review queues must derive payment authority from canonical receipt status");
 assert.match(reviewQueues, /paymentEvidencePresent = hasUploadEvidence_\(rowObj\.Fee_Receipt_File,\s*"Fee_Receipt_File"\)/, "Review queues must distinguish receipt evidence from payment verification");
 assert.match(reviewQueues, /docsQueueMatch = portalSubmitted && requiredDocumentUploadComplete && !docsReviewVerified/, "Documents to Verify must exclude document-verified rows");
 assert.match(reviewQueues, /awaitingPaymentQueueMatch = docsReviewVerified && !paymentVerified && !paymentEvidencePresent/, "Awaiting Payment queue must require docs verified, no raw payment verified flag, and no receipt evidence");
@@ -98,6 +99,6 @@ for (const item of cases) {
   assert.deepEqual(classify(item.row), item.expected, item.name);
 }
 
-console.log("PASS payment queue compatibility dependency is explicit for F3C proof");
+console.log("PASS payment queues derive authority from canonical receipt status");
 console.log("PASS document save preserves Receipt_Status authority while syncing compatibility state");
 console.log("PASS payment and queue fixture matrix preserves stage separation");
