@@ -5989,37 +5989,6 @@ function jsonOutput_(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-
-// test code
-function test_ShowConfig() {
-  Logger.log("SHEET_ID=" + CONFIG.SHEET_ID);
-  Logger.log("LOG_SHEET_ID=" + CONFIG.LOG_SHEET_ID);
-  Logger.log("LOG_SHEET_NAME=" + CONFIG.LOG_SHEET_NAME);
-}
-
-function test_DumpConfigKeys() {
-  Logger.log(JSON.stringify(Object.keys(CONFIG).sort(), null, 2));
-}
-
-function test_LogSheetWrite() {
-  // Open Portal Log spreadsheet by ID
-  var ss = SpreadsheetApp.openById(CONFIG.LOG_SHEET_ID);
-  var sheet = ss.getSheetByName(CONFIG.LOG_SHEET_NAME);
-
-  if (!sheet) {
-    throw new Error(
-      "Sheet not found: " + CONFIG.LOG_SHEET_NAME +
-      " (Spreadsheet: " + ss.getName() + ")"
-    );
-  }
-
-  // Minimal write first (don??????????????????????????????????????t push a 50-column row until we confirm wiring)
-  sheet.appendRow([new Date(), "TEST", "CONFIG_OK"]);
-
-  Logger.log("Log sheet write successful -> " + ss.getName() + " / " + sheet.getName());
-}
-
-function _claspPing() { return "pong"; }
 /************************************************************
 ADMIN QUEUE RPC (restored using existing row helpers)
 ************************************************************/

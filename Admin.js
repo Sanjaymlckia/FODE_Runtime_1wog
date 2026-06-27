@@ -6376,29 +6376,6 @@ function admin_exportPortalLinksCsv(payload) {
   };
 }
 
-function test_AdminAuth() {
-  Logger.log("Active user: " + Session.getActiveUser().getEmail());
-}
-
-function test_AdminResetPortalLink() {
-  var rowNumber = 2;
-  var res = admin_resetPortalLink({ rowNumber: rowNumber });
-  Logger.log("admin_resetPortalLink.link = " + (res.link || ""));
-
-  var sh = openDataSheet_();
-  var idx = headerIndex_(sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0]);
-  requireHeaders_(idx, ["PortalTokenHash", "PortalTokenIssuedAt"]);
-  var tokenHash = clean_(sh.getRange(rowNumber, idx["PortalTokenHash"]).getValue());
-  var issuedAt = sh.getRange(rowNumber, idx["PortalTokenIssuedAt"]).getValue();
-  if (!tokenHash || !issuedAt) throw new Error("Portal token fields not updated.");
-  Logger.log("admin_resetPortalLink token fields updated for row " + rowNumber);
-}
-
-function test_BackfillPortalTokens_DryRun() {
-  var res = admin_backfillPortalTokens({ dryRun: true, limit: 0 });
-  Logger.log("backfill dryRun checked=" + res.checked + " updated=" + res.updated);
-}
-
 function audit_NoHardcodedRowDefaults() {
   Logger.log("Run: rg -n \"\\|\\|\\s*17|payload\\.rowNumber\\s*\\|\\|\\s*[0-9]+|selectedRow\\s*=\\s*[0-9]+\" Admin.js AdminUI.html Code.js");
 }

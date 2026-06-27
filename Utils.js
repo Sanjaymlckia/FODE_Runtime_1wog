@@ -3678,17 +3678,6 @@ function portalDebugLog_(tag, obj) {
   }
 }
 
-function test_PortalLogWrite() {
-  safePortalLog_({
-    route: "test_PortalLogWrite",
-    applicantId: "TEST",
-    email: "test@example.com",
-    status: "OK",
-    message: "Portal log smoke write"
-  }, true);
-  Logger.log("Done");
-}
-
 function isStagingDriveUrlResolverEnabled_() {
   var mode = clean_((CONFIG && CONFIG.DATA_MODE) || "STAGING").toUpperCase();
   return mode !== "PROD";
