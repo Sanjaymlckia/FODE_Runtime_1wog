@@ -66,6 +66,10 @@ vm.runInContext([
   extractFunction(codeSource, "normalizeOverallDocValue_"),
   extractFunction(codeSource, "computeDocVerificationStatus_"),
   extractFunction(codeSource, "derivePaymentBadge_"),
+  extractFunction(codeSource, "deriveCanonicalPaymentState_"),
+  extractFunction(codeSource, "canonicalPaymentBadge_"),
+  extractFunction(codeSource, "isCanonicalPaymentVerified_"),
+  extractFunction(codeSource, "isCanonicalPaymentRejected_"),
   extractFunction(codeSource, "deriveFodeCrmStageFromRow_"),
   extractFunction(codeSource, "communicationPaymentOutstanding_"),
   extractFunction(codeSource, "deriveApplicantLifecycleStage_")
@@ -133,7 +137,7 @@ const nonQueueAdminConsumers = [
   ["buildOpsClassroomHandoverContext_", extractFunction(adminSource, "buildOpsClassroomHandoverContext_")]
 ];
 for (const [name, source] of nonQueueAdminConsumers) {
-  assert.match(source, /derivePaymentBadge_/, `${name} must use canonical payment badge`);
+  assert.match(source, /canonicalPaymentBadge_|isCanonicalPaymentVerified_/, `${name} must use canonical payment helpers`);
   assertNoRawPaymentDecision(source, name);
 }
 
@@ -145,8 +149,8 @@ assertNoRawPaymentDecision(lifecycle, "deriveApplicantLifecycleStage_");
 assertNoRawPaymentDecision(communicationOutstanding, "communicationPaymentOutstanding_");
 assert.match(
   codeSource,
-  /paymentVerified:\s*derivePaymentBadge_\(row\) === "Verified"/,
-  "communication base state must use canonical payment badge"
+  /paymentVerified:\s*isCanonicalPaymentVerified_\(row\)/,
+  "communication base state must use canonical payment helper"
 );
 
 const opsClassroom = extractFunction(adminUiSource, "opsClassroomStateFromRawRow_");

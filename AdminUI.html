@@ -3702,8 +3702,7 @@
     }
     function opsPaymentEvidenceStatus_(row){
       var r = row || {};
-      var receiptStatus = String(r.Receipt_Status || r.Payment_Status || r.Payment_Review_Status || "").toLowerCase();
-      if (/verified|approved|cleared/.test(receiptStatus)) return "Payment verified";
+      if (operationalStateCanonicalPaymentVerified_(r)) return "Payment verified";
       if (opsIsYes_(r.Payment_Received) || opsHasUploadEvidenceLike_(r.Fee_Receipt_File)) return "Payment field evidence present - not verified";
       if (Object.prototype.hasOwnProperty.call(r, "Payment_Received") || Object.prototype.hasOwnProperty.call(r, "Fee_Receipt_File")) return "No payment evidence detected in loaded workflow fields";
       return "Unknown";
@@ -6918,6 +6917,13 @@
       updateCommunicationsUi_();
     }
 
+    function detailCanonicalPaymentVerified_(detail){
+      const d = detail || {};
+      const badge = String(d.Payment_Badge || "").trim();
+      if (badge) return badge === "Verified";
+      return d.paymentVerified === true || d.isPaymentVerified === true;
+    }
+
     function applyPortalLockControls_(detail){
       const btnUnlock = document.getElementById("btnUnlockPortal");
       const btnLock = document.getElementById("btnLockPortal");
@@ -6925,8 +6931,7 @@
       const overallLockInfo = document.getElementById("overallLockInfo");
       const d = detail || currentDetail || null;
       if (!btnUnlock || !btnLock || !d) return;
-      const paymentBadge = d.Payment_Badge || (d.paymentVerified === true ? "Verified" : "Pending");
-      const paymentLocked = paymentBadge === "Verified";
+      const paymentLocked = detailCanonicalPaymentVerified_(d);
       const bypassActive = isModalBypassActive_();
       btnUnlock.title = paymentLocked
         ? (modalState && modalState.isSuperAdmin
@@ -7852,7 +7857,7 @@ function renderStageDashboard_(items, emptyMessage){
       var portalSubmitted = workflowYesNo_(d.Portal_Submitted) === "Yes";
       var docsVerified = workflowYesNo_(d.Docs_Verified) === "Yes";
       var paymentEvidenceUploaded = workflowYesNo_(d.Payment_Received) === "Yes";
-      var paymentVerified = d.paymentVerified === true || d.isPaymentVerified === true || String(d.Payment_Badge || "").toLowerCase() === "verified";
+      var paymentVerified = detailCanonicalPaymentVerified_(d);
       return portalSubmitted && (!docsVerified || !paymentEvidenceUploaded || !paymentVerified);
     }
     function deriveApplicantDisplayStage(detail){
@@ -9070,7 +9075,7 @@ function renderStageDashboard_(items, emptyMessage){
       var docComputed = d.Doc_Verification_Status_Computed || d.Doc_Verification_Status || "Pending";
       var paymentBadge = d.Payment_Badge || (facts.paymentVerified ? "Verified" : "Pending");
       modalState.isSuperAdmin = !!(d.isSuperAdmin === true || IS_SUPER);
-      modalState.isPaymentVerified = !!(d.isPaymentVerified === true || d.paymentVerified === true || facts.paymentVerified || paymentBadge === "Verified");
+      modalState.isPaymentVerified = !!(detailCanonicalPaymentVerified_(d) || facts.paymentVerified || paymentBadge === "Verified");
       modalState.isLocked = true;
       modalState.bypassPaymentFreeze = false;
       document.getElementById("mOverall").textContent = String(docComputed || "Pending");

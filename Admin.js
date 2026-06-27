@@ -240,7 +240,7 @@ function admin_searchApplicants(payload) {
       Transfer_Status: idx.Transfer_Status ? clean_(row[idx.Transfer_Status - 1]) : "",
       Receipt_Status: idx.Receipt_Status ? clean_(row[idx.Receipt_Status - 1]) : ""
     };
-    var paymentBadge = derivePaymentBadge_(statusRow);
+    var paymentBadge = canonicalPaymentBadge_(statusRow);
     var docStage = computeDocVerificationStatus_(statusRow);
     var docsFollowupSentAt = getDocsFollowupSentAt_(rowObj);
     var eligibleDocsFollowUp = computeEligibleDocsFollowUp_(rowObj, docsFollowupSentAt);
@@ -444,9 +444,9 @@ function admin_getApplicantDetail(payload) {
     detailObj.Effective_Email = clean_(detailObj.Parent_Email_Corrected || detailObj.Parent_Email || "");
     detailObj.Parent_Email_Corrected = String(detailObj.Parent_Email_Corrected || "");
     var docStageComputed = computeDocVerificationStatus_(detailObj);
-    var paymentBadge = derivePaymentBadge_(detailObj);
+    var paymentBadge = canonicalPaymentBadge_(detailObj);
     var overallComputed = computeOverallStatus_(detailObj);
-    var paymentVerifiedBool = paymentBadge === "Verified";
+    var paymentVerifiedBool = isCanonicalPaymentVerified_(detailObj);
     var overallStored = idx.Overall_Status ? clean_(row[idx.Overall_Status - 1]) : "";
     var canOverride = canOverrideOverall_(adminEmail);
     var isSuperAdminCaller = canBypassPaymentFreeze_(adminEmail);
@@ -2336,7 +2336,7 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
   }
 
   var wantsReceiptVerified = false;
-  var beforePaymentVerified = isPaymentVerifiedDerived_(currentRowObj) === true;
+    var beforePaymentVerified = isPaymentVerifiedDerived_(currentRowObj) === true;
   var prospectiveRow = {};
   for (var key in currentRowObj) {
     if (Object.prototype.hasOwnProperty.call(currentRowObj, key)) prospectiveRow[key] = currentRowObj[key];
@@ -2348,7 +2348,7 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
     if (prep.mapping && prep.mapping.status === cols.receipt && prep.status === "Verified") wantsReceiptVerified = true;
   }
   if (wantsReceiptVerified) {
-    var prospectivePaymentVerified = derivePaymentBadge_(prospectiveRow) === "Verified" || isPaymentVerifiedDerived_(prospectiveRow) === true;
+    var prospectivePaymentVerified = isCanonicalPaymentVerified_(prospectiveRow) || isPaymentVerifiedDerived_(prospectiveRow) === true;
     if (!beforePaymentVerified && prospectivePaymentVerified && !canBypassPaymentFreeze_(adminEmail)) {
       logAdminEvent_("PAYVER_NOT_ALLOWED_BLOCK", {
         applicantId: applicantId,
@@ -2398,8 +2398,8 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
 
   var refreshedRow = getRowObject_(sh, rowNumber);
   var docStage = computeDocVerificationStatus_(refreshedRow);
-  var paymentBadge = derivePaymentBadge_(refreshedRow);
-  var paymentVerified = paymentBadge === "Verified";
+  var paymentBadge = canonicalPaymentBadge_(refreshedRow);
+  var paymentVerified = isCanonicalPaymentVerified_(refreshedRow);
   var overallComputed = computeOverallStatus_(refreshedRow);
   if (cols.paymentCompat) setCell_(sh, rowNumber, idx, cols.paymentCompat, paymentVerified ? "Yes" : "");
   if (cols.docStage) setCell_(sh, rowNumber, idx, cols.docStage, docStage);
@@ -2511,8 +2511,8 @@ function admin_setOverallStatus(payload) {
   var cols = resolveStatusCols_(idx);
   var rowObj = getRowObject_(sh, rowNumber);
   var docStage = computeDocVerificationStatus_(rowObj);
-  var paymentBadge = derivePaymentBadge_(rowObj);
-  var paymentVerified = paymentBadge === "Verified";
+  var paymentBadge = canonicalPaymentBadge_(rowObj);
+  var paymentVerified = isCanonicalPaymentVerified_(rowObj);
   var computed = computeOverallStatus_(rowObj);
   var canOverride = canOverrideOverall_(adminEmail);
   var finalStatus = canOverride ? requested : computed;
@@ -2575,7 +2575,7 @@ function admin_setPortalAccess(payload) {
   var idx = headerIndex_(sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0]);
   requireHeaders_(idx, ["Portal_Access_Status", "Doc_Last_Verified_At", "Doc_Last_Verified_By"]);
   var rowObj = getRowObject_(sh, rowNumber);
-  var paymentBadge = derivePaymentBadge_(rowObj);
+  var paymentBadge = canonicalPaymentBadge_(rowObj);
   if (status === "Open" && paymentBadge === "Verified") {
     throw new Error("Cannot unlock after payment verification.");
   }
@@ -2595,7 +2595,7 @@ function admin_setPortalAccess(payload) {
   var detailRes = applicantId ? admin_getApplicantDetail({ rowNumber: rowNumber, applicantId: applicantId }) : null;
   return {
     ok: true,
-    paymentBadge: derivePaymentBadge_(refreshed),
+    paymentBadge: canonicalPaymentBadge_(refreshed),
     portalAccessStatus: clean_(refreshed.Portal_Access_Status || status),
     detail: (detailRes && detailRes.ok === true) ? detailRes.detail : null
   };
@@ -2676,8 +2676,8 @@ function admin_setPaymentVerified_impl_(payload, dbgId) {
 
   var refreshedRow = getRowObject_(sh, rowNumber);
   var docStage = computeDocVerificationStatus_(refreshedRow);
-  var paymentBadge = derivePaymentBadge_(refreshedRow);
-  var paymentVerified = paymentBadge === "Verified";
+  var paymentBadge = canonicalPaymentBadge_(refreshedRow);
+  var paymentVerified = isCanonicalPaymentVerified_(refreshedRow);
   var computedOverall = computeOverallStatus_(refreshedRow);
   if (cols.paymentCompat) setCell_(sh, rowNumber, idx, cols.paymentCompat, paymentVerified ? "Yes" : "");
   if (cols.docStage) setCell_(sh, rowNumber, idx, cols.docStage, docStage);
@@ -4259,7 +4259,7 @@ function isQueueCandidateRow_(rowObj) {
   var portalSubmittedRaw = clean_(row.Portal_Submitted || "");
   var portalSubmitted = nonEmpty_(portalSubmittedRaw) && portalSubmittedRaw !== "No";
   var docsVerified = clean_(row.Docs_Verified || "") === "Yes" || computeDocVerificationStatus_(row) === "Verified";
-  var paymentVerified = derivePaymentBadge_(row) === "Verified";
+  var paymentVerified = isCanonicalPaymentVerified_(row);
 
   return isExternalFdIntakeRow_(row) || portalSubmitted || docsVerified || paymentVerified;
 }
@@ -4312,7 +4312,7 @@ function deriveOperationalPipelineStage_(rowObj) {
 
   var portalSubmitted = nonEmpty_(row.Portal_Submitted || "") && clean_(row.Portal_Submitted || "") !== "No";
   var docsVerified = clean_(row.Docs_Verified || "") === "Yes" || computeDocVerificationStatus_(row) === "Verified";
-  var paymentVerified = derivePaymentBadge_(row) === "Verified";
+  var paymentVerified = isCanonicalPaymentVerified_(row);
   var registrationComplete = clean_(row.Registration_Complete || "") === "Yes";
   var receiptPresent = hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File");
   var emailStatus = normalizeEmailStatus_(row.Email_Status || "");
@@ -4532,7 +4532,7 @@ function campaignReportValidApplication_(rowObj) {
   var row = rowObj || {};
   return clean_(row.Docs_Verified || "") === "Yes"
     || computeDocVerificationStatus_(row) === "Verified"
-    || derivePaymentBadge_(row) === "Verified"
+    || isCanonicalPaymentVerified_(row)
     || clean_(row.Registration_Complete || "") === "Yes";
 }
 
@@ -4702,8 +4702,8 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
   var portalSubmittedRaw = clean_(row.Portal_Submitted || "");
   var portalSubmitted = nonEmpty_(portalSubmittedRaw) && portalSubmittedRaw !== "No";
   var paymentEvidencePresent = hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File");
-  var paymentBadge = derivePaymentBadge_(row);
-  var paymentVerified = paymentBadge === "Verified";
+  var paymentBadge = canonicalPaymentBadge_(row);
+  var paymentVerified = isCanonicalPaymentVerified_(row);
   var enrolled = isYes_(row.Registration_Complete) || isYes_(row.Enrolled_Confirmed) || !!clean_(row.Enrolled_At || "");
   var lifecycleStage = clean_(deriveApplicantLifecycleStage_(row) || deriveOperationalPipelineStage_(row) || "UNKNOWN").toUpperCase();
   var documentState = adminOpsDocumentStateFromRow_(row);
@@ -5360,7 +5360,7 @@ function adminOpsDocumentStateFromRow_(rowObj) {
 function adminOpsLifecycleStageKeyFromRow_(rowObj) {
   var row = rowObj || {};
   var receiptStatus = clean_(row.Receipt_Status || row.Payment_Status || row.Payment_Review_Status || "").toLowerCase();
-  var paymentBadge = derivePaymentBadge_(row);
+  var paymentBadge = canonicalPaymentBadge_(row);
   var paymentState = "EVIDENCE_PENDING";
   if (/reject|invalid|failed/.test(receiptStatus)) paymentState = "CORRECTION_REQUIRED";
   else if (/verified|approved|cleared/.test(receiptStatus) || paymentBadge === "Verified") paymentState = "VERIFIED";
@@ -5560,7 +5560,7 @@ function admin_getReviewQueues(payload) {
         var parentPhone = clean_(rowObj.Parent_Phone || rowObj.Mobile || rowObj.WhatsApp || rowObj.Contact_Number || rowObj.Phone || rowObj.Phone_Number || "");
 
         var paymentVerifiedRaw = clean_(rowObj.Payment_Verified || "") === "Yes";
-        var paymentBadge = derivePaymentBadge_(rowObj);
+        var paymentBadge = canonicalPaymentBadge_(rowObj);
         var receiptUrl = clean_(rowObj.Fee_Receipt_File || "");
         var docsVerifiedRaw = clean_(rowObj.Docs_Verified || "");
         var mandatoryDocIssue = hasMandatoryDocIssue_(rowObj, idx);
@@ -5608,7 +5608,7 @@ function admin_getReviewQueues(payload) {
         var docsReviewVerified = docsVerifiedRaw === "Yes" || computeDocVerificationStatus_(rowObj) === "Verified";
         var paymentEvidencePresent = hasUploadEvidence_(rowObj.Fee_Receipt_File, "Fee_Receipt_File");
         var paymentReceived = paymentEvidencePresent;
-        var paymentVerified = paymentBadge === "Verified";
+        var paymentVerified = isCanonicalPaymentVerified_(rowObj);
         var enrolledConfirmed = paymentVerified;
         var opsRequiredDocsSummary = adminOpsRequiredDocumentUploadSummary_(rowObj);
         var opsDocumentState = adminOpsDocumentStateFromRow_(rowObj);
@@ -8655,7 +8655,7 @@ function buildOpsClassroomHandoverContext_(applicantId, dbgId) {
   var firstName = clean_(rowObj.First_Name || rowObj.Student_First_Name || rowObj.name || "");
   var lastName = clean_(rowObj.Last_Name || rowObj.Student_Last_Name || "");
   var studentName = clean_((firstName + " " + lastName).trim() || rowObj.Student_Name || rowObj.Full_Name || id);
-  var paymentVerified = derivePaymentBadge_(rowObj) === "Verified";
+  var paymentVerified = isCanonicalPaymentVerified_(rowObj);
   var enrolledConfirmed = clean_(rowObj.Enrolled_Confirmed || "").toUpperCase() === "YES";
   if (!paymentVerified || !enrolledConfirmed) {
     return {
