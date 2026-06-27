@@ -28,6 +28,8 @@ Release actions are out of scope. This audit is based only on `Code.js`, `Admin.
 
 F2C note: the historical diagnostic/smoke route entries `driveapiprobe`, `drivedeepprobe`, `driveprobe`, `portalsmoke`, and `uploadsmoke` were archived from `resolveDoGetHandler_()` after proof showed no active AdminUI, test, tooling, DR/release, or operator dependency in the repository.
 
+F2D note: orphan Drive diagnostic helpers `driveProbeFolder_` and `driveDeepProbe_` were archived after proof showed no runtime, UI, route, test, tooling, DR/release, or operator dependency in the repository.
+
 ### Admin routes
 
 - Admin UI entrypoint: `renderAdminApp_`.
@@ -47,7 +49,7 @@ F2C note: the historical diagnostic/smoke route entries `driveapiprobe`, `drived
 - Runtime truth builder: `buildRuntimeTruth_`.
 - Admin runtime RPC: `admin_getRuntimeInfo`.
 - doGet whoami route delegates to `doGet_whoami_`; the implementation is referenced but not present in the scoped files.
-- Diagnostics include `diagStatus_`, drive probes, upload/portal smoke routes, `authDrive`, `authDriveYearFolder`, and test helpers.
+- Diagnostics include `diagStatus_`, `authDrive`, `authDriveYearFolder`, and historical test/helper references. Historical drive probe route/helper entries were archived in F2C/F2D.
 
 ## 2. Mutation Functions
 
@@ -170,7 +172,7 @@ F2C note: the historical diagnostic/smoke route entries `driveapiprobe`, `drived
 - `admin_getRuntimeInfo`.
 - `buildRuntimeTruth_`.
 - `diagStatus_` when diagnostics are enabled.
-- `driveProbeFolder_`, `driveDeepProbe_` style probes when used only for inspection.
+- F2D archived orphan `driveProbeFolder_` and `driveDeepProbe_` style probes after proving no active dependency.
 - `authDrive` and `authDriveYearFolder` read Drive metadata and are safe from a data-mutation perspective, but they do exercise Drive scopes.
 - `admin_getApplicantDetail`, `admin_getApplicantDetail_json`, `admin_searchApplicants`.
 - `admin_getStageAggregation`, `admin_getReviewQueues`.
@@ -228,7 +230,7 @@ F2C note: the historical diagnostic/smoke route entries `driveapiprobe`, `drived
 ### Probe / test utilities
 
 - Runtime diagnostics: `buildRuntimeTruth_`, `admin_getRuntimeInfo`, `diagStatus_`.
-- Drive probes/auth probes: `driveProbeFolder_`, `authDrive`, `authDriveYearFolder`, Drive API probes.
+- Auth probes: `authDrive`, `authDriveYearFolder`. Historical Drive probe helpers were archived in F2D.
 - Smoke/tests: `test_Smoke`, `test_PortalLogWrite`, `test_AdminAuth`, `test_AdminResetPortalLink`, `test_BackfillPortalTokens_DryRun`, `testCampaignPing`, `testCampaignGmailAuth`.
 - Audit helper: `audit_NoHardcodedRowDefaults`.
 

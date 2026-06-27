@@ -779,36 +779,6 @@ function diagStatus_(e) {
   return out;
 }
 
-function driveProbeFolder_(folderId) {
-  var out = {
-    ok: false,
-    folderId: clean_(folderId || ""),
-    canIterate: false
-  };
-  try {
-    var id = clean_(folderId || "");
-    if (!id) throw new Error("Missing folderId");
-    var folder = DriveApp.getFolderById(id);
-    out.name = clean_(folder.getName() || "");
-    out.url = clean_(folder.getUrl() || "");
-    try {
-      var it = folder.getFolders();
-      out.canIterate = !!it;
-      if (it && typeof it.hasNext === "function") it.hasNext();
-    } catch (_iterErr) {
-      out.canIterate = false;
-    }
-    out.ok = true;
-    return out;
-  } catch (e) {
-    var se = safeErr_(e);
-    out.errCode = "drive_probe_failed";
-    out.errName = clean_(se.name || "Error") || "Error";
-    out.errMessage = clean_(se.message || "Drive probe failed") || "Drive probe failed";
-    return out;
-  }
-}
-
 function authDrive() {
   var rootId = clean_(CONFIG.APPLICANT_ROOT_FOLDER_ID_PRIMARY || "");
   var out = {
@@ -5800,93 +5770,6 @@ function createApplicantFolder_(payloadOrRecord, opts) {
     eDrive.rootAttemptSummary = rootInfo && rootInfo.rootAttemptSummary ? rootInfo.rootAttemptSummary : [];
     throw eDrive;
   }
-}
-
-function driveDeepProbe_(opts) {
-  var cfg = opts && typeof opts === "object" ? opts : {};
-  var folderId = clean_(cfg.folderId || "");
-  var dbg = clean_(cfg.dbg || "");
-  var results = {};
-  var target = null;
-  var tempFolder = null;
-
-  function step_(key, fn) {
-    try {
-      var value = fn();
-      results[key] = { ok: true };
-      if (value && typeof value === "object" && !Array.isArray(value)) {
-        for (var k in value) results[key][k] = value[k];
-      } else if (value !== undefined) {
-        results[key].value = value;
-      }
-      return results[key];
-    } catch (e) {
-      var se = safeErr_(e);
-      results[key] = {
-        ok: false,
-        errName: clean_(se.name || "Error") || "Error",
-        errMessage: clean_(se.message || "Probe step failed") || "Probe step failed"
-      };
-      return results[key];
-    }
-  }
-
-  step_("step1_rootName", function () {
-    var root = withRetries_(function () { return DriveApp.getRootFolder(); }, { dbg: dbg, label: "driveDeepProbe:getRootFolder#1" });
-    return { rootName: withRetries_(function () { return clean_(root.getName() || ""); }, { dbg: dbg, label: "driveDeepProbe:rootGetName" }) };
-  });
-  step_("step2_rootId", function () {
-    var root2 = withRetries_(function () { return DriveApp.getRootFolder(); }, { dbg: dbg, label: "driveDeepProbe:getRootFolder#2" });
-    return { rootId: withRetries_(function () { return clean_(root2.getId() || ""); }, { dbg: dbg, label: "driveDeepProbe:rootGetId" }) };
-  });
-  step_("step3_createTempFolder", function () {
-    var name = "FODE_DRIVE_PROBE_" + Utilities.formatDate(new Date(), "UTC", "yyyyMMddHHmmss");
-    tempFolder = withRetries_(function () { return DriveApp.createFolder(name); }, { dbg: dbg, label: "driveDeepProbe:createTempFolder" });
-    return {
-      tempFolderId: clean_(tempFolder.getId() || ""),
-      tempFolderUrl: clean_(tempFolder.getUrl() || ""),
-      tempFolderName: clean_(tempFolder.getName() || name)
-    };
-  });
-  step_("step4_deleteTempFolder", function () {
-    if (!tempFolder) throw new Error("No temp folder to delete");
-    withRetries_(function () { return tempFolder.setTrashed(true); }, { dbg: dbg, label: "driveDeepProbe:trashTempFolder" });
-    return { trashed: true };
-  });
-  if (folderId) {
-    step_("canOpenTargetFolder", function () {
-      target = withRetries_(function () { return DriveApp.getFolderById(folderId); }, { dbg: dbg, label: "driveDeepProbe:getTargetFolder" });
-      return {
-        folderId: folderId,
-        name: withRetries_(function () { return clean_(target.getName() || ""); }, { dbg: dbg, label: "driveDeepProbe:targetGetName" }),
-        url: withRetries_(function () { return clean_(target.getUrl() || ""); }, { dbg: dbg, label: "driveDeepProbe:targetGetUrl" })
-      };
-    });
-    step_("canIterateTargetChildren", function () {
-      if (!target) target = withRetries_(function () { return DriveApp.getFolderById(folderId); }, { dbg: dbg, label: "driveDeepProbe:getTargetFolderIter" });
-      var hasAny = withRetries_(function () {
-        var it = target.getFolders();
-        return !!(it && it.hasNext && it.hasNext());
-      }, { dbg: dbg, label: "driveDeepProbe:targetIterChildren" });
-      return { canIterate: true, hasChildFolders: !!hasAny };
-    });
-    step_("canCreateFileInTarget", function () {
-      if (!target) target = withRetries_(function () { return DriveApp.getFolderById(folderId); }, { dbg: dbg, label: "driveDeepProbe:getTargetFolderCreateFile" });
-      var f = withRetries_(function () {
-        return target.createFile("probe.txt", "ok");
-      }, { dbg: dbg, label: "driveDeepProbe:createFileInTarget" });
-      try {
-        withRetries_(function () { return f.setTrashed(true); }, { dbg: dbg, label: "driveDeepProbe:trashTargetProbeFile" });
-      } catch (_trashFileErr) {}
-      return { fileId: clean_(f.getId() || ""), fileUrl: clean_(f.getUrl() || "") };
-    });
-  }
-
-  return {
-    ok: true,
-    folderId: folderId,
-    results: results
-  };
 }
 
 function getOrCreateFolder_(parent, name) {
