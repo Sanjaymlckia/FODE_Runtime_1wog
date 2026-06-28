@@ -32,10 +32,12 @@ function extractFunction(source, name) {
 const reviewQueues = extractFunction(adminSource, "admin_getReviewQueues");
 const resolveStatusCols = extractFunction(adminSource, "resolveStatusCols_");
 const docsReviewVerifiedHelper = extractFunction(adminSource, "adminRowDocsReviewVerified_");
+const docPaymentGateHelper = extractFunction(adminSource, "adminDocumentReviewVerifiedForPaymentGate_");
 
 assert.match(resolveStatusCols, /docsCompat:\s*getCol_\(idx,\s*\["Docs_Verified"\]\)/, "Status column resolver must include Docs_Verified compatibility field");
 
-assert.match(docsReviewVerifiedHelper, /clean_\(row\.Docs_Verified \|\| ""\) === "Yes" \|\| computeDocVerificationStatus_\(row\) === "Verified"/, "Document review helper must derive verified state from raw or computed status");
+assert.match(docPaymentGateHelper, /clean_\(row\.Docs_Verified \|\| ""\) === "Yes" \|\| computeDocVerificationStatus_\(row\) === "Verified"/, "Document review payment-gate helper must derive verified state from raw or computed status");
+assert.match(docsReviewVerifiedHelper, /adminDocumentReviewVerifiedForPaymentGate_\(rowObj\)/, "Document review helper must delegate to the shared payment-gate helper");
 assert.match(reviewQueues, /docsReviewVerified = adminRowDocsReviewVerified_\(rowObj\)/, "Queue classifier must use the shared document-review authority helper");
 assert.match(reviewQueues, /var docsQueueMatch = portalSubmitted && requiredDocumentUploadComplete && !docsReviewVerified;/, "Documents to Verify must continue excluding computed-verified rows");
 assert.match(reviewQueues, /var awaitingPaymentQueueMatch = docsReviewVerified && !paymentVerified && !paymentEvidencePresent;/, "Awaiting Payment must include computed-verified docs even if Docs_Verified was stale");

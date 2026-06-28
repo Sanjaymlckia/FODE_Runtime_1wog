@@ -2280,13 +2280,6 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
       return err_("PAYMENT_FREEZE_REQUIRES_BYPASS", "Payment is verified. Use Unlock to enable Super Admin override before saving.", dbgId);
     }
   }
-  function hasUploadedFileForMapping_(mapping) {
-    if (!mapping || !mapping.file) return false;
-    if (!idx[mapping.file]) return false;
-    var url = clean_(displayRow[idx[mapping.file] - 1]);
-    return /^https?:\/\//i.test(url);
-  }
-
   var docMap = CONFIG.DOC_FIELDS || [];
   var prepared = [];
   for (var i = 0; i < docs.length; i++) {
@@ -2295,7 +2288,7 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
     var mapping = findDocMapping_(file, d.statusField, d.commentField, docMap);
     if (!mapping) throw new Error("Invalid document mapping.");
     var status = normalizeDocStatus_(d.status);
-    if (status === "Verified" && !hasUploadedFileForMapping_(mapping)) {
+    if (status === "Verified" && !adminDocumentDisplayRowHasUrl_(displayRow, idx, mapping)) {
       throw new Error("Cannot set Verified: " + (mapping.label || mapping.file) + " has no uploaded file.");
     }
     var comment = clean_(d.comment || "");
@@ -2358,8 +2351,7 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
       });
       return err_("PAYVER_NOT_ALLOWED", "Only Super Admin can verify payments.", dbgId);
     }
-    var prospectiveDocStage = computeDocVerificationStatus_(prospectiveRow);
-    var docsVerifiedAfterSave = (clean_(prospectiveRow.Docs_Verified || "") === "Yes") || prospectiveDocStage === "Verified";
+    var docsVerifiedAfterSave = adminDocumentReviewVerifiedForPaymentGate_(prospectiveRow);
     if (!docsVerifiedAfterSave) {
       if (!overridePaymentBeforeDocs) {
         logAudit_("PAYMENT_BEFORE_DOCS_BLOCK", {
@@ -2652,7 +2644,7 @@ function admin_setPaymentVerified_impl_(payload, dbgId) {
       changedFields: ["Receipt_Status"]
     });
   }
-  var docsVerifiedNow = (clean_(beforeRow.Docs_Verified || "") === "Yes") || computeDocVerificationStatus_(beforeRow) === "Verified";
+  var docsVerifiedNow = adminDocumentReviewVerifiedForPaymentGate_(beforeRow);
   if (!docsVerifiedNow) {
     if (!overridePaymentBeforeDocs) {
       logAudit_("PAYMENT_BEFORE_DOCS_BLOCK", {
@@ -3524,7 +3516,7 @@ function runVerificationAutomations_(sh, rowNumber, idx, beforeRowObj, afterRowO
   var applicantId = safeStr_(afterRow.ApplicantID || beforeRow.ApplicantID || "");
   try {
     var docsBefore = isYes_(beforeRow.Docs_Verified);
-    var docsAfter = isYes_(afterRow.Docs_Verified) || computeDocVerificationStatus_(afterRow) === "Verified";
+    var docsAfter = adminDocumentReviewVerifiedForAutomation_(afterRow);
     if (!docsBefore && docsAfter) {
       actions.quoteEmail = "manual_only";
       logAdminEvent_("QUOTE_EMAIL_SKIPPED", { applicantId: applicantId, debugId: debugId, reason: "manual_only_cis91" });
@@ -4101,6 +4093,50 @@ function nonEmpty_(v) {
   return true;
 }
 
+function adminDocumentRequiredUploadFields_() {
+  return [
+    { field: "Birth_ID_Passport_File", label: "Birth Certificate / NID / Passport" },
+    { field: "Latest_School_Report_File", label: "Latest School Reports / Documents" },
+    { field: "Passport_Photo_File", label: "Passport Size Colour Photo" }
+  ];
+}
+
+function adminDocumentMandatoryIssueMappings_() {
+  return [
+    { file: "Birth_ID_Passport_File", status: "Birth_ID_Status" },
+    { file: "Latest_School_Report_File", status: "Report_Status" }
+  ];
+}
+
+function adminDocumentHasEvidence_(rowObj, fieldName) {
+  var row = rowObj || {};
+  var field = clean_(fieldName || "");
+  if (!field) return false;
+  return hasUploadEvidence_(row[field], field);
+}
+
+function adminDocumentDisplayRowHasUrl_(displayRow, idx, mapping) {
+  if (!mapping || !mapping.file) return false;
+  if (!idx || !idx[mapping.file]) return false;
+  var url = clean_((displayRow || [])[idx[mapping.file] - 1]);
+  return /^https?:\/\//i.test(url);
+}
+
+function adminDocumentFieldStatus_(rowObj, statusField) {
+  var row = rowObj || {};
+  return normalizeDocStatus_(row[statusField] || "Pending");
+}
+
+function adminDocumentReviewVerifiedForPaymentGate_(rowObj) {
+  var row = rowObj || {};
+  return clean_(row.Docs_Verified || "") === "Yes" || computeDocVerificationStatus_(row) === "Verified";
+}
+
+function adminDocumentReviewVerifiedForAutomation_(rowObj) {
+  var row = rowObj || {};
+  return isYes_(row.Docs_Verified) || computeDocVerificationStatus_(row) === "Verified";
+}
+
 function hasAnyRequiredDoc_(rowObj) {
   var row = rowObj || {};
   var required = [
@@ -4237,16 +4273,11 @@ function compareQueueItems_(a, b) {
 
 function hasMandatoryDocIssue_(rowObj, idx) {
   var row = rowObj || {};
-  var mappings = [
-    { file: "Birth_ID_Passport_File", status: "Birth_ID_Status" },
-    { file: "Latest_School_Report_File", status: "Report_Status" }
-  ];
+  var mappings = adminDocumentMandatoryIssueMappings_();
   for (var i = 0; i < mappings.length; i++) {
     var m = mappings[i];
     if (idx && (!idx[m.file] || !idx[m.status])) continue;
-    var hasFile = hasUploadEvidence_(row[m.file], m.file);
-    var status = clean_(row[m.status] || "");
-    if (hasFile && normalizeDocStatus_(status || "Pending") !== "Verified") return true;
+    if (adminDocumentHasEvidence_(row, m.file) && adminDocumentFieldStatus_(row, m.status) !== "Verified") return true;
   }
   return false;
 }
@@ -4270,8 +4301,7 @@ function adminRowPortalSubmitted_(rowObj) {
 }
 
 function adminRowDocsReviewVerified_(rowObj) {
-  var row = rowObj || {};
-  return clean_(row.Docs_Verified || "") === "Yes" || computeDocVerificationStatus_(row) === "Verified";
+  return adminDocumentReviewVerifiedForPaymentGate_(rowObj);
 }
 
 function adminRowPaymentEvidencePresent_(rowObj) {
@@ -4727,7 +4757,7 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
   var hasValidEmail = stageAggregationIsValidEmail_(effectiveEmail);
   var emailIssue = adminOpsHasEmailIssue_(row);
   var uploadSummary = adminOpsRequiredDocumentUploadSummary_(row);
-  var docsVerified = isYes_(row.Docs_Verified) || computeDocVerificationStatus_(row) === "Verified";
+  var docsVerified = adminDocumentReviewVerifiedForAutomation_(row);
   var portalSubmitted = adminRowPortalSubmitted_(row);
   var paymentFacts = adminRowPaymentAuthorityFacts_(row);
   var paymentEvidencePresent = paymentFacts.paymentEvidencePresent;
@@ -5293,16 +5323,12 @@ function adminOpsHasUploadEvidence_(rowObj) {
 
 function adminOpsRequiredDocumentUploadSummary_(rowObj) {
   var row = rowObj || {};
-  var required = [
-    { field: "Birth_ID_Passport_File", label: "Birth Certificate / NID / Passport" },
-    { field: "Latest_School_Report_File", label: "Latest School Reports / Documents" },
-    { field: "Passport_Photo_File", label: "Passport Size Colour Photo" }
-  ];
+  var required = adminDocumentRequiredUploadFields_();
   var uploaded = [];
   var missing = [];
   for (var i = 0; i < required.length; i++) {
     var item = required[i];
-    if (hasUploadEvidence_(row[item.field], item.field)) uploaded.push(item.field);
+    if (adminDocumentHasEvidence_(row, item.field)) uploaded.push(item.field);
     else missing.push(item.field);
   }
   return {

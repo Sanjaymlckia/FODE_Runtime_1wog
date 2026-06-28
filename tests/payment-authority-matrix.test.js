@@ -33,9 +33,11 @@ const reviewQueues = extractFunction(adminSource, "admin_getReviewQueues");
 const updateDocs = extractFunction(adminSource, "admin_updateDocStatuses_impl_");
 const setPayment = extractFunction(adminSource, "admin_setPaymentVerified_impl_");
 const docsHelper = extractFunction(adminSource, "adminRowDocsReviewVerified_");
+const docPaymentGateHelper = extractFunction(adminSource, "adminDocumentReviewVerifiedForPaymentGate_");
 const paymentFactsHelper = extractFunction(adminSource, "adminRowPaymentAuthorityFacts_");
 
-assert.match(docsHelper, /clean_\(row\.Docs_Verified \|\| ""\) === "Yes" \|\| computeDocVerificationStatus_\(row\) === "Verified"/, "Review queue document helper must tolerate computed document verification when Docs_Verified is stale");
+assert.match(docPaymentGateHelper, /clean_\(row\.Docs_Verified \|\| ""\) === "Yes" \|\| computeDocVerificationStatus_\(row\) === "Verified"/, "Document payment-gate helper must tolerate computed document verification when Docs_Verified is stale");
+assert.match(docsHelper, /adminDocumentReviewVerifiedForPaymentGate_\(rowObj\)/, "Review queue document helper must delegate to the shared document payment-gate helper");
 assert.match(paymentFactsHelper, /paymentVerifiedRaw: adminRowPaymentCompatibilityRawVerified_\(row\)/, "Review queue payment facts preserve raw Payment_Verified as compatibility evidence only");
 assert.match(paymentFactsHelper, /paymentBadge: canonicalPaymentBadge_\(row\)/, "Review queue payment facts must derive payment authority from canonical receipt status");
 assert.match(paymentFactsHelper, /paymentEvidencePresent: adminRowPaymentEvidencePresent_\(row\)/, "Review queue payment facts must distinguish receipt evidence from payment verification");
@@ -54,7 +56,7 @@ assert.match(updateDocs, /var paymentBadge = canonicalPaymentBadge_\(refreshedRo
 assert.match(updateDocs, /setCell_\(sh, rowNumber, idx, cols\.paymentCompat, paymentVerified \? "Yes" : ""\)/, "Document status save currently syncs the raw Payment_Verified compatibility field from derived payment state");
 assert.doesNotMatch(updateDocs, /setCell_\([^)]*"Receipt_Status"/, "Document status save must not write Receipt_Status");
 
-assert.match(setPayment, /docsVerifiedNow = \(clean_\(beforeRow\.Docs_Verified \|\| ""\) === "Yes"\) \|\| computeDocVerificationStatus_\(beforeRow\) === "Verified"/, "Payment verification must require raw or computed document verification");
+assert.match(setPayment, /docsVerifiedNow = adminDocumentReviewVerifiedForPaymentGate_\(beforeRow\)/, "Payment verification must require raw or computed document verification through the shared helper");
 assert.match(setPayment, /setCell_\(sh, rowNumber, idx, "Receipt_Status", "Verified"\)/, "Payment verification must write Receipt_Status as the canonical payment signal");
 assert.doesNotMatch(setPayment, /setCell_\([^)]*"Docs_Verified"/, "Payment verification must not write Docs_Verified");
 
