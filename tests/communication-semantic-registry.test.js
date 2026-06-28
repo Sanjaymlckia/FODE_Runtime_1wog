@@ -239,11 +239,21 @@ const templateFunctionNames = [
   "applicantGradeOrPlaceholder_",
   "applicantSubjectsOrPlaceholder_",
   "applicantPaymentQuoteOrPlaceholder_",
+  "applicantDocumentStatusSummary_",
+  "applicantPaymentStatusSummary_",
+  "applicantComputedFeeQuoteText_",
+  "applicantOutstandingActionOrPlaceholder_",
   "paymentInstructionsOrPlaceholder_",
   "hasUnresolvedActionRequiredPlaceholder_",
   "communicationRequiresResolvedActionPlaceholders_",
   "feedbackStatusNeedsAttention_",
   "buildDocumentAttentionLines_",
+  "subjectsToCsv_",
+  "computeFodeFeeQuote_",
+  "formatKina_",
+  "applicantGradeDisplayOrUnconfirmed_",
+  "applicantSubjectsDisplayOrUnconfirmed_",
+  "buildReminderEmailBody_",
   "buildDocsMissingEmailBody_",
   "buildPaymentFollowupEmailBody_",
   "buildCustomSelectedEmailSubject_",
@@ -271,10 +281,18 @@ const templateContext = {
       { label: "Passport Size Colour Photo", file: "Passport_Photo_File", status: "Photo_Status", comment: "Photo_Comment" },
       { label: "Admission Fee Payment Receipt", file: "Fee_Receipt_File", status: "Receipt_Status", comment: "Receipt_Comment" }
     ],
-    COMMUNICATION_ALLOWED_MESSAGE_TYPES: allowedTypes
+    COMMUNICATION_ALLOWED_MESSAGE_TYPES: allowedTypes,
+    PAYMENT_INSTRUCTIONS_TEXT: "Pay using the approved KIA payment account and upload the receipt.",
+    FEE_REGISTRATION_KINA: 600,
+    FEE_PER_SUBJECT_KINA: 450
   },
+  SCHEMA: { SUBJECTS_CANONICAL: "Subjects_Selected_Canonical" },
   clean_: (value) => String(value == null ? "" : value).trim(),
   hasUploadEvidence_: (value) => !!String(value == null ? "" : value).trim(),
+  computeDocVerificationStatus_: (row) => (row && row.Docs_Verified === "Yes") ? "Verified" : "Pending",
+  isCanonicalPaymentVerified_: (row) => !!(row && row.Receipt_Status === "Verified"),
+  communicationDocsMissing_: (row) => !(row && row.Docs_Verified === "Yes"),
+  communicationPaymentOutstanding_: (row) => !(row && row.Receipt_Status === "Verified"),
   normalizeApplicantMessageType_: context.normalizeApplicantMessageType_
 };
 vm.createContext(templateContext);
@@ -296,26 +314,26 @@ const applicantContext = {
   }
 };
 const docsMissingBody = templateContext.buildDocsMissingEmailBody_(applicantContext);
-assert.match(docsMissingBody, /not available or are incomplete/i);
+assert.match(docsMissingBody, /not available, incomplete, or need resubmission/i);
 assert.match(docsMissingBody, /Applicant ID: FODE-26-TEST/);
 assert.match(docsMissingBody, /Latest School Reports \/ Documents: not received or not available in the current application record\./);
-assert.match(docsMissingBody, /cannot be fully reviewed or processed until the required documents are uploaded/i);
-assert.match(docsMissingBody, /admission processing may be delayed or blocked/i);
-assert.match(docsMissingBody, /application review cannot continue until the documents are received/i);
-assert.match(docsMissingBody, /did not reach us correctly/i);
+assert.match(docsMissingBody, /required documents are not available, incomplete, or need resubmission/i);
+assert.match(docsMissingBody, /Document status: review is still in progress/i);
+assert.match(docsMissingBody, /This is not a final application decision/i);
+assert.match(docsMissingBody, /Open the secure portal link below/i);
 assert.match(docsMissingBody, /upload or resend/i);
 assert.doesNotMatch(docsMissingBody, /\breject(?:ed|ion)?\b/i);
 assert.doesNotMatch(docsMissingBody, /\byour (?:fault|failure)\b/i);
 
 const paymentBody = templateContext.buildPaymentFollowupEmailBody_(applicantContext);
 assert.match(paymentBody, /Applicant ID: FODE-26-TEST/);
-assert.match(paymentBody, /Documents have been reviewed, but payment evidence is still pending/i);
+assert.match(paymentBody, /Admissions still needs payment evidence or payment verification/i);
 assert.match(paymentBody, /\[ACTION REQUIRED: confirm grade\]/);
 assert.match(paymentBody, /\[ACTION REQUIRED: confirm subjects\]/);
 assert.match(paymentBody, /\[ACTION REQUIRED: insert payment\/quote amount\]/);
-assert.match(paymentBody, /\[ACTION REQUIRED: confirm payment instructions\]/);
-assert.match(paymentBody, /Upload or send the payment receipt\/evidence/i);
-assert.match(paymentBody, /Enrolment\/payment processing will continue only after payment evidence is received and verified/i);
+assert.match(paymentBody, /Pay using the approved KIA payment account and upload the receipt\./);
+assert.match(paymentBody, /Upload or send a clear payment receipt\/evidence/i);
+assert.match(paymentBody, /does not confirm acceptance or enrolment/i);
 assert.doesNotMatch(paymentBody, /\byou (?:are|have been) accepted\b/i);
 
 const quoteBody = templateContext.buildApplicationVerifiedQuoteBody_(applicantContext);
@@ -326,12 +344,28 @@ assert.match(quoteBody, /\[ACTION REQUIRED: confirm subjects\]/);
 assert.match(quoteBody, /\[ACTION REQUIRED: insert payment\/quote amount\]/);
 assert.match(quoteBody, /payment receipt\/evidence/i);
 assert.match(quoteBody, /Next steps:/);
+const quoteReadyContext = {
+  applicantId: "FODE-26-QUOTE",
+  portalUrl: "https://portal.example.test/quote",
+  rowObj: {
+    First_Name: "Quote",
+    Last_Name: "Student",
+    Grade: "Grade 10",
+    Subjects_Selected_Canonical: "English, Mathematics",
+    Docs_Verified: "Yes"
+  }
+};
+const quoteReadyBody = templateContext.buildApplicationVerifiedQuoteBody_(quoteReadyContext);
+assert.match(quoteReadyBody, /Estimated total payable: K1500/);
+assert.match(quoteReadyBody, /Subject fee: K900 \(K450 x 2\)/);
+assert.match(quoteReadyBody, /Pay using the approved KIA payment account and upload the receipt\./);
+assert.doesNotMatch(quoteReadyBody, /\[ACTION REQUIRED: insert payment\/quote amount\]/);
+assert.doesNotMatch(quoteReadyBody, /operator|internal|Do not rely/i);
 
 const acceptanceBody = templateContext.buildApplicationAcceptanceConfirmationBody_(applicantContext);
 assert.match(acceptanceBody, /Applicant ID: FODE-26-TEST/);
 assert.match(acceptanceBody, /\[ACTION REQUIRED: confirm grade\]/);
 assert.match(acceptanceBody, /\[ACTION REQUIRED: confirm subjects\]/);
-assert.match(acceptanceBody, /\[ACTION REQUIRED: insert payment\/quote amount\]/);
 assert.match(acceptanceBody, /\[ACTION REQUIRED: confirm acceptance\/enrolment status\]/);
 assert.match(acceptanceBody, /Next steps:/);
 
@@ -343,7 +377,7 @@ assert.match(receiptRequestBody, /does not confirm acceptance or enrolment/i);
 
 const finalReminderBody = templateContext.buildApplicationFinalReminderBody_(applicantContext);
 assert.match(finalReminderBody, /Applicant ID: FODE-26-TEST/);
-assert.match(finalReminderBody, /\[ACTION REQUIRED: state outstanding action\]/);
+assert.match(finalReminderBody, /upload or resend the missing required document/i);
 assert.match(finalReminderBody, /\[ACTION REQUIRED: confirm deadline or urgency\]/);
 
 assert.equal(templateContext.hasUnresolvedActionRequiredPlaceholder_("", paymentBody), true);
@@ -355,8 +389,13 @@ assert.equal(templateContext.communicationRequiresResolvedActionPlaceholders_("c
 const customSubject = templateContext.buildCustomSelectedEmailSubject_();
 const customBody = templateContext.buildCustomSelectedEmailBody_(applicantContext);
 assert.ok(customSubject);
-assert.match(customBody, /selected FODE KIA applicant record/i);
+assert.match(customBody, /FODE KIA application listed below/i);
 assert.match(customBody, /Applicant ID: FODE-26-TEST/);
+assert.doesNotMatch(customBody, /\[ACTION REQUIRED:/);
+
+const reminderBody = templateContext.buildReminderEmailBody_(applicantContext);
+assert.match(reminderBody, /awaiting your next step/i);
+assert.doesNotMatch(reminderBody, /\[ACTION REQUIRED:/);
 
 const prospectBody = templateContext.buildProspectGeneralGuidanceBody_({
   informationUrl: "https://example.test/fode",
@@ -381,8 +420,8 @@ assert.match(fdAcknowledgementSource, /Admissions will review/i);
 assert.doesNotMatch(fdAcknowledgementSource, /\baccepted\b|\benrol(?:led|ment)\b/i);
 
 const reminderSource = extractFunction(codeSource, "buildReminderEmailBody_");
-assert.match(reminderSource, /pending completion/i);
-assert.doesNotMatch(reminderSource, /payment receipt|documents verified|acceptance confirmation/i);
+assert.match(reminderSource, /awaiting your next step/i);
+assert.doesNotMatch(reminderSource, /acceptance confirmation/i);
 
 console.log("PASS communication semantic registry active/planned/manual definitions");
 console.log("PASS active types exactly match configured runtime message types");
