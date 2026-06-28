@@ -13,7 +13,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$Repo = "E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog"
+$Repo = "D:\Repos\FODE_Runtime_1wog"
 $RuntimeFiles = @(
   "Admin.js",
   "AdminUI_OpsApplicantQueue.html",

@@ -1,7 +1,7 @@
 param(
-  [string]$RepoRoot = "E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog",
+  [string]$RepoRoot = "D:\Repos\FODE_Runtime_1wog",
   [string]$ExpectedScriptId = "1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90",
-  [string]$RemoteCheckRoot = "E:\Gdrive\01_SANJAY\Codex_Sync\_clasp_remote_check_FODE",
+  [string]$RemoteCheckRoot = "D:\Repos\_clasp_remote_check_FODE",
   [string[]]$RequiredCodeMarkers = @(),
   [string[]]$RequiredAdminUiMarkers = @(),
   [switch]$AllowExternalRemoteCheck

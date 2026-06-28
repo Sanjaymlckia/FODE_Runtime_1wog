@@ -1,5 +1,5 @@
 param(
-  [string]$ExpectedRoot = "E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog",
+  [string]$ExpectedRoot = "D:\Repos\FODE_Runtime_1wog",
   [int]$ExpectedDailySendCap = 0,
   [string]$ExpectedAutomatedStageRunner = "",
   [string]$ExpectedCrmPipeline = "",

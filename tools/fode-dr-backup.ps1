@@ -1,5 +1,5 @@
 param(
-  [string]$RepoRoot = "E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog",
+  [string]$RepoRoot = "D:\Repos\FODE_Runtime_1wog",
   [string]$BackupRoot = "F:\FODE_DR_Backup",
   [ValidateSet("Plan", "RepoSnapshot", "AppsScriptManifest", "SheetExportPlan", "DriveInventoryPlan", "ApplicantDocumentInventoryPlan", "ArchivePlaywrightReports")]
   [string]$Mode = "Plan",

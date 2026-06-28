@@ -14,7 +14,7 @@ GitHub remains review authority.
 
 Do not run Apps Script source push, version creation, or deployment repin from the D: clone until `.clasp.json`, `Config.js`, and Apps Script project authority are verified from the D: clone in the active release CIS.
 
-Some legacy script defaults may still mention the old E: path. Treat those as requiring explicit CIS review before use; do not assume an E: default is active source authority.
+Tool defaults now target the active D: repo. Historical audit paths may still mention E: as evidence; do not treat those historical paths as active source authority.
 
 ## Tracks
 

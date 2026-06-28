@@ -1,5 +1,5 @@
 param(
-  [string]$RepoRoot = "E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog",
+  [string]$RepoRoot = "D:\Repos\FODE_Runtime_1wog",
   [string]$BackupRoot = "F:\FODE_DR_Backup",
   [switch]$IncludeClaspDeployments
 )
@@ -146,7 +146,7 @@ $manifest = [ordered]@{
     formDesigner = "External intake dependency; backup/export not proven by this manifest."
     googleFormsReplacement = "Flagged as future replacement path; not implemented in this manifest."
     playwrightRoot = "F:\Playwright\fode-secure-link-diagnostic"
-    remoteProofFolder = "E:\Gdrive\01_SANJAY\Codex_Sync\_clasp_remote_check_FODE"
+    remoteProofFolder = "D:\Repos\_clasp_remote_check_FODE"
   }
   backupRoot = $backupResolved
   folders = $Folders
@@ -240,7 +240,7 @@ $runtimeAllowlistMd
 - FormDesigner: external intake dependency; backup/export not proven.
 - Google Forms replacement: future replacement path; not implemented here.
 - Playwright: F:\Playwright\fode-secure-link-diagnostic
-- Remote proof folder: E:\Gdrive\01_SANJAY\Codex_Sync\_clasp_remote_check_FODE
+- Remote proof folder: D:\Repos\_clasp_remote_check_FODE
 
 ## Boundaries
 

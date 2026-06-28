@@ -1,5 +1,5 @@
 param(
-  [string]$RepoRoot = "E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog",
+  [string]$RepoRoot = "D:\Repos\FODE_Runtime_1wog",
   [string]$ExpectedHead = "",
   [string[]]$AllowedChangedFiles = @(),
   [int]$ExpectedLatestAppsScriptVersion = 0,
