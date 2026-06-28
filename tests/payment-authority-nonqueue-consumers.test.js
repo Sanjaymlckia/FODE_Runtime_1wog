@@ -137,7 +137,7 @@ const nonQueueAdminConsumers = [
   ["buildOpsClassroomHandoverContext_", extractFunction(adminSource, "buildOpsClassroomHandoverContext_")]
 ];
 for (const [name, source] of nonQueueAdminConsumers) {
-  assert.match(source, /canonicalPaymentBadge_|isCanonicalPaymentVerified_/, `${name} must use canonical payment helpers`);
+  assert.match(source, /canonicalPaymentBadge_|isCanonicalPaymentVerified_|adminRowPaymentAuthorityFacts_/, `${name} must use canonical payment helpers`);
   assertNoRawPaymentDecision(source, name);
 }
 

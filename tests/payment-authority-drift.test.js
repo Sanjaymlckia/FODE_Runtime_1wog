@@ -137,10 +137,12 @@ assert.deepEqual(
 const reviewQueues = extractFunction(adminSource, "admin_getReviewQueues");
 const updateDocs = extractFunction(adminSource, "admin_updateDocStatuses_impl_");
 const setPayment = extractFunction(adminSource, "admin_setPaymentVerified_impl_");
+const paymentFactsHelper = extractFunction(adminSource, "adminRowPaymentAuthorityFacts_");
 
-assert.match(reviewQueues, /paymentVerifiedRaw = clean_\(rowObj\.Payment_Verified \|\| ""\) === "Yes"/, "Queues may retain raw Payment_Verified as compatibility evidence");
-assert.match(reviewQueues, /var paymentBadge = canonicalPaymentBadge_\(rowObj\)/, "Queues must derive payment badge from canonical receipt status");
-assert.match(reviewQueues, /paymentVerified = isCanonicalPaymentVerified_\(rowObj\)/, "Queues must classify payment stage from canonical payment helper");
+assert.match(paymentFactsHelper, /paymentVerifiedRaw: adminRowPaymentCompatibilityRawVerified_\(row\)/, "Queues may retain raw Payment_Verified as compatibility evidence");
+assert.match(paymentFactsHelper, /paymentBadge: canonicalPaymentBadge_\(row\)/, "Queues must derive payment badge from canonical receipt status");
+assert.match(paymentFactsHelper, /paymentVerified: isCanonicalPaymentVerified_\(row\)/, "Queues must classify payment stage from canonical payment helper");
+assert.match(reviewQueues, /paymentFacts = adminRowPaymentAuthorityFacts_\(rowObj\)/, "Queues must consume centralized payment authority facts");
 assert.doesNotMatch(reviewQueues, /paymentVerified = paymentVerifiedRaw/, "Queues must not classify payment stage from raw compatibility state");
 assert.match(updateDocs, /var paymentBadge = canonicalPaymentBadge_\(refreshedRow\)/, "Document save must derive payment display from canonical receipt status");
 assert.match(updateDocs, /setCell_\(sh, rowNumber, idx, cols\.paymentCompat, paymentVerified \? "Yes" : ""\)/, "Document save may only project Payment_Verified compatibility from derived payment state");
