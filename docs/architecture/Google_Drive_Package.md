@@ -5,13 +5,21 @@ Scope: documentation organization only
 
 ## Google Drive Folder
 
-FODE Runtime synced workspace:
+FODE Runtime archived synced workspace:
 
 https://drive.google.com/drive/folders/1P2FkxEQ9oQsk1I1Pyj7lazkaXly049lW?usp=sharing
 
-Local synced path:
+Archived local synced path:
 
 `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog`
+
+Active Codex working repo:
+
+`D:\Repos\FODE_Runtime_1wog`
+
+GitHub remains review authority. The archived Google Drive copy is not active source authority.
+
+Do not run Apps Script source push/version/repin actions from the active D: clone until `.clasp.json`, `Config.js`, and Apps Script project authority are verified in the active CIS.
 
 ## Recommended Drive Package View
 
@@ -33,4 +41,3 @@ FODE Runtime Architecture/
 ```
 
 No files were uploaded, copied, moved, or shared by r23B.
-

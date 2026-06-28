@@ -79,7 +79,13 @@ Rules:
 
 The authoritative FODE Runtime repo is:
 
-E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog
+D:\Repos\FODE_Runtime_1wog
+
+The old Google Drive synced copy at `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog` is archive/reference only. Do not treat it as active source authority.
+
+GitHub remains the review authority for committed work.
+
+No Apps Script push, version creation, deployment repin, or release action may be performed from the D: clone until `.clasp.json`, `Config.js`, and the intended Apps Script project authority are verified from the D: clone in the active CIS.
 
 Do not create temp repos, remote verification clones, or non-repo source copies outside this path unless explicitly authorized by the operator.
 

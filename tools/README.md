@@ -2,6 +2,20 @@
 
 These scripts are staged gates. They are not a one-click release system.
 
+## Active Repository Authority
+
+Active Codex working repo:
+
+`D:\Repos\FODE_Runtime_1wog`
+
+The old Google Drive synced copy at `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog` is archive/reference only.
+
+GitHub remains review authority.
+
+Do not run Apps Script source push, version creation, or deployment repin from the D: clone until `.clasp.json`, `Config.js`, and Apps Script project authority are verified from the D: clone in the active release CIS.
+
+Some legacy script defaults may still mention the old E: path. Treat those as requiring explicit CIS review before use; do not assume an E: default is active source authority.
+
 ## Tracks
 
 - `Track L`: UI, documentation, audits, and local tooling with no behavior or authority change.

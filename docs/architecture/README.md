@@ -61,10 +61,20 @@ Every future CIS that changes runtime architecture, state transitions, queues, a
 
 ## Current Google Drive Folder
 
-Synced workspace folder:
+Archived Google Drive workspace folder:
 
 https://drive.google.com/drive/folders/1P2FkxEQ9oQsk1I1Pyj7lazkaXly049lW?usp=sharing
 
-Local synced path:
+Archived local synced path:
 
 `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog`
+
+## Active Codex Working Repo
+
+Active local working path:
+
+`D:\Repos\FODE_Runtime_1wog`
+
+The E: Google Drive copy is archive/reference only. GitHub remains review authority.
+
+Do not run `clasp push`, create Apps Script versions, or repin deployments from the D: clone until `.clasp.json`, `Config.js`, and Apps Script project authority are verified from that clone in the active release CIS.
