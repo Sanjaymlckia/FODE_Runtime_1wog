@@ -7935,15 +7935,30 @@ function runFdAcknowledgementForApplicantId_(applicantId, opts) {
   }));
 }
 
+function normalizeLifecycleStageKey_(stage) {
+  return clean_(stage || "").toUpperCase();
+}
+
+function lifecycleStageMessageTypeMap_() {
+  return {
+    INVITE_PENDING: "legacy_invite",
+    INVITED_AWAITING_RESPONSE: "reminder",
+    REMINDER_DUE: "reminder",
+    DOCS_REQUIRED: "reminder",
+    PAYMENT_REQUIRED: "reminder",
+    RECEIPT_AWAITING_VERIFICATION: "reminder"
+  };
+}
+
 function communicationRecommendedMessageTypeForStage_(stage) {
-  var normalized = clean_(stage || "").toUpperCase();
-  if (normalized === "INVITE_PENDING") return "legacy_invite";
-  if (normalized === "INVITED_AWAITING_RESPONSE") return "reminder";
-  if (normalized === "REMINDER_DUE") return "reminder";
-  if (normalized === "DOCS_REQUIRED") return "reminder";
-  if (normalized === "PAYMENT_REQUIRED") return "reminder";
-  if (normalized === "RECEIPT_AWAITING_VERIFICATION") return "reminder";
-  return "";
+  var normalized = normalizeLifecycleStageKey_(stage);
+  var map = lifecycleStageMessageTypeMap_();
+  return map[normalized] || "";
+}
+
+function isLifecycleAwaitingResponseStage_(stage) {
+  var normalized = normalizeLifecycleStageKey_(stage);
+  return ["INVITED_AWAITING_RESPONSE", "REMINDER_DUE", "DOCS_REQUIRED", "PAYMENT_REQUIRED", "RECEIPT_AWAITING_VERIFICATION"].indexOf(normalized) >= 0;
 }
 
 function communicationOverlayStatusFromCode_(code) {
@@ -7999,7 +8014,7 @@ function deriveApplicantLifecycleStage_(rowObj) {
 function deriveApplicantActionability_(rowObj, lifecycleStage, opts) {
   var row = rowObj || {};
   var options = opts && typeof opts === 'object' ? opts : {};
-  var stage = clean_(lifecycleStage || deriveApplicantLifecycleStage_(row)).toUpperCase();
+  var stage = normalizeLifecycleStageKey_(lifecycleStage || deriveApplicantLifecycleStage_(row));
   var applicantId = clean_(row.ApplicantID || "");
   var getEffectiveEmail = typeof options.getEffectiveEmail === 'function' ? options.getEffectiveEmail : getCampaignEffectiveEmail_;
   var isValidEmail = typeof options.isValidEmail === 'function' ? options.isValidEmail : isValidEffectiveEmail_;
@@ -8016,7 +8031,7 @@ function deriveApplicantActionability_(rowObj, lifecycleStage, opts) {
   var bounceFlag = resolveEligibility ? baseState.bounceFlag === true : isCampaignBounceFlagTrue_(row.Email_Bounce_Flag);
   var bounceReason = resolveEligibility ? clean_(baseState.bounceReason || "") : clean_(row.Email_Bounce_Reason || "");
   var hasValidEffectiveEmail = resolveEligibility ? baseState.hasValidEffectiveEmail === true : isValidEmail(effectiveEmail);
-  var awaitingResponse = ["INVITED_AWAITING_RESPONSE", "REMINDER_DUE", "DOCS_REQUIRED", "PAYMENT_REQUIRED", "RECEIPT_AWAITING_VERIFICATION"].indexOf(stage) >= 0;
+  var awaitingResponse = isLifecycleAwaitingResponseStage_(stage);
   var commStatus = "ACTIONABLE";
   var canSendNow = false;
   var blockCode = "";

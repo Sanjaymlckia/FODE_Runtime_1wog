@@ -6973,18 +6973,8 @@ function normalizeStageBatchStage_(stage) {
 
 function getBatchMessageTypeForStage_(stage) {
   var normalized = normalizeStageBatchStage_(stage);
-  switch (normalized) {
-    case "INVITE_PENDING":
-      return "legacy_invite";
-    case "INVITED_AWAITING_RESPONSE":
-    case "REMINDER_DUE":
-    case "DOCS_REQUIRED":
-    case "PAYMENT_REQUIRED":
-    case "RECEIPT_AWAITING_VERIFICATION":
-      return "reminder";
-    default:
-      return "";
-  }
+  if (!normalized) return "";
+  return communicationRecommendedMessageTypeForStage_(normalized);
 }
 
 function isBatchSendableStage_(stage) {

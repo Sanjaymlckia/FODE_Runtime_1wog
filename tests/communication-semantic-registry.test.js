@@ -40,6 +40,9 @@ function configuredAllowedTypes() {
 }
 
 const functionNames = [
+  "normalizeLifecycleStageKey_",
+  "lifecycleStageMessageTypeMap_",
+  "communicationRecommendedMessageTypeForStage_",
   "normalizeApplicantMessageType_",
   "getCommunicationSemanticRegistry_",
   "getCommunicationSemanticDefinition_",
@@ -180,12 +183,15 @@ for (const entry of active) {
 }
 
 const stageMapper = extractFunction(adminSource, "getBatchMessageTypeForStage_");
+const sharedStageMap = extractFunction(codeSource, "lifecycleStageMessageTypeMap_");
+assert.match(stageMapper, /communicationRecommendedMessageTypeForStage_\(normalized\)/, "Stage Batch must use shared lifecycle-stage message mapping");
 for (const stage of ["INVITED_AWAITING_RESPONSE", "REMINDER_DUE", "DOCS_REQUIRED", "PAYMENT_REQUIRED", "RECEIPT_AWAITING_VERIFICATION"]) {
-  assert.match(stageMapper, new RegExp(`case\\s+"${stage}"`), `${stage} mapping must remain visible to the overload test`);
+  assert.equal(context.communicationRecommendedMessageTypeForStage_(stage), "reminder", `${stage} mapping must remain legacy reminder`);
 }
-assert.match(stageMapper, /return\s+"reminder"/, "Current overloaded reminder stage mapping must remain explicitly detected");
-assert.doesNotMatch(stageMapper, /application_exam_fee_reminder/, "Exam fee reminder must not be Stage Batch mapped");
-assert.doesNotMatch(stageMapper, /docs_missing|payment_followup/, "H3 must not remap Stage Batch to selected-applicant template types");
+assert.equal(context.communicationRecommendedMessageTypeForStage_("INVITE_PENDING"), "legacy_invite", "INVITE_PENDING mapping must remain legacy invite");
+assert.equal(context.communicationRecommendedMessageTypeForStage_("PROCESSING"), "", "Unsupported lifecycle stages must not become batch sendable");
+assert.doesNotMatch(sharedStageMap, /application_exam_fee_reminder/, "Exam fee reminder must not be Stage Batch mapped");
+assert.doesNotMatch(sharedStageMap, /docs_missing|payment_followup/, "H3 must not remap Stage Batch to selected-applicant template types");
 
 const selectedMessageTypeSelect = adminUiSource.match(/<select id="commMessageType">([\s\S]*?)<\/select>/);
 assert.ok(selectedMessageTypeSelect, "Selected-applicant message type picker must exist");

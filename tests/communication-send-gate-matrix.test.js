@@ -45,6 +45,10 @@ const context = {
 };
 vm.createContext(context);
 vm.runInContext([
+  "normalizeLifecycleStageKey_",
+  "lifecycleStageMessageTypeMap_",
+  "communicationRecommendedMessageTypeForStage_",
+  "isLifecycleAwaitingResponseStage_",
   "normalizeApplicantMessageType_",
   "getCommunicationSemanticRegistry_",
   "getCommunicationSemanticDefinition_",
@@ -89,11 +93,15 @@ for (const entry of planned) {
 }
 
 const stageMapper = extractFunction(adminSource, "getBatchMessageTypeForStage_");
-assert.match(stageMapper, /case "DOCS_REQUIRED":[\s\S]*return "reminder"/, "DOCS_REQUIRED Stage Batch mapping must remain legacy reminder");
-assert.match(stageMapper, /case "REMINDER_DUE":[\s\S]*return "reminder"/, "REMINDER_DUE Stage Batch mapping must remain legacy reminder");
-assert.match(stageMapper, /case "INVITED_AWAITING_RESPONSE":[\s\S]*return "reminder"/, "INVITED_AWAITING_RESPONSE Stage Batch mapping must remain legacy reminder");
-assert.match(stageMapper, /case "INVITE_PENDING":[\s\S]*return "legacy_invite"/, "INVITE_PENDING Stage Batch mapping must remain legacy invite");
-assert.doesNotMatch(stageMapper, /custom_email|docs_missing|payment_followup|application_verified_quote|application_acceptance_confirmation|application_exam_fee_reminder/, "Selected/manual templates must not be Stage Batch mapped");
+const sharedStageMap = extractFunction(codeSource, "lifecycleStageMessageTypeMap_");
+assert.match(stageMapper, /communicationRecommendedMessageTypeForStage_\(normalized\)/, "Stage Batch must delegate to shared lifecycle-stage message mapping");
+assert.equal(context.communicationRecommendedMessageTypeForStage_("DOCS_REQUIRED"), "reminder", "DOCS_REQUIRED Stage Batch mapping must remain legacy reminder");
+assert.equal(context.communicationRecommendedMessageTypeForStage_("REMINDER_DUE"), "reminder", "REMINDER_DUE Stage Batch mapping must remain legacy reminder");
+assert.equal(context.communicationRecommendedMessageTypeForStage_("INVITED_AWAITING_RESPONSE"), "reminder", "INVITED_AWAITING_RESPONSE Stage Batch mapping must remain legacy reminder");
+assert.equal(context.communicationRecommendedMessageTypeForStage_("INVITE_PENDING"), "legacy_invite", "INVITE_PENDING Stage Batch mapping must remain legacy invite");
+assert.equal(context.communicationRecommendedMessageTypeForStage_("PROCESSING"), "", "PROCESSING must remain unsupported for Stage Batch messaging");
+assert.equal(context.communicationRecommendedMessageTypeForStage_("application_exam_fee_reminder"), "", "Planned template keys must not become lifecycle-stage mappings");
+assert.doesNotMatch(sharedStageMap, /custom_email|docs_missing|payment_followup|application_verified_quote|application_acceptance_confirmation|application_exam_fee_reminder/, "Selected/manual templates must not be Stage Batch mapped");
 
 const sendApplicant = extractFunction(codeSource, "sendApplicantMessage_");
 const dispatchApplicant = extractFunction(codeSource, "dispatchApplicantMessage_");
