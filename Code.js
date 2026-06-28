@@ -6689,6 +6689,123 @@ function getCommunicationSemanticDefinition_(messageType) {
   return null;
 }
 
+function communicationTemplateGalleryCopy_() {
+  return {
+    legacy_invite: {
+      purpose: "Send or resend secure application portal access for an applicant record.",
+      whenToUse: "Use when the applicant needs the portal link to complete or continue the application.",
+      stageSuitability: "Invite pending / portal access pending.",
+      needsPaymentQuoteData: false
+    },
+    reminder: {
+      purpose: "General legacy reminder for an applicant who still needs to take action.",
+      whenToUse: "Use only after checking the current applicant condition; this type remains overloaded.",
+      stageSuitability: "Legacy reminder states only; prefer a more specific selected template when possible.",
+      needsPaymentQuoteData: false
+    },
+    fd_acknowledgement: {
+      purpose: "Acknowledge that an application was received.",
+      whenToUse: "Use for receipt acknowledgement only; it does not confirm acceptance.",
+      stageSuitability: "Application received / FD received.",
+      needsPaymentQuoteData: false
+    },
+    application_feedback: {
+      purpose: "Send selected-applicant correction or feedback guidance.",
+      whenToUse: "Use when the operator has reviewed the record and needs a specific correction or explanation.",
+      stageSuitability: "Manual selected-applicant review.",
+      needsPaymentQuoteData: false
+    },
+    custom_email: {
+      purpose: "General FODE KIA admissions/program information or one-off operator message.",
+      whenToUse: "Use for a selected applicant when no specific operational template fits.",
+      stageSuitability: "Manual review / unclear state.",
+      needsPaymentQuoteData: false
+    },
+    docs_missing: {
+      purpose: "Ask the parent/applicant to upload or resend missing or incomplete documents.",
+      whenToUse: "Use when required document evidence is missing, incomplete, rejected, or not received.",
+      stageSuitability: "Missing documents / document correction required.",
+      needsPaymentQuoteData: false
+    },
+    payment_followup: {
+      purpose: "Follow up on payment evidence or receipt verification.",
+      whenToUse: "Use when payment evidence is uploaded but not verified, or payment remains outstanding.",
+      stageSuitability: "Receipt uploaded / payment evidence awaiting verification.",
+      needsPaymentQuoteData: true
+    },
+    prospect_general_guidance: {
+      purpose: "Provide safe general FODE KIA guidance without applicant-specific commitments.",
+      whenToUse: "Use manually for a selected recipient needing general program or admissions information.",
+      stageSuitability: "Manual guidance only; not Stage Batch.",
+      needsPaymentQuoteData: false
+    },
+    application_receipt_request: {
+      purpose: "Request payment receipt or payment proof from a selected applicant.",
+      whenToUse: "Use when payment was expected but receipt/proof is missing.",
+      stageSuitability: "Awaiting receipt / payment proof.",
+      needsPaymentQuoteData: true
+    },
+    application_verified_quote: {
+      purpose: "Send document-verified quote, subject, and payment instruction guidance.",
+      whenToUse: "Use after documents are verified and before payment evidence is received.",
+      stageSuitability: "Documents verified + no receipt/payment evidence.",
+      needsPaymentQuoteData: true
+    },
+    application_acceptance_confirmation: {
+      purpose: "Confirm acceptance/enrolment outcome after operator authority confirms it.",
+      whenToUse: "Use only when acceptance/enrolment status is known and checked.",
+      stageSuitability: "Payment verified + acceptance/enrolment authority available.",
+      needsPaymentQuoteData: false
+    },
+    application_exam_fee_reminder: {
+      purpose: "Remind about National Exam Fee after subject count and fee authority are checked.",
+      whenToUse: "Use only when exam-fee-due status is known.",
+      stageSuitability: "Manual exam-fee review.",
+      needsPaymentQuoteData: true
+    },
+    application_final_reminder: {
+      purpose: "Final selected-applicant follow-up before manual/dormant handling.",
+      whenToUse: "Use only after operator review of cadence, deadline, and applicant state.",
+      stageSuitability: "Final manual follow-up.",
+      needsPaymentQuoteData: false
+    },
+    contact_fallback_manual: {
+      purpose: "Manual contact fallback guidance when email is unavailable or unreliable.",
+      whenToUse: "Use when email cannot be used and WhatsApp/phone/manual handling is required.",
+      stageSuitability: "Invalid email / no effective email / bounced contact.",
+      needsPaymentQuoteData: false
+    }
+  };
+}
+
+function communicationTemplateGalleryMetadata_() {
+  var registry = getCommunicationSemanticRegistry_();
+  var copy = communicationTemplateGalleryCopy_();
+  return registry.filter(function (entry) {
+    return entry && entry.implementationStatus === "active" && entry.allowedSendModes && entry.allowedSendModes.indexOf("selected") >= 0;
+  }).map(function (entry) {
+    var extra = copy[entry.messageType] || {};
+    var requiresPlaceholders = communicationRequiresResolvedActionPlaceholders_(entry.messageType);
+    return {
+      messageType: entry.messageType,
+      label: clean_(entry.operatorLabel || entry.messageType),
+      purpose: clean_(extra.purpose || entry.semanticIntent || ""),
+      whenToUse: clean_(extra.whenToUse || entry.fallbackInstruction || ""),
+      stageSuitability: clean_(extra.stageSuitability || entry.conditionPolicyId || ""),
+      selectedOnly: entry.allowedSendModes.indexOf("selected") >= 0 && entry.batchSafe !== true,
+      batchSafe: entry.batchSafe === true,
+      allowedSendModes: entry.allowedSendModes.slice(),
+      requiresPaymentQuoteData: extra.needsPaymentQuoteData === true,
+      requiresPortalLink: communicationRequiresPortalUrl_(entry.messageType),
+      requiresResolvedPlaceholders: requiresPlaceholders,
+      placeholderPolicy: requiresPlaceholders ? "Blocks send until ACTION REQUIRED placeholders are resolved." : "No mandatory operational placeholder gate.",
+      editableMode: clean_(entry.editableMode || ""),
+      semanticRisk: clean_(entry.semanticRisk || ""),
+      operatorWarning: clean_(entry.operatorWarning || ""),
+      auditMeaning: clean_(entry.auditMeaning || "")
+    };
+  });
+}
 function getCommunicationSemanticDefinitionsByStatus_(status) {
   var requested = clean_(status || "").toLowerCase();
   return getCommunicationSemanticRegistry_().filter(function (entry) {

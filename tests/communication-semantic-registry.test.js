@@ -49,7 +49,11 @@ const functionNames = [
   "getCommunicationSemanticDefinitionsByStatus_",
   "isCommunicationTypeBatchSafe_",
   "isCommunicationTypePlanned_",
-  "getCommunicationAllowedSendModes_"
+  "getCommunicationAllowedSendModes_",
+  "communicationRequiresPortalUrl_",
+  "communicationRequiresResolvedActionPlaceholders_",
+  "communicationTemplateGalleryCopy_",
+  "communicationTemplateGalleryMetadata_"
 ];
 const context = {
   CONFIG: {
@@ -214,6 +218,49 @@ assert.match(adminUiSource, /Legacy Application Reminder is overloaded; confirm 
 assert.match(adminUiSource, /setCommEditableDraft_\(communicationsState\.result, messageType\)/, "Generated preview must be copied into editable fields");
 assert.match(adminUiSource, /Object\.assign\(payload, getCommEditablePayload_\(\)\)/, "Send payload must use final editable subject/body values");
 assert.match(adminUiSource, /previewApplicantMessageUi_\("type_change_refresh"\)/, "Changing message type must refresh editable subject/body preview");
+assert.match(adminUiSource, /const COMM_TEMPLATE_GALLERY = <\?!= JSON\.stringify\(communicationTemplateGalleryMetadata_\(\)\) \?>;/, "AdminUI must render gallery metadata from the backend communication registry");
+assert.match(adminUiSource, /commTemplateGallery/, "Selected-applicant communication template gallery must be rendered");
+assert.match(adminUiSource, /Use recommended/, "Template gallery must expose advisory recommended-template selection");
+
+const galleryMetadata = context.communicationTemplateGalleryMetadata_();
+const galleryTypes = new Set(galleryMetadata.map((entry) => entry.messageType));
+for (const messageType of [...allowedTypes, ...manualSelectedTypes]) {
+  assert.ok(galleryTypes.has(messageType), `${messageType} must have selected-applicant gallery metadata`);
+}
+for (const entry of galleryMetadata) {
+  assert.ok(entry.label, `${entry.messageType} needs a gallery label`);
+  assert.ok(entry.purpose, `${entry.messageType} needs a gallery purpose`);
+  assert.ok(entry.whenToUse, `${entry.messageType} needs gallery usage guidance`);
+  assert.ok(entry.stageSuitability, `${entry.messageType} needs stage suitability guidance`);
+  assert.equal(entry.allowedSendModes.includes("selected"), true, `${entry.messageType} gallery item must be selected-applicant available`);
+  assert.doesNotMatch(`${entry.label}\n${entry.purpose}\n${entry.whenToUse}\n${entry.stageSuitability}`, /operator-confirmed|internal implementation|Do not rely/i, `${entry.messageType} gallery text must avoid unsafe internal phrasing`);
+}
+assert.equal(galleryMetadata.find((entry) => entry.messageType === "custom_email").selectedOnly, true, "custom_email gallery metadata must remain selected-only");
+assert.equal(galleryMetadata.find((entry) => entry.messageType === "application_verified_quote").requiresPaymentQuoteData, true, "verified quote gallery metadata must flag payment/quote data dependency");
+assert.equal(galleryMetadata.find((entry) => entry.messageType === "docs_missing").requiresResolvedPlaceholders, true, "docs_missing must retain operational placeholder policy");
+
+const recommendationContext = {
+  COMM_TEMPLATE_GALLERY: galleryMetadata,
+  communicationsState: {},
+  currentDetail: null,
+  opsHasEmailIssue_: (row) => row && row.emailIssue === true,
+  detailCanonicalPaymentVerified_: (row) => row && row.paymentVerified === true,
+  opsApplicantQueueFacts_: (row) => row.facts || {},
+  esc: (value) => String(value == null ? "" : value)
+};
+vm.createContext(recommendationContext);
+vm.runInContext([
+  extractFunction(adminUiSource, "commTemplateGalleryItems_"),
+  extractFunction(adminUiSource, "getCommTemplateMeta_"),
+  extractFunction(adminUiSource, "detailHasFeeReceiptEvidence_"),
+  extractFunction(adminUiSource, "recommendCommTemplateForDetail_")
+].join("\n\n"), recommendationContext);
+assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A1", facts:{ documentState:"awaiting_uploads" } }).messageType, "docs_missing");
+assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A2", facts:{ documentState:"eligibility_cleared", paymentState:"payment_evidence_pending" } }).messageType, "application_verified_quote");
+assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A3", Fee_Receipt_File:"https://receipt", facts:{ documentState:"eligibility_cleared", paymentState:"payment_evidence_pending_verification" } }).messageType, "payment_followup");
+assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A4", paymentVerified:true, facts:{ documentState:"eligibility_cleared", paymentState:"payment_verified", paymentVerified:true } }).messageType, "application_acceptance_confirmation");
+assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A5", facts:{ documentState:"unknown" } }).messageType, "custom_email");
+assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A6", emailIssue:true, facts:{ documentState:"eligibility_cleared" } }).messageType, "contact_fallback_manual");
 
 const previewSource = extractFunction(codeSource, "previewApplicantMessage_");
 const sendSource = extractFunction(codeSource, "sendApplicantMessage_");

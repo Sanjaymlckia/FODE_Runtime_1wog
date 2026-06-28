@@ -306,6 +306,36 @@
       flex-wrap:wrap;
       margin-top:10px;
     }
+    .commTemplateRecommendation{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(96,165,250,.32);
+      background:rgba(14,30,52,.74);
+      color:#d8e6f6;
+      font-size:12px;
+      line-height:1.45;
+    }
+    .commTemplateGallery{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+      gap:10px;
+      margin-top:10px;
+    }
+    .commTemplateCard{
+      border:1px solid rgba(148,163,184,.22);
+      border-radius:12px;
+      padding:10px;
+      background:rgba(8,18,32,.78);
+      color:#d8e6f6;
+    }
+    .commTemplateCard.selected{ border-color:rgba(34,197,94,.48); box-shadow:inset 0 0 0 1px rgba(34,197,94,.16); }
+    .commTemplateCard.recommended{ border-color:rgba(96,165,250,.52); }
+    .commTemplateCardTitle{ font-weight:900; color:#f4f9ff; margin-bottom:4px; }
+    .commTemplateCardMeta{ display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
+    .commTemplateChip{ font-size:11px; padding:3px 7px; border-radius:999px; border:1px solid rgba(148,163,184,.26); background:rgba(15,23,42,.74); color:#cbd5e1; }
+    .commTemplateChip.warn{ border-color:rgba(245,158,11,.42); color:#fde7c3; }
+    .commTemplateChip.ok{ border-color:rgba(34,197,94,.42); color:#bbf7d0; }
     .commResultBox{
       margin-top:10px;
       padding:12px;
@@ -2398,6 +2428,8 @@
         <div id="commTemplateHelp" class="muted" style="font-size:12px;margin-top:8px;">
           Selected applicant only. Use Missing Documents for absent or incomplete uploads, Payment / Receipt Follow-Up for outstanding payment evidence, and Custom Email for a reviewed one-off message. Legacy Application Reminder is overloaded; confirm the applicant condition before use.
         </div>
+        <div id="commTemplateRecommendation" class="commTemplateRecommendation"></div>
+        <div id="commTemplateGallery" class="commTemplateGallery"></div>
         <div class="opsSafetyNotice" style="margin-top:8px;">The editable draft below shows the generated language before send. Subject and body may be reviewed and adjusted before final confirmation.</div>
         <div id="legacyEditableWarning" class="legacy-editable-warning">Use the editable email panel below for this message type.</div>
         <div id="commCooldownBanner" class="communication-cooldown-banner hidden">
@@ -2667,6 +2699,7 @@
     const DOCS_FOLLOWUP_ENABLED = <?!= JSON.stringify(!!(CONFIG && CONFIG.DOCS_FOLLOWUP_ENABLE)) ?>;
     const DOCS_FOLLOWUP_SHOW_IN_QUEUES = <?!= JSON.stringify(!!(CONFIG && CONFIG.DOCS_FOLLOWUP_SHOW_IN_QUEUES)) ?>;
     const DOCS_FOLLOWUP_COOLDOWN_MS = <?!= JSON.stringify(Number((CONFIG && CONFIG.DOCS_FOLLOWUP_COOLDOWN_MS) || 300000)) ?>;
+    const COMM_TEMPLATE_GALLERY = <?!= JSON.stringify(communicationTemplateGalleryMetadata_()) ?>;
     const QUEUE_PAGE_SIZE = 10;
     const QUEUE_FETCH_SIZE = 20;
     const queuePagerState = {};
@@ -5756,6 +5789,103 @@
       var el = document.getElementById("commMessageType");
       if (el) el.value = val;
     }
+    function commTemplateGalleryItems_(){
+      return Array.isArray(COMM_TEMPLATE_GALLERY) ? COMM_TEMPLATE_GALLERY : [];
+    }
+    function getCommTemplateMeta_(messageType){
+      var type = String(messageType || "").trim();
+      var list = commTemplateGalleryItems_();
+      for (var i = 0; i < list.length; i++) {
+        if (String(list[i].messageType || "") === type) return list[i];
+      }
+      return null;
+    }
+    function detailHasFeeReceiptEvidence_(detail){
+      var d = detail || {};
+      return !!String(d.Fee_Receipt_File || d.Receipt_File || d.Payment_Receipt_File || "").trim();
+    }
+    function recommendCommTemplateForDetail_(detail){
+      var d = detail || {};
+      if (!d || !String(d.ApplicantID || "").trim()) {
+        return { messageType:"custom_email", reason:"Select an applicant before choosing an operational template." };
+      }
+      if (opsHasEmailIssue_(d)) {
+        return { messageType:"contact_fallback_manual", reason:"Email/contact evidence needs manual fallback review." };
+      }
+      var facts = {};
+      try { facts = opsApplicantQueueFacts_(d) || {}; } catch (_err) { facts = {}; }
+      var docState = String(facts.documentState || "").trim();
+      var paymentState = String(facts.paymentState || "").trim();
+      var paymentVerified = facts.paymentVerified === true || detailCanonicalPaymentVerified_(d);
+      var receiptPresent = detailHasFeeReceiptEvidence_(d) || paymentState === "payment_evidence_pending_verification";
+      if (["awaiting_uploads", "partially_uploaded", "uploaded_review_required", "document_correction_required", "correction_required"].indexOf(docState) >= 0) {
+        return { messageType:"docs_missing", reason:"Document state indicates missing, incomplete, or correction-required evidence." };
+      }
+      if (paymentVerified) {
+        return { messageType:"application_acceptance_confirmation", reason:"Payment is verified; send only if acceptance/enrolment authority is confirmed." };
+      }
+      if (docState === "eligibility_cleared" || docState === "docs_verified" || docState === "verified") {
+        if (receiptPresent) return { messageType:"payment_followup", reason:"Receipt/payment evidence is present and still needs review or verification." };
+        return { messageType:"application_verified_quote", reason:"Documents are verified and payment evidence is not yet received." };
+      }
+      return { messageType:"custom_email", reason:"Applicant state is unclear; use selected-applicant custom email or manual review." };
+    }
+    function commTemplatePlaceholderStatus_(meta){
+      var type = String((meta && meta.messageType) || "");
+      var previewReady = communicationsState.previewApplicantId === String((currentDetail && currentDetail.ApplicantID) || "")
+        && communicationsState.previewMessageType === type
+        && communicationsState.result
+        && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
+      if (previewReady) {
+        var text = String((communicationsState.result.subject || "") + "\n" + (communicationsState.result.body || ""));
+        return /\[ACTION REQUIRED:/i.test(text) ? "Unresolved placeholders present" : "No unresolved placeholders in current preview";
+      }
+      return meta && meta.requiresResolvedPlaceholders ? "Preview required: placeholders may block send" : "No mandatory placeholder gate";
+    }
+    function selectCommTemplateFromGallery_(messageType){
+      setSelectedCommMessageType_(messageType);
+      resetCommunicationsForSelection_(false);
+      updateCommunicationsUi_();
+      if (currentDetail && getSelectedCommMessageType_() !== "custom_email") previewApplicantMessageUi_("gallery_select");
+    }
+    function renderCommTemplateGallery_(){
+      var recEl = document.getElementById("commTemplateRecommendation");
+      var galleryEl = document.getElementById("commTemplateGallery");
+      if (!recEl || !galleryEl) return;
+      var items = commTemplateGalleryItems_();
+      var selectedType = getSelectedCommMessageType_();
+      var recommendation = recommendCommTemplateForDetail_(currentDetail || {});
+      var recommendedMeta = getCommTemplateMeta_(recommendation.messageType) || {};
+      recEl.innerHTML = "<strong>Recommended:</strong> " + esc(recommendedMeta.label || recommendation.messageType || "Manual review")
+        + "<br>" + esc(recommendation.reason || "Review applicant state before sending.")
+        + " <button class='btn small' type='button' onclick='selectCommTemplateFromGallery_(" + JSON.stringify(recommendation.messageType || "custom_email") + ")'>Use recommended</button>";
+      if (!items.length) {
+        galleryEl.innerHTML = "<div class='commTemplateCard'>Template metadata unavailable. Use the message type selector above.</div>";
+        return;
+      }
+      galleryEl.innerHTML = items.map(function(meta){
+        var type = String(meta.messageType || "");
+        var isSelected = type === selectedType;
+        var isRecommended = type === recommendation.messageType;
+        var cls = "commTemplateCard" + (isSelected ? " selected" : "") + (isRecommended ? " recommended" : "");
+        var chips = [];
+        chips.push("<span class='commTemplateChip " + (meta.selectedOnly ? "ok" : "warn") + "'>" + esc(meta.selectedOnly ? "Selected-only" : "Batch-safe") + "</span>");
+        if (meta.requiresPaymentQuoteData) chips.push("<span class='commTemplateChip warn'>Needs payment/quote data</span>");
+        if (meta.requiresPortalLink) chips.push("<span class='commTemplateChip'>Needs portal link</span>");
+        if (meta.semanticRisk) chips.push("<span class='commTemplateChip warn'>" + esc(meta.semanticRisk) + "</span>");
+        chips.push("<span class='commTemplateChip'>" + esc(commTemplatePlaceholderStatus_(meta)) + "</span>");
+        return "<div class='" + cls + "'>"
+          + "<div class='commTemplateCardTitle'>" + esc(meta.label || type) + "</div>"
+          + "<div class='muted' style='font-size:12px;'>" + esc(type) + "</div>"
+          + "<div style='margin-top:8px;font-size:12px;line-height:1.45;'>" + esc(meta.purpose || "") + "</div>"
+          + "<div style='margin-top:6px;font-size:12px;line-height:1.45;'><strong>Use when:</strong> " + esc(meta.whenToUse || "") + "</div>"
+          + "<div style='margin-top:6px;font-size:12px;line-height:1.45;'><strong>Stage:</strong> " + esc(meta.stageSuitability || "") + "</div>"
+          + "<div class='commTemplateCardMeta'>" + chips.join("") + "</div>"
+          + (meta.operatorWarning ? "<div class='muted' style='font-size:11px;'>" + esc(meta.operatorWarning) + "</div>" : "")
+          + "<button class='btn small' type='button' onclick='selectCommTemplateFromGallery_(" + JSON.stringify(type) + ")'>" + esc(isSelected ? "Selected" : "Use template") + "</button>"
+          + "</div>";
+      }).join("");
+    }
     function formatCommValue_(value){
       var raw = String(value == null ? "" : value).trim();
       return raw || "?";
@@ -6127,6 +6257,7 @@
             ? "Applicant already submitted/enrolled; applicant-chasing emails are not required."
             : (editableType && eligibility.active ? eligibility.text : (previewReady ? "Preview ready. Operational confirmation is still required." : "Preview is required before send.")))));
       renderCommEditablePanel_();
+      renderCommTemplateGallery_();
       renderCommunicationCooldownBanner_(detail);
       renderApplicantStatusOverlay_(detail);
       renderCommunicationsDebug_();
@@ -9112,7 +9243,7 @@ function renderStageDashboard_(items, emptyMessage){
       var previousApplicantId = String(communicationsState.applicantId || "").trim();
       if (incomingApplicantId !== previousApplicantId) {
         resetCommunicationsState_(incomingApplicantId, false);
-        setSelectedCommMessageType_("legacy_invite");
+        setSelectedCommMessageType_((recommendCommTemplateForDetail_(d) || {}).messageType || "custom_email");
       } else {
         communicationsState.applicantId = incomingApplicantId;
         setSelectedCommMessageType_(communicationsState.selectedMessageType || "legacy_invite");
