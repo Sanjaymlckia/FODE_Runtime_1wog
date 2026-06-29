@@ -3,7 +3,10 @@ const assert = require("node:assert/strict");
 const vm = require("node:vm");
 
 const codeSource = fs.readFileSync("Code.js", "utf8");
-const adminSource = fs.readFileSync("Admin.js", "utf8");
+const adminSource = [
+  fs.readFileSync("Admin.js", "utf8"),
+  fs.readFileSync("Admin_RowFacts.js", "utf8")
+].join("\n");
 
 function extractFunction(source, name) {
   const marker = `function ${name}`;

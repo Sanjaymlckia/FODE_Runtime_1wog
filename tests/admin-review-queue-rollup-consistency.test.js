@@ -1,7 +1,10 @@
 const fs = require("node:fs");
 const assert = require("node:assert/strict");
 
-const adminSource = fs.readFileSync("Admin.js", "utf8");
+const adminSource = [
+  fs.readFileSync("Admin.js", "utf8"),
+  fs.readFileSync("Admin_RowFacts.js", "utf8")
+].join("\n");
 
 function extractFunction(source, name) {
   const marker = `function ${name}`;
