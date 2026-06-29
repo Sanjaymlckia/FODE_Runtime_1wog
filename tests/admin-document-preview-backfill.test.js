@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 
 const source = [
   fs.readFileSync("Admin.js", "utf8"),
+  fs.readFileSync("Admin_DocumentServices.js", "utf8"),
   fs.readFileSync("Admin_DocumentGallery.js", "utf8")
 ].join("\n");
 

@@ -3251,39 +3251,15 @@ function nonEmpty_(v) {
   return true;
 }
 
-function adminDocumentRequiredUploadFields_() {
-  return [
-    { field: "Birth_ID_Passport_File", label: "Birth Certificate / NID / Passport" },
-    { field: "Latest_School_Report_File", label: "Latest School Reports / Documents" },
-    { field: "Passport_Photo_File", label: "Passport Size Colour Photo" }
-  ];
-}
+// adminDocumentRequiredUploadFields_ lives in Admin_DocumentServices.js.
 
-function adminDocumentMandatoryIssueMappings_() {
-  return [
-    { file: "Birth_ID_Passport_File", status: "Birth_ID_Status" },
-    { file: "Latest_School_Report_File", status: "Report_Status" }
-  ];
-}
+// adminDocumentMandatoryIssueMappings_ lives in Admin_DocumentServices.js.
 
-function adminDocumentHasEvidence_(rowObj, fieldName) {
-  var row = rowObj || {};
-  var field = clean_(fieldName || "");
-  if (!field) return false;
-  return hasUploadEvidence_(row[field], field);
-}
+// adminDocumentHasEvidence_ lives in Admin_DocumentServices.js.
 
-function adminDocumentDisplayRowHasUrl_(displayRow, idx, mapping) {
-  if (!mapping || !mapping.file) return false;
-  if (!idx || !idx[mapping.file]) return false;
-  var url = clean_((displayRow || [])[idx[mapping.file] - 1]);
-  return /^https?:\/\//i.test(url);
-}
+// adminDocumentDisplayRowHasUrl_ lives in Admin_DocumentServices.js.
 
-function adminDocumentFieldStatus_(rowObj, statusField) {
-  var row = rowObj || {};
-  return normalizeDocStatus_(row[statusField] || "Pending");
-}
+// adminDocumentFieldStatus_ lives in Admin_DocumentServices.js.
 
 function adminDocumentReviewVerifiedForPaymentGate_(rowObj) {
   var row = rowObj || {};
@@ -3295,19 +3271,7 @@ function adminDocumentReviewVerifiedForAutomation_(rowObj) {
   return isYes_(row.Docs_Verified) || computeDocVerificationStatus_(row) === "Verified";
 }
 
-function hasAnyRequiredDoc_(rowObj) {
-  var row = rowObj || {};
-  var required = [
-    "Birth_ID_Passport_File",
-    "Latest_School_Report_File",
-    "Transfer_Certificate_File",
-    "Passport_Photo_File"
-  ];
-  for (var i = 0; i < required.length; i++) {
-    if (hasUploadEvidence_(row[required[i]], required[i])) return true;
-  }
-  return false;
-}
+// hasAnyRequiredDoc_ lives in Admin_DocumentServices.js.
 
 function parseTime_(v) {
   if (v instanceof Date) return v.getTime();
@@ -5239,26 +5203,9 @@ function syncPortalSecretsActive_(applicantId, email, fullName, secretPlain, sec
   return sh.getLastRow();
 }
 
-function findDocMapping_(file, statusField, commentField, docMap) {
-  var i;
-  if (file) {
-    for (i = 0; i < docMap.length; i++) if (docMap[i].file === file) return docMap[i];
-  }
-  if (statusField && commentField) {
-    for (i = 0; i < docMap.length; i++) {
-      if (docMap[i].status === statusField && docMap[i].comment === commentField) return docMap[i];
-    }
-  }
-  return null;
-}
+// findDocMapping_ lives in Admin_DocumentServices.js.
 
-function normalizeDocStatus_(s) {
-  var v = clean_(s).toLowerCase();
-  if (v === "verified") return "Verified";
-  if (v === "rejected") return "Rejected";
-  if (v === "fraudulent") return "Fraudulent";
-  return "Pending";
-}
+// normalizeDocStatus_ lives in Admin_DocumentServices.js.
 
 function toPlainString_(v) {
   if (v === null || v === undefined) return "";
@@ -5304,12 +5251,7 @@ function asStringUrl_(v) {
   return out;
 }
 
-function toRouteStatusKey_(status) {
-  if (status === "Verified") return "VERIFIED";
-  if (status === "Rejected") return "REJECTED";
-  if (status === "Fraudulent") return "FRAUDULENT";
-  return "PENDING_REVIEW";
-}
+// toRouteStatusKey_ lives in Admin_DocumentServices.js.
 
 function recomputeOverallDocStatus_(sh, rowNumber, idx, docMap) {
   var row = sh.getRange(rowNumber, 1, 1, sh.getLastColumn()).getValues()[0];
@@ -8138,15 +8080,3 @@ function adminDryRunFirst50LegacyInvites() {
   console.log('DRYRUN_50 ' + JSON.stringify(summary));
   return summary;
 }
-
-
-
-
-
-
-
-
-
-
-
-
