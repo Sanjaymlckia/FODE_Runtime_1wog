@@ -262,6 +262,27 @@ assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID
 assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A5", facts:{ documentState:"unknown" } }).messageType, "custom_email");
 assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A6", emailIssue:true, facts:{ documentState:"eligibility_cleared" } }).messageType, "contact_fallback_manual");
 
+const communicationUiDisplayContext = {};
+vm.createContext(communicationUiDisplayContext);
+vm.runInContext([
+  extractFunction(adminUiSource, "commFirstValue_"),
+  extractFunction(adminUiSource, "commNormalizeCsvList_"),
+  extractFunction(adminUiSource, "commApplicantNameDisplay_"),
+  extractFunction(adminUiSource, "commGradeDisplay_"),
+  extractFunction(adminUiSource, "commSubjectsDisplay_"),
+  extractFunction(adminUiSource, "commTemplatePreviewText_")
+].join("\n\n"), communicationUiDisplayContext);
+assert.equal(communicationUiDisplayContext.commNormalizeCsvList_({ "10272728": "English", "10272729": "Mathematics" }), "English, Mathematics");
+assert.equal(communicationUiDisplayContext.commNormalizeCsvList_(["English", "Mathematics", "English"]), "English, Mathematics");
+assert.equal(communicationUiDisplayContext.commNormalizeCsvList_("English, Mathematics"), "English, Mathematics");
+assert.equal(communicationUiDisplayContext.commSubjectsDisplay_({ Subjects_Selected: { "10272728": "English", "10272729": "Mathematics" } }), "English, Mathematics");
+assert.equal(communicationUiDisplayContext.commSubjectsDisplay_({ Subjects_Selected: "{\"10272728\":\"English\",\"10272729\":\"Mathematics\"}" }), "English, Mathematics");
+assert.equal(communicationUiDisplayContext.commSubjectsDisplay_({}), "not yet confirmed");
+assert.equal(communicationUiDisplayContext.commGradeDisplay_({ Grade: "Grade 12" }), "Grade 12");
+assert.equal(communicationUiDisplayContext.commApplicantNameDisplay_({ First_Name: "Test", Last_Name: "Student" }), "Test Student");
+assert.equal(communicationUiDisplayContext.commTemplatePreviewText_("  Subject line  "), "Subject line");
+assert.match(adminUiSource, /id="commApplicantSummary"/, "Communications UI must expose the normalized applicant summary block");
+
 const previewSource = extractFunction(codeSource, "previewApplicantMessage_");
 const sendSource = extractFunction(codeSource, "sendApplicantMessage_");
 const adminPreviewSource = extractFunction(adminSource, "admin_previewApplicantMessage");

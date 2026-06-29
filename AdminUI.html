@@ -2428,6 +2428,7 @@
         <div id="commTemplateHelp" class="muted" style="font-size:12px;margin-top:8px;">
           Selected applicant only. Use Missing Documents for absent or incomplete uploads, Payment / Receipt Follow-Up for outstanding payment evidence, and Custom Email for a reviewed one-off message. Legacy Application Reminder is overloaded; confirm the applicant condition before use.
         </div>
+        <div id="commApplicantSummary" class="box hidden" style="margin-top:10px;background:rgba(8,18,32,.96);border-color:rgba(148,163,184,.34);"></div>
         <div id="commTemplateRecommendation" class="commTemplateRecommendation"></div>
         <div id="commTemplateGallery" class="commTemplateGallery"></div>
         <div class="opsSafetyNotice" style="margin-top:8px;">The editable draft below shows the generated language before send. Subject and body may be reviewed and adjusted before final confirmation.</div>
@@ -5890,6 +5891,78 @@
       var raw = String(value == null ? "" : value).trim();
       return raw || "?";
     }
+    function commFirstValue_(detail, fields){
+      var d = detail || {};
+      var names = Array.isArray(fields) ? fields : [];
+      for (var i = 0; i < names.length; i++) {
+        var value = d[names[i]];
+        if (Array.isArray(value) && value.length) return value;
+        if (value && typeof value === "object") return value;
+        var text = String(value == null ? "" : value).trim();
+        if (text) return text;
+      }
+      return "";
+    }
+    function commNormalizeCsvList_(raw){
+      if (Array.isArray(raw)) {
+        return raw.map(function(item){ return String(item == null ? "" : item).trim(); }).filter(Boolean).filter(function(item, idx, arr){ return arr.map(function(v){ return v.toLowerCase(); }).indexOf(item.toLowerCase()) === idx; }).join(", ");
+      }
+      if (raw && typeof raw === "object") {
+        var vals = [];
+        Object.keys(raw).forEach(function(key){ vals.push(raw[key]); });
+        return commNormalizeCsvList_(vals);
+      }
+      var text = String(raw == null ? "" : raw).trim();
+      if (!text) return "";
+      if (text.charAt(0) === "{" && text.charAt(text.length - 1) === "}") {
+        try {
+          return commNormalizeCsvList_(JSON.parse(text));
+        } catch (_err) {
+          if (text.indexOf("=") >= 0) {
+            return commNormalizeCsvList_(text.substring(1, text.length - 1).split(",").map(function(part){
+              return part.indexOf("=") >= 0 ? part.split("=").slice(1).join("=") : part;
+            }));
+          }
+        }
+      }
+      return text.split(",").map(function(item){ return item.trim(); }).filter(Boolean).filter(function(item, idx, arr){ return arr.map(function(v){ return v.toLowerCase(); }).indexOf(item.toLowerCase()) === idx; }).join(", ");
+    }
+    function commApplicantNameDisplay_(detail){
+      var d = detail || {};
+      return [d.First_Name, d.Last_Name].map(function(v){ return String(v == null ? "" : v).trim(); }).filter(Boolean).join(" ") || String(d.Student_Name || d.Name || "not yet confirmed").trim();
+    }
+    function commGradeDisplay_(detail){
+      return String(commFirstValue_(detail, ["Accepted_Grade", "Approved_Grade", "Grade_Applying_For", "Grade", "Upgrade_Grade_Stream"]) || "not yet confirmed").trim();
+    }
+    function commSubjectsDisplay_(detail){
+      return commNormalizeCsvList_(commFirstValue_(detail, ["Subjects_Summary", "Subjects_Selected_Canonical", "Subjects_Selected", "Selected_Subjects", "Subjects"])) || "not yet confirmed";
+    }
+    function commTemplatePreviewText_(value){
+      return String(value == null ? "" : value).trim();
+    }
+    function renderCommunicationsApplicantSummary_(detail){
+      var box = document.getElementById("commApplicantSummary");
+      if (!box) return;
+      var d = detail || currentDetail || {};
+      if (!d || !String(d.ApplicantID || "").trim()) {
+        box.className = "box hidden";
+        box.innerHTML = "";
+        return;
+      }
+      var selectedType = getSelectedCommMessageType_();
+      var meta = getCommTemplateMeta_(selectedType) || {};
+      var rows = [
+        { label: "Applicant", value: String(d.ApplicantID || "") + " - " + commApplicantNameDisplay_(d) },
+        { label: "Grade", value: commGradeDisplay_(d) },
+        { label: "Subjects", value: commSubjectsDisplay_(d) },
+        { label: "Selected template", value: meta.label || selectedType || "not selected" }
+      ];
+      box.className = "box";
+      box.innerHTML = '<div style="font-weight:800;margin-bottom:6px;color:#f4f9ff;">Applicant Communication Summary</div>'
+        + rows.map(function(row){
+          return '<div style="margin-top:4px;"><span style="color:#b9cbe0;">' + esc(row.label) + ':</span> <span style="color:#f4f9ff;">' + esc(row.value) + '</span></div>';
+        }).join("");
+    }
     function communicationsDisableReason_(detail){
       var d = detail || currentDetail || {};
       var selectedType = getSelectedCommMessageType_();
@@ -6077,6 +6150,7 @@
         var el = document.getElementById(id);
         if (el) el.textContent = formatCommValue_(map[id]);
       });
+      renderCommunicationsApplicantSummary_(d);
       renderApplicantStatusOverlay_(d);
       renderCommunicationsDerived_(d);
     }
@@ -6104,9 +6178,9 @@
         if (res.blockReason) parts.push('<div style="margin-top:6px;"><strong>Reason:</strong> ' + esc(res.blockReason) + '</div>');
         if (res.debugId) parts.push('<div class="muted" style="margin-top:6px;font-size:12px;"><strong>Debug:</strong> ' + esc(res.debugId) + '</div>');
       }
-      if (resultType === 'PREVIEW' && res.effectiveEmail) parts.push('<div style="margin-top:8px;"><strong>Recipient:</strong> ' + esc(res.effectiveEmail) + '</div>');
-      if (resultType === 'PREVIEW' && res.subject) parts.push('<div style="margin-top:8px;"><strong>Subject:</strong> ' + esc(res.subject) + '</div>');
-      if (resultType === 'PREVIEW' && res.body) parts.push('<div class="commPreviewBody">' + esc(res.body) + '</div>');
+      if (resultType === 'PREVIEW' && res.effectiveEmail) parts.push('<div style="margin-top:8px;"><strong>Recipient:</strong> ' + esc(commTemplatePreviewText_(res.effectiveEmail)) + '</div>');
+      if (resultType === 'PREVIEW' && res.subject) parts.push('<div style="margin-top:8px;"><strong>Subject:</strong> ' + esc(commTemplatePreviewText_(res.subject)) + '</div>');
+      if (resultType === 'PREVIEW' && res.body) parts.push('<div class="commPreviewBody">' + esc(commTemplatePreviewText_(res.body)) + '</div>');
       if (resultType === "SENT") {
         parts.push('<div style="margin-top:6px;">Message sent successfully.</div>');
         if (res.subject) parts.push('<div style="margin-top:6px;"><strong>Subject:</strong> ' + esc(res.subject) + '</div>');
@@ -6258,6 +6332,7 @@
             : (editableType && eligibility.active ? eligibility.text : (previewReady ? "Preview ready. Operational confirmation is still required." : "Preview is required before send.")))));
       renderCommEditablePanel_();
       renderCommTemplateGallery_();
+      renderCommunicationsApplicantSummary_(detail);
       renderCommunicationCooldownBanner_(detail);
       renderApplicantStatusOverlay_(detail);
       renderCommunicationsDebug_();
