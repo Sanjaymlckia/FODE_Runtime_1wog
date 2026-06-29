@@ -3,7 +3,10 @@ const assert = require("node:assert/strict");
 const vm = require("node:vm");
 
 const codeSource = fs.readFileSync("Code.js", "utf8");
-const adminSource = fs.readFileSync("Admin.js", "utf8");
+const adminSource = [
+  fs.readFileSync("Admin.js", "utf8"),
+  fs.readFileSync("Admin_SelectedApplicantCommunications.js", "utf8")
+].join("\n");
 const adminUiSource = fs.readFileSync("AdminUI.html", "utf8");
 const configSource = fs.readFileSync("Config.js", "utf8");
 
