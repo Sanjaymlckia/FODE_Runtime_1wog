@@ -8279,8 +8279,8 @@ function admin_previewApplicantMessage(payload) {
       debugId: clean_(p.debugId || dbgId),
       editedRecipient: clean_(p.recipient || "")
     };
-    if (Object.prototype.hasOwnProperty.call(p, "subject")) previewOptions.editedSubject = String(p.subject || "");
-    if (Object.prototype.hasOwnProperty.call(p, "body")) previewOptions.editedBody = String(p.body || "");
+    if (Object.prototype.hasOwnProperty.call(p, "subject") && clean_(p.subject || "")) previewOptions.editedSubject = String(p.subject || "");
+    if (Object.prototype.hasOwnProperty.call(p, "body") && clean_(p.body || "")) previewOptions.editedBody = String(p.body || "");
     return previewApplicantMessage_(applicantId, messageType, previewOptions);
   });
 }

@@ -300,6 +300,14 @@ const templateFunctionNames = [
   "formatKina_",
   "formatKinaCurrency_",
   "canonicalFodePaymentInformationBlock_",
+  "communicationEmailHeadingBlock_",
+  "communicationApplicantSummaryBlock_",
+  "communicationPortalInstructionBlock_",
+  "communicationOfficeContactBlock_",
+  "communicationSignatureBlock_",
+  "composeSelectedApplicantEmail_",
+  "customEmailOperatorPrompt_",
+  "hasUnresolvedCustomEmailPrompt_",
   "applicantGradeDisplayOrUnconfirmed_",
   "applicantSubjectsDisplayOrUnconfirmed_",
   "buildReminderEmailBody_",
@@ -363,18 +371,25 @@ const applicantContext = {
   }
 };
 const docsMissingBody = templateContext.buildDocsMissingEmailBody_(applicantContext);
+assert.match(docsMissingBody, /Kundu International Academy \/ FODE Admissions/);
+assert.match(docsMissingBody, /FODE KIA Application Communication/);
+assert.match(docsMissingBody, /Applicant summary:/);
 assert.match(docsMissingBody, /not available, incomplete, or need resubmission/i);
 assert.match(docsMissingBody, /Applicant ID: FODE-26-TEST/);
 assert.match(docsMissingBody, /Latest School Reports \/ Documents: not received or not available in the current application record\./);
 assert.match(docsMissingBody, /required documents are not available, incomplete, or need resubmission/i);
 assert.match(docsMissingBody, /Document status: review is still in progress/i);
 assert.match(docsMissingBody, /This is not a final application decision/i);
-assert.match(docsMissingBody, /Open the secure portal link below/i);
+assert.match(docsMissingBody, /Open the secure applicant portal/i);
 assert.match(docsMissingBody, /upload or resend/i);
+assert.match(docsMissingBody, /FODE KIA Admissions Team/);
+assert.match(docsMissingBody, /Admissions Office/);
 assert.doesNotMatch(docsMissingBody, /\breject(?:ed|ion)?\b/i);
 assert.doesNotMatch(docsMissingBody, /\byour (?:fault|failure)\b/i);
 
 const paymentBody = templateContext.buildPaymentFollowupEmailBody_(applicantContext);
+assert.match(paymentBody, /Kundu International Academy \/ FODE Admissions/);
+assert.match(paymentBody, /Applicant summary:/);
 assert.match(paymentBody, /Applicant ID: FODE-26-TEST/);
 assert.match(paymentBody, /Admissions still needs payment evidence or payment verification/i);
 assert.match(paymentBody, /\[ACTION REQUIRED: confirm grade\]/);
@@ -405,6 +420,8 @@ const quoteReadyContext = {
   }
 };
 const quoteReadyBody = templateContext.buildApplicationVerifiedQuoteBody_(quoteReadyContext);
+assert.match(quoteReadyBody, /Kundu International Academy \/ FODE Admissions/);
+assert.match(quoteReadyBody, /Applicant summary:/);
 assert.match(quoteReadyBody, /Registration Fee: K600\.00/);
 assert.match(quoteReadyBody, /Subject Fee: 2 x K450\.00 = K900\.00 \(English, Mathematics\)/);
 assert.match(quoteReadyBody, /Total Amount Payable: K1,500\.00/);
@@ -424,6 +441,8 @@ assert.match(paymentReadyBody, /Option 2 - BSP Bank/);
 assert.match(paymentReadyBody, /Payment reference: Please include Applicant ID FODE-26-QUOTE as the payment reference\./);
 assert.doesNotMatch(paymentReadyBody, /\[ACTION REQUIRED:/);
 const acceptanceBody = templateContext.buildApplicationAcceptanceConfirmationBody_(applicantContext);
+assert.match(acceptanceBody, /Kundu International Academy \/ FODE Admissions/);
+assert.match(acceptanceBody, /Applicant summary:/);
 assert.match(acceptanceBody, /Applicant ID: FODE-26-TEST/);
 assert.match(acceptanceBody, /\[ACTION REQUIRED: confirm grade\]/);
 assert.match(acceptanceBody, /\[ACTION REQUIRED: confirm subjects\]/);
@@ -431,6 +450,8 @@ assert.match(acceptanceBody, /\[ACTION REQUIRED: confirm acceptance\/enrolment s
 assert.match(acceptanceBody, /Next steps:/);
 
 const receiptRequestBody = templateContext.buildApplicationReceiptRequestBody_(applicantContext);
+assert.match(receiptRequestBody, /Kundu International Academy \/ FODE Admissions/);
+assert.match(receiptRequestBody, /Applicant summary:/);
 assert.match(receiptRequestBody, /Applicant ID: FODE-26-TEST/);
 assert.match(receiptRequestBody, /Payment evidence \/ receipt is still required/i);
 assert.match(receiptRequestBody, /\[ACTION REQUIRED: confirm grade\]/);
@@ -439,6 +460,8 @@ assert.match(receiptRequestBody, /upload a clear copy/i);
 assert.match(receiptRequestBody, /does not confirm acceptance or enrolment/i);
 
 const finalReminderBody = templateContext.buildApplicationFinalReminderBody_(applicantContext);
+assert.match(finalReminderBody, /Kundu International Academy \/ FODE Admissions/);
+assert.match(finalReminderBody, /Applicant summary:/);
 assert.match(finalReminderBody, /Applicant ID: FODE-26-TEST/);
 assert.match(finalReminderBody, /upload or resend the missing required document/i);
 assert.match(finalReminderBody, /\[ACTION REQUIRED: confirm deadline or urgency\]/);
@@ -451,10 +474,20 @@ assert.equal(templateContext.communicationRequiresResolvedActionPlaceholders_("c
 
 const customSubject = templateContext.buildCustomSelectedEmailSubject_();
 const customBody = templateContext.buildCustomSelectedEmailBody_(applicantContext);
-assert.ok(customSubject);
-assert.match(customBody, /FODE KIA application listed below/i);
+assert.equal(customSubject, "FODE KIA Application - Information and Assistance");
+assert.match(customBody, /Kundu International Academy \/ FODE Admissions/);
+assert.match(customBody, /FODE KIA Application Communication/);
+assert.match(customBody, /Applicant summary:/);
 assert.match(customBody, /Applicant ID: FODE-26-TEST/);
+assert.match(customBody, /Student: Test Student/);
+assert.match(customBody, /Grade: not yet confirmed/);
+assert.match(customBody, /Subjects: not yet confirmed/);
+assert.match(customBody, /\[Write your message here before sending\.\]/);
+assert.equal(templateContext.hasUnresolvedCustomEmailPrompt_(customBody), true);
 assert.doesNotMatch(customBody, /\[ACTION REQUIRED:/);
+assert.doesNotMatch(customBody, /payment verified|accepted|enrolled/i);
+assert.match(codeSource, /CUSTOM_EMAIL_PROMPT_UNRESOLVED/);
+assert.match(adminPreviewSource, /clean_\(p\.subject \|\| ""\)/);
 
 const reminderBody = templateContext.buildReminderEmailBody_(applicantContext);
 assert.match(reminderBody, /awaiting your next step/i);

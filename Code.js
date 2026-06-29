@@ -7099,6 +7099,89 @@ function canonicalFodePaymentInformationBlock_(context) {
     "After payment, upload the receipt through the applicant portal or send it to Admissions for verification."
   ].join("\n");
 }
+
+function communicationEmailHeadingBlock_() {
+  return [
+    "Kundu International Academy / FODE Admissions",
+    "FODE KIA Application Communication"
+  ].join("\n");
+}
+
+function communicationApplicantSummaryBlock_(context, opts) {
+  var ctx = context || {};
+  var row = ctx.rowObj || {};
+  var options = opts && typeof opts === "object" ? opts : {};
+  var applicantName = buildApplicantFullName_(row) || "the applicant";
+  var lines = [
+    "Applicant summary:",
+    "Applicant ID: " + String(ctx.applicantId || row.ApplicantID || ""),
+    "Student: " + applicantName,
+    "Grade: " + (options.useActionPlaceholders === true ? applicantGradeOrPlaceholder_(row) : applicantGradeDisplayOrUnconfirmed_(row)),
+    "Subjects: " + (options.useActionPlaceholders === true ? applicantSubjectsOrPlaceholder_(row) : applicantSubjectsDisplayOrUnconfirmed_(row))
+  ];
+  if (options.includeStatus !== false) {
+    lines.push("");
+    lines.push(applicantDocumentStatusSummary_(row));
+    lines.push(applicantPaymentStatusSummary_(row));
+  }
+  return lines.join("\n");
+}
+
+function communicationPortalInstructionBlock_(context, purposeText) {
+  var ctx = context || {};
+  var url = clean_(ctx.portalUrl || "");
+  var intro = clean_(purposeText || "Use the secure applicant portal to review the application or upload requested evidence.");
+  if (!url) {
+    return [
+      intro,
+      actionRequiredPlaceholder_("insert secure applicant portal link")
+    ].join("\n");
+  }
+  return [
+    intro,
+    url
+  ].join("\n");
+}
+
+function communicationOfficeContactBlock_() {
+  return "If you need assistance, please contact the Admissions Office.";
+}
+
+function communicationSignatureBlock_() {
+  return [
+    "Regards,",
+    "",
+    "FODE KIA Admissions Team",
+    communicationOfficeContactBlock_()
+  ].join("\n");
+}
+
+function composeSelectedApplicantEmail_(context, sections) {
+  var ctx = context || {};
+  var row = ctx.rowObj || {};
+  var parts = [
+    communicationEmailHeadingBlock_(),
+    "",
+    "Dear " + buildParentOrApplicantName_(row) + ",",
+    ""
+  ];
+  (Array.isArray(sections) ? sections : []).forEach(function (section) {
+    var text = clean_(section || "");
+    if (!text) return;
+    parts.push(text);
+    parts.push("");
+  });
+  parts.push(communicationSignatureBlock_());
+  return parts.join("\n");
+}
+
+function customEmailOperatorPrompt_() {
+  return "[Write your message here before sending.]";
+}
+
+function hasUnresolvedCustomEmailPrompt_(body) {
+  return String(body || "").indexOf(customEmailOperatorPrompt_()) >= 0;
+}
 function applicantPaymentQuoteOrPlaceholder_(rowObj) {
   var amount = firstNonEmptyRowValue_(rowObj, [
     "Fee_Total_Kina",
@@ -7395,96 +7478,58 @@ function buildDocsMissingEmailBody_(context) {
     includeCommentsForAttention: true,
     emptyFallback: "The office has identified at least one required document that still needs review or resubmission."
   }).join("\n");
-  return [
-    "Dear Parent/Guardian,",
-    "",
+  return composeSelectedApplicantEmail_(ctx, [
     "We are continuing the review of the FODE KIA application for " + applicantName + ". One or more required documents are not available, incomplete, or need resubmission before review can continue.",
-    "",
-    "Applicant ID: " + String(ctx.applicantId || ""),
-    "Grade: " + applicantGradeOrPlaceholder_(row),
-    "Subjects: " + applicantSubjectsOrPlaceholder_(row),
-    "",
-    applicantDocumentStatusSummary_(row),
-    applicantPaymentStatusSummary_(row),
-    "",
+    communicationApplicantSummaryBlock_(ctx, { useActionPlaceholders: true }),
     "Documents needing attention:",
-    "",
     missingLines,
-    "",
     "Next steps:",
-    "1. Open the secure portal link below.",
-    "2. Upload or resend the missing or corrected document(s).",
-    "3. Contact FODE Admissions if you are unsure which document is required.",
-    "",
-    String(ctx.portalUrl || ""),
-    "",
-    "This is not a final application decision. Admissions needs the required document evidence before the application can be fully reviewed.",
-    "",
-    "FODE KIA Admissions Team"
-  ].join("\n");
+    [
+      "1. Open the secure applicant portal.",
+      "2. Upload or resend the missing or corrected document(s).",
+      "3. Contact FODE Admissions if you are unsure which document is required."
+    ].join("\n"),
+    communicationPortalInstructionBlock_(ctx, "Secure portal link for document upload or review:"),
+    "This is not a final application decision. Admissions needs the required document evidence before the application can be fully reviewed."
+  ]);
 }
 
 function buildPaymentFollowupEmailBody_(context) {
   var ctx = context || {};
   var row = ctx.rowObj || {};
   var applicantName = buildApplicantFullName_(row) || "the applicant";
-  return [
-    "Dear Parent/Guardian,",
-    "",
+  return composeSelectedApplicantEmail_(ctx, [
     "We are contacting you about the FODE KIA application for " + applicantName + ". Admissions still needs payment evidence or payment verification before the payment step can be completed.",
-    "",
-    "Applicant ID: " + String(ctx.applicantId || ""),
-    "Grade: " + applicantGradeOrPlaceholder_(row),
-    "Subjects: " + applicantSubjectsOrPlaceholder_(row),
-    "",
-    applicantDocumentStatusSummary_(row),
-    applicantPaymentStatusSummary_(row),
-    "",
+    communicationApplicantSummaryBlock_(ctx, { useActionPlaceholders: true }),
     "Payment / quote and payment instructions:",
     canonicalFodePaymentInformationBlock_(ctx),
-    "",
     "Next steps:",
-    "1. Review the grade, subjects, and payment details above.",
-    "2. Complete the required payment if it has not already been made.",
-    "3. Upload or send a clear payment receipt/evidence to Admissions.",
-    "4. Contact Admissions immediately if any grade, subject, or payment detail is incorrect.",
-    "",
-    "Portal link for upload or review:",
-    String(ctx.portalUrl || ""),
-    "",
-    "This message does not confirm acceptance or enrolment. Enrolment/payment processing continues only after payment evidence is received and verified.",
-    "",
-    "FODE KIA Admissions Team"
-  ].join("\n");
+    [
+      "1. Review the grade, subjects, and payment details above.",
+      "2. Complete the required payment if it has not already been made.",
+      "3. Upload or send a clear payment receipt/evidence to Admissions.",
+      "4. Contact Admissions immediately if any grade, subject, or payment detail is incorrect."
+    ].join("\n"),
+    communicationPortalInstructionBlock_(ctx, "Portal link for payment receipt upload or application review:"),
+    "This message does not confirm acceptance or enrolment. Enrolment/payment processing continues only after payment evidence is received and verified."
+  ]);
 }
 
 function buildCustomSelectedEmailSubject_() {
-  return "FODE KIA Information and Next Steps";
+  return "FODE KIA Application - Information and Assistance";
 }
 
 function buildCustomSelectedEmailBody_(context) {
   var ctx = context || {};
   var row = ctx.rowObj || {};
   var recipientName = buildParentOrApplicantName_(row);
-  return [
-    "Dear " + recipientName + ",",
-    "",
+  return composeSelectedApplicantEmail_(ctx, [
     "We are contacting you about the FODE KIA application listed below.",
-    "",
-    "Applicant ID: " + String(ctx.applicantId || ""),
-    "Student: " + (buildApplicantFullName_(row) || "the applicant"),
-    "Grade: " + applicantGradeDisplayOrUnconfirmed_(row),
-    "Subjects: " + applicantSubjectsDisplayOrUnconfirmed_(row),
-    "",
-    applicantDocumentStatusSummary_(row),
-    applicantPaymentStatusSummary_(row),
-    "",
-    "Please review the information in this message and contact FODE Admissions if you need clarification.",
-    "",
-    "FODE Admissions: fode@kundu.ac | WhatsApp +675 7860 4013",
-    "",
-    "FODE KIA Admissions Team"
-  ].join("\n");
+    communicationApplicantSummaryBlock_(ctx, { includeStatus: true }),
+    "Message:",
+    customEmailOperatorPrompt_(),
+    "This message is for general FODE KIA admissions or program assistance. It does not confirm payment, acceptance, enrolment, or classroom placement unless those details are separately confirmed by Admissions."
+  ]).replace("Dear " + buildParentOrApplicantName_(row) + ",", "Dear " + recipientName + ",");
 }
 
 function buildProspectGeneralGuidanceSubject_() {
@@ -7523,29 +7568,16 @@ function buildApplicationReceiptRequestBody_(context) {
   var ctx = context || {};
   var row = ctx.rowObj || {};
   var applicantName = buildApplicantFullName_(row) || "the applicant";
-  return [
-    "Dear Parent/Guardian,",
-    "",
+  return composeSelectedApplicantEmail_(ctx, [
     "We are reviewing the payment information for the FODE KIA application for " + applicantName + ".",
-    "",
-    "Applicant ID: " + String(ctx.applicantId || ""),
-    "Grade: " + applicantGradeOrPlaceholder_(row),
-    "Subjects: " + applicantSubjectsOrPlaceholder_(row),
-    "",
-    applicantDocumentStatusSummary_(row),
-    applicantPaymentStatusSummary_(row),
-    "",
+    communicationApplicantSummaryBlock_(ctx, { useActionPlaceholders: true }),
     "Payment / quote and payment instructions:",
     canonicalFodePaymentInformationBlock_(ctx),
-    "",
     "Payment evidence / receipt is still required before the office can continue the payment verification step.",
-    "",
     "Please upload a clear copy of the payment receipt or payment proof through the approved application portal, or send it to Admissions for verification.",
-    "",
-    "This request is for payment evidence only and does not confirm acceptance or enrolment.",
-    "",
-    "FODE KIA Admissions Team"
-  ].join("\n");
+    communicationPortalInstructionBlock_(ctx, "Secure portal link for payment receipt upload or application review:"),
+    "This request is for payment evidence only and does not confirm acceptance or enrolment."
+  ]);
 }
 
 function buildApplicationVerifiedQuoteSubject_() {
@@ -7556,32 +7588,21 @@ function buildApplicationVerifiedQuoteBody_(context) {
   var ctx = context || {};
   var row = ctx.rowObj || {};
   var applicantName = buildApplicantFullName_(row) || "the applicant";
-  return [
-    "Dear Parent/Guardian,",
-    "",
+  return composeSelectedApplicantEmail_(ctx, [
     "Admissions has completed document verification for the FODE KIA application for " + applicantName + ". The next step is to review the fee/subject guidance and provide payment evidence.",
-    "",
-    "Applicant ID: " + String(ctx.applicantId || ""),
-    "Student: " + applicantName,
-    "Grade: " + applicantGradeOrPlaceholder_(row),
-    "Subjects: " + applicantSubjectsOrPlaceholder_(row),
-    "",
-    applicantDocumentStatusSummary_(row),
-    applicantPaymentStatusSummary_(row),
-    "",
+    communicationApplicantSummaryBlock_(ctx, { useActionPlaceholders: true }),
     "Payment / quote and payment instructions:",
     canonicalFodePaymentInformationBlock_(ctx),
-    "",
     "Next steps:",
-    "1. Check that the grade and subject details are correct.",
-    "2. Complete the required payment using the approved payment instructions.",
-    "3. Upload or send the payment receipt/evidence to Admissions.",
-    "4. Contact Admissions before paying if any fee, grade, or subject detail looks incorrect.",
-    "",
-    "This message confirms document verification only. It does not confirm acceptance or enrolment until payment and enrolment requirements are completed.",
-    "",
-    "FODE KIA Admissions Team"
-  ].join("\n");
+    [
+      "1. Check that the grade and subject details are correct.",
+      "2. Complete the required payment using the approved payment instructions.",
+      "3. Upload or send the payment receipt/evidence to Admissions.",
+      "4. Contact Admissions before paying if any fee, grade, or subject detail looks incorrect."
+    ].join("\n"),
+    communicationPortalInstructionBlock_(ctx, "Portal link for receipt upload or application review:"),
+    "This message confirms document verification only. It does not confirm acceptance or enrolment until payment and enrolment requirements are completed."
+  ]);
 }
 
 function buildApplicationAcceptanceConfirmationSubject_() {
@@ -7592,29 +7613,18 @@ function buildApplicationAcceptanceConfirmationBody_(context) {
   var ctx = context || {};
   var row = ctx.rowObj || {};
   var applicantName = buildApplicantFullName_(row) || "the applicant";
-  return [
-    "Dear Parent/Guardian,",
-    "",
+  return composeSelectedApplicantEmail_(ctx, [
     "Admissions is ready to confirm the current acceptance or enrolment outcome for the FODE KIA application below.",
-    "",
-    "Applicant ID: " + String(ctx.applicantId || ""),
-    "Student: " + applicantName,
-    "Grade: " + applicantGradeOrPlaceholder_(row),
-    "Subjects: " + applicantSubjectsOrPlaceholder_(row),
-    "",
-    applicantDocumentStatusSummary_(row),
-    applicantPaymentStatusSummary_(row),
-    "",
+    communicationApplicantSummaryBlock_(ctx, { useActionPlaceholders: true }),
     "Acceptance / enrolment status:",
     firstNonEmptyRowValue_(row, ["Acceptance_Status", "Enrolment_Status", "Overall_Status", "Status"]) || actionRequiredPlaceholder_("confirm acceptance/enrolment status"),
-    "",
     "Next steps:",
-    "1. Review the grade, subject, payment, and enrolment details above.",
-    "2. Follow any classroom, enrolment, payment, or handover instructions provided by FODE KIA Admissions.",
-    "3. Contact Admissions immediately if any detail is incorrect.",
-    "",
-    "FODE KIA Admissions Team"
-  ].join("\n");
+    [
+      "1. Review the grade, subject, payment, and enrolment details above.",
+      "2. Follow any classroom, enrolment, payment, or handover instructions provided by FODE KIA Admissions.",
+      "3. Contact Admissions immediately if any detail is incorrect."
+    ].join("\n")
+  ]);
 }
 
 function buildApplicationExamFeeReminderSubject_() {
@@ -7646,28 +7656,15 @@ function buildApplicationFinalReminderBody_(context) {
   var ctx = context || {};
   var row = ctx.rowObj || {};
   var applicantName = buildApplicantFullName_(row) || "the applicant";
-  return [
-    "Dear Parent/Guardian,",
-    "",
+  return composeSelectedApplicantEmail_(ctx, [
     "This is a final follow-up for the FODE KIA application for " + applicantName + ". Admissions still needs the outstanding action below before the application can continue.",
-    "",
-    "Applicant ID: " + String(ctx.applicantId || ""),
-    "Grade: " + applicantGradeOrPlaceholder_(row),
-    "Subjects: " + applicantSubjectsOrPlaceholder_(row),
-    "",
-    applicantDocumentStatusSummary_(row),
-    applicantPaymentStatusSummary_(row),
-    "",
+    communicationApplicantSummaryBlock_(ctx, { useActionPlaceholders: true }),
     "Outstanding action:",
     applicantOutstandingActionOrPlaceholder_(row),
-    "",
     "Deadline / urgency:",
     actionRequiredPlaceholder_("confirm deadline or urgency"),
-    "",
-    "Please contact FODE Admissions if you still wish to continue or need assistance. If we do not hear from you, the application may be referred for manual or dormant-case handling.",
-    "",
-    "FODE KIA Admissions Team"
-  ].join("\n");
+    "Please contact FODE Admissions if you still wish to continue or need assistance. If we do not hear from you, the application may be referred for manual or dormant-case handling."
+  ]);
 }
 
 function buildContactFallbackManualSubject_() {
@@ -9584,14 +9581,14 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
   var hasEditedBody = typeof options.editedBody === "string" && !!clean_(options.editedBody || "");
   var previewSubject = hasEditedSubject ? String(options.editedSubject) : String(built.subject || "");
   var previewBody = hasEditedBody ? String(options.editedBody) : String(built.body || "");
-  if (context.messageType === "custom_email" && (!hasEditedSubject || !hasEditedBody)) {
+  if (context.messageType === "custom_email" && (!clean_(previewSubject || "") || !clean_(previewBody || ""))) {
     return {
       ok: true,
       action: "preview",
       eligible: false,
       result: "BLOCKED",
-      blockCode: !hasEditedSubject ? "MISSING_SUBJECT" : "MISSING_BODY",
-      blockReason: !hasEditedSubject ? "Custom email subject is required." : "Custom email body is required.",
+      blockCode: !clean_(previewSubject || "") ? "MISSING_SUBJECT" : "MISSING_BODY",
+      blockReason: !clean_(previewSubject || "") ? "Custom email subject is required." : "Custom email body is required.",
       applicantId: clean_(context.applicantId || ""),
       messageType: clean_(context.messageType || ""),
       effectiveEmail: previewRecipient,
@@ -9736,6 +9733,10 @@ function sendApplicantMessage_(applicantId, messageType, opts) {
     context.eligible = false;
     context.blockCode = "MISSING_BODY";
     context.blockReason = "Email body is required.";
+  } else if (context.messageType === "custom_email" && hasUnresolvedCustomEmailPrompt_(built.body)) {
+    context.eligible = false;
+    context.blockCode = "CUSTOM_EMAIL_PROMPT_UNRESOLVED";
+    context.blockReason = "Replace the custom email prompt with the actual message before sending.";
   } else if (
     communicationRequiresResolvedActionPlaceholders_(context.messageType)
     && hasUnresolvedActionRequiredPlaceholder_(built.subject, built.body)
