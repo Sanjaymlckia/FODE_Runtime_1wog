@@ -7,7 +7,7 @@ function read(path) {
 }
 
 const adminUi = read("AdminUI.html");
-const serverSources = ["Code.js", "Admin.js", "Routes.js", "Utils.js", "Config.js"]
+const serverSources = ["Code.js", "Admin.js", "Admin_DocumentGallery.js", "Routes.js", "Utils.js", "Config.js"]
   .map(read)
   .join("\n");
 
