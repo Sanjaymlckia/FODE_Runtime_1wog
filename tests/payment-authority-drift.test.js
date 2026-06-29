@@ -5,6 +5,7 @@ const vm = require("node:vm");
 const codeSource = fs.readFileSync("Code.js", "utf8");
 const adminSource = [
   fs.readFileSync("Admin.js", "utf8"),
+  fs.readFileSync("Admin_PaymentAuthority.js", "utf8"),
   fs.readFileSync("Admin_ReviewQueues.js", "utf8"),
   fs.readFileSync("Admin_ReviewStatusAuthority.js", "utf8"),
   fs.readFileSync("Admin_RowFacts.js", "utf8")
