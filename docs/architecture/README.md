@@ -69,6 +69,18 @@ Release slices use Level 3 validation: release preflight, authorized Apps Script
 
 Historical Playwright reports remain valid evidence for the releases they documented.
 
+## Engineering Efficiency Policy
+
+Docs-only work uses the lightest deterministic closure: `git status -sb`, `git diff --check`, exact-file staging, one final `git diff --cached --check`, commit, and push. Do not run Node tests or Playwright for docs-only tasks unless the CIS explicitly requires docs tooling validation.
+
+Refactor work validates only changed runtime files and the tests protecting the changed authority surface. Do not run broad exploratory validation unless a concrete defect is found.
+
+Playwright is reserved for visible UI behavior changes, release proof, suspected browser-only regressions, or explicit operator request.
+
+For Windows runner/session failures, attempt normal execution once. If `CreateProcessAsUserW failed: 1312` or an equivalent session failure occurs, immediately use the approved repo-local execution path and do not spend time on repeated recovery attempts.
+
+Apps Script operations remain prohibited unless explicitly authorized by the active release CIS.
+
 ## Current Google Drive Folder
 
 Archived Google Drive workspace folder:

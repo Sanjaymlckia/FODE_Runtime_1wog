@@ -106,6 +106,31 @@ Rules:
 - If Playwright is not required, record: `Playwright not required for this refactor.`
 - Preserve prior Playwright reports as historical evidence.
 
+## Engineering Efficiency Policy
+
+Docs-only CIS:
+- Run `git status -sb`.
+- Run `git diff --check`.
+- Stage exact files only.
+- Run one final `git diff --cached --check` immediately before commit.
+- Commit and push if the staged check passes.
+- Do not run Node tests unless docs tooling changed and requires it.
+- Do not run Playwright.
+
+Refactor CIS:
+- Validate only changed runtime files.
+- Run only tests protecting the changed authority surface.
+- Do not run exploratory validation unless a concrete defect is found.
+- Do not run Playwright by default.
+
+Windows runner:
+- Attempt the normal runner once.
+- If `CreateProcessAsUserW failed: 1312` or equivalent session failure occurs, immediately switch to the approved repo-local execution path.
+- Do not spend time or credits on repeated runner recovery loops unless the operator specifically requests it.
+
+Apps Script:
+- Never run `clasp push`, create an Apps Script version, or repin a deployment unless the active release CIS explicitly authorizes it.
+
 ## Non-Repo Clone / Sandbox Boundary Rule
 
 The authoritative FODE Runtime repo is:

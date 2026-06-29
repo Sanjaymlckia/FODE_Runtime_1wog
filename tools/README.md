@@ -124,6 +124,36 @@ Rules:
 - If Playwright is not required, record: `Playwright not required for this refactor.`
 - Preserve existing Playwright reports as historical evidence.
 
+## Engineering Efficiency Policy
+
+Docs-only tasks:
+
+- `git status -sb`;
+- `git diff --check`;
+- stage exact files only;
+- one final `git diff --cached --check`;
+- commit;
+- push;
+- no Node tests unless docs tooling changed and requires it;
+- no Playwright.
+
+Refactor tasks:
+
+- validate only changed runtime files;
+- run only tests protecting the changed authority surface;
+- do not run exploratory validation unless a defect is found;
+- do not run Playwright by default.
+
+Windows runner:
+
+- attempt normal execution once;
+- after `CreateProcessAsUserW failed: 1312` or equivalent session failure, immediately use the approved repo-local execution path;
+- do not run repeated recovery loops unless the operator requests them.
+
+Apps Script:
+
+- never run `clasp push`, create an Apps Script version, or repin a deployment unless an active release CIS explicitly authorizes it.
+
 ## Scripts
 
 ### `preflight.ps1`
