@@ -47,6 +47,8 @@ const functionNames = [
   "getCommunicationSemanticRegistry_",
   "getCommunicationSemanticDefinition_",
   "getCommunicationSemanticDefinitionsByStatus_",
+  "communicationSendAuthorityForDefinition_",
+  "communicationDefinitionSupportsMode_",
   "isCommunicationTypeBatchSafe_",
   "isCommunicationTypePlanned_",
   "getCommunicationAllowedSendModes_",
@@ -117,6 +119,9 @@ const customEmail = context.getCommunicationSemanticDefinition_("custom_email");
 assert.equal(customEmail.editableMode, "freeform");
 assert.deepEqual(Array.from(customEmail.allowedSendModes), ["selected"]);
 assert.equal(customEmail.batchSafe, false);
+assert.equal(context.communicationSendAuthorityForDefinition_(customEmail).selectedOnly, true);
+assert.equal(context.communicationDefinitionSupportsMode_(customEmail, "selected"), true);
+assert.equal(context.communicationDefinitionSupportsMode_(customEmail, "batch"), false);
 assert.equal(context.isCommunicationTypeBatchSafe_("custom_email"), false);
 
 const reminder = context.getCommunicationSemanticDefinition_("reminder");
@@ -233,6 +238,10 @@ for (const entry of galleryMetadata) {
   assert.ok(entry.whenToUse, `${entry.messageType} needs gallery usage guidance`);
   assert.ok(entry.stageSuitability, `${entry.messageType} needs stage suitability guidance`);
   assert.equal(entry.allowedSendModes.includes("selected"), true, `${entry.messageType} gallery item must be selected-applicant available`);
+  const def = context.getCommunicationSemanticDefinition_(entry.messageType);
+  const authority = context.communicationSendAuthorityForDefinition_(def);
+  assert.equal(entry.selectedOnly, authority.selectedOnly, `${entry.messageType} gallery selected-only flag must come from centralized authority`);
+  assert.equal(entry.batchSafe, authority.batchSafe, `${entry.messageType} gallery batch-safe flag must come from centralized authority`);
   assert.doesNotMatch(`${entry.label}\n${entry.purpose}\n${entry.whenToUse}\n${entry.stageSuitability}`, /operator-confirmed|internal implementation|Do not rely/i, `${entry.messageType} gallery text must avoid unsafe internal phrasing`);
 }
 assert.equal(galleryMetadata.find((entry) => entry.messageType === "custom_email").selectedOnly, true, "custom_email gallery metadata must remain selected-only");

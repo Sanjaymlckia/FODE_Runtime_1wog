@@ -6701,6 +6701,25 @@ function getCommunicationSemanticDefinition_(messageType) {
   return null;
 }
 
+function communicationSendAuthorityForDefinition_(definition) {
+  var def = definition && typeof definition === "object" ? definition : {};
+  var modes = Array.isArray(def.allowedSendModes) ? def.allowedSendModes.slice() : [];
+  var selected = modes.indexOf("selected") >= 0;
+  var batch = modes.indexOf("batch") >= 0 && def.batchSafe === true;
+  return {
+    allowedSendModes: modes,
+    selectedApplicantSafe: selected,
+    batchSafe: batch,
+    selectedOnly: selected && !batch
+  };
+}
+
+function communicationDefinitionSupportsMode_(definition, sendMode) {
+  var mode = clean_(sendMode || "");
+  if (!mode) return false;
+  return communicationSendAuthorityForDefinition_(definition).allowedSendModes.indexOf(mode) >= 0;
+}
+
 function communicationTemplateGalleryCopy_() {
   return {
     legacy_invite: {
@@ -6794,19 +6813,20 @@ function communicationTemplateGalleryMetadata_() {
   var registry = getCommunicationSemanticRegistry_();
   var copy = communicationTemplateGalleryCopy_();
   return registry.filter(function (entry) {
-    return entry && entry.implementationStatus === "active" && entry.allowedSendModes && entry.allowedSendModes.indexOf("selected") >= 0;
+    return entry && entry.implementationStatus === "active" && communicationDefinitionSupportsMode_(entry, "selected");
   }).map(function (entry) {
     var extra = copy[entry.messageType] || {};
     var requiresPlaceholders = communicationRequiresResolvedActionPlaceholders_(entry.messageType);
+    var sendAuthority = communicationSendAuthorityForDefinition_(entry);
     return {
       messageType: entry.messageType,
       label: clean_(entry.operatorLabel || entry.messageType),
       purpose: clean_(extra.purpose || entry.semanticIntent || ""),
       whenToUse: clean_(extra.whenToUse || entry.fallbackInstruction || ""),
       stageSuitability: clean_(extra.stageSuitability || entry.conditionPolicyId || ""),
-      selectedOnly: entry.allowedSendModes.indexOf("selected") >= 0 && entry.batchSafe !== true,
-      batchSafe: entry.batchSafe === true,
-      allowedSendModes: entry.allowedSendModes.slice(),
+      selectedOnly: sendAuthority.selectedOnly === true,
+      batchSafe: sendAuthority.batchSafe === true,
+      allowedSendModes: sendAuthority.allowedSendModes,
       requiresPaymentQuoteData: extra.needsPaymentQuoteData === true,
       requiresPortalLink: communicationRequiresPortalUrl_(entry.messageType),
       requiresResolvedPlaceholders: requiresPlaceholders,
@@ -6827,7 +6847,7 @@ function getCommunicationSemanticDefinitionsByStatus_(status) {
 
 function isCommunicationTypeBatchSafe_(messageType) {
   var definition = getCommunicationSemanticDefinition_(messageType);
-  return !!(definition && definition.implementationStatus === "active" && definition.batchSafe === true);
+  return !!(definition && definition.implementationStatus === "active" && communicationSendAuthorityForDefinition_(definition).batchSafe === true);
 }
 
 function isCommunicationTypePlanned_(messageType) {
@@ -6837,7 +6857,7 @@ function isCommunicationTypePlanned_(messageType) {
 
 function getCommunicationAllowedSendModes_(messageType) {
   var definition = getCommunicationSemanticDefinition_(messageType);
-  return definition && Array.isArray(definition.allowedSendModes) ? definition.allowedSendModes.slice() : [];
+  return definition ? communicationSendAuthorityForDefinition_(definition).allowedSendModes : [];
 }
 
 function communicationCooldownMs_() {

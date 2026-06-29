@@ -52,6 +52,8 @@ vm.runInContext([
   "normalizeApplicantMessageType_",
   "getCommunicationSemanticRegistry_",
   "getCommunicationSemanticDefinition_",
+  "communicationSendAuthorityForDefinition_",
+  "communicationDefinitionSupportsMode_",
   "isCommunicationTypeBatchSafe_",
   "getCommunicationAllowedSendModes_",
   "hasUnresolvedActionRequiredPlaceholder_",
@@ -73,15 +75,23 @@ const selectedOnly = [
 for (const messageType of selectedOnly) {
   const def = context.getCommunicationSemanticDefinition_(messageType);
   assert.ok(def, `${messageType} semantic definition must exist`);
+  const authority = context.communicationSendAuthorityForDefinition_(def);
   assert.deepEqual(Array.from(def.allowedSendModes), ["selected"], `${messageType} must remain selected-only`);
   assert.equal(def.batchSafe, false, `${messageType} must not become batch-safe`);
+  assert.equal(authority.selectedOnly, true, `${messageType} centralized authority must classify selected-only`);
+  assert.equal(authority.batchSafe, false, `${messageType} centralized authority must reject batch`);
+  assert.equal(context.communicationDefinitionSupportsMode_(def, "selected"), true, `${messageType} centralized authority must allow selected mode`);
+  assert.equal(context.communicationDefinitionSupportsMode_(def, "batch"), false, `${messageType} centralized authority must reject batch mode`);
   assert.equal(context.isCommunicationTypeBatchSafe_(messageType), false, `${messageType} batch safety helper must reject batch`);
 }
 
 for (const messageType of ["docs_missing", "payment_followup"]) {
   const def = context.getCommunicationSemanticDefinition_(messageType);
+  const authority = context.communicationSendAuthorityForDefinition_(def);
   assert.ok(def, `${messageType} semantic definition must exist`);
   assert.ok(def.allowedSendModes.indexOf("selected") >= 0, `${messageType} must remain selected-applicant available`);
+  assert.equal(authority.batchSafe, true, `${messageType} centralized authority must retain batch-safe classification`);
+  assert.equal(authority.selectedOnly, false, `${messageType} centralized authority must not classify selected-only`);
   assert.equal(context.normalizeApplicantMessageType_(messageType), messageType, `${messageType} must normalize for selected-applicant preview/send`);
 }
 
