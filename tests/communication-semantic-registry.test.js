@@ -295,6 +295,7 @@ const templateFunctionNames = [
   "communicationRequiresResolvedActionPlaceholders_",
   "feedbackStatusNeedsAttention_",
   "buildDocumentAttentionLines_",
+  "uniqCsv_",
   "subjectsToCsv_",
   "computeFodeFeeQuote_",
   "formatKina_",
@@ -423,6 +424,7 @@ const quoteReadyBody = templateContext.buildApplicationVerifiedQuoteBody_(quoteR
 assert.match(quoteReadyBody, /Kundu International Academy \/ FODE Admissions/);
 assert.match(quoteReadyBody, /Applicant summary:/);
 assert.match(quoteReadyBody, /Registration Fee: K600\.00/);
+assert.match(quoteReadyBody, /Subjects: English, Mathematics/);
 assert.match(quoteReadyBody, /Subject Fee: 2 x K450\.00 = K900\.00 \(English, Mathematics\)/);
 assert.match(quoteReadyBody, /Total Amount Payable: K1,500\.00/);
 assert.match(quoteReadyBody, /TISA Bank Ltd/);
@@ -488,6 +490,23 @@ assert.doesNotMatch(customBody, /\[ACTION REQUIRED:/);
 assert.doesNotMatch(customBody, /payment verified|accepted|enrolled/i);
 assert.match(codeSource, /CUSTOM_EMAIL_PROMPT_UNRESOLVED/);
 assert.match(adminPreviewSource, /clean_\(p\.subject \|\| ""\)/);
+
+const customObjectSubjectBody = templateContext.buildCustomSelectedEmailBody_({
+  applicantId: "FODE-26-SUBJECTMAP",
+  rowObj: {
+    First_Name: "Map",
+    Last_Name: "Student",
+    Parent_First_Name: "Map",
+    Parent_Last_Name: "Parent",
+    Subjects_Selected: {
+      "10272728": "English",
+      "10272729": "Mathematics"
+    }
+  }
+});
+assert.match(customObjectSubjectBody, /Subjects: English, Mathematics/);
+assert.doesNotMatch(customObjectSubjectBody, /\{"10272728":"English","10272729":"Mathematics"\}/);
+assert.doesNotMatch(customObjectSubjectBody, /\[object Object\]/);
 
 const reminderBody = templateContext.buildReminderEmailBody_(applicantContext);
 assert.match(reminderBody, /awaiting your next step/i);

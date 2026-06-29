@@ -4070,6 +4070,18 @@ function getExamSites_(ss) {
 
 /******************** SUBJECT NORMALIZATION ********************/
 function subjectsToCsv_(raw) {
+  if (Array.isArray(raw)) {
+    return uniqCsv_(raw);
+  }
+
+  if (raw && typeof raw === "object") {
+    var objectVals = [];
+    for (var objectKey in raw) {
+      if (Object.prototype.hasOwnProperty.call(raw, objectKey)) objectVals.push(raw[objectKey]);
+    }
+    return uniqCsv_(objectVals);
+  }
+
   var s = clean_(raw);
   if (!s) return "";
 
@@ -6986,13 +6998,19 @@ function applicantGradeOrPlaceholder_(rowObj) {
 }
 
 function applicantSubjectsOrPlaceholder_(rowObj) {
-  return firstNonEmptyRowValue_(rowObj, [
+  var row = rowObj || {};
+  var fields = [
     "Subjects_Summary",
     "Subjects_Selected_Canonical",
     "Subjects_Selected",
     "Selected_Subjects",
     "Subjects"
-  ]) || actionRequiredPlaceholder_("confirm subjects");
+  ];
+  for (var i = 0; i < fields.length; i++) {
+    var csv = subjectsToCsv_(row[fields[i]]);
+    if (csv) return csv;
+  }
+  return actionRequiredPlaceholder_("confirm subjects");
 }
 
 function applicantGradeDisplayOrUnconfirmed_(rowObj) {
@@ -7006,13 +7024,19 @@ function applicantGradeDisplayOrUnconfirmed_(rowObj) {
 }
 
 function applicantSubjectsDisplayOrUnconfirmed_(rowObj) {
-  return firstNonEmptyRowValue_(rowObj, [
+  var row = rowObj || {};
+  var fields = [
     "Subjects_Summary",
     "Subjects_Selected_Canonical",
     "Subjects_Selected",
     "Selected_Subjects",
     "Subjects"
-  ]) || "not yet confirmed";
+  ];
+  for (var i = 0; i < fields.length; i++) {
+    var csv = subjectsToCsv_(row[fields[i]]);
+    if (csv) return csv;
+  }
+  return "not yet confirmed";
 }
 function applicantDocumentStatusSummary_(rowObj) {
   var row = rowObj || {};
