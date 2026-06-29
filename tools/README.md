@@ -87,6 +87,43 @@ Practical rule:
 - Track H with AdminUI/send-surface/Stage Batch/lifecycle/payment-document authority: Full Gate.
 - Production: Full Gate.
 
+## Validation Levels and Playwright Usage
+
+Playwright is no longer part of the default validation pipeline for refactor-only F4/F5 slices.
+
+Level 1 - Refactor/default:
+
+- `node --check`;
+- targeted Node regression tests;
+- `git diff --check`;
+- audit/report where required;
+- commit/push when the CIS authorizes closure;
+- no Playwright;
+- no Apps Script push, deployment, version, or repin.
+
+Level 2 - Feature/UI:
+
+- all Level 1 checks;
+- manual browser inspection when visible UI intentionally changed;
+- Playwright only if browser proof is specifically needed.
+
+Level 3 - Release:
+
+- release preflight;
+- `clasp push`;
+- Apps Script version;
+- Admin staging repin where authorized;
+- `whoami` proof;
+- manual/operator acceptance;
+- Playwright only if explicitly requested by the release CIS or needed to prove a browser-only regression.
+
+Rules:
+
+- Do not run Playwright by default.
+- Do not recover failed Playwright unless browser proof is mandatory.
+- If Playwright is not required, record: `Playwright not required for this refactor.`
+- Preserve existing Playwright reports as historical evidence.
+
 ## Scripts
 
 ### `preflight.ps1`

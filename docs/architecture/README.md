@@ -59,6 +59,16 @@ Every future CIS that changes runtime architecture, state transitions, queues, a
 - Lifecycle/state diagram
 - Protected Surface Register
 
+## Validation Level Rule
+
+Refactor-only F4/F5 slices use Level 1 validation by default: relevant `node --check`, targeted Node regression tests, `git diff --check`, and the required audit/report. Playwright is not required for these refactors and should not be recovered if it fails to start.
+
+Feature/UI slices use Level 2 validation: Level 1 plus manual browser inspection when visible UI intentionally changed. Playwright is used only when browser proof is specifically needed.
+
+Release slices use Level 3 validation: release preflight, authorized Apps Script source push/version/repin, live `whoami`, and manual/operator acceptance. Playwright remains optional release evidence only when the release CIS explicitly requests it or a browser-only regression needs proof.
+
+Historical Playwright reports remain valid evidence for the releases they documented.
+
 ## Current Google Drive Folder
 
 Archived Google Drive workspace folder:

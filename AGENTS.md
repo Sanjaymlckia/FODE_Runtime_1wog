@@ -75,6 +75,37 @@ Rules:
 - If Codex cannot operate the authenticated browser reliably, it must stop and request manual user evidence instead of retrying repeatedly.
 - Manual user screenshots or console output are valid acceptance evidence.
 
+## Validation Levels and Playwright Usage
+
+Playwright is not part of the default validation pipeline for refactor-only F4/F5 slices.
+
+Level 1 - Refactor/default:
+- `node --check` for relevant runtime files.
+- targeted Node regression tests.
+- `git diff --check`.
+- audit/report artifact where required.
+- commit/push when the CIS authorizes closure.
+- no Playwright.
+- no Apps Script push, deployment, version, or repin.
+
+Level 2 - Feature/UI:
+- all Level 1 checks.
+- manual browser inspection when visible UI intentionally changed.
+- Playwright only when browser proof is specifically needed or requested.
+
+Level 3 - Release:
+- release preflight.
+- `clasp push`, Apps Script version, and Admin staging repin only when authorized by the release CIS.
+- Admin/Student `whoami` proof as required by release discipline.
+- manual/operator acceptance.
+- Playwright only when explicitly requested by the release CIS or when a suspected browser-only regression cannot be proven by Node tests.
+
+Rules:
+- Do not run Playwright by default.
+- Do not spend time recovering failed Playwright unless browser proof is mandatory.
+- If Playwright is not required, record: `Playwright not required for this refactor.`
+- Preserve prior Playwright reports as historical evidence.
+
 ## Non-Repo Clone / Sandbox Boundary Rule
 
 The authoritative FODE Runtime repo is:

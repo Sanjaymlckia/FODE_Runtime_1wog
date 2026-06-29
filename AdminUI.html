@@ -2795,6 +2795,7 @@
       lastPayload: null,
       lastRawResponse: null
     };
+    let commMessageTypeOptionsSynced = false;
     let booksPreviewState = {
       busy: false,
       preflight: null,
@@ -5781,12 +5782,14 @@
       communicationsState.busy = false;
     }
     function getSelectedCommMessageType_(){
+      syncCommMessageTypeOptions_();
       var el = document.getElementById("commMessageType");
       return String((el && el.value) || communicationsState.selectedMessageType || "legacy_invite").trim();
     }
     function setSelectedCommMessageType_(messageType){
       var val = String(messageType || "legacy_invite").trim() || "legacy_invite";
       communicationsState.selectedMessageType = val;
+      syncCommMessageTypeOptions_();
       var el = document.getElementById("commMessageType");
       if (el) el.value = val;
     }
@@ -5800,6 +5803,37 @@
         if (String(list[i].messageType || "") === type) return list[i];
       }
       return null;
+    }
+    function commTemplateOptionItems_(){
+      return commTemplateGalleryItems_().filter(function(meta){
+        return meta && meta.selectedPickerVisible !== false && Array.isArray(meta.allowedSendModes) && meta.allowedSendModes.indexOf("selected") >= 0;
+      }).slice().sort(function(a, b){
+        return Number(a.selectedOptionOrder || 999) - Number(b.selectedOptionOrder || 999);
+      });
+    }
+    function commTemplateOptionLabel_(meta){
+      return String((meta && (meta.selectedOptionLabel || meta.label || meta.messageType)) || "").trim();
+    }
+    function syncCommMessageTypeOptions_(){
+      var el = document.getElementById("commMessageType");
+      if (!el || commMessageTypeOptionsSynced) return;
+      var items = commTemplateOptionItems_();
+      if (!items.length) {
+        commMessageTypeOptionsSynced = true;
+        return;
+      }
+      var selected = String(el.value || communicationsState.selectedMessageType || "legacy_invite").trim() || "legacy_invite";
+      while (el.firstChild) el.removeChild(el.firstChild);
+      items.forEach(function(meta){
+        var option = document.createElement("option");
+        option.value = String(meta.messageType || "");
+        option.textContent = commTemplateOptionLabel_(meta);
+        el.appendChild(option);
+      });
+      var hasSelected = items.some(function(meta){ return String(meta.messageType || "") === selected; });
+      el.value = hasSelected ? selected : "legacy_invite";
+      communicationsState.selectedMessageType = el.value || "legacy_invite";
+      commMessageTypeOptionsSynced = true;
     }
     function detailHasFeeReceiptEvidence_(detail){
       var d = detail || {};
@@ -5977,7 +6011,8 @@
     }
     function isEditableCommType_(messageType){
       var t = String(messageType || "").trim();
-      return ["legacy_invite", "reminder", "application_feedback", "custom_email", "docs_missing", "payment_followup", "application_acceptance_confirmation", "application_verified_quote", "application_final_reminder", "application_exam_fee_reminder", "prospect_general_guidance", "application_receipt_request", "contact_fallback_manual"].indexOf(t) >= 0;
+      var meta = getCommTemplateMeta_(t);
+      return !!(meta && meta.selectedPickerVisible !== false && Array.isArray(meta.allowedSendModes) && meta.allowedSendModes.indexOf("selected") >= 0);
     }
     function getCommEditableFields_(){
       return {

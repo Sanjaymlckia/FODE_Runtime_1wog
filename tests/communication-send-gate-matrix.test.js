@@ -133,6 +133,9 @@ for (const messageType of ["application_verified_quote", "application_acceptance
 const selectedMarkup = adminUiSource.match(/<select id="commMessageType">([\s\S]*?)<\/select>/);
 assert.ok(selectedMarkup, "Selected-applicant communication picker must exist");
 assert.match(selectedMarkup[1], /value="custom_email"[\s\S]*Selected Applicant/, "custom_email picker label must remain selected-applicant scoped");
+assert.match(adminUiSource, /function commTemplateOptionItems_/, "Selected-applicant picker must have a backend-metadata option helper");
+assert.match(adminUiSource, /selectedOptionLabel/, "Selected-applicant picker labels must be read from backend registry metadata");
+assert.match(adminUiSource, /function isEditableCommType_[\s\S]*getCommTemplateMeta_/, "Editability must be derived from backend communication metadata");
 assert.match(adminUiSource, /Object\.assign\(payload, getCommEditablePayload_\(\)\)/, "Send payload must use edited subject/body");
 assert.match(adminUiSource, /setCommEditableDraft_\(communicationsState\.result, messageType\)/, "Preview result must hydrate editable draft before send");
 

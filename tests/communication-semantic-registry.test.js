@@ -232,6 +232,45 @@ const galleryTypes = new Set(galleryMetadata.map((entry) => entry.messageType));
 for (const messageType of [...allowedTypes, ...manualSelectedTypes]) {
   assert.ok(galleryTypes.has(messageType), `${messageType} must have selected-applicant gallery metadata`);
 }
+const selectedPickerOrder = [
+  "legacy_invite",
+  "reminder",
+  "docs_missing",
+  "payment_followup",
+  "application_feedback",
+  "custom_email",
+  "application_acceptance_confirmation",
+  "application_verified_quote",
+  "application_final_reminder",
+  "application_exam_fee_reminder",
+  "prospect_general_guidance",
+  "application_receipt_request",
+  "contact_fallback_manual"
+];
+const selectedPickerLabels = {
+  legacy_invite: "Application Portal Invitation",
+  reminder: "Legacy Application Reminder (Overloaded)",
+  docs_missing: "Missing Documents - Selected Applicant",
+  payment_followup: "Payment / Receipt Follow-Up",
+  application_feedback: "Application Feedback",
+  custom_email: "Custom Email - Selected Applicant",
+  application_acceptance_confirmation: "Acceptance Confirmation - Selected Applicant",
+  application_verified_quote: "Verified Quote / Fee Guidance - Selected Applicant",
+  application_final_reminder: "Final Reminder - Selected Applicant",
+  application_exam_fee_reminder: "National Exam Fee Reminder - Selected Applicant",
+  prospect_general_guidance: "Prospect General Guidance - Selected Applicant",
+  application_receipt_request: "Payment Receipt Request - Selected Applicant",
+  contact_fallback_manual: "Manual Contact Fallback - Selected Applicant"
+};
+const galleryByType = new Map(galleryMetadata.map((entry) => [entry.messageType, entry]));
+for (const messageType of selectedPickerOrder) {
+  const metadata = galleryByType.get(messageType);
+  assert.ok(metadata, `${messageType} must have backend metadata for selected-applicant picker alignment`);
+  assert.equal(metadata.selectedPickerVisible, true, `${messageType} must remain visible in selected-applicant picker metadata`);
+  assert.equal(metadata.selectedOptionLabel, selectedPickerLabels[messageType], `${messageType} picker label must be backend-defined without changing visible text`);
+  assert.ok(Number(metadata.selectedOptionOrder) < 999, `${messageType} picker order must be backend-defined`);
+}
+assert.equal(galleryByType.get("fd_acknowledgement").selectedPickerVisible, false, "fd_acknowledgement must remain in gallery metadata but hidden from the selected-applicant picker");
 for (const entry of galleryMetadata) {
   assert.ok(entry.label, `${entry.messageType} needs a gallery label`);
   assert.ok(entry.purpose, `${entry.messageType} needs a gallery purpose`);
@@ -261,9 +300,13 @@ vm.createContext(recommendationContext);
 vm.runInContext([
   extractFunction(adminUiSource, "commTemplateGalleryItems_"),
   extractFunction(adminUiSource, "getCommTemplateMeta_"),
+  extractFunction(adminUiSource, "commTemplateOptionItems_"),
+  extractFunction(adminUiSource, "commTemplateOptionLabel_"),
   extractFunction(adminUiSource, "detailHasFeeReceiptEvidence_"),
   extractFunction(adminUiSource, "recommendCommTemplateForDetail_")
 ].join("\n\n"), recommendationContext);
+assert.equal(JSON.stringify(recommendationContext.commTemplateOptionItems_().map((entry) => entry.messageType)), JSON.stringify(selectedPickerOrder), "Selected-applicant picker options must be derived from backend metadata in the preserved visible order");
+assert.equal(JSON.stringify(recommendationContext.commTemplateOptionItems_().map((entry) => recommendationContext.commTemplateOptionLabel_(entry))), JSON.stringify(selectedPickerOrder.map((messageType) => selectedPickerLabels[messageType])), "Selected-applicant picker labels must be derived from backend metadata without changing visible text");
 assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A1", facts:{ documentState:"awaiting_uploads" } }).messageType, "docs_missing");
 assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A2", facts:{ documentState:"eligibility_cleared", paymentState:"payment_evidence_pending" } }).messageType, "application_verified_quote");
 assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A3", Fee_Receipt_File:"https://receipt", facts:{ documentState:"eligibility_cleared", paymentState:"payment_evidence_pending_verification" } }).messageType, "payment_followup");
