@@ -7054,6 +7054,51 @@ function applicantOutstandingActionOrPlaceholder_(rowObj) {
   return actionRequiredPlaceholder_("state outstanding action");
 }
 
+function formatKinaCurrency_(n) {
+  var num = Number(n || 0);
+  if (!isFinite(num)) num = 0;
+  return "K" + num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function canonicalFodePaymentInformationBlock_(context) {
+  var ctx = context || {};
+  var row = ctx.rowObj || ctx.row || {};
+  var applicantId = clean_(ctx.applicantId || row.ApplicantID || row[CONFIG.APPLICANT_ID_HEADER] || "");
+  var quote = typeof computeFodeFeeQuote_ === "function" ? computeFodeFeeQuote_(row) : null;
+  var subjectCount = quote ? Number(quote.subjectCount || 0) : 0;
+  if (!applicantId) return actionRequiredPlaceholder_("confirm applicant ID for payment reference");
+  if (!quote || !(subjectCount > 0)) return actionRequiredPlaceholder_("confirm subjects before calculating FODE quote");
+  var registration = Number(quote.registrationK || 600);
+  var perSubject = Number(CONFIG.FEE_PER_SUBJECT_KINA || 450);
+  var subjectFee = Number(quote.subjectFeeK || (subjectCount * perSubject));
+  var total = Number(quote.totalK || (registration + subjectFee));
+  var subjectsLine = quote.subjectsList ? " (" + quote.subjectsList + ")" : "";
+  return [
+    "FODE KIA fee breakdown:",
+    "Registration Fee: " + formatKinaCurrency_(registration),
+    "Subject Fee: " + String(subjectCount) + " x " + formatKinaCurrency_(perSubject) + " = " + formatKinaCurrency_(subjectFee) + subjectsLine,
+    "Total Amount Payable: " + formatKinaCurrency_(total),
+    "",
+    "National FODE examination fees are paid separately to DoE FODE and are not included in this amount.",
+    "",
+    "Payment options:",
+    "Option 1 - TISA Bank Ltd (Preferred)",
+    "Bank: TISA Bank Ltd",
+    "Branch: Islander Drive (Branch 001), Port Moresby",
+    "Business Name: KUNDU INTERNATIONAL ACADEMY LIMITED",
+    "CASA Account No.: 0010250069",
+    "",
+    "Option 2 - BSP Bank",
+    "Bank: BSP Bank",
+    "Branch: BSP Haus, Konedobu, Port Moresby",
+    "Account Name: Kundu International Academy",
+    "Account No.: 7027138796",
+    "BSB No.: 088950",
+    "",
+    "Payment reference: Please include Applicant ID " + applicantId + " as the payment reference.",
+    "After payment, upload the receipt through the applicant portal or send it to Admissions for verification."
+  ].join("\n");
+}
 function applicantPaymentQuoteOrPlaceholder_(rowObj) {
   var amount = firstNonEmptyRowValue_(rowObj, [
     "Fee_Total_Kina",
@@ -7395,11 +7440,8 @@ function buildPaymentFollowupEmailBody_(context) {
     applicantDocumentStatusSummary_(row),
     applicantPaymentStatusSummary_(row),
     "",
-    "Payment / quote:",
-    applicantPaymentQuoteOrPlaceholder_(row),
-    "",
-    "Payment instructions:",
-    paymentInstructionsOrPlaceholder_(row),
+    "Payment / quote and payment instructions:",
+    canonicalFodePaymentInformationBlock_(ctx),
     "",
     "Next steps:",
     "1. Review the grade, subjects, and payment details above.",
@@ -7479,18 +7521,26 @@ function buildApplicationReceiptRequestSubject_() {
 
 function buildApplicationReceiptRequestBody_(context) {
   var ctx = context || {};
+  var row = ctx.rowObj || {};
+  var applicantName = buildApplicantFullName_(row) || "the applicant";
   return [
     "Dear Parent/Guardian,",
     "",
-    "We are reviewing the payment information for your FODE KIA application.",
+    "We are reviewing the payment information for the FODE KIA application for " + applicantName + ".",
     "",
     "Applicant ID: " + String(ctx.applicantId || ""),
+    "Grade: " + applicantGradeOrPlaceholder_(row),
+    "Subjects: " + applicantSubjectsOrPlaceholder_(row),
+    "",
+    applicantDocumentStatusSummary_(row),
+    applicantPaymentStatusSummary_(row),
+    "",
+    "Payment / quote and payment instructions:",
+    canonicalFodePaymentInformationBlock_(ctx),
     "",
     "Payment evidence / receipt is still required before the office can continue the payment verification step.",
     "",
-    "Please upload a clear copy of the payment receipt or payment proof through the approved application portal, or send it to the office using the contact path provided by FODE Admissions.",
-    "",
-    "If payment has not yet been made, please confirm the approved payment instructions with the office before paying.",
+    "Please upload a clear copy of the payment receipt or payment proof through the approved application portal, or send it to Admissions for verification.",
     "",
     "This request is for payment evidence only and does not confirm acceptance or enrolment.",
     "",
@@ -7519,11 +7569,8 @@ function buildApplicationVerifiedQuoteBody_(context) {
     applicantDocumentStatusSummary_(row),
     applicantPaymentStatusSummary_(row),
     "",
-    "Payment / quote:",
-    applicantPaymentQuoteOrPlaceholder_(row),
-    "",
-    "Payment instructions:",
-    paymentInstructionsOrPlaceholder_(row),
+    "Payment / quote and payment instructions:",
+    canonicalFodePaymentInformationBlock_(ctx),
     "",
     "Next steps:",
     "1. Check that the grade and subject details are correct.",

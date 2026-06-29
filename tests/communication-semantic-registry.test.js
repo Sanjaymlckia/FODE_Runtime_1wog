@@ -298,6 +298,8 @@ const templateFunctionNames = [
   "subjectsToCsv_",
   "computeFodeFeeQuote_",
   "formatKina_",
+  "formatKinaCurrency_",
+  "canonicalFodePaymentInformationBlock_",
   "applicantGradeDisplayOrUnconfirmed_",
   "applicantSubjectsDisplayOrUnconfirmed_",
   "buildReminderEmailBody_",
@@ -377,8 +379,8 @@ assert.match(paymentBody, /Applicant ID: FODE-26-TEST/);
 assert.match(paymentBody, /Admissions still needs payment evidence or payment verification/i);
 assert.match(paymentBody, /\[ACTION REQUIRED: confirm grade\]/);
 assert.match(paymentBody, /\[ACTION REQUIRED: confirm subjects\]/);
-assert.match(paymentBody, /\[ACTION REQUIRED: insert payment\/quote amount\]/);
-assert.match(paymentBody, /Pay using the approved KIA payment account and upload the receipt\./);
+assert.match(paymentBody, /\[ACTION REQUIRED: confirm subjects before calculating FODE quote\]/);
+assert.doesNotMatch(paymentBody, /\[ACTION REQUIRED: confirm payment instructions\]/);
 assert.match(paymentBody, /Upload or send a clear payment receipt\/evidence/i);
 assert.match(paymentBody, /does not confirm acceptance or enrolment/i);
 assert.doesNotMatch(paymentBody, /\byou (?:are|have been) accepted\b/i);
@@ -388,7 +390,7 @@ assert.match(quoteBody, /completed document verification/i);
 assert.match(quoteBody, /Applicant ID: FODE-26-TEST/);
 assert.match(quoteBody, /\[ACTION REQUIRED: confirm grade\]/);
 assert.match(quoteBody, /\[ACTION REQUIRED: confirm subjects\]/);
-assert.match(quoteBody, /\[ACTION REQUIRED: insert payment\/quote amount\]/);
+assert.match(quoteBody, /\[ACTION REQUIRED: confirm subjects before calculating FODE quote\]/);
 assert.match(quoteBody, /payment receipt\/evidence/i);
 assert.match(quoteBody, /Next steps:/);
 const quoteReadyContext = {
@@ -403,12 +405,24 @@ const quoteReadyContext = {
   }
 };
 const quoteReadyBody = templateContext.buildApplicationVerifiedQuoteBody_(quoteReadyContext);
-assert.match(quoteReadyBody, /Estimated total payable: K1500/);
-assert.match(quoteReadyBody, /Subject fee: K900 \(K450 x 2\)/);
-assert.match(quoteReadyBody, /Pay using the approved KIA payment account and upload the receipt\./);
-assert.doesNotMatch(quoteReadyBody, /\[ACTION REQUIRED: insert payment\/quote amount\]/);
+assert.match(quoteReadyBody, /Registration Fee: K600\.00/);
+assert.match(quoteReadyBody, /Subject Fee: 2 x K450\.00 = K900\.00 \(English, Mathematics\)/);
+assert.match(quoteReadyBody, /Total Amount Payable: K1,500\.00/);
+assert.match(quoteReadyBody, /TISA Bank Ltd/);
+assert.match(quoteReadyBody, /CASA Account No\.: 0010250069/);
+assert.match(quoteReadyBody, /BSP Bank/);
+assert.match(quoteReadyBody, /Account No\.: 7027138796/);
+assert.match(quoteReadyBody, /Payment reference: Please include Applicant ID FODE-26-QUOTE as the payment reference\./);
+assert.match(quoteReadyBody, /National FODE examination fees are paid separately to DoE FODE and are not included/);
+assert.match(quoteReadyBody, /upload the receipt through the applicant portal or send it to Admissions for verification/);
+assert.doesNotMatch(quoteReadyBody, /\[ACTION REQUIRED:/);
 assert.doesNotMatch(quoteReadyBody, /operator|internal|Do not rely/i);
-
+const paymentReadyBody = templateContext.buildPaymentFollowupEmailBody_(quoteReadyContext);
+assert.match(paymentReadyBody, /Total Amount Payable: K1,500\.00/);
+assert.match(paymentReadyBody, /Option 1 - TISA Bank Ltd \(Preferred\)/);
+assert.match(paymentReadyBody, /Option 2 - BSP Bank/);
+assert.match(paymentReadyBody, /Payment reference: Please include Applicant ID FODE-26-QUOTE as the payment reference\./);
+assert.doesNotMatch(paymentReadyBody, /\[ACTION REQUIRED:/);
 const acceptanceBody = templateContext.buildApplicationAcceptanceConfirmationBody_(applicantContext);
 assert.match(acceptanceBody, /Applicant ID: FODE-26-TEST/);
 assert.match(acceptanceBody, /\[ACTION REQUIRED: confirm grade\]/);
@@ -419,6 +433,8 @@ assert.match(acceptanceBody, /Next steps:/);
 const receiptRequestBody = templateContext.buildApplicationReceiptRequestBody_(applicantContext);
 assert.match(receiptRequestBody, /Applicant ID: FODE-26-TEST/);
 assert.match(receiptRequestBody, /Payment evidence \/ receipt is still required/i);
+assert.match(receiptRequestBody, /\[ACTION REQUIRED: confirm grade\]/);
+assert.match(receiptRequestBody, /\[ACTION REQUIRED: confirm subjects before calculating FODE quote\]/);
 assert.match(receiptRequestBody, /upload a clear copy/i);
 assert.match(receiptRequestBody, /does not confirm acceptance or enrolment/i);
 
