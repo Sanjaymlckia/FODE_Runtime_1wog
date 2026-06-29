@@ -3,7 +3,10 @@ const fs = require("node:fs");
 const vm = require("node:vm");
 
 const codeSource = fs.readFileSync("Code.js", "utf8");
-const adminSource = fs.readFileSync("Admin.js", "utf8");
+const adminSource = [
+  fs.readFileSync("Admin.js", "utf8"),
+  fs.readFileSync("Admin_ReviewQueues.js", "utf8")
+].join("\n");
 const adminUiSource = fs.readFileSync("AdminUI.html", "utf8");
 const sharedRowFactsSource = fs.readFileSync("AdminUI_SharedRowFacts.html", "utf8");
 
