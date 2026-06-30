@@ -7,7 +7,7 @@ function read(path) {
 }
 
 const adminUi = read("AdminUI.html");
-const serverSources = ["Code.js", "Admin.js", "Admin_StageBatchCommunications.js", "Admin_SelectedApplicantCommunications.js", "Admin_AccessControl.js", "Admin_LifecycleAuthority.js", "Admin_PaymentAuthority.js", "Admin_ReviewQueues.js", "Admin_ReviewStatusAuthority.js", "Admin_RowFacts.js", "Admin_DocumentServices.js", "Admin_DocumentGallery.js", "Routes.js", "Utils.js", "Config.js"]
+const serverSources = ["Code.js", "Admin.js", "Admin_WhatsAppFallback.js", "Admin_StageBatchCommunications.js", "Admin_SelectedApplicantCommunications.js", "Admin_AccessControl.js", "Admin_LifecycleAuthority.js", "Admin_PaymentAuthority.js", "Admin_ReviewQueues.js", "Admin_ReviewStatusAuthority.js", "Admin_RowFacts.js", "Admin_DocumentServices.js", "Admin_DocumentGallery.js", "Routes.js", "Utils.js", "Config.js"]
   .map(read)
   .join("\n");
 
