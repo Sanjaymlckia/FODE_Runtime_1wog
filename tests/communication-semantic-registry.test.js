@@ -235,6 +235,8 @@ assert.match(adminUiSource, /commTemplateGallery/, "Selected-applicant communica
 assert.match(adminUiSource, /Use recommended/, "Template gallery must expose advisory recommended-template selection");
 assert.match(adminUiSource, /Recommended next action/, "Recommended template highlight must expose a clear badge/label");
 assert.match(adminUiSource, /recommendation\.actionable === true/, "Recommended highlight must be driven by backend actionability");
+assert.match(adminUiSource, /Preview email/, "Template card action must make preview intent clear");
+assert.match(adminUiSource, /scrollToCommunicationPreview_/, "Template card action must jump to the preview or compose area");
 
 const galleryMetadata = context.communicationTemplateGalleryMetadata_();
 const galleryTypes = new Set(galleryMetadata.map((entry) => entry.messageType));

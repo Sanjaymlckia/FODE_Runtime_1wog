@@ -326,11 +326,11 @@
       border:1px solid rgba(148,163,184,.22);
       border-radius:12px;
       padding:10px;
-      background:rgba(8,18,32,.78);
+      background:rgba(12,25,42,.9);
       color:#d8e6f6;
     }
     .commTemplateCard.selected{ border-color:rgba(34,197,94,.48); box-shadow:inset 0 0 0 1px rgba(34,197,94,.16); }
-    .commTemplateCard.recommended{ border-color:rgba(96,165,250,.88); box-shadow:0 0 0 2px rgba(96,165,250,.18), inset 0 0 0 1px rgba(96,165,250,.24); background:rgba(14,30,52,.9); }
+    .commTemplateCard.recommended{ border-color:rgba(96,165,250,1); box-shadow:0 0 0 3px rgba(96,165,250,.24), inset 0 0 0 1px rgba(147,197,253,.36); background:rgba(18,36,60,.94); }
     .commTemplateCardTitle{ font-weight:900; color:#f4f9ff; margin-bottom:4px; }
     .commTemplateCardMeta{ display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
     .commTemplateChip{ font-size:11px; padding:3px 7px; border-radius:999px; border:1px solid rgba(148,163,184,.26); background:rgba(15,23,42,.74); color:#cbd5e1; }
@@ -2793,7 +2793,8 @@
       busy: false,
       lastPreviewButton: "",
       lastPayload: null,
-      lastRawResponse: null
+      lastRawResponse: null,
+      pendingPreviewJump: false
     };
     let commMessageTypeOptionsSynced = false;
     let booksPreviewState = {
@@ -5874,9 +5875,27 @@
     }
     function selectCommTemplateFromGallery_(messageType){
       setSelectedCommMessageType_(messageType);
+      communicationsState.pendingPreviewJump = true;
       resetCommunicationsForSelection_(false);
       updateCommunicationsUi_();
       if (currentDetail && getSelectedCommMessageType_() !== "custom_email") previewApplicantMessageUi_("gallery_select");
+      else {
+        communicationsState.pendingPreviewJump = false;
+        scrollToCommunicationPreview_();
+      }
+    }
+    function scrollToCommunicationPreview_(){
+      window.setTimeout(function(){
+        var editable = document.getElementById("commEditablePanel");
+        var result = document.getElementById("commResult");
+        var target = editable && !editable.classList.contains("hidden") ? editable : result;
+        if (target && typeof target.scrollIntoView === "function") target.scrollIntoView({ behavior: "smooth", block: "start" });
+        var focusTarget = target && target.querySelector ? target.querySelector("input, textarea, button") : null;
+        if (focusTarget && typeof focusTarget.focus === "function") {
+          try { focusTarget.focus({ preventScroll: true }); }
+          catch (_err) { focusTarget.focus(); }
+        }
+      }, 0);
     }
     function renderCommTemplateGallery_(){
       var recEl = document.getElementById("commTemplateRecommendation");
@@ -5920,7 +5939,7 @@
           + "<div style='margin-top:6px;font-size:12px;line-height:1.45;'><strong>Stage:</strong> " + esc(meta.stageSuitability || "") + "</div>"
           + "<div class='commTemplateCardMeta'>" + chips.join("") + "</div>"
           + (meta.operatorWarning ? "<div class='muted' style='font-size:11px;'>" + esc(meta.operatorWarning) + "</div>" : "")
-          + "<button class='btn small' type='button' onclick='selectCommTemplateFromGallery_(" + JSON.stringify(type) + ")'>" + esc(isSelected ? "Selected" : "Use template") + "</button>"
+          + "<button class='btn small' type='button' onclick='selectCommTemplateFromGallery_(" + JSON.stringify(type) + ")'>Preview email</button>"
           + "</div>";
       }).join("");
     }
@@ -6967,6 +6986,10 @@
         }
         renderCommunicationsResult_(communicationsState.result);
         renderCommunicationsDebug_();
+        if (communicationsState.pendingPreviewJump) {
+          communicationsState.pendingPreviewJump = false;
+          scrollToCommunicationPreview_();
+        }
       });
     }
     function sendApplicantMessageUi_(){
