@@ -330,12 +330,14 @@
       color:#d8e6f6;
     }
     .commTemplateCard.selected{ border-color:rgba(34,197,94,.48); box-shadow:inset 0 0 0 1px rgba(34,197,94,.16); }
-    .commTemplateCard.recommended{ border-color:rgba(96,165,250,1); box-shadow:0 0 0 3px rgba(96,165,250,.24), inset 0 0 0 1px rgba(147,197,253,.36); background:rgba(18,36,60,.94); }
+    .commTemplateCard.recommended{ border-width:2px; border-color:rgba(125,211,252,1); box-shadow:0 0 0 3px rgba(125,211,252,.28), inset 0 0 0 1px rgba(186,230,253,.42); background:rgba(20,47,76,.96); }
+    .commTemplateRecommendedBanner{ display:inline-flex; align-items:center; gap:6px; margin-bottom:8px; padding:5px 9px; border-radius:8px; border:1px solid rgba(125,211,252,.8); background:rgba(8,47,73,.95); color:#e0f2fe; font-size:12px; font-weight:900; letter-spacing:0; }
     .commTemplateCardTitle{ font-weight:900; color:#f4f9ff; margin-bottom:4px; }
     .commTemplateCardMeta{ display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
     .commTemplateChip{ font-size:11px; padding:3px 7px; border-radius:999px; border:1px solid rgba(148,163,184,.26); background:rgba(15,23,42,.74); color:#cbd5e1; }
     .commTemplateChip.warn{ border-color:rgba(245,158,11,.42); color:#fde7c3; }
     .commTemplateChip.ok{ border-color:rgba(34,197,94,.42); color:#bbf7d0; }
+    .commTemplateChip.recommended{ border-color:rgba(125,211,252,.78); background:rgba(8,47,73,.82); color:#e0f2fe; font-weight:800; }
     .commResultBox{
       margin-top:10px;
       padding:12px;
@@ -5925,13 +5927,14 @@
         var isRecommended = recommendation.actionable === true && type === recommendation.messageType;
         var cls = "commTemplateCard" + (isSelected ? " selected" : "") + (isRecommended ? " recommended" : "");
         var chips = [];
-        if (isRecommended) chips.push("<span class='commTemplateChip ok'>Recommended next action</span>");
+        if (isRecommended) chips.push("<span class='commTemplateChip recommended'>Recommended next action</span>");
         chips.push("<span class='commTemplateChip " + (meta.selectedOnly ? "ok" : "warn") + "'>" + esc(meta.selectedOnly ? "Selected-only" : "Batch-safe") + "</span>");
         if (meta.requiresPaymentQuoteData) chips.push("<span class='commTemplateChip warn'>Needs payment/quote data</span>");
         if (meta.requiresPortalLink) chips.push("<span class='commTemplateChip'>Needs portal link</span>");
         if (meta.semanticRisk) chips.push("<span class='commTemplateChip warn'>" + esc(meta.semanticRisk) + "</span>");
         chips.push("<span class='commTemplateChip'>" + esc(commTemplatePlaceholderStatus_(meta)) + "</span>");
         return "<div class='" + cls + "'>"
+          + (isRecommended ? "<div class='commTemplateRecommendedBanner'>Recommended next action</div>" : "")
           + "<div class='commTemplateCardTitle'>" + esc(meta.label || type) + "</div>"
           + "<div class='muted' style='font-size:12px;'>" + esc(type) + "</div>"
           + "<div style='margin-top:8px;font-size:12px;line-height:1.45;'>" + esc(meta.purpose || "") + "</div>"
