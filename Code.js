@@ -7101,6 +7101,8 @@ function applicantDocumentStatusSummary_(rowObj) {
 
 function applicantPaymentStatusSummary_(rowObj) {
   var row = rowObj || {};
+  var preVerificationNote = communicationPreVerificationPaymentNote_(row);
+  if (preVerificationNote) return preVerificationNote;
   if (typeof isCanonicalPaymentVerified_ === "function" && isCanonicalPaymentVerified_(row)) return "Payment status: payment evidence has been verified.";
   var receiptStatus = clean_(row.Receipt_Status || "");
   if (receiptStatus) return "Payment status: " + receiptStatus + ".";
@@ -7334,6 +7336,11 @@ function communicationQuoteEligible_(rowObj) {
   return !!(quote && Number(quote.subjectCount || 0) > 0);
 }
 
+function communicationPreVerificationPaymentNote_(rowObj) {
+  if (communicationDocsVerifiedForPayment_(rowObj || {}) === true) return "";
+  return "Payment note: Payment is not required at this stage. Please do not make payment until your documents have been verified and FODE KIA sends you an official payment or quote email.";
+}
+
 function buildDocumentAttentionLines_(rowObj, opts) {
   var row = rowObj || {};
   var options = opts && typeof opts === "object" ? opts : {};
@@ -7396,6 +7403,7 @@ function buildApplicationFeedbackEmailBody_(context) {
   var parentOrApplicantName = buildParentOrApplicantName_(row);
   var applicantName = buildApplicantFullName_(row) || "the applicant";
   var feedbackList = buildApplicationFeedbackIssues_(row);
+  var paymentNote = communicationPreVerificationPaymentNote_(row);
   return [
     "Dear " + parentOrApplicantName + ",",
     "",
@@ -7406,6 +7414,8 @@ function buildApplicationFeedbackEmailBody_(context) {
     "Please review the notes below:",
     "",
     feedbackList,
+    "",
+    paymentNote,
     "",
     "To correct or upload the required documents, please log in to the student portal using the link below:",
     "",
@@ -7428,6 +7438,7 @@ function buildFdAcknowledgementEmailBody_(context) {
   var applicantName = buildApplicantFullName_(row) || "the applicant";
   var portalUrl = clean_(ctx.portalUrl || "");
   var docLines = buildFdAcknowledgementDocumentLines_(row);
+  var paymentNote = communicationPreVerificationPaymentNote_(row);
   var docsSection = docLines.length ? [
     "Documents still required:",
     "",
@@ -7445,6 +7456,8 @@ function buildFdAcknowledgementEmailBody_(context) {
     "Admissions will review the application and the uploaded documents recorded for this applicant.",
     "",
     docsSection,
+    "",
+    paymentNote,
     "",
     "Please visit the Student Portal using the link below to review your application details and upload any remaining required documents:",
     "",

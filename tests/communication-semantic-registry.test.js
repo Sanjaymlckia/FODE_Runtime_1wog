@@ -233,6 +233,8 @@ assert.match(adminUiSource, /previewApplicantMessageUi_\("type_change_refresh"\)
 assert.match(adminUiSource, /const COMM_TEMPLATE_GALLERY = <\?!= JSON\.stringify\(communicationTemplateGalleryMetadata_\(\)\) \?>;/, "AdminUI must render gallery metadata from the backend communication registry");
 assert.match(adminUiSource, /commTemplateGallery/, "Selected-applicant communication template gallery must be rendered");
 assert.match(adminUiSource, /Use recommended/, "Template gallery must expose advisory recommended-template selection");
+assert.match(adminUiSource, /Recommended next action/, "Recommended template highlight must expose a clear badge/label");
+assert.match(adminUiSource, /recommendation\.actionable === true/, "Recommended highlight must be driven by backend actionability");
 
 const galleryMetadata = context.communicationTemplateGalleryMetadata_();
 const galleryTypes = new Set(galleryMetadata.map((entry) => entry.messageType));
@@ -378,7 +380,10 @@ const templateFunctionNames = [
   "communicationDocsVerifiedForPayment_",
   "communicationPaymentEvidenceMissing_",
   "communicationQuoteEligible_",
+  "communicationPreVerificationPaymentNote_",
   "buildDocumentAttentionLines_",
+  "buildApplicationFeedbackIssues_",
+  "buildApplicationFeedbackEmailBody_",
   "buildFdAcknowledgementDocumentLines_",
   "buildFdAcknowledgementEmailBody_",
   "uniqCsv_",
@@ -460,7 +465,15 @@ const applicantContext = {
 const fdAcknowledgementBody = templateContext.buildFdAcknowledgementEmailBody_(applicantContext);
 assert.match(fdAcknowledgementBody, /Documents still required:/);
 assert.match(fdAcknowledgementBody, /Latest School Reports \/ Documents: not yet uploaded in the current application record\./);
+assert.match(fdAcknowledgementBody, /Payment is not required at this stage/i);
+assert.match(fdAcknowledgementBody, /official payment or quote email/i);
 assert.doesNotMatch(fdAcknowledgementBody, /Admission Fee Payment Receipt/, "fd_acknowledgement must not request payment receipt before document verification");
+
+const applicationFeedbackBody = templateContext.buildApplicationFeedbackEmailBody_(applicantContext);
+assert.match(applicationFeedbackBody, /Please review the notes below:/);
+assert.match(applicationFeedbackBody, /Latest School Reports \/ Documents: Cannot verify; no file uploaded\./);
+assert.match(applicationFeedbackBody, /Payment is not required at this stage/i);
+assert.doesNotMatch(applicationFeedbackBody, /Admission Fee Payment Receipt/, "application_feedback must not request payment receipt before document verification");
 
 const docsMissingBody = templateContext.buildDocsMissingEmailBody_(applicantContext);
 assert.match(docsMissingBody, /Kundu International Academy \/ FODE Admissions/);
@@ -474,6 +487,8 @@ assert.match(docsMissingBody, /Document status: review is still in progress/i);
 assert.match(docsMissingBody, /This is not a final application decision/i);
 assert.match(docsMissingBody, /Open the secure applicant portal/i);
 assert.match(docsMissingBody, /upload or resend/i);
+assert.match(docsMissingBody, /Payment is not required at this stage/i);
+assert.match(docsMissingBody, /Please do not make payment until your documents have been verified/i);
 assert.match(docsMissingBody, /FODE KIA Admissions Team/);
 assert.match(docsMissingBody, /Admissions Office/);
 assert.doesNotMatch(docsMissingBody, /\breject(?:ed|ion)?\b/i);
