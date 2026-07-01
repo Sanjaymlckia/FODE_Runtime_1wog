@@ -5842,28 +5842,23 @@
     function recommendCommTemplateForDetail_(detail){
       var d = detail || {};
       if (!d || !String(d.ApplicantID || "").trim()) {
-        return { messageType:"custom_email", reason:"Select an applicant before choosing an operational template." };
+        return { messageType:"", reason:"Select an applicant before choosing an operational template.", actionable:false };
       }
-      if (opsHasEmailIssue_(d)) {
-        return { messageType:"contact_fallback_manual", reason:"Email/contact evidence needs manual fallback review." };
+      var backendType = String(d.Comm_Recommended_Message_Type || "").trim();
+      var canSendNow = d.Comm_Can_Send_Now === true;
+      var blockReason = String(d.Comm_Block_Reason || d.Comm_Block_Code || "").trim();
+      if (backendType && canSendNow) {
+        return { messageType:backendType, reason:"Recommended next action from communication authority.", actionable:true };
       }
-      var facts = {};
-      try { facts = opsApplicantQueueFacts_(d) || {}; } catch (_err) { facts = {}; }
-      var docState = String(facts.documentState || "").trim();
-      var paymentState = String(facts.paymentState || "").trim();
-      var paymentVerified = facts.paymentVerified === true || detailCanonicalPaymentVerified_(d);
-      var receiptPresent = detailHasFeeReceiptEvidence_(d) || paymentState === "payment_evidence_pending_verification";
-      if (["awaiting_uploads", "partially_uploaded", "uploaded_review_required", "document_correction_required", "correction_required"].indexOf(docState) >= 0) {
-        return { messageType:"docs_missing", reason:"Document state indicates missing, incomplete, or correction-required evidence." };
+      if (backendType) {
+        return {
+          messageType:"",
+          blockedMessageType:backendType,
+          reason:blockReason || "No recommended send action is currently available.",
+          actionable:false
+        };
       }
-      if (paymentVerified) {
-        return { messageType:"application_acceptance_confirmation", reason:"Payment is verified; send only if acceptance/enrolment authority is confirmed." };
-      }
-      if (docState === "eligibility_cleared" || docState === "docs_verified" || docState === "verified") {
-        if (receiptPresent) return { messageType:"payment_followup", reason:"Receipt/payment evidence is present and still needs review or verification." };
-        return { messageType:"application_verified_quote", reason:"Documents are verified and payment evidence is not yet received." };
-      }
-      return { messageType:"custom_email", reason:"Applicant state is unclear; use selected-applicant custom email or manual review." };
+      return { messageType:"", reason:blockReason || "No recommended send action.", actionable:false };
     }
     function commTemplatePlaceholderStatus_(meta){
       var type = String((meta && meta.messageType) || "");
@@ -5891,9 +5886,16 @@
       var selectedType = getSelectedCommMessageType_();
       var recommendation = recommendCommTemplateForDetail_(currentDetail || {});
       var recommendedMeta = getCommTemplateMeta_(recommendation.messageType) || {};
-      recEl.innerHTML = "<strong>Recommended:</strong> " + esc(recommendedMeta.label || recommendation.messageType || "Manual review")
-        + "<br>" + esc(recommendation.reason || "Review applicant state before sending.")
-        + " <button class='btn small' type='button' onclick='selectCommTemplateFromGallery_(" + JSON.stringify(recommendation.messageType || "custom_email") + ")'>Use recommended</button>";
+      if (recommendation.actionable === true && recommendation.messageType) {
+        recEl.innerHTML = "<strong>Recommended next action:</strong> " + esc(recommendedMeta.label || recommendation.messageType)
+          + "<br>" + esc(recommendation.reason || "Review applicant state before sending.")
+          + " <button class='btn small' type='button' onclick='selectCommTemplateFromGallery_(" + JSON.stringify(recommendation.messageType) + ")'>Use recommended</button>";
+      } else {
+        var blockedMeta = getCommTemplateMeta_(recommendation.blockedMessageType || "") || {};
+        recEl.innerHTML = "<strong>No recommended send action</strong>"
+          + (blockedMeta.label ? "<br>Blocked template: " + esc(blockedMeta.label) : "")
+          + "<br>" + esc(recommendation.reason || "Review applicant state before sending.");
+      }
       if (!items.length) {
         galleryEl.innerHTML = "<div class='commTemplateCard'>Template metadata unavailable. Use the message type selector above.</div>";
         return;
@@ -5901,7 +5903,7 @@
       galleryEl.innerHTML = items.map(function(meta){
         var type = String(meta.messageType || "");
         var isSelected = type === selectedType;
-        var isRecommended = type === recommendation.messageType;
+        var isRecommended = recommendation.actionable === true && type === recommendation.messageType;
         var cls = "commTemplateCard" + (isSelected ? " selected" : "") + (isRecommended ? " recommended" : "");
         var chips = [];
         chips.push("<span class='commTemplateChip " + (meta.selectedOnly ? "ok" : "warn") + "'>" + esc(meta.selectedOnly ? "Selected-only" : "Batch-safe") + "</span>");
@@ -9353,7 +9355,7 @@ function renderStageDashboard_(items, emptyMessage){
       var previousApplicantId = String(communicationsState.applicantId || "").trim();
       if (incomingApplicantId !== previousApplicantId) {
         resetCommunicationsState_(incomingApplicantId, false);
-        setSelectedCommMessageType_((recommendCommTemplateForDetail_(d) || {}).messageType || "custom_email");
+        setSelectedCommMessageType_("custom_email");
       } else {
         communicationsState.applicantId = incomingApplicantId;
         setSelectedCommMessageType_(communicationsState.selectedMessageType || "legacy_invite");

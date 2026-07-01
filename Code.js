@@ -6958,7 +6958,10 @@ function communicationBlockReason_(code, messageType) {
     APPLICANT_NOT_FOUND: "Applicant not found.",
     UNKNOWN_FILTER_TYPE: "Unsupported batch planning filter.",
     DOCS_ALREADY_COMPLETE: "Documents are already complete for this applicant.",
-    PAYMENT_ALREADY_RESOLVED: "Payment is already resolved for this applicant."
+    PAYMENT_ALREADY_RESOLVED: "Payment is already resolved for this applicant.",
+    DOCS_NOT_VERIFIED_FOR_PAYMENT: "Documents must be verified before payment communication is recommended.",
+    PAYMENT_EVIDENCE_ALREADY_PRESENT: "Payment evidence is already present for this applicant.",
+    QUOTE_NOT_READY: "Quote details are not ready for this applicant."
   };
   return map[clean_(code || "")] || ("Action blocked for message type: " + clean_(messageType || "unknown"));
 }
@@ -7308,13 +7311,38 @@ function feedbackStatusNeedsAttention_(status) {
   return normalized === "rejected" || normalized === "fraudulent";
 }
 
+function isPaymentReceiptDocumentField_(doc) {
+  var d = doc || {};
+  return clean_(d.file || "") === "Fee_Receipt_File" || clean_(d.status || "") === "Receipt_Status";
+}
+
+function communicationDocsVerifiedForPayment_(rowObj, baseState) {
+  var row = rowObj || {};
+  if (baseState && baseState.docsVerified === true) return true;
+  return computeDocVerificationStatus_(row) === "Verified" || clean_(row.Docs_Verified || "") === "Yes";
+}
+
+function communicationPaymentEvidenceMissing_(rowObj) {
+  var row = rowObj || {};
+  return !isCanonicalPaymentVerified_(row) && !hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File");
+}
+
+function communicationQuoteEligible_(rowObj) {
+  var row = rowObj || {};
+  if (typeof computeFodeFeeQuote_ !== "function") return false;
+  var quote = computeFodeFeeQuote_(row);
+  return !!(quote && Number(quote.subjectCount || 0) > 0);
+}
+
 function buildDocumentAttentionLines_(rowObj, opts) {
   var row = rowObj || {};
   var options = opts && typeof opts === "object" ? opts : {};
   var docs = Array.isArray(CONFIG.DOC_FIELDS) ? CONFIG.DOC_FIELDS : [];
+  var docsVerified = communicationDocsVerifiedForPayment_(row);
   var lines = [];
   docs.forEach(function (doc) {
     if (!doc || !doc.file || !doc.status || !doc.comment) return;
+    if (options.excludePaymentReceiptBeforeDocsVerified === true && !docsVerified && isPaymentReceiptDocumentField_(doc)) return;
     var label = clean_(doc.label || doc.file || "");
     if (!label) return;
     var rawFile = row[doc.file];
@@ -7346,6 +7374,7 @@ function buildApplicationFeedbackIssues_(rowObj) {
     attentionStatusText: "",
     includeComments: true,
     includeCommentsForAttention: true,
+    excludePaymentReceiptBeforeDocsVerified: true,
     emptyFallback: "Please review the application details and upload any missing or corrected documents requested by the office."
   }).join("\n");
 }
@@ -7356,6 +7385,7 @@ function buildFdAcknowledgementDocumentLines_(rowObj) {
     attentionStatusText: "uploaded, but a replacement document is still required in the current application record.",
     includeComments: false,
     includeCommentsForAttention: false,
+    excludePaymentReceiptBeforeDocsVerified: true,
     emptyFallback: ""
   });
 }
@@ -7511,7 +7541,7 @@ function communicationMatchesFilterPrecheck_(rowObj, filterType) {
     return !status || status === "NEW" || status === "READY";
   }
   if (normalized === "docs_missing") return state.base && state.base.docsMissing === true;
-  if (normalized === "payment_pending") return state.base && state.base.paymentOutstanding === true;
+  if (normalized === "payment_pending") return state.base && state.base.docsVerified === true && state.base.paymentOutstanding === true;
   return false;
 }
 
@@ -7550,6 +7580,7 @@ function buildDocsMissingEmailBody_(context) {
     attentionStatusText: "requires correction or resubmission.",
     includeComments: true,
     includeCommentsForAttention: true,
+    excludePaymentReceiptBeforeDocsVerified: true,
     emptyFallback: "The office has identified at least one required document that still needs review or resubmission."
   }).join("\n");
   return composeSelectedApplicantEmail_(ctx, [
@@ -7932,8 +7963,18 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
   if (normalizedType === "docs_missing" && baseState.docsMissing !== true) {
     return block("DOCS_ALREADY_COMPLETE");
   }
-  if (normalizedType === "payment_followup" && baseState.paymentOutstanding !== true) {
-    return block("PAYMENT_ALREADY_RESOLVED");
+  if (normalizedType === "payment_followup") {
+    if (communicationDocsVerifiedForPayment_(row, baseState) !== true) return block("DOCS_NOT_VERIFIED_FOR_PAYMENT");
+    if (baseState.paymentOutstanding !== true) return block("PAYMENT_ALREADY_RESOLVED");
+  }
+  if (normalizedType === "application_receipt_request") {
+    if (communicationDocsVerifiedForPayment_(row, baseState) !== true) return block("DOCS_NOT_VERIFIED_FOR_PAYMENT");
+    if (communicationPaymentEvidenceMissing_(row) !== true) return block("PAYMENT_EVIDENCE_ALREADY_PRESENT");
+  }
+  if (normalizedType === "application_verified_quote") {
+    if (communicationDocsVerifiedForPayment_(row, baseState) !== true) return block("DOCS_NOT_VERIFIED_FOR_PAYMENT");
+    if (baseState.paymentVerified === true) return block("PAYMENT_ALREADY_RESOLVED");
+    if (communicationQuoteEligible_(row) !== true) return block("QUOTE_NOT_READY");
   }
 
   context.eligible = true;
@@ -8254,9 +8295,9 @@ function lifecycleStageMessageTypeMap_() {
     INVITE_PENDING: "legacy_invite",
     INVITED_AWAITING_RESPONSE: "reminder",
     REMINDER_DUE: "reminder",
-    DOCS_REQUIRED: "reminder",
-    PAYMENT_REQUIRED: "reminder",
-    RECEIPT_AWAITING_VERIFICATION: "reminder"
+    DOCS_REQUIRED: "docs_missing",
+    PAYMENT_REQUIRED: "payment_followup",
+    RECEIPT_AWAITING_VERIFICATION: "payment_followup"
   };
 }
 

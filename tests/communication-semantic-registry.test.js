@@ -198,13 +198,16 @@ for (const entry of active) {
 const stageMapper = extractFunction(adminSource, "getBatchMessageTypeForStage_");
 const sharedStageMap = extractFunction(codeSource, "lifecycleStageMessageTypeMap_");
 assert.match(stageMapper, /communicationRecommendedMessageTypeForStage_\(normalized\)/, "Stage Batch must use shared lifecycle-stage message mapping");
-for (const stage of ["INVITED_AWAITING_RESPONSE", "REMINDER_DUE", "DOCS_REQUIRED", "PAYMENT_REQUIRED", "RECEIPT_AWAITING_VERIFICATION"]) {
+for (const stage of ["INVITED_AWAITING_RESPONSE", "REMINDER_DUE"]) {
   assert.equal(context.communicationRecommendedMessageTypeForStage_(stage), "reminder", `${stage} mapping must remain legacy reminder`);
 }
+assert.equal(context.communicationRecommendedMessageTypeForStage_("DOCS_REQUIRED"), "docs_missing", "DOCS_REQUIRED mapping must use document wording");
+assert.equal(context.communicationRecommendedMessageTypeForStage_("PAYMENT_REQUIRED"), "payment_followup", "PAYMENT_REQUIRED mapping must use payment wording");
+assert.equal(context.communicationRecommendedMessageTypeForStage_("RECEIPT_AWAITING_VERIFICATION"), "payment_followup", "RECEIPT_AWAITING_VERIFICATION mapping must use payment wording");
 assert.equal(context.communicationRecommendedMessageTypeForStage_("INVITE_PENDING"), "legacy_invite", "INVITE_PENDING mapping must remain legacy invite");
 assert.equal(context.communicationRecommendedMessageTypeForStage_("PROCESSING"), "", "Unsupported lifecycle stages must not become batch sendable");
 assert.doesNotMatch(sharedStageMap, /application_exam_fee_reminder/, "Exam fee reminder must not be Stage Batch mapped");
-assert.doesNotMatch(sharedStageMap, /docs_missing|payment_followup/, "H3 must not remap Stage Batch to selected-applicant template types");
+assert.doesNotMatch(sharedStageMap, /application_verified_quote|application_receipt_request/, "Selected-only payment templates must not be Stage Batch mapped");
 
 const selectedMessageTypeSelect = adminUiSource.match(/<select id="commMessageType">([\s\S]*?)<\/select>/);
 assert.ok(selectedMessageTypeSelect, "Selected-applicant message type picker must exist");
@@ -311,12 +314,12 @@ vm.runInContext([
 ].join("\n\n"), recommendationContext);
 assert.equal(JSON.stringify(recommendationContext.commTemplateOptionItems_().map((entry) => entry.messageType)), JSON.stringify(selectedPickerOrder), "Selected-applicant picker options must be derived from backend metadata in the preserved visible order");
 assert.equal(JSON.stringify(recommendationContext.commTemplateOptionItems_().map((entry) => recommendationContext.commTemplateOptionLabel_(entry))), JSON.stringify(selectedPickerOrder.map((messageType) => selectedPickerLabels[messageType])), "Selected-applicant picker labels must be derived from backend metadata without changing visible text");
-assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A1", facts:{ documentState:"awaiting_uploads" } }).messageType, "docs_missing");
-assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A2", facts:{ documentState:"eligibility_cleared", paymentState:"payment_evidence_pending" } }).messageType, "application_verified_quote");
-assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A3", Fee_Receipt_File:"https://receipt", facts:{ documentState:"eligibility_cleared", paymentState:"payment_evidence_pending_verification" } }).messageType, "payment_followup");
-assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A4", paymentVerified:true, facts:{ documentState:"eligibility_cleared", paymentState:"payment_verified", paymentVerified:true } }).messageType, "application_acceptance_confirmation");
-assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A5", facts:{ documentState:"unknown" } }).messageType, "custom_email");
-assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A6", emailIssue:true, facts:{ documentState:"eligibility_cleared" } }).messageType, "contact_fallback_manual");
+assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A1", Comm_Recommended_Message_Type:"docs_missing", Comm_Can_Send_Now:true }).messageType, "docs_missing");
+assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A2", Comm_Recommended_Message_Type:"application_verified_quote", Comm_Can_Send_Now:true }).messageType, "application_verified_quote");
+assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A3", Comm_Recommended_Message_Type:"payment_followup", Comm_Can_Send_Now:true }).messageType, "payment_followup");
+assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A4", Comm_Recommended_Message_Type:"payment_followup", Comm_Can_Send_Now:false, Comm_Block_Reason:"Cooldown active" }).messageType, "");
+assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A4", Comm_Recommended_Message_Type:"payment_followup", Comm_Can_Send_Now:false, Comm_Block_Reason:"Cooldown active" }).blockedMessageType, "payment_followup");
+assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A5", facts:{ documentState:"awaiting_uploads" } }).messageType, "");
 
 const communicationUiDisplayContext = {};
 vm.createContext(communicationUiDisplayContext);
@@ -371,7 +374,13 @@ const templateFunctionNames = [
   "hasUnresolvedActionRequiredPlaceholder_",
   "communicationRequiresResolvedActionPlaceholders_",
   "feedbackStatusNeedsAttention_",
+  "isPaymentReceiptDocumentField_",
+  "communicationDocsVerifiedForPayment_",
+  "communicationPaymentEvidenceMissing_",
+  "communicationQuoteEligible_",
   "buildDocumentAttentionLines_",
+  "buildFdAcknowledgementDocumentLines_",
+  "buildFdAcknowledgementEmailBody_",
   "uniqCsv_",
   "subjectsToCsv_",
   "computeFodeFeeQuote_",
@@ -448,6 +457,11 @@ const applicantContext = {
     Report_Comment: "Please upload the latest school report."
   }
 };
+const fdAcknowledgementBody = templateContext.buildFdAcknowledgementEmailBody_(applicantContext);
+assert.match(fdAcknowledgementBody, /Documents still required:/);
+assert.match(fdAcknowledgementBody, /Latest School Reports \/ Documents: not yet uploaded in the current application record\./);
+assert.doesNotMatch(fdAcknowledgementBody, /Admission Fee Payment Receipt/, "fd_acknowledgement must not request payment receipt before document verification");
+
 const docsMissingBody = templateContext.buildDocsMissingEmailBody_(applicantContext);
 assert.match(docsMissingBody, /Kundu International Academy \/ FODE Admissions/);
 assert.match(docsMissingBody, /FODE KIA Application Communication/);
@@ -464,6 +478,29 @@ assert.match(docsMissingBody, /FODE KIA Admissions Team/);
 assert.match(docsMissingBody, /Admissions Office/);
 assert.doesNotMatch(docsMissingBody, /\breject(?:ed|ion)?\b/i);
 assert.doesNotMatch(docsMissingBody, /\byour (?:fault|failure)\b/i);
+assert.doesNotMatch(docsMissingBody, /Admission Fee Payment Receipt/, "docs_missing must not request payment receipt before document verification");
+
+const docsVerifiedMissingReceiptContext = {
+  applicantId: "FODE-26-DOCS-VERIFIED",
+  portalUrl: "https://portal.example.test/verified",
+  rowObj: {
+    First_Name: "Verified",
+    Last_Name: "Docs",
+    Parent_First_Name: "Verified",
+    Parent_Last_Name: "Parent",
+    Docs_Verified: "Yes",
+    Birth_ID_Passport_File: "https://example.test/birth.pdf",
+    Birth_ID_Status: "Verified",
+    Latest_School_Report_File: "https://example.test/report.pdf",
+    Report_Status: "Verified",
+    Passport_Photo_File: "https://example.test/photo.jpg",
+    Photo_Status: "Verified",
+    Fee_Receipt_File: "",
+    Receipt_Status: ""
+  }
+};
+const fdAcknowledgementAfterDocsBody = templateContext.buildFdAcknowledgementEmailBody_(docsVerifiedMissingReceiptContext);
+assert.match(fdAcknowledgementAfterDocsBody, /Admission Fee Payment Receipt/, "payment receipt may appear only after document verification");
 
 const paymentBody = templateContext.buildPaymentFollowupEmailBody_(applicantContext);
 assert.match(paymentBody, /Kundu International Academy \/ FODE Admissions/);

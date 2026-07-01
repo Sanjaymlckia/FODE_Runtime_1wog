@@ -109,13 +109,21 @@ for (const entry of planned) {
 const stageMapper = extractFunction(adminSource, "getBatchMessageTypeForStage_");
 const sharedStageMap = extractFunction(codeSource, "lifecycleStageMessageTypeMap_");
 assert.match(stageMapper, /communicationRecommendedMessageTypeForStage_\(normalized\)/, "Stage Batch must delegate to shared lifecycle-stage message mapping");
-assert.equal(context.communicationRecommendedMessageTypeForStage_("DOCS_REQUIRED"), "reminder", "DOCS_REQUIRED Stage Batch mapping must remain legacy reminder");
+assert.equal(context.communicationRecommendedMessageTypeForStage_("DOCS_REQUIRED"), "docs_missing", "DOCS_REQUIRED Stage Batch mapping must use document wording");
 assert.equal(context.communicationRecommendedMessageTypeForStage_("REMINDER_DUE"), "reminder", "REMINDER_DUE Stage Batch mapping must remain legacy reminder");
 assert.equal(context.communicationRecommendedMessageTypeForStage_("INVITED_AWAITING_RESPONSE"), "reminder", "INVITED_AWAITING_RESPONSE Stage Batch mapping must remain legacy reminder");
 assert.equal(context.communicationRecommendedMessageTypeForStage_("INVITE_PENDING"), "legacy_invite", "INVITE_PENDING Stage Batch mapping must remain legacy invite");
+assert.equal(context.communicationRecommendedMessageTypeForStage_("PAYMENT_REQUIRED"), "payment_followup", "PAYMENT_REQUIRED Stage Batch mapping must use payment wording");
+assert.equal(context.communicationRecommendedMessageTypeForStage_("RECEIPT_AWAITING_VERIFICATION"), "payment_followup", "RECEIPT_AWAITING_VERIFICATION Stage Batch mapping must use payment wording");
 assert.equal(context.communicationRecommendedMessageTypeForStage_("PROCESSING"), "", "PROCESSING must remain unsupported for Stage Batch messaging");
 assert.equal(context.communicationRecommendedMessageTypeForStage_("application_exam_fee_reminder"), "", "Planned template keys must not become lifecycle-stage mappings");
-assert.doesNotMatch(sharedStageMap, /custom_email|docs_missing|payment_followup|application_verified_quote|application_acceptance_confirmation|application_exam_fee_reminder/, "Selected/manual templates must not be Stage Batch mapped");
+assert.doesNotMatch(sharedStageMap, /custom_email|application_verified_quote|application_acceptance_confirmation|application_exam_fee_reminder/, "Selected/manual templates must not be Stage Batch mapped");
+
+const resolveFromRow = extractFunction(codeSource, "resolveApplicantMessageContextFromRow_");
+assert.match(resolveFromRow, /normalizedType === "payment_followup"[\s\S]*DOCS_NOT_VERIFIED_FOR_PAYMENT/, "payment_followup must require document verification first");
+assert.match(resolveFromRow, /normalizedType === "application_receipt_request"[\s\S]*communicationPaymentEvidenceMissing_/, "receipt request must require missing payment evidence");
+assert.match(resolveFromRow, /normalizedType === "application_verified_quote"[\s\S]*communicationQuoteEligible_/, "verified quote must require quote eligibility");
+assert.match(resolveFromRow, /PAYMENT_ALREADY_RESOLVED/, "payment templates must block after canonical payment resolution");
 
 const sendApplicant = extractFunction(codeSource, "sendApplicantMessage_");
 const dispatchApplicant = extractFunction(codeSource, "dispatchApplicantMessage_");
