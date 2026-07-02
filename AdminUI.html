@@ -357,6 +357,16 @@
       border-color: rgba(239,68,68,.45);
       background: rgba(127,29,29,.24);
     }
+    .commOverridePanel{
+      margin-top:10px;
+      padding:12px;
+      border-radius:12px;
+      border:1px solid rgba(245,158,11,.52);
+      background:rgba(120,53,15,.22);
+      color:#fde7c3;
+    }
+    .commOverridePanel textarea{ width:100%; min-height:72px; margin-top:8px; background:#0f172a; color:#f8fafc; border:1px solid rgba(245,158,11,.45); border-radius:8px; padding:8px; }
+    .commPrereqList{ margin:8px 0 0; padding-left:18px; font-size:12px; line-height:1.45; }
     .commPreviewBody{
       white-space:pre-wrap;
       font-size:13px;
@@ -2461,6 +2471,13 @@
             <button id="btnCommSendEdited" class="btn small ok" type="button" onclick="sendApplicantMessageUi_()" disabled>Send Edited Email</button>
           </div>
         </div>
+        <div id="commOverridePanel" class="commOverridePanel hidden">
+          <strong>WARNING</strong>
+          <div style="margin-top:6px;">This communication is outside the normal applicant lifecycle. Sending this message may imply acceptance, approval or financial authority. Continue only if exceptional circumstances apply.</div>
+          <label style="display:block;margin-top:8px;font-weight:800;">Super Admin override justification</label>
+          <textarea id="commOverrideReason" maxlength="500" placeholder="Required: explain the exceptional circumstance before preview/send override."></textarea>
+          <div class="muted" style="font-size:12px;margin-top:6px;">Minimum 20 characters. Override is logged with operator, role, applicant, template, reason, and missing prerequisites.</div>
+        </div>
         <div id="commResult" class="commResultBox hidden"></div>
         <div id="commDebug" class="commResultBox hidden" style="margin-top:8px;"></div>
       </div>
@@ -2796,7 +2813,8 @@
       lastPreviewButton: "",
       lastPayload: null,
       lastRawResponse: null,
-      pendingPreviewJump: false
+      pendingPreviewJump: false,
+      authorityOverrideReason: ""
     };
     let commMessageTypeOptionsSynced = false;
     let booksPreviewState = {
@@ -5781,6 +5799,7 @@
       communicationsState.previewApplicantId = "";
       communicationsState.previewMessageType = "";
       communicationsState.portalUrl = "";
+      communicationsState.authorityOverrideReason = "";
       if (!preserveResult) communicationsState.result = null;
       communicationsState.busy = false;
     }
@@ -5925,9 +5944,15 @@
         var type = String(meta.messageType || "");
         var isSelected = type === selectedType;
         var isRecommended = recommendation.actionable === true && type === recommendation.messageType;
+        var currentResult = communicationsState.result && typeof communicationsState.result === "object" ? communicationsState.result : null;
+        var isBlockedSelected = isSelected
+          && currentResult
+          && String(currentResult.messageType || "") === type
+          && String(currentResult.result || "").toUpperCase() === "BLOCKED";
         var cls = "commTemplateCard" + (isSelected ? " selected" : "") + (isRecommended ? " recommended" : "");
         var chips = [];
         if (isRecommended) chips.push("<span class='commTemplateChip recommended'>Recommended next action</span>");
+        if (isBlockedSelected) chips.push("<span class='commTemplateChip warn'>Blocked</span>");
         chips.push("<span class='commTemplateChip " + (meta.selectedOnly ? "ok" : "warn") + "'>" + esc(meta.selectedOnly ? "Selected-only" : "Batch-safe") + "</span>");
         if (meta.requiresPaymentQuoteData) chips.push("<span class='commTemplateChip warn'>Needs payment/quote data</span>");
         if (meta.requiresPortalLink) chips.push("<span class='commTemplateChip'>Needs portal link</span>");
@@ -5941,6 +5966,7 @@
           + "<div style='margin-top:6px;font-size:12px;line-height:1.45;'><strong>Use when:</strong> " + esc(meta.whenToUse || "") + "</div>"
           + "<div style='margin-top:6px;font-size:12px;line-height:1.45;'><strong>Stage:</strong> " + esc(meta.stageSuitability || "") + "</div>"
           + "<div class='commTemplateCardMeta'>" + chips.join("") + "</div>"
+          + (isBlockedSelected && currentResult.blockReason ? "<div class='muted' style='font-size:11px;'><strong>Blocked:</strong> " + esc(currentResult.blockReason) + "</div>" : "")
           + (meta.operatorWarning ? "<div class='muted' style='font-size:11px;'>" + esc(meta.operatorWarning) + "</div>" : "")
           + "<button class='btn small' type='button' onclick='selectCommTemplateFromGallery_(" + JSON.stringify(type) + ")'>Preview email</button>"
           + "</div>";
@@ -6221,6 +6247,7 @@
       if (!res) {
         box.className = "commResultBox hidden";
         box.innerHTML = "";
+        renderCommOverridePanel_(null);
         return;
       }
       var resultType = String(res.result || "").trim().toUpperCase();
@@ -6236,11 +6263,19 @@
         parts.push('<div style="margin-top:6px;"><strong>Result:</strong> ' + esc(resultType) + '</div>');
         if (res.blockCode) parts.push('<div style="margin-top:6px;"><strong>Code:</strong> ' + esc(res.blockCode) + '</div>');
         if (res.blockReason) parts.push('<div style="margin-top:6px;"><strong>Reason:</strong> ' + esc(res.blockReason) + '</div>');
+        if (Array.isArray(res.missingPrerequisites) && res.missingPrerequisites.length) {
+          parts.push('<div style="margin-top:8px;"><strong>Required prerequisites:</strong></div>');
+          parts.push('<ul class="commPrereqList">' + res.missingPrerequisites.map(function(item){
+            return '<li>' + esc(String((item && item.label) || "")) + (item && item.detail ? ' <span class="muted">(' + esc(item.detail) + ')</span>' : '') + '</li>';
+          }).join("") + '</ul>');
+        }
+        if (res.protectedCommunication === true) parts.push('<div style="margin-top:8px;"><strong>Protected communication:</strong> lifecycle authority gate active.</div>');
         if (res.debugId) parts.push('<div class="muted" style="margin-top:6px;font-size:12px;"><strong>Debug:</strong> ' + esc(res.debugId) + '</div>');
       }
       if (resultType === 'PREVIEW' && res.effectiveEmail) parts.push('<div style="margin-top:8px;"><strong>Recipient:</strong> ' + esc(commTemplatePreviewText_(res.effectiveEmail)) + '</div>');
       if (resultType === 'PREVIEW' && res.subject) parts.push('<div style="margin-top:8px;"><strong>Subject:</strong> ' + esc(commTemplatePreviewText_(res.subject)) + '</div>');
       if (resultType === 'PREVIEW' && res.body) parts.push('<div class="commPreviewBody">' + esc(commTemplatePreviewText_(res.body)) + '</div>');
+      if (resultType === 'PREVIEW' && res.overrideApplied === true) parts.push('<div class="commResultBox warn" style="margin-top:10px;"><strong>Super Admin override active.</strong> This preview bypassed one or more protected lifecycle prerequisites and will be logged if sent.</div>');
       if (resultType === "SENT") {
         parts.push('<div style="margin-top:6px;">Message sent successfully.</div>');
         if (res.subject) parts.push('<div style="margin-top:6px;"><strong>Subject:</strong> ' + esc(res.subject) + '</div>');
@@ -6253,6 +6288,58 @@
       if (resultType !== "BLOCKED" && res.debugId) parts.push('<div class="muted" style="margin-top:6px;font-size:12px;">Debug ID: ' + esc(res.debugId) + '</div>');
       box.className = cls;
       box.innerHTML = parts.join("");
+      renderCommOverridePanel_(res);
+    }
+    function renderCommOverridePanel_(result){
+      var panel = document.getElementById("commOverridePanel");
+      if (!panel) return;
+      var res = result && typeof result === "object" ? result : {};
+      var show = IS_SUPER === true
+        && String(res.result || "").toUpperCase() === "BLOCKED"
+        && res.protectedCommunication === true
+        && res.overridePermitted === true;
+      panel.classList.toggle("hidden", !show);
+    }
+    function commOverridePanelVisible_(){
+      var panel = document.getElementById("commOverridePanel");
+      return !!(panel && !panel.classList.contains("hidden"));
+    }
+    function commAuthorityOverrideReason_(){
+      var el = document.getElementById("commOverrideReason");
+      return String((el && el.value) || "").trim();
+    }
+    function getCommAuthorityOverridePayload_(){
+      if (IS_SUPER !== true) return {};
+      if (commOverridePanelVisible_()) {
+        communicationsState.authorityOverrideReason = commAuthorityOverrideReason_();
+        return {
+          authorityOverride: true,
+          authorityOverrideReason: communicationsState.authorityOverrideReason
+        };
+      }
+      if (communicationsState.result && communicationsState.result.overrideApplied === true && communicationsState.authorityOverrideReason.length >= 20) {
+        return {
+          authorityOverride: true,
+          authorityOverrideReason: communicationsState.authorityOverrideReason
+        };
+      }
+      return {};
+    }
+    function requireCommOverrideReasonReady_(){
+      if (IS_SUPER !== true || !commOverridePanelVisible_()) return true;
+      var reason = commAuthorityOverrideReason_();
+      if (reason.length >= 20) return true;
+      communicationsState.result = {
+        ok: true,
+        result: "BLOCKED",
+        eligible: false,
+        protectedCommunication: true,
+        overridePermitted: true,
+        blockCode: "COMM_OVERRIDE_REASON_REQUIRED",
+        blockReason: "Super Admin override requires a written justification of at least 20 characters."
+      };
+      renderCommunicationsResult_(communicationsState.result);
+      return false;
     }
     function renderCommunicationsDebug_(){
       var box = document.getElementById("commDebug");
@@ -6969,6 +7056,8 @@
       var applicantId = String(currentDetail.ApplicantID || "").trim();
       var messageType = getSelectedCommMessageType_();
       var payload = { applicantId: applicantId, messageType: messageType };
+      if (!requireCommOverrideReasonReady_()) return;
+      Object.assign(payload, getCommAuthorityOverridePayload_());
       if (isEditableCommType_(messageType) && String(buttonSource || "") !== "top_preview") Object.assign(payload, getCommEditablePayload_());
       communicationsState.lastPreviewButton = String(buttonSource || "");
       communicationsState.lastPayload = resafeJson_(payload);
@@ -7026,13 +7115,16 @@
       var previewReady = communicationsState.previewApplicantId === applicantId && communicationsState.previewMessageType === messageType && communicationsState.result && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
       if (!previewReady) return;
       var payload = { applicantId: applicantId, messageType: messageType, confirmManualSingleSend: true };
+      Object.assign(payload, getCommAuthorityOverridePayload_());
       if (IS_OPERATIONS_ADMIN) {
         payload.sourceSurface = "ops";
         payload.sourceView = "admin";
       }
       if (isEditableCommType_(messageType)) Object.assign(payload, getCommEditablePayload_());
+      if (!requireCommOverrideReasonReady_()) return;
       var recipientForConfirm = String((payload.recipient || communicationsState.result.effectiveEmail || "")).trim();
       var messageTypeLabel = messageType === "application_feedback" ? "Application Feedback" : (messageType === "custom_email" ? "Custom Email" : messageType.replaceAll("_", " "));
+      if (payload.authorityOverride === true && !window.confirm("WARNING: This communication is outside the normal applicant lifecycle and may imply acceptance, approval or financial authority. Continue with Super Admin override?")) return;
       if (!window.confirm("You are about to send " + messageTypeLabel + " to " + recipientForConfirm + ". Continue?")) return;
       runCommunicationsAction_("admin_sendApplicantMessage", payload, function(res){
         communicationsState.result = res && typeof res === "object" ? res : { ok: false, result: "FAILED", blockReason: "Invalid send response.", debugId: "" };

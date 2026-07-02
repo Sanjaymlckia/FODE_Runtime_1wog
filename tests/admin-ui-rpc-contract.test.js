@@ -85,6 +85,9 @@ for (const name of protectedRpcs) {
 assert.doesNotMatch(adminUi, /console\.log\([^)]*(rawValue|fileId|folderId|PortalTokenSecret)/i, "AdminUI console logging must not expose raw file/folder/token details");
 assert.match(adminUi, /withFailureHandler\(function\(err\)/, "AdminUI RPC calls must keep failure handlers");
 assert.match(adminUi, /Runtime: loading\.\.\./, "AdminUI must retain visible runtime-loading state for hydration diagnostics");
+assert.match(adminUi, /id="commOverridePanel"/, "Communication override panel must remain explicit in the selected-applicant UI");
+assert.match(adminUi, /IS_SUPER === true[\s\S]*commOverridePanelVisible_/, "Communication override UI must stay Super Admin gated");
+assert.match(adminUi, /authorityOverrideReason/, "Communication override payload must include mandatory justification text");
 
 console.log("PASS AdminUI inline scripts parse after Apps Script template substitution");
 console.log("PASS AdminUI google.script.run calls resolve to server functions");

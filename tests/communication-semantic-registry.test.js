@@ -58,6 +58,8 @@ const functionNames = [
   "getCommunicationAllowedSendModes_",
   "communicationRequiresPortalUrl_",
   "communicationRequiresResolvedActionPlaceholders_",
+  "getCommunicationAuthorityMatrix_",
+  "getCommunicationAuthorityRule_",
   "communicationTemplateGalleryCopy_",
   "communicationTemplateGalleryMetadata_"
 ];
@@ -98,6 +100,27 @@ for (const entry of registry) {
   assert.ok(allowedEditableModes.has(entry.editableMode), `${entry.messageType} has an invalid editable mode`);
   assert.ok(entry.auditMeaning, `${entry.messageType} needs audit meaning`);
   assert.ok(["active", "planned", "manual"].includes(entry.implementationStatus), `${entry.messageType} has invalid status`);
+  assert.ok(context.getCommunicationAuthorityRule_(entry.messageType), `${entry.messageType} needs a canonical communication authority rule`);
+}
+
+const authorityMatrix = context.getCommunicationAuthorityMatrix_();
+for (const messageType of allowedTypes) {
+  const rule = authorityMatrix[messageType];
+  assert.ok(rule, `${messageType} must be present in the canonical communication authority matrix`);
+  assert.ok(Array.isArray(rule.permittedLifecycleStages), `${messageType} needs explicit lifecycle stages`);
+  assert.ok(rule.requiredDocumentState, `${messageType} needs explicit document-state authority`);
+  assert.ok(rule.requiredPaymentState, `${messageType} needs explicit payment-state authority`);
+  assert.ok(rule.requiredVerificationState, `${messageType} needs explicit verification authority`);
+  assert.ok(rule.requiredApplicantState, `${messageType} needs explicit applicant-state authority`);
+  assert.ok(rule.minimumRole, `${messageType} needs explicit minimum role`);
+  assert.equal(typeof rule.overridePermitted, "boolean", `${messageType} needs explicit override policy`);
+}
+for (const messageType of ["payment_followup", "application_receipt_request", "application_verified_quote", "application_acceptance_confirmation", "application_exam_fee_reminder"]) {
+  assert.equal(authorityMatrix[messageType].protectedAction, true, `${messageType} must be protected by communication authority`);
+  assert.equal(authorityMatrix[messageType].overridePermitted, true, `${messageType} must require explicit Super Admin override path when bypassed`);
+}
+for (const messageType of ["fd_acknowledgement", "docs_missing", "application_feedback"]) {
+  assert.notEqual(authorityMatrix[messageType].requiredPaymentState, "OUTSTANDING", `${messageType} must not require or imply payment before verification`);
 }
 
 for (const entry of active) {

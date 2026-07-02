@@ -60,6 +60,8 @@ vm.runInContext([
   "communicationDefinitionSupportsMode_",
   "isCommunicationTypeBatchSafe_",
   "getCommunicationAllowedSendModes_",
+  "getCommunicationAuthorityMatrix_",
+  "getCommunicationAuthorityRule_",
   "hasUnresolvedActionRequiredPlaceholder_",
   "communicationRequiresResolvedActionPlaceholders_"
 ].map((name) => extractFunction(codeSource, name)).join("\n\n"), context);
@@ -120,6 +122,21 @@ assert.equal(context.communicationRecommendedMessageTypeForStage_("application_e
 assert.doesNotMatch(sharedStageMap, /custom_email|application_verified_quote|application_acceptance_confirmation|application_exam_fee_reminder/, "Selected/manual templates must not be Stage Batch mapped");
 
 const resolveFromRow = extractFunction(codeSource, "resolveApplicantMessageContextFromRow_");
+const authorityMatrixSource = extractFunction(codeSource, "getCommunicationAuthorityMatrix_");
+const authorityEvaluateSource = extractFunction(codeSource, "evaluateCommunicationAuthority_");
+const overrideLogSource = extractFunction(codeSource, "logCommunicationAuthorityOverride_");
+assert.match(resolveFromRow, /evaluateCommunicationAuthority_/, "Selected and batch previews/sends must resolve through the canonical communication authority matrix");
+assert.match(resolveFromRow, /logCommunicationAuthorityOverride_/, "Super Admin authority override must be audit logged by the resolver");
+assert.match(authorityEvaluateSource, /actor\.isSuper !== true/, "Normal Admin must not bypass protected communication authority");
+assert.match(authorityEvaluateSource, /reason\.length < 20/, "Super Admin override must require a written justification");
+assert.match(overrideLogSource, /COMM_AUTHORITY_OVERRIDE/, "Override audit log must use a distinct communication authority event");
+assert.match(overrideLogSource, /missingPrerequisites/, "Override audit log must include missing prerequisites");
+assert.match(authorityMatrixSource, /application_acceptance_confirmation[\s\S]*protectedAction:\s*true/, "Acceptance confirmation must be a protected communication");
+assert.match(authorityMatrixSource, /application_acceptance_confirmation[\s\S]*requiredPaymentState:\s*"VERIFIED"/, "Acceptance confirmation must require verified payment");
+assert.match(authorityMatrixSource, /application_acceptance_confirmation[\s\S]*requiredVerificationState:\s*"ACCEPTANCE_CONFIRMED"/, "Acceptance confirmation must require acceptance authority");
+assert.match(authorityMatrixSource, /payment_followup[\s\S]*requiredDocumentState:\s*"VERIFIED"/, "Payment follow-up must require document verification");
+assert.match(authorityMatrixSource, /application_receipt_request[\s\S]*requiredPaymentState:\s*"EVIDENCE_MISSING"/, "Receipt request must require missing payment evidence");
+assert.match(authorityMatrixSource, /application_verified_quote[\s\S]*requiredPaymentState:\s*"QUOTE_ELIGIBLE_NOT_VERIFIED"/, "Verified quote must require quote eligibility and no verified payment");
 assert.match(resolveFromRow, /normalizedType === "payment_followup"[\s\S]*DOCS_NOT_VERIFIED_FOR_PAYMENT/, "payment_followup must require document verification first");
 assert.match(resolveFromRow, /normalizedType === "application_receipt_request"[\s\S]*communicationPaymentEvidenceMissing_/, "receipt request must require missing payment evidence");
 assert.match(resolveFromRow, /normalizedType === "application_verified_quote"[\s\S]*communicationQuoteEligible_/, "verified quote must require quote eligibility");
@@ -127,6 +144,12 @@ assert.match(resolveFromRow, /PAYMENT_ALREADY_RESOLVED/, "payment templates must
 
 const sendApplicant = extractFunction(codeSource, "sendApplicantMessage_");
 const dispatchApplicant = extractFunction(codeSource, "dispatchApplicantMessage_");
+const adminPreview = extractFunction(adminSource, "admin_previewApplicantMessage");
+const adminSend = extractFunction(adminSource, "admin_sendApplicantMessage");
+const stageSend = extractFunction(adminSource, "admin_sendStageBatch");
+assert.match(adminPreview, /authorityOverrideReason/, "Selected preview wrapper must pass authority override reason to backend authority");
+assert.match(adminSend, /authorityOverrideReason/, "Selected send wrapper must pass authority override reason to backend authority");
+assert.doesNotMatch(stageSend, /authorityOverride/, "Stage Batch must not provide an override bypass");
 assert.match(sendApplicant, /isSystemStabilizationModeActive_/, "Selected send must preserve stabilization gate");
 assert.match(sendApplicant, /ENABLE_PRODUCTION_EMAIL_SENDS/, "Selected send must preserve production-send gate");
 assert.match(sendApplicant, /dispatchApplicantMessage_\(context, built, options\)/, "Selected send must route through guarded delivery dispatch");

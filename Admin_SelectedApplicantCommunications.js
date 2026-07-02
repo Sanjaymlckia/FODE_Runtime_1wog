@@ -20,7 +20,9 @@ function admin_previewApplicantMessage(payload) {
       actorRole: actor.actorRole,
       batchLabel: clean_(p.batchLabel || ""),
       debugId: clean_(p.debugId || dbgId),
-      editedRecipient: clean_(p.recipient || "")
+      editedRecipient: clean_(p.recipient || ""),
+      authorityOverride: p.authorityOverride === true,
+      authorityOverrideReason: clean_(p.authorityOverrideReason || "")
     };
     if (Object.prototype.hasOwnProperty.call(p, "subject") && clean_(p.subject || "")) previewOptions.editedSubject = String(p.subject || "");
     if (Object.prototype.hasOwnProperty.call(p, "body") && clean_(p.body || "")) previewOptions.editedBody = String(p.body || "");
@@ -86,7 +88,9 @@ function admin_sendApplicantMessage(payload) {
       batchLabel: clean_(p.batchLabel || ""),
       debugId: clean_(p.debugId || dbgId),
       manualSingleSendProbe: true,
-      editedRecipient: opsRecipientOverride || clean_(p.recipient || "")
+      editedRecipient: opsRecipientOverride || clean_(p.recipient || ""),
+      authorityOverride: p.authorityOverride === true,
+      authorityOverrideReason: clean_(p.authorityOverrideReason || "")
     };
     if (Object.prototype.hasOwnProperty.call(p, "subject")) sendOptions.editedSubject = String(p.subject || "");
     if (Object.prototype.hasOwnProperty.call(p, "body")) sendOptions.editedBody = String(p.body || "");

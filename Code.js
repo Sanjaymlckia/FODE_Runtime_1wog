@@ -6845,6 +6845,7 @@ function communicationTemplateGalleryMetadata_() {
     var extra = copy[entry.messageType] || {};
     var requiresPlaceholders = communicationRequiresResolvedActionPlaceholders_(entry.messageType);
     var sendAuthority = communicationSendAuthorityForDefinition_(entry);
+    var authorityRule = getCommunicationAuthorityRule_(entry.messageType) || {};
     return {
       messageType: entry.messageType,
       label: clean_(entry.operatorLabel || entry.messageType),
@@ -6863,6 +6864,13 @@ function communicationTemplateGalleryMetadata_() {
       placeholderPolicy: requiresPlaceholders ? "Blocks send until ACTION REQUIRED placeholders are resolved." : "No mandatory operational placeholder gate.",
       editableMode: clean_(entry.editableMode || ""),
       semanticRisk: clean_(entry.semanticRisk || ""),
+      protectedCommunication: authorityRule.protectedAction === true,
+      overridePermitted: authorityRule.overridePermitted === true,
+      permittedLifecycleStages: Array.isArray(authorityRule.permittedLifecycleStages) ? authorityRule.permittedLifecycleStages.slice() : [],
+      requiredDocumentState: clean_(authorityRule.requiredDocumentState || ""),
+      requiredPaymentState: clean_(authorityRule.requiredPaymentState || ""),
+      requiredVerificationState: clean_(authorityRule.requiredVerificationState || ""),
+      requiredApplicantState: clean_(authorityRule.requiredApplicantState || ""),
       operatorWarning: clean_(entry.operatorWarning || ""),
       auditMeaning: clean_(entry.auditMeaning || "")
     };
@@ -6961,9 +6969,373 @@ function communicationBlockReason_(code, messageType) {
     PAYMENT_ALREADY_RESOLVED: "Payment is already resolved for this applicant.",
     DOCS_NOT_VERIFIED_FOR_PAYMENT: "Documents must be verified before payment communication is recommended.",
     PAYMENT_EVIDENCE_ALREADY_PRESENT: "Payment evidence is already present for this applicant.",
-    QUOTE_NOT_READY: "Quote details are not ready for this applicant."
+    QUOTE_NOT_READY: "Quote details are not ready for this applicant.",
+    COMM_AUTHORITY_BLOCKED: "This communication is blocked by the lifecycle authority matrix.",
+    COMM_OVERRIDE_DENIED: "Only Super Admin may override this protected communication gate.",
+    COMM_OVERRIDE_REASON_REQUIRED: "Super Admin override requires a written justification of at least 20 characters.",
+    ACCEPTANCE_NOT_CONFIRMED: "Acceptance or enrolment authority is not confirmed for this applicant."
   };
   return map[clean_(code || "")] || ("Action blocked for message type: " + clean_(messageType || "unknown"));
+}
+
+function getCommunicationAuthorityMatrix_() {
+  return {
+    legacy_invite: {
+      permittedLifecycleStages: ["INVITE_PENDING", "INVITED_AWAITING_RESPONSE", "REMINDER_DUE", "DOCS_REQUIRED"],
+      requiredDocumentState: "NOT_VERIFIED",
+      requiredPaymentState: "ANY",
+      requiredVerificationState: "NOT_ACCEPTED",
+      requiredApplicantState: "ACTIVE",
+      minimumRole: "EXISTING_SEND_AUTHORITY",
+      protectedAction: false,
+      overridePermitted: false,
+      overrideConditions: []
+    },
+    reminder: {
+      permittedLifecycleStages: ["INVITED_AWAITING_RESPONSE", "REMINDER_DUE"],
+      requiredDocumentState: "ANY",
+      requiredPaymentState: "ANY",
+      requiredVerificationState: "NOT_ACCEPTED",
+      requiredApplicantState: "ACTIVE",
+      minimumRole: "EXISTING_SEND_AUTHORITY",
+      protectedAction: false,
+      overridePermitted: false,
+      overrideConditions: []
+    },
+    fd_acknowledgement: {
+      permittedLifecycleStages: ["INVITE_PENDING", "INVITED_AWAITING_RESPONSE", "REMINDER_DUE", "DOCS_REQUIRED", "PROCESSING"],
+      requiredDocumentState: "NOT_VERIFIED",
+      requiredPaymentState: "ANY",
+      requiredVerificationState: "NOT_ACCEPTED",
+      requiredApplicantState: "ACTIVE",
+      minimumRole: "EXISTING_SEND_AUTHORITY",
+      protectedAction: false,
+      overridePermitted: false,
+      overrideConditions: []
+    },
+    docs_missing: {
+      permittedLifecycleStages: ["DOCS_REQUIRED", "PROCESSING"],
+      requiredDocumentState: "MISSING_OR_UNVERIFIED",
+      requiredPaymentState: "ANY",
+      requiredVerificationState: "NOT_ACCEPTED",
+      requiredApplicantState: "ACTIVE",
+      minimumRole: "EXISTING_SEND_AUTHORITY",
+      protectedAction: false,
+      overridePermitted: false,
+      overrideConditions: []
+    },
+    application_feedback: {
+      permittedLifecycleStages: ["DOCS_REQUIRED", "PROCESSING"],
+      requiredDocumentState: "MISSING_OR_UNVERIFIED",
+      requiredPaymentState: "ANY",
+      requiredVerificationState: "NOT_ACCEPTED",
+      requiredApplicantState: "ACTIVE",
+      minimumRole: "EXISTING_SEND_AUTHORITY",
+      protectedAction: false,
+      overridePermitted: false,
+      overrideConditions: []
+    },
+    custom_email: {
+      permittedLifecycleStages: ["ANY"],
+      requiredDocumentState: "ANY",
+      requiredPaymentState: "ANY",
+      requiredVerificationState: "ANY",
+      requiredApplicantState: "ACTIVE",
+      minimumRole: "EXISTING_SEND_AUTHORITY",
+      protectedAction: false,
+      overridePermitted: false,
+      overrideConditions: []
+    },
+    payment_followup: {
+      permittedLifecycleStages: ["PAYMENT_REQUIRED", "RECEIPT_AWAITING_VERIFICATION"],
+      requiredDocumentState: "VERIFIED",
+      requiredPaymentState: "OUTSTANDING",
+      requiredVerificationState: "NOT_ACCEPTED",
+      requiredApplicantState: "ACTIVE",
+      minimumRole: "EXISTING_SEND_AUTHORITY",
+      protectedAction: true,
+      overridePermitted: true,
+      overrideConditions: ["SUPER_ADMIN", "JUSTIFICATION_REQUIRED", "AUDIT_LOG_REQUIRED"]
+    },
+    application_receipt_request: {
+      permittedLifecycleStages: ["PAYMENT_REQUIRED"],
+      requiredDocumentState: "VERIFIED",
+      requiredPaymentState: "EVIDENCE_MISSING",
+      requiredVerificationState: "NOT_ACCEPTED",
+      requiredApplicantState: "ACTIVE",
+      minimumRole: "EXISTING_SEND_AUTHORITY",
+      protectedAction: true,
+      overridePermitted: true,
+      overrideConditions: ["SUPER_ADMIN", "JUSTIFICATION_REQUIRED", "AUDIT_LOG_REQUIRED"]
+    },
+    application_verified_quote: {
+      permittedLifecycleStages: ["PAYMENT_REQUIRED", "RECEIPT_AWAITING_VERIFICATION"],
+      requiredDocumentState: "VERIFIED",
+      requiredPaymentState: "QUOTE_ELIGIBLE_NOT_VERIFIED",
+      requiredVerificationState: "NOT_ACCEPTED",
+      requiredApplicantState: "ACTIVE",
+      minimumRole: "EXISTING_SEND_AUTHORITY",
+      protectedAction: true,
+      overridePermitted: true,
+      overrideConditions: ["SUPER_ADMIN", "JUSTIFICATION_REQUIRED", "AUDIT_LOG_REQUIRED"]
+    },
+    application_acceptance_confirmation: {
+      permittedLifecycleStages: ["COMPLETE"],
+      requiredDocumentState: "VERIFIED",
+      requiredPaymentState: "VERIFIED",
+      requiredVerificationState: "ACCEPTANCE_CONFIRMED",
+      requiredApplicantState: "ACCEPTED",
+      minimumRole: "EXISTING_SEND_AUTHORITY",
+      protectedAction: true,
+      overridePermitted: true,
+      overrideConditions: ["SUPER_ADMIN", "JUSTIFICATION_REQUIRED", "AUDIT_LOG_REQUIRED"]
+    },
+    application_exam_fee_reminder: {
+      permittedLifecycleStages: ["COMPLETE"],
+      requiredDocumentState: "VERIFIED",
+      requiredPaymentState: "VERIFIED",
+      requiredVerificationState: "ACCEPTANCE_CONFIRMED",
+      requiredApplicantState: "ACCEPTED",
+      minimumRole: "EXISTING_SEND_AUTHORITY",
+      protectedAction: true,
+      overridePermitted: true,
+      overrideConditions: ["SUPER_ADMIN", "JUSTIFICATION_REQUIRED", "AUDIT_LOG_REQUIRED"]
+    },
+    application_final_reminder: {
+      permittedLifecycleStages: ["INVITED_AWAITING_RESPONSE", "REMINDER_DUE", "DOCS_REQUIRED", "PAYMENT_REQUIRED", "RECEIPT_AWAITING_VERIFICATION"],
+      requiredDocumentState: "ANY",
+      requiredPaymentState: "ANY",
+      requiredVerificationState: "NOT_ACCEPTED",
+      requiredApplicantState: "ACTIVE",
+      minimumRole: "EXISTING_SEND_AUTHORITY",
+      protectedAction: false,
+      overridePermitted: false,
+      overrideConditions: []
+    },
+    prospect_general_guidance: {
+      permittedLifecycleStages: ["ANY"],
+      requiredDocumentState: "ANY",
+      requiredPaymentState: "ANY",
+      requiredVerificationState: "ANY",
+      requiredApplicantState: "ACTIVE",
+      minimumRole: "EXISTING_SEND_AUTHORITY",
+      protectedAction: false,
+      overridePermitted: false,
+      overrideConditions: []
+    },
+    contact_fallback_manual: {
+      permittedLifecycleStages: ["ANY"],
+      requiredDocumentState: "ANY",
+      requiredPaymentState: "ANY",
+      requiredVerificationState: "ANY",
+      requiredApplicantState: "ACTIVE",
+      minimumRole: "EXISTING_MANUAL_FALLBACK_AUTHORITY",
+      protectedAction: false,
+      overridePermitted: false,
+      overrideConditions: []
+    }
+  };
+}
+
+function getCommunicationAuthorityRule_(messageType) {
+  var normalizedType = normalizeApplicantMessageType_(messageType || "");
+  var matrix = getCommunicationAuthorityMatrix_();
+  return normalizedType && matrix[normalizedType] ? matrix[normalizedType] : null;
+}
+
+function communicationPaymentEvidencePresent_(rowObj) {
+  var row = rowObj || {};
+  return hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File")
+    || hasUploadEvidence_(row.Receipt_File, "Receipt_File")
+    || hasUploadEvidence_(row.Payment_Receipt_File, "Payment_Receipt_File");
+}
+
+function communicationAcceptanceConfirmed_(rowObj) {
+  var row = rowObj || {};
+  var enrolled = clean_(row.Enrolled_Confirmed || row.Enrolment_Confirmed || "").toLowerCase();
+  if (enrolled === "yes" || enrolled === "true" || enrolled === "confirmed") return true;
+  var status = clean_([
+    row.Acceptance_Status,
+    row.Enrolment_Status,
+    row.Overall_Status,
+    row["Application Status"],
+    row.Status
+  ].filter(function (value) { return !!clean_(value || ""); }).join(" ")).toLowerCase();
+  return /\b(accepted|approved|admitted|enrolled|enrolment confirmed|enrollment confirmed)\b/.test(status);
+}
+
+function communicationApplicantAuthorityState_(rowObj, baseState) {
+  var row = rowObj || {};
+  var status = clean_([
+    row.Acceptance_Status,
+    row.Enrolment_Status,
+    row.Overall_Status,
+    row["Application Status"],
+    row.Status,
+    row.Payment_Badge
+  ].filter(function (value) { return !!clean_(value || ""); }).join(" ")).toLowerCase();
+  if (/\b(rejected|fraudulent|declined)\b/.test(status)) return "REJECTED";
+  if (/\b(dormant|inactive)\b/.test(status)) return "DORMANT";
+  if (/\b(archived|closed)\b/.test(status)) return "ARCHIVED";
+  if (communicationAcceptanceConfirmed_(row) || (baseState && baseState.paymentVerified === true && /\b(approved|accepted|enrolled)\b/.test(status))) return "ACCEPTED";
+  return "ACTIVE";
+}
+
+function communicationAuthorityPrerequisiteLine_(label, ok, detail) {
+  return {
+    label: clean_(label || ""),
+    ok: ok === true,
+    detail: clean_(detail || "")
+  };
+}
+
+function communicationAuthorityPrerequisiteText_(items) {
+  var list = Array.isArray(items) ? items : [];
+  return list.map(function (item) {
+    return (item.ok ? "✓ " : "✗ ") + clean_(item.label || "") + (item.detail ? " - " + clean_(item.detail || "") : "");
+  }).join("; ");
+}
+
+function evaluateCommunicationAuthority_(rowObj, messageType, baseState, opts) {
+  var row = rowObj || {};
+  var normalizedType = normalizeApplicantMessageType_(messageType || "");
+  var options = opts && typeof opts === "object" ? opts : {};
+  var actor = options.actor && typeof options.actor === "object" ? options.actor : communicationGetActorInfo_(options);
+  var rule = getCommunicationAuthorityRule_(normalizedType);
+  if (!rule) {
+    return { ok: false, blockCode: "UNKNOWN_MESSAGE_TYPE", blockReason: communicationBlockReason_("UNKNOWN_MESSAGE_TYPE", normalizedType), missingPrerequisites: [] };
+  }
+  var state = baseState && typeof baseState === "object" ? baseState : deriveCommunicationState_(row, normalizedType, options).base;
+  var lifecycleStage = normalizeLifecycleStageKey_(deriveApplicantLifecycleStage_(row));
+  var applicantState = communicationApplicantAuthorityState_(row, state);
+  var docsVerified = state.docsVerified === true;
+  var docsMissing = state.docsMissing === true;
+  var paymentVerified = state.paymentVerified === true;
+  var paymentOutstanding = state.paymentOutstanding === true;
+  var paymentEvidencePresent = communicationPaymentEvidencePresent_(row);
+  var paymentEvidenceMissing = communicationPaymentEvidenceMissing_(row);
+  var quoteEligible = communicationQuoteEligible_(row) === true;
+  var acceptanceConfirmed = communicationAcceptanceConfirmed_(row);
+  var checks = [];
+
+  function add(label, ok, detail) {
+    checks.push(communicationAuthorityPrerequisiteLine_(label, ok, detail));
+  }
+
+  var permittedStages = Array.isArray(rule.permittedLifecycleStages) ? rule.permittedLifecycleStages : [];
+  if (permittedStages.indexOf("ANY") < 0) add("Lifecycle stage: " + permittedStages.join(" / "), permittedStages.indexOf(lifecycleStage) >= 0, "Current: " + lifecycleStage);
+
+  if (rule.requiredApplicantState === "ACTIVE") add("Applicant active", applicantState === "ACTIVE", "Current: " + applicantState);
+  else if (rule.requiredApplicantState === "ACCEPTED") add("Applicant accepted/enrolled", applicantState === "ACCEPTED", "Current: " + applicantState);
+
+  if (rule.requiredDocumentState === "VERIFIED") add("Documents Verified", docsVerified, docsVerified ? "" : "Current: not verified");
+  else if (rule.requiredDocumentState === "NOT_VERIFIED") add("Documents not yet verified", docsVerified !== true, docsVerified ? "Current: verified" : "");
+  else if (rule.requiredDocumentState === "MISSING_OR_UNVERIFIED") add("Documents missing or not verified", docsMissing === true || docsVerified !== true, docsVerified ? "Current: verified" : "");
+
+  if (rule.requiredPaymentState === "OUTSTANDING") add("Payment Outstanding", paymentOutstanding === true, paymentOutstanding ? "" : "Current: resolved");
+  else if (rule.requiredPaymentState === "EVIDENCE_MISSING") add("Payment Evidence Missing", paymentEvidenceMissing === true, paymentEvidenceMissing ? "" : "Current: evidence present or payment resolved");
+  else if (rule.requiredPaymentState === "QUOTE_ELIGIBLE_NOT_VERIFIED") {
+    add("Quote eligible", quoteEligible === true, quoteEligible ? "" : "Quote details are not ready");
+    add("No verified payment", paymentVerified !== true, paymentVerified ? "Current: payment verified" : "");
+  } else if (rule.requiredPaymentState === "VERIFIED") add("Payment Verified", paymentVerified === true, paymentVerified ? "" : "Current: not verified");
+
+  if (rule.requiredVerificationState === "NOT_ACCEPTED") add("No acceptance/enrolment confirmation", acceptanceConfirmed !== true, acceptanceConfirmed ? "Current: accepted/enrolled" : "");
+  else if (rule.requiredVerificationState === "ACCEPTANCE_CONFIRMED") add("Acceptance/enrolment confirmed", acceptanceConfirmed === true, acceptanceConfirmed ? "" : "No acceptance/enrolment authority found");
+
+  if (normalizedType === "payment_followup") add("Payment evidence state", paymentOutstanding === true, paymentEvidencePresent ? "Evidence uploaded; awaiting verification" : "Payment evidence not verified");
+
+  var missing = checks.filter(function (item) { return item.ok !== true; });
+  if (!missing.length) {
+    return {
+      ok: true,
+      blockCode: "",
+      blockReason: "",
+      authorityRule: rule,
+      protectedCommunication: rule.protectedAction === true,
+      overridePermitted: rule.overridePermitted === true,
+      missingPrerequisites: [],
+      prerequisiteChecks: checks,
+      lifecycleStage: lifecycleStage,
+      applicantState: applicantState
+    };
+  }
+
+  var overrideRequested = options.authorityOverride === true;
+  var reason = clean_(options.authorityOverrideReason || "");
+  if (overrideRequested) {
+    if (rule.protectedAction !== true || rule.overridePermitted !== true || actor.isSuper !== true) {
+      return {
+        ok: false,
+        blockCode: "COMM_OVERRIDE_DENIED",
+        blockReason: communicationBlockReason_("COMM_OVERRIDE_DENIED", normalizedType),
+        authorityRule: rule,
+        protectedCommunication: rule.protectedAction === true,
+        overridePermitted: rule.overridePermitted === true,
+        missingPrerequisites: missing,
+        prerequisiteChecks: checks,
+        lifecycleStage: lifecycleStage,
+        applicantState: applicantState
+      };
+    }
+    if (reason.length < 20) {
+      return {
+        ok: false,
+        blockCode: "COMM_OVERRIDE_REASON_REQUIRED",
+        blockReason: communicationBlockReason_("COMM_OVERRIDE_REASON_REQUIRED", normalizedType),
+        authorityRule: rule,
+        protectedCommunication: true,
+        overridePermitted: true,
+        missingPrerequisites: missing,
+        prerequisiteChecks: checks,
+        lifecycleStage: lifecycleStage,
+        applicantState: applicantState
+      };
+    }
+    return {
+      ok: true,
+      blockCode: "",
+      blockReason: "",
+      authorityRule: rule,
+      protectedCommunication: true,
+      overridePermitted: true,
+      overrideApplied: true,
+      overrideReason: reason,
+      missingPrerequisites: missing,
+      prerequisiteChecks: checks,
+      lifecycleStage: lifecycleStage,
+      applicantState: applicantState
+    };
+  }
+
+  return {
+    ok: false,
+    blockCode: "COMM_AUTHORITY_BLOCKED",
+    blockReason: "Blocked by communication authority matrix. Requires: " + communicationAuthorityPrerequisiteText_(checks),
+    authorityRule: rule,
+    protectedCommunication: rule.protectedAction === true,
+    overridePermitted: rule.overridePermitted === true,
+    missingPrerequisites: missing,
+    prerequisiteChecks: checks,
+    lifecycleStage: lifecycleStage,
+    applicantState: applicantState
+  };
+}
+
+function logCommunicationAuthorityOverride_(context, evaluation, action) {
+  var ctx = context || {};
+  var evalResult = evaluation || {};
+  campaignLog_("COMM_AUTHORITY_OVERRIDE", {
+    timestamp: new Date().toISOString(),
+    action: clean_(action || ctx.action || ""),
+    operator: clean_(ctx.actorEmail || ""),
+    role: clean_(ctx.actorRole || ""),
+    applicant: clean_(ctx.applicantId || ""),
+    template: clean_(ctx.messageType || ""),
+    reason: clean_(evalResult.overrideReason || ""),
+    missingPrerequisites: evalResult.missingPrerequisites || [],
+    override: true,
+    debugId: clean_(ctx.debugId || "")
+  });
 }
 
 function communicationRequiresPortalUrl_(messageType) {
@@ -7914,6 +8286,14 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
     requestId: requestId,
     actorEmail: actor.email,
     actorRole: actor.role,
+    protectedCommunication: false,
+    overridePermitted: false,
+    overrideApplied: false,
+    overrideReason: "",
+    prerequisiteChecks: [],
+    missingPrerequisites: [],
+    lifecycleStage: "",
+    applicantState: "",
     rowNumber: Number(rowNumber || 0),
     sheet: sheet || null,
     batchLabel: clean_(options.batchLabel || "")
@@ -7941,11 +8321,29 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
   if (clean_(options.action || "") === "planBatch" && !actor.isSuper) return block("ROLE_BLOCKED");
   if (!context.applicantId) return block("APPLICANT_NOT_FOUND");
 
-  if (!baseState.hasEffectiveEmail) return block("NO_EFFECTIVE_EMAIL");
-  if (baseState.hasValidEffectiveEmail !== true) return block("INVALID_EMAIL", "Applicant does not have a valid email address.");
+  var definition = getCommunicationSemanticDefinition_(normalizedType);
+  var requiresValidEmail = !(definition && definition.requiresValidEmail === false);
+  if (requiresValidEmail && !baseState.hasEffectiveEmail) return block("NO_EFFECTIVE_EMAIL");
+  if (requiresValidEmail && baseState.hasValidEffectiveEmail !== true) return block("INVALID_EMAIL", "Applicant does not have a valid email address.");
   if (baseState.bounceFlag) return block("BOUNCED", clean_(baseState.bounceReason || "") || communicationBlockReason_("BOUNCED", normalizedType));
   if (context.emailStatus === "DO_NOT_CONTACT") return block("DO_NOT_CONTACT");
   if (communicationState.cooldownActive) return block("COOLDOWN_ACTIVE");
+
+  var authority = evaluateCommunicationAuthority_(row, normalizedType, baseState, Object.assign({}, options, {
+    actor: actor,
+    authorityOverride: options.authorityOverride === true,
+    authorityOverrideReason: clean_(options.authorityOverrideReason || "")
+  }));
+  context.protectedCommunication = authority.protectedCommunication === true;
+  context.overridePermitted = authority.overridePermitted === true;
+  context.overrideApplied = authority.overrideApplied === true;
+  context.overrideReason = clean_(authority.overrideReason || "");
+  context.prerequisiteChecks = authority.prerequisiteChecks || [];
+  context.missingPrerequisites = authority.missingPrerequisites || [];
+  context.lifecycleStage = clean_(authority.lifecycleStage || "");
+  context.applicantState = clean_(authority.applicantState || "");
+  if (!authority.ok) return block(authority.blockCode, authority.blockReason);
+  if (authority.overrideApplied === true) logCommunicationAuthorityOverride_(context, authority, clean_(options.action || ""));
 
   if (context.requiresPortalUrl) {
     var secretRes = null;
@@ -9686,6 +10084,13 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
       result: "BLOCKED",
       blockCode: clean_(context.blockCode || ""),
       blockReason: clean_(context.blockReason || ""),
+      protectedCommunication: context.protectedCommunication === true,
+      overridePermitted: context.overridePermitted === true,
+      overrideApplied: context.overrideApplied === true,
+      missingPrerequisites: context.missingPrerequisites || [],
+      prerequisiteChecks: context.prerequisiteChecks || [],
+      lifecycleStage: clean_(context.lifecycleStage || ""),
+      applicantState: clean_(context.applicantState || ""),
       applicantId: clean_(context.applicantId || applicantId || ""),
       messageType: clean_(context.messageType || messageType || ""),
       effectiveEmail: clean_(context.effectiveEmail || ""),
@@ -9730,6 +10135,13 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
     result: "PREVIEW",
     blockCode: "",
     blockReason: "",
+    protectedCommunication: context.protectedCommunication === true,
+    overridePermitted: context.overridePermitted === true,
+    overrideApplied: context.overrideApplied === true,
+    missingPrerequisites: context.missingPrerequisites || [],
+    prerequisiteChecks: context.prerequisiteChecks || [],
+    lifecycleStage: clean_(context.lifecycleStage || ""),
+    applicantState: clean_(context.applicantState || ""),
     applicantId: clean_(context.applicantId || ""),
     messageType: clean_(context.messageType || ""),
     effectiveEmail: previewRecipient,
@@ -9821,6 +10233,13 @@ function sendApplicantMessage_(applicantId, messageType, opts) {
       eligible: false,
       blockCode: clean_(context.blockCode || ""),
       blockReason: clean_(context.blockReason || ""),
+      protectedCommunication: context.protectedCommunication === true,
+      overridePermitted: context.overridePermitted === true,
+      overrideApplied: context.overrideApplied === true,
+      missingPrerequisites: context.missingPrerequisites || [],
+      prerequisiteChecks: context.prerequisiteChecks || [],
+      lifecycleStage: clean_(context.lifecycleStage || ""),
+      applicantState: clean_(context.applicantState || ""),
       applicantId: clean_(context.applicantId || applicantId || ""),
       messageType: clean_(context.messageType || messageType || ""),
       effectiveEmail: clean_(context.effectiveEmail || ""),
@@ -9881,6 +10300,13 @@ function sendApplicantMessage_(applicantId, messageType, opts) {
       eligible: false,
       blockCode: clean_(context.blockCode || ""),
       blockReason: clean_(context.blockReason || ""),
+      protectedCommunication: context.protectedCommunication === true,
+      overridePermitted: context.overridePermitted === true,
+      overrideApplied: context.overrideApplied === true,
+      missingPrerequisites: context.missingPrerequisites || [],
+      prerequisiteChecks: context.prerequisiteChecks || [],
+      lifecycleStage: clean_(context.lifecycleStage || ""),
+      applicantState: clean_(context.applicantState || ""),
       applicantId: clean_(context.applicantId || applicantId || ""),
       messageType: clean_(context.messageType || messageType || ""),
       effectiveEmail: clean_(context.effectiveEmail || ""),
