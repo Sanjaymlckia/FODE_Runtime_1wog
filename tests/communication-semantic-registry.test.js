@@ -232,7 +232,7 @@ assert.equal(context.communicationRecommendedMessageTypeForStage_("PROCESSING"),
 assert.doesNotMatch(sharedStageMap, /application_exam_fee_reminder/, "Exam fee reminder must not be Stage Batch mapped");
 assert.doesNotMatch(sharedStageMap, /application_verified_quote|application_receipt_request/, "Selected-only payment templates must not be Stage Batch mapped");
 
-const selectedMessageTypeSelect = adminUiSource.match(/<select id="commMessageType">([\s\S]*?)<\/select>/);
+const selectedMessageTypeSelect = adminUiSource.match(/<select\b[^>]*id="commMessageType"[^>]*>([\s\S]*?)<\/select>/);
 assert.ok(selectedMessageTypeSelect, "Selected-applicant message type picker must exist");
 const selectedMessageTypeMarkup = selectedMessageTypeSelect[1];
 for (const messageType of ["legacy_invite", "reminder", "docs_missing", "payment_followup", "application_feedback", "custom_email", ...manualSelectedTypes]) {

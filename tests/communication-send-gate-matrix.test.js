@@ -165,7 +165,7 @@ for (const messageType of ["application_verified_quote", "application_acceptance
   assert.equal(context.communicationRequiresResolvedActionPlaceholders_(messageType), true, `${messageType} must block unresolved operational placeholders`);
 }
 
-const selectedMarkup = adminUiSource.match(/<select id="commMessageType">([\s\S]*?)<\/select>/);
+const selectedMarkup = adminUiSource.match(/<select\b[^>]*id="commMessageType"[^>]*>([\s\S]*?)<\/select>/);
 assert.ok(selectedMarkup, "Selected-applicant communication picker must exist");
 assert.match(selectedMarkup[1], /value="custom_email"[\s\S]*Selected Applicant/, "custom_email picker label must remain selected-applicant scoped");
 assert.match(adminUiSource, /function commTemplateOptionItems_/, "Selected-applicant picker must have a backend-metadata option helper");

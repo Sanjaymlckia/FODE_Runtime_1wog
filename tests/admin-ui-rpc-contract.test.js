@@ -92,6 +92,7 @@ assert.match(adminUi, /function clearCommEditableDraft_[\s\S]*fields\.recipient\
 assert.match(adminUi, /clearCommEditableDraft_\(messageType\)[\s\S]*admin_previewApplicantMessage/, "Preview flow must clear stale editable draft before backend response");
 assert.match(adminUi, /STALE_PREVIEW_RESPONSE/, "Preview flow must discard stale applicant/template responses");
 assert.match(adminUi, /responseApplicantId !== currentApplicantId \|\| responseMessageType !== currentMessageType/, "Preview response must match selected applicant and selected template before draft hydration");
+assert.match(adminUi, /<select id="commMessageType" onchange="onCommunicationsMessageTypeChange_\(\)">/, "Message type picker must invoke communication selection hygiene on direct user change");
 
 console.log("PASS AdminUI inline scripts parse after Apps Script template substitution");
 console.log("PASS AdminUI google.script.run calls resolve to server functions");
