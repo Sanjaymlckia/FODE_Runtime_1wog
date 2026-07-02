@@ -88,6 +88,10 @@ assert.match(adminUi, /Runtime: loading\.\.\./, "AdminUI must retain visible run
 assert.match(adminUi, /id="commOverridePanel"/, "Communication override panel must remain explicit in the selected-applicant UI");
 assert.match(adminUi, /IS_SUPER === true[\s\S]*commOverridePanelVisible_/, "Communication override UI must stay Super Admin gated");
 assert.match(adminUi, /authorityOverrideReason/, "Communication override payload must include mandatory justification text");
+assert.match(adminUi, /function clearCommEditableDraft_[\s\S]*fields\.recipient\)\s*fields\.recipient\.value = ""/, "Editable communication draft clear must remove stale recipient");
+assert.match(adminUi, /clearCommEditableDraft_\(messageType\)[\s\S]*admin_previewApplicantMessage/, "Preview flow must clear stale editable draft before backend response");
+assert.match(adminUi, /STALE_PREVIEW_RESPONSE/, "Preview flow must discard stale applicant/template responses");
+assert.match(adminUi, /responseApplicantId !== currentApplicantId \|\| responseMessageType !== currentMessageType/, "Preview response must match selected applicant and selected template before draft hydration");
 
 console.log("PASS AdminUI inline scripts parse after Apps Script template substitution");
 console.log("PASS AdminUI google.script.run calls resolve to server functions");

@@ -5802,6 +5802,7 @@
       communicationsState.authorityOverrideReason = "";
       if (!preserveResult) communicationsState.result = null;
       communicationsState.busy = false;
+      if (!preserveResult) clearCommEditableDraft_(getSelectedCommMessageType_());
     }
     function getSelectedCommMessageType_(){
       syncCommMessageTypeOptions_();
@@ -6083,7 +6084,7 @@
     function setCommEditableDraft_(res, messageType){
       var fields = getCommEditableFields_();
       var result = res && typeof res === "object" ? res : {};
-      if (fields.recipient) fields.recipient.value = String(result.effectiveEmail || (currentDetail && (currentDetail.Effective_Email || currentDetail.Parent_Email_Corrected || currentDetail.Parent_Email)) || "");
+      if (fields.recipient) fields.recipient.value = String(result.effectiveEmail || "");
       if (fields.subject) fields.subject.value = String(result.subject || "");
       if (fields.body) fields.body.value = String(result.body || "");
       communicationsState.portalUrl = String(result.portalUrl || communicationsState.portalUrl || "");
@@ -6095,7 +6096,7 @@
     function clearCommEditableDraft_(messageType){
       var fields = getCommEditableFields_();
       var selectedType = String(messageType || getSelectedCommMessageType_() || "");
-      if (fields.recipient) fields.recipient.value = String((currentDetail && (currentDetail.Effective_Email || currentDetail.Parent_Email_Corrected || currentDetail.Parent_Email)) || "");
+      if (fields.recipient) fields.recipient.value = "";
       if (fields.subject) fields.subject.value = "";
       if (fields.body) fields.body.value = "";
       if (fields.subject) fields.subject.placeholder = selectedType === "custom_email" ? "Enter subject" : "Generate preview to populate default subject";
@@ -6208,6 +6209,7 @@
           currentDetail.Comm_Block_Reason = String(res.Comm_Block_Reason || "");
           currentDetail.Comm_Recommended_Message_Type = String(res.Comm_Recommended_Message_Type || "");
           currentDetail.Comm_Awaiting_Response = res.Comm_Awaiting_Response === true;
+          if (res.Comm_Can_Send_Now !== true && !String(res.Comm_Recommended_Message_Type || "").trim()) clearCommEditableDraft_(getSelectedCommMessageType_());
           renderCommunicationsDerived_(currentDetail);
           updateCommunicationsUi_();
         })
@@ -6973,13 +6975,7 @@
       if (!preserveResult) communicationsState.result = null;
       if (!preserveResult) communicationsState.lastRawResponse = null;
       renderCommunicationsResult_(communicationsState.result);
-      if (isEditableCommType_(getSelectedCommMessageType_()) && !preserveResult) {
-        setCommEditableDraft_({
-          effectiveEmail: String((currentDetail && (currentDetail.Effective_Email || currentDetail.Parent_Email_Corrected || currentDetail.Parent_Email)) || ""),
-          subject: "",
-          body: ""
-        }, getSelectedCommMessageType_());
-      }
+      if (isEditableCommType_(getSelectedCommMessageType_()) && !preserveResult) clearCommEditableDraft_(getSelectedCommMessageType_());
       updateCommunicationsUi_();
     }
     function onCommunicationsMessageTypeChange_(){
@@ -7063,10 +7059,34 @@
       communicationsState.lastPayload = resafeJson_(payload);
       communicationsState.lastRawResponse = null;
       communicationsState.result = null;
+      clearCommEditableDraft_(messageType);
       updateCommunicationsUi_();
       runCommunicationsAction_("admin_previewApplicantMessage", payload, function(res){
         communicationsState.lastRawResponse = resafeJson_(res);
         communicationsState.result = res && typeof res === "object" ? res : { ok: false, result: "FAILED", blockReason: "Invalid preview response.", debugId: "" };
+        var responseApplicantId = String((communicationsState.result && communicationsState.result.applicantId) || "").trim();
+        var responseMessageType = String((communicationsState.result && communicationsState.result.messageType) || "").trim();
+        var currentApplicantId = String((currentDetail && currentDetail.ApplicantID) || "").trim();
+        var currentMessageType = getSelectedCommMessageType_();
+        if (responseApplicantId !== currentApplicantId || responseMessageType !== currentMessageType) {
+          clearCommEditableDraft_(currentMessageType);
+          communicationsState.previewApplicantId = "";
+          communicationsState.previewMessageType = "";
+          communicationsState.result = {
+            ok: true,
+            action: "preview",
+            eligible: false,
+            result: "BLOCKED",
+            blockCode: "STALE_PREVIEW_RESPONSE",
+            blockReason: "Preview response was discarded because the selected applicant or template changed before it completed.",
+            applicantId: currentApplicantId,
+            messageType: currentMessageType,
+            debugId: String((res && res.debugId) || "")
+          };
+          renderCommunicationsResult_(communicationsState.result);
+          renderCommunicationsDebug_();
+          return;
+        }
         if (communicationsState.result.eligible === true && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW") {
           communicationsState.previewApplicantId = applicantId;
           communicationsState.previewMessageType = messageType;
