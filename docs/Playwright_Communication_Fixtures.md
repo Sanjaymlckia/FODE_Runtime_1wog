@@ -8,14 +8,14 @@ The Playwright smoke must not send email, send WhatsApp, verify payments, change
 
 ## Fixture Environment Variables
 
-| Fixture | Environment variable | Required lifecycle state | Expected authority |
-| --- | --- | --- | --- |
-| COMM-A | `FODE_COMM_AUTHORITY_APPLICANT_A` | Application received; documents pending | `docs_missing` available. Payment and acceptance templates blocked. |
-| COMM-B | `FODE_COMM_AUTHORITY_APPLICANT_B` | Documents verified; payment outstanding | Verified quote/payment guidance and payment follow-up available. Acceptance blocked until payment authority is satisfied. |
-| COMM-C | `FODE_COMM_AUTHORITY_APPLICANT_C` | Payment evidence uploaded; awaiting verification | Receipt request and acceptance remain blocked until payment verification is complete. |
-| COMM-D | `FODE_COMM_AUTHORITY_APPLICANT_D` | Payment verified | Acceptance confirmation available. Payment follow-up blocked. |
-| COMM-E | `FODE_COMM_AUTHORITY_APPLICANT_E` | Accepted | Acceptance already completed. Payment follow-up blocked. |
-| COMM-F | `FODE_COMM_AUTHORITY_APPLICANT_F` | Dormant, rejected, archived, withdrawn, or closed | Operational templates suppressed; only appropriate manual communication should remain available. |
+| Fixture | Environment variable | ApplicantID | Required lifecycle state | Expected authority |
+| --- | --- | --- | --- | --- |
+| COMM-A | `FODE_COMM_AUTHORITY_APPLICANT_A` | `FODE-26-TEST-001` | Application received; documents pending | `docs_missing` preview available. Payment and acceptance templates blocked. |
+| COMM-B | `FODE_COMM_AUTHORITY_APPLICANT_B` | `FODE-26-TEST-002` | Documents verified; payment outstanding | Verified quote/payment guidance, payment follow-up, and acceptance are protected and blocked without explicit override authority. |
+| COMM-C | `FODE_COMM_AUTHORITY_APPLICANT_C` | `FODE-26-TEST-003` | Payment evidence uploaded; awaiting verification | Receipt request and acceptance remain blocked until payment verification is complete. |
+| COMM-D | `FODE_COMM_AUTHORITY_APPLICANT_D` | `FODE-26-TEST-004` | Payment verified | Acceptance confirmation is protected and blocked until acceptance/enrolment authority is confirmed. Payment follow-up blocked. |
+| COMM-E | `FODE_COMM_AUTHORITY_APPLICANT_E` | `FODE-26-TEST-005` | Accepted | Acceptance already completed. Payment follow-up blocked. |
+| COMM-F | `FODE_COMM_AUTHORITY_APPLICANT_F` | `FODE-26-TEST-006` | Dormant, rejected, archived, withdrawn, or closed | Missing-docs correction preview remains available; payment and acceptance templates are blocked. |
 
 ## Selection Rules
 
@@ -30,7 +30,7 @@ Each fixture should have:
 
 ## Fixture Verifier
 
-`npm run test:comm-authority-fixtures` opens each configured fixture and verifies:
+`npm run test:comm-authority-fixtures` opens all six configured fixtures and verifies:
 
 - The applicant can be found.
 - The observed lifecycle text matches the expected fixture state.
@@ -38,7 +38,7 @@ Each fixture should have:
 - Expected available templates produce preview evidence.
 - Expected blocked templates are disabled or return blocked authority evidence.
 
-If a fixture is not configured, it is reported as missing. If a configured applicant no longer matches the expected lifecycle state, the verifier records `SKIP` with the observed state and does not silently pass that fixture.
+All six `FODE_COMM_AUTHORITY_APPLICANT_A` through `FODE_COMM_AUTHORITY_APPLICANT_F` variables are mandatory. Missing target configuration or missing fixture variables fail the run. If an applicant no longer matches the expected lifecycle state, the verifier fails with observed evidence and does not fall back to another row.
 
 ## Updating Fixtures
 
@@ -70,3 +70,4 @@ This fixture smoke must not:
 - Change document status.
 - Modify Sheets or Drive.
 - Touch Student, Production, or OPS deployments.
+- Fall back to arbitrary live applicants.

@@ -14,7 +14,7 @@ Suggested fixture email:
 
 `sanjay@minervacenters.com`
 
-The Playwright verifier reads fixture IDs from environment variables and fails configured fixture mismatches with diagnostics.
+The Playwright verifier reads fixture IDs from environment variables. All six communication fixture variables are mandatory for communication authority acceptance, and lookup, state, recommendation, or authority mismatches fail with diagnostics.
 
 ## Fixture Ownership
 
@@ -29,14 +29,14 @@ Responsibilities:
 
 ## Canonical Fixtures
 
-| Fixture | Env var | Permanent name | Workflow state | Document state | Payment state | Expected recommendation |
-| --- | --- | --- | --- | --- | --- | --- |
-| COMM-A | `FODE_COMM_AUTHORITY_APPLICANT_A` | `TEST_COMM_A` | Application Received | Documents Pending | Payment Not Due | `docs_missing` |
-| COMM-B | `FODE_COMM_AUTHORITY_APPLICANT_B` | `TEST_COMM_B` | Awaiting Payment | Documents Verified | Payment Outstanding | `application_verified_quote` or `payment_followup` |
-| COMM-C | `FODE_COMM_AUTHORITY_APPLICANT_C` | `TEST_COMM_C` | Awaiting Payment Verification | Documents Verified | Payment Evidence Uploaded | No applicant send action or payment verification workflow |
-| COMM-D | `FODE_COMM_AUTHORITY_APPLICANT_D` | `TEST_COMM_D` | Ready for Acceptance | Documents Verified | Payment Verified | `application_acceptance_confirmation` |
-| COMM-E | `FODE_COMM_AUTHORITY_APPLICANT_E` | `TEST_COMM_E` | Accepted | Documents Verified | Payment Verified or Closed | No recommended send action |
-| COMM-F | `FODE_COMM_AUTHORITY_APPLICANT_F` | `TEST_COMM_F` | Dormant / Rejected / Archived | Closed or Not Actionable | Closed or Not Actionable | No recommended send action |
+| Fixture | Env var | ApplicantID | Permanent name | Workflow state | Document state | Payment state | Expected recommendation |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| COMM-A | `FODE_COMM_AUTHORITY_APPLICANT_A` | `FODE-26-TEST-001` | `TEST_COMM_A` | Application Received | Documents Pending | Payment Evidence Pending / Not Due | `docs_missing` |
+| COMM-B | `FODE_COMM_AUTHORITY_APPLICANT_B` | `FODE-26-TEST-002` | `TEST_COMM_B` | Awaiting Payment | Documents Verified | Payment Outstanding | Protected quote/payment templates blocked without override |
+| COMM-C | `FODE_COMM_AUTHORITY_APPLICANT_C` | `FODE-26-TEST-003` | `TEST_COMM_C` | Awaiting Payment Verification | Documents Verified | Payment Evidence Uploaded | No applicant send action or payment verification workflow |
+| COMM-D | `FODE_COMM_AUTHORITY_APPLICANT_D` | `FODE-26-TEST-004` | `TEST_COMM_D` | Payment Verified / Acceptance Authority Pending | Documents Verified | Payment Verified | Acceptance confirmation blocked until acceptance/enrolment authority is confirmed |
+| COMM-E | `FODE_COMM_AUTHORITY_APPLICANT_E` | `FODE-26-TEST-005` | `TEST_COMM_E` | Accepted | Documents Verified | Payment Verified or Closed | No recommended send action |
+| COMM-F | `FODE_COMM_AUTHORITY_APPLICANT_F` | `FODE-26-TEST-006` | `TEST_COMM_F` | Dormant / Rejected / Archived | Closed or Not Actionable | Closed or Not Actionable | Missing-docs correction preview available; payment/acceptance blocked |
 
 ## Expected Authority
 
@@ -61,16 +61,17 @@ Protected payment and acceptance templates require Super Admin override and just
 
 Allowed templates:
 
-- `application_verified_quote`
-- `payment_followup`
+- No direct protected payment/quote preview without explicit override authority.
 
 Blocked templates:
 
+- `application_verified_quote`
+- `payment_followup`
 - `application_acceptance_confirmation`
 
 Override behavior:
 
-Acceptance requires Super Admin override until payment authority is satisfied.
+Verified quote, payment follow-up, and acceptance are protected and blocked without explicit Super Admin override authority.
 
 ### COMM-C
 
@@ -91,16 +92,17 @@ Acceptance requires Super Admin override until payment is verified.
 
 Allowed templates:
 
-- `application_acceptance_confirmation`
+- No direct acceptance confirmation until acceptance/enrolment authority is confirmed.
 
 Blocked templates:
 
+- `application_acceptance_confirmation`
 - `payment_followup`
 - `application_receipt_request`
 
 Override behavior:
 
-No override should be required for acceptance when document and payment authority are satisfied.
+Acceptance confirmation is protected and blocked until acceptance/enrolment authority is confirmed.
 
 ### COMM-E
 
@@ -122,11 +124,10 @@ Repeat acceptance and payment follow-up are blocked.
 
 Allowed templates:
 
-- Only appropriate manual communication, if authority permits it.
+- `docs_missing` correction preview remains available in the current runtime.
 
 Blocked templates:
 
-- `docs_missing`
 - `payment_followup`
 - `application_receipt_request`
 - `application_verified_quote`
@@ -155,7 +156,7 @@ The verifier checks:
 - Expected blocked templates are blocked.
 - Expected allowed templates can produce preview evidence.
 
-Configured fixture mismatches fail with explicit diagnostics. Missing fixture environment variables are reported as setup warnings because this CIS does not create live applicants.
+Configured fixture mismatches fail with explicit diagnostics. Missing communication fixture environment variables fail acceptance because the regression suite is fixture-driven only.
 
 ## Bootstrap Plan
 
