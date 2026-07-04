@@ -15,8 +15,7 @@ const reviewQueuesIndex = indexOfRequired('id="reviewQueuesPanel"');
 assert.ok(dashboardIndex < reviewQueuesIndex, "Operations Workspace must render before Review Queues");
 assert.ok(adminUi.includes("Operations Workspace"), "Promoted operator surface must use the Operations Workspace label");
 assert.doesNotMatch(adminUi, /Actionability Dashboard/i, "Old Actionability Dashboard heading must not remain visible in AdminUI");
-assert.ok(adminUi.includes("Primary workload surface for today's work, ownership, blockers, priority, and next action"), "Operations Workspace must be described as the primary workload surface");
-assert.ok(adminUi.includes("Review Workspace remains the primary editing authority"), "Review Workspace must be described as the editing authority");
+assert.ok(adminUi.includes("Primary workload surface. Review Workspace remains the editing authority."), "Operations Workspace must use concise primary-surface language");
 assert.doesNotMatch(adminUi, /Review Queues remains the primary action surface/i, "Review Queues must not claim primary action-surface authority");
 assert.doesNotMatch(adminUi, /Secondary Navigation: Review Queues/i, "Review Queues heading must not visually compete as secondary navigation");
 assert.ok(adminUi.includes("Compatibility: Review Queues"), "Review Queues must remain available as a compatibility surface");
@@ -56,6 +55,7 @@ assert.match(adminUi, /key === "MANAGEMENT" \? "Exceptions"/, "KPI strip must sh
 assert.match(adminUi, /<button class="actionabilityKpi/, "KPI cards must render as actionable buttons");
 assert.match(adminUi, /onclick="selectActionabilityGroup_/, "KPI/group cards must select an actionability group");
 assert.match(adminUi, /var displayRows = actionabilityActiveGroup \? \(groupRows\[actionabilityActiveGroup\] \|\| \[\]\) : rows;/, "KPI/group filters must still drive displayed worklist rows");
+assert.doesNotMatch(renderActionabilityRowBody_(), /Newest:/, "Group cards must not spend benchmark scan space on newest metadata");
 
 ["APPLICANT", "ADMISSIONS", "FINANCE", "ACADEMIC", "MANAGEMENT", "DORMANT", "COMPLETE"].forEach((key) => {
   assert.ok(adminUi.includes(`data-actionability-kpi="' + esc(key) + '"`) || adminUi.includes(`data-actionability-kpi="${key}"`), `KPI bucket key must be rendered: ${key}`);
@@ -67,6 +67,7 @@ assert.match(adminUi, /reviewActionabilityRow_\('[^']*'|reviewActionabilityRow_\
 assert.match(adminUi, /actionabilityRenderedRows/, "Dashboard Review buttons must use the currently rendered row list");
 assert.match(adminUi, /class="btn actionabilityReviewBtn"/, "Dashboard Review button must use the emphasized operator action style");
 assert.match(adminUi, /Current Worklist/, "Operations Workspace must label the dense worklist");
+assert.ok(adminUi.includes("Review opens authoritative editing."), "Worklist helper text must reinforce Review as the edit handoff");
 assert.match(adminUi, /class="actionabilityWorklist"/, "Applicant rows must render in the OPS-style worklist structure");
 assert.match(adminUi, /role="table" aria-label="Operations Workspace Current Worklist"/, "Worklist must use a predictable table/list geometry");
 assert.match(adminUi, /class="actionabilityWorklistRow" role="row" data-actionability-row=/, "Applicant rows must render as fixed worklist rows");
@@ -78,6 +79,7 @@ assert.doesNotMatch(adminUi, /\.actionabilityWorklistTable\{[^}]*min-width:/, "P
   assert.ok(adminUi.includes(`class="actionabilityClusterLabel">${label}</span>`), `Worklist must cluster operator facts under ${label}`);
 });
 assert.match(adminUi, /actionabilityReviewCell[\s\S]+actionabilityReviewBtn/, "Review must remain a dedicated visible action column");
+assert.match(adminUi, /\.modal\{[\s\S]*background: #f8fafc;[\s\S]*border: 1px solid #dbe5ef;/, "Review modal must visually align with the operator workspace surface");
 assert.doesNotMatch(renderActionabilityRowBody_(), /<strong>Invoice:<\/strong> <span>Not shown<\/span>|<strong>CRM:<\/strong> <span>Not shown<\/span>/, "Dashboard rows must not spend scan space on Not shown filler facts");
 [
   ["applicantId", "Applicant ID"],
