@@ -72,6 +72,12 @@ assert.match(adminUi, /role="table" aria-label="Operations Workspace Current Wor
 assert.match(adminUi, /class="actionabilityWorklistRow" role="row" data-actionability-row=/, "Applicant rows must render as fixed worklist rows");
 assert.doesNotMatch(renderActionabilityRowBody_(), /class="actionabilityTask"/, "Applicant rows must not render as the old irregular card blocks");
 assert.match(adminUi, /actionabilityStatusChips/, "Dashboard rows must expose compact status chips");
+assert.doesNotMatch(adminUi, /\.actionabilityWorklist\{[^}]*overflow-x:auto/, "Primary worklist must not require horizontal scrolling");
+assert.doesNotMatch(adminUi, /\.actionabilityWorklistTable\{[^}]*min-width:/, "Primary worklist table must not force horizontal overflow");
+["Applicant", "Ownership", "Progress", "Timeline"].forEach((label) => {
+  assert.ok(adminUi.includes(`class="actionabilityClusterLabel">${label}</span>`), `Worklist must cluster operator facts under ${label}`);
+});
+assert.match(adminUi, /actionabilityReviewCell[\s\S]+actionabilityReviewBtn/, "Review must remain a dedicated visible action column");
 assert.doesNotMatch(renderActionabilityRowBody_(), /<strong>Invoice:<\/strong> <span>Not shown<\/span>|<strong>CRM:<\/strong> <span>Not shown<\/span>/, "Dashboard rows must not spend scan space on Not shown filler facts");
 [
   ["applicantId", "Applicant ID"],
