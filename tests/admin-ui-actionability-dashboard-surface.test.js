@@ -55,7 +55,18 @@ assert.match(adminUi, /key === "MANAGEMENT" \? "Exceptions"/, "KPI strip must sh
 assert.match(adminUi, /<button class="actionabilityKpi/, "KPI cards must render as actionable buttons");
 assert.match(adminUi, /onclick="selectActionabilityGroup_/, "KPI/group cards must select an actionability group");
 assert.match(adminUi, /var displayRows = actionabilityActiveGroup \? \(groupRows\[actionabilityActiveGroup\] \|\| \[\]\) : rows;/, "KPI/group filters must still drive displayed worklist rows");
+assert.match(adminUi, /actionabilityPopulationLedgerState\s*=\s*ledger/, "Operations Workspace must retain Population Ledger summary from the backend");
+assert.match(adminUi, /function actionabilityPopulationCountForGroup_/, "Operations Workspace KPI totals must have a ledger-backed count resolver");
+assert.match(adminUi, /operationalBucketCounts/, "Operations Workspace must consume ledger operational bucket counts");
+assert.match(adminUi, /actionabilityPopulationCountForGroup_\(key,\s*\(groupRows\[key\] \|\| \[\]\)\.length\)/, "KPI cards must render full population bucket counts with visible-row fallback only");
+assert.match(adminUi, /actionabilityPopulationCountForGroup_\(key,\s*list\.length\)/, "Group cards must render full population bucket counts with visible-row fallback only");
+assert.match(adminUi, /String\(displayRows\.length\) \+ " visible \/ " \+ String\(populationTotal\) \+ " population"/, "Operations Workspace meta must separate visible worklist rows from population totals");
 assert.doesNotMatch(renderActionabilityRowBody_(), /Newest:/, "Group cards must not spend benchmark scan space on newest metadata");
+assert.match(adminUi, /stagePopulationLedgerState/, "Lifecycle Map must retain Population Ledger summary from the backend");
+assert.match(adminUi, /Population Ledger: " \+ String\(Number\(ledger\.applicantIdRows/, "Lifecycle Map metadata must report ledger applicant population");
+assert.doesNotMatch(adminUi, /review queue visible/i, "Lifecycle Map must not label lifecycle/actionability counts as Review Queue visibility");
+assert.match(adminUi, /var ledger = data\.populationLedger/, "Global Dashboard renderer must consume Population Ledger summary");
+assert.match(adminUi, /ApplicantID \/ " \+ Number\(data\.scannedRows/, "Global Dashboard scan metric must separate ApplicantID rows from scanned rows");
 
 ["APPLICANT", "ADMISSIONS", "FINANCE", "ACADEMIC", "MANAGEMENT", "DORMANT", "COMPLETE"].forEach((key) => {
   assert.ok(adminUi.includes(`data-actionability-kpi="' + esc(key) + '"`) || adminUi.includes(`data-actionability-kpi="${key}"`), `KPI bucket key must be rendered: ${key}`);
@@ -120,6 +131,9 @@ assert.match(adminUi, /function actionabilityDocumentLabel_/, "Dashboard must no
 assert.match(adminUi, /missing\.slice\(0,\s*2\)\.map\(actionabilityDocumentLabel_/, "Dashboard blocker labels must not render raw document field keys");
 
 assert.match(adminJs, /hasPhoneFallback/, "Actionability payload must expose phone fallback availability");
+assert.match(adminJs, /populationLedger:\s*populationLedgerPublicSummary_\(ledger\)/, "Actionability preview RPC must expose Population Ledger summary");
+assert.match(adminJs, /function admin_getPopulationLedger/, "Population Ledger RPC must exist as a read-only authority foundation");
+assert.match(adminJs, /function buildPopulationLedgerFromValues_/, "Population Ledger must be reusable by dashboard and lifecycle consumers");
 assert.match(adminJs, /contactabilityState: isUncontactable \? "UNCONTACTABLE"/, "Actionability payload must classify no-email/no-phone applicants as uncontactable");
 assert.match(adminUi, /return "Uncontactable"/, "Dashboard priority language must show Uncontactable");
 assert.match(adminUi, /return "Contact details required"/, "Dashboard due language must replace urgent due text for uncontactable applicants");

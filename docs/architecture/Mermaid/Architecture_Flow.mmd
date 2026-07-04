@@ -14,13 +14,15 @@ flowchart TD
 
   FILES --> PREVIEW["Applicant-folder FODE_PREVIEW<br/>gallery + lightbox"]
 
-  DOC --> ACTION["Operator actionability resolver<br/>derived/read-only"]
-  PAY --> ACTION
-  COMM --> ACTION
+  DOC --> LEDGER["Population Ledger<br/>exactly-once population accounting"]
+  PAY --> LEDGER
+  COMM --> LEDGER
+  LEDGER --> ACTION["Operator actionability resolver<br/>derived/read-only"]
   PREVIEW --> ACTION
 
-  ACTION --> ADMIN["Admin Dashboard / Legacy Admin<br/>live authority surface"]
-  ACTION --> QUEUES["Review queues"]
+  LEDGER --> ADMIN["Admin Dashboard / Operations Workspace<br/>population + workload surface"]
+  ACTION --> ADMIN
+  ACTION --> QUEUES["Review queues<br/>compatibility workflow cohorts"]
   ACTION --> STAGE["Stage Batch communications<br/>separate authority"]
   ACTION --> ESC["Escalations / blockers"]
 

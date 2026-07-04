@@ -26,6 +26,8 @@ const ledgerFunctionNames = [
   "populationLedgerNextActionFamily_",
   "populationLedgerBucketFromActionability_",
   "populationLedgerClassifyRow_",
+  "populationLedgerPublicSummary_",
+  "buildPopulationLedgerFromValues_",
   "admin_getPopulationLedger"
 ];
 const ledgerSource = ledgerFunctionNames.map((name) => extractFunction(adminSource, name)).join("\n\n");
@@ -137,6 +139,17 @@ assert.ok(ledger.integrityMessages.some((message) => /Unknown \/ Unclassified/.t
 const noLimitLedger = context.admin_getPopulationLedger({});
 assert.equal(noLimitLedger.applicantIdRows, ledger.applicantIdRows, "Visible limit payload must not affect ledger totals");
 assert.equal(noLimitLedger.entries.length, ledger.entries.length, "Visible limit payload must not affect ledger entries");
+
+const summaryOnly = context.buildPopulationLedgerFromValues_(sheetValues, "FODE_Data", { includeEntries: false });
+assert.equal(summaryOnly.applicantIdRows, 4);
+assert.equal(summaryOnly.entries.length, 0, "Internal dashboard consumers can request summary-only ledger payloads");
+assert.equal(summaryOnly.operationalBucketCounts["Unknown / Unclassified"], 1);
+assert.equal(Object.values(summaryOnly.operationalBucketCounts).reduce((sum, count) => sum + count, 0), summaryOnly.applicantIdRows);
+
+const publicSummary = context.populationLedgerPublicSummary_(ledger);
+assert.equal(publicSummary.applicantIdRows, ledger.applicantIdRows);
+assert.equal(publicSummary.hiddenByLimit, 0);
+assert.equal(publicSummary.entries, undefined, "Public dashboard summary must not expose row-level entries");
 
 console.log("PASS population ledger accounts for full applicant population exactly once");
 console.log("PASS population ledger keeps Review Queue counts out of population authority");

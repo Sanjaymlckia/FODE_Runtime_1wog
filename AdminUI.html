@@ -2886,8 +2886,10 @@
     let actionabilityRenderedRows = [];
     let actionabilitySortState = { key: "default", dir: "desc" };
     let actionabilityActiveGroup = "";
-    let actionabilityPreviewMetaState = { includedRows: 0, scannedRows: 0 };
+    let actionabilityPreviewMetaState = { includedRows: 0, scannedRows: 0, applicantIdRows: 0, integrityStatus: "" };
     let actionabilityPreviewCountsState = {};
+    let actionabilityPopulationLedgerState = null;
+    let stagePopulationLedgerState = null;
     let pendingActionabilityReviewContext = null;
     let selectedDocsRowNumbers = {};
     let lastDocsSendAttemptByApplicantId = {};
@@ -7564,9 +7566,13 @@
     function updateStageFilterMeta_(){
       var el = document.getElementById("stageFilterMeta");
       if (!el) return;
+      var ledger = stagePopulationLedgerState || {};
+      var ledgerText = ledger.applicantIdRows
+        ? (" Population Ledger: " + String(Number(ledger.applicantIdRows || 0)) + " ApplicantID rows, " + String(ledger.integrityStatus || "UNKNOWN") + ".")
+        : "";
       el.textContent = selectedStageFilter
         ? ("Table filter: " + selectedStageFilter + " (click again to clear)")
-        : "Click a stage to filter the applicant table.";
+        : ("Click a stage to filter the applicant table." + ledgerText);
       updateSearchScopeUi_();
     }
 
@@ -8199,7 +8205,7 @@ function renderStageDashboard_(items, emptyMessage){
           '<div style="margin-top:8px;">' + renderPriorityBadge_(priority) + '</div>' +
           '<div class="stageCardMeta">' +
             '<span>' + esc(String(Number(item && item.total || 0))) + ' total</span>' +
-            '<span>' + esc(String(Number(item && item.actionable || 0))) + ' review queue visible</span>' +
+            '<span>' + esc(String(Number(item && item.actionable || 0))) + ' operator actionable</span>' +
             '<span>' + esc(String(Number(item && item.blocked || 0))) + ' blocked</span>' +
           '</div>' +
         '</button>';
@@ -8210,6 +8216,7 @@ function renderStageDashboard_(items, emptyMessage){
       google.script.run
         .withSuccessHandler(function(res){
           var rows = (res && Array.isArray(res.stages)) ? res.stages : [];
+          stagePopulationLedgerState = res && res.populationLedger && typeof res.populationLedger === "object" ? res.populationLedger : null;
           renderStageDashboard_(rows, rows.length ? "" : "No data or failed to load");
         })
         .withFailureHandler(function(err){
@@ -8719,6 +8726,25 @@ function renderStageDashboard_(items, emptyMessage){
       return "Other";
     }
 
+    function actionabilityPopulationBucketForGroup_(key){
+      var normalized = String(key || "").trim().toUpperCase();
+      if (normalized === "APPLICANT") return "Applicant Action";
+      if (normalized === "ADMISSIONS") return "Admissions Review";
+      if (normalized === "FINANCE") return "Finance";
+      if (normalized === "ACADEMIC") return "Academic Admin";
+      if (normalized === "MANAGEMENT") return "Management Exceptions";
+      if (normalized === "DORMANT") return "Dormant";
+      if (normalized === "COMPLETE") return "Completed / No Action";
+      return "Unknown / Unclassified";
+    }
+
+    function actionabilityPopulationCountForGroup_(key, fallbackCount){
+      var ledger = actionabilityPopulationLedgerState || {};
+      var counts = ledger.operationalBucketCounts || {};
+      var value = Number(counts[actionabilityPopulationBucketForGroup_(key)]);
+      return Number.isFinite(value) ? value : Number(fallbackCount || 0);
+    }
+
     function actionabilityNextActionLabel_(value){
       var normalized = String(value || "").trim().toUpperCase();
       if (normalized === "UPLOAD_REQUIRED_DOCUMENTS") return "Upload Required Documents";
@@ -8944,9 +8970,13 @@ function renderStageDashboard_(items, emptyMessage){
       var metaEl = document.getElementById("actionabilityPreviewMeta");
       if (!summaryEl || !rowsEl) return;
       if (data.preserveRows !== true) {
+        var ledger = (data.populationLedger && typeof data.populationLedger === "object") ? data.populationLedger : null;
+        actionabilityPopulationLedgerState = ledger;
         actionabilityPreviewMetaState = {
           includedRows: Number(data.includedRows || 0),
-          scannedRows: Number(data.scannedRows || 0)
+          scannedRows: Number(data.scannedRows || 0),
+          applicantIdRows: Number(ledger && ledger.applicantIdRows || data.includedRows || 0),
+          integrityStatus: String(ledger && ledger.integrityStatus || "")
         };
         actionabilityPreviewCountsState = data.countsByOwner || {};
       }
@@ -8963,14 +8993,16 @@ function renderStageDashboard_(items, emptyMessage){
       if (kpiEl) {
         kpiEl.innerHTML = groups.map(function(key){
           var label = key === "ACADEMIC" ? "Academic Admin" : (key === "MANAGEMENT" ? "Exceptions" : actionabilityGroupLabel_(key));
+          var populationCount = actionabilityPopulationCountForGroup_(key, (groupRows[key] || []).length);
           return '<button class="actionabilityKpi' + (actionabilityActiveGroup === key ? ' active' : '') + '" type="button" data-actionability-kpi="' + esc(key) + '" onclick="selectActionabilityGroup_(\'' + esc(key) + '\')">'
             + '<div class="k">' + esc(label) + '</div>'
-            + '<div class="v">' + esc(String((groupRows[key] || []).length)) + '</div>'
+            + '<div class="v">' + esc(String(populationCount)) + '</div>'
             + '</button>';
         }).join("");
       }
       summaryEl.innerHTML = groups.map(function(key){
         var list = groupRows[key] || [];
+        var populationCount = actionabilityPopulationCountForGroup_(key, list.length);
         var top = list[0] || {};
         var oldest = list.reduce(function(best, item){
           var age = Number(item && item.ageDays || 0);
@@ -8978,8 +9010,9 @@ function renderStageDashboard_(items, emptyMessage){
         }, null);
         return '<button class="actionabilityGroupCard' + (actionabilityActiveGroup === key ? ' active' : '') + '" type="button" onclick="selectActionabilityGroup_(\'' + esc(key) + '\')">'
           + '<div class="k">' + esc(actionabilityGroupLabel_(key)) + '</div>'
-          + '<div class="v">' + esc(String(list.length)) + '</div>'
+          + '<div class="v">' + esc(String(populationCount)) + '</div>'
           + '<div class="actionabilityGroupMeta">'
+          + '<div><strong>Visible:</strong> ' + esc(String(list.length)) + '</div>'
           + '<div><strong>Urgency:</strong> ' + esc(actionabilityPriorityLabel_(top.urgencyLevel || "NORMAL")) + '</div>'
           + '<div><strong>Oldest:</strong> ' + esc(oldest && oldest.ageDays !== "" && oldest.ageDays !== undefined ? String(oldest.ageDays) + "d" : "-") + '</div>'
           + '<div><strong>Action:</strong> ' + esc(actionabilityNextActionLabel_(top.nextAction || "NO_ACTION")) + '</div>'
@@ -8988,7 +9021,9 @@ function renderStageDashboard_(items, emptyMessage){
       var displayRows = actionabilityActiveGroup ? (groupRows[actionabilityActiveGroup] || []) : rows;
       actionabilityRenderedRows = displayRows.slice();
       if (metaEl) {
-        metaEl.textContent = String(displayRows.length) + " shown / " + String(Number(actionabilityPreviewMetaState.includedRows || rows.length || 0)) + " total";
+        var populationTotal = Number(actionabilityPreviewMetaState.applicantIdRows || actionabilityPreviewMetaState.includedRows || rows.length || 0);
+        var integrity = actionabilityPreviewMetaState.integrityStatus ? (" | Ledger " + actionabilityPreviewMetaState.integrityStatus) : "";
+        metaEl.textContent = String(displayRows.length) + " visible / " + String(populationTotal) + " population" + integrity;
       }
       if (!displayRows.length) {
         rowsEl.innerHTML = '<div class="actionabilityEmpty">No actionable work returned.</div>';
@@ -10764,6 +10799,7 @@ function renderStageDashboard_(items, emptyMessage){
       var data = res && typeof res === "object" ? res : {};
       var pipeline = data.pipelineCounts || {};
       var emailStates = data.emailStates || {};
+      var ledger = data.populationLedger && typeof data.populationLedger === "object" ? data.populationLedger : {};
       setOpsValue_("opsFormsToday", Number(data.formsReceivedToday || 0));
       setOpsValue_("opsPendingReview", Number(data.openLifecycleRows != null ? data.openLifecycleRows : data.pendingIntakeReview || 0));
       setOpsValue_("opsDocsPending", Number(data.awaitingDocuments != null ? data.awaitingDocuments : data.docsPending || 0));
@@ -10774,7 +10810,7 @@ function renderStageDashboard_(items, emptyMessage){
       setOpsValue_("opsWhatsappQueue", Number(data.whatsappFallbackQueue || 0));
       setOpsValue_("opsQueueBacklog", Number(data.queueBacklog || 0));
       setOpsValue_("opsDuplicateRisk", Number(data.duplicateRisk || 0));
-      setOpsValue_("opsMetricsScan", Number(data.scannedRows || 0) + " rows / " + Number(data.scanDurationMs || 0) + " ms");
+      setOpsValue_("opsMetricsScan", Number(ledger.applicantIdRows || 0) + " ApplicantID / " + Number(data.scannedRows || 0) + " scanned / " + String(ledger.integrityStatus || "UNKNOWN"));
       setOpsValue_("pipeNewToMlckia", Number(pipeline["New To MLCKIA"] || 0));
       setOpsValue_("pipeContacted", Number(pipeline.Contacted || 0));
       setOpsValue_("pipeDocumentsPending", Number(data.readyForReview != null ? data.readyForReview : pipeline["Documents Pending"] || 0));

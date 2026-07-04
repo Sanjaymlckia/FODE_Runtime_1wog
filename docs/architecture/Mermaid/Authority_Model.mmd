@@ -10,11 +10,12 @@ flowchart TD
   A --> K["Zoho Books workflow<br/>protected payment-adjacent"]
   A --> L["Contactability evidence<br/>partial/future"]
 
-  B --> H["Operator actionability resolver<br/>derived/read-only"]
-  C --> H
-  D --> H
-  E --> H
-  F --> H
+  B --> Q["Population Ledger<br/>exactly-once read-only accounting"]
+  C --> Q
+  D --> Q
+  E --> Q
+  F --> Q
+  Q --> H["Operator actionability resolver<br/>derived/read-only"]
   G -.-> H
   I --> H
   J --> H
@@ -22,6 +23,7 @@ flowchart TD
   L --> F
 
   H --> M["Admin operator surfaces"]
+  Q --> M
   F --> N["Stage Batch preview/send gates"]
   F --> O["Selected-applicant communication gates"]
   P["OPS frozen reference"] -.-> H

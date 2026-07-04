@@ -28,6 +28,7 @@ Do not collapse separate authorities into one state. Do not let UI labels become
 | Enrollment/classroom | Enrollment and classroom handover fields | Partial/future authority; must not be inferred from payment alone. |
 | Contactability | Row-readable communication/failure evidence only | Bounce evidence is partial/future until ingestion/manual marking is approved. |
 | LAP automation | Stage resolver and automation scaffolds | Partial/future; scheduled action authority is not broadly active. |
+| Population Ledger | `buildPopulationLedgerFromValues_()` / `admin_getPopulationLedger()` | Read-only exactly-once applicant population accounting. |
 | Operator actionability | Operator Actionability Resolver | Derived/read-only/non-authoritative. |
 
 ## Important Distinctions
@@ -36,7 +37,9 @@ Do not collapse separate authorities into one state. Do not let UI labels become
 |---|---|
 | Completeness vs review | Complete means required files supplied. Review means officer checked acceptability. |
 | Lifecycle vs urgency | Lifecycle says state. Urgency says how strongly action is needed. |
-| Queue visibility vs send eligibility | Review queue rows are workload. Stage Batch Preview determines mail eligibility. |
+| Population vs visible worklist | Population Ledger counts every ApplicantID row. Operations Workspace visible rows are a limited worklist window. |
+| Review Queues vs population authority | Review Queues are compatibility/workflow queues. They do not account for the applicant population. |
+| Queue visibility vs send eligibility | Review queue rows are compatibility workflow visibility. Stage Batch Preview determines mail eligibility. |
 | Recommendation vs send authority | Actionability recommends. Preview selects. Send validates. |
 | OPS vs authority | OPS must not create a separate authority system. |
 | Preview vs original document | Preview is derived evidence. Original canonical file remains the document source of truth. |

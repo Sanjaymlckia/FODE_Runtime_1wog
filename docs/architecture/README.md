@@ -14,6 +14,7 @@ Runtime source, Apps Script deployment, queues, communications, Sheets, and send
 | Architecture overview | [Architecture_Overview.md](Architecture_Overview.md) |
 | Authority model | [Authority_Model.md](Authority_Model.md) |
 | Operational model | [Operational_Model.md](Operational_Model.md) |
+| Population Ledger model | [Population_Ledger_Model.md](Population_Ledger_Model.md) |
 | Operator Actionability Resolver | [Operator_Actionability_Resolver.md](Operator_Actionability_Resolver.md) |
 | Communication model | [Communication_Model.md](Communication_Model.md) |
 | Queue model | [Queue_Model.md](Queue_Model.md) |
@@ -37,8 +38,9 @@ The Operator Actionability Resolver is derived, read-only, and non-authoritative
 Raw Facts
 -> Shared Row Facts
 -> Authority Layer
+-> Population Ledger
 -> Operator Actionability Resolver
--> Dashboard / Queues / Communications
+-> Dashboard / Operations Workspace / Lifecycle Map / Communications
 ```
 
 ## r301+ Runtime Truth

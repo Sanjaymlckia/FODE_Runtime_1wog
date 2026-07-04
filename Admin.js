@@ -2493,6 +2493,7 @@ function buildOperationalDashboardMetrics_() {
   var startedAt = now.getTime();
   var sheet = openDataSheet_();
   var values = sheet.getDataRange().getValues();
+  var ledger = buildPopulationLedgerFromValues_(values, sheet && typeof sheet.getName === "function" ? sheet.getName() : "", { includeEntries: false });
   var headers = values && values.length ? values[0] : [];
   var rows = Math.max(0, (values || []).length - 1);
   var pipelineCounts = {
@@ -2530,6 +2531,7 @@ function buildOperationalDashboardMetrics_() {
     duplicateRisk: 0,
     pipelineCounts: pipelineCounts,
     emailStates: emailStates,
+    populationLedger: populationLedgerPublicSummary_(ledger),
     scannedRows: rows,
     scanDurationMs: 0
   };
@@ -2888,6 +2890,7 @@ function admin_getActionabilityPreview(payload) {
   var limit = Math.max(1, Math.min(100, Number(p.limit || 40)));
   var sheet = openDataSheet_();
   var data = sheet.getDataRange().getValues();
+  var ledger = buildPopulationLedgerFromValues_(data, sheet && typeof sheet.getName === "function" ? sheet.getName() : "", { includeEntries: false });
   var out = {
     ok: true,
     readOnly: true,
@@ -2897,6 +2900,7 @@ function admin_getActionabilityPreview(payload) {
     scannedRows: Math.max(0, (data || []).length - 1),
     includedRows: 0,
     countsByOwner: { APPLICANT: 0, OFFICER: 0, FINANCE: 0, ADMIN: 0, SYSTEM: 0, NONE: 0 },
+    populationLedger: populationLedgerPublicSummary_(ledger),
     rows: []
   };
   if (!data || data.length < 2) return out;
@@ -3024,21 +3028,38 @@ function populationLedgerClassifyRow_(rowObj, rowNumber) {
   return entry;
 }
 
-function admin_getPopulationLedger(payload) {
-  var adminEmail = getCallerEmail_();
-  if (!isAdmin_(adminEmail)) throw new Error("Access denied");
-  var p = payload && typeof payload === "object" ? payload : {};
-  var sampleLimit = Math.max(1, Math.min(25, Number(p.sampleLimit || 10)));
-  var sheet = openDataSheet_();
-  var data = sheet.getDataRange().getValues();
-  var sourceSheetName = sheet && typeof sheet.getName === "function"
-    ? clean_(sheet.getName() || "")
-    : clean_(typeof CONFIG !== "undefined" && CONFIG && (CONFIG.DATA_SHEET || CONFIG.SHEET_NAME_WORKING) || "");
+function populationLedgerPublicSummary_(ledger) {
+  var src = ledger || {};
+  return {
+    ok: src.ok === true,
+    readOnly: true,
+    generatedAt: clean_(src.generatedAt || ""),
+    sourceSheetName: clean_(src.sourceSheetName || ""),
+    scannedRows: Number(src.scannedRows || 0),
+    applicantIdRows: Number(src.applicantIdRows || 0),
+    classifiedRows: Number(src.classifiedRows || 0),
+    unclassifiedRows: Number(src.unclassifiedRows || 0),
+    duplicateApplicantIds: Array.isArray(src.duplicateApplicantIds) ? src.duplicateApplicantIds.slice() : [],
+    hiddenByLimit: 0,
+    lifecycleCounts: Object.assign({}, src.lifecycleCounts || {}),
+    operationalBucketCounts: Object.assign({}, src.operationalBucketCounts || {}),
+    nextActionFamilyCounts: Object.assign({}, src.nextActionFamilyCounts || {}),
+    unknownUnclassifiedCount: Number(src.unknownUnclassifiedCount || 0),
+    sampleUnclassifiedRows: Array.isArray(src.sampleUnclassifiedRows) ? src.sampleUnclassifiedRows.slice() : [],
+    integrityStatus: clean_(src.integrityStatus || "FAIL"),
+    integrityMessages: Array.isArray(src.integrityMessages) ? src.integrityMessages.slice() : []
+  };
+}
+
+function buildPopulationLedgerFromValues_(data, sourceSheetName, opts) {
+  var options = opts && typeof opts === "object" ? opts : {};
+  var sampleLimit = Math.max(1, Math.min(25, Number(options.sampleLimit || 10)));
+  var includeEntries = options.includeEntries !== false;
   var out = {
     ok: true,
     readOnly: true,
     generatedAt: new Date().toISOString(),
-    sourceSheetName: sourceSheetName,
+    sourceSheetName: clean_(sourceSheetName || ""),
     scannedRows: Math.max(0, (data || []).length - 1),
     applicantIdRows: 0,
     classifiedRows: 0,
@@ -3072,7 +3093,7 @@ function admin_getPopulationLedger(payload) {
     applicantRowsById[applicantId].push(r + 1);
 
     var entry = populationLedgerClassifyRow_(rowObj, r + 1);
-    out.entries.push(entry);
+    if (includeEntries) out.entries.push(entry);
 
     out.lifecycleCounts[entry.lifecycleState] = Number(out.lifecycleCounts[entry.lifecycleState] || 0) + 1;
     if (!Object.prototype.hasOwnProperty.call(out.operationalBucketCounts, entry.operationalBucket)) {
@@ -3111,7 +3132,7 @@ function admin_getPopulationLedger(payload) {
   var bucketNames = Object.keys(out.operationalBucketCounts);
   for (var b = 0; b < bucketNames.length; b++) bucketTotal += Number(out.operationalBucketCounts[bucketNames[b]] || 0);
 
-  if (out.entries.length !== out.applicantIdRows) {
+  if (includeEntries && out.entries.length !== out.applicantIdRows) {
     out.integrityStatus = "FAIL";
     out.integrityMessages.push("Ledger entry count does not equal ApplicantID row count.");
   }
@@ -3129,6 +3150,21 @@ function admin_getPopulationLedger(payload) {
   }
   if (out.integrityMessages.length === 0) out.integrityMessages.push("Population ledger reconciles.");
   return out;
+}
+
+function admin_getPopulationLedger(payload) {
+  var adminEmail = getCallerEmail_();
+  if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+  var p = payload && typeof payload === "object" ? payload : {};
+  var sheet = openDataSheet_();
+  var data = sheet.getDataRange().getValues();
+  var sourceSheetName = sheet && typeof sheet.getName === "function"
+    ? clean_(sheet.getName() || "")
+    : clean_(typeof CONFIG !== "undefined" && CONFIG && (CONFIG.DATA_SHEET || CONFIG.SHEET_NAME_WORKING) || "");
+  return buildPopulationLedgerFromValues_(data, sourceSheetName, {
+    sampleLimit: p.sampleLimit,
+    includeEntries: p.includeEntries !== false
+  });
 }
 
 // Review queue page metadata helper lives in Admin_ReviewQueues.js.
@@ -3428,7 +3464,8 @@ function admin_getStageAggregation(payload) {
 
   var sh = openDataSheet_();
   var values = sh.getDataRange().getValues();
-  var out = { ok: true, stages: [] };
+  var ledger = buildPopulationLedgerFromValues_(values, sh && typeof sh.getName === "function" ? sh.getName() : "", { includeEntries: false });
+  var out = { ok: true, stages: [], populationLedger: populationLedgerPublicSummary_(ledger) };
   if (!values || values.length < 2) return out;
 
   var headers = values[0];

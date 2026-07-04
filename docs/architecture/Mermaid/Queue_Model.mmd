@@ -1,5 +1,6 @@
 flowchart TD
-  A["Raw row facts + authority outputs"] --> B["Review queues<br/>current Admin surface"]
+  A["Raw row facts + authority outputs"] --> P["Population Ledger<br/>population authority"]
+  A --> B["Review queues<br/>compatibility workflow cohorts"]
 
   B --> C["Application Received / FD Received"]
   B --> D["Documents to Verify"]
@@ -15,10 +16,11 @@ flowchart TD
   G --> G1["Exception/blocker review"]
   H --> H1["Post-payment/classroom handover context"]
 
-  I["Future owner/action queue model"] -.-> J["Applicant Action Queue"]
-  I -.-> K["Officer Review Queue"]
-  I -.-> L["Finance Action Queue"]
-  I -.-> M["Escalated Queue"]
-  I -.-> N["Dormant Queue"]
+  P --> I["Operations Workspace owner/action model"]
+  I --> J["Applicant Action"]
+  I --> K["Admissions Review"]
+  I --> L["Finance"]
+  I --> M["Management Exceptions"]
+  I --> N["Dormant"]
 
   O["Stage Batch send eligibility<br/>separate from queue visibility"] -.-> B
