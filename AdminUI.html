@@ -225,6 +225,18 @@
     .operatorWorkspaceHead{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:8px; padding:4px 2px 10px; border-bottom:1px solid #dbe5ef; }
     .operatorWorkspaceTitle{ margin:0; font-size:22px; color:#0f1f35; letter-spacing:0; line-height:1.15; }
     .operatorWorkspaceTools{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .operatorViewShell{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:8px 0 6px; }
+    .operatorViewBtn{ border:1px solid #cbd8e6; background:#fff; color:#31516f; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:900; }
+    .operatorViewBtn.active{ background:#0f1f35; border-color:#0f1f35; color:#fff; }
+    .operatorViewBtn[disabled]{ cursor:not-allowed; opacity:.58; background:#f3f6fa; color:#66788c; }
+    .operatorViewNote{ color:#66788c; font-size:12px; line-height:1.35; }
+    .operatorSurfaceRoles{ display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:6px; margin:8px 0; }
+    .operatorSurfaceRole{ border:1px solid #dbe5ef; background:#fff; border-radius:8px; padding:7px 9px; font-size:11px; color:#40556b; line-height:1.3; }
+    .operatorSurfaceRole strong{ display:block; color:#0f1f35; font-size:11px; text-transform:uppercase; letter-spacing:0; }
+    .secondarySurfacePanel{ border-color:#e1e7ef; background:#fbfcfe; box-shadow:none; }
+    .secondarySurfacePanel > summary{ cursor:pointer; font-weight:900; color:#31516f; list-style-position:inside; }
+    .secondarySurfaceBody{ margin-top:10px; }
+    .legacyDiagnosticsPanel{ opacity:.94; }
     .actionabilityKpiStrip{ display:grid; grid-template-columns:repeat(7, minmax(112px, 1fr)); gap:7px; margin:10px 0 8px; }
     .actionabilityKpi{ border:1px solid #d5e2ee; border-radius:8px; padding:8px 10px; background:#fff; color:#0f172a; min-width:0; text-align:left; cursor:pointer; box-shadow:0 5px 14px rgba(17,39,68,.04); }
     .actionabilityKpi:hover, .actionabilityKpi.active{ border-color:#7da9de; background:#eef5ff; box-shadow:inset 0 0 0 1px rgba(31,90,165,.16); }
@@ -2068,13 +2080,24 @@
       <div class="operatorWorkspaceHead">
         <div>
           <h2 class="operatorWorkspaceTitle">Operations Workspace</h2>
-          <div class="muted" style="margin-top:4px;">Read-only Operator Workspace. Existing review, lifecycle, communication, payment, and verification authorities remain the source of truth.</div>
+          <div class="muted" style="margin-top:4px;">Primary workload surface for what needs work next. Existing Review Workspace, lifecycle, communication, payment, and verification authorities remain the source of truth.</div>
+          <div class="operatorViewShell" aria-label="Operations Workspace view mode">
+            <button class="operatorViewBtn active" type="button" aria-pressed="true" data-actionability-view="global">Global View</button>
+            <button class="operatorViewBtn" type="button" aria-pressed="false" data-actionability-view="operator" disabled title="Operator scoping pending">Operator View</button>
+            <span class="operatorViewNote">Global View shows the current full derived workload. Operator View scoping is pending; no backend filter is applied.</span>
+          </div>
         </div>
         <div class="operatorWorkspaceTools">
           <button id="btnActionabilityRefresh" class="btn small" type="button" onclick="loadActionabilityPreview_({ force: 1 })">Refresh</button>
           <span class="opsStatusPill info">Derived Only</span>
           <span id="actionabilityPreviewMeta" class="muted" style="font-size:12px;">Not loaded</span>
         </div>
+      </div>
+      <div class="operatorSurfaceRoles" aria-label="Admin surface roles">
+        <div class="operatorSurfaceRole"><strong>Operations Workspace</strong>What needs work next.</div>
+        <div class="operatorSurfaceRole"><strong>Lifecycle Map</strong>Population and state visibility.</div>
+        <div class="operatorSurfaceRole"><strong>Review Workspace</strong>Authoritative editing modal.</div>
+        <div class="operatorSurfaceRole"><strong>System Health</strong>Diagnostics and automation state.</div>
       </div>
       <div id="actionabilityKpiStrip" class="actionabilityKpiStrip" aria-label="Actionability responsibility counts"></div>
       <div id="actionabilityPreviewSummary" class="actionabilitySummary"></div>
@@ -2083,9 +2106,10 @@
       </div>
     </div>
 
-    <div id="reviewQueuesPanel" class="card queue-panel">
-      <h3>Secondary Navigation: Review Queues</h3>
-      <div class="muted" style="margin-bottom:10px;">Use these queues when a dashboard task requires the existing authoritative Review workspace.</div>
+    <details id="reviewQueuesPanel" class="card queue-panel secondarySurfacePanel">
+      <summary>Compatibility: Review Queues</summary>
+      <div class="secondarySurfaceBody">
+      <div class="muted" style="margin-bottom:10px;">Operations Workspace is the primary workload surface. Review Queues remain available for compatibility and existing review workflows.</div>
       <div id="queueFdReceived" class="queue-section"></div>
       <div id="queueDocs" class="queue-section"></div>
       <div id="queueAwaitingPayment" class="queue-section"></div>
@@ -2098,11 +2122,14 @@
       </div>
       <div id="docsSendSummary" class="sendSummary hidden"></div>
       <div id="docsSendFailures" class="sendSummary hidden" style="margin-top:6px;"></div>
-    </div>
+      </div>
+    </details>
 
-    <div id="operationalDashboardPanel" class="card queue-panel">
-      <h3>Admin Dashboard</h3>
-      <div class="muted" style="margin-bottom:10px;">Operational summary only. Review Queues remains the primary action surface; these sections show current workload, blockers, communications, and supporting intake context.</div>
+    <details id="operationalDashboardPanel" class="card queue-panel secondarySurfacePanel legacyDiagnosticsPanel">
+      <summary>Advanced / Legacy workload diagnostics</summary>
+      <div class="secondarySurfaceBody">
+      <h3>Legacy Dashboard Metrics</h3>
+      <div class="muted" style="margin-bottom:10px;">Operations Workspace is the primary workload surface. These legacy dashboard panels remain available for reconciliation, diagnostics, and supporting intake context.</div>
 
       <div style="font-weight:800;margin-top:12px;">2. Document &amp; Payment Status</div>
       <div class="muted" style="margin:4px 0 10px;">Awaiting Documents reflects applicant-action incompleteness. Ready For Review reflects officer review workload. Payment cards below are supporting pipeline/context snapshots, not review-queue authority.</div>
@@ -2143,7 +2170,8 @@
         <div class="box"><div class="k">Queue Backlog</div><div class="v" id="opsQueueBacklog">loading...</div></div>
         <div class="box"><div class="k">Metrics Scan</div><div class="v" id="opsMetricsScan">loading...</div></div>
       </div>
-    </div>
+      </div>
+    </details>
 
     <details id="compatibilitySummaryPanel" class="card queue-panel">
       <summary style="cursor:pointer;font-weight:900;">Compatibility Summary</summary>
@@ -2188,16 +2216,19 @@
       <div id="waFallbackMsg" class="muted" style="margin-top:10px;"></div>
     </div>
 
-    <div id="stageDashboardPanel" class="card queue-panel">
+    <details id="stageDashboardPanel" class="card queue-panel secondarySurfacePanel legacyDiagnosticsPanel">
+      <summary>Advanced / Lifecycle drill-down</summary>
+      <div class="secondarySurfaceBody">
       <h3>Workload &amp; Action Required Drill-Down</h3>
       <div class="muted" style="margin:4px 0 10px;">This drill-down is based on lifecycle/actionability aggregation and may not match legacy pipeline summary counts.</div>
       <div id="stageFilterMeta" class="stageDashboardMeta">Click a lifecycle/actionability stage to filter the applicant table. Review queue visibility is not the same as mail eligibility.</div>
       <div id="stageDashboardCards" class="stageCards"></div>
-    </div>
+      </div>
+    </details>
 
     <div id="stageBatchPanel" class="card queue-panel">
       <h3>Stage Batch Communications</h3>
-      <div class="muted" style="margin-bottom:10px;">Review Queues show operational workload. Not all rows are currently mail-eligible. Preview Cohort Result appears below in the Stage Batch Preview Result / Diagnostics panel.</div>
+      <div class="muted" style="margin-bottom:10px;">Operations Workspace shows operational workload. Not all rows are currently mail-eligible. Preview Cohort Result appears below in the Stage Batch Preview Result / Diagnostics panel.</div>
       <div class="commMeta">
         <div class="box"><div class="k">Selected Stage</div><div class="v" id="stageBatchSelectedStage">&mdash;</div></div>
         <div class="box"><div class="k">Priority</div><div class="v" id="stageBatchPriority">&mdash;</div></div>

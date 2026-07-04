@@ -15,6 +15,20 @@ const reviewQueuesIndex = indexOfRequired('id="reviewQueuesPanel"');
 assert.ok(dashboardIndex < reviewQueuesIndex, "Operations Workspace must render before Review Queues");
 assert.ok(adminUi.includes("Operations Workspace"), "Promoted operator surface must use the Operations Workspace label");
 assert.doesNotMatch(adminUi, /Actionability Dashboard/i, "Old Actionability Dashboard heading must not remain visible in AdminUI");
+assert.ok(adminUi.includes("Operations Workspace is the primary workload surface"), "Operations Workspace must be described as the primary workload surface");
+assert.doesNotMatch(adminUi, /Review Queues remains the primary action surface/i, "Review Queues must not claim primary action-surface authority");
+assert.doesNotMatch(adminUi, /Secondary Navigation: Review Queues/i, "Review Queues heading must not visually compete as secondary navigation");
+assert.ok(adminUi.includes("Compatibility: Review Queues"), "Review Queues must remain available as a compatibility surface");
+assert.ok(adminUi.includes("Review Queues remain available for compatibility and existing review workflows"), "Review Queues compatibility wording must be explicit");
+assert.ok(adminUi.includes("Global View"), "Operations Workspace must expose the Global View shell");
+assert.ok(adminUi.includes("Operator View"), "Operations Workspace must expose the Operator View shell");
+assert.ok(adminUi.includes("Operator View scoping is pending; no backend filter is applied"), "Operator View shell must not imply backend filtering exists");
+assert.match(adminUi, /data-actionability-view="global"/, "View shell must preserve actionability-scoped internal naming");
+assert.match(adminUi, /data-actionability-view="operator"[^>]*disabled/, "Operator View must stay disabled until backend scoping exists");
+assert.ok(adminUi.includes("What needs work next."), "Operations Workspace role must be clear");
+assert.ok(adminUi.includes("Population and state visibility."), "Lifecycle Map role must be clear");
+assert.ok(adminUi.includes("Authoritative editing modal."), "Review Workspace role must be clear");
+assert.ok(adminUi.includes("Diagnostics and automation state."), "System Health role must be clear");
 
 const kpiIndex = indexOfRequired('id="actionabilityKpiStrip"');
 const summaryIndex = indexOfRequired('id="actionabilityPreviewSummary"');
@@ -69,6 +83,7 @@ assert.match(adminUi, /return "No email, no phone"/, "Dashboard blocker must sho
 assert.match(adminUi, /return "Contactability Gate"/, "Dashboard authority must show Contactability Gate");
 
 console.log("PASS Operations Workspace is primary above Review Queues");
+console.log("PASS Operations Workspace role wording, compatibility Review Queues, and view shell are present");
 console.log("PASS KPI strip renders actionable responsibility buckets above dashboard groups");
 console.log("PASS experimental/internal/contactability codes remain hidden from dashboard rows");
 console.log("PASS dashboard Review action keeps existing modal entry from rendered rows");
