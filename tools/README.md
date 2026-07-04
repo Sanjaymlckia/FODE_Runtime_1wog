@@ -2,6 +2,28 @@
 
 These scripts are staged gates. They are not a one-click release system.
 
+## Runtime Engineering Platform
+
+REP v1 adds a context-driven platform layer for FODE and future runtimes.
+
+Canonical platform context:
+
+`runtime-context.json`
+
+Primary REP docs:
+
+- `docs/platform/Runtime_Engineering_Platform.md`
+- `docs/tooling/Runtime_Context.md`
+- `docs/workflows/Runtime_Engineering_Workflows.md`
+
+REP tools:
+
+- `rep-validate-context.ps1`: read-only context shape and safety validation.
+- `rep-acceptance-plan.ps1`: prints a profile-specific acceptance plan from context.
+- `rep-evidence-record.ps1`: plans or writes a standardized evidence record.
+
+These tools resolve project constants from context. Do not duplicate Sheet IDs, deployment IDs, runtime URLs, whoami URLs, Playwright paths, or evidence roots in new workflow docs.
+
 ## Active Repository Authority
 
 Active Codex working repo:

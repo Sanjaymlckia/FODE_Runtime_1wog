@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 1,
+  "activeProject": "FODE",
+  "projects": {
+    "FODE": {
+      "displayName": "FODE Runtime",
+      "trackDefault": "Track L",
+      "runtimeReleaseDefault": false,
+      "repository": {
+        "path": "D:\\Repos\\FODE_Runtime_1wog",
+        "github": "https://github.com/Sanjaymlckia/FODE_Runtime_1wog.git",
+        "branch": "main"
+      },
+      "appsScript": {
+        "scriptId": "1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90",
+        "rootDir": ".",
+        "sourceAuthority": ".clasp.json"
+      },
+      "dataSources": {
+        "liveSheet": {
+          "spreadsheetId": "1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4SalU",
+          "primaryTab": "FODE_Data",
+          "authority": "production-live-operational",
+          "diagnosticAccess": "read-only"
+        }
+      },
+      "deployments": {
+        "adminStaging": {
+          "deploymentId": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ",
+          "url": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec",
+          "whoamiUrl": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami",
+          "expectedRuntime": "r316",
+          "expectedDeploy": 316,
+          "expectedAppsScriptVersion": 318
+        },
+        "studentStaging": {
+          "deploymentId": "AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv",
+          "url": "https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec",
+          "whoamiUrl": "https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec?view=whoami",
+          "expectedRuntime": "r217",
+          "expectedDeploy": 217,
+          "expectedAppsScriptVersion": 247
+        },
+        "production": {
+          "deploymentId": null,
+          "url": null,
+          "whoamiUrl": null,
+          "status": "not-configured-do-not-infer"
+        },
+        "ops": {
+          "deploymentId": null,
+          "url": null,
+          "whoamiUrl": null,
+          "status": "frozen-do-not-mutate"
+        }
+      },
+      "playwright": {
+        "projectPath": "F:\\Playwright\\fode-secure-link-diagnostic",
+        "reportsPath": "F:\\Playwright\\fode-secure-link-diagnostic\\reports",
+        "suiteNames": [
+          "health",
+          "identity",
+          "operations",
+          "review",
+          "communications",
+          "gallery",
+          "payments",
+          "documents",
+          "lifecycle",
+          "system-health"
+        ]
+      },
+      "evidence": {
+        "rootPath": "F:\\FODE_DR_Backup",
+        "releaseProofsPath": "F:\\FODE_DR_Backup\\release_proofs",
+        "namingPattern": "{timestamp}-{project}-{profile}-{runtime}-{status}"
+      },
+      "acceptanceProfiles": {
+        "health": {
+          "description": "Read-only reachability and hydration health.",
+          "checks": [
+            "context",
+            "admin-whoami",
+            "student-whoami",
+            "playwright-health"
+          ]
+        },
+        "identity": {
+          "description": "Runtime and deployment identity proof.",
+          "checks": [
+            "context",
+            "admin-whoami",
+            "student-whoami",
+            "deployment-metadata"
+          ]
+        },
+        "operations": {
+          "description": "Read-only operator workload surface smoke.",
+          "checks": [
+            "context",
+            "admin-hydration",
+            "operations-workspace",
+            "review-open-read-only"
+          ]
+        },
+        "communications": {
+          "description": "Read-only communication preview and authority surface smoke.",
+          "checks": [
+            "context",
+            "selected-applicant",
+            "preview-only",
+            "no-send"
+          ]
+        },
+        "gallery": {
+          "description": "Read-only document gallery and secure-link smoke.",
+          "checks": [
+            "context",
+            "document-gallery",
+            "secure-link-read"
+          ]
+        },
+        "lifecycle": {
+          "description": "Lifecycle map and derived state reconciliation.",
+          "checks": [
+            "context",
+            "sheet-read-only",
+            "lifecycle-reconciliation"
+          ]
+        },
+        "full-release": {
+          "description": "Full release acceptance profile after an authorized runtime release.",
+          "checks": [
+            "context",
+            "preflight",
+            "validation",
+            "remote-source-proof",
+            "version",
+            "repin",
+            "whoami",
+            "playwright",
+            "evidence",
+            "summary"
+          ]
+        }
+      },
+      "diagnostics": {
+        "readOnlyOnly": true,
+        "supported": [
+          "sheet-reconciliation",
+          "dashboard-reconciliation",
+          "lifecycle-reconciliation",
+          "queue-reconciliation",
+          "runtime-identity",
+          "deployment-identity",
+          "authority-verification"
+        ]
+      },
+      "releaseManagement": {
+        "supportedReleaseTypes": [
+          "major",
+          "minor",
+          "hotfix",
+          "identity-bump",
+          "benchmark"
+        ],
+        "rollbackPreference": "deployment-repin-first",
+        "tagRecommendationPattern": "{project}-r{deploy}-{purpose}"
+      },
+      "featureFlags": {
+        "runtimeMutationAllowedByDefault": false,
+        "sheetMutationAllowedByDefault": false,
+        "driveMutationAllowedByDefault": false,
+        "productionMutationAllowedByDefault": false
+      }
+    }
+  },
+  "sharedEngineering": {
+    "principles": [
+      "project-runtime-business-logic-stays-project-owned",
+      "runtime-platform-tooling-is-reusable",
+      "shared-engineering-components-are-config-driven",
+      "live-whoami-is-runtime-truth",
+      "read-only-diagnostics-before-any-mutation"
+    ],
+    "defaultSuites": [
+      "health",
+      "identity",
+      "operations",
+      "review",
+      "communications",
+      "gallery",
+      "payments",
+      "documents",
+      "lifecycle",
+      "system-health"
+    ]
+  }
+}
