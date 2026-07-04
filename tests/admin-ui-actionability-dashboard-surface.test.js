@@ -12,7 +12,9 @@ function indexOfRequired(needle) {
 
 const dashboardIndex = indexOfRequired('id="actionabilityPreviewPanel"');
 const reviewQueuesIndex = indexOfRequired('id="reviewQueuesPanel"');
-assert.ok(dashboardIndex < reviewQueuesIndex, "Actionability Dashboard must render before Review Queues");
+assert.ok(dashboardIndex < reviewQueuesIndex, "Operations Workspace must render before Review Queues");
+assert.ok(adminUi.includes("Operations Workspace"), "Promoted operator surface must use the Operations Workspace label");
+assert.doesNotMatch(adminUi, /Actionability Dashboard/i, "Old Actionability Dashboard heading must not remain visible in AdminUI");
 
 const kpiIndex = indexOfRequired('id="actionabilityKpiStrip"');
 const summaryIndex = indexOfRequired('id="actionabilityPreviewSummary"');
@@ -57,7 +59,7 @@ assert.match(adminUi, /return "Contact details required"/, "Dashboard due langua
 assert.match(adminUi, /return "No email, no phone"/, "Dashboard blocker must show no-email/no-phone facts");
 assert.match(adminUi, /return "Contactability Gate"/, "Dashboard authority must show Contactability Gate");
 
-console.log("PASS Actionability Dashboard is primary above Review Queues");
+console.log("PASS Operations Workspace is primary above Review Queues");
 console.log("PASS KPI strip renders actionable responsibility buckets above dashboard groups");
 console.log("PASS experimental/internal/contactability codes remain hidden from dashboard rows");
 console.log("PASS dashboard Review action keeps existing modal entry from rendered rows");
