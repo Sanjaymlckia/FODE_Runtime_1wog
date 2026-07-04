@@ -8699,12 +8699,21 @@ function renderStageDashboard_(items, emptyMessage){
       return ok === true ? yesLabel : noLabel;
     }
 
+    function actionabilityDocumentLabel_(value){
+      var text = String(value || "").trim();
+      if (!text) return "";
+      text = text.replace(/_File$/i, "");
+      text = text.replace(/_/g, " ");
+      text = text.replace(/\bId\b/g, "ID");
+      return text.replace(/\b\w/g, function(ch){ return ch.toUpperCase(); });
+    }
+
     function actionabilityBlockerLabel_(row){
       var r = row || {};
       var state = r.authorityState || {};
       var missing = Array.isArray(state.missingRequiredDocuments) ? state.missingRequiredDocuments.filter(Boolean) : [];
       if (actionabilityIsUncontactable_(r)) return "No email, no phone";
-      if (missing.length) return missing.slice(0, 2).join(", ");
+      if (missing.length) return missing.slice(0, 2).map(actionabilityDocumentLabel_).filter(Boolean).join(", ");
       var suppressor = String(r.suppressor || "").trim().toUpperCase();
       if (suppressor === "NO_EFFECTIVE_EMAIL") return "Contact Missing";
       if (suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "Email Blocked";
