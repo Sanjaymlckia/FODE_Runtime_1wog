@@ -220,12 +220,42 @@
       border-color: rgba(148,163,184,.3);
       color: #d6deea;
     }
-    .actionabilityPanel summary{ cursor:pointer; font-weight:800; }
-    .actionabilitySummary{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; margin:10px 0; }
-    .actionabilityTable{ width:100%; border-collapse:collapse; font-size:12px; margin-top:10px; }
-    .actionabilityTable th,.actionabilityTable td{ border-bottom:1px solid var(--border); padding:7px 6px; text-align:left; vertical-align:top; }
-    .actionabilityTable th{ color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.02em; }
-    .actionabilityExplain{ color:var(--muted); max-width:360px; }
+    .actionabilityPanel{ border-color:rgba(37,99,235,.28); }
+    .operatorWorkspaceHead{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
+    .operatorWorkspaceTitle{ margin:0; font-size:20px; letter-spacing:0; }
+    .operatorWorkspaceTools{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .actionabilityKpiStrip{ display:grid; grid-template-columns:repeat(7, minmax(104px, 1fr)); gap:8px; margin:10px 0; }
+    .actionabilityKpi{ border:1px solid var(--border); border-radius:8px; padding:9px 10px; background:#f8fafc; min-width:0; }
+    .actionabilityKpi .k{ color:var(--muted); font-size:11px; text-transform:uppercase; font-weight:800; white-space:normal; }
+    .actionabilityKpi .v{ font-size:20px; font-weight:900; margin-top:2px; }
+    .actionabilitySummary{ display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:8px; margin:10px 0; }
+    .actionabilityGroupCard{ border:1px solid var(--border); border-radius:8px; padding:10px; background:#fff; }
+    .actionabilityGroupCard .k{ color:var(--muted); font-size:11px; text-transform:uppercase; font-weight:800; }
+    .actionabilityGroupCard .v{ font-size:22px; font-weight:900; margin-top:2px; }
+    .actionabilityGroupMeta{ display:grid; grid-template-columns:1fr 1fr; gap:5px 8px; font-size:12px; margin-top:8px; color:#334155; }
+    .actionabilityRows{ display:grid; gap:10px; margin-top:10px; }
+    .actionabilityTask{ border:1px solid var(--border); border-radius:8px; padding:12px; background:#fff; display:grid; grid-template-columns:minmax(180px,1.2fr) minmax(210px,1.3fr) minmax(210px,1.3fr) minmax(160px,.8fr); gap:12px; align-items:start; }
+    .actionabilityTaskPrimary{ font-weight:900; color:#0f172a; }
+    .actionabilityTaskName{ color:var(--muted); font-size:12px; margin-top:3px; }
+    .actionabilityFactGrid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:5px 10px; font-size:12px; }
+    .actionabilityFact{ min-width:0; }
+    .actionabilityFact strong{ color:#334155; font-weight:800; }
+    .actionabilityFact span{ color:#0f172a; }
+    .actionabilityBlocker{ color:#991b1b; font-weight:800; }
+    .actionabilityAuthority{ color:#1d4ed8; font-weight:800; }
+    .actionabilityDetails{ grid-column:1 / -1; color:var(--muted); font-size:12px; }
+    .actionabilityDetails summary{ cursor:pointer; font-weight:800; color:#334155; }
+    .actionabilityEmpty{ border:1px dashed var(--border); border-radius:8px; padding:18px; color:var(--muted); background:#fff; }
+    @media (max-width: 1120px){
+      .actionabilityKpiStrip{ grid-template-columns:repeat(4, minmax(0, 1fr)); }
+    }
+    @media (max-width: 980px){
+      .actionabilityTask{ grid-template-columns:1fr; }
+      .actionabilityDetails{ grid-column:auto; }
+    }
+    @media (max-width: 680px){
+      .actionabilityKpiStrip{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    }
     .sortableHeader{ cursor:pointer; user-select:none; }
     .sortableHeader:hover{ text-decoration:underline; }
     .badge{
@@ -2028,9 +2058,28 @@
       <div class="muted" id="studentUrlWarnText" style="margin-top:6px;"></div>
     </div>
 
+    <div id="actionabilityPreviewPanel" class="card queue-panel actionabilityPanel">
+      <div class="operatorWorkspaceHead">
+        <div>
+          <h2 class="operatorWorkspaceTitle">Actionability Dashboard</h2>
+          <div class="muted" style="margin-top:4px;">Read-only Operator Workspace. Existing review, lifecycle, communication, payment, and verification authorities remain the source of truth.</div>
+        </div>
+        <div class="operatorWorkspaceTools">
+          <button id="btnActionabilityRefresh" class="btn small" type="button" onclick="loadActionabilityPreview_({ force: 1 })">Refresh</button>
+          <span class="opsStatusPill info">Derived Only</span>
+          <span id="actionabilityPreviewMeta" class="muted" style="font-size:12px;">Not loaded</span>
+        </div>
+      </div>
+      <div id="actionabilityKpiStrip" class="actionabilityKpiStrip" aria-label="Actionability responsibility counts"></div>
+      <div id="actionabilityPreviewSummary" class="actionabilitySummary"></div>
+      <div id="actionabilityPreviewRows" class="actionabilityRows">
+        <div class="actionabilityEmpty">Loading actionability dashboard...</div>
+      </div>
+    </div>
+
     <div id="reviewQueuesPanel" class="card queue-panel">
-      <h3>1. Review Queues</h3>
-      <div class="muted" style="margin-bottom:10px;">Review Queues show operational workload. Documents to Verify is the officer review-ready queue; submitted records missing mandatory uploads remain applicant-action records and do not appear there.</div>
+      <h3>Secondary Navigation: Review Queues</h3>
+      <div class="muted" style="margin-bottom:10px;">Use these queues when a dashboard task requires the existing authoritative Review workspace.</div>
       <div id="queueFdReceived" class="queue-section"></div>
       <div id="queueDocs" class="queue-section"></div>
       <div id="queueAwaitingPayment" class="queue-section"></div>
@@ -2185,17 +2234,6 @@
         </div>
       </div>
     </div>
-
-    <details id="actionabilityPreviewPanel" class="card queue-panel actionabilityPanel">
-      <summary>Actionability Preview <span class="opsStatusPill warn">Read-Only Experimental</span></summary>
-      <div class="muted" style="margin:8px 0 10px;">Derived, non-authoritative view. Consumes existing authorities to explain who should act next; it does not change queues, lifecycle, communications, or send behavior.</div>
-      <div class="row" style="align-items:center;gap:8px;margin-bottom:8px;">
-        <button id="btnActionabilityRefresh" class="btn small" type="button" onclick="loadActionabilityPreview_({ force: 1 })">Refresh Preview</button>
-        <span id="actionabilityPreviewMeta" class="muted" style="font-size:12px;">Not loaded</span>
-      </div>
-      <div id="actionabilityPreviewSummary" class="actionabilitySummary"></div>
-      <div id="actionabilityPreviewRows" class="muted" style="font-size:12px;">Expand this panel to review derived actionability recommendations.</div>
-    </details>
 
     <details id="legacySearchPanel" class="card">
       <summary style="cursor:pointer;font-weight:800;">Applicant Search <span class="opsStatusPill info">Read-only</span></summary>
@@ -2777,6 +2815,7 @@
     let actionabilitySortState = { key: "default", dir: "desc" };
     let actionabilityPreviewMetaState = { includedRows: 0, scannedRows: 0 };
     let actionabilityPreviewCountsState = {};
+    let pendingActionabilityReviewContext = null;
     let selectedDocsRowNumbers = {};
     let lastDocsSendAttemptByApplicantId = {};
     let isDocsSendBusy = false;
@@ -8566,12 +8605,122 @@ function renderStageDashboard_(items, emptyMessage){
     function actionabilityOwnerLabel_(key){
       var normalized = String(key || "").trim().toUpperCase();
       if (normalized === "APPLICANT") return "Applicant Action";
-      if (normalized === "OFFICER") return "Officer Action";
-      if (normalized === "FINANCE") return "Finance Action";
-      if (normalized === "ADMIN") return "Admin Action";
-      if (normalized === "SYSTEM") return "System Action";
+      if (normalized === "OFFICER") return "Admissions Review";
+      if (normalized === "FINANCE") return "Finance";
+      if (normalized === "ADMIN") return "Academic Administration";
+      if (normalized === "SYSTEM") return "Management Exceptions";
       if (normalized === "NONE") return "No Action";
       return normalized || "Unknown";
+    }
+
+    function actionabilityGroupKey_(row){
+      var r = row || {};
+      var urgency = String(r.urgencyLevel || "").trim().toUpperCase();
+      var owner = String(r.actionOwner || "").trim().toUpperCase();
+      var suppressor = String(r.suppressor || "").trim().toUpperCase();
+      if (owner === "NONE" || String(r.nextAction || "").trim().toUpperCase() === "NO_ACTION") return "COMPLETE";
+      if (urgency === "DORMANT") return "DORMANT";
+      if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "MANAGEMENT";
+      if (owner === "APPLICANT") return "APPLICANT";
+      if (owner === "OFFICER") return "ADMISSIONS";
+      if (owner === "FINANCE") return "FINANCE";
+      if (owner === "ADMIN") return "ACADEMIC";
+      return "MANAGEMENT";
+    }
+
+    function actionabilityGroupLabel_(key){
+      var normalized = String(key || "").trim().toUpperCase();
+      if (normalized === "APPLICANT") return "Applicant Action";
+      if (normalized === "ADMISSIONS") return "Admissions Review";
+      if (normalized === "FINANCE") return "Finance";
+      if (normalized === "ACADEMIC") return "Academic Administration";
+      if (normalized === "MANAGEMENT") return "Management Exceptions";
+      if (normalized === "DORMANT") return "Dormant";
+      if (normalized === "COMPLETE") return "Completed / No Action";
+      return "Other";
+    }
+
+    function actionabilityNextActionLabel_(value){
+      var normalized = String(value || "").trim().toUpperCase();
+      if (normalized === "UPLOAD_REQUIRED_DOCUMENTS") return "Upload Required Documents";
+      if (normalized === "REVIEW_DOCUMENTS") return "Review Documents";
+      if (normalized === "SEND_PAYMENT_REMINDER") return "Send Payment Reminder";
+      if (normalized === "VERIFY_PAYMENT") return "Verify Payment";
+      if (normalized === "ENROLL") return "Complete Enrolment";
+      if (normalized === "FIX_CONTACT_DETAILS") return "Fix Contact Details";
+      if (normalized === "NO_ACTION") return "No Action";
+      return normalized ? normalized.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, function(ch){ return ch.toUpperCase(); }) : "No Action";
+    }
+
+    function actionabilityCommsLabel_(value){
+      var normalized = String(value || "").trim().toLowerCase();
+      if (!normalized) return "None";
+      if (normalized === "document_completion_reminder") return "Document Reminder";
+      if (normalized === "document_completion_escalation") return "Document Escalation";
+      if (normalized === "payment_reminder") return "Payment Reminder";
+      if (normalized === "payment_escalation") return "Payment Escalation";
+      if (normalized === "docs_missing") return "Missing Documents";
+      if (normalized === "payment_followup") return "Payment Reminder";
+      return "Manual Review";
+    }
+
+    function actionabilityPriorityLabel_(value){
+      var normalized = String(value || "NORMAL").trim().toUpperCase();
+      if (normalized === "ESCALATED") return "Urgent";
+      if (normalized === "OVERDUE") return "Overdue";
+      if (normalized === "DUE") return "Due";
+      if (normalized === "DORMANT") return "Dormant";
+      return "Normal";
+    }
+
+    function actionabilityPriorityClass_(value){
+      var normalized = String(value || "NORMAL").trim().toUpperCase();
+      if (normalized === "ESCALATED" || normalized === "DORMANT") return "danger";
+      if (normalized === "OVERDUE" || normalized === "DUE") return "warn";
+      return "info";
+    }
+
+    function actionabilityStatusValue_(ok, yesLabel, noLabel){
+      return ok === true ? yesLabel : noLabel;
+    }
+
+    function actionabilityBlockerLabel_(row){
+      var r = row || {};
+      var state = r.authorityState || {};
+      var missing = Array.isArray(state.missingRequiredDocuments) ? state.missingRequiredDocuments.filter(Boolean) : [];
+      if (missing.length) return missing.slice(0, 2).join(", ");
+      var suppressor = String(r.suppressor || "").trim().toUpperCase();
+      if (suppressor === "NO_EFFECTIVE_EMAIL") return "Contact Missing";
+      if (suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "Email Blocked";
+      if (suppressor === "COOLDOWN_ACTIVE") return "Cooling Period";
+      if (suppressor === "OFFICER_ACTION_PENDING") return "Admissions Review";
+      if (suppressor === "FINANCE_ACTION_PENDING") return "Receipt Pending";
+      if (suppressor === "ADMIN_ACTION_PENDING") return "Enrolment Pending";
+      if (suppressor === "COMPLETED_OR_ENROLLED") return "None";
+      if (state.portalSubmitted !== true) return "Awaiting Applicant";
+      if (state.docsVerified !== true && state.requiredDocumentUploadComplete === true) return "Review Required";
+      if (state.paymentEvidencePresent !== true && state.paymentVerified !== true) return "Receipt Missing";
+      return "None";
+    }
+
+    function actionabilityAuthorityLabel_(row){
+      var group = actionabilityGroupKey_(row);
+      if (group === "APPLICANT") return "LAP D3";
+      if (group === "ADMISSIONS") return "Admissions V1";
+      if (group === "FINANCE") return "Finance F2";
+      if (group === "ACADEMIC") return "LAP A1";
+      if (group === "MANAGEMENT") return "Manual Override";
+      if (group === "DORMANT") return "LAP D0";
+      return "Lifecycle Authority";
+    }
+
+    function actionabilityReviewTarget_(row){
+      var group = actionabilityGroupKey_(row);
+      if (group === "ADMISSIONS" || String(row && row.nextAction || "").toUpperCase().indexOf("DOCUMENT") >= 0) return "docs";
+      if (group === "FINANCE") return "payment";
+      if (group === "ACADEMIC") return "academic";
+      if (group === "MANAGEMENT") return "exception";
+      return "summary";
     }
 
     function actionabilityUrgencyRank_(value){
@@ -8646,6 +8795,7 @@ function renderStageDashboard_(items, emptyMessage){
       var data = (res && typeof res === "object") ? res : {};
       var summaryEl = document.getElementById("actionabilityPreviewSummary");
       var rowsEl = document.getElementById("actionabilityPreviewRows");
+      var kpiEl = document.getElementById("actionabilityKpiStrip");
       var metaEl = document.getElementById("actionabilityPreviewMeta");
       if (!summaryEl || !rowsEl) return;
       if (data.preserveRows !== true) {
@@ -8655,55 +8805,128 @@ function renderStageDashboard_(items, emptyMessage){
         };
         actionabilityPreviewCountsState = data.countsByOwner || {};
       }
-      var counts = actionabilityPreviewCountsState || {};
-      var owners = ["APPLICANT", "OFFICER", "FINANCE", "ADMIN", "NONE"];
-      summaryEl.innerHTML = owners.map(function(owner){
-        return '<div class="box"><div class="k">' + esc(actionabilityOwnerLabel_(owner)) + '</div><div class="v">' + esc(String(Number(counts[owner] || 0))) + '</div></div>';
-      }).join("");
       if (data.preserveRows !== true && Array.isArray(data.rows)) actionabilityPreviewRows = data.rows.slice();
       var rows = sortedActionabilityRows_(actionabilityPreviewRows);
+      var groups = ["APPLICANT", "ADMISSIONS", "FINANCE", "ACADEMIC", "MANAGEMENT", "DORMANT", "COMPLETE"];
+      var groupRows = {};
+      groups.forEach(function(key){ groupRows[key] = []; });
+      rows.forEach(function(row){
+        var key = actionabilityGroupKey_(row);
+        if (!groupRows[key]) groupRows[key] = [];
+        groupRows[key].push(row);
+      });
+      if (kpiEl) {
+        kpiEl.innerHTML = groups.map(function(key){
+          var label = key === "ACADEMIC" ? "Academic Admin" : (key === "MANAGEMENT" ? "Exceptions" : actionabilityGroupLabel_(key));
+          return '<div class="actionabilityKpi" data-actionability-kpi="' + esc(key) + '">'
+            + '<div class="k">' + esc(label) + '</div>'
+            + '<div class="v">' + esc(String((groupRows[key] || []).length)) + '</div>'
+            + '</div>';
+        }).join("");
+      }
+      summaryEl.innerHTML = groups.map(function(key){
+        var list = groupRows[key] || [];
+        var top = list[0] || {};
+        var oldest = list.reduce(function(best, item){
+          var age = Number(item && item.ageDays || 0);
+          return !best || age > Number(best.ageDays || 0) ? item : best;
+        }, null);
+        var newest = list.reduce(function(best, item){
+          var age = Number(item && item.ageDays || 0);
+          return !best || age < Number(best.ageDays || 0) ? item : best;
+        }, null);
+        return '<div class="actionabilityGroupCard">'
+          + '<div class="k">' + esc(actionabilityGroupLabel_(key)) + '</div>'
+          + '<div class="v">' + esc(String(list.length)) + '</div>'
+          + '<div class="actionabilityGroupMeta">'
+          + '<div><strong>Urgency:</strong> ' + esc(actionabilityPriorityLabel_(top.urgencyLevel || "NORMAL")) + '</div>'
+          + '<div><strong>Oldest:</strong> ' + esc(oldest && oldest.ageDays !== "" && oldest.ageDays !== undefined ? String(oldest.ageDays) + "d" : "-") + '</div>'
+          + '<div><strong>Newest:</strong> ' + esc(newest && newest.ageDays !== "" && newest.ageDays !== undefined ? String(newest.ageDays) + "d" : "-") + '</div>'
+          + '<div><strong>Action:</strong> ' + esc(actionabilityNextActionLabel_(top.nextAction || "NO_ACTION")) + '</div>'
+          + '</div></div>';
+      }).join("");
       if (metaEl) {
-        metaEl.textContent = "Read-only preview: " + String(rows.length) + " shown of " + String(Number(actionabilityPreviewMetaState.includedRows || rows.length || 0)) + " included; " + String(Number(actionabilityPreviewMetaState.scannedRows || 0)) + " scanned.";
+        metaEl.textContent = String(rows.length) + " shown / " + String(Number(actionabilityPreviewMetaState.includedRows || rows.length || 0)) + " total";
       }
       if (!rows.length) {
-        rowsEl.innerHTML = '<div class="queue-empty">No actionability rows returned.</div>';
+        rowsEl.innerHTML = '<div class="actionabilityEmpty">No actionable work returned.</div>';
         return;
       }
-      var html = '<table class="actionabilityTable"><tr>'
-        + '<th class="sortableHeader" onclick="sortActionabilityPreview_(\'name\')">Applicant' + esc(actionabilitySortLabel_("name")) + '</th>'
-        + '<th class="sortableHeader" onclick="sortActionabilityPreview_(\'owner\')">Owner' + esc(actionabilitySortLabel_("owner")) + '</th>'
-        + '<th class="sortableHeader" onclick="sortActionabilityPreview_(\'nextAction\')">Next Action' + esc(actionabilitySortLabel_("nextAction")) + '</th>'
-        + '<th class="sortableHeader" onclick="sortActionabilityPreview_(\'urgency\')">Urgency' + esc(actionabilitySortLabel_("urgency")) + '</th>'
-        + '<th class="sortableHeader" onclick="sortActionabilityPreview_(\'suppressor\')">Suppressor' + esc(actionabilitySortLabel_("suppressor")) + '</th>'
-        + '<th>Recommended Message</th>'
-        + '<th class="sortableHeader" onclick="sortActionabilityPreview_(\'age\')">Age' + esc(actionabilitySortLabel_("age")) + '</th>'
-        + '<th>Explanation / Authorities</th></tr>';
-      rows.forEach(function(row){
+      var html = "";
+      rows.forEach(function(row, index){
         var r = row || {};
         var state = r.authorityState || {};
-        var authorities = Array.isArray(r.sourceAuthorities) ? r.sourceAuthorities.join(" | ") : "";
-        var missing = Array.isArray(state.missingRequiredDocuments) && state.missingRequiredDocuments.length ? (" Missing: " + state.missingRequiredDocuments.join(", ")) : "";
-        var urgency = String(r.urgencyLevel || "NORMAL").toUpperCase();
-        var urgencyClass = (urgency === "ESCALATED" || urgency === "DORMANT") ? "danger" : (urgency === "OVERDUE" ? "warn" : "info");
-        html += '<tr>';
-        html += '<td><strong>' + esc(r.applicantId || "") + '</strong><br><span class="muted">' + esc(r.name || "") + '</span></td>';
-        html += '<td>' + esc(actionabilityOwnerLabel_(r.actionOwner)) + '</td>';
-        html += '<td>' + esc(r.nextAction || "NO_ACTION") + '</td>';
-        html += '<td><span class="opsStatusPill ' + urgencyClass + '">' + esc(urgency) + '</span><br><span class="muted">' + esc(r.urgencyReason || "") + '</span></td>';
-        html += '<td>' + esc(r.suppressor || "-") + '</td>';
-        html += '<td>' + esc(r.recommendedMessageType || "-") + '</td>';
-        html += '<td>' + esc(String(r.ageDays === "" || r.ageDays === null || r.ageDays === undefined ? "-" : r.ageDays + " day(s)")) + '<br><span class="muted">' + esc(r.lastRelevantDateSource || "") + '</span></td>';
-        html += '<td class="actionabilityExplain">' + esc(r.explanation || "") + '<br><span class="muted">' + esc(authorities + missing) + '</span></td>';
-        html += '</tr>';
+        var priority = actionabilityPriorityLabel_(r.urgencyLevel);
+        var priorityClass = actionabilityPriorityClass_(r.urgencyLevel);
+        var nextAction = actionabilityNextActionLabel_(r.nextAction);
+        var commNext = actionabilityCommsLabel_(r.recommendedMessageType);
+        var due = String(r.suppressor || "").toUpperCase() === "COOLDOWN_ACTIVE" ? "Cooling Period" : (priority === "Normal" ? "Open" : priority);
+        var blocker = actionabilityBlockerLabel_(r);
+        var authority = actionabilityAuthorityLabel_(r);
+        html += '<div class="actionabilityTask">';
+        html += '<div><div class="actionabilityTaskPrimary">' + esc(r.applicantId || "") + '</div><div class="actionabilityTaskName">' + esc(r.name || "Name not shown") + '</div><div style="margin-top:8px;"><span class="opsStatusPill ' + priorityClass + '">' + esc(priority) + '</span></div></div>';
+        html += '<div class="actionabilityFactGrid">'
+          + '<div class="actionabilityFact"><strong>Owner:</strong> <span>' + esc(actionabilityGroupLabel_(actionabilityGroupKey_(r))) + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Next Action:</strong> <span>' + esc(nextAction) + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Blocker:</strong> <span class="actionabilityBlocker">' + esc(blocker) + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Authority:</strong> <span class="actionabilityAuthority">' + esc(authority) + '</span></div>'
+          + '</div>';
+        html += '<div class="actionabilityFactGrid">'
+          + '<div class="actionabilityFact"><strong>Portal:</strong> <span>' + esc(actionabilityStatusValue_(state.portalSubmitted, "Submitted", "Not Submitted")) + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Docs:</strong> <span>' + esc(state.docsVerified ? "Verified" : (state.requiredDocumentUploadComplete ? "Reviewing" : "Missing")) + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Payment:</strong> <span>' + esc(state.paymentVerified ? "Verified" : (state.paymentEvidencePresent ? "Pending" : "Not Started")) + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Invoice:</strong> <span>Not shown</span></div>'
+          + '<div class="actionabilityFact"><strong>CRM:</strong> <span>Not shown</span></div>'
+          + '<div class="actionabilityFact"><strong>Enrolment:</strong> <span>' + esc(actionabilityGroupKey_(r) === "COMPLETE" ? "Confirmed" : "Pending") + '</span></div>'
+          + '</div>';
+        html += '<div class="actionabilityFactGrid">'
+          + '<div class="actionabilityFact"><strong>Last:</strong> <span>' + esc(r.lastContactAgeDays === "" ? "None" : String(r.lastContactAgeDays) + "d ago") + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Next:</strong> <span>' + esc(commNext) + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Due:</strong> <span>' + esc(due) + '</span></div>'
+          + '<div><button class="btn small accent" type="button" onclick="reviewActionabilityRow_(' + String(index) + ', this)">Review</button></div>'
+          + '</div>';
+        html += '<details class="actionabilityDetails"><summary>Details</summary>'
+          + '<div class="actionabilityFactGrid" style="margin-top:8px;">'
+          + '<div class="actionabilityFact"><strong>Priority:</strong> <span>' + esc(r.urgencyReason || priority) + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Documents:</strong> <span>' + esc(String(Number(state.uploadedRequiredDocumentCount || 0)) + "/" + String(Number(state.requiredDocumentCount || 0))) + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Lifecycle:</strong> <span>' + esc(String(state.lifecycleStage || "Not shown").replace(/_/g, " ")) + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Age:</strong> <span>' + esc(r.ageDays === "" || r.ageDays === undefined ? "-" : String(r.ageDays) + "d") + '</span></div>'
+          + '</div></details>';
+        html += '</div>';
       });
-      html += '</table>';
       rowsEl.innerHTML = html;
+    }
+
+    function reviewActionabilityRow_(index, triggerBtn){
+      var rows = sortedActionabilityRows_(actionabilityPreviewRows);
+      var row = rows[Number(index)] || null;
+      if (!row || !row.applicantId) return;
+      pendingActionabilityReviewContext = {
+        applicantId: String(row.applicantId || ""),
+        target: actionabilityReviewTarget_(row)
+      };
+      review(Number(row.rowNumber || 0) || null, String(row.applicantId || ""), triggerBtn || null);
+    }
+
+    function focusActionabilityReviewTarget_(){
+      var ctx = pendingActionabilityReviewContext || null;
+      if (!ctx) return;
+      pendingActionabilityReviewContext = null;
+      window.setTimeout(function(){
+        var targetId = "applicantStatusStrip";
+        if (ctx.target === "docs") targetId = "docs";
+        else if (ctx.target === "payment") targetId = "mPayment";
+        else if (ctx.target === "academic") targetId = "booksDryRunCard";
+        else if (ctx.target === "exception") targetId = "commDerivedMeta";
+        var el = document.getElementById(targetId) || document.getElementById("applicantStatusStrip");
+        if (el && typeof el.scrollIntoView === "function") el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 350);
     }
 
     function loadActionabilityPreview_(opts){
       var o = (opts && typeof opts === "object") ? opts : {};
       var metaEl = document.getElementById("actionabilityPreviewMeta");
-      if (metaEl) metaEl.textContent = "Loading read-only preview...";
+      if (metaEl) metaEl.textContent = "Loading dashboard...";
       google.script.run
         .withSuccessHandler(function(res){
           renderActionabilityPreview_(res || {});
@@ -8711,8 +8934,8 @@ function renderStageDashboard_(items, emptyMessage){
         .withFailureHandler(function(err){
           console.error("[AdminUI] admin_getActionabilityPreview failure:", err);
           var rowsEl = document.getElementById("actionabilityPreviewRows");
-          if (rowsEl) rowsEl.innerHTML = '<div class="queue-empty">Could not load actionability preview.</div>';
-          if (metaEl) metaEl.textContent = "Actionability preview unavailable.";
+          if (rowsEl) rowsEl.innerHTML = '<div class="queue-empty">Could not load actionability dashboard.</div>';
+          if (metaEl) metaEl.textContent = "Actionability dashboard unavailable.";
         })
         .admin_getActionabilityPreview({ limit: 40, force: o.force ? 1 : 0 });
     }
@@ -9532,6 +9755,7 @@ function renderStageDashboard_(items, emptyMessage){
       document.getElementById("modalBack").style.display = "flex";
       syncDocumentGalleryUi_();
       syncModalEditControls_();
+      focusActionabilityReviewTarget_();
     }
 
     function renderDocCards_(docs){
