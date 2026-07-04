@@ -237,6 +237,8 @@
     .secondarySurfacePanel > summary{ cursor:pointer; font-weight:900; color:#31516f; list-style-position:inside; }
     .secondarySurfaceBody{ margin-top:10px; }
     .legacyDiagnosticsPanel{ opacity:.94; }
+    .legacyPanelBlock{ border:1px solid #e5ebf2; border-radius:8px; background:#fff; padding:12px; margin-top:10px; box-shadow:none; }
+    .legacyPanelBlock h3{ margin:0 0 8px; font-size:15px; color:#31516f; }
     .actionabilityKpiStrip{ display:grid; grid-template-columns:repeat(7, minmax(112px, 1fr)); gap:7px; margin:10px 0 8px; }
     .actionabilityKpi{ border:1px solid #d5e2ee; border-radius:8px; padding:8px 10px; background:#fff; color:#0f172a; min-width:0; text-align:left; cursor:pointer; box-shadow:0 5px 14px rgba(17,39,68,.04); }
     .actionabilityKpi:hover, .actionabilityKpi.active{ border-color:#7da9de; background:#eef5ff; box-shadow:inset 0 0 0 1px rgba(31,90,165,.16); }
@@ -248,17 +250,25 @@
     .actionabilityGroupCard .k{ color:#31516f; font-size:10px; text-transform:uppercase; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .actionabilityGroupCard .v{ color:#0f1f35; font-size:22px; line-height:1; font-weight:900; margin-top:3px; }
     .actionabilityGroupMeta{ display:grid; grid-template-columns:1fr 1fr; gap:4px 8px; font-size:11px; margin-top:7px; color:#40556b; }
-    .actionabilityRows{ display:grid; gap:7px; margin-top:8px; }
-    .actionabilityTask{ border:1px solid #dbe5ef; border-radius:8px; padding:10px; background:#fff; color:#0f172a; display:grid; grid-template-columns:minmax(150px,.85fr) minmax(220px,1.25fr) minmax(240px,1.35fr) minmax(155px,.72fr); gap:10px; align-items:start; box-shadow:0 5px 14px rgba(17,39,68,.035); }
+    .actionabilityRows{ display:grid; gap:6px; margin-top:8px; }
+    .actionabilityTask{ border:1px solid #dbe5ef; border-radius:8px; padding:8px 9px; background:#fff; color:#0f172a; display:grid; grid-template-columns:minmax(138px,.9fr) minmax(164px,1fr) minmax(172px,1.08fr) minmax(190px,1.1fr) minmax(104px,.58fr) minmax(92px,.45fr); gap:8px; align-items:center; box-shadow:0 4px 10px rgba(17,39,68,.03); }
     .actionabilityTaskPrimary{ font-weight:900; color:#0f172a; }
     .actionabilityTaskName{ color:#66788c; font-size:11px; margin-top:2px; overflow-wrap:anywhere; }
+    .actionabilityTaskStack{ display:grid; gap:4px; min-width:0; }
     .actionabilityFactGrid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:4px 8px; font-size:11px; line-height:1.28; }
     .actionabilityFact{ min-width:0; }
-    .actionabilityFact strong{ display:block; color:#61748a; font-size:10px; font-weight:900; text-transform:uppercase; }
+    .actionabilityFact strong{ display:block; color:#61748a; font-size:9px; font-weight:900; text-transform:uppercase; }
     .actionabilityFact span{ color:#0f172a; }
+    .actionabilityStatusChips{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+    .actionabilityMiniChip{ border:1px solid #dbe5ef; border-radius:999px; padding:2px 6px; background:#f8fafc; color:#31516f; font-size:10px; font-weight:900; line-height:1.25; white-space:nowrap; }
+    .actionabilityMiniChip.ok{ color:#137347; border-color:#bfe3ce; background:#f0fbf4; }
+    .actionabilityMiniChip.warn{ color:#8a5a00; border-color:#f2d38b; background:#fff8e6; }
+    .actionabilityMiniChip.blocked{ color:#9a2d2d; border-color:#efc4c4; background:#fff5f5; }
     .actionabilityBlocker{ color:#9a2d2d; font-weight:900; }
     .actionabilityAuthority{ color:#1f5aa5; font-weight:900; }
-    .actionabilityReviewBtn{ width:100%; padding:9px 12px; border-radius:8px; background:#1f5aa5; border-color:#174a8b; color:#fff; font-size:13px; font-weight:900; }
+    .actionabilityDueBlock{ font-size:11px; color:#40556b; font-weight:900; }
+    .actionabilityDueBlock span{ display:block; color:#0f172a; margin-top:2px; }
+    .actionabilityReviewBtn{ width:100%; padding:8px 10px; border-radius:8px; background:#1f5aa5; border-color:#174a8b; color:#fff; font-size:12px; font-weight:900; }
     .actionabilityReviewBtn:hover{ background:#174a8b; }
     .actionabilityFilterNote{ color:#1f5aa5; font-size:12px; font-weight:900; margin:4px 0 8px; }
     .actionabilityDetails{ grid-column:1 / -1; color:#66788c; font-size:11px; border-top:1px solid #edf2f7; padding-top:7px; }
@@ -1527,8 +1537,8 @@
             <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Choose Lifecycle Stage</button>
           </div>
           <div class="opsInspectPanel" id="opsStageBatchInlineNote">Bulk communication requires Operations Admin or Super Admin authority, plus preview, confirmation, caps, and backend gates.</div>
-          <div class="opsInspectPanel" style="margin-top:10px;">Review Queues show operational workload. Not all rows are currently mail-eligible. Preview Cohort Result appears below in the Stage Batch Preview Result / Diagnostics panel.</div>
-          <div class="opsSectionHeader" style="margin-top:12px;"><div><h3 style="margin:0;font-size:15px;">Stage Batch Preview Result</h3><p style="margin:4px 0 0;">Stage Batch Preview shows mail eligibility for the selected stage.</p></div><span class="opsStatusPill info">Separate from Review Queues</span></div>
+          <div class="opsInspectPanel" style="margin-top:10px;">Operations Workspace shows operator workload. Not all rows are currently mail-eligible. Preview Cohort Result appears below in the Stage Batch Preview Result / Diagnostics panel.</div>
+          <div class="opsSectionHeader" style="margin-top:12px;"><div><h3 style="margin:0;font-size:15px;">Stage Batch Preview Result</h3><p style="margin:4px 0 0;">Stage Batch Preview shows mail eligibility for the selected stage.</p></div><span class="opsStatusPill info">Separate from Operations Workspace</span></div>
           <div id="opsStageBatchSummary" class="opsResultBox hidden" tabindex="-1" aria-live="polite"></div>
           <div id="opsStageBatchPreviewDiagnostics" class="opsResultBox hidden" tabindex="-1" aria-live="polite"></div>
         </div>
@@ -1839,7 +1849,7 @@
           <div><h2>Reports</h2><p>Operational report menu backed by loaded queue/runtime snapshots. CSV export is local browser-only and does not write Sheets or Drive.</p></div>
           <span class="opsStatusPill info">Local export</span>
         </div>
-        <div class="opsResultBox info">Lifecycle Map Global View now shows full active admissions lifecycle counts. Reports / Campaign remain broader aggregate surfaces; Applicant Queue remains the loaded OPS working snapshot.</div>
+        <div class="opsResultBox info">Lifecycle Map Global View shows full active admissions lifecycle counts. Reports and campaigns remain broader aggregate surfaces; Operations Workspace is the operator workload surface.</div>
         <div class="opsTileGrid">
           <div class="opsTile"><div class="opsTileTitle">Daily Admissions Snapshot</div><div class="opsTileMeta" id="cockpitReportAdmissions">Full-population aggregate when loaded</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Daily Admissions Snapshot')">Open Full-Population Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Daily Admissions Snapshot')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Guidance Only</button></div></div>
           <div class="opsTile"><div class="opsTileTitle">Invoice Raised vs Sent</div><div class="opsTileMeta" id="cockpitReportInvoiceTile">Count unavailable</div><div class="opsActionRow"><button class="opsActionBtn live" type="button" onclick="opsOpenReport_('Invoice Raised vs Sent')">Open Report</button><button class="opsActionBtn live" type="button" onclick="opsExportReportCsv_('Invoice Raised vs Sent')">Export CSV</button><button class="opsActionBtn" type="button" onclick="opsShowReportSchedulingGuidance_()">Schedule Report</button></div></div>
@@ -2080,11 +2090,11 @@
       <div class="operatorWorkspaceHead">
         <div>
           <h2 class="operatorWorkspaceTitle">Operations Workspace</h2>
-          <div class="muted" style="margin-top:4px;">Primary workload surface for what needs work next. Existing Review Workspace, lifecycle, communication, payment, and verification authorities remain the source of truth.</div>
+          <div class="muted" style="margin-top:4px;">Primary workload surface for today's work, ownership, blockers, priority, and next action. Review Workspace remains the primary editing authority.</div>
           <div class="operatorViewShell" aria-label="Operations Workspace view mode">
-            <button class="operatorViewBtn active" type="button" aria-pressed="true" data-actionability-view="global">Global View</button>
-            <button class="operatorViewBtn" type="button" aria-pressed="false" data-actionability-view="operator" disabled title="Operator scoping pending">Operator View</button>
-            <span class="operatorViewNote">Global View shows the current full derived workload. Operator View scoping is pending; no backend filter is applied.</span>
+            <button class="operatorViewBtn active" type="button" aria-pressed="true" data-actionability-view="global">Global View: Current workload</button>
+            <button class="operatorViewBtn" type="button" aria-pressed="false" data-actionability-view="operator" disabled title="Operator-scoped workload coming soon">Operator View: Coming soon</button>
+            <span class="operatorViewNote">Operator-scoped workload is planned; no backend filter is applied.</span>
           </div>
         </div>
         <div class="operatorWorkspaceTools">
@@ -2094,10 +2104,10 @@
         </div>
       </div>
       <div class="operatorSurfaceRoles" aria-label="Admin surface roles">
-        <div class="operatorSurfaceRole"><strong>Operations Workspace</strong>What needs work next.</div>
-        <div class="operatorSurfaceRole"><strong>Lifecycle Map</strong>Population and state visibility.</div>
+        <div class="operatorSurfaceRole"><strong>Operations Workspace</strong>What requires work today.</div>
+        <div class="operatorSurfaceRole"><strong>Lifecycle Map</strong>Where applicants are.</div>
         <div class="operatorSurfaceRole"><strong>Review Workspace</strong>Authoritative editing modal.</div>
-        <div class="operatorSurfaceRole"><strong>System Health</strong>Diagnostics and automation state.</div>
+        <div class="operatorSurfaceRole"><strong>System Health</strong>Troubleshooting and automation state.</div>
       </div>
       <div id="actionabilityKpiStrip" class="actionabilityKpiStrip" aria-label="Actionability responsibility counts"></div>
       <div id="actionabilityPreviewSummary" class="actionabilitySummary"></div>
@@ -2125,9 +2135,12 @@
       </div>
     </details>
 
-    <details id="operationalDashboardPanel" class="card queue-panel secondarySurfacePanel legacyDiagnosticsPanel">
-      <summary>Advanced / Legacy workload diagnostics</summary>
+    <details id="advancedDiagnosticsPanel" class="card queue-panel secondarySurfacePanel legacyDiagnosticsPanel">
+      <summary>Advanced Diagnostics / Legacy Panels</summary>
       <div class="secondarySurfaceBody">
+      <div class="muted" style="margin-bottom:10px;">Optional diagnostics and compatibility panels. Operations Workspace is the primary workload surface; Review Workspace is the primary editing authority.</div>
+
+    <section id="operationalDashboardPanel" class="legacyPanelBlock">
       <h3>Legacy Dashboard Metrics</h3>
       <div class="muted" style="margin-bottom:10px;">Operations Workspace is the primary workload surface. These legacy dashboard panels remain available for reconciliation, diagnostics, and supporting intake context.</div>
 
@@ -2170,12 +2183,11 @@
         <div class="box"><div class="k">Queue Backlog</div><div class="v" id="opsQueueBacklog">loading...</div></div>
         <div class="box"><div class="k">Metrics Scan</div><div class="v" id="opsMetricsScan">loading...</div></div>
       </div>
-      </div>
-    </details>
+    </section>
 
-    <details id="compatibilitySummaryPanel" class="card queue-panel">
+    <details id="compatibilitySummaryPanel" class="legacyPanelBlock">
       <summary style="cursor:pointer;font-weight:900;">Compatibility Summary</summary>
-      <div class="muted" style="margin:10px 0;">Compatibility summary only. Use Workload Drill-Down for current operational workload and applicant state. These summary buckets are not canonical lifecycle, queue, or mail-eligibility authority.</div>
+      <div class="muted" style="margin:10px 0;">Compatibility summary only. Use Operations Workspace for current work and Lifecycle Map for applicant state. These summary buckets are not canonical lifecycle, queue, or mail-eligibility authority.</div>
       <div class="commMeta">
         <div class="box"><div class="k">Summary: New / Unclassified</div><div class="v" id="pipeNewToMlckia">loading...</div></div>
         <div class="box"><div class="k">Summary: Contacted</div><div class="v" id="pipeContacted">loading...</div></div>
@@ -2185,7 +2197,7 @@
       </div>
     </details>
 
-    <div id="whatsappFallbackPanel" class="card queue-panel">
+    <section id="whatsappFallbackPanel" class="legacyPanelBlock">
       <h3>WhatsApp Fallback Queue</h3>
       <div class="muted" style="margin-bottom:10px;">CSV export plus manual admin email only. This does not send WhatsApp, SMS, or automated email. Review every row and use individual links or a broadcast list; do not create applicant groups.</div>
       <div class="commControls">
@@ -2214,9 +2226,9 @@
       </div>
       <div class="muted" style="margin-top:10px;">The CSV includes copy/paste-ready message text and single-recipient WhatsApp Web links. Manual operator send remains the final step.</div>
       <div id="waFallbackMsg" class="muted" style="margin-top:10px;"></div>
-    </div>
+    </section>
 
-    <details id="stageDashboardPanel" class="card queue-panel secondarySurfacePanel legacyDiagnosticsPanel">
+    <details id="stageDashboardPanel" class="legacyPanelBlock">
       <summary>Advanced / Lifecycle drill-down</summary>
       <div class="secondarySurfaceBody">
       <h3>Workload &amp; Action Required Drill-Down</h3>
@@ -2226,7 +2238,7 @@
       </div>
     </details>
 
-    <div id="stageBatchPanel" class="card queue-panel">
+    <section id="stageBatchPanel" class="legacyPanelBlock">
       <h3>Stage Batch Communications</h3>
       <div class="muted" style="margin-bottom:10px;">Operations Workspace shows operational workload. Not all rows are currently mail-eligible. Preview Cohort Result appears below in the Stage Batch Preview Result / Diagnostics panel.</div>
       <div class="commMeta">
@@ -2250,7 +2262,7 @@
         <div id="stageBatchInlineNote" class="muted" style="font-size:12px;">Standard production stage sends automatically use the next eligible unsent records. Diagnostic offset is ignored unless a separate diagnostic flow is introduced.</div>
       </div>
       <div style="font-weight:800;margin-top:12px;">Preview Cohort Result</div>
-      <div class="muted" style="font-size:12px;margin-top:4px;">Stage Batch Preview shows mail eligibility for the selected stage. Review Queues remains a separate operational listing.</div>
+      <div class="muted" style="font-size:12px;margin-top:4px;">Stage Batch Preview shows mail eligibility for the selected stage. Operations Workspace remains the operator workload surface.</div>
       <div id="stageBatchSummary" class="sendSummary hidden" tabindex="-1" aria-live="polite"></div>
       <div id="stageBatchPreviewDiagnostics" class="sendSummary hidden">
         <div style="font-weight:800;">Preview Diagnostics</div>
@@ -2270,7 +2282,9 @@
           <div class="box"><div class="k">Replay Protection Active</div><div class="v" id="diagPreviewReplayActive">-</div></div>
         </div>
       </div>
-    </div>
+    </section>
+      </div>
+    </details>
 
     <details id="legacySearchPanel" class="card">
       <summary style="cursor:pointer;font-weight:800;">Applicant Search <span class="opsStatusPill info">Read-only</span></summary>
@@ -7728,7 +7742,7 @@ function renderStageBatchSummary_(res){
     }
   } else if (isPreview) {
     parts.push('<div style="font-weight:800;">Stage Batch Preview Result</div>');
-    parts.push('<div class="muted" style="margin-top:6px;font-size:12px;">This summary is the authoritative mail-eligibility preview for the selected stage. Review Queues remains a separate operational listing.</div>');
+    parts.push('<div class="muted" style="margin-top:6px;font-size:12px;">This summary is the authoritative mail-eligibility preview for the selected stage. Operations Workspace remains the operator workload surface.</div>');
     parts.push('<div style="margin-top:6px;">Selected Stage / Queue: ' + esc(String(res.stage || batchState.selectedStage || "")) + ' | Message Type: ' + esc(String(res.messageType || "(none)")) + '</div>');
     parts.push('<div style="margin-top:6px;">Preview Request ID: ' + esc(String(res.requestId || res.previewRequestId || "")) + ' | Candidate Hash Present: ' + esc(!!String(res.candidateHash || "") ? "YES" : "NO") + ' | Sendable Status: ' + esc(batchState.sendable === true ? "SENDABLE" : "BLOCKED") + '</div>');
     parts.push('<div style="margin-top:6px;">Total Candidate Count: ' + esc(String(Number(res.candidateCount != null ? res.candidateCount : res.count || 0))) + ' | Eligible Preview Count: ' + esc(String(Number(res.count || 0))) + ' | Requested Batch Size: ' + esc(String(Number(res.previewLimit || res.limit || 0))) + '</div>');
@@ -8941,32 +8955,35 @@ function renderStageDashboard_(items, emptyMessage){
         var due = actionabilityDueLabel_(r, priority);
         var blocker = actionabilityBlockerLabel_(r);
         var authority = actionabilityAuthorityLabel_(r);
+        var portalLabel = actionabilityStatusValue_(state.portalSubmitted, "Portal submitted", "Portal pending");
+        var docsLabel = state.docsVerified ? "Docs verified" : (state.requiredDocumentUploadComplete ? "Docs review" : "Docs missing");
+        var paymentLabel = state.paymentVerified ? "Payment verified" : (state.paymentEvidencePresent ? "Payment pending" : "Payment open");
+        var contactLabel = actionabilityContactStatus_(r) === "Available" ? "Contact ok" : "Contact missing";
+        var docsClass = state.docsVerified ? "ok" : (state.requiredDocumentUploadComplete ? "warn" : "blocked");
+        var paymentClass = state.paymentVerified ? "ok" : (state.paymentEvidencePresent ? "warn" : "blocked");
+        var contactClass = actionabilityContactStatus_(r) === "Available" ? "ok" : "blocked";
         html += '<div class="actionabilityTask">';
-        html += '<div><div class="actionabilityTaskPrimary">' + esc(r.applicantId || "") + '</div><div class="actionabilityTaskName">' + esc(r.name || "Name not shown") + '</div><div style="margin-top:8px;"><span class="opsStatusPill ' + priorityClass + '">' + esc(priority) + '</span></div></div>';
+        html += '<div class="actionabilityTaskStack"><div class="actionabilityTaskPrimary">' + esc(r.applicantId || "") + '</div><div class="actionabilityTaskName">' + esc(r.name || "Name not shown") + '</div><div><span class="opsStatusPill ' + priorityClass + '">' + esc(priority) + '</span></div></div>';
         html += '<div class="actionabilityFactGrid">'
           + '<div class="actionabilityFact"><strong>Owner:</strong> <span>' + esc(actionabilityGroupLabel_(actionabilityGroupKey_(r))) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Next Action:</strong> <span>' + esc(nextAction) + '</span></div>'
+          + '</div>';
+        html += '<div class="actionabilityFactGrid">'
           + '<div class="actionabilityFact"><strong>Blocker:</strong> <span class="actionabilityBlocker">' + esc(blocker) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Authority:</strong> <span class="actionabilityAuthority">' + esc(authority) + '</span></div>'
           + '</div>';
-        html += '<div class="actionabilityFactGrid">'
-          + '<div class="actionabilityFact"><strong>Portal:</strong> <span>' + esc(actionabilityStatusValue_(state.portalSubmitted, "Submitted", "Not Submitted")) + '</span></div>'
-          + '<div class="actionabilityFact"><strong>Docs:</strong> <span>' + esc(state.docsVerified ? "Verified" : (state.requiredDocumentUploadComplete ? "Reviewing" : "Missing")) + '</span></div>'
-          + '<div class="actionabilityFact"><strong>Payment:</strong> <span>' + esc(state.paymentVerified ? "Verified" : (state.paymentEvidencePresent ? "Pending" : "Not Started")) + '</span></div>'
-          + '<div class="actionabilityFact"><strong>Invoice:</strong> <span>Not shown</span></div>'
-          + '<div class="actionabilityFact"><strong>CRM:</strong> <span>Not shown</span></div>'
-          + '<div class="actionabilityFact"><strong>Enrolment:</strong> <span>' + esc(actionabilityGroupKey_(r) === "COMPLETE" ? "Confirmed" : "Pending") + '</span></div>'
-          + '<div class="actionabilityFact"><strong>Contact:</strong> <span>' + esc(actionabilityContactStatus_(r)) + '</span></div>'
+        html += '<div class="actionabilityStatusChips">'
+          + '<span class="actionabilityMiniChip ' + (state.portalSubmitted ? "ok" : "warn") + '">' + esc(portalLabel) + '</span>'
+          + '<span class="actionabilityMiniChip ' + docsClass + '">' + esc(docsLabel) + '</span>'
+          + '<span class="actionabilityMiniChip ' + paymentClass + '">' + esc(paymentLabel) + '</span>'
+          + '<span class="actionabilityMiniChip ' + contactClass + '">' + esc(contactLabel) + '</span>'
           + '</div>';
-        html += '<div class="actionabilityFactGrid">'
-          + '<div class="actionabilityFact"><strong>Last:</strong> <span>' + esc(r.lastContactAgeDays === "" ? "None" : String(r.lastContactAgeDays) + "d ago") + '</span></div>'
-          + '<div class="actionabilityFact"><strong>Next:</strong> <span>' + esc(commNext) + '</span></div>'
-          + '<div class="actionabilityFact"><strong>Due:</strong> <span>' + esc(due) + '</span></div>'
-          + '<div><button class="btn actionabilityReviewBtn" type="button" onclick="reviewActionabilityRow_(' + String(index) + ', this)">Review</button></div>'
-          + '</div>';
+        html += '<div class="actionabilityDueBlock">Due<span>' + esc(due) + '</span><span class="muted">' + esc(commNext) + '</span></div>';
+        html += '<div><button class="btn actionabilityReviewBtn" type="button" onclick="reviewActionabilityRow_(' + String(index) + ', this)">Review</button></div>';
         html += '<details class="actionabilityDetails"><summary>Details</summary>'
           + '<div class="actionabilityFactGrid" style="margin-top:8px;">'
           + '<div class="actionabilityFact"><strong>Priority:</strong> <span>' + esc(r.urgencyReason || priority) + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Last:</strong> <span>' + esc(r.lastContactAgeDays === "" ? "None" : String(r.lastContactAgeDays) + "d ago") + '</span></div>'
           + '<div class="actionabilityFact"><strong>Documents:</strong> <span>' + esc(String(Number(state.uploadedRequiredDocumentCount || 0)) + "/" + String(Number(state.requiredDocumentCount || 0))) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Lifecycle:</strong> <span>' + esc(String(state.lifecycleStage || "Not shown").replace(/_/g, " ")) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Age:</strong> <span>' + esc(r.ageDays === "" || r.ageDays === undefined ? "-" : String(r.ageDays) + "d") + '</span></div>'

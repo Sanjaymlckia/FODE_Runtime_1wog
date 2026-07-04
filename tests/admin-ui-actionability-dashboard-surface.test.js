@@ -15,20 +15,26 @@ const reviewQueuesIndex = indexOfRequired('id="reviewQueuesPanel"');
 assert.ok(dashboardIndex < reviewQueuesIndex, "Operations Workspace must render before Review Queues");
 assert.ok(adminUi.includes("Operations Workspace"), "Promoted operator surface must use the Operations Workspace label");
 assert.doesNotMatch(adminUi, /Actionability Dashboard/i, "Old Actionability Dashboard heading must not remain visible in AdminUI");
-assert.ok(adminUi.includes("Operations Workspace is the primary workload surface"), "Operations Workspace must be described as the primary workload surface");
+assert.ok(adminUi.includes("Primary workload surface for today's work, ownership, blockers, priority, and next action"), "Operations Workspace must be described as the primary workload surface");
+assert.ok(adminUi.includes("Review Workspace remains the primary editing authority"), "Review Workspace must be described as the editing authority");
 assert.doesNotMatch(adminUi, /Review Queues remains the primary action surface/i, "Review Queues must not claim primary action-surface authority");
 assert.doesNotMatch(adminUi, /Secondary Navigation: Review Queues/i, "Review Queues heading must not visually compete as secondary navigation");
 assert.ok(adminUi.includes("Compatibility: Review Queues"), "Review Queues must remain available as a compatibility surface");
 assert.ok(adminUi.includes("Review Queues remain available for compatibility and existing review workflows"), "Review Queues compatibility wording must be explicit");
-assert.ok(adminUi.includes("Global View"), "Operations Workspace must expose the Global View shell");
-assert.ok(adminUi.includes("Operator View"), "Operations Workspace must expose the Operator View shell");
-assert.ok(adminUi.includes("Operator View scoping is pending; no backend filter is applied"), "Operator View shell must not imply backend filtering exists");
+assert.match(adminUi, /<details id="reviewQueuesPanel"[^>]*>/, "Review Queues must be a collapsed details surface");
+assert.doesNotMatch(adminUi, /<details id="reviewQueuesPanel"[^>]*\sopen\b/, "Review Queues must be collapsed by default");
+assert.ok(adminUi.includes("Advanced Diagnostics / Legacy Panels"), "Legacy/supporting panels must be grouped under Advanced Diagnostics");
+assert.match(adminUi, /<details id="advancedDiagnosticsPanel"[^>]*>/, "Advanced Diagnostics must be a collapsed details surface");
+assert.doesNotMatch(adminUi, /<details id="advancedDiagnosticsPanel"[^>]*\sopen\b/, "Advanced Diagnostics must be collapsed by default");
+assert.ok(adminUi.includes("Global View: Current workload"), "Operations Workspace must expose the Global View shell");
+assert.ok(adminUi.includes("Operator View: Coming soon"), "Operations Workspace must expose the Operator View shell");
+assert.ok(adminUi.includes("Operator-scoped workload is planned; no backend filter is applied"), "Operator View shell must not imply backend filtering exists");
 assert.match(adminUi, /data-actionability-view="global"/, "View shell must preserve actionability-scoped internal naming");
 assert.match(adminUi, /data-actionability-view="operator"[^>]*disabled/, "Operator View must stay disabled until backend scoping exists");
-assert.ok(adminUi.includes("What needs work next."), "Operations Workspace role must be clear");
-assert.ok(adminUi.includes("Population and state visibility."), "Lifecycle Map role must be clear");
+assert.ok(adminUi.includes("What requires work today."), "Operations Workspace role must be clear");
+assert.ok(adminUi.includes("Where applicants are."), "Lifecycle Map role must be clear");
 assert.ok(adminUi.includes("Authoritative editing modal."), "Review Workspace role must be clear");
-assert.ok(adminUi.includes("Diagnostics and automation state."), "System Health role must be clear");
+assert.ok(adminUi.includes("Troubleshooting and automation state."), "System Health role must be clear");
 
 const kpiIndex = indexOfRequired('id="actionabilityKpiStrip"');
 const summaryIndex = indexOfRequired('id="actionabilityPreviewSummary"');
@@ -59,6 +65,8 @@ assert.match(adminUi, /function reviewActionabilityRow_/, "Dashboard Review butt
 assert.match(adminUi, /reviewActionabilityRow_\('[^']*'|reviewActionabilityRow_\(\s*'?\s*\+ String\(index\)/, "Dashboard rows must render Review actions");
 assert.match(adminUi, /actionabilityRenderedRows/, "Dashboard Review buttons must use the currently rendered row list");
 assert.match(adminUi, /class="btn actionabilityReviewBtn"/, "Dashboard Review button must use the emphasized operator action style");
+assert.match(adminUi, /class="actionabilityStatusChips"/, "Dashboard rows must expose compact status chips");
+assert.doesNotMatch(renderActionabilityRowBody_(), /<strong>Invoice:<\/strong> <span>Not shown<\/span>|<strong>CRM:<\/strong> <span>Not shown<\/span>/, "Dashboard rows must not spend scan space on Not shown filler facts");
 assert.match(adminUi, /review\([^;]+actionabilityFocus:\s*true/, "Dashboard Review must explicitly mark actionability-origin focus requests");
 assert.match(adminUi, /function clearPendingActionabilityReviewContext_/, "Dashboard Review focus context must have an explicit clear helper");
 assert.match(adminUi, /pendingCtx\.requestId\s*=\s*reqId/, "Dashboard Review focus context must bind to the current detail request id");
@@ -67,7 +75,11 @@ assert.match(adminUi, /ctxId\s*&&\s*detailId\s*&&\s*ctxId\s*!==\s*detailId/, "Da
 assert.match(adminUi, /clearPendingActionabilityReviewContext_\(reqId\)/, "Dashboard focus context must clear on stale or failed detail requests");
 assert.match(adminUi, /reviewOpts\.actionabilityFocus\s*===\s*true[\s\S]+clearPendingActionabilityReviewContext_\(\)/, "Normal Review calls must clear stale dashboard focus context");
 
-const renderBody = adminUi.slice(indexOfRequired("function renderActionabilityPreview_"), indexOfRequired("function reviewActionabilityRow_"));
+function renderActionabilityRowBody_() {
+  return adminUi.slice(indexOfRequired("function renderActionabilityPreview_"), indexOfRequired("function reviewActionabilityRow_"));
+}
+
+const renderBody = renderActionabilityRowBody_();
 assert.doesNotMatch(renderBody, /esc\(\s*r\.recommendedMessageType\s*\)/, "Rows must render communication labels, not raw message type identifiers");
 assert.doesNotMatch(renderBody, /esc\(\s*r\.(?:templateId|Template_ID)\s*\)/i, "Rows must not render raw template identifiers");
 assert.doesNotMatch(renderBody, /INVALID_EMAIL|NO_EFFECTIVE_EMAIL/, "Rows must not render raw contactability codes");
