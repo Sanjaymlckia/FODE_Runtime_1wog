@@ -45,6 +45,13 @@ assert.match(adminUi, /function reviewActionabilityRow_/, "Dashboard Review butt
 assert.match(adminUi, /reviewActionabilityRow_\('[^']*'|reviewActionabilityRow_\(\s*'?\s*\+ String\(index\)/, "Dashboard rows must render Review actions");
 assert.match(adminUi, /actionabilityRenderedRows/, "Dashboard Review buttons must use the currently rendered row list");
 assert.match(adminUi, /class="btn actionabilityReviewBtn"/, "Dashboard Review button must use the emphasized operator action style");
+assert.match(adminUi, /review\([^;]+actionabilityFocus:\s*true/, "Dashboard Review must explicitly mark actionability-origin focus requests");
+assert.match(adminUi, /function clearPendingActionabilityReviewContext_/, "Dashboard Review focus context must have an explicit clear helper");
+assert.match(adminUi, /pendingCtx\.requestId\s*=\s*reqId/, "Dashboard Review focus context must bind to the current detail request id");
+assert.match(adminUi, /focusActionabilityReviewTarget_\(d\)/, "Dashboard focus must validate against the opened detail record");
+assert.match(adminUi, /ctxId\s*&&\s*detailId\s*&&\s*ctxId\s*!==\s*detailId/, "Dashboard focus must ignore applicant mismatches");
+assert.match(adminUi, /clearPendingActionabilityReviewContext_\(reqId\)/, "Dashboard focus context must clear on stale or failed detail requests");
+assert.match(adminUi, /reviewOpts\.actionabilityFocus\s*===\s*true[\s\S]+clearPendingActionabilityReviewContext_\(\)/, "Normal Review calls must clear stale dashboard focus context");
 
 const renderBody = adminUi.slice(indexOfRequired("function renderActionabilityPreview_"), indexOfRequired("function reviewActionabilityRow_"));
 assert.doesNotMatch(renderBody, /esc\(\s*r\.recommendedMessageType\s*\)/, "Rows must render communication labels, not raw message type identifiers");
@@ -63,4 +70,5 @@ console.log("PASS Operations Workspace is primary above Review Queues");
 console.log("PASS KPI strip renders actionable responsibility buckets above dashboard groups");
 console.log("PASS experimental/internal/contactability codes remain hidden from dashboard rows");
 console.log("PASS dashboard Review action keeps existing modal entry from rendered rows");
+console.log("PASS dashboard Review focus context is request-bound and cleared on stale paths");
 console.log("PASS no-contact applicants render Uncontactable / Contactability Gate language");

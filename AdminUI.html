@@ -8942,16 +8942,33 @@ function renderStageDashboard_(items, emptyMessage){
       if (!row || !row.applicantId) return;
       pendingActionabilityReviewContext = {
         applicantId: String(row.applicantId || ""),
+        rowNumber: Number(row.rowNumber || 0) || null,
+        requestId: null,
         target: actionabilityReviewTarget_(row)
       };
-      review(Number(row.rowNumber || 0) || null, String(row.applicantId || ""), triggerBtn || null);
+      review(Number(row.rowNumber || 0) || null, String(row.applicantId || ""), triggerBtn || null, { actionabilityFocus: true });
     }
 
-    function focusActionabilityReviewTarget_(){
+    function clearPendingActionabilityReviewContext_(requestId){
+      var ctx = pendingActionabilityReviewContext || null;
+      if (!ctx) return;
+      if (requestId && Number(ctx.requestId || 0) !== Number(requestId)) return;
+      pendingActionabilityReviewContext = null;
+    }
+
+    function focusActionabilityReviewTarget_(detail){
       var ctx = pendingActionabilityReviewContext || null;
       if (!ctx) return;
       pendingActionabilityReviewContext = null;
+      var detailId = String(detail && detail.ApplicantID || "").trim();
+      var ctxId = String(ctx.applicantId || "").trim();
+      var detailRow = Number((detail && detail._rowNumber) || currentRowNumber || 0);
+      var ctxRow = Number(ctx.rowNumber || 0);
+      if (Number(ctx.requestId || 0) !== Number(lastRequestId || 0)) return;
+      if (ctxId && detailId && ctxId !== detailId) return;
+      if (Number.isFinite(ctxRow) && ctxRow >= 2 && Number.isFinite(detailRow) && detailRow >= 2 && ctxRow !== detailRow) return;
       window.setTimeout(function(){
+        if (Number(ctx.requestId || 0) !== Number(lastRequestId || 0)) return;
         var targetId = "applicantStatusStrip";
         if (ctx.target === "docs") targetId = "docs";
         else if (ctx.target === "payment") targetId = "mPayment";
@@ -9440,16 +9457,29 @@ function renderStageDashboard_(items, emptyMessage){
         .admin_searchApplicants({ applicantId: applicantId, name: name, email: email, phone: phone, stage: stage });
     }
 
-    function review(rowNumber, applicantId, triggerBtn){
+    function review(rowNumber, applicantId, triggerBtn, opts){
       const reqId = ++lastRequestId;
       const rowNum = Number(rowNumber);
       const id = String(applicantId || "").trim();
+      const reviewOpts = (opts && typeof opts === "object") ? opts : {};
       console.log("[AdminUI] REVIEW_CLICK rowNumber=%s applicantId=%s reqId=%s", rowNumber, id || "", reqId);
       if (!id && (!Number.isFinite(rowNum) || rowNum < 2)) {
+        clearPendingActionabilityReviewContext_();
         const msg = "Cannot open Review: missing rowNumber and ApplicantID.";
         setMsg("msg", msg);
         setMsg("mMsg", msg);
         return;
+      }
+      var pendingCtx = pendingActionabilityReviewContext || null;
+      if (pendingCtx) {
+        var pendingId = String(pendingCtx.applicantId || "").trim();
+        var pendingRow = Number(pendingCtx.rowNumber || 0);
+        var rowMatches = !(Number.isFinite(pendingRow) && pendingRow >= 2 && Number.isFinite(rowNum) && rowNum >= 2) || pendingRow === rowNum;
+        if (reviewOpts.actionabilityFocus === true && pendingId && id && pendingId === id && rowMatches) {
+          pendingCtx.requestId = reqId;
+        } else {
+          clearPendingActionabilityReviewContext_();
+        }
       }
       if (id) {
         var rowContext = opsQueueRowByApplicantId_(id) || {};
@@ -9472,6 +9502,7 @@ function renderStageDashboard_(items, emptyMessage){
       google.script.run
         .withSuccessHandler(function(res){
           if (reqId !== lastRequestId) {
+            clearPendingActionabilityReviewContext_(reqId);
             clearDocsLoading_("");
             setReviewButtonLoading_(triggerBtn, false);
             return;
@@ -9493,6 +9524,7 @@ function renderStageDashboard_(items, emptyMessage){
             });
           } catch (_e) {}
           if (!apiResult || apiResult.ok !== true) {
+            clearPendingActionabilityReviewContext_(reqId);
             clearDocsLoading_("Detail request failed");
             setActionButtonsEnabled(false);
             setReviewButtonLoading_(triggerBtn, false);
@@ -9507,6 +9539,7 @@ function renderStageDashboard_(items, emptyMessage){
           }
 
           if (!detail) {
+            clearPendingActionabilityReviewContext_(reqId);
             var invalidMsg = "Invalid detail response";
             setMsg("mMsg", invalidMsg);
             setMsg("msg", invalidMsg);
@@ -9533,10 +9566,12 @@ function renderStageDashboard_(items, emptyMessage){
         })
         .withFailureHandler(function(err){
           if (reqId !== lastRequestId) {
+            clearPendingActionabilityReviewContext_(reqId);
             clearDocsLoading_("");
             setReviewButtonLoading_(triggerBtn, false);
             return;
           }
+          clearPendingActionabilityReviewContext_(reqId);
           console.error("[AdminUI] SIG detail_json failure:", err);
           var failMsg = "Detail request failed: " + (err && err.message ? err.message : String(err));
           setModalMsg_(failMsg);
@@ -9794,7 +9829,7 @@ function renderStageDashboard_(items, emptyMessage){
       document.getElementById("modalBack").style.display = "flex";
       syncDocumentGalleryUi_();
       syncModalEditControls_();
-      focusActionabilityReviewTarget_();
+      focusActionabilityReviewTarget_(d);
     }
 
     function renderDocCards_(docs){
