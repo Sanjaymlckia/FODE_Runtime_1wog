@@ -55,6 +55,7 @@ assert.ok(kpiIndex < summaryIndex, "KPI strip must render above dashboard group 
 assert.match(adminUi, /key === "MANAGEMENT" \? "Exceptions"/, "KPI strip must shorten Management Exceptions to Exceptions");
 assert.match(adminUi, /<button class="actionabilityKpi/, "KPI cards must render as actionable buttons");
 assert.match(adminUi, /onclick="selectActionabilityGroup_/, "KPI/group cards must select an actionability group");
+assert.match(adminUi, /var displayRows = actionabilityActiveGroup \? \(groupRows\[actionabilityActiveGroup\] \|\| \[\]\) : rows;/, "KPI/group filters must still drive displayed worklist rows");
 
 ["APPLICANT", "ADMISSIONS", "FINANCE", "ACADEMIC", "MANAGEMENT", "DORMANT", "COMPLETE"].forEach((key) => {
   assert.ok(adminUi.includes(`data-actionability-kpi="' + esc(key) + '"`) || adminUi.includes(`data-actionability-kpi="${key}"`), `KPI bucket key must be rendered: ${key}`);
@@ -65,8 +66,31 @@ assert.match(adminUi, /function reviewActionabilityRow_/, "Dashboard Review butt
 assert.match(adminUi, /reviewActionabilityRow_\('[^']*'|reviewActionabilityRow_\(\s*'?\s*\+ String\(index\)/, "Dashboard rows must render Review actions");
 assert.match(adminUi, /actionabilityRenderedRows/, "Dashboard Review buttons must use the currently rendered row list");
 assert.match(adminUi, /class="btn actionabilityReviewBtn"/, "Dashboard Review button must use the emphasized operator action style");
-assert.match(adminUi, /class="actionabilityStatusChips"/, "Dashboard rows must expose compact status chips");
+assert.match(adminUi, /Current Worklist/, "Operations Workspace must label the dense worklist");
+assert.match(adminUi, /class="actionabilityWorklist"/, "Applicant rows must render in the OPS-style worklist structure");
+assert.match(adminUi, /role="table" aria-label="Operations Workspace Current Worklist"/, "Worklist must use a predictable table/list geometry");
+assert.match(adminUi, /class="actionabilityWorklistRow" role="row" data-actionability-row=/, "Applicant rows must render as fixed worklist rows");
+assert.doesNotMatch(renderActionabilityRowBody_(), /class="actionabilityTask"/, "Applicant rows must not render as the old irregular card blocks");
+assert.match(adminUi, /actionabilityStatusChips/, "Dashboard rows must expose compact status chips");
 assert.doesNotMatch(renderActionabilityRowBody_(), /<strong>Invoice:<\/strong> <span>Not shown<\/span>|<strong>CRM:<\/strong> <span>Not shown<\/span>/, "Dashboard rows must not spend scan space on Not shown filler facts");
+[
+  ["applicantId", "Applicant ID"],
+  ["name", "Applicant Name"],
+  ["owner", "Owner"],
+  ["nextAction", "Next Action"],
+  ["docs", "Docs"],
+  ["payment", "Payment"],
+  ["contact", "Contact"],
+  ["age", "Age / Last"],
+  ["due", "Due / Next"]
+].forEach(([key, label]) => {
+  assert.match(adminUi, new RegExp(`sortHeader\\("${key}", "${label}"\\)`), `Sortable header must exist for ${label}`);
+  assert.match(adminUi, /data-actionability-sort="' \+ esc\(key\) \+ '"/, `Sort data attribute must be rendered for ${label}`);
+  assert.match(adminUi, /onclick="sortActionabilityPreview_/, `Sort action must be wired for ${label}`);
+});
+["applicantId", "docs", "payment", "contact", "due"].forEach((key) => {
+  assert.match(adminUi, new RegExp(`state\\.key === "${key}"`), `Sorter must implement ${key}`);
+});
 assert.match(adminUi, /review\([^;]+actionabilityFocus:\s*true/, "Dashboard Review must explicitly mark actionability-origin focus requests");
 assert.match(adminUi, /function clearPendingActionabilityReviewContext_/, "Dashboard Review focus context must have an explicit clear helper");
 assert.match(adminUi, /pendingCtx\.requestId\s*=\s*reqId/, "Dashboard Review focus context must bind to the current detail request id");

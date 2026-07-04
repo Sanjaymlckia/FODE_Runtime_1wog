@@ -250,11 +250,20 @@
     .actionabilityGroupCard .k{ color:#31516f; font-size:10px; text-transform:uppercase; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .actionabilityGroupCard .v{ color:#0f1f35; font-size:22px; line-height:1; font-weight:900; margin-top:3px; }
     .actionabilityGroupMeta{ display:grid; grid-template-columns:1fr 1fr; gap:4px 8px; font-size:11px; margin-top:7px; color:#40556b; }
-    .actionabilityRows{ display:grid; gap:6px; margin-top:8px; }
-    .actionabilityTask{ border:1px solid #dbe5ef; border-radius:8px; padding:8px 9px; background:#fff; color:#0f172a; display:grid; grid-template-columns:minmax(138px,.9fr) minmax(164px,1fr) minmax(172px,1.08fr) minmax(190px,1.1fr) minmax(104px,.58fr) minmax(92px,.45fr); gap:8px; align-items:center; box-shadow:0 4px 10px rgba(17,39,68,.03); }
-    .actionabilityTaskPrimary{ font-weight:900; color:#0f172a; }
-    .actionabilityTaskName{ color:#66788c; font-size:11px; margin-top:2px; overflow-wrap:anywhere; }
-    .actionabilityTaskStack{ display:grid; gap:4px; min-width:0; }
+    .actionabilityRows{ display:grid; gap:7px; margin-top:8px; }
+    .actionabilityWorklist{ border:1px solid #dbe5ef; border-radius:8px; background:#fff; overflow-x:auto; box-shadow:0 4px 12px rgba(17,39,68,.035); }
+    .actionabilityWorklistTitle{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-bottom:1px solid #e5ebf2; color:#0f1f35; font-size:13px; font-weight:900; }
+    .actionabilityWorklistTable{ min-width:1180px; }
+    .actionabilityWorklistHeader, .actionabilityWorklistRow{ display:grid; grid-template-columns:108px 150px 118px 148px 150px 118px 88px 94px 104px 94px 96px 124px 92px; align-items:center; }
+    .actionabilityWorklistHeader{ min-height:32px; background:#f8fafc; border-bottom:1px solid #dbe5ef; color:#31516f; font-size:10px; font-weight:900; text-transform:uppercase; }
+    .actionabilityWorklistRow{ min-height:42px; border-bottom:1px solid #edf2f7; color:#0f172a; font-size:11px; }
+    .actionabilityWorklistRow:last-child{ border-bottom:0; }
+    .actionabilityWorklistCell{ min-width:0; padding:6px 7px; overflow:hidden; text-overflow:ellipsis; }
+    .actionabilityWorklistCell strong{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .actionabilityWorklistCell span{ display:block; color:#66788c; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .actionabilitySortBtn{ border:0; background:transparent; color:#31516f; font:inherit; font-weight:900; text-transform:uppercase; padding:0; cursor:pointer; text-align:left; }
+    .actionabilitySortBtn:hover{ color:#1f5aa5; text-decoration:underline; }
+    .actionabilityWorklistDetails{ grid-column:1 / -1; border-top:1px solid #edf2f7; padding:6px 7px; background:#fbfcfe; }
     .actionabilityFactGrid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:4px 8px; font-size:11px; line-height:1.28; }
     .actionabilityFact{ min-width:0; }
     .actionabilityFact strong{ display:block; color:#61748a; font-size:9px; font-weight:900; text-transform:uppercase; }
@@ -267,7 +276,7 @@
     .actionabilityBlocker{ color:#9a2d2d; font-weight:900; }
     .actionabilityAuthority{ color:#1f5aa5; font-weight:900; }
     .actionabilityDueBlock{ font-size:11px; color:#40556b; font-weight:900; }
-    .actionabilityDueBlock span{ display:block; color:#0f172a; margin-top:2px; }
+    .actionabilityDueBlock span{ display:block; color:#0f172a; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .actionabilityReviewBtn{ width:100%; padding:8px 10px; border-radius:8px; background:#1f5aa5; border-color:#174a8b; color:#fff; font-size:12px; font-weight:900; }
     .actionabilityReviewBtn:hover{ background:#174a8b; }
     .actionabilityFilterNote{ color:#1f5aa5; font-size:12px; font-weight:900; margin:4px 0 8px; }
@@ -278,7 +287,8 @@
       .actionabilityKpiStrip{ grid-template-columns:repeat(4, minmax(0, 1fr)); }
     }
     @media (max-width: 980px){
-      .actionabilityTask{ grid-template-columns:1fr; }
+      .actionabilityWorklistTable{ min-width:980px; }
+      .actionabilityWorklistHeader, .actionabilityWorklistRow{ grid-template-columns:100px 138px 108px 136px 136px 108px 78px 84px 92px 84px 88px 112px 84px; }
       .actionabilityDetails{ grid-column:auto; }
     }
     @media (max-width: 680px){
@@ -8826,6 +8836,13 @@ function renderStageDashboard_(items, emptyMessage){
       list.sort(function(a, b){
         var av;
         var bv;
+        var as = (a && a.authorityState) || {};
+        var bs = (b && b.authorityState) || {};
+        if (state.key === "applicantId") {
+          av = String(a && a.applicantId || "");
+          bv = String(b && b.applicantId || "");
+          return av.localeCompare(bv) * dir;
+        }
         if (state.key === "owner") {
           av = String(a && a.actionOwner || "");
           bv = String(b && b.actionOwner || "");
@@ -8850,6 +8867,34 @@ function renderStageDashboard_(items, emptyMessage){
           av = Number(a && a.ageDays || 0);
           bv = Number(b && b.ageDays || 0);
           return (av - bv) * dir;
+        }
+        if (state.key === "last") {
+          av = Number(a && a.lastContactAgeDays || 0);
+          bv = Number(b && b.lastContactAgeDays || 0);
+          return (av - bv) * dir;
+        }
+        if (state.key === "docs") {
+          av = (as.docsVerified ? 2 : (as.requiredDocumentUploadComplete ? 1 : 0));
+          bv = (bs.docsVerified ? 2 : (bs.requiredDocumentUploadComplete ? 1 : 0));
+          return (av - bv) * dir;
+        }
+        if (state.key === "payment") {
+          av = (as.paymentVerified ? 2 : (as.paymentEvidencePresent ? 1 : 0));
+          bv = (bs.paymentVerified ? 2 : (bs.paymentEvidencePresent ? 1 : 0));
+          return (av - bv) * dir;
+        }
+        if (state.key === "contact") {
+          av = actionabilityIsUncontactable_(a) ? 0 : 1;
+          bv = actionabilityIsUncontactable_(b) ? 0 : 1;
+          return (av - bv) * dir;
+        }
+        if (state.key === "due") {
+          av = actionabilityUrgencyRank_(a && a.urgencyLevel);
+          bv = actionabilityUrgencyRank_(b && b.urgencyLevel);
+          if (av !== bv) return (av - bv) * dir;
+          av = String(a && a.recommendedMessageType || a && a.nextAction || "");
+          bv = String(b && b.recommendedMessageType || b && b.nextAction || "");
+          return av.localeCompare(bv) * dir;
         }
         if (state.key === "urgency") {
           av = actionabilityUrgencyRank_(a && a.urgencyLevel);
@@ -8876,7 +8921,7 @@ function renderStageDashboard_(items, emptyMessage){
         actionabilitySortState.dir = actionabilitySortState.dir === "asc" ? "desc" : "asc";
       } else {
         actionabilitySortState.key = normalized;
-        actionabilitySortState.dir = (normalized === "name" || normalized === "owner" || normalized === "nextAction" || normalized === "suppressor") ? "asc" : "desc";
+        actionabilitySortState.dir = (normalized === "applicantId" || normalized === "name" || normalized === "owner" || normalized === "nextAction" || normalized === "suppressor") ? "asc" : "desc";
       }
       renderActionabilityPreview_({ preserveRows: true });
     }
@@ -8944,7 +8989,28 @@ function renderStageDashboard_(items, emptyMessage){
         rowsEl.innerHTML = '<div class="actionabilityEmpty">No actionable work returned.</div>';
         return;
       }
+      var sortHeader = function(key, label){
+        return '<button class="actionabilitySortBtn" type="button" data-actionability-sort="' + esc(key) + '" onclick="sortActionabilityPreview_(\'' + esc(key) + '\')">' + esc(label + actionabilitySortLabel_(key)) + '</button>';
+      };
       var html = actionabilityActiveGroup ? '<div class="actionabilityFilterNote">Showing: ' + esc(actionabilityGroupLabel_(actionabilityActiveGroup)) + ' <button class="btn small" type="button" onclick="selectActionabilityGroup_(\'' + esc(actionabilityActiveGroup) + '\')">Show All</button></div>' : "";
+      html += '<div class="actionabilityWorklist" aria-label="Current Worklist">'
+        + '<div class="actionabilityWorklistTitle"><span>Current Worklist</span><span class="muted">Read-only derived workload. Use Review to edit.</span></div>'
+        + '<div class="actionabilityWorklistTable" role="table" aria-label="Operations Workspace Current Worklist">'
+        + '<div class="actionabilityWorklistHeader" role="row">'
+        + '<div class="actionabilityWorklistCell" role="columnheader">' + sortHeader("applicantId", "Applicant ID") + '</div>'
+        + '<div class="actionabilityWorklistCell" role="columnheader">' + sortHeader("name", "Applicant Name") + '</div>'
+        + '<div class="actionabilityWorklistCell" role="columnheader">' + sortHeader("owner", "Owner") + '</div>'
+        + '<div class="actionabilityWorklistCell" role="columnheader">' + sortHeader("nextAction", "Next Action") + '</div>'
+        + '<div class="actionabilityWorklistCell" role="columnheader">Blocker</div>'
+        + '<div class="actionabilityWorklistCell" role="columnheader">Authority</div>'
+        + '<div class="actionabilityWorklistCell" role="columnheader">Portal</div>'
+        + '<div class="actionabilityWorklistCell" role="columnheader">' + sortHeader("docs", "Docs") + '</div>'
+        + '<div class="actionabilityWorklistCell" role="columnheader">' + sortHeader("payment", "Payment") + '</div>'
+        + '<div class="actionabilityWorklistCell" role="columnheader">' + sortHeader("contact", "Contact") + '</div>'
+        + '<div class="actionabilityWorklistCell" role="columnheader">' + sortHeader("age", "Age / Last") + '</div>'
+        + '<div class="actionabilityWorklistCell" role="columnheader">' + sortHeader("due", "Due / Next") + '</div>'
+        + '<div class="actionabilityWorklistCell" role="columnheader">Review</div>'
+        + '</div>';
       displayRows.forEach(function(row, index){
         var r = row || {};
         var state = r.authorityState || {};
@@ -8962,34 +9028,30 @@ function renderStageDashboard_(items, emptyMessage){
         var docsClass = state.docsVerified ? "ok" : (state.requiredDocumentUploadComplete ? "warn" : "blocked");
         var paymentClass = state.paymentVerified ? "ok" : (state.paymentEvidencePresent ? "warn" : "blocked");
         var contactClass = actionabilityContactStatus_(r) === "Available" ? "ok" : "blocked";
-        html += '<div class="actionabilityTask">';
-        html += '<div class="actionabilityTaskStack"><div class="actionabilityTaskPrimary">' + esc(r.applicantId || "") + '</div><div class="actionabilityTaskName">' + esc(r.name || "Name not shown") + '</div><div><span class="opsStatusPill ' + priorityClass + '">' + esc(priority) + '</span></div></div>';
-        html += '<div class="actionabilityFactGrid">'
-          + '<div class="actionabilityFact"><strong>Owner:</strong> <span>' + esc(actionabilityGroupLabel_(actionabilityGroupKey_(r))) + '</span></div>'
-          + '<div class="actionabilityFact"><strong>Next Action:</strong> <span>' + esc(nextAction) + '</span></div>'
-          + '</div>';
-        html += '<div class="actionabilityFactGrid">'
-          + '<div class="actionabilityFact"><strong>Blocker:</strong> <span class="actionabilityBlocker">' + esc(blocker) + '</span></div>'
-          + '<div class="actionabilityFact"><strong>Authority:</strong> <span class="actionabilityAuthority">' + esc(authority) + '</span></div>'
-          + '</div>';
-        html += '<div class="actionabilityStatusChips">'
-          + '<span class="actionabilityMiniChip ' + (state.portalSubmitted ? "ok" : "warn") + '">' + esc(portalLabel) + '</span>'
-          + '<span class="actionabilityMiniChip ' + docsClass + '">' + esc(docsLabel) + '</span>'
-          + '<span class="actionabilityMiniChip ' + paymentClass + '">' + esc(paymentLabel) + '</span>'
-          + '<span class="actionabilityMiniChip ' + contactClass + '">' + esc(contactLabel) + '</span>'
-          + '</div>';
-        html += '<div class="actionabilityDueBlock">Due<span>' + esc(due) + '</span><span class="muted">' + esc(commNext) + '</span></div>';
-        html += '<div><button class="btn actionabilityReviewBtn" type="button" onclick="reviewActionabilityRow_(' + String(index) + ', this)">Review</button></div>';
-        html += '<details class="actionabilityDetails"><summary>Details</summary>'
+        html += '<div class="actionabilityWorklistRow" role="row" data-actionability-row="' + esc(String(index)) + '">';
+        html += '<div class="actionabilityWorklistCell" role="cell"><strong>' + esc(r.applicantId || "") + '</strong></div>';
+        html += '<div class="actionabilityWorklistCell" role="cell"><strong>' + esc(r.name || "Name not shown") + '</strong></div>';
+        html += '<div class="actionabilityWorklistCell" role="cell"><strong>' + esc(actionabilityGroupLabel_(actionabilityGroupKey_(r))) + '</strong><span class="opsStatusPill ' + priorityClass + '">' + esc(priority) + '</span></div>';
+        html += '<div class="actionabilityWorklistCell" role="cell"><strong>' + esc(nextAction) + '</strong></div>';
+        html += '<div class="actionabilityWorklistCell" role="cell"><strong class="actionabilityBlocker">' + esc(blocker) + '</strong></div>';
+        html += '<div class="actionabilityWorklistCell" role="cell"><strong class="actionabilityAuthority">' + esc(authority) + '</strong></div>';
+        html += '<div class="actionabilityWorklistCell actionabilityStatusChips" role="cell"><span class="actionabilityMiniChip ' + (state.portalSubmitted ? "ok" : "warn") + '">' + esc(portalLabel) + '</span></div>';
+        html += '<div class="actionabilityWorklistCell actionabilityStatusChips" role="cell"><span class="actionabilityMiniChip ' + docsClass + '">' + esc(docsLabel) + '</span></div>';
+        html += '<div class="actionabilityWorklistCell actionabilityStatusChips" role="cell"><span class="actionabilityMiniChip ' + paymentClass + '">' + esc(paymentLabel) + '</span></div>';
+        html += '<div class="actionabilityWorklistCell actionabilityStatusChips" role="cell"><span class="actionabilityMiniChip ' + contactClass + '">' + esc(contactLabel) + '</span></div>';
+        html += '<div class="actionabilityWorklistCell" role="cell"><strong>' + esc(r.ageDays === "" || r.ageDays === undefined ? "-" : String(r.ageDays) + "d") + '</strong><span>Last ' + esc(r.lastContactAgeDays === "" ? "none" : String(r.lastContactAgeDays) + "d") + '</span></div>';
+        html += '<div class="actionabilityWorklistCell actionabilityDueBlock" role="cell"><strong>' + esc(due) + '</strong><span>' + esc(commNext) + '</span></div>';
+        html += '<div class="actionabilityWorklistCell" role="cell"><button class="btn actionabilityReviewBtn" type="button" onclick="reviewActionabilityRow_(' + String(index) + ', this)">Review</button></div>';
+        html += '<details class="actionabilityDetails actionabilityWorklistDetails"><summary>Details</summary>'
           + '<div class="actionabilityFactGrid" style="margin-top:8px;">'
           + '<div class="actionabilityFact"><strong>Priority:</strong> <span>' + esc(r.urgencyReason || priority) + '</span></div>'
-          + '<div class="actionabilityFact"><strong>Last:</strong> <span>' + esc(r.lastContactAgeDays === "" ? "None" : String(r.lastContactAgeDays) + "d ago") + '</span></div>'
           + '<div class="actionabilityFact"><strong>Documents:</strong> <span>' + esc(String(Number(state.uploadedRequiredDocumentCount || 0)) + "/" + String(Number(state.requiredDocumentCount || 0))) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Lifecycle:</strong> <span>' + esc(String(state.lifecycleStage || "Not shown").replace(/_/g, " ")) + '</span></div>'
-          + '<div class="actionabilityFact"><strong>Age:</strong> <span>' + esc(r.ageDays === "" || r.ageDays === undefined ? "-" : String(r.ageDays) + "d") + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Row:</strong> <span>' + esc(String(Number(r.rowNumber || 0) || "-")) + '</span></div>'
           + '</div></details>';
         html += '</div>';
       });
+      html += '</div></div>';
       rowsEl.innerHTML = html;
     }
 
