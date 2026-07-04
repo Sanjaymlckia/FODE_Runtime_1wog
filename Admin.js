@@ -2762,6 +2762,11 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
   var name = (firstName + " " + lastName).trim();
   var effectiveEmail = stageAggregationEffectiveEmail_(row);
   var hasValidEmail = stageAggregationIsValidEmail_(effectiveEmail);
+  var phoneFallbackInfo = typeof normalizePngWhatsAppPhone_ === "function"
+    ? normalizePngWhatsAppPhone_(getWhatsAppFallbackPhoneRaw_(row))
+    : { ok: !!clean_(getWhatsAppFallbackPhoneRaw_(row) || "") };
+  var hasPhoneFallback = phoneFallbackInfo && phoneFallbackInfo.ok === true;
+  var isUncontactable = !hasValidEmail && !hasPhoneFallback;
   var emailIssue = adminOpsHasEmailIssue_(row);
   var uploadSummary = adminOpsRequiredDocumentUploadSummary_(row);
   var docsVerified = adminDocumentReviewVerifiedForAutomation_(row);
@@ -2825,6 +2830,9 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
 
   if (suppressor === "COOLDOWN_ACTIVE") recommendedMessageType = "";
   var urgency = actionabilityPreviewUrgency_(owner, nextAction, dateInfo, suppressor, cooldownActive);
+  if (isUncontactable) {
+    urgency = { level: "UNCONTACTABLE", reason: "No valid email or phone fallback is available." };
+  }
   return {
     rowNumber: rowNumber,
     applicantId: applicantId,
@@ -2858,13 +2866,15 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
       portalSubmitted: !!portalSubmitted,
       paymentEvidencePresent: !!paymentEvidencePresent,
       paymentVerified: !!paymentVerified,
-      hasValidEmail: !!hasValidEmail
+      hasValidEmail: !!hasValidEmail,
+      hasPhoneFallback: !!hasPhoneFallback,
+      contactabilityState: isUncontactable ? "UNCONTACTABLE" : (hasValidEmail ? "EMAIL_AVAILABLE" : "PHONE_FALLBACK_AVAILABLE")
     }
   };
 }
 
 function compareActionabilityPreviewRows_(a, b) {
-  var order = { DORMANT: 1, ESCALATED: 2, OVERDUE: 3, DUE: 4, NORMAL: 5 };
+  var order = { UNCONTACTABLE: 1, DORMANT: 2, ESCALATED: 3, OVERDUE: 4, DUE: 5, NORMAL: 6 };
   var aRank = order[clean_(a && a.urgencyLevel || "").toUpperCase()] || 99;
   var bRank = order[clean_(b && b.urgencyLevel || "").toUpperCase()] || 99;
   if (aRank !== bRank) return aRank - bRank;
