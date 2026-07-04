@@ -2922,6 +2922,215 @@ function admin_getActionabilityPreview(payload) {
   return out;
 }
 
+function populationLedgerBucketNames_() {
+  return [
+    "Applicant Action",
+    "Admissions Review",
+    "Finance",
+    "Academic Admin",
+    "Management Exceptions",
+    "Dormant",
+    "Completed / No Action",
+    "Unknown / Unclassified"
+  ];
+}
+
+function populationLedgerEmptyBucketCounts_() {
+  var out = {};
+  var names = populationLedgerBucketNames_();
+  for (var i = 0; i < names.length; i++) out[names[i]] = 0;
+  return out;
+}
+
+function populationLedgerRowObjectFromValues_(headers, values) {
+  var rowObj = {};
+  var head = Array.isArray(headers) ? headers : [];
+  var vals = Array.isArray(values) ? values : [];
+  for (var c = 0; c < head.length; c++) {
+    var h = clean_(head[c]);
+    if (h) rowObj[h] = vals[c];
+  }
+  return rowObj;
+}
+
+function populationLedgerNextActionFamily_(nextAction) {
+  var action = clean_(nextAction || "").toUpperCase();
+  if (!action) return "UNKNOWN";
+  if (action === "NO_ACTION") return "NO_ACTION";
+  if (action === "UPLOAD_REQUIRED_DOCUMENTS" || action === "SEND_PAYMENT_REMINDER") return "APPLICANT_ACTION";
+  if (action === "REVIEW_DOCUMENTS") return "ADMISSIONS_REVIEW";
+  if (action === "VERIFY_PAYMENT") return "FINANCE";
+  if (action === "ENROLL") return "ACADEMIC_ADMIN";
+  if (action === "FIX_CONTACT_DETAILS") return "MANAGEMENT_EXCEPTION";
+  return "MANAGEMENT_EXCEPTION";
+}
+
+function populationLedgerBucketFromActionability_(item) {
+  var row = item || {};
+  var owner = clean_(row.actionOwner || "").toUpperCase();
+  var nextAction = clean_(row.nextAction || "").toUpperCase();
+  var urgency = clean_(row.urgencyLevel || "").toUpperCase();
+  var suppressor = clean_(row.suppressor || "").toUpperCase();
+
+  if (!owner || !nextAction) return { bucket: "Unknown / Unclassified", reason: "Missing actionability owner or next action." };
+  if (owner === "NONE" || nextAction === "NO_ACTION") return { bucket: "Completed / No Action", reason: "" };
+  if (urgency === "DORMANT") return { bucket: "Dormant", reason: "" };
+  if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return { bucket: "Management Exceptions", reason: "" };
+  if (owner === "APPLICANT") return { bucket: "Applicant Action", reason: "" };
+  if (owner === "OFFICER") return { bucket: "Admissions Review", reason: "" };
+  if (owner === "FINANCE") return { bucket: "Finance", reason: "" };
+  if (owner === "ADMIN") return { bucket: "Academic Admin", reason: "" };
+  if (owner === "SYSTEM") return { bucket: "Management Exceptions", reason: "" };
+  return { bucket: "Unknown / Unclassified", reason: "Unrecognized actionability owner: " + owner };
+}
+
+function populationLedgerClassifyRow_(rowObj, rowNumber) {
+  var row = rowObj || {};
+  var applicantId = clean_(row.ApplicantID || "");
+  var entry = {
+    rowNumber: rowNumber,
+    applicantId: applicantId,
+    lifecycleState: "UNKNOWN",
+    operationalBucket: "Unknown / Unclassified",
+    nextActionFamily: "UNKNOWN",
+    actionOwner: "UNKNOWN",
+    nextAction: "UNKNOWN",
+    urgencyLevel: "UNKNOWN",
+    unclassifiedReason: ""
+  };
+
+  if (!applicantId) {
+    entry.unclassifiedReason = "Missing ApplicantID.";
+    return entry;
+  }
+
+  try {
+    var item = buildActionabilityPreviewRow_(row, rowNumber);
+    var bucketInfo = populationLedgerBucketFromActionability_(item);
+    entry.lifecycleState = clean_(item && item.authorityState && item.authorityState.lifecycleStage || "UNKNOWN").toUpperCase() || "UNKNOWN";
+    entry.operationalBucket = bucketInfo.bucket;
+    entry.nextActionFamily = populationLedgerNextActionFamily_(item && item.nextAction);
+    entry.actionOwner = clean_(item && item.actionOwner || "UNKNOWN").toUpperCase() || "UNKNOWN";
+    entry.nextAction = clean_(item && item.nextAction || "UNKNOWN").toUpperCase() || "UNKNOWN";
+    entry.urgencyLevel = clean_(item && item.urgencyLevel || "UNKNOWN").toUpperCase() || "UNKNOWN";
+    entry.unclassifiedReason = bucketInfo.reason || "";
+  } catch (err) {
+    entry.unclassifiedReason = "Actionability resolver failed: " + (err && err.message ? err.message : String(err));
+  }
+
+  if (entry.lifecycleState === "UNKNOWN" || entry.operationalBucket === "Unknown / Unclassified" || entry.nextActionFamily === "UNKNOWN") {
+    entry.unclassifiedReason = entry.unclassifiedReason || "Lifecycle, operational bucket, or next action family is unknown.";
+  }
+  return entry;
+}
+
+function admin_getPopulationLedger(payload) {
+  var adminEmail = getCallerEmail_();
+  if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+  var p = payload && typeof payload === "object" ? payload : {};
+  var sampleLimit = Math.max(1, Math.min(25, Number(p.sampleLimit || 10)));
+  var sheet = openDataSheet_();
+  var data = sheet.getDataRange().getValues();
+  var sourceSheetName = sheet && typeof sheet.getName === "function"
+    ? clean_(sheet.getName() || "")
+    : clean_(typeof CONFIG !== "undefined" && CONFIG && (CONFIG.DATA_SHEET || CONFIG.SHEET_NAME_WORKING) || "");
+  var out = {
+    ok: true,
+    readOnly: true,
+    generatedAt: new Date().toISOString(),
+    sourceSheetName: sourceSheetName,
+    scannedRows: Math.max(0, (data || []).length - 1),
+    applicantIdRows: 0,
+    classifiedRows: 0,
+    unclassifiedRows: 0,
+    duplicateApplicantIds: [],
+    hiddenByLimit: 0,
+    lifecycleCounts: {},
+    operationalBucketCounts: populationLedgerEmptyBucketCounts_(),
+    nextActionFamilyCounts: {},
+    unknownUnclassifiedCount: 0,
+    sampleUnclassifiedRows: [],
+    entries: [],
+    integrityStatus: "PASS",
+    integrityMessages: []
+  };
+
+  if (!data || data.length < 2) {
+    out.integrityMessages.push("No applicant data rows found.");
+    return out;
+  }
+
+  var headers = data[0] || [];
+  var applicantRowsById = {};
+  for (var r = 1; r < data.length; r++) {
+    var rowObj = populationLedgerRowObjectFromValues_(headers, data[r] || []);
+    var applicantId = clean_(rowObj.ApplicantID || "");
+    if (!applicantId) continue;
+
+    out.applicantIdRows++;
+    if (!applicantRowsById[applicantId]) applicantRowsById[applicantId] = [];
+    applicantRowsById[applicantId].push(r + 1);
+
+    var entry = populationLedgerClassifyRow_(rowObj, r + 1);
+    out.entries.push(entry);
+
+    out.lifecycleCounts[entry.lifecycleState] = Number(out.lifecycleCounts[entry.lifecycleState] || 0) + 1;
+    if (!Object.prototype.hasOwnProperty.call(out.operationalBucketCounts, entry.operationalBucket)) {
+      out.operationalBucketCounts[entry.operationalBucket] = 0;
+    }
+    out.operationalBucketCounts[entry.operationalBucket]++;
+    out.nextActionFamilyCounts[entry.nextActionFamily] = Number(out.nextActionFamilyCounts[entry.nextActionFamily] || 0) + 1;
+
+    if (entry.operationalBucket === "Unknown / Unclassified" || entry.lifecycleState === "UNKNOWN" || entry.nextActionFamily === "UNKNOWN") {
+      out.unclassifiedRows++;
+      if (out.sampleUnclassifiedRows.length < sampleLimit) {
+        out.sampleUnclassifiedRows.push({
+          rowNumber: entry.rowNumber,
+          applicantId: entry.applicantId,
+          lifecycleState: entry.lifecycleState,
+          operationalBucket: entry.operationalBucket,
+          nextActionFamily: entry.nextActionFamily,
+          reason: entry.unclassifiedReason
+        });
+      }
+    } else {
+      out.classifiedRows++;
+    }
+  }
+
+  var ids = Object.keys(applicantRowsById);
+  for (var i = 0; i < ids.length; i++) {
+    var id = ids[i];
+    if (applicantRowsById[id].length > 1) {
+      out.duplicateApplicantIds.push({ applicantId: id, rowNumbers: applicantRowsById[id] });
+    }
+  }
+
+  out.unknownUnclassifiedCount = out.unclassifiedRows;
+  var bucketTotal = 0;
+  var bucketNames = Object.keys(out.operationalBucketCounts);
+  for (var b = 0; b < bucketNames.length; b++) bucketTotal += Number(out.operationalBucketCounts[bucketNames[b]] || 0);
+
+  if (out.entries.length !== out.applicantIdRows) {
+    out.integrityStatus = "FAIL";
+    out.integrityMessages.push("Ledger entry count does not equal ApplicantID row count.");
+  }
+  if (bucketTotal !== out.applicantIdRows) {
+    out.integrityStatus = "FAIL";
+    out.integrityMessages.push("Operational bucket counts do not sum to ApplicantID row count.");
+  }
+  if (out.unclassifiedRows > 0 && out.integrityStatus !== "FAIL") {
+    out.integrityStatus = "WARN";
+    out.integrityMessages.push("Unknown / Unclassified applicant rows are present.");
+  }
+  if (out.duplicateApplicantIds.length > 0 && out.integrityStatus !== "FAIL") {
+    out.integrityStatus = "WARN";
+    out.integrityMessages.push("Duplicate ApplicantID values are present.");
+  }
+  if (out.integrityMessages.length === 0) out.integrityMessages.push("Population ledger reconciles.");
+  return out;
+}
+
 // Review queue page metadata helper lives in Admin_ReviewQueues.js.
 
 // Stage priority and ordering helpers live in Admin_LifecycleAuthority.js.
