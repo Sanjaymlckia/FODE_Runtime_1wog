@@ -27,6 +27,9 @@ expectMatch(/setReviewHeaderValue_\("mHeaderTokenAge", tokenText\)/, "Loaded mod
 expectMatch(/class="kv reviewCardGrid"/, "Primary facts must use balanced review card grid");
 expectMatch(/class="box reviewCardWide"[\s\S]*Workflow Fields/, "Workflow fields must be grouped into a wider balanced card");
 expectMatch(/class="box reviewPanel" id="communicationsCard"/, "Communications must use the shared review panel rhythm");
+expectMatch(/commTemplateCard\.selected\{[^}]*border-color:#1f5aa5[^}]*box-shadow:inset 4px 0 0 #1f5aa5/s, "Selected communication template must have a strong active state");
+expectMatch(/commTemplateSelectedBanner[\s\S]*Selected template/, "Selected communication template card must show explicit selected label");
+expectMatch(/Selected template:<\/strong>[\s\S]*previewMeta\.label/, "Communication preview must name the selected template it reflects");
 expectMatch(/id="booksDryRunCard" class="box booksDryRunPanel reviewPanel"/, "Books preview must use the shared review panel rhythm");
 expectMatch(/id="documentReviewWorkflow" class="reviewDocumentWorkflow reviewPanel"/, "Document verification must use the shared review panel rhythm");
 expectMatch(/class="reviewGuidance"[\s\S]*Document saves remain authority-gated/, "Document section must keep concise authority guidance");

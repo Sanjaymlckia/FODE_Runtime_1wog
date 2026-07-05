@@ -152,10 +152,21 @@ assert.match(adminUi, /missing\.slice\(0,\s*2\)\.map\(actionabilityDocumentLabel
 
 assert.match(adminJs, /hasPhoneFallback/, "Actionability payload must expose phone fallback availability");
 assert.match(adminJs, /populationLedger:\s*populationLedgerPublicSummary_\(ledger\)/, "Actionability preview RPC must expose Population Ledger summary");
-assert.match(adminJs, /emailResponseTraffic:\s*buildEmailResponseTrafficShell_/, "Operational dashboard must expose read-only email response traffic");
+assert.match(adminJs, /communicationsActivity:\s*buildCommunicationsActivityShell_/, "Operational dashboard must expose read-only communications activity");
+assert.match(adminJs, /emailResponseTraffic\s*=\s*out\.communicationsActivity/, "Legacy emailResponseTraffic field must remain a compatibility alias");
 assert.match(adminUi, /id="actionabilityResponseTraffic"/, "Operations Workspace must have a read-only response traffic surface");
-assert.match(adminUi, /row latest-contact fields/, "Response traffic must label its source and avoid overclaiming send-log authority");
-assert.match(adminUi, /latest row state/, "Response traffic must be framed as row-latest state");
+assert.match(adminUi, /Communications Activity/, "Operations Workspace must label the surface as Communications Activity");
+["Today", "Last 7 Days", "Month-to-Date", "Previous Month", "Failed", "Suppressed / Bounced", "Last Successful Send", "Cumulative Sent"].forEach((label) => {
+  assert.match(adminUi, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `Communications Activity must include ${label}`);
+});
+assert.match(adminJs, /Source: latest row state only/, "Communications Activity must label latest-row source limitations");
+assert.match(adminJs, /cumulativeLabel:\s*"Rows with latest status SENT"/, "Cumulative metric must be labelled as row-latest proxy when no true ledger exists");
+assert.match(adminUi, /cumulativeIsHistorical === true/, "UI must distinguish historical cumulative sends from latest-row proxy counts");
+assert.doesNotMatch(adminUi, /admin_sendCommunicationsActivity|admin_updateCommunicationsActivity|admin_createCommunicationsLedger/, "Communications Activity surface must not add mutation RPCs");
+assert.match(adminUi, /function actionabilityManagementExceptionBreakdown_/, "Management Exceptions must expose a scoped breakdown when visible rows support it");
+assert.match(adminUi, /Visible breakdown: Uncontactable/, "Management Exceptions breakdown must be labelled as visible-row derived");
+assert.match(adminUi, /class="actionabilitySortBtn"[\s\S]*esc\(label \+ actionabilitySortLabel_\(key\)\)/, "Grouped worklist headers must render separated sort button labels");
+assert.match(adminUi, /\.actionabilitySortBtn\{[^}]*border:1px solid #dbe5ef[^}]*text-transform:none/s, "Grouped worklist headers must avoid merged-looking uppercase labels");
 assert.match(adminJs, /function admin_getPopulationLedger/, "Population Ledger RPC must exist as a read-only authority foundation");
 assert.match(adminJs, /function buildPopulationLedgerFromValues_/, "Population Ledger must be reusable by dashboard and lifecycle consumers");
 assert.match(adminJs, /contactabilityState: isUncontactable \? "UNCONTACTABLE"/, "Actionability payload must classify no-email/no-phone applicants as uncontactable");

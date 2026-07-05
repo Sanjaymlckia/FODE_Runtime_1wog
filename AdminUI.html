@@ -259,7 +259,7 @@
     .actionabilityBucketViewBtn:hover, .actionabilityBucketRow.active .actionabilityBucketViewBtn{ border-color:#8fb4df; background:#eef6ff; color:#174a8b; }
     .actionabilityTraffic{ margin:7px 0 9px; border:1px solid #e1e7ef; border-radius:6px; background:#fbfcfe; overflow:hidden; }
     .actionabilityTrafficTitle{ display:flex; justify-content:space-between; gap:8px; padding:7px 9px; border-bottom:1px solid #e5ebf2; color:#31516f; font-size:12px; font-weight:900; }
-    .actionabilityTrafficGrid{ display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:0; }
+    .actionabilityTrafficGrid{ display:grid; grid-template-columns:repeat(8, minmax(0,1fr)); gap:0; }
     .actionabilityTrafficItem{ padding:7px 9px; border-right:1px solid #edf2f7; min-width:0; }
     .actionabilityTrafficItem:last-child{ border-right:0; }
     .actionabilityTrafficItem .k{ color:#61748a; font-size:9px; text-transform:uppercase; font-weight:900; }
@@ -277,9 +277,9 @@
     .actionabilityWorklistCell span{ display:block; color:#66788c; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .actionabilityClusterHeader{ display:flex; flex-direction:column; justify-content:center; gap:3px; }
     .actionabilityClusterLabel{ color:#0f1f35; font-size:10px; line-height:1; }
-    .actionabilityClusterSorts{ display:flex; flex-wrap:wrap; gap:5px 8px; align-items:center; }
-    .actionabilitySortBtn{ border:0; background:transparent; color:#31516f; font:inherit; font-weight:800; text-transform:uppercase; padding:0; cursor:pointer; text-align:left; }
-    .actionabilitySortBtn:hover{ color:#1f5aa5; text-decoration:underline; }
+    .actionabilityClusterSorts{ display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-top:2px; }
+    .actionabilitySortBtn{ display:inline-flex; align-items:center; border:1px solid #dbe5ef; border-radius:4px; background:#fff; color:#31516f; font:inherit; font-size:10px; font-weight:800; text-transform:none; padding:2px 5px; cursor:pointer; text-align:left; line-height:1.15; }
+    .actionabilitySortBtn:hover{ color:#1f5aa5; border-color:#9fc0e4; background:#f5f9ff; text-decoration:none; }
     .actionabilityWorklistDetails{ grid-column:1 / -1; border-top:1px solid #edf2f7; padding:6px 7px; background:#fbfcfe; }
     .actionabilityFactGrid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:4px 8px; font-size:11px; line-height:1.28; }
     .actionabilityFact{ min-width:0; }
@@ -423,39 +423,45 @@
       margin-top:10px;
     }
     .commTemplateCard{
-      border:1px solid rgba(148,163,184,.22);
-      border-radius:12px;
+      border:1px solid #dbe5ef;
+      border-radius:8px;
       padding:10px;
-      background:rgba(12,25,42,.9);
-      color:#d8e6f6;
+      background:#fff;
+      color:#102030;
     }
-    .commTemplateCard.selected{ border-color:rgba(34,197,94,.48); box-shadow:inset 0 0 0 1px rgba(34,197,94,.16); }
-    .commTemplateCard.recommended{ border-width:2px; border-color:rgba(125,211,252,1); box-shadow:0 0 0 3px rgba(125,211,252,.28), inset 0 0 0 1px rgba(186,230,253,.42); background:rgba(20,47,76,.96); }
-    .commTemplateRecommendedBanner{ display:inline-flex; align-items:center; gap:6px; margin-bottom:8px; padding:5px 9px; border-radius:8px; border:1px solid rgba(125,211,252,.8); background:rgba(8,47,73,.95); color:#e0f2fe; font-size:12px; font-weight:900; letter-spacing:0; }
-    .commTemplateCardTitle{ font-weight:900; color:#f4f9ff; margin-bottom:4px; }
+    .commTemplateCard.selected{ border-color:#1f5aa5; box-shadow:inset 4px 0 0 #1f5aa5; background:#f5f9ff; }
+    .commTemplateCard.recommended{ border-width:2px; border-color:#7db7f0; box-shadow:0 0 0 3px rgba(125,183,240,.18); background:#fafdff; }
+    .commTemplateSelectedBanner,
+    .commTemplateRecommendedBanner{ display:inline-flex; align-items:center; gap:6px; margin-bottom:8px; padding:5px 9px; border-radius:999px; border:1px solid #9fc0e4; background:#eef6ff; color:#174a8b; font-size:12px; font-weight:900; letter-spacing:0; }
+    .commTemplateSelectedBanner{ border-color:#1f5aa5; background:#1f5aa5; color:#fff; }
+    .commTemplateCardTitle{ font-weight:900; color:#0f1f35; margin-bottom:4px; }
     .commTemplateCardMeta{ display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
-    .commTemplateChip{ font-size:11px; padding:3px 7px; border-radius:999px; border:1px solid rgba(148,163,184,.26); background:rgba(15,23,42,.74); color:#cbd5e1; }
-    .commTemplateChip.warn{ border-color:rgba(245,158,11,.42); color:#fde7c3; }
-    .commTemplateChip.ok{ border-color:rgba(34,197,94,.42); color:#bbf7d0; }
-    .commTemplateChip.recommended{ border-color:rgba(125,211,252,.78); background:rgba(8,47,73,.82); color:#e0f2fe; font-weight:800; }
+    .commTemplateChip{ font-size:11px; padding:3px 7px; border-radius:999px; border:1px solid #dbe5ef; background:#f8fafc; color:#31516f; }
+    .commTemplateChip.warn{ border-color:#f2d083; color:#76520a; background:#fff9e8; }
+    .commTemplateChip.ok{ border-color:#b9dfc8; color:#21623b; background:#f0fbf4; }
+    .commTemplateChip.recommended{ border-color:#9fc0e4; background:#eef6ff; color:#174a8b; font-weight:800; }
     .commResultBox{
       margin-top:10px;
       padding:12px;
-      border-radius:12px;
-      border:1px solid rgba(148,163,184,.18);
-      background: rgba(11,18,32,.45);
+      border-radius:8px;
+      border:1px solid #dbe5ef;
+      background:#fff;
+      color:#102030;
     }
     .commResultBox.warn{
-      border-color: rgba(245,158,11,.45);
-      background: rgba(120,53,15,.2);
+      border-color:#f2d083;
+      background:#fff9e8;
+      color:#76520a;
     }
     .commResultBox.ok{
-      border-color: rgba(34,197,94,.45);
-      background: rgba(20,83,45,.22);
+      border-color:#b9dfc8;
+      background:#f0fbf4;
+      color:#164b2b;
     }
     .commResultBox.err{
-      border-color: rgba(239,68,68,.45);
-      background: rgba(127,29,29,.24);
+      border-color:#efc4c4;
+      background:#fff5f5;
+      color:#8b1f1f;
     }
     .commOverridePanel{
       margin-top:10px;
@@ -534,11 +540,11 @@
     .reviewSectionNote{
       margin-top:6px;
       font-size:12px;
-      color:#61748a;
+      color:#40556b;
       line-height:1.45;
     }
     .reviewPanel{
-      border:1px solid #dbe5ef;
+      border:1px solid #cbd8e6;
       border-radius:8px;
       background:#fff;
       padding:12px;
@@ -550,9 +556,11 @@
       justify-content:space-between;
       gap:12px;
       margin-bottom:10px;
+      padding-bottom:8px;
+      border-bottom:1px solid #e5ebf2;
     }
     .reviewPanelTitle{ margin:0; color:#0f1f35; font-size:15px; font-weight:900; }
-    .reviewPanelNote{ margin:4px 0 0; color:#61748a; font-size:12px; line-height:1.35; }
+    .reviewPanelNote{ margin:4px 0 0; color:#40556b; font-size:12px; line-height:1.35; }
     .reviewGuidance{
       border:1px solid #f2d083;
       background:#fff9e8;
@@ -6184,6 +6192,7 @@
         if (meta.semanticRisk) chips.push("<span class='commTemplateChip warn'>" + esc(meta.semanticRisk) + "</span>");
         chips.push("<span class='commTemplateChip'>" + esc(commTemplatePlaceholderStatus_(meta)) + "</span>");
         return "<div class='" + cls + "'>"
+          + (isSelected ? "<div class='commTemplateSelectedBanner'>Selected template</div>" : "")
           + (isRecommended ? "<div class='commTemplateRecommendedBanner'>Recommended next action</div>" : "")
           + "<div class='commTemplateCardTitle'>" + esc(meta.label || type) + "</div>"
           + "<div class='muted' style='font-size:12px;'>" + esc(type) + "</div>"
@@ -6497,6 +6506,11 @@
         }
         if (res.protectedCommunication === true) parts.push('<div style="margin-top:8px;"><strong>Protected communication:</strong> lifecycle authority gate active.</div>');
         if (res.debugId) parts.push('<div class="muted" style="margin-top:6px;font-size:12px;"><strong>Debug:</strong> ' + esc(res.debugId) + '</div>');
+      }
+      if (resultType === 'PREVIEW') {
+        var previewType = String(res.messageType || getSelectedCommMessageType_() || "");
+        var previewMeta = getCommTemplateMeta_(previewType) || {};
+        parts.push('<div style="margin-top:8px;"><strong>Selected template:</strong> ' + esc(previewMeta.label || previewType || "not selected") + '</div>');
       }
       if (resultType === 'PREVIEW' && res.effectiveEmail) parts.push('<div style="margin-top:8px;"><strong>Recipient:</strong> ' + esc(commTemplatePreviewText_(res.effectiveEmail)) + '</div>');
       if (resultType === 'PREVIEW' && res.subject) parts.push('<div style="margin-top:8px;"><strong>Subject:</strong> ' + esc(commTemplatePreviewText_(res.subject)) + '</div>');
@@ -9099,9 +9113,34 @@ function renderStageDashboard_(items, emptyMessage){
       }).join("");
     }
 
-    function actionabilityBucketNote_(key, populationCount, visibleCount){
+    function actionabilityManagementExceptionBreakdown_(list){
+      var rows = Array.isArray(list) ? list : [];
+      var counts = { uncontactable: 0, manual: 0, portal: 0, other: 0 };
+      rows.forEach(function(row){
+        var r = row || {};
+        var text = [
+          r.contactabilityState,
+          r.blocker,
+          r.blockerLabel,
+          r.authority,
+          r.authorityLabel,
+          r.nextAction
+        ].map(function(v){ return String(v || "").toLowerCase(); }).join(" ");
+        if (text.indexOf("uncontactable") >= 0 || text.indexOf("no email") >= 0 || text.indexOf("no phone") >= 0) counts.uncontactable++;
+        else if (text.indexOf("override") >= 0 || text.indexOf("manual") >= 0) counts.manual++;
+        else if (text.indexOf("portal") >= 0 || text.indexOf("access") >= 0 || text.indexOf("token") >= 0) counts.portal++;
+        else counts.other++;
+      });
+      return "Visible breakdown: Uncontactable " + counts.uncontactable
+        + " / Manual Override " + counts.manual
+        + " / Portal or access issue " + counts.portal
+        + " / Other " + counts.other;
+    }
+
+    function actionabilityBucketNote_(key, populationCount, visibleCount, list){
       var ledger = actionabilityPopulationLedgerState || {};
       var integrity = String(ledger.integrityStatus || "UNKNOWN");
+      if (key === "MANAGEMENT") return actionabilityManagementExceptionBreakdown_(list);
       if (key === "UNKNOWN") return populationCount > 0 ? "Requires classification" : "Explicit zero";
       if (actionabilityActiveGroup === key) return "Current filter";
       if (integrity !== "PASS") return "Ledger " + integrity;
@@ -9114,21 +9153,26 @@ function renderStageDashboard_(items, emptyMessage){
       if (!el) return;
       var data = actionabilityResponseTrafficState || null;
       if (!data || data.reliable !== true) {
-        el.innerHTML = '<div class="actionabilityTrafficTitle"><span>Response Traffic</span><span class="muted">Source not verified for display</span></div>';
+        el.innerHTML = '<div class="actionabilityTrafficTitle"><span>Communications Activity</span><span class="muted">Source not verified for display</span></div>';
         return;
       }
       function count(path, key){
         return Number((data[path] && data[path][key]) || 0);
       }
+      var sourceLabel = data.sourceLabel || "Source: latest row state only - not cumulative history";
+      var cumulativeValue = Number((data.sent && data.sent.cumulative) || 0);
+      var cumulativeLabel = data.cumulativeIsHistorical === true ? String(cumulativeValue) : String(cumulativeValue) + " rows";
       var items = [
-        ["Sent today", count("sent", "today")],
-        ["Sent week", count("sent", "thisWeek")],
-        ["Sent month", count("sent", "thisMonth")],
-        ["Failed today", count("failed", "today")],
-        ["Suppressed / bounced", count("suppressed", "thisMonth") + count("bounced", "thisMonth")],
-        ["Last sent", data.lastSentAt || "-"]
+        ["Today", count("sent", "today")],
+        ["Last 7 Days", count("sent", "last7Days") || count("sent", "thisWeek")],
+        ["Month-to-Date", count("sent", "monthToDate") || count("sent", "thisMonth")],
+        ["Previous Month", count("sent", "previousMonth")],
+        ["Failed", count("failed", "today")],
+        ["Suppressed / Bounced", Number((data.suppressedBounced && data.suppressedBounced.total) || 0) || (count("suppressed", "total") + count("bounced", "total"))],
+        ["Last Successful Send", data.lastSuccessfulSend || data.lastSentAt || "-"],
+        ["Cumulative Sent", cumulativeLabel]
       ];
-      el.innerHTML = '<div class="actionabilityTrafficTitle"><span>Response Traffic</span><span class="muted">' + esc(data.sourceLabel || "row latest-contact fields") + ' - read-only, latest row state</span></div>'
+      el.innerHTML = '<div class="actionabilityTrafficTitle"><span>Communications Activity</span><span class="muted">' + esc(sourceLabel) + ' | ' + esc(data.cumulativeLabel || "Rows with latest status SENT") + '</span></div>'
         + '<div class="actionabilityTrafficGrid">'
         + items.map(function(item){
           return '<div class="actionabilityTrafficItem"><div class="k">' + esc(item[0]) + '</div><div class="v">' + esc(item[1]) + '</div></div>';
@@ -9191,7 +9235,7 @@ function renderStageDashboard_(items, emptyMessage){
           + '<div class="actionabilityBucketCell" role="cell">' + esc(String(list.length)) + '</div>'
           + '<div class="actionabilityBucketCell" role="cell">' + esc(oldest && oldest.ageDays !== "" && oldest.ageDays !== undefined ? String(oldest.ageDays) + "d" : "-") + '</div>'
           + '<div class="actionabilityBucketCell" role="cell">' + esc(actionabilityNextActionLabel_(top.nextAction || "NO_ACTION")) + '</div>'
-          + '<div class="actionabilityBucketCell muted" role="cell">' + esc(actionabilityBucketNote_(key, populationCount, list.length)) + '</div>'
+          + '<div class="actionabilityBucketCell muted" role="cell">' + esc(actionabilityBucketNote_(key, populationCount, list.length, list)) + '</div>'
           + '<div class="actionabilityBucketCell" role="cell"><button class="actionabilityBucketViewBtn" type="button" onclick="selectActionabilityGroup_(\'' + esc(key) + '\')">' + esc(actionabilityActiveGroup === key ? "All" : "View") + '</button></div>'
           + '</div>';
       }).join("") + '</div>';
@@ -11070,7 +11114,9 @@ function renderStageDashboard_(items, emptyMessage){
       var pipeline = data.pipelineCounts || {};
       var emailStates = data.emailStates || {};
       var ledger = data.populationLedger && typeof data.populationLedger === "object" ? data.populationLedger : {};
-      actionabilityResponseTrafficState = data.emailResponseTraffic && typeof data.emailResponseTraffic === "object" ? data.emailResponseTraffic : null;
+      actionabilityResponseTrafficState = data.communicationsActivity && typeof data.communicationsActivity === "object"
+        ? data.communicationsActivity
+        : (data.emailResponseTraffic && typeof data.emailResponseTraffic === "object" ? data.emailResponseTraffic : null);
       renderActionabilityResponseTraffic_();
       setOpsValue_("opsFormsToday", Number(data.formsReceivedToday || 0));
       setOpsValue_("opsPendingReview", Number(data.openLifecycleRows != null ? data.openLifecycleRows : data.pendingIntakeReview || 0));

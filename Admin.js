@@ -2471,26 +2471,51 @@ function isSameLocalMonth_(value, now) {
   return Utilities.formatDate(new Date(ts), tz, "yyyy-MM") === Utilities.formatDate(now || new Date(), tz, "yyyy-MM");
 }
 
-function buildEmailResponseTrafficShell_() {
+function isPreviousLocalMonth_(value, now) {
+  var ts = parseTime_(value);
+  if (!(ts > 0)) return false;
+  var ref = now || new Date();
+  var previous = new Date(ref.getFullYear(), ref.getMonth() - 1, 1);
+  var tz = Session.getScriptTimeZone() || "GMT";
+  return Utilities.formatDate(new Date(ts), tz, "yyyy-MM") === Utilities.formatDate(previous, tz, "yyyy-MM");
+}
+
+function buildCommunicationsActivityShell_() {
   return {
     reliable: true,
-    sourceLabel: "row latest-contact fields",
-    sourceDetail: "Latest row state only; not a cumulative send log.",
-    sent: { today: 0, thisWeek: 0, thisMonth: 0 },
-    failed: { today: 0, thisWeek: 0, thisMonth: 0 },
-    suppressed: { today: 0, thisWeek: 0, thisMonth: 0 },
-    bounced: { today: 0, thisWeek: 0, thisMonth: 0 },
+    sourceType: "latest_row_state",
+    sourceLabel: "Source: latest row state only - not cumulative history",
+    sourceDetail: "Derived from durable row-latest communication fields. No append-only communications ledger is currently exposed to Admin metrics.",
+    cumulativeIsHistorical: false,
+    cumulativeLabel: "Rows with latest status SENT",
+    sent: { today: 0, last7Days: 0, monthToDate: 0, previousMonth: 0, cumulative: 0 },
+    failed: { today: 0, last7Days: 0, monthToDate: 0, previousMonth: 0 },
+    suppressed: { total: 0 },
+    bounced: { total: 0 },
+    suppressedBounced: { total: 0 },
+    lastSuccessfulSend: "",
     lastSentAt: "",
     sourceFields: ["Email_Last_Sent_At", "Last_Contacted_At", "Email_Status", "Last_Contact_Result", "Email_Bounce_Flag"]
   };
+}
+
+function buildEmailResponseTrafficShell_() {
+  return buildCommunicationsActivityShell_();
 }
 
 function addEmailTrafficPeriod_(bucket, timestamp, now) {
   var ts = parseTime_(timestamp);
   if (!(ts > 0) || !bucket) return;
   if (isSameLocalDate_(timestamp, now)) bucket.today = Number(bucket.today || 0) + 1;
-  if ((now.getTime() - ts) <= (7 * 24 * 60 * 60 * 1000)) bucket.thisWeek = Number(bucket.thisWeek || 0) + 1;
-  if (isSameLocalMonth_(timestamp, now)) bucket.thisMonth = Number(bucket.thisMonth || 0) + 1;
+  if ((now.getTime() - ts) <= (7 * 24 * 60 * 60 * 1000)) {
+    bucket.last7Days = Number(bucket.last7Days || 0) + 1;
+    bucket.thisWeek = Number(bucket.thisWeek || 0) + 1;
+  }
+  if (isSameLocalMonth_(timestamp, now)) {
+    bucket.monthToDate = Number(bucket.monthToDate || 0) + 1;
+    bucket.thisMonth = Number(bucket.thisMonth || 0) + 1;
+  }
+  if (isPreviousLocalMonth_(timestamp, now)) bucket.previousMonth = Number(bucket.previousMonth || 0) + 1;
 }
 
 // Lifecycle and stage authority helpers live in Admin_LifecycleAuthority.js.
@@ -2560,11 +2585,13 @@ function buildOperationalDashboardMetrics_() {
     duplicateRisk: 0,
     pipelineCounts: pipelineCounts,
     emailStates: emailStates,
-    emailResponseTraffic: buildEmailResponseTrafficShell_(),
+    communicationsActivity: buildCommunicationsActivityShell_(),
+    emailResponseTraffic: null,
     populationLedger: populationLedgerPublicSummary_(ledger),
     scannedRows: rows,
     scanDurationMs: 0
   };
+  out.emailResponseTraffic = out.communicationsActivity;
   for (var r = 1; r < values.length; r++) {
     var rowObj = campaignRowObjectFromValues_(headers, values[r]);
     if (!clean_(rowObj.ApplicantID || "")) continue;
@@ -2587,19 +2614,29 @@ function buildOperationalDashboardMetrics_() {
     var trafficTimestamp = rowObj.Email_Last_Sent_At || rowObj.Last_Contacted_At || "";
     var sentLike = emailStatus === "SENT" || lastResult === "SENT" || lastResult === "SUCCESS" || lastResult === "DELIVERED";
     if (sentLike) {
-      addEmailTrafficPeriod_(out.emailResponseTraffic.sent, trafficTimestamp, now);
+      out.communicationsActivity.sent.cumulative = Number(out.communicationsActivity.sent.cumulative || 0) + 1;
+      addEmailTrafficPeriod_(out.communicationsActivity.sent, trafficTimestamp, now);
       var sentTs = parseTime_(trafficTimestamp);
-      var currentLastTs = parseTime_(out.emailResponseTraffic.lastSentAt || "");
-      if (sentTs > currentLastTs) out.emailResponseTraffic.lastSentAt = new Date(sentTs).toISOString();
+      var currentLastTs = parseTime_(out.communicationsActivity.lastSuccessfulSend || out.communicationsActivity.lastSentAt || "");
+      if (sentTs > currentLastTs) {
+        out.communicationsActivity.lastSuccessfulSend = new Date(sentTs).toISOString();
+        out.communicationsActivity.lastSentAt = out.communicationsActivity.lastSuccessfulSend;
+      }
     }
     if (lastResult === "FAILED") emailStates.FAILED++;
     if (lastResult === "SUPPRESSED") emailStates.SUPPRESSED++;
     if (emailStatus === "FAILED" || emailStatus === "BOUNCED" || lastResult === "FAILED") {
       out.emailFailures++;
-      addEmailTrafficPeriod_(out.emailResponseTraffic.failed, trafficTimestamp, now);
+      addEmailTrafficPeriod_(out.communicationsActivity.failed, trafficTimestamp, now);
     }
-    if (emailStatus === "SUPPRESSED" || lastResult === "SUPPRESSED") addEmailTrafficPeriod_(out.emailResponseTraffic.suppressed, trafficTimestamp, now);
-    if (emailStatus === "BOUNCED" || isCampaignBounceFlagTrue_(rowObj.Email_Bounce_Flag)) addEmailTrafficPeriod_(out.emailResponseTraffic.bounced, trafficTimestamp, now);
+    if (emailStatus === "SUPPRESSED" || lastResult === "SUPPRESSED") {
+      out.communicationsActivity.suppressed.total = Number(out.communicationsActivity.suppressed.total || 0) + 1;
+      out.communicationsActivity.suppressedBounced.total = Number(out.communicationsActivity.suppressedBounced.total || 0) + 1;
+    }
+    if (emailStatus === "BOUNCED" || isCampaignBounceFlagTrue_(rowObj.Email_Bounce_Flag)) {
+      out.communicationsActivity.bounced.total = Number(out.communicationsActivity.bounced.total || 0) + 1;
+      out.communicationsActivity.suppressedBounced.total = Number(out.communicationsActivity.suppressedBounced.total || 0) + 1;
+    }
     if (isWhatsAppFallbackCandidate_(rowObj, "ALL_FALLBACK") || emailStatus === "FALLBACK_PENDING") {
       out.whatsappFallbackQueue++;
     }
