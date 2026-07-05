@@ -2538,6 +2538,7 @@
             <div class="reviewHeaderFact"><div class="k">Submitted</div><div class="v" id="mHeaderSubmitted">-</div></div>
             <div class="reviewHeaderFact"><div class="k">Current Stage</div><div class="v" id="mHeaderStage">-</div></div>
             <div class="reviewHeaderFact"><div class="k">Owner</div><div class="v" id="mHeaderOwner">Review Workspace</div></div>
+            <div class="reviewHeaderFact"><div class="k">Delivery Health</div><div class="v" id="mHeaderDeliveryHealth">Unknown</div></div>
             <div class="reviewHeaderFact"><div class="k">Token Age</div><div class="v" id="mHeaderTokenAge">-</div></div>
           </div>
           <div class="hidden" id="mTitle">Applicant Review</div>
@@ -9173,6 +9174,15 @@ function renderStageDashboard_(items, emptyMessage){
         ["Last Successful Send", data.lastSuccessfulSend || data.lastSentAt || "-"],
         ["Cumulative Emails Sent", cumulativeLabel]
       ];
+      var delivery = data.deliveryHealth || {};
+      if (delivery.available === true) {
+        var rate = delivery.bounceRate === null || delivery.bounceRate === undefined ? "-" : (Math.round(Number(delivery.bounceRate || 0) * 1000) / 10) + "%";
+        items.push(["Permanent Bounces", Number(delivery.permanentBounces || 0)]);
+        items.push(["Temporary Bounces", Number(delivery.temporaryBounces || 0)]);
+        items.push(["Bounce Rate", rate]);
+        items.push(["Last Bounce", delivery.lastBounce || "-"]);
+        items.push(["Successful Deliveries", Number(delivery.successfulDeliveries || 0)]);
+      }
       el.innerHTML = '<div class="actionabilityTrafficTitle"><span>Communications Activity</span><span class="muted">' + esc(sourceLabel + sourceDetail) + ' | ' + esc(data.cumulativeLabel || "Rows with latest status SENT") + '</span></div>'
         + '<div class="actionabilityTrafficGrid">'
         + items.map(function(item){
@@ -9600,6 +9610,7 @@ function renderStageDashboard_(items, emptyMessage){
       setReviewHeaderValue_("mHeaderSubmitted", "-");
       setReviewHeaderValue_("mHeaderStage", "Loading");
       setReviewHeaderValue_("mHeaderOwner", "Review Workspace");
+      setReviewHeaderValue_("mHeaderDeliveryHealth", "Unknown");
       setReviewHeaderValue_("mHeaderTokenAge", "-");
       document.getElementById("docs").innerHTML = '<div class="muted">Loading...</div>';
       document.getElementById("mMsg").textContent = "Loading...";
@@ -10200,6 +10211,9 @@ function renderStageDashboard_(items, emptyMessage){
       var ownerLabel = proof.currentQueueBucket || proof.resolverNextAction || facts.nextActionLabel || "Review Workspace";
       var submittedLabel = formatApplicantDateTime(opsFirstNonBlank_(d.Timestamp, d.timestamp, d.Created_At, d.Submitted_At, d.PortalTokenIssuedAt));
       var phoneLabel = opsFirstNonBlank_(facts.phone, d.Parent_Phone, d.Parent_Mobile, d.Phone_Number, d.Mobile, d.Phone);
+      var deliveryHealthLabel = opsFirstNonBlank_(d.Delivery_Health, d.Last_Delivery_Status, "");
+      if (!deliveryHealthLabel && isCommBounceFlagTrue_(d.Email_Bounce_Flag)) deliveryHealthLabel = "Permanent Failure";
+      if (!deliveryHealthLabel) deliveryHealthLabel = "Unknown";
       setReviewHeaderValue_("mApplicantName", fullName || opsDetailName_(d) || "Unnamed Applicant");
       setReviewHeaderValue_("mApplicantId", d.ApplicantID || "Unknown ApplicantID");
       setReviewHeaderValue_("mHeaderEmail", emailLabel);
@@ -10207,6 +10221,7 @@ function renderStageDashboard_(items, emptyMessage){
       setReviewHeaderValue_("mHeaderSubmitted", submittedLabel || "-");
       setReviewHeaderValue_("mHeaderStage", deriveApplicantDisplayStage(d) || "Unknown");
       setReviewHeaderValue_("mHeaderOwner", ownerLabel);
+      setReviewHeaderValue_("mHeaderDeliveryHealth", deliveryHealthLabel);
       var overallComputed = d.Overall_Status_Computed || d.Doc_Verification_Status_Computed || d.Doc_Verification_Status || "Pending";
       var docComputed = d.Doc_Verification_Status_Computed || d.Doc_Verification_Status || "Pending";
       var paymentBadge = d.Payment_Badge || (facts.paymentVerified ? "Verified" : "Pending");

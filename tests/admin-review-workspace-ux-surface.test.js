@@ -16,6 +16,7 @@ expectMatch(/id="mApplicantName"/, "Review header must include applicant name");
 expectMatch(/id="mApplicantId"/, "Review header must include applicant ID");
 expectMatch(/id="mHeaderEmail"[\s\S]*id="mHeaderPhone"[\s\S]*id="mHeaderSubmitted"/, "Review header must include contact and submitted facts");
 expectMatch(/id="mHeaderStage"[\s\S]*id="mHeaderOwner"[\s\S]*id="mHeaderTokenAge"/, "Review header must include stage, owner, and token age facts");
+expectMatch(/Delivery Health[\s\S]*id="mHeaderDeliveryHealth"/, "Review header must expose reconciled delivery health");
 expectMatch(/<div class="hidden" id="mTitle">Applicant Review<\/div>[\s\S]*<div class="hidden" id="mSub"><\/div>/, "Legacy title/subtitle nodes must remain for compatibility");
 expectMatch(/function setReviewHeaderValue_\(/, "Header field updates must use a bounded local DOM setter");
 expectMatch(/setReviewHeaderValue_\("mApplicantName", fullName \|\| opsDetailName_\(d\)/, "Loaded modal must bind applicant name from existing detail data");
@@ -23,6 +24,7 @@ expectMatch(/setReviewHeaderValue_\("mApplicantId", d\.ApplicantID/, "Loaded mod
 expectMatch(/setReviewHeaderValue_\("mHeaderEmail", emailLabel\)/, "Loaded modal must bind effective email label");
 expectMatch(/setReviewHeaderValue_\("mHeaderSubmitted", submittedLabel/, "Loaded modal must bind submitted date");
 expectMatch(/setReviewHeaderValue_\("mHeaderStage", deriveApplicantDisplayStage\(d\)/, "Loaded modal must bind current display stage");
+expectMatch(/setReviewHeaderValue_\("mHeaderDeliveryHealth", deliveryHealthLabel\)/, "Loaded modal must bind reconciled delivery health");
 expectMatch(/setReviewHeaderValue_\("mHeaderTokenAge", tokenText\)/, "Loaded modal must bind token age");
 expectMatch(/class="kv reviewCardGrid"/, "Primary facts must use balanced review card grid");
 expectMatch(/class="box reviewCardWide"[\s\S]*Workflow Fields/, "Workflow fields must be grouped into a wider balanced card");

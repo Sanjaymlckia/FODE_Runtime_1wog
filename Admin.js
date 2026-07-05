@@ -335,6 +335,12 @@ function admin_getApplicantDetail(payload) {
       Email_Verification_Status: idx.Email_Verification_Status ? clean_(row[idx.Email_Verification_Status - 1]) : "",
       Email_Bounce_Flag: idx.Email_Bounce_Flag ? clean_(row[idx.Email_Bounce_Flag - 1]) : "",
       Email_Bounce_Reason: idx.Email_Bounce_Reason ? clean_(row[idx.Email_Bounce_Reason - 1]) : "",
+      Last_Delivery_Status: idx.Last_Delivery_Status ? clean_(row[idx.Last_Delivery_Status - 1]) : "",
+      Last_Bounce_Date: idx.Last_Bounce_Date ? clean_(row[idx.Last_Bounce_Date - 1]) : "",
+      Bounce_Reason: idx.Bounce_Reason ? clean_(row[idx.Bounce_Reason - 1]) : "",
+      Delivery_Health: idx.Delivery_Health ? clean_(row[idx.Delivery_Health - 1]) : "",
+      Delivery_Reconciliation_Key: idx.Delivery_Reconciliation_Key ? clean_(row[idx.Delivery_Reconciliation_Key - 1]) : "",
+      Delivery_Reconciliation_Source: idx.Delivery_Reconciliation_Source ? clean_(row[idx.Delivery_Reconciliation_Source - 1]) : "",
       Email_Next_Action_Date: idx.Email_Next_Action_Date ? clean_(row[idx.Email_Next_Action_Date - 1]) : "",
       Last_Email_Error: idx.Last_Email_Error ? clean_(row[idx.Last_Email_Error - 1]) : "",
       Last_Email_To: idx.Last_Email_To ? clean_(row[idx.Last_Email_To - 1]) : "",
@@ -2485,7 +2491,7 @@ function buildCommunicationsActivityShell_() {
     reliable: true,
     sourceType: "latest_row_state",
     sourceLabel: "Source: latest row state only - not cumulative history",
-    sourceDetail: "Window counts are rows whose latest communication state falls in the period. No append-only communications ledger or mailbox bounce folder is runtime-ingested for Admin metrics.",
+    sourceDetail: "Window counts are rows whose latest communication state falls in the period. Mailbox bounces affect reliability metrics only after deterministic runtime reconciliation.",
     cumulativeIsHistorical: false,
     cumulativeLabel: "Rows with latest status SENT",
     sent: { today: 0, last7Days: 0, monthToDate: 0, previousMonth: 0, cumulative: 0 },
@@ -2493,9 +2499,19 @@ function buildCommunicationsActivityShell_() {
     suppressed: { total: 0 },
     bounced: { total: 0 },
     suppressedBounced: { total: 0 },
+    deliveryHealth: {
+      available: false,
+      permanentBounces: 0,
+      temporaryBounces: 0,
+      successfulDeliveries: 0,
+      unknown: 0,
+      lastBounce: "",
+      bounceRate: null,
+      sourceLabel: "Source: reconciled runtime delivery health"
+    },
     lastSuccessfulSend: "",
     lastSentAt: "",
-    sourceFields: ["Email_Last_Sent_At", "Last_Contacted_At", "Email_Status", "Last_Contact_Result", "Email_Bounce_Flag"]
+    sourceFields: ["Email_Last_Sent_At", "Last_Contacted_At", "Email_Status", "Last_Contact_Result", "Email_Bounce_Flag", "Delivery_Health", "Last_Delivery_Status", "Last_Bounce_Date"]
   };
 }
 
@@ -2637,6 +2653,18 @@ function buildOperationalDashboardMetrics_() {
       out.communicationsActivity.bounced.total = Number(out.communicationsActivity.bounced.total || 0) + 1;
       out.communicationsActivity.suppressedBounced.total = Number(out.communicationsActivity.suppressedBounced.total || 0) + 1;
     }
+    var deliveryHealth = clean_(rowObj.Delivery_Health || rowObj.Last_Delivery_Status || "").toUpperCase();
+    var hasDeliveryEvidence = !!clean_(rowObj.Delivery_Health || rowObj.Last_Delivery_Status || rowObj.Last_Bounce_Date || rowObj.Delivery_Reconciliation_Key || "");
+    if (hasDeliveryEvidence) {
+      out.communicationsActivity.deliveryHealth.available = true;
+      if (deliveryHealth === "PERMANENT FAILURE") out.communicationsActivity.deliveryHealth.permanentBounces++;
+      else if (deliveryHealth === "TEMPORARY FAILURE") out.communicationsActivity.deliveryHealth.temporaryBounces++;
+      else if (deliveryHealth === "DELIVERED") out.communicationsActivity.deliveryHealth.successfulDeliveries++;
+      else out.communicationsActivity.deliveryHealth.unknown++;
+      var bounceTs = parseTime_(rowObj.Last_Bounce_Date || "");
+      var currentBounceTs = parseTime_(out.communicationsActivity.deliveryHealth.lastBounce || "");
+      if (bounceTs > currentBounceTs) out.communicationsActivity.deliveryHealth.lastBounce = new Date(bounceTs).toISOString();
+    }
     if (isWhatsAppFallbackCandidate_(rowObj, "ALL_FALLBACK") || emailStatus === "FALLBACK_PENDING") {
       out.whatsappFallbackQueue++;
     }
@@ -2656,6 +2684,11 @@ function buildOperationalDashboardMetrics_() {
     });
   }
   out.duplicateRisk = countDuplicateRisk_(signatureCounts);
+  var dh = out.communicationsActivity.deliveryHealth;
+  if (dh && dh.available === true) {
+    var attempted = Number(dh.successfulDeliveries || 0) + Number(dh.permanentBounces || 0) + Number(dh.temporaryBounces || 0);
+    dh.bounceRate = attempted > 0 ? ((Number(dh.permanentBounces || 0) + Number(dh.temporaryBounces || 0)) / attempted) : null;
+  }
   out.scanDurationMs = new Date().getTime() - startedAt;
   return out;
 }

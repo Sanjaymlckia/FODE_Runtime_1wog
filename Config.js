@@ -209,6 +209,12 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
     "Email_Attempt_Count",
     "Email_Bounce_Flag",
     "Email_Bounce_Reason",
+    "Last_Delivery_Status",
+    "Last_Bounce_Date",
+    "Bounce_Reason",
+    "Delivery_Health",
+    "Delivery_Reconciliation_Key",
+    "Delivery_Reconciliation_Source",
     "Email_Next_Action_Date",
     "Email_Campaign_Batch"
   ],

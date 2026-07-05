@@ -159,9 +159,15 @@ assert.match(adminUi, /Communications Activity/, "Operations Workspace must labe
 ["Today", "Last 7 Days", "Month-to-Date", "Previous Month", "Failed", "Suppressed / Bounced", "Last Successful Send", "Cumulative Emails Sent"].forEach((label) => {
   assert.match(adminUi, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `Communications Activity must include ${label}`);
 });
+["Permanent Bounces", "Temporary Bounces", "Bounce Rate", "Last Bounce", "Successful Deliveries"].forEach((label) => {
+  assert.match(adminUi, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `Communications Activity must support reconciled delivery metric ${label}`);
+});
 assert.match(adminJs, /Source: latest row state only/, "Communications Activity must label latest-row source limitations");
-assert.match(adminJs, /No append-only communications ledger or mailbox bounce folder is runtime-ingested/, "Communications Activity must disclose that external bounce folders are not runtime-ingested");
+assert.match(adminJs, /Mailbox bounces affect reliability metrics only after deterministic runtime reconciliation/, "Communications Activity must disclose that mailbox bounces require runtime reconciliation before dashboard use");
 assert.match(adminJs, /cumulativeLabel:\s*"Rows with latest status SENT"/, "Cumulative metric must be labelled as row-latest proxy when no true ledger exists");
+assert.match(adminJs, /deliveryHealth:\s*\{[\s\S]*Source: reconciled runtime delivery health/, "Communications Activity must define runtime delivery-health metrics separately from Gmail");
+assert.match(adminUi, /delivery\.available === true/, "Reconciled delivery metrics must only render when runtime evidence exists");
+assert.doesNotMatch(adminJs, /GmailApp\.search[\s\S]*communicationsActivity/, "Communications Activity metrics must not query Gmail directly");
 assert.match(adminUi, /cumulativeIsHistorical === true/, "UI must distinguish historical cumulative sends from latest-row proxy counts");
 assert.doesNotMatch(adminUi, /admin_sendCommunicationsActivity|admin_updateCommunicationsActivity|admin_createCommunicationsLedger/, "Communications Activity surface must not add mutation RPCs");
 assert.match(adminUi, /function actionabilityManagementExceptionBreakdown_/, "Management Exceptions must expose a scoped breakdown when visible rows support it");

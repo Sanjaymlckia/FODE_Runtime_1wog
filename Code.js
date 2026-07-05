@@ -10921,7 +10921,69 @@ function classifyBounceResult_(subject, plainBody, extractedReason) {
   return { classification: "HARD", reason: reason };
 }
 
-function applyBounceStateToRow_(rowObj, classification, reason) {
+function extractBounceSmtpStatus_(text) {
+  var blob = String(text || "");
+  var status = blob.match(/\b([245][0-9]{2})(?:[ \t]+([245]\.[0-9.]+))?\b/);
+  if (status) return clean_([status[1], status[2] || ""].join(" "));
+  var dsn = blob.match(/\bStatus:\s*([245]\.[0-9.]+)/i);
+  return dsn ? clean_(dsn[1]) : "";
+}
+
+function normalizeDeliveryHealth_(classification) {
+  var normalized = normalizeBounceClassification_(classification);
+  if (normalized === "TEMPORARY") return "Temporary Failure";
+  if (normalized === "HARD" || normalized === "INVALID" || normalized === "BLOCKED") return "Permanent Failure";
+  return "Unknown";
+}
+
+function normalizeBounceFailureType_(classification, reason) {
+  var normalized = normalizeBounceClassification_(classification);
+  var blob = clean_(reason || "").toLowerCase();
+  if (normalized === "TEMPORARY") return "TEMPORARY_FAILURE";
+  if (/domain|dns|host not found|no mx/i.test(blob)) return "DOMAIN_FAILURE";
+  if (normalized === "HARD" || normalized === "INVALID" || normalized === "BLOCKED") return "PERMANENT_FAILURE";
+  return "UNKNOWN";
+}
+
+function buildBounceReconciliationKey_(candidate) {
+  var c = candidate || {};
+  var provider = clean_(c.provider || "gmail-bouncemail-v1");
+  var messageId = clean_(c.messageId || "");
+  var recipient = clean_(c.failedRecipient || "").toLowerCase();
+  if (messageId && recipient) return provider + "::" + messageId + "::" + recipient;
+  return provider + "::" + recipient + "::" + clean_(c.timestamp || "") + "::" + clean_(c.smtpStatus || "");
+}
+
+function buildGmailBounceCandidate_(message, subject, plainBody, classification, reason) {
+  var body = String(plainBody || "");
+  var allText = [clean_(subject || ""), body].join("\n");
+  var emails = campaignExtractBounceEmails_(allText);
+  var failedRecipient = clean_(emails[0] || "").toLowerCase();
+  var timestamp = "";
+  if (message && typeof message.getDate === "function" && message.getDate()) {
+    timestamp = message.getDate().toISOString();
+  }
+  var normalizedClass = normalizeBounceClassification_(classification);
+  var normalizedReason = clean_(reason || campaignExtractBounceReason_(body, subject) || "");
+  var candidate = {
+    provider: "gmail-bouncemail-v1",
+    messageId: clean_(message && typeof message.getId === "function" ? message.getId() : ""),
+    threadId: clean_(message && typeof message.getThread === "function" && message.getThread() && typeof message.getThread().getId === "function" ? message.getThread().getId() : ""),
+    failedRecipient: failedRecipient,
+    allRecipients: emails.slice(0),
+    applicantIds: campaignExtractApplicantIds_(allText),
+    failureType: normalizeBounceFailureType_(normalizedClass, normalizedReason),
+    classification: normalizedClass,
+    smtpStatus: extractBounceSmtpStatus_(allText),
+    timestamp: timestamp,
+    diagnosticReason: normalizedReason,
+    deliveryHealth: normalizeDeliveryHealth_(normalizedClass)
+  };
+  candidate.reconciliationKey = buildBounceReconciliationKey_(candidate);
+  return candidate;
+}
+
+function buildBounceStatePatch_(rowObj, classification, reason, candidate) {
   var row = rowObj || {};
   var normalizedClass = normalizeBounceClassification_(classification);
   var normalizedReason = normalizeBounceReason_(normalizedClass, reason);
@@ -10929,6 +10991,21 @@ function applyBounceStateToRow_(rowObj, classification, reason) {
   var currentReason = clean_(row.Email_Bounce_Reason || "");
   var currentStatus = normalizeEmailStatus_(row.Email_Status || "");
   var nextActionDate = clean_(row.Email_Next_Action_Date || "");
+  var c = candidate || {};
+  var bounceAt = clean_(c.timestamp || "");
+  var deliveryHealth = clean_(c.deliveryHealth || normalizeDeliveryHealth_(normalizedClass));
+  var reconciliationKey = clean_(c.reconciliationKey || buildBounceReconciliationKey_(c));
+  if (reconciliationKey && reconciliationKey === clean_(row.Delivery_Reconciliation_Key || "")) return patch;
+  var bounceTs = parseTime_(bounceAt);
+  var lastContactTs = parseTime_(row.Email_Last_Sent_At || row.Last_Contacted_At || "");
+  var lastResult = clean_(row.Last_Contact_Result || row.Email_Status || "").toUpperCase();
+  if (bounceTs > 0 && lastContactTs > bounceTs && /^(SENT|SUCCESS|DELIVERED)$/i.test(lastResult)) return patch;
+  if (deliveryHealth && deliveryHealth !== clean_(row.Delivery_Health || "")) patch.Delivery_Health = deliveryHealth;
+  if (deliveryHealth && deliveryHealth !== clean_(row.Last_Delivery_Status || "")) patch.Last_Delivery_Status = deliveryHealth;
+  if (bounceAt && bounceAt !== clean_(row.Last_Bounce_Date || "")) patch.Last_Bounce_Date = bounceAt;
+  if (normalizedReason && normalizedReason !== clean_(row.Bounce_Reason || "")) patch.Bounce_Reason = normalizedReason;
+  if (reconciliationKey && reconciliationKey !== clean_(row.Delivery_Reconciliation_Key || "")) patch.Delivery_Reconciliation_Key = reconciliationKey;
+  if (clean_(c.provider || "") && clean_(c.provider || "") !== clean_(row.Delivery_Reconciliation_Source || "")) patch.Delivery_Reconciliation_Source = clean_(c.provider || "");
   if (normalizedClass === "TEMPORARY") {
     var retryAt = computeNextActionDate_(1, new Date());
     if (normalizedReason && normalizedReason !== currentReason) patch.Email_Bounce_Reason = normalizedReason;
@@ -10942,6 +11019,10 @@ function applyBounceStateToRow_(rowObj, classification, reason) {
     if (nextActionDate) patch.Email_Next_Action_Date = "";
   }
   return patch;
+}
+
+function applyBounceStateToRow_(rowObj, classification, reason) {
+  return buildBounceStatePatch_(rowObj, classification, reason, {});
 }
 
 function ingestRecentBounces_(opts) {
@@ -11018,8 +11099,11 @@ function ingestRecentBounces_(opts) {
       var applicantIdMatches = campaignExtractApplicantIds_(blob);
       var bounce = classifyBounceResult_(subject, plainBody, campaignExtractBounceReason_(plainBody, subject));
       var classification = normalizeBounceClassification_(bounce && bounce.classification || "NONE");
+      var candidate = buildGmailBounceCandidate_(msg, subject, plainBody, classification, bounce && bounce.reason || "");
+      emailMatches = candidate.allRecipients && candidate.allRecipients.length ? candidate.allRecipients : emailMatches;
+      applicantIdMatches = candidate.applicantIds && candidate.applicantIds.length ? candidate.applicantIds : applicantIdMatches;
       countsByClassification[classification] = Number(countsByClassification[classification] || 0) + 1;
-      latestBounceAt = clean_(msg.getDate && msg.getDate() ? msg.getDate().toISOString() : nowIso);
+      latestBounceAt = clean_(candidate.timestamp || (msg.getDate && msg.getDate() ? msg.getDate().toISOString() : nowIso));
       latestBounceReason = clean_(bounce && bounce.reason || "");
       latestBounceClassification = classification;
       if (applicantIdMatches.length === 1) latestBounceApplicantId = normalizeBounceApplicantId_(applicantIdMatches[0] || "");
@@ -11028,7 +11112,7 @@ function ingestRecentBounces_(opts) {
         matched++;
         matchedUnique++;
         var matchedRow = match.row;
-        var patch = applyBounceStateToRow_(matchedRow.row || matchedRow, classification, bounce && bounce.reason || "");
+        var patch = buildBounceStatePatch_(matchedRow.row || matchedRow, classification, bounce && bounce.reason || "", candidate);
         if (Object.keys(patch).length) {
           applyPatch_(sh, Number(match.rowNumber || matchedRow.rowNumber || 0), patch);
           updated++;
@@ -11036,6 +11120,12 @@ function ingestRecentBounces_(opts) {
           matchedRow.row.Email_Bounce_Reason = Object.prototype.hasOwnProperty.call(patch, 'Email_Bounce_Reason') ? patch.Email_Bounce_Reason : matchedRow.row.Email_Bounce_Reason;
           matchedRow.row.Email_Status = Object.prototype.hasOwnProperty.call(patch, 'Email_Status') ? patch.Email_Status : matchedRow.row.Email_Status;
           matchedRow.row.Email_Next_Action_Date = Object.prototype.hasOwnProperty.call(patch, 'Email_Next_Action_Date') ? patch.Email_Next_Action_Date : matchedRow.row.Email_Next_Action_Date;
+          matchedRow.row.Last_Delivery_Status = Object.prototype.hasOwnProperty.call(patch, 'Last_Delivery_Status') ? patch.Last_Delivery_Status : matchedRow.row.Last_Delivery_Status;
+          matchedRow.row.Last_Bounce_Date = Object.prototype.hasOwnProperty.call(patch, 'Last_Bounce_Date') ? patch.Last_Bounce_Date : matchedRow.row.Last_Bounce_Date;
+          matchedRow.row.Bounce_Reason = Object.prototype.hasOwnProperty.call(patch, 'Bounce_Reason') ? patch.Bounce_Reason : matchedRow.row.Bounce_Reason;
+          matchedRow.row.Delivery_Health = Object.prototype.hasOwnProperty.call(patch, 'Delivery_Health') ? patch.Delivery_Health : matchedRow.row.Delivery_Health;
+          matchedRow.row.Delivery_Reconciliation_Key = Object.prototype.hasOwnProperty.call(patch, 'Delivery_Reconciliation_Key') ? patch.Delivery_Reconciliation_Key : matchedRow.row.Delivery_Reconciliation_Key;
+          matchedRow.row.Delivery_Reconciliation_Source = Object.prototype.hasOwnProperty.call(patch, 'Delivery_Reconciliation_Source') ? patch.Delivery_Reconciliation_Source : matchedRow.row.Delivery_Reconciliation_Source;
         }
       } else if (match && match.status === "MATCH_AMBIGUOUS") {
         ambiguous++;
