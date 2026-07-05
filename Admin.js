@@ -2464,6 +2464,35 @@ function isSameLocalDate_(value, now) {
   return Utilities.formatDate(new Date(ts), tz, "yyyy-MM-dd") === Utilities.formatDate(now || new Date(), tz, "yyyy-MM-dd");
 }
 
+function isSameLocalMonth_(value, now) {
+  var ts = parseTime_(value);
+  if (!(ts > 0)) return false;
+  var tz = Session.getScriptTimeZone() || "GMT";
+  return Utilities.formatDate(new Date(ts), tz, "yyyy-MM") === Utilities.formatDate(now || new Date(), tz, "yyyy-MM");
+}
+
+function buildEmailResponseTrafficShell_() {
+  return {
+    reliable: true,
+    sourceLabel: "row latest-contact fields",
+    sourceDetail: "Latest row state only; not a cumulative send log.",
+    sent: { today: 0, thisWeek: 0, thisMonth: 0 },
+    failed: { today: 0, thisWeek: 0, thisMonth: 0 },
+    suppressed: { today: 0, thisWeek: 0, thisMonth: 0 },
+    bounced: { today: 0, thisWeek: 0, thisMonth: 0 },
+    lastSentAt: "",
+    sourceFields: ["Email_Last_Sent_At", "Last_Contacted_At", "Email_Status", "Last_Contact_Result", "Email_Bounce_Flag"]
+  };
+}
+
+function addEmailTrafficPeriod_(bucket, timestamp, now) {
+  var ts = parseTime_(timestamp);
+  if (!(ts > 0) || !bucket) return;
+  if (isSameLocalDate_(timestamp, now)) bucket.today = Number(bucket.today || 0) + 1;
+  if ((now.getTime() - ts) <= (7 * 24 * 60 * 60 * 1000)) bucket.thisWeek = Number(bucket.thisWeek || 0) + 1;
+  if (isSameLocalMonth_(timestamp, now)) bucket.thisMonth = Number(bucket.thisMonth || 0) + 1;
+}
+
 // Lifecycle and stage authority helpers live in Admin_LifecycleAuthority.js.
 
 function buildDuplicateSignatureMetrics_(rowObj) {
@@ -2531,6 +2560,7 @@ function buildOperationalDashboardMetrics_() {
     duplicateRisk: 0,
     pipelineCounts: pipelineCounts,
     emailStates: emailStates,
+    emailResponseTraffic: buildEmailResponseTrafficShell_(),
     populationLedger: populationLedgerPublicSummary_(ledger),
     scannedRows: rows,
     scanDurationMs: 0
@@ -2554,9 +2584,22 @@ function buildOperationalDashboardMetrics_() {
     if (isSameLocalDate_(rowObj.Email_Last_Sent_At || "", now)) out.emailRowsSentToday++;
     out.emailSentToday = out.rowLoggedCommunicationsToday;
     var lastResult = clean_(rowObj.Last_Contact_Result || "").toUpperCase();
+    var trafficTimestamp = rowObj.Email_Last_Sent_At || rowObj.Last_Contacted_At || "";
+    var sentLike = emailStatus === "SENT" || lastResult === "SENT" || lastResult === "SUCCESS" || lastResult === "DELIVERED";
+    if (sentLike) {
+      addEmailTrafficPeriod_(out.emailResponseTraffic.sent, trafficTimestamp, now);
+      var sentTs = parseTime_(trafficTimestamp);
+      var currentLastTs = parseTime_(out.emailResponseTraffic.lastSentAt || "");
+      if (sentTs > currentLastTs) out.emailResponseTraffic.lastSentAt = new Date(sentTs).toISOString();
+    }
     if (lastResult === "FAILED") emailStates.FAILED++;
     if (lastResult === "SUPPRESSED") emailStates.SUPPRESSED++;
-    if (emailStatus === "FAILED" || emailStatus === "BOUNCED" || lastResult === "FAILED") out.emailFailures++;
+    if (emailStatus === "FAILED" || emailStatus === "BOUNCED" || lastResult === "FAILED") {
+      out.emailFailures++;
+      addEmailTrafficPeriod_(out.emailResponseTraffic.failed, trafficTimestamp, now);
+    }
+    if (emailStatus === "SUPPRESSED" || lastResult === "SUPPRESSED") addEmailTrafficPeriod_(out.emailResponseTraffic.suppressed, trafficTimestamp, now);
+    if (emailStatus === "BOUNCED" || isCampaignBounceFlagTrue_(rowObj.Email_Bounce_Flag)) addEmailTrafficPeriod_(out.emailResponseTraffic.bounced, trafficTimestamp, now);
     if (isWhatsAppFallbackCandidate_(rowObj, "ALL_FALLBACK") || emailStatus === "FALLBACK_PENDING") {
       out.whatsappFallbackQueue++;
     }

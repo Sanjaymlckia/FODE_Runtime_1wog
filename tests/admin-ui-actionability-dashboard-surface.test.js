@@ -26,10 +26,10 @@ assert.ok(adminUi.includes("Advanced Diagnostics / Legacy Panels"), "Legacy/supp
 assert.match(adminUi, /<details id="advancedDiagnosticsPanel"[^>]*>/, "Advanced Diagnostics must be a collapsed details surface");
 assert.doesNotMatch(adminUi, /<details id="advancedDiagnosticsPanel"[^>]*\sopen\b/, "Advanced Diagnostics must be collapsed by default");
 assert.ok(adminUi.includes("Global View: Current workload"), "Operations Workspace must expose the Global View shell");
-assert.ok(adminUi.includes("Operator View: Coming soon"), "Operations Workspace must expose the Operator View shell");
-assert.ok(adminUi.includes("Operator-scoped workload is planned; no backend filter is applied"), "Operator View shell must not imply backend filtering exists");
+assert.doesNotMatch(adminUi, /Operator View: Coming soon/, "Operations Workspace must not expose a fake Operator View control");
+assert.ok(adminUi.includes("Operator-scoped view pending ownership model."), "Operator-scoped view must be described as pending ownership authority");
 assert.match(adminUi, /data-actionability-view="global"/, "View shell must preserve actionability-scoped internal naming");
-assert.match(adminUi, /data-actionability-view="operator"[^>]*disabled/, "Operator View must stay disabled until backend scoping exists");
+assert.doesNotMatch(adminUi, /data-actionability-view="operator"/, "Operator View must not be rendered until backend scoping exists");
 assert.ok(adminUi.includes("What requires work today."), "Operations Workspace role must be clear");
 assert.ok(adminUi.includes("Where applicants are."), "Lifecycle Map role must be clear");
 assert.ok(adminUi.includes("Authoritative editing modal."), "Review Workspace role must be clear");
@@ -37,8 +37,22 @@ assert.ok(adminUi.includes("Troubleshooting and automation state."), "System Hea
 
 const kpiIndex = indexOfRequired('id="actionabilityKpiStrip"');
 const summaryIndex = indexOfRequired('id="actionabilityPreviewSummary"');
-assert.ok(kpiIndex > dashboardIndex, "KPI strip must live inside the promoted dashboard");
-assert.ok(kpiIndex < summaryIndex, "KPI strip must render above dashboard group summaries");
+assert.ok(kpiIndex > dashboardIndex, "Ledger bar must live inside the promoted dashboard");
+assert.ok(kpiIndex < summaryIndex, "Ledger bar must render above operational bucket table");
+assert.match(adminUi, /function renderActionabilityLedgerBar_/, "Operations Workspace must render a ledger trust bar");
+assert.match(adminUi, /actionabilityLedgerItem/, "Ledger trust bar must use aligned ledger items, not decorative cards");
+assert.match(adminUi, /Scanned rows/, "Ledger bar must expose scanned rows");
+assert.match(adminUi, /Applicant ID rows/, "Ledger bar must expose ApplicantID rows");
+assert.match(adminUi, /Unknown \/ Unclassified/, "Ledger bar must expose unknown/unclassified rows");
+assert.match(adminUi, /Duplicate Applicant IDs/, "Ledger bar must expose duplicate ApplicantID risk");
+assert.match(adminUi, /Integrity/, "Ledger bar must expose integrity status");
+assert.match(adminUi, /Generated/, "Ledger bar must expose generated timestamp");
+assert.match(adminUi, /class="actionabilityBucketTable"/, "Operational buckets must render as a table rhythm");
+assert.match(adminUi, /Population<\/div>[\s\S]+Visible<\/div>/, "Operational buckets must separate population counts from visible rows");
+assert.match(adminUi, /Primary Action/, "Operational buckets must preserve primary action scanning");
+assert.match(adminUi, /Integrity \/ Notes/, "Operational buckets must expose integrity notes");
+assert.doesNotMatch(adminUi, /<button class="actionabilityKpi/, "Operations Workspace must not render card-style KPI buttons");
+assert.doesNotMatch(adminUi, /class="actionabilityGroupCard/, "Operations Workspace must not render irregular group cards");
 
 [
   "Applicant Action",
@@ -47,28 +61,27 @@ assert.ok(kpiIndex < summaryIndex, "KPI strip must render above dashboard group 
   "Academic Admin",
   "Exceptions",
   "Dormant",
-  "Completed / No Action"
+  "Completed / No Action",
+  "Unknown / Unclassified"
 ].forEach((label) => {
-  assert.ok(adminUi.includes(label), `KPI responsibility bucket must be present: ${label}`);
+  assert.ok(adminUi.includes(label), `Operational bucket must be present: ${label}`);
 });
-assert.match(adminUi, /key === "MANAGEMENT" \? "Exceptions"/, "KPI strip must shorten Management Exceptions to Exceptions");
-assert.match(adminUi, /<button class="actionabilityKpi/, "KPI cards must render as actionable buttons");
-assert.match(adminUi, /onclick="selectActionabilityGroup_/, "KPI/group cards must select an actionability group");
+assert.match(adminUi, /actionabilityBucketViewBtn/, "Operational bucket view buttons must use secondary button hierarchy");
+assert.match(adminUi, /onclick="selectActionabilityGroup_/, "Operational bucket rows must select an actionability group");
 assert.match(adminUi, /var displayRows = actionabilityActiveGroup \? \(groupRows\[actionabilityActiveGroup\] \|\| \[\]\) : rows;/, "KPI/group filters must still drive displayed worklist rows");
 assert.match(adminUi, /actionabilityPopulationLedgerState\s*=\s*ledger/, "Operations Workspace must retain Population Ledger summary from the backend");
 assert.match(adminUi, /function actionabilityPopulationCountForGroup_/, "Operations Workspace KPI totals must have a ledger-backed count resolver");
 assert.match(adminUi, /operationalBucketCounts/, "Operations Workspace must consume ledger operational bucket counts");
-assert.match(adminUi, /actionabilityPopulationCountForGroup_\(key,\s*\(groupRows\[key\] \|\| \[\]\)\.length\)/, "KPI cards must render full population bucket counts with visible-row fallback only");
-assert.match(adminUi, /actionabilityPopulationCountForGroup_\(key,\s*list\.length\)/, "Group cards must render full population bucket counts with visible-row fallback only");
-assert.match(adminUi, /String\(displayRows\.length\) \+ " visible \/ " \+ String\(populationTotal\) \+ " population"/, "Operations Workspace meta must separate visible worklist rows from population totals");
-assert.doesNotMatch(renderActionabilityRowBody_(), /Newest:/, "Group cards must not spend benchmark scan space on newest metadata");
+assert.match(adminUi, /actionabilityPopulationCountForGroup_\(key,\s*list\.length\)/, "Operational bucket table must render full population bucket counts with visible-row fallback only");
+assert.match(adminUi, /visible worklist rows \/ " \+ String\(populationTotal\) \+ " total applicant population/, "Operations Workspace meta must separate visible worklist rows from population totals");
+assert.doesNotMatch(renderActionabilityRowBody_(), /Newest:/, "Operational bucket table must not spend benchmark scan space on newest metadata");
 assert.match(adminUi, /stagePopulationLedgerState/, "Lifecycle Map must retain Population Ledger summary from the backend");
 assert.match(adminUi, /Population Ledger: " \+ String\(Number\(ledger\.applicantIdRows/, "Lifecycle Map metadata must report ledger applicant population");
 assert.doesNotMatch(adminUi, /review queue visible/i, "Lifecycle Map must not label lifecycle/actionability counts as Review Queue visibility");
 assert.match(adminUi, /var ledger = data\.populationLedger/, "Global Dashboard renderer must consume Population Ledger summary");
 assert.match(adminUi, /ApplicantID \/ " \+ Number\(data\.scannedRows/, "Global Dashboard scan metric must separate ApplicantID rows from scanned rows");
 
-["APPLICANT", "ADMISSIONS", "FINANCE", "ACADEMIC", "MANAGEMENT", "DORMANT", "COMPLETE"].forEach((key) => {
+["APPLICANT", "ADMISSIONS", "FINANCE", "ACADEMIC", "MANAGEMENT", "DORMANT", "COMPLETE", "UNKNOWN"].forEach((key) => {
   assert.ok(adminUi.includes(`data-actionability-kpi="' + esc(key) + '"`) || adminUi.includes(`data-actionability-kpi="${key}"`), `KPI bucket key must be rendered: ${key}`);
 });
 
@@ -90,6 +103,13 @@ assert.doesNotMatch(adminUi, /\.actionabilityWorklistTable\{[^}]*min-width:/, "P
   assert.ok(adminUi.includes(`class="actionabilityClusterLabel">${label}</span>`), `Worklist must cluster operator facts under ${label}`);
 });
 assert.match(adminUi, /actionabilityReviewCell[\s\S]+actionabilityReviewBtn/, "Review must remain a dedicated visible action column");
+assert.match(adminUi, /class="btn actionabilityReviewBtn"/, "Review must keep primary button hierarchy");
+assert.match(adminUi, /id="actionabilityContextMenu"/, "Current Worklist must expose an OPS-style context menu");
+assert.match(adminUi, /oncontextmenu="return openActionabilityContextMenu_/, "Current Worklist rows must open the safe context menu");
+assert.match(adminUi, /data-actionability-context="review"/, "Context menu must include Review handoff");
+assert.match(adminUi, /data-actionability-context="copy-id"/, "Context menu must include Copy Applicant ID");
+assert.match(adminUi, /data-actionability-context="copy-name"/, "Context menu must include Copy Applicant Name");
+assert.doesNotMatch(adminUi, /data-actionability-context="(?:send|reset|status|payment|document)/i, "Context menu must not expose mutation actions");
 assert.match(adminUi, /\.modal\{[\s\S]*background: #f8fafc;[\s\S]*border: 1px solid #dbe5ef;/, "Review modal must visually align with the operator workspace surface");
 assert.doesNotMatch(renderActionabilityRowBody_(), /<strong>Invoice:<\/strong> <span>Not shown<\/span>|<strong>CRM:<\/strong> <span>Not shown<\/span>/, "Dashboard rows must not spend scan space on Not shown filler facts");
 [
@@ -132,6 +152,10 @@ assert.match(adminUi, /missing\.slice\(0,\s*2\)\.map\(actionabilityDocumentLabel
 
 assert.match(adminJs, /hasPhoneFallback/, "Actionability payload must expose phone fallback availability");
 assert.match(adminJs, /populationLedger:\s*populationLedgerPublicSummary_\(ledger\)/, "Actionability preview RPC must expose Population Ledger summary");
+assert.match(adminJs, /emailResponseTraffic:\s*buildEmailResponseTrafficShell_/, "Operational dashboard must expose read-only email response traffic");
+assert.match(adminUi, /id="actionabilityResponseTraffic"/, "Operations Workspace must have a read-only response traffic surface");
+assert.match(adminUi, /row latest-contact fields/, "Response traffic must label its source and avoid overclaiming send-log authority");
+assert.match(adminUi, /latest row state/, "Response traffic must be framed as row-latest state");
 assert.match(adminJs, /function admin_getPopulationLedger/, "Population Ledger RPC must exist as a read-only authority foundation");
 assert.match(adminJs, /function buildPopulationLedgerFromValues_/, "Population Ledger must be reusable by dashboard and lifecycle consumers");
 assert.match(adminJs, /contactabilityState: isUncontactable \? "UNCONTACTABLE"/, "Actionability payload must classify no-email/no-phone applicants as uncontactable");
@@ -141,9 +165,10 @@ assert.match(adminUi, /return "No email, no phone"/, "Dashboard blocker must sho
 assert.match(adminUi, /return "Contactability Gate"/, "Dashboard authority must show Contactability Gate");
 
 console.log("PASS Operations Workspace is primary above Review Queues");
-console.log("PASS Operations Workspace role wording, compatibility Review Queues, and view shell are present");
-console.log("PASS KPI strip renders actionable responsibility buckets above dashboard groups");
+console.log("PASS Operations Workspace role wording, compatibility Review Queues, and Global View shell are present");
+console.log("PASS ledger bar and operational bucket table replace card-heavy KPI/group surfaces");
 console.log("PASS experimental/internal/contactability codes remain hidden from dashboard rows");
 console.log("PASS dashboard Review action keeps existing modal entry from rendered rows");
+console.log("PASS Current Worklist context menu exposes safe read-only actions only");
 console.log("PASS dashboard Review focus context is request-bound and cleared on stale paths");
 console.log("PASS no-contact applicants render Uncontactable / Contactability Gate language");

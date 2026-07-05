@@ -42,7 +42,7 @@ assert.doesNotMatch(ledgerBuilder, /admin_getReviewQueues|isQueueCandidateRow_/,
 });
 
 assert.match(adminUi, /actionabilityPopulationCountForGroup_/, "Operations Workspace must resolve KPI counts from ledger population totals");
-assert.match(adminUi, /visible \/ " \+ String\(populationTotal\) \+ " population"/, "Operations Workspace must label visible rows separately from population totals");
+assert.match(adminUi, /visible worklist rows \/ " \+ String\(populationTotal\) \+ " total applicant population/, "Operations Workspace must label visible rows separately from population totals");
 assert.doesNotMatch(adminUi, /Review Queues remains the primary action surface/i, "Review Queues must not claim primary authority");
 assert.match(adminUi, /Compatibility: Review Queues/, "Review Queues must remain compatibility-only navigation");
 
