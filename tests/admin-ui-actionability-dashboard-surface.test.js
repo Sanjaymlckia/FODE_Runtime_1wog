@@ -121,7 +121,18 @@ assert.match(adminUi, /oncontextmenu="return openActionabilityContextMenu_/, "Cu
 assert.match(adminUi, /data-actionability-context="review"/, "Context menu must include Review handoff");
 assert.match(adminUi, /data-actionability-context="copy-id"/, "Context menu must include Copy Applicant ID");
 assert.match(adminUi, /data-actionability-context="copy-name"/, "Context menu must include Copy Applicant Name");
+assert.match(adminUi, /data-actionability-context="copy-summary"/, "Context menu must include a safe row summary copy action");
+assert.match(adminUi, /data-actionability-context="copy-contact"/, "Context menu must include safe contact guidance copy action");
+assert.match(adminUi, /data-actionability-context="copy-blocker"/, "Context menu must include safe blocker copy action");
 assert.doesNotMatch(adminUi, /data-actionability-context="(?:send|reset|status|payment|document)/i, "Context menu must not expose mutation actions");
+assert.match(adminUi, /let actionabilitySelectedKeys = \{\}/, "Current Worklist must keep explicit selection state");
+assert.match(adminUi, /function selectVisibleActionabilityRows_/, "Current Worklist must support Select Visible");
+assert.match(adminUi, /function clearActionabilitySelection_/, "Current Worklist must support Clear Selection");
+assert.match(adminUi, /Batch Communication/, "Current Worklist must expose batch communication readiness");
+assert.match(adminUi, /Batch Reminder/, "Current Worklist must expose batch reminder readiness");
+assert.match(adminUi, /Batch Export/, "Current Worklist must expose local batch export readiness");
+assert.match(adminUi, /Send authority remains in Review Workspace or existing gated batch tools/, "Batch communication must remain a handoff, not a send path");
+assert.match(adminUi, /function exportActionabilitySelection_/, "Batch Export must be implemented as a local selected-row export");
 assert.match(adminUi, /\.modal\{[\s\S]*background: #f8fafc;[\s\S]*border: 1px solid #dbe5ef;/, "Review modal must visually align with the operator workspace surface");
 assert.doesNotMatch(renderActionabilityRowBody_(), /<strong>Invoice:<\/strong> <span>Not shown<\/span>|<strong>CRM:<\/strong> <span>Not shown<\/span>/, "Dashboard rows must not spend scan space on Not shown filler facts");
 [
@@ -193,6 +204,18 @@ assert.match(adminUi, /return "Uncontactable"/, "Dashboard priority language mus
 assert.match(adminUi, /return "Contact details required"/, "Dashboard due language must replace urgent due text for uncontactable applicants");
 assert.match(adminUi, /return "No email, no phone"/, "Dashboard blocker must show no-email/no-phone facts");
 assert.match(adminUi, /return "Contactability Gate"/, "Dashboard authority must show Contactability Gate");
+assert.match(adminUi, /function actionabilityIsEmailActionable_/, "Dashboard must gate worklist email actions before presenting batch communication");
+assert.match(adminUi, /NO_EFFECTIVE_EMAIL[\s\S]*EMAIL_BLOCKED_OR_BOUNCED/, "Dashboard email actionability must reject no-email and bounced/blocked suppressors");
+assert.match(adminUi, /function actionabilityContactGuidance_/, "Dashboard must expose operator contactability guidance");
+assert.match(adminUi, /No usable email or phone\. Route to Contactability Gate\./, "No-contact rows must route operators to Contactability Gate");
+assert.match(adminUi, /function actionabilityDocumentCompletenessLabel_/, "Worklist must render document completeness evidence");
+assert.match(adminUi, /All Required Missing/, "Document completeness must distinguish no uploads");
+assert.match(adminUi, /Required Uploaded - Review/, "Document completeness must distinguish uploaded-but-unverified records");
+assert.match(adminUi, /Required Complete/, "Document completeness must distinguish complete records");
+assert.match(adminUi, /function actionabilityHiddenExplanation_/, "Bucket table must explain hidden population records");
+assert.match(adminUi, /hidden by worklist window, completion state, or another authority path/, "Hidden population explanation must name why records are not visible");
+assert.match(adminUi, /View Hidden/, "Bucket action must distinguish hidden population records from normal view");
+assert.match(adminUi, /Explain/, "Bucket action must explain buckets with population but no visible rows");
 
 console.log("PASS Operations Workspace is primary above Review Queues");
 console.log("PASS Operations Workspace role wording, compatibility Review Queues, and Global View shell are present");
