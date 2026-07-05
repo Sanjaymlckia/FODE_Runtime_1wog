@@ -46,6 +46,8 @@ mustMatch(adminUi, /All Required Missing/, "Document scenario must show all-requ
 mustMatch(adminUi, /\d|uploadedRequiredDocumentCount[\s\S]*requiredDocumentCount/, "Document scenario must use uploaded/required evidence");
 mustMatch(adminUi, /Required Complete/, "Document scenario must show complete state");
 mustMatch(adminUi, /Missing Documents:<\/strong>/, "Document scenario details must name missing documents");
+mustNotMatch(adminUi, /"Docs Missing"/, "Document scenario must not use the old ambiguous Docs Missing fallback");
+mustMatch(adminUi, /Document State Unknown/, "Document scenario must use an honest unknown-state fallback");
 
 mustMatch(adminUi, /Priority \/ Next/, "Timing scenario must use honest Priority / Next label");
 mustNotMatch(adminUi, /Due \/ Next/, "Timing scenario must not imply unsupported due-date scheduling");
