@@ -1,6 +1,6 @@
 param(
-  [string]$AdminExpectedRuntime = "r285",
-  [int]$AdminExpectedDeploy = 285,
+  [string]$AdminExpectedRuntime = "r316",
+  [int]$AdminExpectedDeploy = 316,
   [string]$StudentExpectedRuntime = "r217",
   [int]$StudentExpectedDeploy = 217,
   [string]$AdminUrl = "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami",
@@ -11,6 +11,11 @@ $ErrorActionPreference = "Stop"
 
 $ExpectedScriptId = "1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90"
 $Failures = New-Object System.Collections.Generic.List[string]
+
+Write-Host "Expected Admin whoami: $AdminExpectedRuntime / $AdminExpectedDeploy"
+Write-Host "Expected Student whoami: $StudentExpectedRuntime / $StudentExpectedDeploy"
+Write-Host "Override these parameters explicitly during identity-bump releases."
+Write-Host ""
 
 function Add-Fail {
   param([string]$Message)

@@ -1,5 +1,5 @@
 param(
-  [ValidateSet("health", "hydration", "operations", "all")]
+  [ValidateSet("health", "hydration", "operations", "review", "communications", "ledger", "surfaces", "all")]
   [string]$Profile = "health"
 )
 
@@ -28,6 +28,45 @@ function Get-NewReports {
     Where-Object { Test-Path -LiteralPath $_ -PathType Leaf })
 }
 
+function Invoke-NodeSmoke {
+  param(
+    [string]$Name,
+    [string[]]$Tests
+  )
+  Write-Host "RUN: $Name surface smoke"
+  foreach ($test in $Tests) {
+    if (!(Test-Path -LiteralPath $test -PathType Leaf)) {
+      Fail-Smoke "$Name smoke missing permanent test: $test"
+      continue
+    }
+    Write-Host "RUN: node $test"
+    & node $test
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+      Fail-Smoke "$Name smoke failed at $test ($exitCode)"
+      return
+    }
+  }
+}
+
+function Invoke-SurfaceSmoke {
+  param([string]$Name)
+  if ($Name -eq "operations") {
+    Invoke-NodeSmoke "operations" @("tests\admin-ui-actionability-dashboard-surface.test.js")
+  } elseif ($Name -eq "review") {
+    Invoke-NodeSmoke "review" @("tests\admin-review-workspace-ux-surface.test.js")
+  } elseif ($Name -eq "communications") {
+    Invoke-NodeSmoke "communications" @("tests\admin-ui-actionability-dashboard-surface.test.js", "tests\admin-review-workspace-ux-surface.test.js")
+  } elseif ($Name -eq "ledger") {
+    Invoke-NodeSmoke "ledger" @("tests\admin-population-ledger.test.js", "tests\admin-population-ledger-authority.test.js")
+  } elseif ($Name -eq "surfaces") {
+    Invoke-SurfaceSmoke "operations"
+    Invoke-SurfaceSmoke "review"
+    Invoke-SurfaceSmoke "communications"
+    Invoke-SurfaceSmoke "ledger"
+  }
+}
+
 & (Join-Path $PSScriptRoot "fode-bootstrap.ps1")
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -38,11 +77,17 @@ $reportRoot = $project.playwright.reportsPath
 $playwrightRoot = $project.playwright.projectPath
 $proof = Join-Path $PSScriptRoot "fode-staging-health-proof.ps1"
 
-$profiles = if ($Profile -eq "all") { @("health", "hydration", "operations") } else { @($Profile) }
+$profiles = if ($Profile -eq "all") { @("health", "hydration", "operations", "review", "communications", "ledger") } else { @($Profile) }
 $evidence = @()
 
 foreach ($item in $profiles) {
+  if (@("review", "communications", "ledger", "surfaces") -contains $item) {
+    Invoke-SurfaceSmoke $item
+    continue
+  }
+
   if ($item -eq "operations") {
+    Invoke-SurfaceSmoke "operations"
     $operationSpecs = @(
       "specs/fode-operations-workspace-smoke.spec.ts",
       "specs/fode-admin-operations-workspace.spec.ts",
