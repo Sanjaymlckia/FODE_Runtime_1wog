@@ -474,28 +474,50 @@
       margin-top:8px;
     }
     .modalBack{
-      position:fixed; inset:0; background: rgba(15,31,53,.42);
-      display:none; align-items:center; justify-content:center; padding:18px;
+      position:fixed; inset:0; background: rgba(15,31,53,.52);
+      display:none; align-items:center; justify-content:center; padding:14px;
+      z-index:9000;
     }
     .modal{
-      width:min(1050px, 100%);
-      max-height: 92vh;
+      width:min(1280px, 100%);
+      max-height: 94vh;
       overflow:auto;
       border-radius: 10px;
       background: #f8fafc;
-      border: 1px solid #dbe5ef;
-      padding:16px;
-      box-shadow: 0 18px 46px rgba(15,31,53,.28);
+      border: 1px solid #cbd8e6;
+      padding:0;
+      box-shadow: 0 22px 58px rgba(15,31,53,.34);
       display:flex;
       flex-direction:column;
+      color:#102030;
     }
     .modalHead{
-      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
-      margin-bottom: 10px;
-      padding-bottom:10px;
-      border-bottom:1px solid #dbe5ef;
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) auto;
+      gap:16px;
+      align-items:start;
+      padding:16px 18px;
+      background:#0f1f35;
+      color:#eef6ff;
+      border-bottom:1px solid #081829;
+      position:sticky;
+      top:0;
+      z-index:6;
     }
-    .kv{ display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:10px; margin: 10px 0 12px 0; }
+    .reviewIdentityBlock{ min-width:0; }
+    .reviewIdentityKicker{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; color:#aac2db; }
+    .reviewApplicantName{ margin-top:4px; font-size:22px; line-height:1.12; font-weight:900; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .reviewApplicantId{ margin-top:4px; font-size:13px; font-weight:900; color:#b9d7f5; }
+    .reviewHeaderGrid{ display:grid; grid-template-columns:repeat(4, minmax(130px,1fr)); gap:8px 12px; margin-top:12px; }
+    .reviewHeaderFact{ min-width:0; }
+    .reviewHeaderFact .k{ color:#aac2db; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; }
+    .reviewHeaderFact .v{ color:#f8fbff; font-size:12px; font-weight:800; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .reviewHeaderActions{ display:flex; align-items:flex-start; justify-content:flex-end; gap:8px; }
+    .reviewHeaderClose{ background:#fff; color:#0f1f35; border-color:#dbe5ef; min-width:78px; }
+    .reviewWorkspaceBody{ padding:14px 16px 16px; display:flex; flex-direction:column; gap:12px; }
+    .kv{ display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:10px; margin:0; }
+    .reviewCardGrid{ align-items:stretch; }
+    .reviewCardWide{ grid-column:span 2; }
     .reviewWorkflowSection{ margin-top:12px; }
     .reviewWorkflowIdentity{ order:10; }
     .reviewDocumentWorkflow{ order:20; }
@@ -504,38 +526,68 @@
     .reviewSecondaryWorkflow{ order:50; }
     .reviewFooterWorkflow{ order:60; }
     .reviewSectionTitle{
-      margin-top:12px;
+      margin:0;
       font-weight:900;
-      font-size:14px;
+      font-size:15px;
       color:#0f1f35;
     }
     .reviewSectionNote{
       margin-top:6px;
       font-size:12px;
-      color:#b9cbe0;
+      color:#61748a;
       line-height:1.45;
+    }
+    .reviewPanel{
+      border:1px solid #dbe5ef;
+      border-radius:8px;
+      background:#fff;
+      padding:12px;
+      box-shadow:none;
+    }
+    .reviewPanelHeader{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:10px;
+    }
+    .reviewPanelTitle{ margin:0; color:#0f1f35; font-size:15px; font-weight:900; }
+    .reviewPanelNote{ margin:4px 0 0; color:#61748a; font-size:12px; line-height:1.35; }
+    .reviewGuidance{
+      border:1px solid #f2d083;
+      background:#fff9e8;
+      color:#76520a;
+      border-radius:7px;
+      padding:8px 10px;
+      font-size:12px;
+      font-weight:800;
+      line-height:1.35;
     }
     .documentReviewActionBar{
       position:sticky;
       top:0;
       z-index:4;
-      margin:10px 0;
+      margin:12px 0 0;
       padding:10px;
-      border-radius:12px;
-      border:1px solid rgba(245,158,11,.30);
-      background:rgba(8,18,32,.98);
-      box-shadow:0 10px 24px rgba(0,0,0,.24), inset 0 0 0 1px rgba(148,163,184,.08);
+      border-radius:8px;
+      border:1px solid #dbe5ef;
+      background:#fbfdff;
+      box-shadow:0 8px 18px rgba(17,39,68,.06);
       display:flex;
       gap:8px;
       align-items:center;
       flex-wrap:wrap;
+      justify-content:space-between;
     }
+    .reviewActionGroup{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .reviewActionGroupLabel{ color:#61748a; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; }
     .documentReviewActionBar .dirtyWarn{
       margin:0;
       padding:6px 9px;
       border-radius:999px;
-      background:rgba(120,53,15,.28);
-      border:1px solid rgba(245,158,11,.32);
+      background:#fff4d6;
+      border:1px solid #f2d083;
+      color:#76520a;
     }
     .box{
       padding:10px; border-radius: 12px;
@@ -569,40 +621,40 @@
       display:grid;
       grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
       gap:10px;
-      margin:12px 0 8px;
+      margin:0;
     }
     .applicant-status-card{
-      border:1px solid rgba(148,163,184,.24);
-      border-radius:12px;
-      padding:12px 14px;
-      background:rgba(8,18,32,.96);
-      box-shadow:inset 0 0 0 1px rgba(148,163,184,.08);
+      border:1px solid #dbe5ef;
+      border-radius:8px;
+      padding:10px 12px;
+      background:#fff;
+      box-shadow:none;
     }
-    .applicant-status-card--stage{ border-color:rgba(96,165,250,.38); }
-    .applicant-status-card--comm{ border-color:rgba(34,197,94,.34); }
-    .applicant-status-card--eligibility{ border-color:rgba(245,158,11,.34); }
+    .applicant-status-card--stage{ border-left:4px solid #1f5aa5; }
+    .applicant-status-card--comm{ border-left:4px solid #2f855a; }
+    .applicant-status-card--eligibility{ border-left:4px solid #d97706; }
     .applicant-status-label{
       font-size:12px;
       font-weight:700;
       letter-spacing:.03em;
       text-transform:uppercase;
-      color:#b9cbe0;
+      color:#61748a;
     }
     .applicant-status-value{
       margin-top:6px;
-      font-size:15px;
+      font-size:14px;
       font-weight:800;
-      color:#f4f9ff;
+      color:#0f1f35;
       line-height:1.35;
     }
     .applicant-helper-note{
       margin-top:6px;
-      padding:10px 12px;
-      border-radius:10px;
-      border:1px solid rgba(96,165,250,.22);
-      background:rgba(11,18,32,.78);
-      color:#d8e6f6;
-      font-size:13px;
+      padding:8px 10px;
+      border-radius:8px;
+      border:1px solid #dbe5ef;
+      background:#fbfdff;
+      color:#40556b;
+      font-size:12px;
       line-height:1.45;
     }
     .communication-cooldown-banner{
@@ -633,19 +685,19 @@
     }
     .legacy-editable-warning.active{ display:block; }
     .booksDryRunPanel{
-      margin-top:12px;
-      background:rgba(8,18,32,.96);
-      border-color:rgba(96,165,250,.28);
-      box-shadow:inset 0 0 0 1px rgba(96,165,250,.08);
+      margin-top:0;
+      background:#fff;
+      border-color:#dbe5ef;
+      box-shadow:none;
     }
     .booksDryRunTitle{
       font-weight:900;
-      color:#f4f9ff;
+      color:#0f1f35;
     }
     .booksDryRunNote{
       margin-top:6px;
       font-size:12px;
-      color:#b9cbe0;
+      color:#61748a;
     }
     .booksDryRunGrid{
       display:grid;
@@ -734,23 +786,25 @@
       color:#b9cbe0;
     }
     .k{ font-size:12px; color:var(--muted); }
-    .modal .k{ color:#d7e6ff; }
-    .modal label{ color:#e4f0ff; }
+    .modal .box{ background:#fff; border-color:#dbe5ef; border-radius:8px; color:#102030; }
+    .modal .k{ color:#61748a; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; }
+    .modal label{ color:#31516f; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.03em; }
+    .modal .v{ color:#0f1f35; font-size:13px; line-height:1.35; }
     .v{ font-size:13px; margin-top:4px; }
     .docs{ display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:10px; margin-top:8px; }
     .doc{
-      padding:10px; border-radius: 12px;
-      border: 1px solid rgba(148,163,184,.18);
-      background: rgba(11,18,32,.45);
+      padding:10px; border-radius: 8px;
+      border: 1px solid #dbe5ef;
+      background: #fbfdff;
       display:grid;
       grid-template-columns: minmax(0,1fr);
       gap:10px;
       align-items:start;
     }
-    .docMeta{ font-size:12px; color:var(--muted); line-height:1.45; margin-top:4px; word-break:break-word; }
+    .docMeta{ font-size:12px; color:#61748a; line-height:1.45; margin-top:4px; word-break:break-word; }
     .docActionRow{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; align-items:center; }
     .docActionRow .btn{ text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
-    .docPreviewStatus{ font-size:12px; color:#b9cbe0; margin-top:6px; }
+    .docPreviewStatus{ font-size:12px; color:#61748a; margin-top:6px; }
     .docVisualPreview{
       min-height:220px;
       border:1px solid rgba(148,163,184,.18);
@@ -801,13 +855,13 @@
       background: var(--fieldBg);
       color: var(--text);
     }
-    .docTitle{ font-weight:800; font-size:13px; }
+    .docTitle{ font-weight:900; font-size:13px; color:#0f1f35; }
     .docWarn{ margin-top:6px; font-size:12px; opacity:.85; color:var(--warn); }
     .documentGallery{
       margin-top:10px;
-      border:1px solid rgba(148,163,184,.18);
-      border-radius:14px;
-      background:rgba(15,23,42,.18);
+      border:1px solid #cbd8e6;
+      border-radius:8px;
+      background:#fbfdff;
       padding:12px;
     }
     .documentGalleryHeader{
@@ -2466,16 +2520,28 @@
   <div id="modalBack" class="modalBack">
     <div class="modal">
       <div class="modalHead">
-        <div>
-          <div style="font-weight:900; font-size:16px;" id="mTitle">Applicant Review</div>
-          <div class="muted" style="font-size:12px; margin-top:4px;" id="mSub"></div>
+        <div class="reviewIdentityBlock">
+          <div class="reviewIdentityKicker">Applicant Review Workspace</div>
+          <div class="reviewApplicantName" id="mApplicantName">Applicant</div>
+          <div class="reviewApplicantId" id="mApplicantId">Applicant ID</div>
+          <div class="reviewHeaderGrid" aria-label="Applicant review identity">
+            <div class="reviewHeaderFact"><div class="k">Email</div><div class="v" id="mHeaderEmail">-</div></div>
+            <div class="reviewHeaderFact"><div class="k">Phone</div><div class="v" id="mHeaderPhone">-</div></div>
+            <div class="reviewHeaderFact"><div class="k">Submitted</div><div class="v" id="mHeaderSubmitted">-</div></div>
+            <div class="reviewHeaderFact"><div class="k">Current Stage</div><div class="v" id="mHeaderStage">-</div></div>
+            <div class="reviewHeaderFact"><div class="k">Owner</div><div class="v" id="mHeaderOwner">Review Workspace</div></div>
+            <div class="reviewHeaderFact"><div class="k">Token Age</div><div class="v" id="mHeaderTokenAge">-</div></div>
+          </div>
+          <div class="hidden" id="mTitle">Applicant Review</div>
+          <div class="hidden" id="mSub"></div>
         </div>
-        <div style="display:flex; gap:8px;">
-          <button class="btn small" onclick="closeModal()">Close</button>
+        <div class="reviewHeaderActions">
+          <button class="btn small reviewHeaderClose" onclick="closeModal()">Close</button>
         </div>
       </div>
 
-      <div class="kv">
+      <div class="reviewWorkspaceBody">
+      <div class="kv reviewCardGrid">
         <div class="box hidden">
           <div class="k">Doc Verification (Computed)</div>
           <div class="v" id="mOverall">-</div>
@@ -2489,7 +2555,7 @@
           <div class="k">Payment Status</div>
           <div class="v" id="mPayment">-</div>
         </div>
-        <div class="box">
+        <div class="box reviewCardWide">
           <div class="k">Workflow Fields</div>
           <div class="v" style="font-size:13px;font-weight:600;line-height:1.6;">
             <div id="mWorkflowPortalSubmitted">Portal State: Select applicant - portal submitted does not imply documents uploaded.</div>
@@ -2509,7 +2575,7 @@
         </div>
       </div>
 
-      <div class="box">
+      <div class="box reviewAuditCard">
         <div class="k">Audit</div>
         <div class="v" id="mAudit">—</div>
       </div>
@@ -2530,8 +2596,13 @@
       </div>
       <div id="applicantHelperNote" class="applicant-helper-note hidden"></div>
 
-      <div class="box" id="communicationsCard" style="margin-top:12px;">
-        <div style="font-weight:900;">Communications</div>
+      <div class="box reviewPanel" id="communicationsCard">
+        <div class="reviewPanelHeader">
+          <div>
+            <div class="reviewPanelTitle">Communications</div>
+            <div class="reviewPanelNote">Preview and controlled send workflow for the selected applicant.</div>
+          </div>
+        </div>
         <div class="opsSafetyNotice">Supervisory action &mdash; requires approval, preview, confirmation, and audit. Normal Admin workflow is preview only.</div>
         <div class="commMeta">
           <div class="box"><div class="k">Applicant ID</div><div class="v" id="commApplicantId">&mdash;</div></div>
@@ -2615,9 +2686,13 @@
         <div id="commDebug" class="commResultBox hidden" style="margin-top:8px;"></div>
       </div>
 
-      <div id="booksDryRunCard" class="box booksDryRunPanel">
-        <div class="booksDryRunTitle">Zoho Books FODE Preview / Dry Run</div>
-        <div class="booksDryRunNote">No invoice will be created unless live write flags are enabled.</div>
+      <div id="booksDryRunCard" class="box booksDryRunPanel reviewPanel">
+        <div class="reviewPanelHeader">
+          <div>
+            <div class="reviewPanelTitle">Zoho Books FODE Preview / Dry Run</div>
+            <div class="reviewPanelNote">No invoice will be created unless live write flags are enabled.</div>
+          </div>
+        </div>
         <div class="opsSafetyNotice">This may create or send financial records. Verify selected applicant, payer, subjects, and amount before approval. Normal Admin workflow is preview only.</div>
         <div id="booksInvoiceRaisedBadge" class="booksStatusBadge hidden">
           <div id="booksInvoiceRaisedTitle" class="booksStatusBadgeTitle"></div>
@@ -2671,9 +2746,14 @@
         <div id="booksInvoicePayload" class="booksDryRunPayload hidden"></div>
       </div>
 
-      <div id="documentReviewWorkflow" class="reviewDocumentWorkflow">
-      <div class="reviewSectionTitle">Document Evidence and Verification</div>
-      <div class="reviewSectionNote">Review uploaded evidence first, then update document statuses. The save warning and save button stay attached to this document-verification workflow.</div>
+      <div id="documentReviewWorkflow" class="reviewDocumentWorkflow reviewPanel">
+      <div class="reviewPanelHeader">
+        <div>
+          <div class="reviewPanelTitle">Document Evidence and Verification</div>
+          <div class="reviewPanelNote">Review evidence, update document statuses, then save through the existing gated workflow.</div>
+        </div>
+      </div>
+      <div class="reviewGuidance">Document saves remain authority-gated. The gallery is read-only until an operator explicitly opens it.</div>
 
       <div class="row" style="margin-top:10px; align-items:center;">
         <button id="btnOpenDocumentGallery" class="btn small" type="button" onclick="toggleDocumentGallery_()">Open Document Gallery</button>
@@ -2695,7 +2775,7 @@
         <div class="v" style="font-size:13px;font-weight:600;color:#1f3b63;">Overall status is locked because payment is verified. Unlock the form to make further changes.</div>
       </div>
 
-      <div style="margin-top:12px; font-weight:900;">Documents (status + comment)</div>
+      <div class="reviewSectionTitle" style="margin-top:12px;">Documents</div>
       <div class="opsSafetyNotice">Legacy edit/mutation surface. Saving document or status changes is supervisory-gated and not a normal Admin workflow action.</div>
       <div id="docs" class="docs"></div>
 
@@ -2721,21 +2801,24 @@
       </div>
 
       <div class="documentReviewActionBar">
-        <button id="btnSaveDocs" class="btn accent" onclick="saveDocs()">Save Document Statuses</button>
-        <div id="dirtyWarn" class="dirtyWarn hidden">⚠ Unsaved document-status changes</div>
-        <button id="btnRefreshDetails" class="btn small" onclick="refreshDetails()">Refresh Details</button>
-        <button class="btn small" onclick="closeModal()">Close Review</button>
-      </div>
-
-      <div class="row" style="margin-top:10px;">
-        <button id="btnCopyLink" class="btn" onclick="copyPortalLink()">Copy Portal Link</button>
-        <button id="btnResetLink" class="btn warn" onclick="resetPortalLink()" title="Super Admin only. Resets the portal secret and generates a new link.">Reset Link</button>
+        <div class="reviewActionGroup">
+          <span class="reviewActionGroupLabel">Review workflow</span>
+          <button id="btnSaveDocs" class="btn accent" onclick="saveDocs()">Save Document Statuses</button>
+          <div id="dirtyWarn" class="dirtyWarn hidden">Unsaved document-status changes</div>
+        </div>
+        <div class="reviewActionGroup">
+          <span class="reviewActionGroupLabel">Secondary</span>
+          <button id="btnRefreshDetails" class="btn small" onclick="refreshDetails()">Refresh</button>
+          <button id="btnCopyLink" class="btn small" onclick="copyPortalLink()">Copy Portal Link</button>
+          <button id="btnResetLink" class="btn small warn" onclick="resetPortalLink()" title="Super Admin only. Resets the portal secret and generates a new link.">Reset Link</button>
+          <button class="btn small" onclick="closeModal()">Close</button>
+        </div>
       </div>
       <div id="docsRouteHint" class="muted" style="margin-top:8px;font-size:12px;"></div>
       <div class="muted" style="margin-top:6px;font-size:12px;">Copy Portal Link does not mutate data. Reset Link is Super Admin only and regenerates the portal secret after confirmation. Unlock Editing / Lock Editing are local modal controls only and do not change applicant portal access state. Actual portal access lock/unlock is a separate Super Admin server action.</div>
       </div>
 
-      <details id="reviewSecondaryTools" class="reviewSecondaryWorkflow">
+      <details id="reviewSecondaryTools" class="reviewSecondaryWorkflow reviewPanel">
       <summary style="cursor:pointer;font-weight:800;">Contact fallback / CRM / admin support details</summary>
       <details id="superEmailOverrideWrap" style="margin-top:10px;">
         <summary style="cursor:pointer;font-weight:700;">Operations Admin: Correct Parent Email</summary>
@@ -2776,6 +2859,7 @@
       <div class="reviewFooterWorkflow">
         <div id="portalLinkBox" class="muted" style="margin-top:10px;word-break:break-all;"></div>
         <div id="mMsg" class="muted" style="margin-top:10px;"></div>
+      </div>
       </div>
     </div>
   </div>
@@ -9454,9 +9538,24 @@ function renderStageDashboard_(items, emptyMessage){
       delete btn.dataset.origText;
     }
 
+    function setReviewHeaderValue_(id, value){
+      var el = document.getElementById(id);
+      if (!el) return;
+      var text = value === null || value === undefined || value === "" ? "-" : String(value);
+      el.textContent = text;
+    }
+
     function openModalLoading_(applicantId, rowNumber){
       document.getElementById("mTitle").textContent = "Applicant Review - " + (applicantId || "Unknown");
       document.getElementById("mSub").textContent = "RowNumber: " + String(rowNumber || "");
+      setReviewHeaderValue_("mApplicantName", "Loading applicant");
+      setReviewHeaderValue_("mApplicantId", applicantId || "Unknown ApplicantID");
+      setReviewHeaderValue_("mHeaderEmail", "-");
+      setReviewHeaderValue_("mHeaderPhone", "-");
+      setReviewHeaderValue_("mHeaderSubmitted", "-");
+      setReviewHeaderValue_("mHeaderStage", "Loading");
+      setReviewHeaderValue_("mHeaderOwner", "Review Workspace");
+      setReviewHeaderValue_("mHeaderTokenAge", "-");
       document.getElementById("docs").innerHTML = '<div class="muted">Loading...</div>';
       document.getElementById("mMsg").textContent = "Loading...";
       document.getElementById("modalBack").style.display = "flex";
@@ -10052,6 +10151,17 @@ function renderStageDashboard_(items, emptyMessage){
       if (overrideReason) overrideReason.value = "";
 
       var facts = opsPortalDiagnosticsFacts_(d);
+      var proof = facts && facts.resolverProof ? facts.resolverProof : {};
+      var ownerLabel = proof.currentQueueBucket || proof.resolverNextAction || facts.nextActionLabel || "Review Workspace";
+      var submittedLabel = formatApplicantDateTime(opsFirstNonBlank_(d.Timestamp, d.timestamp, d.Created_At, d.Submitted_At, d.PortalTokenIssuedAt));
+      var phoneLabel = opsFirstNonBlank_(facts.phone, d.Parent_Phone, d.Parent_Mobile, d.Phone_Number, d.Mobile, d.Phone);
+      setReviewHeaderValue_("mApplicantName", fullName || opsDetailName_(d) || "Unnamed Applicant");
+      setReviewHeaderValue_("mApplicantId", d.ApplicantID || "Unknown ApplicantID");
+      setReviewHeaderValue_("mHeaderEmail", emailLabel);
+      setReviewHeaderValue_("mHeaderPhone", phoneLabel || "-");
+      setReviewHeaderValue_("mHeaderSubmitted", submittedLabel || "-");
+      setReviewHeaderValue_("mHeaderStage", deriveApplicantDisplayStage(d) || "Unknown");
+      setReviewHeaderValue_("mHeaderOwner", ownerLabel);
       var overallComputed = d.Overall_Status_Computed || d.Doc_Verification_Status_Computed || d.Doc_Verification_Status || "Pending";
       var docComputed = d.Doc_Verification_Status_Computed || d.Doc_Verification_Status || "Pending";
       var paymentBadge = d.Payment_Badge || (facts.paymentVerified ? "Verified" : "Pending");
@@ -10078,14 +10188,16 @@ function renderStageDashboard_(items, emptyMessage){
       }
       var portalLockState = d.Portal_Locked_Computed ? "Form Locked" : "Form Open";
       document.getElementById("mPortal").textContent = facts.portalStateLabel + " | " + (d.Portal_Access_Status || "Open") + " | " + portalLockState;
+      var tokenText = "Not issued";
       if (d.PortalTokenAgeDays === null || d.PortalTokenAgeDays === undefined || d.PortalTokenAgeDays === "") {
-        document.getElementById("mTokenAge").textContent = "Not issued";
+        tokenText = "Not issued";
       } else {
-        let tokenText = String(d.PortalTokenAgeDays) + " day(s)";
+        tokenText = String(d.PortalTokenAgeDays) + " day(s)";
         if (d.PortalTokenExpired) tokenText += " | Expired";
         else if (d.PortalTokenMaxAgeDays) tokenText += " / " + String(d.PortalTokenMaxAgeDays) + " max";
-        document.getElementById("mTokenAge").textContent = tokenText;
       }
+      document.getElementById("mTokenAge").textContent = tokenText;
+      setReviewHeaderValue_("mHeaderTokenAge", tokenText);
       document.getElementById("mAudit").textContent = "Last: " + (d.Doc_Last_Verified_At ? String(d.Doc_Last_Verified_At) : "—")
         + " | By: " + (d.Doc_Last_Verified_By || "—");
 
