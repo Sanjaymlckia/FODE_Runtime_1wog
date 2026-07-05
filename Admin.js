@@ -2485,7 +2485,7 @@ function buildCommunicationsActivityShell_() {
     reliable: true,
     sourceType: "latest_row_state",
     sourceLabel: "Source: latest row state only - not cumulative history",
-    sourceDetail: "Derived from durable row-latest communication fields. No append-only communications ledger is currently exposed to Admin metrics.",
+    sourceDetail: "Window counts are rows whose latest communication state falls in the period. No append-only communications ledger or mailbox bounce folder is runtime-ingested for Admin metrics.",
     cumulativeIsHistorical: false,
     cumulativeLabel: "Rows with latest status SENT",
     sent: { today: 0, last7Days: 0, monthToDate: 0, previousMonth: 0, cumulative: 0 },

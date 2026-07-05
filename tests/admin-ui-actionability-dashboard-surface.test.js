@@ -156,10 +156,11 @@ assert.match(adminJs, /communicationsActivity:\s*buildCommunicationsActivityShel
 assert.match(adminJs, /emailResponseTraffic\s*=\s*out\.communicationsActivity/, "Legacy emailResponseTraffic field must remain a compatibility alias");
 assert.match(adminUi, /id="actionabilityResponseTraffic"/, "Operations Workspace must have a read-only response traffic surface");
 assert.match(adminUi, /Communications Activity/, "Operations Workspace must label the surface as Communications Activity");
-["Today", "Last 7 Days", "Month-to-Date", "Previous Month", "Failed", "Suppressed / Bounced", "Last Successful Send", "Cumulative Sent"].forEach((label) => {
+["Today", "Last 7 Days", "Month-to-Date", "Previous Month", "Failed", "Suppressed / Bounced", "Last Successful Send", "Cumulative Emails Sent"].forEach((label) => {
   assert.match(adminUi, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `Communications Activity must include ${label}`);
 });
 assert.match(adminJs, /Source: latest row state only/, "Communications Activity must label latest-row source limitations");
+assert.match(adminJs, /No append-only communications ledger or mailbox bounce folder is runtime-ingested/, "Communications Activity must disclose that external bounce folders are not runtime-ingested");
 assert.match(adminJs, /cumulativeLabel:\s*"Rows with latest status SENT"/, "Cumulative metric must be labelled as row-latest proxy when no true ledger exists");
 assert.match(adminUi, /cumulativeIsHistorical === true/, "UI must distinguish historical cumulative sends from latest-row proxy counts");
 assert.doesNotMatch(adminUi, /admin_sendCommunicationsActivity|admin_updateCommunicationsActivity|admin_createCommunicationsLedger/, "Communications Activity surface must not add mutation RPCs");

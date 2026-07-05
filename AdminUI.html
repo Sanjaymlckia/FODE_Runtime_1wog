@@ -9160,6 +9160,7 @@ function renderStageDashboard_(items, emptyMessage){
         return Number((data[path] && data[path][key]) || 0);
       }
       var sourceLabel = data.sourceLabel || "Source: latest row state only - not cumulative history";
+      var sourceDetail = data.sourceDetail ? (" | " + data.sourceDetail) : "";
       var cumulativeValue = Number((data.sent && data.sent.cumulative) || 0);
       var cumulativeLabel = data.cumulativeIsHistorical === true ? String(cumulativeValue) : String(cumulativeValue) + " rows";
       var items = [
@@ -9170,9 +9171,9 @@ function renderStageDashboard_(items, emptyMessage){
         ["Failed", count("failed", "today")],
         ["Suppressed / Bounced", Number((data.suppressedBounced && data.suppressedBounced.total) || 0) || (count("suppressed", "total") + count("bounced", "total"))],
         ["Last Successful Send", data.lastSuccessfulSend || data.lastSentAt || "-"],
-        ["Cumulative Sent", cumulativeLabel]
+        ["Cumulative Emails Sent", cumulativeLabel]
       ];
-      el.innerHTML = '<div class="actionabilityTrafficTitle"><span>Communications Activity</span><span class="muted">' + esc(sourceLabel) + ' | ' + esc(data.cumulativeLabel || "Rows with latest status SENT") + '</span></div>'
+      el.innerHTML = '<div class="actionabilityTrafficTitle"><span>Communications Activity</span><span class="muted">' + esc(sourceLabel + sourceDetail) + ' | ' + esc(data.cumulativeLabel || "Rows with latest status SENT") + '</span></div>'
         + '<div class="actionabilityTrafficGrid">'
         + items.map(function(item){
           return '<div class="actionabilityTrafficItem"><div class="k">' + esc(item[0]) + '</div><div class="v">' + esc(item[1]) + '</div></div>';
