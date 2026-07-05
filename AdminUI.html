@@ -519,6 +519,21 @@
     }
     .commTemplateCard.selected{ border-color:#1f5aa5; box-shadow:inset 4px 0 0 #1f5aa5; background:#f5f9ff; }
     .commTemplateCard.recommended{ border-width:2px; border-color:#7db7f0; box-shadow:0 0 0 3px rgba(125,183,240,.18); background:#fafdff; }
+    .commTemplateCard .btn{
+      border-color:#9fb4ca;
+      background:#fff;
+      color:#173451;
+      font-weight:850;
+    }
+    .commTemplateCard .btn:hover:not(:disabled){ background:#eef6ff; border-color:#7fa6d1; color:#0f3f78; filter:none; }
+    .commTemplateCard .btn:disabled,
+    .commTemplateCard .btn[disabled]{
+      opacity:1;
+      background:#eef2f6;
+      border-color:#9fb4ca;
+      color:#40556b;
+      box-shadow:inset 0 0 0 1px rgba(82,103,125,.12);
+    }
     .commTemplateSelectedBanner,
     .commTemplateRecommendedBanner{ display:inline-flex; align-items:center; gap:6px; margin-bottom:8px; padding:5px 9px; border-radius:999px; border:1px solid #9fc0e4; background:#eef6ff; color:#174a8b; font-size:12px; font-weight:900; letter-spacing:0; }
     .commTemplateSelectedBanner{ border-color:#1f5aa5; background:#1f5aa5; color:#fff; }
@@ -554,12 +569,13 @@
     .commOverridePanel{
       margin-top:10px;
       padding:12px;
-      border-radius:12px;
-      border:1px solid rgba(245,158,11,.52);
-      background:rgba(120,53,15,.22);
-      color:#fde7c3;
+      border-radius:8px;
+      border:1px solid #d7a755;
+      background:#fff2dc;
+      color:#704500;
+      font-weight:800;
     }
-    .commOverridePanel textarea{ width:100%; min-height:72px; margin-top:8px; background:#0f172a; color:#f8fafc; border:1px solid rgba(245,158,11,.45); border-radius:8px; padding:8px; }
+    .commOverridePanel textarea{ width:100%; min-height:72px; margin-top:8px; background:#fff; color:#102030; border:1px solid #b9821c; border-radius:8px; padding:8px; font-weight:700; }
     .commPrereqList{ margin:8px 0 0; padding-left:18px; font-size:12px; line-height:1.45; }
     .commPreviewBody{
       white-space:pre-wrap;
@@ -591,7 +607,7 @@
       gap:16px;
       align-items:start;
       padding:16px 18px;
-      background:#0f1f35;
+      background:#0b1c30;
       color:#eef6ff;
       border-bottom:1px solid #081829;
       position:sticky;
@@ -599,16 +615,52 @@
       z-index:6;
     }
     .reviewIdentityBlock{ min-width:0; }
-    .reviewIdentityKicker{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; color:#aac2db; }
+    .reviewIdentityKicker{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; color:#d6e7f8; }
     .reviewApplicantName{ margin-top:4px; font-size:22px; line-height:1.12; font-weight:900; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .reviewApplicantId{ margin-top:4px; font-size:13px; font-weight:900; color:#b9d7f5; }
+    .reviewApplicantId{ margin-top:4px; font-size:13px; font-weight:900; color:#dceeff; }
     .reviewHeaderGrid{ display:grid; grid-template-columns:repeat(4, minmax(130px,1fr)); gap:8px 12px; margin-top:12px; }
     .reviewHeaderFact{ min-width:0; }
-    .reviewHeaderFact .k{ color:#aac2db; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; }
-    .reviewHeaderFact .v{ color:#f8fbff; font-size:12px; font-weight:800; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .reviewHeaderFact .k{ color:#c8dcf0; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; }
+    .reviewHeaderFact .v{ color:#ffffff; font-size:12px; font-weight:900; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .reviewHeaderActions{ display:flex; align-items:flex-start; justify-content:flex-end; gap:8px; }
     .reviewHeaderClose{ background:#fff; color:#0f1f35; border-color:#dbe5ef; min-width:78px; }
     .reviewWorkspaceBody{ padding:14px 16px 16px; display:flex; flex-direction:column; gap:12px; }
+    .modal .opsSafetyNotice{
+      border:1px solid #d7a755;
+      background:#fff2dc;
+      color:#704500;
+      border-radius:8px;
+      padding:10px 12px;
+      font-size:12px;
+      font-weight:850;
+      line-height:1.4;
+    }
+    .modal .commResultBox{
+      border-color:#cbd8e6;
+      background:#fff;
+      color:#102030;
+      border-radius:8px;
+      line-height:1.45;
+    }
+    .modal .commResultBox.warn{
+      border-color:#d7a755;
+      background:#fff2dc;
+      color:#704500;
+      font-weight:800;
+    }
+    .modal .commResultBox.err{
+      border-color:#d18d8d;
+      background:#fdeaea;
+      color:#8b1f1f;
+      font-weight:850;
+    }
+    .modal #commDebug{
+      opacity:.82;
+      background:#f8fafc;
+      color:#40556b;
+      border-style:dashed;
+      font-size:12px;
+    }
     .kv{ display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:10px; margin:0; }
     .reviewCardGrid{ align-items:stretch; }
     .reviewCardWide{ grid-column:span 2; }
