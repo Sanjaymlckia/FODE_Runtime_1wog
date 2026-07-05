@@ -23,24 +23,42 @@
       --fieldBorder: rgba(122,184,245,.68);
       --fieldBg: rgba(10,30,54,.74);
       --radius: 14px;
+      --appBg: #eef3f8;
+      --surfacePrimary: #f8fafc;
+      --surfaceSecondary: #fbfcfe;
+      --surfaceCard: #ffffff;
+      --surfaceDiagnostic: #f4f7fb;
+      --ink: #0f1f35;
+      --inkSubtle: #31516f;
+      --inkMuted: #40556b;
+      --inkHelper: #61748a;
+      --line: #dbe5ef;
+      --lineSoft: #e5ebf2;
+      --lineFaint: #edf2f7;
+      --shadowPrimary: 0 8px 20px rgba(17,39,68,.055);
+      --shadowModal: 0 22px 58px rgba(15,31,53,.34);
+      --panelRadius: 8px;
+      --sectionGap: 12px;
+      --sectionPad: 12px;
+      --tablePadY: 7px;
+      --tablePadX: 9px;
     }
     *{ box-sizing:border-box; }
     body{
       margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      background: radial-gradient(1000px 700px at 20% -10%, rgba(14,165,164,.25), transparent 60%),
-                  var(--bg);
+      background: var(--appBg);
       color:var(--text);
     }
     .wrap{ max-width:1100px; margin:0 auto; padding:22px; }
     .topbar{
       display:flex; align-items:center; justify-content:space-between; gap:12px;
-      padding:14px 16px; background: rgba(17,26,46,.85);
-      border: 1px solid rgba(148,163,184,.18);
-      border-radius: var(--radius);
-      backdrop-filter: blur(8px);
+      padding:14px 16px; background:#0f1f35;
+      border: 1px solid #081829;
+      border-radius: var(--panelRadius);
+      box-shadow: var(--shadowPrimary);
     }
     .brand h1{ margin:0; font-size:18px; }
-    .sub{ font-size:12px; color:var(--muted); margin-top:4px; }
+    .sub{ font-size:12px; color:#b9d7f5; margin-top:4px; }
     .verBadge{
       display:inline-block;
       margin-left:8px;
@@ -61,29 +79,35 @@
     .diagLinks a{ color:#93c5fd; text-decoration:none; }
     .diagLinks a:hover{ text-decoration:underline; }
     .card{
-      background: rgba(17,26,46,.85);
-      border: 1px solid rgba(148,163,184,.18);
-      border-radius: var(--radius);
+      background: var(--surfaceCard);
+      border: 1px solid var(--line);
+      border-radius: var(--panelRadius);
       padding:14px;
-      backdrop-filter: blur(8px);
       margin-top:14px;
+      color:var(--ink);
+      box-shadow:none;
     }
+    .primaryWorkspace{ background:var(--surfacePrimary); border-color:var(--line); box-shadow:var(--shadowPrimary); padding:12px; }
+    .secondaryOperationalPanel{ background:var(--surfaceSecondary); border-color:var(--lineSoft); box-shadow:none; color:var(--ink); }
+    .diagnosticLegacyPanel{ background:var(--surfaceDiagnostic); border-color:var(--lineSoft); box-shadow:none; color:var(--ink); }
+    .surfaceTitle{ margin:0; color:var(--ink); font-size:16px; font-weight:900; line-height:1.2; }
+    .surfaceSubtitle, .helperText{ color:var(--inkMuted); font-size:12px; line-height:1.4; }
     .queue-panel{ padding:14px; }
     .queue-panel h3{ margin:0 0 10px 0; font-size:16px; }
     .queue-section{
       margin-top:10px;
-      border:1px solid rgba(148,163,184,.18);
-      border-radius:12px;
-      background: rgba(11,18,32,.35);
+      border:1px solid var(--line);
+      border-radius:var(--panelRadius);
+      background: var(--surfaceCard);
       padding:10px;
     }
     .queue-section.expanded{
       border-color: rgba(14,165,164,.45);
       box-shadow: inset 0 0 0 1px rgba(14,165,164,.2);
     }
-    .queue-header{ font-weight:800; font-size:13px; margin-bottom:8px; }
-    .queue-empty{ font-size:12px; color:var(--muted); }
-    .queue-table th, .queue-table td{ padding:8px 6px; font-size:12px; }
+    .queue-header{ font-weight:850; font-size:13px; margin-bottom:8px; color:var(--ink); }
+    .queue-empty{ font-size:12px; color:var(--inkMuted); }
+    .queue-table th, .queue-table td{ padding:var(--tablePadY) var(--tablePadX); font-size:12px; }
     .queue-section-header{
       display:flex; justify-content:space-between; align-items:center; gap:8px;
       width:100%; background:transparent; border:0; color:inherit; padding:0; cursor:pointer;
@@ -91,23 +115,23 @@
     }
     .queue-section-header .caret{ font-size:12px; color:var(--muted); }
     .queue-section-body.hidden{ display:none; }
-    .stageDashboardMeta{ margin:0 0 10px 0; font-size:12px; color:var(--muted); }
+    .stageDashboardMeta{ margin:0 0 10px 0; font-size:12px; color:var(--inkMuted); }
     .stageCards{ display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; }
     .stageCard{
       width:100%; text-align:left; cursor:pointer;
-      border:1px solid rgba(148,163,184,.18);
-      border-radius:12px;
-      background: rgba(11,18,32,.35);
+      border:1px solid var(--line);
+      border-radius:var(--panelRadius);
+      background: var(--surfaceCard);
       padding:10px;
       color:inherit;
     }
     .stageCard.selected{
       border-color: rgba(102,178,255,.68);
       box-shadow: inset 0 0 0 1px rgba(102,178,255,.22);
-      background: rgba(17,26,46,.55);
+      background: #f5f9ff;
     }
     .stageCardStage{ font-weight:800; font-size:13px; }
-    .stageCardMeta{ margin-top:8px; font-size:12px; color:var(--muted); display:flex; flex-wrap:wrap; gap:8px; }
+    .stageCardMeta{ margin-top:8px; font-size:12px; color:var(--inkMuted); display:flex; flex-wrap:wrap; gap:8px; }
     .priorityBadge{
       display:inline-flex; align-items:center; justify-content:center;
       padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800;
@@ -122,7 +146,7 @@
     input, textarea, select{
       width:100%;
       padding:10px 11px;
-      border-radius: 12px;
+      border-radius: var(--panelRadius);
       border: 1px solid var(--fieldBorder);
       background: var(--fieldBg);
       color: var(--text);
@@ -136,7 +160,7 @@
     .btn{
       border:none; cursor:pointer;
       padding:10px 12px;
-      border-radius: 12px;
+      border-radius: var(--panelRadius);
       color: var(--text);
       background: rgba(148,163,184,.10);
       border: 1px solid rgba(148,163,184,.18);
@@ -147,8 +171,8 @@
     .btn.ok{ background: rgba(34,197,94,.16); border-color: rgba(34,197,94,.35); }
     .btn.warn{ background: rgba(245,158,11,.16); border-color: rgba(245,158,11,.35); }
     .btn.danger{ background: rgba(239,68,68,.16); border-color: rgba(239,68,68,.35); }
-    .btn.small{ padding:8px 10px; font-size:12px; }
-    .btn-sm{ padding:8px 10px; font-size:12px; }
+    .btn.small{ padding:7px 10px; font-size:12px; border-radius:6px; }
+    .btn-sm{ padding:7px 10px; font-size:12px; border-radius:6px; }
     .btn-success{
       background: rgba(34,197,94,.16);
       border-color: rgba(34,197,94,.35);
@@ -160,11 +184,11 @@
       outline-offset:1px;
     }
     table{ width:100%; border-collapse: collapse; }
-    th, td{ text-align:left; padding:10px 8px; font-size:13px; border-bottom: 1px solid rgba(148,163,184,.12); }
-    th{ color:var(--muted); font-weight:700; font-size:12px; }
+    th, td{ text-align:left; padding:var(--tablePadY) var(--tablePadX); font-size:13px; border-bottom: 1px solid var(--lineFaint); }
+    th{ color:var(--inkSubtle); font-weight:850; font-size:12px; background:#f8fafc; }
     a{ color: rgba(14,165,164,.95); text-decoration:none; }
     a:hover{ text-decoration:underline; }
-    .muted{ color:var(--muted); }
+    .muted{ color:var(--inkMuted); }
     .statusTag{
       display:inline-block;
       padding:2px 8px;
@@ -220,24 +244,34 @@
       border-color: rgba(148,163,184,.3);
       color: #d6deea;
     }
-    .actionabilityPanel{ border-color:#dbe5ef; background:#f8fafc; color:#102030; box-shadow:0 8px 20px rgba(17,39,68,.055); padding:10px; }
-    .actionabilityPanel .muted{ color:#66788c; }
+    .actionabilityPanel{ border-color:var(--line); background:var(--surfacePrimary); color:var(--ink); box-shadow:var(--shadowPrimary); padding:12px; }
+    .actionabilityPanel .muted{ color:var(--inkMuted); }
     .operatorWorkspaceHead{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:6px; padding:2px 2px 8px; border-bottom:1px solid #e5ebf2; }
-    .operatorWorkspaceTitle{ margin:0; font-size:20px; color:#0f1f35; letter-spacing:0; line-height:1.15; }
+    .operatorWorkspaceTitle{ margin:0; font-size:20px; color:var(--ink); letter-spacing:0; line-height:1.15; }
     .operatorWorkspaceTools{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .operatorViewShell{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:6px 0 3px; }
     .operatorViewBtn{ border:1px solid #cbd8e6; background:#fff; color:#31516f; border-radius:6px; padding:5px 9px; font-size:12px; font-weight:800; }
     .operatorViewBtn.active{ background:#0f1f35; border-color:#0f1f35; color:#fff; }
     .operatorViewBtn[disabled]{ cursor:not-allowed; opacity:.58; background:#f3f6fa; color:#66788c; }
-    .operatorViewNote{ color:#66788c; font-size:12px; line-height:1.35; }
+    .operatorViewNote{ color:var(--inkMuted); font-size:12px; line-height:1.35; }
     .operatorSurfaceRoles{ display:flex; align-items:center; flex-wrap:wrap; gap:6px 12px; margin:6px 0 8px; padding:6px 8px; border:1px solid #e5ebf2; border-radius:6px; background:#fbfdff; }
-    .operatorSurfaceRole{ border:0; background:transparent; border-radius:0; padding:0; font-size:11px; color:#66788c; line-height:1.25; }
+    .operatorSurfaceRole{ border:0; background:transparent; border-radius:0; padding:0; font-size:11px; color:var(--inkMuted); line-height:1.25; }
     .operatorSurfaceRole strong{ display:inline; color:#31516f; font-size:11px; text-transform:none; letter-spacing:0; margin-right:4px; }
-    .secondarySurfacePanel{ border-color:#e1e7ef; background:#fbfcfe; box-shadow:none; }
+    .secondarySurfacePanel{ border-color:var(--lineSoft); background:var(--surfaceSecondary); box-shadow:none; }
     .secondarySurfacePanel > summary{ cursor:pointer; font-weight:900; color:#31516f; list-style-position:inside; }
     .secondarySurfaceBody{ margin-top:10px; }
-    .legacyDiagnosticsPanel{ opacity:.94; }
-    .legacyPanelBlock{ border:1px solid #e5ebf2; border-radius:8px; background:#fff; padding:12px; margin-top:10px; box-shadow:none; }
+    .legacyDiagnosticsPanel{ opacity:.96; }
+    .secondaryOperationalPanel > summary,
+    .diagnosticLegacyPanel > summary{
+      cursor:pointer;
+      font-weight:900;
+      color:var(--inkSubtle);
+      list-style-position:inside;
+    }
+    .secondaryOperationalPanel .muted,
+    .diagnosticLegacyPanel .muted,
+    .legacyPanelBlock .muted{ color:var(--inkMuted); }
+    .legacyPanelBlock{ border:1px solid var(--lineSoft); border-radius:var(--panelRadius); background:var(--surfaceCard); padding:var(--sectionPad); margin-top:var(--sectionGap); box-shadow:none; }
     .legacyPanelBlock h3{ margin:0 0 8px; font-size:15px; color:#31516f; }
     .actionabilityKpiStrip{ display:grid; grid-template-columns:repeat(7, minmax(94px, 1fr)); gap:0; margin:8px 0 7px; border:1px solid #dbe5ef; border-radius:6px; overflow:hidden; background:#fff; }
     .actionabilityLedgerItem{ min-width:0; padding:7px 9px; border-right:1px solid #e5ebf2; background:#fff; }
@@ -257,7 +291,7 @@
     .actionabilityBucketCell.muted{ color:#66788c; }
     .actionabilityBucketViewBtn{ width:100%; border:1px solid #cbd8e6; border-radius:6px; background:#fff; color:#31516f; padding:5px 7px; font-size:11px; font-weight:850; cursor:pointer; }
     .actionabilityBucketViewBtn:hover, .actionabilityBucketRow.active .actionabilityBucketViewBtn{ border-color:#8fb4df; background:#eef6ff; color:#174a8b; }
-    .actionabilityTraffic{ margin:7px 0 9px; border:1px solid #e1e7ef; border-radius:6px; background:#fbfcfe; overflow:hidden; }
+    .actionabilityTraffic{ margin:8px 0 10px; border:1px solid var(--lineSoft); border-radius:var(--panelRadius); background:var(--surfaceSecondary); overflow:hidden; }
     .actionabilityTrafficTitle{ display:flex; justify-content:space-between; gap:8px; padding:7px 9px; border-bottom:1px solid #e5ebf2; color:#31516f; font-size:12px; font-weight:900; }
     .actionabilityTrafficGrid{ display:grid; grid-template-columns:repeat(8, minmax(0,1fr)); gap:0; }
     .actionabilityTrafficItem{ padding:7px 9px; border-right:1px solid #edf2f7; min-width:0; }
@@ -265,7 +299,7 @@
     .actionabilityTrafficItem .k{ color:#61748a; font-size:9px; text-transform:uppercase; font-weight:900; }
     .actionabilityTrafficItem .v{ color:#0f1f35; font-size:13px; font-weight:850; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .actionabilityRows{ display:grid; gap:8px; margin-top:9px; }
-    .actionabilityWorklist{ border:1px solid #dbe5ef; border-radius:6px; background:#fff; overflow:hidden; box-shadow:none; }
+    .actionabilityWorklist{ border:1px solid var(--line); border-radius:var(--panelRadius); background:#fff; overflow:hidden; box-shadow:none; }
     .actionabilityWorklistTitle{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-bottom:1px solid #e5ebf2; color:#0f1f35; font-size:13px; font-weight:900; }
     .actionabilityWorklistTable{ width:100%; }
     .actionabilityWorklistHeader, .actionabilityWorklistRow{ display:grid; grid-template-columns:minmax(230px, 1.35fr) minmax(180px, .9fr) minmax(230px, 1.05fr) minmax(170px, .8fr) 96px; align-items:stretch; }
@@ -598,21 +632,24 @@
       color:#76520a;
     }
     .box{
-      padding:10px; border-radius: 12px;
-      border: 1px solid rgba(148,163,184,.18);
-      background: rgba(11,18,32,.45);
+      padding:10px; border-radius: var(--panelRadius);
+      border: 1px solid var(--line);
+      background: var(--surfaceCard);
+      color:var(--ink);
     }
+    .box .k{ color:var(--inkHelper); font-size:11px; font-weight:850; text-transform:uppercase; letter-spacing:.02em; }
+    .box .v{ color:var(--ink); font-weight:850; }
     .commEditablePanel{
       margin-top:10px;
-      background: rgba(8,18,32,.96);
-      border-color: rgba(148,163,184,.34);
-      color: var(--text);
-      box-shadow: inset 0 0 0 1px rgba(148,163,184,.10);
+      background: var(--surfaceCard);
+      border-color: var(--line);
+      color: var(--ink);
+      box-shadow:none;
     }
     .commEditablePanelTitle{
       font-weight:800;
       margin-bottom:8px;
-      color:#f4f9ff;
+      color:var(--ink);
     }
     .commEditablePanel input,
     .commEditablePanel textarea{
@@ -716,20 +753,20 @@
     .booksDryRunBanner{
       margin-top:10px;
       padding:10px 12px;
-      border-radius:10px;
-      border:1px solid rgba(245,158,11,.34);
-      background:rgba(120,53,15,.20);
-      color:#fde7c3;
+      border-radius:var(--panelRadius);
+      border:1px solid #f2d083;
+      background:#fff9e8;
+      color:#76520a;
       font-size:12px;
       line-height:1.45;
     }
     .booksDryRunPayload{
       margin-top:10px;
       padding:12px;
-      border-radius:12px;
-      border:1px solid rgba(148,163,184,.18);
-      background:rgba(11,18,32,.45);
-      color:#dbeafe;
+      border-radius:var(--panelRadius);
+      border:1px solid var(--line);
+      background:#f8fafc;
+      color:var(--ink);
       white-space:pre-wrap;
       word-break:break-word;
       font-size:12px;
@@ -740,10 +777,10 @@
     .booksStatusBadge{
       margin-top:10px;
       padding:12px 14px;
-      border-radius:12px;
-      border:1px solid rgba(34,197,94,.35);
-      background:rgba(20,83,45,.28);
-      color:#dcfce7;
+      border-radius:var(--panelRadius);
+      border:1px solid #b9dfc8;
+      background:#f0fbf4;
+      color:#164b2b;
     }
     .booksStatusBadge.hidden{ display:none; }
     .booksStatusBadgeTitle{
@@ -755,7 +792,7 @@
       margin-top:6px;
       font-size:12px;
       line-height:1.45;
-      color:#bbf7d0;
+      color:#21623b;
     }
     .booksLineSummary{
       margin-top:10px;
@@ -2191,7 +2228,7 @@
       <div class="muted" id="studentUrlWarnText" style="margin-top:6px;"></div>
     </div>
 
-    <div id="actionabilityPreviewPanel" class="card queue-panel actionabilityPanel">
+    <div id="actionabilityPreviewPanel" class="card queue-panel actionabilityPanel primaryWorkspace">
       <div class="operatorWorkspaceHead">
         <div>
           <h2 class="operatorWorkspaceTitle">Operations Workspace</h2>
@@ -2222,7 +2259,7 @@
       <div id="actionabilityContextMenu" class="actionabilityContextMenu" role="menu" aria-label="Current Worklist context actions"></div>
     </div>
 
-    <details id="reviewQueuesPanel" class="card queue-panel secondarySurfacePanel">
+    <details id="reviewQueuesPanel" class="card queue-panel secondarySurfacePanel secondaryOperationalPanel">
       <summary>Compatibility: Review Queues</summary>
       <div class="secondarySurfaceBody">
       <div class="muted" style="margin-bottom:10px;">Operations Workspace is the primary workload surface. Review Queues remain available for compatibility and existing review workflows.</div>
@@ -2241,7 +2278,7 @@
       </div>
     </details>
 
-    <details id="advancedDiagnosticsPanel" class="card queue-panel secondarySurfacePanel legacyDiagnosticsPanel">
+    <details id="advancedDiagnosticsPanel" class="card queue-panel secondarySurfacePanel legacyDiagnosticsPanel diagnosticLegacyPanel">
       <summary>Advanced Diagnostics / Legacy Panels</summary>
       <div class="secondarySurfaceBody">
       <div class="muted" style="margin-bottom:10px;">Optional diagnostics and compatibility panels. Operations Workspace is the primary workload surface; Review Workspace is the primary editing authority.</div>
@@ -2392,7 +2429,7 @@
       </div>
     </details>
 
-    <details id="legacySearchPanel" class="card">
+    <details id="legacySearchPanel" class="card secondaryOperationalPanel">
       <summary style="cursor:pointer;font-weight:800;">Applicant Search <span class="opsStatusPill info">Read-only</span></summary>
       <div class="muted" style="margin:8px 0 10px;">Explicit operator search only. Search does not change queues, authority state, lifecycle, or Stage Batch eligibility.</div>
       <div class="row">
@@ -2428,7 +2465,7 @@
       <div id="bounceScanSummary" class="sendSummary hidden" style="margin-top:10px;"></div>
     </details>
 
-    <details id="systemHealthPanel" class="card queue-panel">
+    <details id="systemHealthPanel" class="card queue-panel diagnosticLegacyPanel">
       <summary style="cursor:pointer;font-weight:900;">6. System Health</summary>
       <div class="muted" style="margin:10px 0;">Technical/runtime diagnostics. Configuration truth and trigger inspection truth are shown separately below.</div>
 
@@ -2490,7 +2527,7 @@
       </div>
     </details>
 
-    <div id="legacyResultsPanel" class="card hidden">
+    <div id="legacyResultsPanel" class="card secondaryOperationalPanel hidden">
       <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
         <div style="font-weight:900;">Results</div>
         <div class="muted" style="font-size:12px;">Search by ApplicantID for exact match.</div>

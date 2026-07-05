@@ -25,6 +25,13 @@ assert.doesNotMatch(adminUi, /<details id="reviewQueuesPanel"[^>]*\sopen\b/, "Re
 assert.ok(adminUi.includes("Advanced Diagnostics / Legacy Panels"), "Legacy/supporting panels must be grouped under Advanced Diagnostics");
 assert.match(adminUi, /<details id="advancedDiagnosticsPanel"[^>]*>/, "Advanced Diagnostics must be a collapsed details surface");
 assert.doesNotMatch(adminUi, /<details id="advancedDiagnosticsPanel"[^>]*\sopen\b/, "Advanced Diagnostics must be collapsed by default");
+assert.match(adminUi, /--surfacePrimary:[\s\S]*--surfaceSecondary:[\s\S]*--surfaceDiagnostic:/, "Admin UI must define a unified panel surface token system");
+assert.match(adminUi, /id="actionabilityPreviewPanel" class="[^"]*primaryWorkspace/, "Operations Workspace must use the Primary Workspace visual tier");
+assert.match(adminUi, /id="reviewQueuesPanel" class="[^"]*secondaryOperationalPanel/, "Review Queues must use the Secondary Operational Panel tier");
+assert.match(adminUi, /id="advancedDiagnosticsPanel" class="[^"]*diagnosticLegacyPanel/, "Advanced Diagnostics must use the Diagnostic / Legacy Panel tier");
+assert.match(adminUi, /id="legacySearchPanel" class="[^"]*secondaryOperationalPanel/, "Search must use the Secondary Operational Panel tier");
+assert.match(adminUi, /id="systemHealthPanel" class="[^"]*diagnosticLegacyPanel/, "System Health must use the Diagnostic / Legacy Panel tier");
+assert.match(adminUi, /id="legacyResultsPanel" class="[^"]*secondaryOperationalPanel/, "Search results must use the Secondary Operational Panel tier");
 assert.ok(adminUi.includes("Global View: Current workload"), "Operations Workspace must expose the Global View shell");
 assert.doesNotMatch(adminUi, /Operator View: Coming soon/, "Operations Workspace must not expose a fake Operator View control");
 assert.ok(adminUi.includes("Operator-scoped view pending ownership model."), "Operator-scoped view must be described as pending ownership authority");
