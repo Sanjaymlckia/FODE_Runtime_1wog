@@ -28,6 +28,7 @@ function Invoke-FodeStep {
 Set-Location -LiteralPath $repoRoot
 Write-Host "Permanent Admin surface tests:"
 Write-Host "  Operations Workbench: tests\admin-ui-actionability-dashboard-surface.test.js"
+Write-Host "  Operator Acceptance: tests\admin-operator-scenario-contract.test.js"
 Write-Host "  Review Workspace: tests\admin-review-workspace-ux-surface.test.js"
 Write-Host "  Communications Activity: tests\admin-ui-actionability-dashboard-surface.test.js"
 Write-Host "  Population Ledger: tests\admin-population-ledger.test.js; tests\admin-population-ledger-authority.test.js"
@@ -35,6 +36,7 @@ Invoke-FodeStep "bootstrap" { & (Join-Path $PSScriptRoot "fode-bootstrap.ps1") }
 Invoke-FodeStep "git status -sb" { & git status -sb }
 Invoke-FodeStep "node --check Admin.js" { & node --check Admin.js }
 Invoke-FodeStep "node tests\admin-ui-actionability-dashboard-surface.test.js" { & node tests\admin-ui-actionability-dashboard-surface.test.js }
+Invoke-FodeStep "node tests\admin-operator-scenario-contract.test.js" { & node tests\admin-operator-scenario-contract.test.js }
 Invoke-FodeStep "node tests\admin-review-workspace-ux-surface.test.js" { & node tests\admin-review-workspace-ux-surface.test.js }
 Invoke-FodeStep "node tests\admin-population-ledger.test.js" { & node tests\admin-population-ledger.test.js }
 Invoke-FodeStep "node tests\admin-population-ledger-authority.test.js" { & node tests\admin-population-ledger-authority.test.js }

@@ -37,7 +37,7 @@ mustMatch(adminUi, /Email workflow unavailable/, "Contactability Gate must suppr
 mustMatch(adminUi, /Email preview disabled by Contactability Gate/, "Contactability Gate must visibly disable preview");
 mustMatch(adminUi, /Contactability Gate:[\s\S]*Alternative:/, "Contactability Gate must explain reason and alternative path");
 
-mustMatch(adminUi, /\.btn:disabled,[\s\S]*background:#eef2f6;[\s\S]*color:#52677d;/, "Disabled buttons must remain readable");
+mustMatch(adminUi, /\.btn:disabled,[\s\S]*background:#e2eaf2;[\s\S]*border-color:#8da2b7;[\s\S]*color:#26384e;/, "Disabled buttons must remain readable");
 ["btnCommPreview", "btnCommGenerateEditable", "btnCommInsertPortalLink", "btnCommSend"].forEach((id) => {
   mustMatch(adminUi, new RegExp(`id="${id}"[\\s\\S]*>[^<]+<\\/button>`), `${id} must keep a visible label`);
 });

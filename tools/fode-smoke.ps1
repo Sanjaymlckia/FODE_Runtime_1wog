@@ -1,5 +1,5 @@
 param(
-  [ValidateSet("health", "hydration", "operations", "review", "communications", "ledger", "surfaces", "all")]
+  [ValidateSet("health", "hydration", "operations", "operator", "review", "communications", "ledger", "surfaces", "all")]
   [string]$Profile = "health"
 )
 
@@ -53,6 +53,12 @@ function Invoke-SurfaceSmoke {
   param([string]$Name)
   if ($Name -eq "operations") {
     Invoke-NodeSmoke "operations" @("tests\admin-ui-actionability-dashboard-surface.test.js")
+  } elseif ($Name -eq "operator") {
+    Invoke-NodeSmoke "operator" @(
+      "tests\admin-operator-scenario-contract.test.js",
+      "tests\admin-ui-actionability-dashboard-surface.test.js",
+      "tests\admin-review-workspace-ux-surface.test.js"
+    )
   } elseif ($Name -eq "review") {
     Invoke-NodeSmoke "review" @("tests\admin-review-workspace-ux-surface.test.js")
   } elseif ($Name -eq "communications") {
@@ -61,6 +67,7 @@ function Invoke-SurfaceSmoke {
     Invoke-NodeSmoke "ledger" @("tests\admin-population-ledger.test.js", "tests\admin-population-ledger-authority.test.js")
   } elseif ($Name -eq "surfaces") {
     Invoke-SurfaceSmoke "operations"
+    Invoke-SurfaceSmoke "operator"
     Invoke-SurfaceSmoke "review"
     Invoke-SurfaceSmoke "communications"
     Invoke-SurfaceSmoke "ledger"
@@ -77,11 +84,11 @@ $reportRoot = $project.playwright.reportsPath
 $playwrightRoot = $project.playwright.projectPath
 $proof = Join-Path $PSScriptRoot "fode-staging-health-proof.ps1"
 
-$profiles = if ($Profile -eq "all") { @("health", "hydration", "operations", "review", "communications", "ledger") } else { @($Profile) }
+$profiles = if ($Profile -eq "all") { @("health", "hydration", "operations", "operator", "review", "communications", "ledger") } else { @($Profile) }
 $evidence = @()
 
 foreach ($item in $profiles) {
-  if (@("review", "communications", "ledger", "surfaces") -contains $item) {
+  if (@("operator", "review", "communications", "ledger", "surfaces") -contains $item) {
     Invoke-SurfaceSmoke $item
     continue
   }
