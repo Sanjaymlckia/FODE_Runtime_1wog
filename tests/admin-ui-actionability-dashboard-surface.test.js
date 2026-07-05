@@ -32,6 +32,11 @@ assert.match(adminUi, /id="advancedDiagnosticsPanel" class="[^"]*diagnosticLegac
 assert.match(adminUi, /id="legacySearchPanel" class="[^"]*secondaryOperationalPanel/, "Search must use the Secondary Operational Panel tier");
 assert.match(adminUi, /id="systemHealthPanel" class="[^"]*diagnosticLegacyPanel/, "System Health must use the Diagnostic / Legacy Panel tier");
 assert.match(adminUi, /id="legacyResultsPanel" class="[^"]*secondaryOperationalPanel/, "Search results must use the Secondary Operational Panel tier");
+assert.match(adminUi, /\.queue-table\{ background:#fff; color:#102030; \}/, "Secondary queue tables must use readable dark text on white");
+assert.match(adminUi, /\.queue-table th\{ color:#173451; background:#eef3f8; border-bottom:1px solid #cbd8e6; font-weight:900; \}/, "Secondary queue headers must have readable contrast");
+assert.match(adminUi, /\.secondaryOperationalPanel \.btn:disabled,[\s\S]*color:#52677d;[\s\S]*opacity:1;/, "Secondary disabled buttons must stay readable without opacity fade");
+assert.match(adminUi, /\.statusTag\.ready\{[\s\S]*background:#e7f4ec;[\s\S]*color:#145c34;/, "Secondary ready chips must use dark text and solid readable green");
+assert.match(adminUi, /\.badge-warning\{[\s\S]*background:#fff2dc;[\s\S]*color:#805006;/, "Secondary warning chips must use dark text and solid readable amber");
 assert.ok(adminUi.includes("Global View: Current workload"), "Operations Workspace must expose the Global View shell");
 assert.doesNotMatch(adminUi, /Operator View: Coming soon/, "Operations Workspace must not expose a fake Operator View control");
 assert.ok(adminUi.includes("Operator-scoped view pending ownership model."), "Operator-scoped view must be described as pending ownership authority");
