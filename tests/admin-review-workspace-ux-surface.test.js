@@ -32,9 +32,15 @@ expectMatch(/class="kv reviewCardGrid"/, "Primary facts must use balanced review
 expectMatch(/class="box reviewCardWide"[\s\S]*Workflow Fields/, "Workflow fields must be grouped into a wider balanced card");
 expectMatch(/class="box reviewPanel" id="communicationsCard"/, "Communications must use the shared review panel rhythm");
 expectMatch(/commTemplateCard\.selected\{[^}]*border-color:#1f5aa5[^}]*box-shadow:inset 4px 0 0 #1f5aa5/s, "Selected communication template must have a strong active state");
-expectMatch(/\.commTemplateCard \.btn:disabled,[\s\S]*background:#eef2f6;[\s\S]*color:#40556b;/, "Disabled template preview buttons must remain visible and readable");
+expectMatch(/\.commTemplateCard \.btn:disabled,[\s\S]*background:#e2eaf2;[\s\S]*border-color:#8da2b7;[\s\S]*color:#26384e;/, "Disabled template preview buttons must remain visible and readable");
 expectMatch(/commTemplateSelectedBanner[\s\S]*Selected template/, "Selected communication template card must show explicit selected label");
 expectMatch(/Selected template:<\/strong>[\s\S]*previewMeta\.label/, "Communication preview must name the selected template it reflects");
+expectMatch(/\.btn:disabled,[\s\S]*background:#e2eaf2;[\s\S]*border-color:#8da2b7;[\s\S]*color:#26384e;/, "Disabled modal buttons must remain visible globally");
+expectMatch(/id="btnCommPreview"[\s\S]*>Preview<\/button>/, "Preview button label must remain visible");
+expectMatch(/id="btnCommGenerateEditable"[\s\S]*>Generate \/ Preview Email<\/button>/, "Generate / Preview Email button label must remain visible");
+expectMatch(/id="btnCommInsertPortalLink"[\s\S]*>Insert Portal Link<\/button>/, "Insert Portal Link button label must remain visible");
+expectMatch(/id="btnCommSend"[\s\S]*>Send<\/button>/, "Send button label must remain visible");
+expectMatch(/Contactability Gate:[\s\S]*contactGate\.reason[\s\S]*Alternative:/, "Contactability Gate must explain disabled communication controls");
 expectMatch(/\.commOverridePanel\{[\s\S]*background:#fff2dc;[\s\S]*color:#704500;/, "Override warning block must use readable dark warning text");
 expectMatch(/\.commOverridePanel textarea\{[\s\S]*background:#fff;[\s\S]*color:#102030;/, "Override textarea must remain readable");
 expectMatch(/\.modal \.commResultBox\.err\{[\s\S]*color:#8b1f1f;/, "Action blocked/error panel must keep strong readable contrast");

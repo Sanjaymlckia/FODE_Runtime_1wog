@@ -34,7 +34,7 @@ assert.match(adminUi, /id="systemHealthPanel" class="[^"]*diagnosticLegacyPanel/
 assert.match(adminUi, /id="legacyResultsPanel" class="[^"]*secondaryOperationalPanel/, "Search results must use the Secondary Operational Panel tier");
 assert.match(adminUi, /\.queue-table\{ background:#fff; color:#102030; \}/, "Secondary queue tables must use readable dark text on white");
 assert.match(adminUi, /\.queue-table th\{ color:#173451; background:#eef3f8; border-bottom:1px solid #cbd8e6; font-weight:900; \}/, "Secondary queue headers must have readable contrast");
-assert.match(adminUi, /\.secondaryOperationalPanel \.btn:disabled,[\s\S]*color:#52677d;[\s\S]*opacity:1;/, "Secondary disabled buttons must stay readable without opacity fade");
+assert.match(adminUi, /\.secondaryOperationalPanel \.btn:disabled,[\s\S]*background:#e2eaf2;[\s\S]*border-color:#8da2b7;[\s\S]*color:#26384e;[\s\S]*opacity:1;/, "Secondary disabled buttons must stay readable without opacity fade");
 assert.match(adminUi, /\.statusTag\.ready\{[\s\S]*background:#e7f4ec;[\s\S]*color:#145c34;/, "Secondary ready chips must use dark text and solid readable green");
 assert.match(adminUi, /\.badge-warning\{[\s\S]*background:#fff2dc;[\s\S]*color:#805006;/, "Secondary warning chips must use dark text and solid readable amber");
 assert.ok(adminUi.includes("Global View: Current workload"), "Operations Workspace must expose the Global View shell");
@@ -127,12 +127,18 @@ assert.match(adminUi, /data-actionability-context="copy-blocker"/, "Context menu
 assert.doesNotMatch(adminUi, /data-actionability-context="(?:send|reset|status|payment|document)/i, "Context menu must not expose mutation actions");
 assert.match(adminUi, /let actionabilitySelectedKeys = \{\}/, "Current Worklist must keep explicit selection state");
 assert.match(adminUi, /function selectVisibleActionabilityRows_/, "Current Worklist must support Select Visible");
+assert.match(adminUi, /function selectAllActionabilityRows_/, "Current Worklist must support Select All bounded by current authority/filter");
 assert.match(adminUi, /function clearActionabilitySelection_/, "Current Worklist must support Clear Selection");
 assert.match(adminUi, /Batch Communication/, "Current Worklist must expose batch communication readiness");
 assert.match(adminUi, /Batch Reminder/, "Current Worklist must expose batch reminder readiness");
 assert.match(adminUi, /Batch Export/, "Current Worklist must expose local batch export readiness");
 assert.match(adminUi, /Send authority remains in Review Workspace or existing gated batch tools/, "Batch communication must remain a handoff, not a send path");
 assert.match(adminUi, /function exportActionabilitySelection_/, "Batch Export must be implemented as a local selected-row export");
+assert.match(adminUi, /function renderActionabilityBatchPanel_/, "Batch communication must render an operational handoff panel");
+assert.match(adminUi, /Batch Communication Handoff/, "Batch panel must name the communication handoff");
+assert.match(adminUi, /Recommended templates/, "Batch panel must show recommended template groups");
+assert.match(adminUi, /Blocked reasons/, "Batch panel must show blocked reasons");
+assert.match(adminUi, /Open first eligible in Review/, "Batch panel must provide a safe next action");
 assert.match(adminUi, /\.modal\{[\s\S]*background: #f8fafc;[\s\S]*border: 1px solid #dbe5ef;/, "Review modal must visually align with the operator workspace surface");
 assert.doesNotMatch(renderActionabilityRowBody_(), /<strong>Invoice:<\/strong> <span>Not shown<\/span>|<strong>CRM:<\/strong> <span>Not shown<\/span>/, "Dashboard rows must not spend scan space on Not shown filler facts");
 [
@@ -144,7 +150,7 @@ assert.doesNotMatch(renderActionabilityRowBody_(), /<strong>Invoice:<\/strong> <
   ["payment", "Payment"],
   ["contact", "Contact"],
   ["age", "Age / Last"],
-  ["due", "Due / Next"]
+  ["due", "Priority / Next"]
 ].forEach(([key, label]) => {
   assert.match(adminUi, new RegExp(`sortHeader\\("${key}", "${label}"\\)`), `Sortable header must exist for ${label}`);
   assert.match(adminUi, /data-actionability-sort="' \+ esc\(key\) \+ '"/, `Sort data attribute must be rendered for ${label}`);
@@ -196,7 +202,7 @@ assert.doesNotMatch(adminUi, /admin_sendCommunicationsActivity|admin_updateCommu
 assert.match(adminUi, /function actionabilityManagementExceptionBreakdown_/, "Management Exceptions must expose a scoped breakdown when visible rows support it");
 assert.match(adminUi, /Visible breakdown: Uncontactable/, "Management Exceptions breakdown must be labelled as visible-row derived");
 assert.match(adminUi, /class="actionabilitySortBtn"[\s\S]*esc\(label \+ actionabilitySortLabel_\(key\)\)/, "Grouped worklist headers must render separated sort button labels");
-assert.match(adminUi, /\.actionabilitySortBtn\{[^}]*border:1px solid #dbe5ef[^}]*text-transform:none/s, "Grouped worklist headers must avoid merged-looking uppercase labels");
+assert.match(adminUi, /\.actionabilitySortBtn\{[^}]*border:1px solid #9fb4ca[^}]*text-transform:none/s, "Grouped worklist headers must avoid merged-looking uppercase labels");
 assert.match(adminJs, /function admin_getPopulationLedger/, "Population Ledger RPC must exist as a read-only authority foundation");
 assert.match(adminJs, /function buildPopulationLedgerFromValues_/, "Population Ledger must be reusable by dashboard and lifecycle consumers");
 assert.match(adminJs, /contactabilityState: isUncontactable \? "UNCONTACTABLE"/, "Actionability payload must classify no-email/no-phone applicants as uncontactable");
@@ -213,9 +219,26 @@ assert.match(adminUi, /All Required Missing/, "Document completeness must distin
 assert.match(adminUi, /Required Uploaded - Review/, "Document completeness must distinguish uploaded-but-unverified records");
 assert.match(adminUi, /Required Complete/, "Document completeness must distinguish complete records");
 assert.match(adminUi, /function actionabilityHiddenExplanation_/, "Bucket table must explain hidden population records");
+assert.match(adminJs, /function buildActionabilityHiddenRecords_/, "Actionability preview must expose bounded hidden record DTOs");
+assert.match(adminJs, /hiddenRecords:\s*\{ perBucketLimit: 5, byGroup: \{\}, totalByGroup: \{\} \}/, "Actionability preview must initialize hiddenRecords DTO");
+assert.match(adminJs, /out\.hiddenRecords = buildActionabilityHiddenRecords_/, "Actionability preview must populate hiddenRecords from the full read-only row set");
+assert.match(adminUi, /function actionabilityHiddenPanel_/, "Bucket table must render hidden record drill-down");
+assert.match(adminUi, /Show Hidden:/, "Hidden drill-down must expose a Show Hidden affordance");
+assert.match(adminUi, /Applicant ID unavailable/, "Hidden drill-down must expose bounded applicant identity fallback");
+assert.match(adminUi, /reviewActionabilityHiddenRecord_/, "Hidden records must be openable in Review Workspace");
 assert.match(adminUi, /hidden by worklist window, completion state, or another authority path/, "Hidden population explanation must name why records are not visible");
 assert.match(adminUi, /View Hidden/, "Bucket action must distinguish hidden population records from normal view");
 assert.match(adminUi, /Explain/, "Bucket action must explain buckets with population but no visible rows");
+assert.match(adminUi, /Priority \/ Next/, "Timing column must honestly describe priority/next-action sorting");
+assert.doesNotMatch(adminUi, /Due \/ Next/, "Timing column must not imply a due-date scheduler when none exists");
+assert.match(adminUi, /function commContactabilityGate_/, "Review modal must treat Contactability Gate as a first-class workflow state");
+assert.match(adminUi, /Email workflow unavailable/, "Contactability Gate must suppress normal email template workflow");
+assert.match(adminUi, /Email preview disabled by Contactability Gate/, "Contactability Gate must visibly disable email preview");
+assert.match(adminUi, /btnCommGenerateEditable[\s\S]*contactGate\.active/, "Generate / Preview Email must be disabled by Contactability Gate with visible label");
+assert.match(adminUi, /btnCommInsertPortalLink[\s\S]*contactGate\.active/, "Insert Portal Link must be disabled by Contactability Gate with visible label");
+assert.match(adminUi, /btnCommSendEdited[\s\S]*contactGate\.active/, "Send edited email must be disabled by Contactability Gate with visible label");
+assert.match(adminUi, /function actionabilityMissingDocumentsDetail_/, "Expanded worklist details must name missing documents");
+assert.match(adminUi, /Missing Documents:<\/strong>/, "Expanded worklist details must include missing document names");
 
 console.log("PASS Operations Workspace is primary above Review Queues");
 console.log("PASS Operations Workspace role wording, compatibility Review Queues, and Global View shell are present");

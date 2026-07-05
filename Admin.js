@@ -2996,6 +2996,77 @@ function compareActionabilityPreviewRows_(a, b) {
   return Number(b && b.ageDays || 0) - Number(a && a.ageDays || 0);
 }
 
+function actionabilityPreviewGroupKey_(row) {
+  var r = row || {};
+  var urgency = clean_(r.urgencyLevel || "").toUpperCase();
+  var owner = clean_(r.actionOwner || "").toUpperCase();
+  var suppressor = clean_(r.suppressor || "").toUpperCase();
+  if (owner === "NONE" || clean_(r.nextAction || "").toUpperCase() === "NO_ACTION") return "COMPLETE";
+  if (urgency === "DORMANT") return "DORMANT";
+  if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "MANAGEMENT";
+  if (owner === "APPLICANT") return "APPLICANT";
+  if (owner === "OFFICER") return "ADMISSIONS";
+  if (owner === "FINANCE") return "FINANCE";
+  if (owner === "ADMIN") return "ACADEMIC";
+  if (owner === "SYSTEM") return "MANAGEMENT";
+  return "UNKNOWN";
+}
+
+function actionabilityHiddenReasonForGroup_(groupKey) {
+  var key = clean_(groupKey || "").toUpperCase();
+  if (key === "COMPLETE") return "COMPLETED_NO_ACTION";
+  if (key === "DORMANT") return "DORMANT";
+  if (key === "UNKNOWN") return "UNKNOWN";
+  if (key === "ACADEMIC" || key === "ADMISSIONS" || key === "FINANCE" || key === "MANAGEMENT") return "OTHER_AUTHORITY";
+  return "FILTERED_BY_WORKLIST";
+}
+
+function actionabilityHiddenSuggestedAction_(groupKey, row) {
+  var key = clean_(groupKey || "").toUpperCase();
+  if (key === "COMPLETE") return "Explain Only";
+  if (key === "DORMANT") return "Open Applicant";
+  if (key === "UNKNOWN") return "Open Applicant";
+  if (key === "FINANCE") return "Open Applicant";
+  if (key === "ADMISSIONS" || key === "ACADEMIC" || key === "MANAGEMENT") return "Open Applicant";
+  return clean_(row && row.nextAction || "").toUpperCase() === "NO_ACTION" ? "Explain Only" : "Switch Filter";
+}
+
+function buildActionabilityHiddenRecords_(rows, visibleRows, perBucketLimit) {
+  var limit = Math.max(1, Math.min(10, Number(perBucketLimit || 5)));
+  var visible = {};
+  (Array.isArray(visibleRows) ? visibleRows : []).forEach(function(row) {
+    var key = clean_(row && (row.applicantId || row.rowNumber) || "");
+    if (key) visible[key] = true;
+  });
+  var out = { perBucketLimit: limit, byGroup: {}, totalByGroup: {} };
+  (Array.isArray(rows) ? rows : []).forEach(function(row) {
+    var key = clean_(row && (row.applicantId || row.rowNumber) || "");
+    if (!key || visible[key]) return;
+    var groupKey = actionabilityPreviewGroupKey_(row);
+    out.totalByGroup[groupKey] = Number(out.totalByGroup[groupKey] || 0) + 1;
+    if (!out.byGroup[groupKey]) out.byGroup[groupKey] = [];
+    if (out.byGroup[groupKey].length >= limit) return;
+    out.byGroup[groupKey].push({
+      rowNumber: Number(row.rowNumber || 0) || 0,
+      applicantId: clean_(row.applicantId || ""),
+      name: clean_(row.name || ""),
+      currentStage: clean_((row.authorityState && row.authorityState.lifecycleStage) || ""),
+      currentBucket: groupKey,
+      hiddenReason: actionabilityHiddenReasonForGroup_(groupKey),
+      suggestedAction: actionabilityHiddenSuggestedAction_(groupKey, row),
+      actionOwner: clean_(row.actionOwner || ""),
+      nextAction: clean_(row.nextAction || ""),
+      urgencyLevel: clean_(row.urgencyLevel || ""),
+      suppressor: clean_(row.suppressor || ""),
+      recommendedMessageType: clean_(row.recommendedMessageType || ""),
+      ageDays: row.ageDays,
+      lastContactAgeDays: row.lastContactAgeDays,
+      authorityState: row.authorityState || {}
+    });
+  });
+  return out;
+}
+
 function admin_getActionabilityPreview(payload) {
   var adminEmail = getCallerEmail_();
   if (!isAdmin_(adminEmail)) throw new Error("Access denied");
@@ -3014,7 +3085,8 @@ function admin_getActionabilityPreview(payload) {
     includedRows: 0,
     countsByOwner: { APPLICANT: 0, OFFICER: 0, FINANCE: 0, ADMIN: 0, SYSTEM: 0, NONE: 0 },
     populationLedger: populationLedgerPublicSummary_(ledger),
-    rows: []
+    rows: [],
+    hiddenRecords: { perBucketLimit: 5, byGroup: {}, totalByGroup: {} }
   };
   if (!data || data.length < 2) return out;
   var headers = data[0] || [];
@@ -3036,6 +3108,7 @@ function admin_getActionabilityPreview(payload) {
   rows.sort(compareActionabilityPreviewRows_);
   out.includedRows = rows.length;
   out.rows = rows.slice(0, limit);
+  out.hiddenRecords = buildActionabilityHiddenRecords_(rows, out.rows, p.hiddenLimit || 5);
   return out;
 }
 

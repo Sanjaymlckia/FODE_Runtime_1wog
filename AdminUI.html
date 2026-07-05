@@ -163,6 +163,10 @@
     }
     textarea{ min-height:52px; resize:vertical; }
     .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
       border:none; cursor:pointer;
       padding:10px 12px;
       border-radius: var(--panelRadius);
@@ -171,6 +175,9 @@
       border: 1px solid rgba(148,163,184,.18);
       font-weight: 700;
       font-size: 13px;
+      line-height:1.2;
+      min-height:34px;
+      white-space:nowrap;
     }
     .btn.accent{ background: rgba(14,165,164,.18); border-color: rgba(14,165,164,.35); }
     .btn.ok{ background: rgba(34,197,94,.16); border-color: rgba(34,197,94,.35); }
@@ -180,10 +187,11 @@
     .btn[disabled]{
       cursor:not-allowed;
       opacity:1;
-      background:#eef2f6;
-      border-color:#cbd8e6;
-      color:#52677d;
+      background:#e2eaf2;
+      border-color:#8da2b7;
+      color:#26384e;
       filter:none;
+      box-shadow:inset 0 0 0 1px rgba(38,56,78,.08);
     }
     .btn.accent:disabled,
     .btn.accent[disabled],
@@ -194,8 +202,8 @@
     .btn.danger:disabled,
     .btn.danger[disabled]{
       background:#eef2f6;
-      border-color:#cbd8e6;
-      color:#52677d;
+      border-color:#8da2b7;
+      color:#26384e;
     }
     .btn.small{ padding:7px 10px; font-size:12px; border-radius:6px; }
     .btn-sm{ padding:7px 10px; font-size:12px; border-radius:6px; }
@@ -214,7 +222,7 @@
     th{ color:var(--inkSubtle); font-weight:850; font-size:12px; background:#f8fafc; }
     a{ color: rgba(14,165,164,.95); text-decoration:none; }
     a:hover{ text-decoration:underline; }
-    .muted{ color:var(--inkMuted); }
+    .muted{ color:#40556b; }
     .statusTag{
       display:inline-block;
       padding:2px 8px;
@@ -276,9 +284,9 @@
     .operatorWorkspaceTitle{ margin:0; font-size:20px; color:var(--ink); letter-spacing:0; line-height:1.15; }
     .operatorWorkspaceTools{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .operatorViewShell{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:6px 0 3px; }
-    .operatorViewBtn{ border:1px solid #cbd8e6; background:#fff; color:#31516f; border-radius:6px; padding:5px 9px; font-size:12px; font-weight:800; }
+    .operatorViewBtn{ border:1px solid #9fb4ca; background:#fff; color:#173451; border-radius:6px; padding:6px 10px; font-size:12px; font-weight:850; line-height:1.2; }
     .operatorViewBtn.active{ background:#0f1f35; border-color:#0f1f35; color:#fff; }
-    .operatorViewBtn[disabled]{ cursor:not-allowed; opacity:1; background:#eef2f6; border-color:#cbd8e6; color:#52677d; }
+    .operatorViewBtn[disabled]{ cursor:not-allowed; opacity:1; background:#e2eaf2; border-color:#8da2b7; color:#26384e; }
     .operatorViewNote{ color:var(--inkMuted); font-size:12px; line-height:1.35; }
     .operatorSurfaceRoles{ display:flex; align-items:center; flex-wrap:wrap; gap:6px 12px; margin:6px 0 8px; padding:6px 8px; border:1px solid #e5ebf2; border-radius:6px; background:#fbfdff; }
     .operatorSurfaceRole{ border:0; background:transparent; border-radius:0; padding:0; font-size:11px; color:var(--inkMuted); line-height:1.25; }
@@ -312,9 +320,9 @@
     .secondaryOperationalPanel .btn.ok:not(:disabled){ background:#e7f4ec; border-color:#84bd98; color:#145c34; }
     .secondaryOperationalPanel .btn:disabled,
     .secondaryOperationalPanel .btn[disabled]{
-      background:#eef2f6;
-      border-color:#b9c7d6;
-      color:#52677d;
+      background:#e2eaf2;
+      border-color:#8da2b7;
+      color:#26384e;
       opacity:1;
       text-decoration:none;
     }
@@ -335,15 +343,15 @@
     .actionabilityLedgerItem.warn .v{ color:#9a2d2d; }
     .actionabilitySummary{ margin:7px 0 9px; border:1px solid #dbe5ef; border-radius:6px; overflow:hidden; background:#fff; }
     .actionabilityBucketTable{ width:100%; }
-    .actionabilityBucketHeader, .actionabilityBucketRow{ display:grid; grid-template-columns:minmax(160px,1.2fr) 92px 86px 80px minmax(150px,1fr) minmax(130px,.9fr) 72px; align-items:center; }
+    .actionabilityBucketHeader, .actionabilityBucketRow{ display:grid; grid-template-columns:minmax(160px,1.2fr) 92px 86px 80px minmax(150px,1fr) minmax(130px,.9fr) 84px; align-items:center; }
     .actionabilityBucketHeader{ min-height:32px; background:#f8fafc; color:#31516f; border-bottom:1px solid #dbe5ef; font-size:10px; font-weight:900; text-transform:uppercase; }
     .actionabilityBucketRow{ min-height:38px; border-bottom:1px solid #edf2f7; color:#0f172a; font-size:11px; }
     .actionabilityBucketRow:last-child{ border-bottom:0; }
     .actionabilityBucketRow.active{ background:#f5f9ff; box-shadow:inset 3px 0 0 #1f5aa5; }
     .actionabilityBucketCell{ min-width:0; padding:6px 8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .actionabilityBucketCell strong{ color:#0f1f35; font-weight:850; }
-    .actionabilityBucketCell.muted{ color:#66788c; }
-    .actionabilityBucketViewBtn{ width:100%; border:1px solid #cbd8e6; border-radius:6px; background:#fff; color:#31516f; padding:5px 7px; font-size:11px; font-weight:850; cursor:pointer; }
+    .actionabilityBucketCell.muted{ color:#40556b; }
+    .actionabilityBucketViewBtn{ width:100%; border:1px solid #9fb4ca; border-radius:6px; background:#fff; color:#173451; padding:5px 7px; font-size:11px; font-weight:900; cursor:pointer; line-height:1.2; white-space:nowrap; }
     .actionabilityBucketViewBtn:hover, .actionabilityBucketRow.active .actionabilityBucketViewBtn{ border-color:#8fb4df; background:#eef6ff; color:#174a8b; }
     .actionabilityTraffic{ margin:8px 0 10px; border:1px solid var(--lineSoft); border-radius:var(--panelRadius); background:var(--surfaceSecondary); overflow:hidden; }
     .actionabilityTrafficTitle{ display:flex; justify-content:space-between; gap:8px; padding:7px 9px; border-bottom:1px solid #e5ebf2; color:#31516f; font-size:12px; font-weight:900; }
@@ -362,22 +370,22 @@
     .actionabilityWorklistRow:last-child{ border-bottom:0; }
     .actionabilityWorklistCell{ min-width:0; padding:7px 9px; overflow:hidden; text-overflow:ellipsis; }
     .actionabilityWorklistCell strong{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .actionabilityWorklistCell span{ display:block; color:#66788c; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .actionabilityWorklistCell span{ display:block; color:#40556b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .actionabilityClusterHeader{ display:flex; flex-direction:column; justify-content:center; gap:3px; }
-    .actionabilityClusterLabel{ color:#0f1f35; font-size:10px; line-height:1; }
+    .actionabilityClusterLabel{ color:#0f1f35; font-size:11px; line-height:1; }
     .actionabilityClusterSorts{ display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-top:2px; }
-    .actionabilitySortBtn{ display:inline-flex; align-items:center; border:1px solid #dbe5ef; border-radius:4px; background:#fff; color:#31516f; font:inherit; font-size:10px; font-weight:800; text-transform:none; padding:2px 5px; cursor:pointer; text-align:left; line-height:1.15; }
+    .actionabilitySortBtn{ display:inline-flex; align-items:center; border:1px solid #9fb4ca; border-radius:4px; background:#fff; color:#173451; font:inherit; font-size:10px; font-weight:850; text-transform:none; padding:3px 6px; cursor:pointer; text-align:left; line-height:1.15; }
     .actionabilitySortBtn:hover{ color:#1f5aa5; border-color:#9fc0e4; background:#f5f9ff; text-decoration:none; }
     .actionabilityWorklistDetails{ grid-column:1 / -1; border-top:1px solid #edf2f7; padding:6px 7px; background:#fbfcfe; }
     .actionabilityFactGrid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:4px 8px; font-size:11px; line-height:1.28; }
     .actionabilityFact{ min-width:0; }
-    .actionabilityFact strong{ display:block; color:#61748a; font-size:9px; font-weight:900; text-transform:uppercase; }
+    .actionabilityFact strong{ display:block; color:#40556b; font-size:9px; font-weight:900; text-transform:uppercase; }
     .actionabilityFact span{ color:#0f172a; }
     .actionabilityStatusChips{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
-    .actionabilityMiniChip{ border:1px solid #dbe5ef; border-radius:999px; padding:2px 6px; background:#f8fafc; color:#31516f; font-size:10px; font-weight:800; line-height:1.25; white-space:nowrap; }
-    .actionabilityMiniChip.ok{ color:#31516f; border-color:#dbe5ef; background:#f8fafc; }
-    .actionabilityMiniChip.warn{ color:#8a5a00; border-color:#f2d38b; background:#fff8e6; }
-    .actionabilityMiniChip.blocked{ color:#9a2d2d; border-color:#efc4c4; background:#fff5f5; }
+    .actionabilityMiniChip{ border:1px solid #9fb4ca; border-radius:999px; padding:2px 6px; background:#fff; color:#173451; font-size:10px; font-weight:850; line-height:1.25; white-space:nowrap; }
+    .actionabilityMiniChip.ok{ color:#145c34; border-color:#84bd98; background:#e7f4ec; }
+    .actionabilityMiniChip.warn{ color:#805006; border-color:#d7a755; background:#fff2dc; }
+    .actionabilityMiniChip.blocked{ color:#8b1f1f; border-color:#d18d8d; background:#fdeaea; }
     .actionabilityApplicantCell strong{ color:#0f1f35; font-size:12px; font-weight:850; }
     .actionabilityApplicantId{ color:#31516f; font-weight:800; }
     .actionabilityNextAction{ margin-top:4px; color:#0f172a; font-weight:850; }
@@ -394,11 +402,25 @@
     .actionabilityFilterNote{ color:#1f5aa5; font-size:12px; font-weight:900; margin:4px 0 8px; }
     .actionabilitySelectionBar{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 10px; border-bottom:1px solid #e5ebf2; background:#fbfdff; color:#24445f; font-size:12px; font-weight:800; flex-wrap:wrap; }
     .actionabilitySelectionActions{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-    .actionabilitySelectionStatus{ color:#52677d; font-size:11px; font-weight:750; }
+    .actionabilitySelectionStatus{ color:#31516f; font-size:11px; font-weight:850; }
     .actionabilitySelectBox{ display:inline-flex; align-items:center; gap:6px; max-width:100%; cursor:pointer; }
     .actionabilitySelectBox input{ width:15px; height:15px; accent-color:#1f5aa5; flex:0 0 auto; }
     .actionabilitySelectBox strong{ min-width:0; }
     .actionabilityGuidance{ display:block; color:#40556b; font-size:11px; font-weight:800; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .actionabilityHiddenPanel, .actionabilityBatchPanel{ border-top:1px solid #e5ebf2; background:#fbfdff; padding:9px 10px; color:#173451; }
+    .actionabilityHiddenPanel summary{ cursor:pointer; font-weight:900; color:#174a8b; }
+    .actionabilityHiddenList{ display:grid; gap:6px; margin-top:8px; }
+    .actionabilityHiddenRecord{ display:grid; grid-template-columns:minmax(170px,1.2fr) minmax(120px,.75fr) minmax(150px,.9fr) minmax(190px,1fr) auto; gap:8px; align-items:center; padding:7px 8px; border:1px solid #dbe5ef; border-radius:6px; background:#fff; font-size:11px; }
+    .actionabilityHiddenRecord strong{ display:block; color:#0f1f35; font-size:12px; }
+    .actionabilityHiddenRecord span{ display:block; color:#52677d; margin-top:2px; }
+    .actionabilityBatchPanel{ border-bottom:1px solid #e5ebf2; }
+    .actionabilityBatchPanel h4{ margin:0 0 7px; color:#0f1f35; font-size:13px; }
+    .actionabilityBatchGrid{ display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:6px; margin-bottom:8px; }
+    .actionabilityBatchMetric{ border:1px solid #dbe5ef; border-radius:6px; background:#fff; padding:6px 7px; min-width:0; }
+    .actionabilityBatchMetric .k{ display:block; color:#61748a; font-size:9px; text-transform:uppercase; font-weight:900; }
+    .actionabilityBatchMetric .v{ display:block; color:#0f1f35; font-size:14px; font-weight:900; margin-top:2px; }
+    .actionabilityBatchDetails{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; font-size:11px; color:#40556b; }
+    .actionabilityBatchDetails strong{ display:block; color:#173451; margin-bottom:3px; }
     .actionabilityContextMenu{ position:fixed; z-index:10000; min-width:190px; border:1px solid #cbd8e6; border-radius:6px; background:#fff; box-shadow:0 12px 28px rgba(15,31,53,.18); padding:5px; display:none; }
     .actionabilityContextMenu.open{ display:block; }
     .actionabilityContextMenu button{ display:block; width:100%; border:0; border-radius:4px; background:transparent; color:#0f1f35; text-align:left; padding:7px 8px; font-size:12px; font-weight:800; cursor:pointer; }
@@ -410,6 +432,9 @@
       .actionabilityKpiStrip{ grid-template-columns:repeat(4, minmax(0, 1fr)); }
       .actionabilityBucketHeader, .actionabilityBucketRow{ grid-template-columns:minmax(145px,1.2fr) 76px 72px 68px minmax(120px,1fr) minmax(105px,.9fr) 64px; }
       .actionabilityTrafficGrid{ grid-template-columns:repeat(3, minmax(0,1fr)); }
+      .actionabilityHiddenRecord{ grid-template-columns:1fr; }
+      .actionabilityBatchGrid{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+      .actionabilityBatchDetails{ grid-template-columns:1fr; }
     }
     @media (max-width: 980px){
       .actionabilityWorklistHeader, .actionabilityWorklistRow{ grid-template-columns:minmax(170px, 1.2fr) minmax(135px, .8fr) minmax(160px, .95fr) minmax(130px, .75fr) 82px; }
@@ -536,10 +561,10 @@
     .commTemplateCard .btn:disabled,
     .commTemplateCard .btn[disabled]{
       opacity:1;
-      background:#eef2f6;
-      border-color:#9fb4ca;
-      color:#40556b;
-      box-shadow:inset 0 0 0 1px rgba(82,103,125,.12);
+      background:#e2eaf2;
+      border-color:#8da2b7;
+      color:#26384e;
+      box-shadow:inset 0 0 0 1px rgba(38,56,78,.08);
     }
     .commTemplateSelectedBanner,
     .commTemplateRecommendedBanner{ display:inline-flex; align-items:center; gap:6px; margin-bottom:8px; padding:5px 9px; border-radius:999px; border:1px solid #9fc0e4; background:#eef6ff; color:#174a8b; font-size:12px; font-weight:900; letter-spacing:0; }
@@ -945,9 +970,19 @@
     }
     .k{ font-size:12px; color:var(--muted); }
     .modal .box{ background:#fff; border-color:#dbe5ef; border-radius:8px; color:#102030; }
-    .modal .k{ color:#61748a; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; }
-    .modal label{ color:#31516f; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.03em; }
+    .modal .k{ color:#40556b; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; }
+    .modal label{ color:#173451; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.03em; }
     .modal .v{ color:#0f1f35; font-size:13px; line-height:1.35; }
+    .modal .btn:disabled,
+    .modal .btn[disabled]{
+      opacity:1;
+      background:#e2eaf2;
+      border-color:#8da2b7;
+      color:#26384e;
+      filter:none;
+      text-decoration:none;
+      box-shadow:inset 0 0 0 1px rgba(38,56,78,.08);
+    }
     .v{ font-size:13px; margin-top:4px; }
     .docs{ display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:10px; margin-top:8px; }
     .doc{
@@ -959,10 +994,10 @@
       gap:10px;
       align-items:start;
     }
-    .docMeta{ font-size:12px; color:#61748a; line-height:1.45; margin-top:4px; word-break:break-word; }
+    .docMeta{ font-size:12px; color:#40556b; line-height:1.45; margin-top:4px; word-break:break-word; }
     .docActionRow{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; align-items:center; }
     .docActionRow .btn{ text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
-    .docPreviewStatus{ font-size:12px; color:#61748a; margin-top:6px; }
+    .docPreviewStatus{ font-size:12px; color:#40556b; margin-top:6px; }
     .docVisualPreview{
       min-height:220px;
       border:1px solid rgba(148,163,184,.18);
@@ -1031,7 +1066,7 @@
       margin-bottom:8px;
     }
     .documentGalleryTitle{ font-weight:800; font-size:13px; }
-    .documentGalleryMeta{ font-size:12px; color:var(--muted); }
+    .documentGalleryMeta{ font-size:12px; color:#40556b; }
     .documentGalleryGrid{
       display:grid;
       grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
@@ -1075,7 +1110,7 @@
     }
     .documentGalleryTileMeta{
       font-size:11px;
-      color:var(--muted);
+      color:#40556b;
       line-height:1.35;
     }
     .documentGalleryFileName{
@@ -1090,7 +1125,7 @@
     }
     .documentGalleryWarning{
       font-size:11px;
-      color:#cbd5e1;
+      color:#40556b;
       line-height:1.35;
     }
     .documentGalleryThumb{
@@ -3157,9 +3192,11 @@
     let actionabilityPreviewCountsState = {};
     let actionabilityPopulationLedgerState = null;
     let actionabilityResponseTrafficState = null;
+    let actionabilityHiddenRecordsState = { byGroup: {}, totalByGroup: {}, perBucketLimit: 5 };
     let actionabilityContextMenuIndex = null;
     let actionabilitySelectedKeys = {};
     let actionabilityBatchMessage = "";
+    let actionabilityBatchPanelMode = "";
     let stagePopulationLedgerState = null;
     let pendingActionabilityReviewContext = null;
     let selectedDocsRowNumbers = {};
@@ -6281,6 +6318,20 @@
       return meta && meta.requiresResolvedPlaceholders ? "Preview required: placeholders may block send" : "No mandatory placeholder gate";
     }
     function selectCommTemplateFromGallery_(messageType){
+      var gate = commContactabilityGate_(currentDetail || {});
+      if (gate.active) {
+        communicationsState.result = {
+          ok: true,
+          result: "BLOCKED",
+          blockCode: "CONTACTABILITY_GATE",
+          blockReason: gate.reason + " " + gate.recommendedAction,
+          applicantId: String((currentDetail && currentDetail.ApplicantID) || ""),
+          messageType: String(messageType || "")
+        };
+        renderCommunicationsResult_(communicationsState.result);
+        updateCommunicationsUi_();
+        return;
+      }
       setSelectedCommMessageType_(messageType);
       communicationsState.pendingPreviewJump = true;
       resetCommunicationsForSelection_(false);
@@ -6311,6 +6362,22 @@
       var items = commTemplateGalleryItems_();
       var selectedType = getSelectedCommMessageType_();
       var recommendation = recommendCommTemplateForDetail_(currentDetail || {});
+      var contactGate = commContactabilityGate_(currentDetail || {});
+      if (contactGate.active) {
+        recEl.innerHTML = "<strong>Contactability Gate</strong><br>"
+          + esc(contactGate.reason) + "<br>"
+          + esc(contactGate.recommendedAction) + "<br>"
+          + "<span class='muted'>" + esc(contactGate.alternativePath) + "</span>";
+        galleryEl.innerHTML = "<div class='commTemplateCard selected'>"
+          + "<div class='commTemplateSelectedBanner'>Contactability Gate</div>"
+          + "<div class='commTemplateCardTitle'>Email workflow unavailable</div>"
+          + "<div style='margin-top:8px;font-size:12px;line-height:1.45;'>" + esc(contactGate.reason) + "</div>"
+          + "<div style='margin-top:6px;font-size:12px;line-height:1.45;'><strong>Recommended action:</strong> " + esc(contactGate.recommendedAction) + "</div>"
+          + "<div style='margin-top:6px;font-size:12px;line-height:1.45;'><strong>Alternative path:</strong> " + esc(contactGate.alternativePath) + "</div>"
+          + "<button class='btn small' type='button' disabled>Email preview disabled by Contactability Gate</button>"
+          + "</div>";
+        return;
+      }
       var recommendedMeta = getCommTemplateMeta_(recommendation.messageType) || {};
       if (recommendation.actionable === true && recommendation.messageType) {
         recEl.innerHTML = "<strong>Recommended next action:</strong> " + esc(recommendedMeta.label || recommendation.messageType)
@@ -6447,6 +6514,38 @@
       if ((selectedType === "legacy_invite" || selectedType === "reminder") && commPortalSubmittedActive_(d)) return "Portal already submitted for this applicant.";
       return "";
     }
+
+    function commContactabilityGate_(detail){
+      var d = detail || currentDetail || {};
+      var effectiveEmail = String(d.Effective_Email || d.Parent_Email_Corrected || d.Parent_Email || "").trim();
+      var phone = opsFirstNonBlank_(d.Parent_Phone, d.Parent_Mobile, d.Phone_Number, d.Mobile, d.Phone);
+      if (!effectiveEmail) {
+        return {
+          active: true,
+          reason: "No effective email is available.",
+          recommendedAction: "Correct applicant or guardian email in Review Workspace before previewing email.",
+          alternativePath: phone ? "Use approved phone/WhatsApp fallback outside the email template flow." : "Collect a valid email or phone contact before communication."
+        };
+      }
+      if (isCommBounceFlagTrue_(d.Email_Bounce_Flag)) {
+        return {
+          active: true,
+          reason: "Permanent bounce or delivery failure is recorded.",
+          recommendedAction: "Correct the email address and clear delivery health through the approved reconciliation flow.",
+          alternativePath: phone ? "Use approved phone/WhatsApp fallback while email is blocked." : "Collect alternate contact details."
+        };
+      }
+      var verification = String(d.Email_Verification_Status || d.Last_Contact_Result || "").trim().toUpperCase();
+      if (/^(BOUNCED|SUPPRESSED)$/.test(verification)) {
+        return {
+          active: true,
+          reason: "Email status is " + verification + ".",
+          recommendedAction: "Resolve the email status before email preview/send.",
+          alternativePath: phone ? "Use approved phone/WhatsApp fallback." : "Collect alternate contact details."
+        };
+      }
+      return { active: false, reason: "", recommendedAction: "", alternativePath: "" };
+    }
     function isEditableCommType_(messageType){
       var t = String(messageType || "").trim();
       var meta = getCommTemplateMeta_(t);
@@ -6496,11 +6595,21 @@
       var selectedType = getSelectedCommMessageType_();
       var isEditable = isEditableCommType_(selectedType);
       var eligibility = deriveSendEligibility(currentDetail || {});
+      var contactGate = commContactabilityGate_(currentDetail || {});
       var previewReady = communicationsState.previewApplicantId === String((currentDetail && currentDetail.ApplicantID) || "") && communicationsState.previewMessageType === selectedType && communicationsState.result && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
       if (panel) panel.classList.toggle("hidden", !isEditable);
-      if (generateBtn) generateBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy;
-      if (insertBtn) insertBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy;
-      if (sendBtn) sendBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy || !previewReady || eligibility.active || !CAN_RUN_OPERATIONS_ACTIONS;
+      if (generateBtn) {
+        generateBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy || contactGate.active;
+        generateBtn.title = contactGate.active ? "Contactability Gate: " + contactGate.reason : "";
+      }
+      if (insertBtn) {
+        insertBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy || contactGate.active;
+        insertBtn.title = contactGate.active ? "Contactability Gate: " + contactGate.reason : "";
+      }
+      if (sendBtn) {
+        sendBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy || !previewReady || eligibility.active || !CAN_RUN_OPERATIONS_ACTIONS || contactGate.active;
+        sendBtn.title = contactGate.active ? "Contactability Gate: " + contactGate.reason : "";
+      }
     }
     function requestPortalLinkForComm_(onDone){
       var done = typeof onDone === "function" ? onDone : function(){};
@@ -6849,12 +6958,13 @@
       var detail = currentDetail || {};
       var selectedType = getSelectedCommMessageType_();
       var editableType = isEditableCommType_(selectedType);
+      var contactGate = commContactabilityGate_(detail);
       var disableReason = communicationsDisableReason_(detail);
       var eligibility = deriveSendEligibility(detail);
       var previewReady = communicationsState.previewApplicantId === String(detail.ApplicantID || "") && communicationsState.previewMessageType === selectedType && communicationsState.result && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
-      var controlsDisabled = !currentRowNumber || isUiBusy || communicationsState.busy || !!disableReason;
+      var controlsDisabled = !currentRowNumber || isUiBusy || communicationsState.busy || !!disableReason || contactGate.active;
       var emailIssueHint = opsHasEmailIssue_(detail) ? (disableReason || ("Email issue detected. " + opsEmailIssueFallbackHint_(detail))) : "";
-      selectEl.disabled = !currentRowNumber || isUiBusy || communicationsState.busy;
+      selectEl.disabled = !currentRowNumber || isUiBusy || communicationsState.busy || contactGate.active;
       previewBtn.disabled = editableType ? true : controlsDisabled;
       sendBtn.disabled = editableType ? true : (controlsDisabled || !previewReady || !CAN_RUN_OPERATIONS_ACTIONS);
       previewBtn.style.display = editableType ? "none" : "";
@@ -6864,12 +6974,14 @@
       sendBtn.textContent = communicationsState.busy ? "Sending..." : (CAN_RUN_OPERATIONS_ACTIONS ? "Send (Operations action)" : "Send (Operations action - disabled)");
       noteEl.textContent = communicationsState.busy
         ? (previewReady ? "Sending..." : "Loading preview...")
+        : (contactGate.active
+          ? ("Contactability Gate: " + contactGate.reason + " " + contactGate.recommendedAction + " Alternative: " + contactGate.alternativePath)
         : (emailIssueHint
           || disableReason
           || (!CAN_RUN_OPERATIONS_ACTIONS ? "Operations action \u2014 requires Operations Admin or Super Admin authority, preview, confirmation, and audit. Normal Admin workflow is preview only."
           : ((workflowIsYes_(detail.Portal_Submitted) || workflowIsYes_(detail.Enrolled_Confirmed))
             ? "Applicant already submitted/enrolled; applicant-chasing emails are not required."
-            : (editableType && eligibility.active ? eligibility.text : (previewReady ? "Preview ready. Operational confirmation is still required." : "Preview is required before send.")))));
+            : (editableType && eligibility.active ? eligibility.text : (previewReady ? "Preview ready. Operational confirmation is still required." : "Preview is required before send."))))));
       renderCommEditablePanel_();
       renderCommTemplateGallery_();
       renderCommunicationsApplicantSummary_(detail);
@@ -7440,6 +7552,20 @@
     }
     function previewApplicantMessageUi_(buttonSource){
       if (!currentDetail || communicationsState.busy) return;
+      var contactGate = commContactabilityGate_(currentDetail || {});
+      if (contactGate.active) {
+        communicationsState.result = {
+          ok: true,
+          result: "BLOCKED",
+          blockCode: "CONTACTABILITY_GATE",
+          blockReason: contactGate.reason + " " + contactGate.recommendedAction + " Alternative: " + contactGate.alternativePath,
+          applicantId: String(currentDetail.ApplicantID || ""),
+          messageType: getSelectedCommMessageType_()
+        };
+        renderCommunicationsResult_(communicationsState.result);
+        updateCommunicationsUi_();
+        return;
+      }
       var applicantId = String(currentDetail.ApplicantID || "").trim();
       var messageType = getSelectedCommMessageType_();
       var payload = { applicantId: applicantId, messageType: messageType };
@@ -9166,6 +9292,13 @@ function renderStageDashboard_(items, emptyMessage){
       return "blocked";
     }
 
+    function actionabilityMissingDocumentsDetail_(row){
+      var state = (row && row.authorityState) || {};
+      var missing = Array.isArray(state.missingRequiredDocuments) ? state.missingRequiredDocuments.filter(Boolean) : [];
+      if (!missing.length) return "No required documents missing";
+      return missing.map(actionabilityDocumentLabel_).filter(Boolean).join(", ");
+    }
+
     function actionabilityReviewTarget_(row){
       var group = actionabilityGroupKey_(row);
       if (group === "ADMISSIONS" || String(row && row.nextAction || "").toUpperCase().indexOf("DOCUMENT") >= 0) return "docs";
@@ -9187,6 +9320,15 @@ function renderStageDashboard_(items, emptyMessage){
       renderActionabilityPreview_({ preserveRows: true });
       window.setTimeout(function(){
         var target = document.getElementById(actionabilityActiveGroup ? "actionabilityPreviewRows" : "actionabilityPreviewSummary");
+        if (target && typeof target.scrollIntoView === "function") target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 40);
+    }
+
+    function showAllActionability_(){
+      actionabilityActiveGroup = "";
+      renderActionabilityPreview_({ preserveRows: true });
+      window.setTimeout(function(){
+        var target = document.getElementById("actionabilityPreviewSummary");
         if (target && typeof target.scrollIntoView === "function") target.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 40);
     }
@@ -9349,6 +9491,50 @@ function renderStageDashboard_(items, emptyMessage){
       return String(hidden) + " additional ledger rows outside the visible worklist window.";
     }
 
+    function actionabilityHiddenReasonLabel_(value){
+      var reason = String(value || "").trim().toUpperCase();
+      if (reason === "FILTERED_BY_BUCKET") return "Hidden by current bucket filter";
+      if (reason === "FILTERED_BY_WORKLIST") return "Outside visible worklist window";
+      if (reason === "COMPLETED_NO_ACTION") return "Completed / no action required";
+      if (reason === "DORMANT") return "Dormant record";
+      if (reason === "OTHER_AUTHORITY") return "Owned by another authority path";
+      if (reason === "UNKNOWN") return "Unknown / unclassified";
+      return "Explanation unavailable";
+    }
+
+    function actionabilityHiddenPanel_(key, populationCount, visibleCount){
+      var hiddenCount = Math.max(0, Number(populationCount || 0) - Number(visibleCount || 0));
+      if (!hiddenCount) return "";
+      var state = actionabilityHiddenRecordsState || {};
+      var byGroup = state.byGroup || {};
+      var totalByGroup = state.totalByGroup || {};
+      var records = Array.isArray(byGroup[key]) ? byGroup[key] : [];
+      var boundedTotal = Number(totalByGroup[key] || records.length || 0);
+      var activeFilterNote = actionabilityActiveGroup && actionabilityActiveGroup !== key
+        ? "Current filter is " + actionabilityGroupLabel_(actionabilityActiveGroup) + "; switch filter to work this bucket."
+        : "These records are outside the visible worklist window or owned by a secondary authority path.";
+      var html = '<details class="actionabilityHiddenPanel"><summary>Show Hidden: ' + esc(hiddenCount) + ' hidden in ' + actionabilityGroupLabel_(key) + '</summary>'
+        + '<div style="margin-top:6px;font-size:11px;color:#40556b;">' + esc(activeFilterNote) + ' Bounded preview: ' + esc(records.length) + ' of ' + esc(boundedTotal || hiddenCount) + '.</div>'
+        + '<div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;">'
+        + '<button class="btn small" type="button" onclick="selectActionabilityGroup_(\'' + esc(key) + '\')">Switch Filter</button>'
+        + '<button class="btn small" type="button" onclick="showAllActionability_()">Show All</button>'
+        + '</div>';
+      if (!records.length) {
+        html += '<div class="actionabilityHiddenList"><div class="actionabilityHiddenRecord"><div><strong>Explain Only</strong><span>No bounded applicant identity was returned for this bucket. Use Population Ledger reconciliation before action.</span></div></div></div>';
+      } else {
+        html += '<div class="actionabilityHiddenList">' + records.map(function(row, index){
+          return '<div class="actionabilityHiddenRecord">'
+            + '<div><strong>' + esc(row.applicantId || "Applicant ID unavailable") + '</strong><span>' + esc(row.name || "Name unavailable") + '</span></div>'
+            + '<div><strong>Stage</strong><span>' + esc(String(row.currentStage || "Unknown").replace(/_/g, " ")) + '</span></div>'
+            + '<div><strong>Reason</strong><span>' + esc(actionabilityHiddenReasonLabel_(row.hiddenReason)) + '</span></div>'
+            + '<div><strong>Suggested Action</strong><span>' + esc(row.suggestedAction || "Explain Only") + '</span></div>'
+            + '<div><button class="btn small" type="button" onclick="reviewActionabilityHiddenRecord_(\'' + esc(key) + '\',' + String(index) + ', this)">Open Applicant</button></div>'
+            + '</div>';
+        }).join("") + '</div>';
+      }
+      return html + '</details>';
+    }
+
     function actionabilityBucketNote_(key, populationCount, visibleCount, list){
       var ledger = actionabilityPopulationLedgerState || {};
       var integrity = String(ledger.integrityStatus || "UNKNOWN");
@@ -9368,15 +9554,76 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function actionabilitySelectedRows_(){
-      var source = Array.isArray(actionabilityPreviewRows) ? actionabilityPreviewRows : [];
+      var hidden = actionabilityHiddenRecordsState && actionabilityHiddenRecordsState.byGroup ? actionabilityHiddenRecordsState.byGroup : {};
+      var source = Array.isArray(actionabilityPreviewRows) ? actionabilityPreviewRows.slice() : [];
+      Object.keys(hidden).forEach(function(key){
+        if (Array.isArray(hidden[key])) source = source.concat(hidden[key]);
+      });
       return source.filter(function(row){ return !!actionabilitySelectedKeys[actionabilityRowKey_(row)]; });
     }
 
     function actionabilitySelectionSummary_(rows){
       var selected = Array.isArray(rows) ? rows : actionabilitySelectedRows_();
       var eligible = selected.filter(actionabilityIsEmailActionable_);
+      var noEmail = selected.filter(function(row){ return actionabilityIsUncontactable_(row) || String(row && row.suppressor || "").toUpperCase() === "NO_EFFECTIVE_EMAIL"; });
+      var permanentBounce = selected.filter(function(row){ return String(row && row.suppressor || "").toUpperCase() === "EMAIL_BLOCKED_OR_BOUNCED"; });
+      var temporaryFailure = selected.filter(function(row){ return String(row && row.suppressor || "").toUpperCase() === "COOLDOWN_ACTIVE"; });
+      var templateCounts = {};
+      var blockedReasons = {};
+      selected.forEach(function(row){
+        var template = actionabilityIsEmailActionable_(row) ? actionabilityCommsLabel_(row && row.recommendedMessageType) : "";
+        if (template) templateCounts[template] = Number(templateCounts[template] || 0) + 1;
+        if (!actionabilityIsEmailActionable_(row)) {
+          var reason = actionabilityContactGuidance_(row);
+          blockedReasons[reason] = Number(blockedReasons[reason] || 0) + 1;
+        }
+      });
       var blocked = Math.max(0, selected.length - eligible.length);
-      return { selected: selected.length, eligible: eligible.length, blocked: blocked };
+      return {
+        selected: selected.length,
+        eligible: eligible.length,
+        blocked: blocked,
+        noEmail: noEmail.length,
+        permanentBounce: permanentBounce.length,
+        temporaryFailure: temporaryFailure.length,
+        templateCounts: templateCounts,
+        blockedReasons: blockedReasons
+      };
+    }
+
+    function actionabilitySummaryList_(obj, emptyText){
+      var keys = Object.keys(obj || {});
+      if (!keys.length) return emptyText || "None";
+      return keys.map(function(key){ return key + " (" + String(obj[key]) + ")"; }).join(", ");
+    }
+
+    function actionabilityBatchRecommendedNextAction_(summary){
+      if (!summary || !summary.selected) return "Select applicants first.";
+      if (summary.eligible > 0 && summary.blocked > 0) return "Open first eligible applicant in Review, then resolve blocked rows through Contactability Gate.";
+      if (summary.eligible > 0) return "Open first eligible applicant in Review or use existing gated batch tools. No send occurs from this panel.";
+      return "Resolve Contactability Gate issues before email communication.";
+    }
+
+    function renderActionabilityBatchPanel_(){
+      if (!actionabilityBatchPanelMode) return "";
+      var summary = actionabilitySelectionSummary_();
+      var modeLabel = actionabilityBatchPanelMode === "reminder" ? "Batch Reminder Handoff" : "Batch Communication Handoff";
+      var next = actionabilityBatchRecommendedNextAction_(summary);
+      return '<div class="actionabilityBatchPanel" role="region" aria-label="' + esc(modeLabel) + '">'
+        + '<h4>' + esc(modeLabel) + '</h4>'
+        + '<div class="actionabilityBatchGrid">'
+        + '<div class="actionabilityBatchMetric"><span class="k">Total selected</span><span class="v">' + esc(summary.selected) + '</span></div>'
+        + '<div class="actionabilityBatchMetric"><span class="k">Contactable</span><span class="v">' + esc(summary.eligible) + '</span></div>'
+        + '<div class="actionabilityBatchMetric"><span class="k">No email</span><span class="v">' + esc(summary.noEmail) + '</span></div>'
+        + '<div class="actionabilityBatchMetric"><span class="k">Permanent bounce</span><span class="v">' + esc(summary.permanentBounce) + '</span></div>'
+        + '<div class="actionabilityBatchMetric"><span class="k">Temporary failure</span><span class="v">' + esc(summary.temporaryFailure) + '</span></div>'
+        + '<div class="actionabilityBatchMetric"><span class="k">Blocked</span><span class="v">' + esc(summary.blocked) + '</span></div>'
+        + '</div>'
+        + '<div class="actionabilityBatchDetails">'
+        + '<div><strong>Recommended templates</strong>' + esc(actionabilitySummaryList_(summary.templateCounts, "No email-ready templates")) + '</div>'
+        + '<div><strong>Blocked reasons</strong>' + esc(actionabilitySummaryList_(summary.blockedReasons, "No blocked selected rows")) + '</div>'
+        + '<div><strong>Recommended next action</strong>' + esc(next) + '<div style="margin-top:6px;"><button class="btn small" type="button" onclick="openFirstActionabilityEligibleReview_()" ' + (summary.eligible ? "" : "disabled") + '>Open first eligible in Review</button></div></div>'
+        + '</div></div>';
     }
 
     function renderActionabilitySelectionControls_(displayRows){
@@ -9393,6 +9640,7 @@ function renderStageDashboard_(items, emptyMessage){
         + '<div><strong>Selection</strong><span class="actionabilitySelectionStatus">' + esc(status) + '</span></div>'
         + '<div class="actionabilitySelectionActions">'
         + '<button class="btn small" type="button" onclick="selectVisibleActionabilityRows_()">Select Visible</button>'
+        + '<button class="btn small" type="button" onclick="selectAllActionabilityRows_()">Select All</button>'
         + '<button class="btn small" type="button" onclick="clearActionabilitySelection_()" ' + (selected ? "" : "disabled") + '>Clear Selection</button>'
         + '<button class="btn small" type="button" onclick="actionabilityBatchCommunication_()" ' + (canBatchEmail ? "" : "disabled") + ' title="' + esc(canBatchEmail ? "Preview communication readiness for selected rows." : "Select at least one email-ready applicant.") + '">Batch Communication</button>'
         + '<button class="btn small" type="button" onclick="actionabilityBatchReminder_()" ' + (canBatchEmail ? "" : "disabled") + ' title="' + esc(canBatchEmail ? "Preview reminder readiness for selected rows." : "Blocked until selected rows include an email-ready applicant.") + '">Batch Reminder</button>'
@@ -9419,22 +9667,48 @@ function renderStageDashboard_(items, emptyMessage){
       renderActionabilityPreview_({ preserveRows: true });
     }
 
+    function selectAllActionabilityRows_(){
+      var rows = Array.isArray(actionabilityPreviewRows) ? actionabilityPreviewRows.slice() : [];
+      if (actionabilityActiveGroup) {
+        rows = rows.filter(function(row){ return actionabilityGroupKey_(row) === actionabilityActiveGroup; });
+        var hidden = actionabilityHiddenRecordsState && actionabilityHiddenRecordsState.byGroup && actionabilityHiddenRecordsState.byGroup[actionabilityActiveGroup];
+        if (Array.isArray(hidden)) rows = rows.concat(hidden);
+      }
+      rows.forEach(function(row){
+        var key = actionabilityRowKey_(row);
+        if (key) actionabilitySelectedKeys[key] = true;
+      });
+      actionabilityBatchMessage = actionabilityActiveGroup
+        ? "All bounded rows selected for " + actionabilityGroupLabel_(actionabilityActiveGroup) + "."
+        : "All bounded returned worklist rows selected.";
+      renderActionabilityPreview_({ preserveRows: true });
+    }
+
     function clearActionabilitySelection_(){
       actionabilitySelectedKeys = {};
       actionabilityBatchMessage = "";
+      actionabilityBatchPanelMode = "";
       renderActionabilityPreview_({ preserveRows: true });
     }
 
     function actionabilityBatchCommunication_(){
       var summary = actionabilitySelectionSummary_();
       actionabilityBatchMessage = "Batch Communication readiness: " + String(summary.eligible) + " eligible, " + String(summary.blocked) + " blocked. Send authority remains in Review Workspace or existing gated batch tools.";
+      actionabilityBatchPanelMode = "communication";
       renderActionabilityPreview_({ preserveRows: true });
     }
 
     function actionabilityBatchReminder_(){
       var summary = actionabilitySelectionSummary_();
       actionabilityBatchMessage = "Batch Reminder readiness: " + String(summary.eligible) + " eligible, " + String(summary.blocked) + " blocked by Contactability Gate, bounce, or cooldown.";
+      actionabilityBatchPanelMode = "reminder";
       renderActionabilityPreview_({ preserveRows: true });
+    }
+
+    function openFirstActionabilityEligibleReview_(){
+      var row = actionabilitySelectedRows_().filter(actionabilityIsEmailActionable_)[0] || null;
+      if (!row) return;
+      reviewActionabilityRecord_(row, null);
     }
 
     function actionabilityCsvValue_(value){
@@ -9530,6 +9804,7 @@ function renderStageDashboard_(items, emptyMessage){
           integrityStatus: String(ledger && ledger.integrityStatus || "")
         };
         actionabilityPreviewCountsState = data.countsByOwner || {};
+        actionabilityHiddenRecordsState = data.hiddenRecords && typeof data.hiddenRecords === "object" ? data.hiddenRecords : { byGroup: {}, totalByGroup: {}, perBucketLimit: 5 };
       }
       if (data.preserveRows !== true && Array.isArray(data.rows)) actionabilityPreviewRows = data.rows.slice();
       var rows = sortedActionabilityRows_(actionabilityPreviewRows);
@@ -9572,7 +9847,8 @@ function renderStageDashboard_(items, emptyMessage){
           + '<div class="actionabilityBucketCell" role="cell">' + esc(actionabilityNextActionLabel_(top.nextAction || "NO_ACTION")) + '</div>'
           + '<div class="actionabilityBucketCell muted" role="cell">' + esc(actionabilityBucketNote_(key, populationCount, list.length, list)) + '</div>'
           + '<div class="actionabilityBucketCell" role="cell"><button class="actionabilityBucketViewBtn" type="button" onclick="selectActionabilityGroup_(\'' + esc(key) + '\')">' + esc(viewLabel) + '</button></div>'
-          + '</div>';
+          + '</div>'
+          + actionabilityHiddenPanel_(key, populationCount, list.length);
       }).join("") + '</div>';
       renderActionabilityResponseTraffic_();
       var displayRows = actionabilityActiveGroup ? (groupRows[actionabilityActiveGroup] || []) : rows;
@@ -9594,12 +9870,13 @@ function renderStageDashboard_(items, emptyMessage){
       html += '<div class="actionabilityWorklist" aria-label="Current Worklist">'
         + '<div class="actionabilityWorklistTitle"><span>Current Worklist</span><span class="muted">Review opens authoritative editing.</span></div>'
         + renderActionabilitySelectionControls_(displayRows)
+        + renderActionabilityBatchPanel_()
         + '<div class="actionabilityWorklistTable" role="table" aria-label="Operations Workspace Current Worklist">'
         + '<div class="actionabilityWorklistHeader" role="row">'
         + '<div class="actionabilityWorklistCell actionabilityClusterHeader" role="columnheader"><span class="actionabilityClusterLabel">Applicant</span><span class="actionabilityClusterSorts">' + sortHeader("applicantId", "Applicant ID") + sortHeader("name", "Applicant Name") + sortHeader("nextAction", "Next Action") + '</span></div>'
         + '<div class="actionabilityWorklistCell actionabilityClusterHeader" role="columnheader"><span class="actionabilityClusterLabel">Ownership</span><span class="actionabilityClusterSorts">' + sortHeader("owner", "Owner") + '</span></div>'
         + '<div class="actionabilityWorklistCell actionabilityClusterHeader" role="columnheader"><span class="actionabilityClusterLabel">Progress</span><span class="actionabilityClusterSorts">' + sortHeader("docs", "Docs") + sortHeader("payment", "Payment") + sortHeader("contact", "Contact") + '</span></div>'
-        + '<div class="actionabilityWorklistCell actionabilityClusterHeader" role="columnheader"><span class="actionabilityClusterLabel">Timeline</span><span class="actionabilityClusterSorts">' + sortHeader("age", "Age / Last") + sortHeader("due", "Due / Next") + '</span></div>'
+        + '<div class="actionabilityWorklistCell actionabilityClusterHeader" role="columnheader"><span class="actionabilityClusterLabel">Timeline</span><span class="actionabilityClusterSorts">' + sortHeader("age", "Age / Last") + sortHeader("due", "Priority / Next") + '</span></div>'
         + '<div class="actionabilityWorklistCell" role="columnheader">Review</div>'
         + '</div>';
       displayRows.forEach(function(row, index){
@@ -9631,6 +9908,7 @@ function renderStageDashboard_(items, emptyMessage){
           + '<div class="actionabilityFactGrid" style="margin-top:8px;">'
           + '<div class="actionabilityFact"><strong>Priority:</strong> <span>' + esc(r.urgencyReason || priority) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Documents:</strong> <span>' + esc(String(Number(state.uploadedRequiredDocumentCount || 0)) + "/" + String(Number(state.requiredDocumentCount || 0))) + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Missing Documents:</strong> <span>' + esc(actionabilityMissingDocumentsDetail_(r)) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Lifecycle:</strong> <span>' + esc(String(state.lifecycleStage || "Not shown").replace(/_/g, " ")) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Next Message:</strong> <span>' + esc(commNext) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Row:</strong> <span>' + esc(String(Number(r.rowNumber || 0) || "-")) + '</span></div>'
@@ -9715,9 +9993,7 @@ function renderStageDashboard_(items, emptyMessage){
       });
     }
 
-    function reviewActionabilityRow_(index, triggerBtn){
-      var rows = Array.isArray(actionabilityRenderedRows) && actionabilityRenderedRows.length ? actionabilityRenderedRows : sortedActionabilityRows_(actionabilityPreviewRows);
-      var row = rows[Number(index)] || null;
+    function reviewActionabilityRecord_(row, triggerBtn){
       if (!row || !row.applicantId) return;
       pendingActionabilityReviewContext = {
         applicantId: String(row.applicantId || ""),
@@ -9726,6 +10002,20 @@ function renderStageDashboard_(items, emptyMessage){
         target: actionabilityReviewTarget_(row)
       };
       review(Number(row.rowNumber || 0) || null, String(row.applicantId || ""), triggerBtn || null, { actionabilityFocus: true });
+    }
+
+    function reviewActionabilityRow_(index, triggerBtn){
+      var rows = Array.isArray(actionabilityRenderedRows) && actionabilityRenderedRows.length ? actionabilityRenderedRows : sortedActionabilityRows_(actionabilityPreviewRows);
+      reviewActionabilityRecord_(rows[Number(index)] || null, triggerBtn);
+    }
+
+    function reviewActionabilityHiddenRecord_(groupKey, index, triggerBtn){
+      var records = actionabilityHiddenRecordsState
+        && actionabilityHiddenRecordsState.byGroup
+        && Array.isArray(actionabilityHiddenRecordsState.byGroup[groupKey])
+        ? actionabilityHiddenRecordsState.byGroup[groupKey]
+        : [];
+      reviewActionabilityRecord_(records[Number(index)] || null, triggerBtn);
     }
 
     function clearPendingActionabilityReviewContext_(requestId){
