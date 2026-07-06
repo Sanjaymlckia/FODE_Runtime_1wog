@@ -177,7 +177,11 @@
       font-size: 13px;
       line-height:1.2;
       min-height:34px;
-      white-space:nowrap;
+      white-space:normal;
+      overflow:visible;
+      text-overflow:clip;
+      overflow-wrap:anywhere;
+      text-align:center;
     }
     .btn.accent{ background: rgba(14,165,164,.18); border-color: rgba(14,165,164,.35); }
     .btn.ok{ background: rgba(34,197,94,.16); border-color: rgba(34,197,94,.35); }
@@ -338,14 +342,14 @@
     .actionabilityKpiStrip{ display:grid; grid-template-columns:repeat(7, minmax(94px, 1fr)); gap:0; margin:8px 0 7px; border:1px solid #dbe5ef; border-radius:6px; overflow:hidden; background:#fff; }
     .actionabilityLedgerItem{ min-width:0; padding:7px 9px; border-right:1px solid #e5ebf2; background:#fff; }
     .actionabilityLedgerItem:last-child{ border-right:0; }
-    .actionabilityLedgerItem .k{ color:#61748a; font-size:9px; text-transform:uppercase; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .actionabilityLedgerItem .v{ color:#0f1f35; font-size:14px; line-height:1.15; font-weight:850; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .actionabilityLedgerItem .k{ color:#61748a; font-size:9px; text-transform:uppercase; font-weight:900; white-space:normal; overflow:visible; text-overflow:clip; line-height:1.2; overflow-wrap:anywhere; }
+    .actionabilityLedgerItem .v{ color:#0f1f35; font-size:14px; line-height:1.2; font-weight:850; margin-top:3px; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; }
     .actionabilityLedgerItem.warn .v{ color:#9a2d2d; }
     .actionabilitySummary{ margin:7px 0 9px; border:1px solid #dbe5ef; border-radius:6px; overflow:hidden; background:#fff; }
     .actionabilityBucketDeck{ display:grid; gap:8px; padding:8px; background:#f8fafc; }
     .actionabilityBucketSortBar{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 9px; border-bottom:1px solid #dbe5ef; background:#fff; color:#31516f; font-size:11px; font-weight:900; flex-wrap:wrap; }
     .actionabilityBucketSortActions{ display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
-    .actionabilityBucketSortBtn{ border:1px solid #9fb4ca; border-radius:4px; background:#fff; color:#173451; font:inherit; font-size:10px; font-weight:850; padding:4px 7px; cursor:pointer; line-height:1.15; }
+    .actionabilityBucketSortBtn{ border:1px solid #9fb4ca; border-radius:4px; background:#fff; color:#173451; font:inherit; font-size:10px; font-weight:850; padding:4px 7px; cursor:pointer; line-height:1.2; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; min-height:28px; text-align:center; }
     .actionabilityBucketSortBtn.active, .actionabilityBucketSortBtn:hover{ border-color:#8fb4df; background:#eef6ff; color:#174a8b; }
     .actionabilityBucketCard{ position:relative; display:grid; grid-template-columns:minmax(220px,.8fr) minmax(0,1.55fr) minmax(230px,1fr); gap:8px; align-items:stretch; border:1px solid #dbe5ef; border-radius:6px; background:#fff; color:#0f172a; overflow:hidden; box-shadow:0 1px 0 rgba(15,31,53,.025); }
     .actionabilityBucketCard:before{ content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:#8aa0b6; }
@@ -362,17 +366,17 @@
     .actionabilityBucketTitle{ color:#0f1f35; font-size:18px; font-weight:900; line-height:1.12; }
     .actionabilityBucketDescription{ color:#40556b; font-size:12px; line-height:1.35; font-weight:700; }
     .actionabilityBucketActions{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:auto; }
-    .actionabilityBucketReviewBtn{ border:1px solid #174a8b; border-radius:5px; background:#123f78; color:#fff; padding:7px 12px; font-size:12px; font-weight:900; cursor:pointer; line-height:1.15; }
+    .actionabilityBucketReviewBtn{ border:1px solid #174a8b; border-radius:5px; background:#123f78; color:#fff; padding:7px 12px; font-size:12px; font-weight:900; cursor:pointer; line-height:1.2; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; min-height:32px; }
     .actionabilityBucketReviewBtn:hover{ background:#174a8b; }
-    .actionabilityBucketReviewBtn:disabled{ background:#edf2f7; border-color:#cbd8e6; color:#7a8fa5; cursor:not-allowed; }
+    .actionabilityBucketReviewBtn:disabled{ background:#e2eaf2; border-color:#8da2b7; color:#26384e; cursor:not-allowed; opacity:1; }
     .actionabilityBucketHiddenPanel{ min-width:0; }
-    .actionabilityBucketHiddenPanel summary{ display:inline-flex; align-items:center; border:1px solid #cbd8e6; border-radius:5px; background:#fff; color:#31516f; padding:5px 8px; font-size:10px; font-weight:900; cursor:pointer; line-height:1.15; }
+    .actionabilityBucketHiddenPanel summary{ display:inline-flex; align-items:center; border:1px solid #cbd8e6; border-radius:5px; background:#fff; color:#31516f; padding:5px 8px; font-size:10px; font-weight:900; cursor:pointer; line-height:1.2; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; min-height:28px; }
     .actionabilityBucketHiddenPanel[open] summary{ background:#eef6ff; border-color:#9fc0e4; color:#174a8b; }
     .actionabilityBucketMain{ padding:12px 4px; min-width:0; display:grid; gap:8px; align-content:start; }
     .actionabilityBucketMetricGrid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; padding:0 10px; }
     .actionabilityBucketMetric{ min-width:0; padding:0; }
     .actionabilityBucketMetric .k{ color:#61748a; font-size:10px; text-transform:uppercase; font-weight:900; line-height:1.1; margin-top:4px; }
-    .actionabilityBucketMetric .v{ color:#0f1f35; font-size:26px; line-height:1; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .actionabilityBucketMetric .v{ color:#0f1f35; font-size:26px; line-height:1; font-weight:800; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; }
     .actionabilityBucketMetric.primary .v{ color:#174a8b; font-size:30px; }
     .actionabilityWorkloadBar{ display:flex; height:8px; margin:2px 10px 0; overflow:hidden; border-radius:999px; background:#edf2f7; }
     .actionabilityWorkloadSeg{ min-width:2px; }
@@ -399,7 +403,7 @@
     .actionabilityTrafficItem{ padding:7px 9px; border-right:1px solid #edf2f7; min-width:0; }
     .actionabilityTrafficItem:last-child{ border-right:0; }
     .actionabilityTrafficItem .k{ color:#61748a; font-size:9px; text-transform:uppercase; font-weight:900; }
-    .actionabilityTrafficItem .v{ color:#0f1f35; font-size:13px; font-weight:850; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .actionabilityTrafficItem .v{ color:#0f1f35; font-size:13px; font-weight:850; margin-top:3px; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; line-height:1.25; }
     .actionabilityRows{ display:grid; gap:8px; margin-top:9px; }
     .actionabilityWorklist{ border:1px solid var(--line); border-radius:var(--panelRadius); background:#fff; overflow:hidden; box-shadow:none; }
     .actionabilityWorklistTitle{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-bottom:1px solid #e5ebf2; color:#0f1f35; font-size:13px; font-weight:900; }
@@ -408,13 +412,13 @@
     .actionabilityWorklistHeader{ min-height:38px; background:#f8fafc; border-bottom:1px solid #dbe5ef; color:#31516f; font-size:10px; font-weight:850; text-transform:uppercase; }
     .actionabilityWorklistRow{ min-height:70px; border-bottom:1px solid #edf2f7; color:#0f172a; font-size:11px; }
     .actionabilityWorklistRow:last-child{ border-bottom:0; }
-    .actionabilityWorklistCell{ min-width:0; padding:7px 9px; overflow:hidden; text-overflow:ellipsis; }
-    .actionabilityWorklistCell strong{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .actionabilityWorklistCell span{ display:block; color:#40556b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .actionabilityWorklistCell{ min-width:0; padding:7px 9px; overflow:visible; text-overflow:clip; }
+    .actionabilityWorklistCell strong{ display:block; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; line-height:1.25; }
+    .actionabilityWorklistCell span{ display:block; color:#40556b; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; line-height:1.25; }
     .actionabilityClusterHeader{ display:flex; flex-direction:column; justify-content:center; gap:3px; }
     .actionabilityClusterLabel{ color:#0f1f35; font-size:11px; line-height:1; }
     .actionabilityClusterSorts{ display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-top:2px; }
-    .actionabilitySortBtn{ display:inline-flex; align-items:center; border:1px solid #9fb4ca; border-radius:4px; background:#fff; color:#173451; font:inherit; font-size:10px; font-weight:850; text-transform:none; padding:3px 6px; cursor:pointer; text-align:left; line-height:1.15; }
+    .actionabilitySortBtn{ display:inline-flex; align-items:center; border:1px solid #9fb4ca; border-radius:4px; background:#fff; color:#173451; font:inherit; font-size:10px; font-weight:850; text-transform:none; padding:3px 6px; cursor:pointer; text-align:left; line-height:1.2; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; min-height:26px; }
     .actionabilitySortBtn:hover{ color:#1f5aa5; border-color:#9fc0e4; background:#f5f9ff; text-decoration:none; }
     .actionabilityWorklistDetails{ grid-column:1 / -1; border-top:1px solid #edf2f7; padding:6px 7px; background:#fbfcfe; }
     .actionabilityFactGrid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:4px 8px; font-size:11px; line-height:1.28; }
@@ -422,7 +426,7 @@
     .actionabilityFact strong{ display:block; color:#40556b; font-size:9px; font-weight:900; text-transform:uppercase; }
     .actionabilityFact span{ color:#0f172a; }
     .actionabilityStatusChips{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
-    .actionabilityMiniChip{ border:1px solid #9fb4ca; border-radius:999px; padding:2px 6px; background:#fff; color:#173451; font-size:10px; font-weight:850; line-height:1.25; white-space:nowrap; }
+    .actionabilityMiniChip{ border:1px solid #9fb4ca; border-radius:999px; padding:2px 6px; background:#fff; color:#173451; font-size:10px; font-weight:850; line-height:1.25; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; min-height:22px; }
     .actionabilityMiniChip.ok{ color:#145c34; border-color:#84bd98; background:#e7f4ec; }
     .actionabilityMiniChip.warn{ color:#805006; border-color:#d7a755; background:#fff2dc; }
     .actionabilityMiniChip.blocked{ color:#8b1f1f; border-color:#d18d8d; background:#fdeaea; }
@@ -435,7 +439,7 @@
     .actionabilityBlocker{ color:#9a2d2d; font-weight:800; }
     .actionabilityAuthority{ color:#31516f; font-weight:800; }
     .actionabilityDueBlock{ font-size:11px; color:#40556b; font-weight:800; }
-    .actionabilityDueBlock span{ display:block; color:#0f172a; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .actionabilityDueBlock span{ display:block; color:#0f172a; margin-top:2px; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; }
     .actionabilityReviewCell{ display:flex; align-items:center; justify-content:center; }
     .actionabilityReviewBtn{ width:100%; padding:9px 10px; border-radius:6px; background:#1f5aa5; border-color:#174a8b; color:#fff; font-size:12px; font-weight:850; }
     .actionabilityReviewBtn:hover{ background:#174a8b; }
@@ -446,7 +450,7 @@
     .actionabilitySelectBox{ display:inline-flex; align-items:center; gap:6px; max-width:100%; cursor:pointer; }
     .actionabilitySelectBox input{ width:15px; height:15px; accent-color:#1f5aa5; flex:0 0 auto; }
     .actionabilitySelectBox strong{ min-width:0; }
-    .actionabilityGuidance{ display:block; color:#40556b; font-size:11px; font-weight:800; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .actionabilityGuidance{ display:block; color:#40556b; font-size:11px; font-weight:800; margin-top:2px; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; line-height:1.25; }
     .actionabilityHiddenPanel, .actionabilityBatchPanel{ border-top:1px solid #e5ebf2; background:#fbfdff; padding:9px 10px; color:#173451; }
     .actionabilityHiddenPanel summary{ cursor:pointer; font-weight:900; color:#174a8b; }
     .actionabilityHiddenList{ display:grid; gap:6px; margin-top:8px; }
@@ -493,7 +497,8 @@
     .sortableHeader{ cursor:pointer; user-select:none; }
     .sortableHeader:hover{ text-decoration:underline; }
     .badge{
-      display:inline-block;
+      display:inline-flex;
+      align-items:center;
       padding:2px 8px;
       border-radius:999px;
       font-size:11px;
@@ -501,6 +506,11 @@
       border:1px solid #9fb4ca;
       background:#edf3f8;
       color:#173451;
+      white-space:normal;
+      overflow:visible;
+      text-overflow:clip;
+      overflow-wrap:anywhere;
+      line-height:1.25;
     }
     .bg-success{
       background:#e7f4ec;
@@ -611,11 +621,11 @@
       box-shadow:inset 0 0 0 1px rgba(38,56,78,.08);
     }
     .commTemplateSelectedBanner,
-    .commTemplateRecommendedBanner{ display:inline-flex; align-items:center; gap:6px; margin-bottom:8px; padding:5px 9px; border-radius:999px; border:1px solid #9fc0e4; background:#eef6ff; color:#174a8b; font-size:12px; font-weight:900; letter-spacing:0; }
+    .commTemplateRecommendedBanner{ display:inline-flex; align-items:center; gap:6px; margin-bottom:8px; padding:5px 9px; border-radius:999px; border:1px solid #9fc0e4; background:#eef6ff; color:#174a8b; font-size:12px; font-weight:900; letter-spacing:0; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.25; }
     .commTemplateSelectedBanner{ border-color:#1f5aa5; background:#1f5aa5; color:#fff; }
     .commTemplateCardTitle{ font-weight:900; color:#0f1f35; margin-bottom:4px; }
     .commTemplateCardMeta{ display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
-    .commTemplateChip{ font-size:11px; padding:3px 7px; border-radius:999px; border:1px solid #dbe5ef; background:#f8fafc; color:#31516f; }
+    .commTemplateChip{ font-size:11px; padding:3px 7px; border-radius:999px; border:1px solid #dbe5ef; background:#f8fafc; color:#31516f; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.25; }
     .commTemplateChip.warn{ border-color:#f2d083; color:#76520a; background:#fff9e8; }
     .commTemplateChip.ok{ border-color:#b9dfc8; color:#21623b; background:#f0fbf4; }
     .commTemplateChip.recommended{ border-color:#9fc0e4; background:#eef6ff; color:#174a8b; font-weight:800; }
@@ -692,12 +702,12 @@
     }
     .reviewIdentityBlock{ min-width:0; }
     .reviewIdentityKicker{ font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; color:#d6e7f8; }
-    .reviewApplicantName{ margin-top:4px; font-size:22px; line-height:1.12; font-weight:900; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .reviewApplicantId{ margin-top:4px; font-size:13px; font-weight:900; color:#dceeff; }
+    .reviewApplicantName{ margin-top:4px; font-size:22px; line-height:1.12; font-weight:900; color:#fff; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; }
+    .reviewApplicantId{ margin-top:4px; font-size:13px; font-weight:900; color:#dceeff; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; }
     .reviewHeaderGrid{ display:grid; grid-template-columns:repeat(4, minmax(130px,1fr)); gap:8px 12px; margin-top:12px; }
-    .reviewHeaderFact{ min-width:0; }
-    .reviewHeaderFact .k{ color:#c8dcf0; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; }
-    .reviewHeaderFact .v{ color:#ffffff; font-size:12px; font-weight:900; margin-top:3px; overflow:visible; text-overflow:clip; white-space:normal; line-height:1.25; overflow-wrap:anywhere; }
+    .reviewHeaderFact{ min-width:0; border-left:2px solid rgba(214,231,248,.42); padding-left:8px; }
+    .reviewHeaderFactLabel{ color:#e6f2ff; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; line-height:1.2; opacity:1; }
+    .reviewHeaderFactValue{ color:#ffffff; font-size:13px; font-weight:900; margin-top:3px; overflow:visible; text-overflow:clip; white-space:normal; line-height:1.28; overflow-wrap:anywhere; opacity:1; text-shadow:0 1px 1px rgba(0,0,0,.22); }
     .reviewHeaderActions{ display:flex; align-items:flex-start; justify-content:flex-end; gap:8px; }
     .reviewHeaderClose{ background:#fff; color:#0f1f35; border-color:#dbe5ef; min-width:78px; }
     .reviewWorkspaceBody{ padding:14px 16px 16px; display:flex; flex-direction:column; gap:12px; }
@@ -1159,9 +1169,11 @@
     }
     .documentGalleryFileName{
       display:block;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      white-space:nowrap;
+      overflow:visible;
+      text-overflow:clip;
+      white-space:normal;
+      overflow-wrap:anywhere;
+      line-height:1.25;
     }
     .documentGalleryFileType{
       display:block;
@@ -1236,7 +1248,11 @@
     }
     .documentGalleryActions .muted[aria-label="Recommendation"]{
       font-size:11px;
-      white-space:nowrap;
+      white-space:normal;
+      overflow:visible;
+      text-overflow:clip;
+      overflow-wrap:anywhere;
+      line-height:1.25;
     }
     .documentGalleryError{
       font-size:11px;
@@ -1382,7 +1398,7 @@
       border-radius:999px; padding:8px 12px; font-size:12px; font-weight:800; cursor:pointer;
     }
     .opsModeBtn.active{ background:#2878f0; border-color:#4b94ff; color:#fff; }
-    .opsModeBtn[disabled]{ opacity:.42; cursor:not-allowed; }
+    .opsModeBtn[disabled]{ opacity:1; cursor:not-allowed; color:#d6e7f8; background:rgba(255,255,255,.10); border-color:rgba(255,255,255,.28); }
     .opsRoleStrip{
       display:flex; flex-direction:column; gap:6px; padding:10px 12px; border-radius:14px;
       background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08);
@@ -1472,7 +1488,7 @@
     .opsPageIntro p{ margin:5px 0 0; color:#6f8194; font-size:13px; }
     .opsStatusPill{
       display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px;
-      font-size:12px; font-weight:900; border:1px solid #d5e2ee; background:#f4f8fb; color:#3e546a; white-space:nowrap;
+      font-size:12px; font-weight:900; border:1px solid #d5e2ee; background:#f4f8fb; color:#3e546a; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.25; min-height:28px;
     }
     .opsStatusPill.ok{ background:#e9f8ef; border-color:#bfe6c8; color:#14733f; }
     .opsStatusPill.warn{ background:#fff5e8; border-color:#f3d6a5; color:#9a6208; }
@@ -1494,7 +1510,7 @@
     .opsSortableStrip{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 12px; }
     .opsSortableHeader{
       border:1px solid #d8e5f2; background:#fff; color:#31516f; border-radius:999px;
-      padding:7px 10px; font-size:11px; font-weight:900; cursor:pointer;
+      padding:7px 10px; font-size:11px; font-weight:900; cursor:pointer; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.25; min-height:30px;
     }
     .opsSortableHeader.active{ background:#eef5ff; border-color:#9fc3f5; color:#1f5aa5; }
     .opsLifecycleQueue{ display:flex; flex-direction:column; gap:12px; }
@@ -1566,11 +1582,11 @@
     .opsEscalationPanel h3{ margin:0 0 6px; color:#20364d; font-size:15px; }
     .opsActionBtn{
       border:1px solid #cfdde9; background:#f8fbff; color:#33506d; border-radius:10px;
-      padding:9px 12px; font-size:12px; font-weight:900; cursor:pointer;
+      padding:9px 12px; font-size:12px; font-weight:900; cursor:pointer; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.25; min-height:34px;
     }
     .opsActionBtn.primary{ background:#eaf2ff; border-color:#bfd6f8; color:#1f5aa5; }
     .opsActionBtn.live{ background:#e9f8ef; border-color:#b9e6c9; color:#17613a; }
-    .opsActionBtn[disabled]{ cursor:not-allowed; color:#73879b; background:#f3f6f9; border-color:#d9e2eb; opacity:.95; }
+    .opsActionBtn[disabled]{ cursor:not-allowed; color:#26384e; background:#e2eaf2; border-color:#8da2b7; opacity:1; }
     .opsSafetyNotice{ border:1px solid #f0c36d; background:#fff8e8; color:#704a00; border-radius:9px; padding:10px 12px; margin:10px 0; font-size:12px; font-weight:700; }
     .opsResultBox{ margin-top:12px; border:1px solid #dbe5ef; background:#fbfdff; border-radius:10px; padding:12px; color:#26384e; font-size:13px; }
     .opsResultBox.ok{ border-color:#a7dfbd; background:#f1fbf5; color:#17613a; }
@@ -2762,13 +2778,13 @@
           <div class="reviewApplicantName" id="mApplicantName">Applicant</div>
           <div class="reviewApplicantId" id="mApplicantId">Applicant ID</div>
           <div class="reviewHeaderGrid" aria-label="Applicant review identity">
-            <div class="reviewHeaderFact"><div class="k">Email</div><div class="v" id="mHeaderEmail">-</div></div>
-            <div class="reviewHeaderFact"><div class="k">Phone</div><div class="v" id="mHeaderPhone">-</div></div>
-            <div class="reviewHeaderFact"><div class="k">Submitted</div><div class="v" id="mHeaderSubmitted">-</div></div>
-            <div class="reviewHeaderFact"><div class="k">Current Stage</div><div class="v" id="mHeaderStage">-</div></div>
-            <div class="reviewHeaderFact"><div class="k">Owner</div><div class="v" id="mHeaderOwner">Review Workspace</div></div>
-            <div class="reviewHeaderFact"><div class="k">Delivery Health</div><div class="v" id="mHeaderDeliveryHealth">Unknown</div></div>
-            <div class="reviewHeaderFact"><div class="k">Token Age</div><div class="v" id="mHeaderTokenAge">-</div></div>
+            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Email</div><div class="reviewHeaderFactValue" id="mHeaderEmail">-</div></div>
+            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Phone</div><div class="reviewHeaderFactValue" id="mHeaderPhone">-</div></div>
+            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Submitted</div><div class="reviewHeaderFactValue" id="mHeaderSubmitted">-</div></div>
+            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Current Stage</div><div class="reviewHeaderFactValue" id="mHeaderStage">-</div></div>
+            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Owner</div><div class="reviewHeaderFactValue" id="mHeaderOwner">Review Workspace</div></div>
+            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Delivery Health</div><div class="reviewHeaderFactValue" id="mHeaderDeliveryHealth">Unknown</div></div>
+            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Token Age</div><div class="reviewHeaderFactValue" id="mHeaderTokenAge">-</div></div>
           </div>
           <div class="hidden" id="mTitle">Applicant Review</div>
           <div class="hidden" id="mSub"></div>
@@ -9407,18 +9423,17 @@ function renderStageDashboard_(items, emptyMessage){
       }, 40);
     }
 
-    function reviewFirstActionabilityBucket_(key, triggerBtn){
+    function filterActionabilityBucketForReview_(key, triggerBtn){
       var normalized = String(key || "").trim().toUpperCase();
-      var rows = sortedActionabilityRows_(actionabilityPreviewRows).filter(function(row){
-        return actionabilityGroupKey_(row) === normalized;
-      });
-      if (!rows.length) {
-        selectActionabilityGroup_(normalized);
-        return;
-      }
+      if (!normalized) return;
       actionabilityActiveGroup = normalized;
       renderActionabilityPreview_({ preserveRows: true });
-      reviewActionabilityRecord_(rows[0], triggerBtn);
+      setMsg("msg", "Showing " + actionabilityGroupLabel_(normalized) + " worklist. Use a row Review button to open an exact applicant.");
+      if (triggerBtn && typeof triggerBtn.blur === "function") triggerBtn.blur();
+      window.setTimeout(function(){
+        var target = document.getElementById("actionabilityPreviewRows");
+        if (target && typeof target.scrollIntoView === "function") target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 40);
     }
 
     function sortedActionabilityRows_(rows){
@@ -9774,7 +9789,7 @@ function renderStageDashboard_(items, emptyMessage){
         + '<div class="actionabilityBucketLead">'
         + '<div><div class="actionabilityBucketTitle">' + esc(actionabilityGroupLabel_(key)) + '</div><div class="actionabilityBucketDescription">' + esc(actionabilityBucketDescription_(key)) + '</div></div>'
         + '<div class="actionabilityBucketActions">'
-        + '<button class="actionabilityBucketReviewBtn" type="button" onclick="reviewFirstActionabilityBucket_(\'' + esc(key) + '\', this)" ' + (visibleCount ? "" : "disabled") + '>Review</button>'
+        + '<button class="actionabilityBucketReviewBtn" type="button" onclick="filterActionabilityBucketForReview_(\'' + esc(key) + '\', this)" ' + (visibleCount ? "" : "disabled") + ' title="Show this bucket worklist. Use row Review to open an exact applicant.">Show Worklist</button>'
         + actionabilityHiddenPanel_(key, populationCount, visibleCount)
         + '</div></div>'
         + '<div class="actionabilityBucketMain">'

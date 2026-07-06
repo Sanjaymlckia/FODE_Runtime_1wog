@@ -10,6 +10,27 @@ function indexOfRequired(needle) {
   return index;
 }
 
+function cssRule(selector) {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = adminUi.match(new RegExp(`(?:^|\\n)\\s*${escaped}\\{([^}]*)\\}`, "s"));
+  assert.ok(match, `Missing CSS rule: ${selector}`);
+  return match[1];
+}
+
+function expectReadableControl(selector) {
+  const rule = cssRule(selector);
+  assert.match(rule, /white-space:normal;/, `${selector} must allow wrapping`);
+  assert.match(rule, /overflow:visible;/, `${selector} must not hide text`);
+  assert.match(rule, /text-overflow:clip;/, `${selector} must not ellipsize operator labels`);
+  assert.match(rule, /overflow-wrap:anywhere;/, `${selector} must wrap long labels instead of clipping`);
+}
+
+function functionSource(name) {
+  const start = indexOfRequired(`function ${name}(`);
+  const next = adminUi.indexOf("\n    function ", start + 1);
+  return adminUi.slice(start, next === -1 ? adminUi.length : next);
+}
+
 const dashboardIndex = indexOfRequired('id="actionabilityPreviewPanel"');
 const reviewQueuesIndex = indexOfRequired('id="reviewQueuesPanel"');
 assert.ok(dashboardIndex < reviewQueuesIndex, "Operations Workspace must render before Review Queues");
@@ -37,6 +58,50 @@ assert.match(adminUi, /\.queue-table th\{ color:#173451; background:#eef3f8; bor
 assert.match(adminUi, /\.secondaryOperationalPanel \.btn:disabled,[\s\S]*background:#e2eaf2;[\s\S]*border-color:#8da2b7;[\s\S]*color:#26384e;[\s\S]*opacity:1;/, "Secondary disabled buttons must stay readable without opacity fade");
 assert.match(adminUi, /\.statusTag\.ready\{[\s\S]*background:#e7f4ec;[\s\S]*color:#145c34;/, "Secondary ready chips must use dark text and solid readable green");
 assert.match(adminUi, /\.badge-warning\{[\s\S]*background:#fff2dc;[\s\S]*color:#805006;/, "Secondary warning chips must use dark text and solid readable amber");
+expectReadableControl(".btn");
+assert.match(cssRule(".btn:disabled,\n    .btn[disabled]"), /opacity:1;[\s\S]*color:#26384e;/, "Disabled global buttons must remain readable");
+[
+  ".actionabilityBucketSortBtn",
+  ".actionabilityBucketReviewBtn",
+  ".actionabilityBucketHiddenPanel summary",
+  ".actionabilitySortBtn",
+  ".actionabilityMiniChip",
+  ".badge",
+  ".commTemplateChip",
+  ".opsStatusPill",
+  ".opsSortableHeader",
+  ".opsActionBtn"
+].forEach(expectReadableControl);
+assert.match(cssRule(".actionabilityBucketReviewBtn:disabled"), /background:#e2eaf2;[\s\S]*color:#26384e;[\s\S]*opacity:1;/, "Disabled bucket review buttons must remain readable");
+assert.match(cssRule(".opsModeBtn[disabled]"), /opacity:1;[\s\S]*color:#d6e7f8;/, "Disabled mode buttons must not be washed out");
+assert.match(cssRule(".opsActionBtn[disabled]"), /color:#26384e;[\s\S]*background:#e2eaf2;[\s\S]*opacity:1;/, "Disabled ops action buttons must remain readable");
+[
+  ".actionabilityLedgerItem .k",
+  ".actionabilityLedgerItem .v",
+  ".actionabilityBucketMetric .v",
+  ".actionabilityTrafficItem .v",
+  ".actionabilityWorklistCell strong",
+  ".actionabilityWorklistCell span",
+  ".actionabilityDueBlock span",
+  ".actionabilityGuidance",
+  ".reviewApplicantName",
+  ".reviewApplicantId",
+  ".reviewHeaderFactValue",
+  ".documentGalleryFileName",
+  ".documentGalleryActions .muted[aria-label=\"Recommendation\"]"
+].forEach(expectReadableControl);
+[
+  ".actionabilityBucketSortBtn",
+  ".actionabilitySortBtn",
+  ".actionabilityMiniChip",
+  ".opsStatusPill",
+  ".commTemplateChip",
+  ".reviewApplicantName",
+  ".actionabilityWorklistCell span",
+  ".actionabilityGuidance"
+].forEach((selector) => {
+  assert.doesNotMatch(cssRule(selector), /text-overflow:ellipsis|white-space:nowrap|overflow:hidden/, `${selector} must not hide operator-critical labels`);
+});
 assert.ok(adminUi.includes("Global View: Current workload"), "Operations Workspace must expose the Global View shell");
 assert.doesNotMatch(adminUi, /Operator View: Coming soon/, "Operations Workspace must not expose a fake Operator View control");
 assert.ok(adminUi.includes("Operator-scoped view pending ownership model."), "Operator-scoped view must be described as pending ownership authority");
@@ -82,8 +147,11 @@ assert.doesNotMatch(adminUi, /class="actionabilityGroupCard/, "Operations Worksp
   assert.ok(adminUi.includes(label), `Operational bucket must be present: ${label}`);
 });
 assert.match(adminUi, /actionabilityBucketReviewBtn/, "Operational bucket cards must expose left-side Review controls");
-assert.match(adminUi, /function reviewFirstActionabilityBucket_/, "Bucket Review controls must hand off to Review Workspace through an existing row");
-assert.match(adminUi, /onclick="reviewFirstActionabilityBucket_/, "Bucket Review controls must use the Review Workspace handoff");
+assert.match(adminUi, /function filterActionabilityBucketForReview_/, "Bucket Review controls must filter the bucket worklist");
+assert.match(adminUi, /onclick="filterActionabilityBucketForReview_/, "Bucket Review controls must use filter-only handoff");
+assert.match(adminUi, /Show this bucket worklist\. Use row Review to open an exact applicant\./, "Bucket Review control must explain exact-applicant handoff");
+assert.doesNotMatch(functionSource("filterActionabilityBucketForReview_"), /reviewActionabilityRecord_|review\(/, "Bucket Review must not open a modal or choose a first applicant");
+assert.match(functionSource("filterActionabilityBucketForReview_"), /actionabilityActiveGroup\s*=\s*normalized[\s\S]*renderActionabilityPreview_\(\{ preserveRows: true \}\)/, "Bucket Review must switch the visible worklist to that bucket");
 assert.match(adminUi, /actionabilityBucketHiddenPanel[\s\S]*Hidden ' \+ esc\(hiddenCount\)/, "Operational bucket cards must expose secondary hidden controls");
 assert.match(adminUi, /data-actionability-bucket-sort/, "Operational bucket cards must expose sort controls");
 assert.match(adminUi, /onclick="selectActionabilityGroup_/, "Operational bucket rows must select an actionability group");
@@ -108,6 +176,8 @@ assert.doesNotMatch(adminUi, /Read-Only Experimental|Experimental Actionability|
 assert.match(adminUi, /function reviewActionabilityRow_/, "Dashboard Review button must keep existing modal entry function");
 assert.match(adminUi, /reviewActionabilityRow_\('[^']*'|reviewActionabilityRow_\(\s*'?\s*\+ String\(index\)/, "Dashboard rows must render Review actions");
 assert.match(adminUi, /actionabilityRenderedRows/, "Dashboard Review buttons must use the currently rendered row list");
+assert.match(functionSource("reviewActionabilityRow_"), /actionabilityRenderedRows[\s\S]*reviewActionabilityRecord_\(rows\[Number\(index\)\]/, "Row Review must open the exact rendered row");
+assert.match(functionSource("reviewActionabilityRecord_"), /review\(Number\(row\.rowNumber \|\| 0\)[\s\S]*String\(row\.applicantId \|\| ""\)/, "Row Review must pass the selected applicant ID into the modal opener");
 assert.match(adminUi, /class="btn actionabilityReviewBtn"/, "Dashboard Review button must use the emphasized operator action style");
 assert.match(adminUi, /Current Worklist/, "Operations Workspace must label the dense worklist");
 assert.ok(adminUi.includes("Review opens authoritative editing."), "Worklist helper text must reinforce Review as the edit handoff");
@@ -235,6 +305,7 @@ assert.match(adminUi, /Showing ' \+ esc\(records\.length\) \+ ' of ' \+ esc\(bou
 assert.match(adminUi, /function actionabilityHiddenBreakdown_/, "Bucket cards must structure hidden reason breakdowns");
 assert.match(adminUi, /Applicant ID unavailable/, "Hidden drill-down must expose bounded applicant identity fallback");
 assert.match(adminUi, /reviewActionabilityHiddenRecord_/, "Hidden records must be openable in Review Workspace");
+assert.match(functionSource("reviewActionabilityHiddenRecord_"), /actionabilityHiddenRecordsState[\s\S]*byGroup\[groupKey\][\s\S]*reviewActionabilityRecord_\(records\[Number\(index\)\]/, "Hidden Review must open the selected hidden record only");
 assert.match(adminUi, /hidden by worklist window, completion state, or another authority path/, "Hidden population explanation must name why records are not visible");
 assert.doesNotMatch(renderActionabilityRowBody_(), /View Hidden|Show Hidden:/, "Bucket cards must not duplicate old View Hidden / Show Hidden language");
 assert.match(adminUi, /Explain/, "Bucket action must explain buckets with population but no visible rows");

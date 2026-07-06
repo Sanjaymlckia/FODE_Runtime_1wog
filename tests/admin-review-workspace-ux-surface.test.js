@@ -11,14 +11,38 @@ function expectNoMatch(pattern, message) {
   assert.doesNotMatch(source, pattern, message);
 }
 
+function cssRule(selector) {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = source.match(new RegExp(`(?:^|\\n)\\s*${escaped}\\{([^}]*)\\}`, "s"));
+  assert.ok(match, `Missing CSS rule: ${selector}`);
+  return match[1];
+}
+
+function expectReadableHeader(selector) {
+  const rule = cssRule(selector);
+  expectMatch(new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\{[^}]*white-space:normal;`, "s"), `${selector} must wrap modal header text`);
+  assert.match(rule, /overflow:visible;/, `${selector} must not hide modal header text`);
+  assert.match(rule, /text-overflow:clip;/, `${selector} must not ellipsize modal header text`);
+  assert.match(rule, /overflow-wrap:anywhere;/, `${selector} must support long identity values`);
+}
+
 expectMatch(/reviewIdentityKicker[\s\S]*Applicant Review Workspace/, "Review modal must expose a strong workspace identity header");
 expectMatch(/\.modalHead\{[\s\S]*background:#0b1c30;[\s\S]*color:#eef6ff;/, "Review modal header must keep a high-contrast dark identity bar");
-expectMatch(/\.reviewHeaderFact \.k\{ color:#c8dcf0;[\s\S]*\.reviewHeaderFact \.v\{ color:#ffffff;[\s\S]*font-weight:900;/, "Review header labels and values must remain readable");
+expectMatch(/\.reviewHeaderFactLabel\{ color:#e6f2ff;[\s\S]*opacity:1;/, "Review header labels must use explicit readable label class");
+expectMatch(/\.reviewHeaderFactValue\{ color:#ffffff;[\s\S]*font-weight:900;[\s\S]*opacity:1;/, "Review header values must use explicit high-contrast value class");
+expectReadableHeader(".reviewApplicantName");
+expectReadableHeader(".reviewApplicantId");
+expectReadableHeader(".reviewHeaderFactValue");
+expectNoMatch(/\.reviewHeaderFactValue\{[^}]*opacity:\.(?:[0-9]+)/, "Review header identity values must not use low opacity");
+expectNoMatch(/class="(?:k|v)" id="mHeader(?:Email|Phone|Submitted|Stage|Owner|DeliveryHealth|TokenAge)"/, "Review header identity values must not render through generic low-contrast modal value classes");
 expectMatch(/id="mApplicantName"/, "Review header must include applicant name");
 expectMatch(/id="mApplicantId"/, "Review header must include applicant ID");
 expectMatch(/id="mHeaderEmail"[\s\S]*id="mHeaderPhone"[\s\S]*id="mHeaderSubmitted"/, "Review header must include contact and submitted facts");
 expectMatch(/id="mHeaderStage"[\s\S]*id="mHeaderOwner"[\s\S]*id="mHeaderTokenAge"/, "Review header must include stage, owner, and token age facts");
 expectMatch(/Delivery Health[\s\S]*id="mHeaderDeliveryHealth"/, "Review header must expose reconciled delivery health");
+expectMatch(/class="reviewHeaderFactLabel">Email[\s\S]*class="reviewHeaderFactValue" id="mHeaderEmail"/, "Email header fact must use explicit readable classes");
+expectMatch(/class="reviewHeaderFactLabel">Phone[\s\S]*class="reviewHeaderFactValue" id="mHeaderPhone"/, "Phone header fact must use explicit readable classes");
+expectMatch(/class="reviewHeaderFactLabel">Current Stage[\s\S]*class="reviewHeaderFactValue" id="mHeaderStage"/, "Current Stage header fact must use explicit readable classes");
 expectMatch(/<div class="hidden" id="mTitle">Applicant Review<\/div>[\s\S]*<div class="hidden" id="mSub"><\/div>/, "Legacy title/subtitle nodes must remain for compatibility");
 expectMatch(/function setReviewHeaderValue_\(/, "Header field updates must use a bounded local DOM setter");
 expectMatch(/setReviewHeaderValue_\("mApplicantName", fullName \|\| opsDetailName_\(d\)/, "Loaded modal must bind applicant name from existing detail data");
