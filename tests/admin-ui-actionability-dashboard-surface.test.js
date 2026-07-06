@@ -61,9 +61,11 @@ assert.match(adminUi, /Integrity/, "Ledger bar must expose integrity status");
 assert.match(adminUi, /Generated/, "Ledger bar must expose generated timestamp");
 assert.match(adminUi, /class="actionabilityBucketDeck"/, "Operational buckets must render as a card deck");
 assert.match(adminUi, /class="actionabilityBucketCard/, "Operational buckets must render horizontal cards");
-assert.match(adminUi, /Total \/ Population[\s\S]+Action Required \/ Visible[\s\S]+Hidden/, "Operational cards must separate population, visible, and hidden counts");
+assert.match(adminUi, /Population[\s\S]+Today&apos;s Work[\s\S]+Hidden/, "Operational cards must separate population, today's work, and hidden counts");
 assert.match(adminUi, /Next Operator Action/, "Operational cards must preserve next action scanning");
-assert.match(adminUi, /actionabilityBucketStateBadge/, "Operational cards must expose state and integrity badges");
+assert.match(adminUi, /actionabilityBucketStatusBlock/, "Operational cards must expose concise status blocks");
+assert.doesNotMatch(adminUi, /Not derived|Cooling not yet derived|Cooling Off/, "Operational cards must not advertise unfinished Cooling Off placeholders");
+assert.doesNotMatch(adminUi, /\.actionabilityBucketMetric\{[^}]*border:/, "Operational card metrics must use typography rather than nested metric boxes");
 assert.doesNotMatch(adminUi, /<button class="actionabilityKpi/, "Operations Workspace must not render card-style KPI buttons");
 assert.doesNotMatch(adminUi, /class="actionabilityGroupCard/, "Operations Workspace must not render irregular group cards");
 
@@ -230,7 +232,7 @@ assert.match(adminJs, /out\.hiddenRecords = buildActionabilityHiddenRecords_/, "
 assert.match(adminUi, /function actionabilityHiddenPanel_/, "Bucket table must render hidden record drill-down");
 assert.doesNotMatch(adminUi, /Show Hidden:/, "Hidden drill-down must not render old full-width Show Hidden rows");
 assert.match(adminUi, /Showing ' \+ esc\(records\.length\) \+ ' of ' \+ esc\(boundedTotal \|\| hiddenCount\) \+ ' hidden in /, "Hidden drill-down must explicitly reconcile displayed and total hidden rows");
-assert.match(adminUi, /actionabilityBucketHiddenBreakdown/, "Bucket cards must structure hidden reason breakdowns");
+assert.match(adminUi, /function actionabilityHiddenBreakdown_/, "Bucket cards must structure hidden reason breakdowns");
 assert.match(adminUi, /Applicant ID unavailable/, "Hidden drill-down must expose bounded applicant identity fallback");
 assert.match(adminUi, /reviewActionabilityHiddenRecord_/, "Hidden records must be openable in Review Workspace");
 assert.match(adminUi, /hidden by worklist window, completion state, or another authority path/, "Hidden population explanation must name why records are not visible");

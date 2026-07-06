@@ -347,7 +347,7 @@
     .actionabilityBucketSortActions{ display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
     .actionabilityBucketSortBtn{ border:1px solid #9fb4ca; border-radius:4px; background:#fff; color:#173451; font:inherit; font-size:10px; font-weight:850; padding:4px 7px; cursor:pointer; line-height:1.15; }
     .actionabilityBucketSortBtn.active, .actionabilityBucketSortBtn:hover{ border-color:#8fb4df; background:#eef6ff; color:#174a8b; }
-    .actionabilityBucketCard{ position:relative; display:grid; grid-template-columns:minmax(210px,.85fr) minmax(0,1.7fr) minmax(220px,1fr); gap:10px; align-items:stretch; border:1px solid #dbe5ef; border-radius:6px; background:#fff; color:#0f172a; overflow:hidden; box-shadow:0 1px 0 rgba(15,31,53,.03); }
+    .actionabilityBucketCard{ position:relative; display:grid; grid-template-columns:minmax(220px,.8fr) minmax(0,1.55fr) minmax(230px,1fr); gap:8px; align-items:stretch; border:1px solid #dbe5ef; border-radius:6px; background:#fff; color:#0f172a; overflow:hidden; box-shadow:0 1px 0 rgba(15,31,53,.025); }
     .actionabilityBucketCard:before{ content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:#8aa0b6; }
     .actionabilityBucketCard.active{ border-color:#9fc0e4; background:#fbfdff; }
     .actionabilityBucketCard[data-actionability-kpi="APPLICANT"]:before{ background:#1f70ea; }
@@ -358,23 +358,23 @@
     .actionabilityBucketCard[data-actionability-kpi="DORMANT"]:before{ background:#64748b; }
     .actionabilityBucketCard[data-actionability-kpi="COMPLETE"]:before{ background:#27744b; }
     .actionabilityBucketCard[data-actionability-kpi="UNKNOWN"]:before{ background:#805006; }
-    .actionabilityBucketLead{ padding:10px 10px 10px 15px; min-width:0; display:flex; flex-direction:column; gap:8px; border-right:1px solid #edf2f7; }
-    .actionabilityBucketTitle{ color:#0f1f35; font-size:14px; font-weight:900; line-height:1.18; }
-    .actionabilityBucketDescription{ color:#40556b; font-size:11px; line-height:1.35; font-weight:750; }
+    .actionabilityBucketLead{ padding:12px 12px 12px 17px; min-width:0; display:flex; flex-direction:column; gap:9px; }
+    .actionabilityBucketTitle{ color:#0f1f35; font-size:18px; font-weight:900; line-height:1.12; }
+    .actionabilityBucketDescription{ color:#40556b; font-size:12px; line-height:1.35; font-weight:700; }
     .actionabilityBucketActions{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:auto; }
-    .actionabilityBucketReviewBtn{ border:1px solid #174a8b; border-radius:5px; background:#1f5aa5; color:#fff; padding:6px 9px; font-size:11px; font-weight:900; cursor:pointer; line-height:1.15; }
+    .actionabilityBucketReviewBtn{ border:1px solid #174a8b; border-radius:5px; background:#123f78; color:#fff; padding:7px 12px; font-size:12px; font-weight:900; cursor:pointer; line-height:1.15; }
     .actionabilityBucketReviewBtn:hover{ background:#174a8b; }
     .actionabilityBucketReviewBtn:disabled{ background:#edf2f7; border-color:#cbd8e6; color:#7a8fa5; cursor:not-allowed; }
     .actionabilityBucketHiddenPanel{ min-width:0; }
     .actionabilityBucketHiddenPanel summary{ display:inline-flex; align-items:center; border:1px solid #cbd8e6; border-radius:5px; background:#fff; color:#31516f; padding:5px 8px; font-size:10px; font-weight:900; cursor:pointer; line-height:1.15; }
     .actionabilityBucketHiddenPanel[open] summary{ background:#eef6ff; border-color:#9fc0e4; color:#174a8b; }
-    .actionabilityBucketMain{ padding:10px 0; min-width:0; display:grid; gap:8px; align-content:start; }
-    .actionabilityBucketMetricGrid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; padding:0 10px; }
-    .actionabilityBucketMetric{ min-width:0; border:1px solid #edf2f7; border-radius:5px; background:#fbfdff; padding:6px 7px; }
-    .actionabilityBucketMetric .k{ color:#61748a; font-size:9px; text-transform:uppercase; font-weight:900; line-height:1.1; }
-    .actionabilityBucketMetric .v{ color:#0f1f35; font-size:16px; line-height:1.1; font-weight:900; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .actionabilityBucketMetric.primary .v{ color:#174a8b; font-size:20px; }
-    .actionabilityWorkloadBar{ display:flex; height:9px; margin:0 10px; overflow:hidden; border-radius:999px; background:#edf2f7; }
+    .actionabilityBucketMain{ padding:12px 4px; min-width:0; display:grid; gap:8px; align-content:start; }
+    .actionabilityBucketMetricGrid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; padding:0 10px; }
+    .actionabilityBucketMetric{ min-width:0; padding:0; }
+    .actionabilityBucketMetric .k{ color:#61748a; font-size:10px; text-transform:uppercase; font-weight:900; line-height:1.1; margin-top:4px; }
+    .actionabilityBucketMetric .v{ color:#0f1f35; font-size:26px; line-height:1; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .actionabilityBucketMetric.primary .v{ color:#174a8b; font-size:30px; }
+    .actionabilityWorkloadBar{ display:flex; height:8px; margin:2px 10px 0; overflow:hidden; border-radius:999px; background:#edf2f7; }
     .actionabilityWorkloadSeg{ min-width:2px; }
     .actionabilityWorkloadSeg.needs{ background:#1f70ea; }
     .actionabilityWorkloadSeg.cooling{ background:#9fb4ca; }
@@ -388,11 +388,11 @@
     .actionabilityWorkloadLegend .completed:before{ background:#27744b; }
     .actionabilityBucketNext{ padding:0 10px; color:#0f1f35; font-size:12px; font-weight:850; line-height:1.35; }
     .actionabilityBucketNext strong{ display:block; color:#61748a; font-size:9px; text-transform:uppercase; font-weight:900; margin-bottom:2px; }
-    .actionabilityBucketState{ padding:10px; min-width:0; border-left:1px solid #edf2f7; background:#fbfdff; display:grid; gap:7px; align-content:start; }
-    .actionabilityBucketStateBadge{ display:inline-flex; width:max-content; max-width:100%; border:1px solid #cbd8e6; border-radius:999px; background:#fff; color:#31516f; padding:3px 7px; font-size:10px; font-weight:900; line-height:1.15; }
-    .actionabilityBucketNote{ color:#40556b; font-size:11px; font-weight:750; line-height:1.35; overflow-wrap:anywhere; }
-    .actionabilityBucketHiddenSummary{ color:#173451; font-size:11px; font-weight:900; line-height:1.35; }
-    .actionabilityBucketHiddenBreakdown{ color:#40556b; font-size:10px; line-height:1.35; font-weight:800; }
+    .actionabilityBucketState{ padding:12px 12px 12px 4px; min-width:0; display:grid; gap:8px; align-content:start; }
+    .actionabilityBucketStatusBlock{ min-width:0; }
+    .actionabilityBucketStatusBlock strong{ display:block; color:#61748a; font-size:10px; font-weight:900; text-transform:uppercase; line-height:1.1; margin-bottom:3px; }
+    .actionabilityBucketStatusBlock span{ display:block; color:#173451; font-size:12px; font-weight:850; line-height:1.25; overflow-wrap:anywhere; }
+    .actionabilityBucketStatusBlock em{ display:block; color:#40556b; font-style:normal; font-size:11px; font-weight:700; line-height:1.3; margin-top:2px; }
     .actionabilityTraffic{ margin:8px 0 10px; border:1px solid var(--lineSoft); border-radius:var(--panelRadius); background:var(--surfaceSecondary); overflow:hidden; }
     .actionabilityTrafficTitle{ display:flex; justify-content:space-between; gap:8px; padding:7px 9px; border-bottom:1px solid #e5ebf2; color:#31516f; font-size:12px; font-weight:900; }
     .actionabilityTrafficGrid{ display:grid; grid-template-columns:repeat(8, minmax(0,1fr)); gap:0; }
@@ -9677,6 +9677,14 @@ function renderStageDashboard_(items, emptyMessage){
       return "Ledger " + integrity;
     }
 
+    function actionabilityBucketStatusReason_(key, populationCount, visibleCount){
+      var hidden = Math.max(0, Number(populationCount || 0) - Number(visibleCount || 0));
+      if (actionabilityActiveGroup === key) return "Current filter";
+      if (Number(populationCount || 0) === 0) return "No records in bucket";
+      if (hidden > 0) return "Outside current worklist";
+      return "Visible workload matches population";
+    }
+
     function sortedActionabilityBucketKeys_(groups, groupRows){
       var keys = (Array.isArray(groups) ? groups : []).slice();
       var order = {};
@@ -9710,7 +9718,7 @@ function renderStageDashboard_(items, emptyMessage){
           var label = item[1];
           return '<button class="actionabilityBucketSortBtn' + (actionabilityBucketSortState === key ? ' active' : '') + '" type="button" data-actionability-bucket-sort="' + esc(key) + '" onclick="setActionabilityBucketSort_(\'' + esc(key) + '\')">' + esc(label) + '</button>';
         }).join("")
-        + '</div><div class="actionabilityWorkloadLegend"><span class="needs">Needs Action</span><span class="cooling">Cooling Off</span><span class="hidden">Hidden</span><span class="completed">Completed</span></div></div>';
+        + '</div><div class="actionabilityWorkloadLegend"><span class="needs">Needs Action</span><span class="hidden">Hidden</span><span class="completed">Completed</span></div></div>';
     }
 
     function actionabilityHiddenPanel_(key, populationCount, visibleCount){
@@ -9747,34 +9755,20 @@ function renderStageDashboard_(items, emptyMessage){
       return html + '</details>';
     }
 
-    function actionabilityBucketNote_(key, populationCount, visibleCount, list){
-      var ledger = actionabilityPopulationLedgerState || {};
-      var integrity = String(ledger.integrityStatus || "UNKNOWN");
-      var hidden = actionabilityHiddenExplanation_(key, populationCount, visibleCount);
-      if (key === "MANAGEMENT") return actionabilityManagementExceptionBreakdown_(list) + (hidden ? " / " + hidden : "");
-      if (key === "UNKNOWN") return populationCount > 0 ? "Requires classification" + (hidden ? " / " + hidden : "") : "Explicit zero";
-      if (actionabilityActiveGroup === key) return "Current filter" + (hidden ? " / " + hidden : "");
-      if (integrity !== "PASS") return "Ledger " + integrity;
-      if (hidden) return hidden;
-      if (Number(populationCount || 0) !== Number(visibleCount || 0)) return "Full population count";
-      return "Ledger-derived";
-    }
-
     function renderActionabilityBucketCard_(key, list){
       var rows = Array.isArray(list) ? list : [];
       var populationCount = actionabilityPopulationCountForGroup_(key, rows.length);
       var visibleCount = rows.length;
       var hiddenCount = Math.max(0, Number(populationCount || 0) - Number(visibleCount || 0));
-      var coolingLabel = "Not derived";
       var top = rows[0] || {};
       var oldest = actionabilityOldestAgeForList_(rows);
       var completed = key === "COMPLETE" ? populationCount : 0;
       var nextAction = actionabilityNextActionLabel_(top.nextAction || "NO_ACTION");
-      var note = actionabilityBucketNote_(key, populationCount, visibleCount, rows);
       var stateBadge = actionabilityBucketStateBadge_(key, populationCount, visibleCount);
+      var statusReason = actionabilityBucketStatusReason_(key, populationCount, visibleCount);
       var hiddenTotal = actionabilityHiddenTotalForGroup_(key) || hiddenCount;
       var hiddenShown = actionabilityHiddenDisplayedRowsForGroup_(key);
-      var hiddenSummary = hiddenCount ? ("Showing " + String(hiddenShown) + " of " + String(hiddenTotal) + " hidden") : "No hidden records";
+      var hiddenSummary = hiddenCount ? ("Showing " + String(hiddenShown) + " / " + String(hiddenTotal) + " hidden") : "No hidden records";
       var hiddenBreakdown = hiddenCount ? actionabilityHiddenBreakdown_(key) : "No records hidden from this bucket.";
       return '<div class="actionabilityBucketCard' + (actionabilityActiveGroup === key ? ' active' : '') + '" data-actionability-kpi="' + esc(key) + '">'
         + '<div class="actionabilityBucketLead">'
@@ -9785,24 +9779,21 @@ function renderStageDashboard_(items, emptyMessage){
         + '</div></div>'
         + '<div class="actionabilityBucketMain">'
         + '<div class="actionabilityBucketMetricGrid">'
-        + '<div class="actionabilityBucketMetric"><div class="k">Total / Population</div><div class="v">' + esc(String(populationCount)) + '</div></div>'
-        + '<div class="actionabilityBucketMetric primary"><div class="k">Action Required / Visible</div><div class="v">' + esc(String(visibleCount)) + '</div></div>'
-        + '<div class="actionabilityBucketMetric"><div class="k">Cooling Off</div><div class="v">' + esc(coolingLabel) + '</div></div>'
-        + '<div class="actionabilityBucketMetric"><div class="k">Hidden</div><div class="v">' + esc(String(hiddenCount)) + '</div></div>'
+        + '<div class="actionabilityBucketMetric"><div class="v">' + esc(String(populationCount)) + '</div><div class="k">Population</div></div>'
+        + '<div class="actionabilityBucketMetric primary"><div class="v">' + esc(String(visibleCount)) + '</div><div class="k">Today&apos;s Work</div></div>'
+        + '<div class="actionabilityBucketMetric"><div class="v">' + esc(String(hiddenCount)) + '</div><div class="k">Hidden</div></div>'
         + '</div>'
         + '<div class="actionabilityWorkloadBar" aria-label="Workload bar">'
         + actionabilityWorkloadSegment_("needs", visibleCount, populationCount)
         + actionabilityWorkloadSegment_("completed", completed, populationCount)
         + actionabilityWorkloadSegment_("hidden", hiddenCount, populationCount)
         + '</div>'
-        + '<div class="actionabilityWorkloadLegend"><span class="needs">' + esc(actionabilityPercent_(visibleCount, populationCount)) + ' Needs Action</span><span class="cooling">Cooling not yet derived</span><span class="hidden">' + esc(actionabilityPercent_(hiddenCount, populationCount)) + ' Hidden</span></div>'
+        + '<div class="actionabilityWorkloadLegend"><span class="needs">' + esc(actionabilityPercent_(visibleCount, populationCount)) + ' Needs Action</span><span class="hidden">' + esc(actionabilityPercent_(hiddenCount, populationCount)) + ' Hidden</span></div>'
         + '</div>'
         + '<div class="actionabilityBucketState">'
-        + '<span class="actionabilityBucketStateBadge">' + esc(stateBadge) + '</span>'
         + '<div class="actionabilityBucketNext"><strong>Next Operator Action</strong>' + esc(nextAction) + '<br><span>' + esc(oldest !== "" ? ("Oldest visible: " + String(oldest) + "d") : "No visible age evidence") + '</span></div>'
-        + '<div class="actionabilityBucketNote">' + esc(note) + '</div>'
-        + '<div class="actionabilityBucketHiddenSummary">' + esc(hiddenSummary) + '</div>'
-        + '<div class="actionabilityBucketHiddenBreakdown">' + esc(hiddenBreakdown) + '</div>'
+        + '<div class="actionabilityBucketStatusBlock"><strong>Status</strong><span>' + esc(stateBadge) + '</span><em>' + esc(statusReason) + '</em></div>'
+        + '<div class="actionabilityBucketStatusBlock"><strong>Hidden Summary</strong><span>' + esc(hiddenSummary) + '</span><em>' + esc(hiddenBreakdown) + '</em></div>'
         + '</div>'
         + '</div>';
     }
