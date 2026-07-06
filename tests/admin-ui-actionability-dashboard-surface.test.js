@@ -224,6 +224,8 @@ assert.match(adminJs, /hiddenRecords:\s*\{ perBucketLimit: 5, byGroup: \{\}, tot
 assert.match(adminJs, /out\.hiddenRecords = buildActionabilityHiddenRecords_/, "Actionability preview must populate hiddenRecords from the full read-only row set");
 assert.match(adminUi, /function actionabilityHiddenPanel_/, "Bucket table must render hidden record drill-down");
 assert.match(adminUi, /Show Hidden:/, "Hidden drill-down must expose a Show Hidden affordance");
+assert.match(adminUi, /Showing ' \+ esc\(records\.length\) \+ ' of ' \+ esc\(boundedTotal \|\| hiddenCount\) \+ ' hidden in /, "Hidden drill-down must explicitly reconcile displayed and total hidden rows");
+assert.match(adminUi, /actionabilityBucketCell muted notes/, "Bucket Integrity / Notes must use the wrapping notes cell");
 assert.match(adminUi, /Applicant ID unavailable/, "Hidden drill-down must expose bounded applicant identity fallback");
 assert.match(adminUi, /reviewActionabilityHiddenRecord_/, "Hidden records must be openable in Review Workspace");
 assert.match(adminUi, /hidden by worklist window, completion state, or another authority path/, "Hidden population explanation must name why records are not visible");

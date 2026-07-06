@@ -343,12 +343,13 @@
     .actionabilityLedgerItem.warn .v{ color:#9a2d2d; }
     .actionabilitySummary{ margin:7px 0 9px; border:1px solid #dbe5ef; border-radius:6px; overflow:hidden; background:#fff; }
     .actionabilityBucketTable{ width:100%; }
-    .actionabilityBucketHeader, .actionabilityBucketRow{ display:grid; grid-template-columns:minmax(160px,1.2fr) 92px 86px 80px minmax(150px,1fr) minmax(130px,.9fr) 84px; align-items:center; }
+    .actionabilityBucketHeader, .actionabilityBucketRow{ display:grid; grid-template-columns:minmax(160px,1.2fr) 92px 86px 80px minmax(150px,1fr) minmax(220px,1.25fr) 84px; align-items:center; }
     .actionabilityBucketHeader{ min-height:32px; background:#f8fafc; color:#31516f; border-bottom:1px solid #dbe5ef; font-size:10px; font-weight:900; text-transform:uppercase; }
     .actionabilityBucketRow{ min-height:38px; border-bottom:1px solid #edf2f7; color:#0f172a; font-size:11px; }
     .actionabilityBucketRow:last-child{ border-bottom:0; }
     .actionabilityBucketRow.active{ background:#f5f9ff; box-shadow:inset 3px 0 0 #1f5aa5; }
     .actionabilityBucketCell{ min-width:0; padding:6px 8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .actionabilityBucketCell.notes{ white-space:normal; overflow:visible; text-overflow:clip; line-height:1.35; }
     .actionabilityBucketCell strong{ color:#0f1f35; font-weight:850; }
     .actionabilityBucketCell.muted{ color:#40556b; }
     .actionabilityBucketViewBtn{ width:100%; border:1px solid #9fb4ca; border-radius:6px; background:#fff; color:#173451; padding:5px 7px; font-size:11px; font-weight:900; cursor:pointer; line-height:1.2; white-space:nowrap; }
@@ -410,9 +411,11 @@
     .actionabilityHiddenPanel, .actionabilityBatchPanel{ border-top:1px solid #e5ebf2; background:#fbfdff; padding:9px 10px; color:#173451; }
     .actionabilityHiddenPanel summary{ cursor:pointer; font-weight:900; color:#174a8b; }
     .actionabilityHiddenList{ display:grid; gap:6px; margin-top:8px; }
-    .actionabilityHiddenRecord{ display:grid; grid-template-columns:minmax(170px,1.2fr) minmax(120px,.75fr) minmax(150px,.9fr) minmax(190px,1fr) auto; gap:8px; align-items:center; padding:7px 8px; border:1px solid #dbe5ef; border-radius:6px; background:#fff; font-size:11px; }
+    .actionabilityHiddenRecord{ display:grid; grid-template-columns:minmax(170px,1.2fr) minmax(120px,.75fr) minmax(210px,1.05fr) minmax(210px,1.05fr) auto; gap:8px; align-items:start; padding:7px 8px; border:1px solid #dbe5ef; border-radius:6px; background:#fff; font-size:11px; }
     .actionabilityHiddenRecord strong{ display:block; color:#0f1f35; font-size:12px; }
-    .actionabilityHiddenRecord span{ display:block; color:#52677d; margin-top:2px; }
+    .actionabilityHiddenRecord span{ display:block; color:#52677d; margin-top:2px; white-space:normal; overflow:visible; text-overflow:clip; line-height:1.35; }
+    .actionabilityHiddenCount{ margin-top:6px; font-size:12px; color:#173451; font-weight:900; }
+    .actionabilityHiddenNote{ margin-top:4px; font-size:11px; color:#40556b; line-height:1.4; }
     .actionabilityBatchPanel{ border-bottom:1px solid #e5ebf2; }
     .actionabilityBatchPanel h4{ margin:0 0 7px; color:#0f1f35; font-size:13px; }
     .actionabilityBatchGrid{ display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:6px; margin-bottom:8px; }
@@ -653,7 +656,7 @@
     .reviewHeaderGrid{ display:grid; grid-template-columns:repeat(4, minmax(130px,1fr)); gap:8px 12px; margin-top:12px; }
     .reviewHeaderFact{ min-width:0; }
     .reviewHeaderFact .k{ color:#c8dcf0; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; }
-    .reviewHeaderFact .v{ color:#ffffff; font-size:12px; font-weight:900; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .reviewHeaderFact .v{ color:#ffffff; font-size:12px; font-weight:900; margin-top:3px; overflow:visible; text-overflow:clip; white-space:normal; line-height:1.25; overflow-wrap:anywhere; }
     .reviewHeaderActions{ display:flex; align-items:flex-start; justify-content:flex-end; gap:8px; }
     .reviewHeaderClose{ background:#fff; color:#0f1f35; border-color:#dbe5ef; min-width:78px; }
     .reviewWorkspaceBody{ padding:14px 16px 16px; display:flex; flex-direction:column; gap:12px; }
@@ -9436,6 +9439,26 @@ function renderStageDashboard_(items, emptyMessage){
       return String(value);
     }
 
+    function actionabilityLedgerBucketAliases_(key){
+      var normalized = String(key || "").trim().toUpperCase();
+      if (normalized === "ACADEMIC") return ["Academic Administration", "Academic Admin"];
+      return [actionabilityGroupLabel_(key)];
+    }
+
+    function actionabilityHiddenTotalForGroup_(key){
+      var state = actionabilityHiddenRecordsState || {};
+      var totals = state.totalByGroup || {};
+      var direct = Number(totals[key] || 0);
+      if (direct > 0) return direct;
+      var aliases = actionabilityLedgerBucketAliases_(key);
+      for (var i = 0; i < aliases.length; i++) {
+        var aliasKey = actionabilityGroupKeyFromLabel_(aliases[i]);
+        var n = Number(totals[aliasKey] || totals[aliases[i]] || 0);
+        if (n > 0) return n;
+      }
+      return 0;
+    }
+
     function renderActionabilityLedgerBar_(){
       var ledger = actionabilityPopulationLedgerState || {};
       var unknown = Number(ledger.unclassifiedRows || 0);
@@ -9483,12 +9506,15 @@ function renderStageDashboard_(items, emptyMessage){
     function actionabilityHiddenExplanation_(key, populationCount, visibleCount){
       var hidden = Math.max(0, Number(populationCount || 0) - Number(visibleCount || 0));
       if (!hidden) return "";
+      var dtoTotal = actionabilityHiddenTotalForGroup_(key);
+      var shown = actionabilityHiddenDisplayedRowsForGroup_(key);
+      var countText = "Showing " + String(shown) + " of " + String(dtoTotal || hidden) + " hidden in " + actionabilityGroupLabel_(key) + ".";
       if (actionabilityActiveGroup && actionabilityActiveGroup !== key) return String(hidden) + " hidden by current filter.";
-      if (key === "COMPLETE") return String(hidden) + " outside current worklist because no action is required.";
-      if (key === "DORMANT") return String(hidden) + " outside current worklist because dormant records require explicit review.";
-      if (key === "UNKNOWN") return String(hidden) + " ledger rows require classification before normal work routing.";
-      if (visibleCount <= 0) return String(hidden) + " hidden by worklist window, completion state, or another authority path.";
-      return String(hidden) + " additional ledger rows outside the visible worklist window.";
+      if (key === "COMPLETE") return countText + " Outside current worklist because no action is required.";
+      if (key === "DORMANT") return countText + " Outside current worklist because dormant records require explicit review.";
+      if (key === "UNKNOWN") return countText + " Ledger rows require classification before normal work routing.";
+      if (visibleCount <= 0) return countText + " hidden by worklist window, completion state, or another authority path.";
+      return countText + " Additional ledger rows outside the visible worklist window.";
     }
 
     function actionabilityHiddenReasonLabel_(value){
@@ -9502,19 +9528,37 @@ function renderStageDashboard_(items, emptyMessage){
       return "Explanation unavailable";
     }
 
+    function actionabilityHiddenRecordsForGroup_(key){
+      var state = actionabilityHiddenRecordsState || {};
+      var byGroup = state.byGroup || {};
+      if (Array.isArray(byGroup[key])) return byGroup[key];
+      var aliases = actionabilityLedgerBucketAliases_(key);
+      for (var i = 0; i < aliases.length; i++) {
+        var aliasKey = actionabilityGroupKeyFromLabel_(aliases[i]);
+        if (Array.isArray(byGroup[aliasKey])) return byGroup[aliasKey];
+        if (Array.isArray(byGroup[aliases[i]])) return byGroup[aliases[i]];
+      }
+      return [];
+    }
+
+    function actionabilityHiddenDisplayedRowsForGroup_(key){
+      return actionabilityHiddenRecordsForGroup_(key).length;
+    }
+
     function actionabilityHiddenPanel_(key, populationCount, visibleCount){
       var hiddenCount = Math.max(0, Number(populationCount || 0) - Number(visibleCount || 0));
       if (!hiddenCount) return "";
       var state = actionabilityHiddenRecordsState || {};
-      var byGroup = state.byGroup || {};
-      var totalByGroup = state.totalByGroup || {};
-      var records = Array.isArray(byGroup[key]) ? byGroup[key] : [];
-      var boundedTotal = Number(totalByGroup[key] || records.length || 0);
+      var records = actionabilityHiddenRecordsForGroup_(key);
+      var boundedTotal = Number(actionabilityHiddenTotalForGroup_(key) || records.length || hiddenCount || 0);
+      var perBucketLimit = Number(state.perBucketLimit || 5);
+      var bounded = boundedTotal > records.length;
       var activeFilterNote = actionabilityActiveGroup && actionabilityActiveGroup !== key
         ? "Current filter is " + actionabilityGroupLabel_(actionabilityActiveGroup) + "; switch filter to work this bucket."
         : "These records are outside the visible worklist window or owned by a secondary authority path.";
       var html = '<details class="actionabilityHiddenPanel"><summary>Show Hidden: ' + esc(hiddenCount) + ' hidden in ' + actionabilityGroupLabel_(key) + '</summary>'
-        + '<div style="margin-top:6px;font-size:11px;color:#40556b;">' + esc(activeFilterNote) + ' Bounded preview: ' + esc(records.length) + ' of ' + esc(boundedTotal || hiddenCount) + '.</div>'
+        + '<div class="actionabilityHiddenCount">Showing ' + esc(records.length) + ' of ' + esc(boundedTotal || hiddenCount) + ' hidden in ' + esc(actionabilityGroupLabel_(key)) + '.</div>'
+        + '<div class="actionabilityHiddenNote">' + esc(activeFilterNote) + ' ' + (bounded ? esc("Bounded preview capped at " + String(perBucketLimit) + " records per bucket; switch filter or Show All to review the full worklist population.") : esc("All hidden applicant identities returned by the DTO are listed below.")) + '</div>'
         + '<div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;">'
         + '<button class="btn small" type="button" onclick="selectActionabilityGroup_(\'' + esc(key) + '\')">Switch Filter</button>'
         + '<button class="btn small" type="button" onclick="showAllActionability_()">Show All</button>'
@@ -9526,8 +9570,8 @@ function renderStageDashboard_(items, emptyMessage){
           return '<div class="actionabilityHiddenRecord">'
             + '<div><strong>' + esc(row.applicantId || "Applicant ID unavailable") + '</strong><span>' + esc(row.name || "Name unavailable") + '</span></div>'
             + '<div><strong>Stage</strong><span>' + esc(String(row.currentStage || "Unknown").replace(/_/g, " ")) + '</span></div>'
-            + '<div><strong>Reason</strong><span>' + esc(actionabilityHiddenReasonLabel_(row.hiddenReason)) + '</span></div>'
-            + '<div><strong>Suggested Action</strong><span>' + esc(row.suggestedAction || "Explain Only") + '</span></div>'
+            + '<div><strong>Reason</strong><span>' + esc(actionabilityHiddenReasonLabel_(row.hiddenReason)) + ' | Owner: ' + esc(row.actionOwner || "Unknown") + ' | Next: ' + esc(actionabilityNextActionLabel_(row.nextAction || "NO_ACTION")) + '</span></div>'
+            + '<div><strong>Suggested Action</strong><span>' + esc(row.suggestedAction || "Explain Only") + ' | Urgency: ' + esc(row.urgencyLevel || "Unknown") + '</span></div>'
             + '<div><button class="btn small" type="button" onclick="reviewActionabilityHiddenRecord_(\'' + esc(key) + '\',' + String(index) + ', this)">Open Applicant</button></div>'
             + '</div>';
         }).join("") + '</div>';
@@ -9845,7 +9889,7 @@ function renderStageDashboard_(items, emptyMessage){
           + '<div class="actionabilityBucketCell" role="cell">' + esc(String(list.length)) + '</div>'
           + '<div class="actionabilityBucketCell" role="cell">' + esc(oldest && oldest.ageDays !== "" && oldest.ageDays !== undefined ? String(oldest.ageDays) + "d" : "-") + '</div>'
           + '<div class="actionabilityBucketCell" role="cell">' + esc(actionabilityNextActionLabel_(top.nextAction || "NO_ACTION")) + '</div>'
-          + '<div class="actionabilityBucketCell muted" role="cell">' + esc(actionabilityBucketNote_(key, populationCount, list.length, list)) + '</div>'
+          + '<div class="actionabilityBucketCell muted notes" role="cell">' + esc(actionabilityBucketNote_(key, populationCount, list.length, list)) + '</div>'
           + '<div class="actionabilityBucketCell" role="cell"><button class="actionabilityBucketViewBtn" type="button" onclick="selectActionabilityGroup_(\'' + esc(key) + '\')">' + esc(viewLabel) + '</button></div>'
           + '</div>'
           + actionabilityHiddenPanel_(key, populationCount, list.length);
