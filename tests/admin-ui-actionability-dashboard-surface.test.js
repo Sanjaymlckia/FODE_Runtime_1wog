@@ -50,7 +50,7 @@ assert.ok(adminUi.includes("Troubleshooting and automation state."), "System Hea
 const kpiIndex = indexOfRequired('id="actionabilityKpiStrip"');
 const summaryIndex = indexOfRequired('id="actionabilityPreviewSummary"');
 assert.ok(kpiIndex > dashboardIndex, "Ledger bar must live inside the promoted dashboard");
-assert.ok(kpiIndex < summaryIndex, "Ledger bar must render above operational bucket table");
+assert.ok(kpiIndex < summaryIndex, "Ledger bar must render above operational bucket cards");
 assert.match(adminUi, /function renderActionabilityLedgerBar_/, "Operations Workspace must render a ledger trust bar");
 assert.match(adminUi, /actionabilityLedgerItem/, "Ledger trust bar must use aligned ledger items, not decorative cards");
 assert.match(adminUi, /Scanned rows/, "Ledger bar must expose scanned rows");
@@ -59,10 +59,11 @@ assert.match(adminUi, /Unknown \/ Unclassified/, "Ledger bar must expose unknown
 assert.match(adminUi, /Duplicate Applicant IDs/, "Ledger bar must expose duplicate ApplicantID risk");
 assert.match(adminUi, /Integrity/, "Ledger bar must expose integrity status");
 assert.match(adminUi, /Generated/, "Ledger bar must expose generated timestamp");
-assert.match(adminUi, /class="actionabilityBucketTable"/, "Operational buckets must render as a table rhythm");
-assert.match(adminUi, /Population<\/div>[\s\S]+Visible<\/div>/, "Operational buckets must separate population counts from visible rows");
-assert.match(adminUi, /Primary Action/, "Operational buckets must preserve primary action scanning");
-assert.match(adminUi, /Integrity \/ Notes/, "Operational buckets must expose integrity notes");
+assert.match(adminUi, /class="actionabilityBucketDeck"/, "Operational buckets must render as a card deck");
+assert.match(adminUi, /class="actionabilityBucketCard/, "Operational buckets must render horizontal cards");
+assert.match(adminUi, /Total \/ Population[\s\S]+Action Required \/ Visible[\s\S]+Hidden/, "Operational cards must separate population, visible, and hidden counts");
+assert.match(adminUi, /Next Operator Action/, "Operational cards must preserve next action scanning");
+assert.match(adminUi, /actionabilityBucketStateBadge/, "Operational cards must expose state and integrity badges");
 assert.doesNotMatch(adminUi, /<button class="actionabilityKpi/, "Operations Workspace must not render card-style KPI buttons");
 assert.doesNotMatch(adminUi, /class="actionabilityGroupCard/, "Operations Workspace must not render irregular group cards");
 
@@ -78,15 +79,19 @@ assert.doesNotMatch(adminUi, /class="actionabilityGroupCard/, "Operations Worksp
 ].forEach((label) => {
   assert.ok(adminUi.includes(label), `Operational bucket must be present: ${label}`);
 });
-assert.match(adminUi, /actionabilityBucketViewBtn/, "Operational bucket view buttons must use secondary button hierarchy");
+assert.match(adminUi, /actionabilityBucketReviewBtn/, "Operational bucket cards must expose left-side Review controls");
+assert.match(adminUi, /function reviewFirstActionabilityBucket_/, "Bucket Review controls must hand off to Review Workspace through an existing row");
+assert.match(adminUi, /onclick="reviewFirstActionabilityBucket_/, "Bucket Review controls must use the Review Workspace handoff");
+assert.match(adminUi, /actionabilityBucketHiddenPanel[\s\S]*Hidden ' \+ esc\(hiddenCount\)/, "Operational bucket cards must expose secondary hidden controls");
+assert.match(adminUi, /data-actionability-bucket-sort/, "Operational bucket cards must expose sort controls");
 assert.match(adminUi, /onclick="selectActionabilityGroup_/, "Operational bucket rows must select an actionability group");
 assert.match(adminUi, /var displayRows = actionabilityActiveGroup \? \(groupRows\[actionabilityActiveGroup\] \|\| \[\]\) : rows;/, "KPI/group filters must still drive displayed worklist rows");
 assert.match(adminUi, /actionabilityPopulationLedgerState\s*=\s*ledger/, "Operations Workspace must retain Population Ledger summary from the backend");
 assert.match(adminUi, /function actionabilityPopulationCountForGroup_/, "Operations Workspace KPI totals must have a ledger-backed count resolver");
 assert.match(adminUi, /operationalBucketCounts/, "Operations Workspace must consume ledger operational bucket counts");
-assert.match(adminUi, /actionabilityPopulationCountForGroup_\(key,\s*list\.length\)/, "Operational bucket table must render full population bucket counts with visible-row fallback only");
+assert.match(adminUi, /actionabilityPopulationCountForGroup_\(key,\s*rows\.length\)/, "Operational bucket cards must render full population bucket counts with visible-row fallback only");
 assert.match(adminUi, /visible worklist rows \/ " \+ String\(populationTotal\) \+ " total applicant population/, "Operations Workspace meta must separate visible worklist rows from population totals");
-assert.doesNotMatch(renderActionabilityRowBody_(), /Newest:/, "Operational bucket table must not spend benchmark scan space on newest metadata");
+assert.doesNotMatch(renderActionabilityRowBody_(), /Newest:/, "Operational bucket cards must not spend benchmark scan space on newest metadata");
 assert.match(adminUi, /stagePopulationLedgerState/, "Lifecycle Map must retain Population Ledger summary from the backend");
 assert.match(adminUi, /Population Ledger: " \+ String\(Number\(ledger\.applicantIdRows/, "Lifecycle Map metadata must report ledger applicant population");
 assert.doesNotMatch(adminUi, /review queue visible/i, "Lifecycle Map must not label lifecycle/actionability counts as Review Queue visibility");
@@ -223,13 +228,13 @@ assert.match(adminJs, /function buildActionabilityHiddenRecords_/, "Actionabilit
 assert.match(adminJs, /hiddenRecords:\s*\{ perBucketLimit: 5, byGroup: \{\}, totalByGroup: \{\} \}/, "Actionability preview must initialize hiddenRecords DTO");
 assert.match(adminJs, /out\.hiddenRecords = buildActionabilityHiddenRecords_/, "Actionability preview must populate hiddenRecords from the full read-only row set");
 assert.match(adminUi, /function actionabilityHiddenPanel_/, "Bucket table must render hidden record drill-down");
-assert.match(adminUi, /Show Hidden:/, "Hidden drill-down must expose a Show Hidden affordance");
+assert.doesNotMatch(adminUi, /Show Hidden:/, "Hidden drill-down must not render old full-width Show Hidden rows");
 assert.match(adminUi, /Showing ' \+ esc\(records\.length\) \+ ' of ' \+ esc\(boundedTotal \|\| hiddenCount\) \+ ' hidden in /, "Hidden drill-down must explicitly reconcile displayed and total hidden rows");
-assert.match(adminUi, /actionabilityBucketCell muted notes/, "Bucket Integrity / Notes must use the wrapping notes cell");
+assert.match(adminUi, /actionabilityBucketHiddenBreakdown/, "Bucket cards must structure hidden reason breakdowns");
 assert.match(adminUi, /Applicant ID unavailable/, "Hidden drill-down must expose bounded applicant identity fallback");
 assert.match(adminUi, /reviewActionabilityHiddenRecord_/, "Hidden records must be openable in Review Workspace");
 assert.match(adminUi, /hidden by worklist window, completion state, or another authority path/, "Hidden population explanation must name why records are not visible");
-assert.match(adminUi, /View Hidden/, "Bucket action must distinguish hidden population records from normal view");
+assert.doesNotMatch(renderActionabilityRowBody_(), /View Hidden|Show Hidden:/, "Bucket cards must not duplicate old View Hidden / Show Hidden language");
 assert.match(adminUi, /Explain/, "Bucket action must explain buckets with population but no visible rows");
 assert.match(adminUi, /Priority \/ Next/, "Timing column must honestly describe priority/next-action sorting");
 assert.doesNotMatch(adminUi, /Due \/ Next/, "Timing column must not imply a due-date scheduler when none exists");

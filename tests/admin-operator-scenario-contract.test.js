@@ -15,7 +15,7 @@ function mustNotMatch(source, pattern, message) {
 mustMatch(adminJs, /function buildActionabilityHiddenRecords_/, "Hidden Records DTO must exist");
 mustMatch(adminJs, /applicantId:[\s\S]*name:[\s\S]*currentStage:[\s\S]*currentBucket:[\s\S]*hiddenReason:[\s\S]*suggestedAction:/, "Hidden records must expose identity, stage, bucket, reason, and action");
 mustMatch(adminUi, /function actionabilityHiddenPanel_/, "Hidden bucket scenario must render a drill-down");
-mustMatch(adminUi, /Show Hidden:/, "Hidden bucket scenario must provide Show Hidden");
+mustMatch(adminUi, /actionabilityBucketHiddenPanel[\s\S]*Hidden ' \+ esc\(hiddenCount\)/, "Hidden bucket scenario must provide embedded Hidden count control");
 mustMatch(adminUi, /Switch Filter/, "Hidden bucket scenario must provide Switch Filter");
 mustMatch(adminUi, /Open Applicant/, "Hidden bucket scenario must provide Open Applicant");
 mustMatch(adminUi, /Explain Only/, "Hidden bucket scenario must provide Explain Only fallback");

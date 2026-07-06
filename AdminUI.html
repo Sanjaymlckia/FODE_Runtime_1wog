@@ -342,18 +342,57 @@
     .actionabilityLedgerItem .v{ color:#0f1f35; font-size:14px; line-height:1.15; font-weight:850; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .actionabilityLedgerItem.warn .v{ color:#9a2d2d; }
     .actionabilitySummary{ margin:7px 0 9px; border:1px solid #dbe5ef; border-radius:6px; overflow:hidden; background:#fff; }
-    .actionabilityBucketTable{ width:100%; }
-    .actionabilityBucketHeader, .actionabilityBucketRow{ display:grid; grid-template-columns:minmax(160px,1.2fr) 92px 86px 80px minmax(150px,1fr) minmax(220px,1.25fr) 84px; align-items:center; }
-    .actionabilityBucketHeader{ min-height:32px; background:#f8fafc; color:#31516f; border-bottom:1px solid #dbe5ef; font-size:10px; font-weight:900; text-transform:uppercase; }
-    .actionabilityBucketRow{ min-height:38px; border-bottom:1px solid #edf2f7; color:#0f172a; font-size:11px; }
-    .actionabilityBucketRow:last-child{ border-bottom:0; }
-    .actionabilityBucketRow.active{ background:#f5f9ff; box-shadow:inset 3px 0 0 #1f5aa5; }
-    .actionabilityBucketCell{ min-width:0; padding:6px 8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .actionabilityBucketCell.notes{ white-space:normal; overflow:visible; text-overflow:clip; line-height:1.35; }
-    .actionabilityBucketCell strong{ color:#0f1f35; font-weight:850; }
-    .actionabilityBucketCell.muted{ color:#40556b; }
-    .actionabilityBucketViewBtn{ width:100%; border:1px solid #9fb4ca; border-radius:6px; background:#fff; color:#173451; padding:5px 7px; font-size:11px; font-weight:900; cursor:pointer; line-height:1.2; white-space:nowrap; }
-    .actionabilityBucketViewBtn:hover, .actionabilityBucketRow.active .actionabilityBucketViewBtn{ border-color:#8fb4df; background:#eef6ff; color:#174a8b; }
+    .actionabilityBucketDeck{ display:grid; gap:8px; padding:8px; background:#f8fafc; }
+    .actionabilityBucketSortBar{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 9px; border-bottom:1px solid #dbe5ef; background:#fff; color:#31516f; font-size:11px; font-weight:900; flex-wrap:wrap; }
+    .actionabilityBucketSortActions{ display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+    .actionabilityBucketSortBtn{ border:1px solid #9fb4ca; border-radius:4px; background:#fff; color:#173451; font:inherit; font-size:10px; font-weight:850; padding:4px 7px; cursor:pointer; line-height:1.15; }
+    .actionabilityBucketSortBtn.active, .actionabilityBucketSortBtn:hover{ border-color:#8fb4df; background:#eef6ff; color:#174a8b; }
+    .actionabilityBucketCard{ position:relative; display:grid; grid-template-columns:minmax(210px,.85fr) minmax(0,1.7fr) minmax(220px,1fr); gap:10px; align-items:stretch; border:1px solid #dbe5ef; border-radius:6px; background:#fff; color:#0f172a; overflow:hidden; box-shadow:0 1px 0 rgba(15,31,53,.03); }
+    .actionabilityBucketCard:before{ content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:#8aa0b6; }
+    .actionabilityBucketCard.active{ border-color:#9fc0e4; background:#fbfdff; }
+    .actionabilityBucketCard[data-actionability-kpi="APPLICANT"]:before{ background:#1f70ea; }
+    .actionabilityBucketCard[data-actionability-kpi="ADMISSIONS"]:before{ background:#6957d8; }
+    .actionabilityBucketCard[data-actionability-kpi="FINANCE"]:before{ background:#1f8a4c; }
+    .actionabilityBucketCard[data-actionability-kpi="ACADEMIC"]:before{ background:#bd6b08; }
+    .actionabilityBucketCard[data-actionability-kpi="MANAGEMENT"]:before{ background:#a83030; }
+    .actionabilityBucketCard[data-actionability-kpi="DORMANT"]:before{ background:#64748b; }
+    .actionabilityBucketCard[data-actionability-kpi="COMPLETE"]:before{ background:#27744b; }
+    .actionabilityBucketCard[data-actionability-kpi="UNKNOWN"]:before{ background:#805006; }
+    .actionabilityBucketLead{ padding:10px 10px 10px 15px; min-width:0; display:flex; flex-direction:column; gap:8px; border-right:1px solid #edf2f7; }
+    .actionabilityBucketTitle{ color:#0f1f35; font-size:14px; font-weight:900; line-height:1.18; }
+    .actionabilityBucketDescription{ color:#40556b; font-size:11px; line-height:1.35; font-weight:750; }
+    .actionabilityBucketActions{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:auto; }
+    .actionabilityBucketReviewBtn{ border:1px solid #174a8b; border-radius:5px; background:#1f5aa5; color:#fff; padding:6px 9px; font-size:11px; font-weight:900; cursor:pointer; line-height:1.15; }
+    .actionabilityBucketReviewBtn:hover{ background:#174a8b; }
+    .actionabilityBucketReviewBtn:disabled{ background:#edf2f7; border-color:#cbd8e6; color:#7a8fa5; cursor:not-allowed; }
+    .actionabilityBucketHiddenPanel{ min-width:0; }
+    .actionabilityBucketHiddenPanel summary{ display:inline-flex; align-items:center; border:1px solid #cbd8e6; border-radius:5px; background:#fff; color:#31516f; padding:5px 8px; font-size:10px; font-weight:900; cursor:pointer; line-height:1.15; }
+    .actionabilityBucketHiddenPanel[open] summary{ background:#eef6ff; border-color:#9fc0e4; color:#174a8b; }
+    .actionabilityBucketMain{ padding:10px 0; min-width:0; display:grid; gap:8px; align-content:start; }
+    .actionabilityBucketMetricGrid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; padding:0 10px; }
+    .actionabilityBucketMetric{ min-width:0; border:1px solid #edf2f7; border-radius:5px; background:#fbfdff; padding:6px 7px; }
+    .actionabilityBucketMetric .k{ color:#61748a; font-size:9px; text-transform:uppercase; font-weight:900; line-height:1.1; }
+    .actionabilityBucketMetric .v{ color:#0f1f35; font-size:16px; line-height:1.1; font-weight:900; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .actionabilityBucketMetric.primary .v{ color:#174a8b; font-size:20px; }
+    .actionabilityWorkloadBar{ display:flex; height:9px; margin:0 10px; overflow:hidden; border-radius:999px; background:#edf2f7; }
+    .actionabilityWorkloadSeg{ min-width:2px; }
+    .actionabilityWorkloadSeg.needs{ background:#1f70ea; }
+    .actionabilityWorkloadSeg.cooling{ background:#9fb4ca; }
+    .actionabilityWorkloadSeg.hidden{ background:#d7a755; }
+    .actionabilityWorkloadSeg.completed{ background:#27744b; }
+    .actionabilityWorkloadLegend{ display:flex; gap:8px; flex-wrap:wrap; padding:0 10px; color:#40556b; font-size:10px; font-weight:850; }
+    .actionabilityWorkloadLegend span:before{ content:""; display:inline-block; width:7px; height:7px; border-radius:999px; margin-right:4px; vertical-align:middle; background:#8aa0b6; }
+    .actionabilityWorkloadLegend .needs:before{ background:#1f70ea; }
+    .actionabilityWorkloadLegend .cooling:before{ background:#9fb4ca; }
+    .actionabilityWorkloadLegend .hidden:before{ background:#d7a755; }
+    .actionabilityWorkloadLegend .completed:before{ background:#27744b; }
+    .actionabilityBucketNext{ padding:0 10px; color:#0f1f35; font-size:12px; font-weight:850; line-height:1.35; }
+    .actionabilityBucketNext strong{ display:block; color:#61748a; font-size:9px; text-transform:uppercase; font-weight:900; margin-bottom:2px; }
+    .actionabilityBucketState{ padding:10px; min-width:0; border-left:1px solid #edf2f7; background:#fbfdff; display:grid; gap:7px; align-content:start; }
+    .actionabilityBucketStateBadge{ display:inline-flex; width:max-content; max-width:100%; border:1px solid #cbd8e6; border-radius:999px; background:#fff; color:#31516f; padding:3px 7px; font-size:10px; font-weight:900; line-height:1.15; }
+    .actionabilityBucketNote{ color:#40556b; font-size:11px; font-weight:750; line-height:1.35; overflow-wrap:anywhere; }
+    .actionabilityBucketHiddenSummary{ color:#173451; font-size:11px; font-weight:900; line-height:1.35; }
+    .actionabilityBucketHiddenBreakdown{ color:#40556b; font-size:10px; line-height:1.35; font-weight:800; }
     .actionabilityTraffic{ margin:8px 0 10px; border:1px solid var(--lineSoft); border-radius:var(--panelRadius); background:var(--surfaceSecondary); overflow:hidden; }
     .actionabilityTrafficTitle{ display:flex; justify-content:space-between; gap:8px; padding:7px 9px; border-bottom:1px solid #e5ebf2; color:#31516f; font-size:12px; font-weight:900; }
     .actionabilityTrafficGrid{ display:grid; grid-template-columns:repeat(8, minmax(0,1fr)); gap:0; }
@@ -433,7 +472,8 @@
     .actionabilityEmpty{ border:1px dashed #d5e2ee; border-radius:8px; padding:16px; color:#66788c; background:#fff; }
     @media (max-width: 1120px){
       .actionabilityKpiStrip{ grid-template-columns:repeat(4, minmax(0, 1fr)); }
-      .actionabilityBucketHeader, .actionabilityBucketRow{ grid-template-columns:minmax(145px,1.2fr) 76px 72px 68px minmax(120px,1fr) minmax(105px,.9fr) 64px; }
+      .actionabilityBucketCard{ grid-template-columns:minmax(190px,.85fr) minmax(0,1.35fr); }
+      .actionabilityBucketState{ grid-column:1 / -1; border-left:0; border-top:1px solid #edf2f7; }
       .actionabilityTrafficGrid{ grid-template-columns:repeat(3, minmax(0,1fr)); }
       .actionabilityHiddenRecord{ grid-template-columns:1fr; }
       .actionabilityBatchGrid{ grid-template-columns:repeat(3,minmax(0,1fr)); }
@@ -445,8 +485,9 @@
     }
     @media (max-width: 680px){
       .actionabilityKpiStrip{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
-      .actionabilityBucketHeader, .actionabilityBucketRow{ grid-template-columns:minmax(130px,1fr) 70px 64px 60px minmax(98px,1fr) 62px; }
-      .actionabilityBucketHeader .actionabilityBucketCell:nth-child(6), .actionabilityBucketRow .actionabilityBucketCell:nth-child(6){ display:none; }
+      .actionabilityBucketCard{ grid-template-columns:1fr; }
+      .actionabilityBucketLead{ border-right:0; border-bottom:1px solid #edf2f7; }
+      .actionabilityBucketMetricGrid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
       .actionabilityTrafficGrid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
     }
     .sortableHeader{ cursor:pointer; user-select:none; }
@@ -3190,6 +3231,7 @@
     let actionabilityPreviewRows = [];
     let actionabilityRenderedRows = [];
     let actionabilitySortState = { key: "default", dir: "desc" };
+    let actionabilityBucketSortState = "operational";
     let actionabilityActiveGroup = "";
     let actionabilityPreviewMetaState = { includedRows: 0, scannedRows: 0, applicantIdRows: 0, integrityStatus: "" };
     let actionabilityPreviewCountsState = {};
@@ -9152,6 +9194,35 @@ function renderStageDashboard_(items, emptyMessage){
       return Number.isFinite(value) ? value : Number(fallbackCount || 0);
     }
 
+    function actionabilityGroupKeyFromLabel_(label){
+      var text = String(label || "").trim().toUpperCase();
+      if (text === "APPLICANT ACTION") return "APPLICANT";
+      if (text === "ADMISSIONS REVIEW") return "ADMISSIONS";
+      if (text === "FINANCE") return "FINANCE";
+      if (text === "ACADEMIC ADMIN" || text === "ACADEMIC ADMINISTRATION") return "ACADEMIC";
+      if (text === "MANAGEMENT EXCEPTIONS" || text === "EXCEPTIONS") return "MANAGEMENT";
+      if (text === "DORMANT") return "DORMANT";
+      if (text === "COMPLETED / NO ACTION" || text === "COMPLETE") return "COMPLETE";
+      return "UNKNOWN";
+    }
+
+    function actionabilityBucketDescription_(key){
+      var normalized = String(key || "").trim().toUpperCase();
+      if (normalized === "APPLICANT") return "Applicants require document uploads or completion.";
+      if (normalized === "ADMISSIONS") return "Applications ready for academic document review.";
+      if (normalized === "FINANCE") return "Payment and financial verification actions.";
+      if (normalized === "ACADEMIC") return "Academic placement and administrative actions.";
+      if (normalized === "MANAGEMENT") return "Exceptions requiring management attention and remediation.";
+      if (normalized === "DORMANT") return "Applicants dormant per lifecycle rules.";
+      if (normalized === "COMPLETE") return "No action required.";
+      return "Explicit zero or unclassified rows.";
+    }
+
+    function setActionabilityBucketSort_(key){
+      actionabilityBucketSortState = String(key || "operational");
+      renderActionabilityPreview_({ preserveRows: true });
+    }
+
     function actionabilityNextActionLabel_(value){
       var normalized = String(value || "").trim().toUpperCase();
       if (normalized === "UPLOAD_REQUIRED_DOCUMENTS") return "Upload Required Documents";
@@ -9334,6 +9405,20 @@ function renderStageDashboard_(items, emptyMessage){
         var target = document.getElementById("actionabilityPreviewSummary");
         if (target && typeof target.scrollIntoView === "function") target.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 40);
+    }
+
+    function reviewFirstActionabilityBucket_(key, triggerBtn){
+      var normalized = String(key || "").trim().toUpperCase();
+      var rows = sortedActionabilityRows_(actionabilityPreviewRows).filter(function(row){
+        return actionabilityGroupKey_(row) === normalized;
+      });
+      if (!rows.length) {
+        selectActionabilityGroup_(normalized);
+        return;
+      }
+      actionabilityActiveGroup = normalized;
+      renderActionabilityPreview_({ preserveRows: true });
+      reviewActionabilityRecord_(rows[0], triggerBtn);
     }
 
     function sortedActionabilityRows_(rows){
@@ -9545,6 +9630,89 @@ function renderStageDashboard_(items, emptyMessage){
       return actionabilityHiddenRecordsForGroup_(key).length;
     }
 
+    function actionabilityOldestAgeForList_(list){
+      var rows = Array.isArray(list) ? list : [];
+      var max = "";
+      rows.forEach(function(row){
+        var age = Number(row && row.ageDays);
+        if (Number.isFinite(age) && (max === "" || age > Number(max))) max = age;
+      });
+      return max;
+    }
+
+    function actionabilityPercent_(part, total){
+      var denom = Math.max(0, Number(total || 0));
+      if (!denom) return "0%";
+      return String(Math.round((Math.max(0, Number(part || 0)) / denom) * 100)) + "%";
+    }
+
+    function actionabilityWorkloadSegment_(cls, value, total){
+      var pct = Math.max(0, Number(total || 0)) ? Math.max(0, Number(value || 0)) / Math.max(1, Number(total || 0)) * 100 : 0;
+      return '<div class="actionabilityWorkloadSeg ' + esc(cls) + '" style="width:' + esc(String(pct)) + '%"></div>';
+    }
+
+    function actionabilityHiddenBreakdown_(key){
+      var records = actionabilityHiddenRecordsForGroup_(key);
+      if (!records.length) return "No hidden applicant identities returned in the bounded preview.";
+      var counts = {};
+      records.forEach(function(row){
+        var label = actionabilityHiddenReasonLabel_(row && row.hiddenReason);
+        var suppressor = String(row && row.suppressor || "").trim().toUpperCase();
+        if (suppressor === "COOLDOWN_ACTIVE") label = "Cooling period";
+        else if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") label = "Missing contact";
+        else if (String(row && row.actionOwner || "").trim().toUpperCase() === "FINANCE") label = "Finance";
+        else if (String(row && row.actionOwner || "").trim().toUpperCase() === "OFFICER") label = "Admissions Review";
+        else if (String(row && row.actionOwner || "").trim().toUpperCase() === "ADMIN") label = "Manual review / data quality";
+        counts[label] = Number(counts[label] || 0) + 1;
+      });
+      return Object.keys(counts).map(function(label){ return String(counts[label]) + " " + label; }).join(" / ");
+    }
+
+    function actionabilityBucketStateBadge_(key, populationCount, visibleCount){
+      var ledger = actionabilityPopulationLedgerState || {};
+      var integrity = String(ledger.integrityStatus || "UNKNOWN");
+      if (actionabilityActiveGroup === key) return "Current filter";
+      if (Number(populationCount || 0) === 0 && Number(visibleCount || 0) === 0) return "Explicit zero";
+      if (integrity === "PASS") return "Ledger-derived";
+      return "Ledger " + integrity;
+    }
+
+    function sortedActionabilityBucketKeys_(groups, groupRows){
+      var keys = (Array.isArray(groups) ? groups : []).slice();
+      var order = {};
+      keys.forEach(function(key, index){ order[key] = index; });
+      var mode = String(actionabilityBucketSortState || "operational");
+      keys.sort(function(a, b){
+        var aList = groupRows[a] || [];
+        var bList = groupRows[b] || [];
+        var aPop = actionabilityPopulationCountForGroup_(a, aList.length);
+        var bPop = actionabilityPopulationCountForGroup_(b, bList.length);
+        if (mode === "visible") return bList.length - aList.length || order[a] - order[b];
+        if (mode === "population") return bPop - aPop || order[a] - order[b];
+        if (mode === "oldest") return Number(actionabilityOldestAgeForList_(bList) || 0) - Number(actionabilityOldestAgeForList_(aList) || 0) || order[a] - order[b];
+        if (mode === "alpha") return actionabilityGroupLabel_(a).localeCompare(actionabilityGroupLabel_(b));
+        return order[a] - order[b];
+      });
+      return keys;
+    }
+
+    function renderActionabilityBucketSortControls_(){
+      var modes = [
+        ["operational", "Operational Order"],
+        ["visible", "Highest Action Required"],
+        ["population", "Highest Population"],
+        ["oldest", "Oldest"],
+        ["alpha", "Alphabetical"]
+      ];
+      return '<div class="actionabilityBucketSortBar"><span>Sort buckets by:</span><div class="actionabilityBucketSortActions">'
+        + modes.map(function(item){
+          var key = item[0];
+          var label = item[1];
+          return '<button class="actionabilityBucketSortBtn' + (actionabilityBucketSortState === key ? ' active' : '') + '" type="button" data-actionability-bucket-sort="' + esc(key) + '" onclick="setActionabilityBucketSort_(\'' + esc(key) + '\')">' + esc(label) + '</button>';
+        }).join("")
+        + '</div><div class="actionabilityWorkloadLegend"><span class="needs">Needs Action</span><span class="cooling">Cooling Off</span><span class="hidden">Hidden</span><span class="completed">Completed</span></div></div>';
+    }
+
     function actionabilityHiddenPanel_(key, populationCount, visibleCount){
       var hiddenCount = Math.max(0, Number(populationCount || 0) - Number(visibleCount || 0));
       if (!hiddenCount) return "";
@@ -9556,7 +9724,7 @@ function renderStageDashboard_(items, emptyMessage){
       var activeFilterNote = actionabilityActiveGroup && actionabilityActiveGroup !== key
         ? "Current filter is " + actionabilityGroupLabel_(actionabilityActiveGroup) + "; switch filter to work this bucket."
         : "These records are outside the visible worklist window or owned by a secondary authority path.";
-      var html = '<details class="actionabilityHiddenPanel"><summary>Show Hidden: ' + esc(hiddenCount) + ' hidden in ' + actionabilityGroupLabel_(key) + '</summary>'
+      var html = '<details class="actionabilityBucketHiddenPanel"><summary>Hidden ' + esc(hiddenCount) + '</summary>'
         + '<div class="actionabilityHiddenCount">Showing ' + esc(records.length) + ' of ' + esc(boundedTotal || hiddenCount) + ' hidden in ' + esc(actionabilityGroupLabel_(key)) + '.</div>'
         + '<div class="actionabilityHiddenNote">' + esc(activeFilterNote) + ' ' + (bounded ? esc("Bounded preview capped at " + String(perBucketLimit) + " records per bucket; switch filter or Show All to review the full worklist population.") : esc("All hidden applicant identities returned by the DTO are listed below.")) + '</div>'
         + '<div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;">'
@@ -9590,6 +9758,53 @@ function renderStageDashboard_(items, emptyMessage){
       if (hidden) return hidden;
       if (Number(populationCount || 0) !== Number(visibleCount || 0)) return "Full population count";
       return "Ledger-derived";
+    }
+
+    function renderActionabilityBucketCard_(key, list){
+      var rows = Array.isArray(list) ? list : [];
+      var populationCount = actionabilityPopulationCountForGroup_(key, rows.length);
+      var visibleCount = rows.length;
+      var hiddenCount = Math.max(0, Number(populationCount || 0) - Number(visibleCount || 0));
+      var coolingLabel = "Not derived";
+      var top = rows[0] || {};
+      var oldest = actionabilityOldestAgeForList_(rows);
+      var completed = key === "COMPLETE" ? populationCount : 0;
+      var nextAction = actionabilityNextActionLabel_(top.nextAction || "NO_ACTION");
+      var note = actionabilityBucketNote_(key, populationCount, visibleCount, rows);
+      var stateBadge = actionabilityBucketStateBadge_(key, populationCount, visibleCount);
+      var hiddenTotal = actionabilityHiddenTotalForGroup_(key) || hiddenCount;
+      var hiddenShown = actionabilityHiddenDisplayedRowsForGroup_(key);
+      var hiddenSummary = hiddenCount ? ("Showing " + String(hiddenShown) + " of " + String(hiddenTotal) + " hidden") : "No hidden records";
+      var hiddenBreakdown = hiddenCount ? actionabilityHiddenBreakdown_(key) : "No records hidden from this bucket.";
+      return '<div class="actionabilityBucketCard' + (actionabilityActiveGroup === key ? ' active' : '') + '" data-actionability-kpi="' + esc(key) + '">'
+        + '<div class="actionabilityBucketLead">'
+        + '<div><div class="actionabilityBucketTitle">' + esc(actionabilityGroupLabel_(key)) + '</div><div class="actionabilityBucketDescription">' + esc(actionabilityBucketDescription_(key)) + '</div></div>'
+        + '<div class="actionabilityBucketActions">'
+        + '<button class="actionabilityBucketReviewBtn" type="button" onclick="reviewFirstActionabilityBucket_(\'' + esc(key) + '\', this)" ' + (visibleCount ? "" : "disabled") + '>Review</button>'
+        + actionabilityHiddenPanel_(key, populationCount, visibleCount)
+        + '</div></div>'
+        + '<div class="actionabilityBucketMain">'
+        + '<div class="actionabilityBucketMetricGrid">'
+        + '<div class="actionabilityBucketMetric"><div class="k">Total / Population</div><div class="v">' + esc(String(populationCount)) + '</div></div>'
+        + '<div class="actionabilityBucketMetric primary"><div class="k">Action Required / Visible</div><div class="v">' + esc(String(visibleCount)) + '</div></div>'
+        + '<div class="actionabilityBucketMetric"><div class="k">Cooling Off</div><div class="v">' + esc(coolingLabel) + '</div></div>'
+        + '<div class="actionabilityBucketMetric"><div class="k">Hidden</div><div class="v">' + esc(String(hiddenCount)) + '</div></div>'
+        + '</div>'
+        + '<div class="actionabilityWorkloadBar" aria-label="Workload bar">'
+        + actionabilityWorkloadSegment_("needs", visibleCount, populationCount)
+        + actionabilityWorkloadSegment_("completed", completed, populationCount)
+        + actionabilityWorkloadSegment_("hidden", hiddenCount, populationCount)
+        + '</div>'
+        + '<div class="actionabilityWorkloadLegend"><span class="needs">' + esc(actionabilityPercent_(visibleCount, populationCount)) + ' Needs Action</span><span class="cooling">Cooling not yet derived</span><span class="hidden">' + esc(actionabilityPercent_(hiddenCount, populationCount)) + ' Hidden</span></div>'
+        + '</div>'
+        + '<div class="actionabilityBucketState">'
+        + '<span class="actionabilityBucketStateBadge">' + esc(stateBadge) + '</span>'
+        + '<div class="actionabilityBucketNext"><strong>Next Operator Action</strong>' + esc(nextAction) + '<br><span>' + esc(oldest !== "" ? ("Oldest visible: " + String(oldest) + "d") : "No visible age evidence") + '</span></div>'
+        + '<div class="actionabilityBucketNote">' + esc(note) + '</div>'
+        + '<div class="actionabilityBucketHiddenSummary">' + esc(hiddenSummary) + '</div>'
+        + '<div class="actionabilityBucketHiddenBreakdown">' + esc(hiddenBreakdown) + '</div>'
+        + '</div>'
+        + '</div>';
     }
 
     function actionabilityRowKey_(row){
@@ -9863,37 +10078,13 @@ function renderStageDashboard_(items, emptyMessage){
       if (kpiEl) {
         kpiEl.innerHTML = renderActionabilityLedgerBar_();
       }
-      summaryEl.innerHTML = '<div class="actionabilityBucketTable" role="table" aria-label="Operational Buckets">'
-        + '<div class="actionabilityBucketHeader" role="row">'
-        + '<div class="actionabilityBucketCell" role="columnheader">Bucket</div>'
-        + '<div class="actionabilityBucketCell" role="columnheader">Population</div>'
-        + '<div class="actionabilityBucketCell" role="columnheader">Visible</div>'
-        + '<div class="actionabilityBucketCell" role="columnheader">Oldest</div>'
-        + '<div class="actionabilityBucketCell" role="columnheader">Primary Action</div>'
-        + '<div class="actionabilityBucketCell" role="columnheader">Integrity / Notes</div>'
-        + '<div class="actionabilityBucketCell" role="columnheader">View</div>'
-        + '</div>'
-        + groups.map(function(key){
-        var list = groupRows[key] || [];
-        var populationCount = actionabilityPopulationCountForGroup_(key, list.length);
-        var top = list[0] || {};
-        var oldest = list.reduce(function(best, item){
-          var age = Number(item && item.ageDays || 0);
-          return !best || age > Number(best.ageDays || 0) ? item : best;
-        }, null);
-        var hidden = Number(populationCount || 0) > Number(list.length || 0);
-        var viewLabel = actionabilityActiveGroup === key ? "All" : (hidden && !list.length ? "Explain" : (hidden ? "View Hidden" : "View"));
-        return '<div class="actionabilityBucketRow' + (actionabilityActiveGroup === key ? ' active' : '') + '" role="row" data-actionability-kpi="' + esc(key) + '">'
-          + '<div class="actionabilityBucketCell" role="cell"><strong>' + esc(actionabilityGroupLabel_(key)) + '</strong></div>'
-          + '<div class="actionabilityBucketCell" role="cell">' + esc(String(populationCount)) + '</div>'
-          + '<div class="actionabilityBucketCell" role="cell">' + esc(String(list.length)) + '</div>'
-          + '<div class="actionabilityBucketCell" role="cell">' + esc(oldest && oldest.ageDays !== "" && oldest.ageDays !== undefined ? String(oldest.ageDays) + "d" : "-") + '</div>'
-          + '<div class="actionabilityBucketCell" role="cell">' + esc(actionabilityNextActionLabel_(top.nextAction || "NO_ACTION")) + '</div>'
-          + '<div class="actionabilityBucketCell muted notes" role="cell">' + esc(actionabilityBucketNote_(key, populationCount, list.length, list)) + '</div>'
-          + '<div class="actionabilityBucketCell" role="cell"><button class="actionabilityBucketViewBtn" type="button" onclick="selectActionabilityGroup_(\'' + esc(key) + '\')">' + esc(viewLabel) + '</button></div>'
-          + '</div>'
-          + actionabilityHiddenPanel_(key, populationCount, list.length);
-      }).join("") + '</div>';
+      var sortedBucketKeys = sortedActionabilityBucketKeys_(groups, groupRows);
+      summaryEl.innerHTML = renderActionabilityBucketSortControls_()
+        + '<div class="actionabilityBucketDeck" aria-label="Operational bucket cards">'
+        + sortedBucketKeys.map(function(key){
+          return renderActionabilityBucketCard_(key, groupRows[key] || []);
+        }).join("")
+        + '</div>';
       renderActionabilityResponseTraffic_();
       var displayRows = actionabilityActiveGroup ? (groupRows[actionabilityActiveGroup] || []) : rows;
       actionabilityRenderedRows = displayRows.slice();
