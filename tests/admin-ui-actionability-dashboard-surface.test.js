@@ -233,7 +233,11 @@ assert.match(adminUi, /id="standaloneBatchCommTemplateGallery"/, "Batch modal mu
 assert.match(adminUi, /commTemplateSelectedBanner[\s\S]*Selected template[\s\S]*commTemplateRecommendedBanner[\s\S]*Recommended/, "Batch modal must visibly highlight the selected recommended template");
 assert.match(adminUi, /id="standaloneBatchCommRecipients"/, "Batch modal must expose recipient preview and quick exclusion");
 assert.match(adminUi, /Recipient count/, "Batch modal preview must show recipient count");
-assert.match(adminUi, /id="btnStandaloneBatchCommPreview"[\s\S]*>Preview<\/button>[\s\S]*id="btnStandaloneBatchCommSend"[\s\S]*>Send Batch<\/button>/, "Batch modal must expose preview and confirm/send controls");
+assert.match(adminUi, /id="btnStandaloneBatchCommPreview"[\s\S]*>Generate Preview<\/button>[\s\S]*id="btnStandaloneBatchCommSend"[\s\S]*onclick="requestBatchCommunicationConfirmation_\(\)"[\s\S]*>Review Send<\/button>/, "Batch modal must expose generate preview and in-app confirmation controls");
+assert.match(adminUi, /id="standaloneBatchCommConfirm"/, "Batch modal must render an in-app confirmation panel");
+assert.match(adminUi, /batchCommWorkflow[\s\S]*Template[\s\S]*Preview[\s\S]*Recipients[\s\S]*Confirm[\s\S]*Send/, "Batch modal must show a workflow checklist");
+assert.match(adminUi, /commTemplateOtherBanner[\s\S]*Other option/, "Batch modal must mark non-recommended templates as other options");
+assert.match(adminUi, /Excluded \/ Blocked/, "Batch modal summary must make exclusions and blocked records prominent");
 assert.match(adminUi, /Technical Diagnostics/, "Batch modal must keep diagnostics collapsed under a technical section");
 assert.match(functionSource("actionabilityBatchCommunication_"), /openBatchCommunicationFromSelection_\("selected"\)/, "Selected cohort batch communication must open the batch modal");
 assert.match(functionSource("actionabilityBatchCommunication_"), /actionabilityBatchMessage = ""[\s\S]*actionabilityBatchPanelMode = ""[\s\S]*openBatchCommunicationFromSelection_\("selected"\)/, "Selected cohort batch communication must open the modal directly without a handoff panel");
@@ -259,7 +263,8 @@ assert.match(functionSource("selectAllActionabilityRows_"), /actionabilitySelect
 assert.match(functionSource("loadActionabilityPreview_"), /admin_getActionabilityPreview\(\{ limit: 100/, "Operations Workspace must load the full existing bounded worklist cap before client pagination");
 assert.match(functionSource("batchCommCanSend_"), /previewStale === true/, "Quick exclusions must make preview stale before send");
 assert.match(functionSource("toggleBatchCommRecipient_"), /previewStale = true/, "Quick exclusions must update counts and require a fresh preview");
-assert.match(functionSource("sendBatchCommunicationModal_"), /You are about to send [\s\S]* to [\s\S]* applicants/, "Batch confirmation must name template and recipient count");
+assert.match(functionSource("batchCommConfirmHtml_"), /You are about to send [\s\S]* to [\s\S]* applicants[\s\S]*Proceed\?/, "Batch confirmation panel must name template and recipient count");
+assert.doesNotMatch(functionSource("sendBatchCommunicationModal_"), /window\.confirm/, "Batch send must use the in-app confirmation panel instead of browser-native confirm");
 assert.match(adminUi, /Select Visible<\/button>[\s\S]*Select All<\/button>[\s\S]*Clear Selection<\/button>/, "Selection controls must remain visible in the operator control strip");
 assert.match(adminUi, /class="btn small operatorControl operatorControlSecondary" type="button" onclick="selectVisibleActionabilityRows_\(\)">Select Visible/, "Select Visible must use secondary operator control semantics");
 assert.match(adminUi, /class="btn small operatorControl operatorControlSecondary" type="button" onclick="selectAllActionabilityRows_\(\)">Select All/, "Select All must use secondary operator control semantics");

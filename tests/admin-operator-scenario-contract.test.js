@@ -12,6 +12,13 @@ function mustNotMatch(source, pattern, message) {
   assert.doesNotMatch(source, pattern, message);
 }
 
+function functionSource(name) {
+  const start = adminUi.indexOf(`function ${name}(`);
+  assert.ok(start >= 0, `Missing function ${name}`);
+  const next = adminUi.indexOf("\n    function ", start + 1);
+  return adminUi.slice(start, next >= 0 ? next : adminUi.length);
+}
+
 mustMatch(adminJs, /function buildActionabilityHiddenRecords_/, "Hidden Records DTO must exist");
 mustMatch(adminJs, /applicantId:[\s\S]*name:[\s\S]*currentStage:[\s\S]*currentBucket:[\s\S]*hiddenReason:[\s\S]*suggestedAction:/, "Hidden records must expose identity, stage, bucket, reason, and action");
 mustMatch(adminUi, /function actionabilityHiddenPanel_/, "Hidden bucket scenario must render a drill-down");
@@ -38,7 +45,7 @@ mustMatch(adminUi, /BLOCKED: Batch Communication modal container is missing/, "B
 mustMatch(adminUi, /id="standaloneBatchCommTemplateGallery"/, "Batch communication scenario must show the template gallery inside the modal");
 mustMatch(adminUi, /Selected template[\s\S]*Recommended/, "Batch communication scenario must highlight the recommended template");
 mustMatch(adminUi, /Recipient count/, "Batch communication scenario must show recipient count");
-mustMatch(adminUi, /id="btnStandaloneBatchCommPreview"[\s\S]*>Preview<\/button>[\s\S]*id="btnStandaloneBatchCommSend"[\s\S]*>Send Batch<\/button>/, "Batch communication scenario must expose preview and confirm flow");
+mustMatch(adminUi, /id="btnStandaloneBatchCommPreview"[\s\S]*>Generate Preview<\/button>[\s\S]*id="btnStandaloneBatchCommSend"[\s\S]*onclick="requestBatchCommunicationConfirmation_\(\)"[\s\S]*>Review Send<\/button>/, "Batch communication scenario must expose generate preview and in-app confirmation flow");
 mustNotMatch(adminUi, /Batch Communication Handoff|Batch Reminder Handoff/, "Batch communication scenario must not stop at a handoff panel");
 mustNotMatch(adminUi, /Open first eligible in Review/, "Batch communication scenario must not route multi-applicant cohorts through Review");
 mustNotMatch(adminUi, /function actionabilityBatchCommunication_[\s\S]{0,700}admin_sendApplicantMessage/, "Batch modal must not create a single-applicant send path");
@@ -55,7 +62,12 @@ mustMatch(adminUi, /Recipients[\s\S]*Valid email[\s\S]*Blocked[\s\S]*Missing ema
 ["Preview required", "Ready to Send", "Sending", "Completed", "Failed / Partial"].forEach((label) => {
   mustMatch(adminUi, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `Batch modal must expose send lifecycle state: ${label}`);
 });
-mustMatch(adminUi, /You are about to send [\s\S]* to [\s\S]* applicants/, "Batch modal confirmation must name template and recipient count");
+mustMatch(adminUi, /id="standaloneBatchCommConfirm"/, "Batch modal must render an in-app confirmation panel");
+mustMatch(adminUi, /batchCommWorkflow[\s\S]*Template[\s\S]*Preview[\s\S]*Recipients[\s\S]*Confirm[\s\S]*Send/, "Batch modal must show the workflow checklist");
+mustMatch(adminUi, /commTemplateOtherBanner[\s\S]*Other option/, "Batch modal must mark non-recommended templates as other options");
+mustMatch(adminUi, /Excluded \/ Blocked/, "Batch modal summary must expose exclusions and blocked records");
+mustMatch(adminUi, /You are about to send [\s\S]* to [\s\S]* applicants[\s\S]*Proceed\?/, "Batch modal confirmation must name template and recipient count");
+mustNotMatch(functionSource("sendBatchCommunicationModal_"), /window\.confirm/, "Batch modal must not use browser-native confirmation");
 mustMatch(adminUi, /Technical Diagnostics/, "Batch modal diagnostics must remain available but separated");
 
 mustMatch(adminUi, /function commContactabilityGate_/, "Contactability Gate scenario must be first-class");

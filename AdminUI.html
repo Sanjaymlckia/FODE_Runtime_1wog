@@ -505,9 +505,22 @@
     .batchCommStateNote.ready{ border-color:#8cc79f; background:#f1fbf4; color:#155724; }
     .batchCommStateNote.warn{ border-color:#e7b95b; background:#fff8e8; color:#704a00; }
     .batchCommStateNote.fail{ border-color:#d99; background:#fff5f5; color:#7b1d1d; }
+    .batchCommWorkflow{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; }
+    .batchCommWorkflowStep{ border:1px solid #dbe5ef; border-radius:999px; padding:5px 8px; background:#f8fafc; color:#40556b; font-size:11px; font-weight:900; text-align:center; }
+    .batchCommWorkflowStep.active{ border-color:#1f5aa5; background:#eef6ff; color:#174a8b; }
+    .batchCommWorkflowStep.done{ border-color:#8cc79f; background:#f1fbf4; color:#155724; }
     .batchCommGrid{ display:grid; grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr); gap:12px; align-items:start; }
     .batchCommPanel{ background:#fff; border:1px solid #dbe5ef; border-radius:8px; padding:12px; color:#173451; }
     .batchCommPanel h4{ margin:0 0 8px; color:#0f1f35; font-size:14px; font-weight:900; }
+    .batchCommSummaryPanel{ border-color:#b8cce2; box-shadow:0 1px 0 rgba(15,31,53,.05); }
+    .batchCommSummaryGrid{ display:grid; gap:8px; margin-top:10px; }
+    .batchCommSummaryItem{ border:1px solid #dbe5ef; border-radius:8px; background:#fbfdff; padding:8px 9px; }
+    .batchCommSummaryItem strong{ display:block; color:#40556b; font-size:10px; text-transform:uppercase; letter-spacing:.03em; }
+    .batchCommSummaryItem span{ display:block; margin-top:3px; color:#0f1f35; font-size:14px; font-weight:900; overflow-wrap:anywhere; }
+    .batchCommReasonList{ margin-top:8px; display:grid; gap:5px; }
+    .batchCommReason{ border:1px solid #e3c06b; background:#fff8e8; color:#704a00; border-radius:7px; padding:6px 8px; font-size:12px; font-weight:850; }
+    .batchCommConfirmPanel{ border-color:#b8cce2; background:#fbfdff; }
+    .batchCommConfirmPanel.hidden{ display:none; }
     .batchCommTemplateGallery{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:8px; }
     .batchCommTemplateCard{ border:1px solid #cbd8e6; border-radius:8px; background:#fff; padding:10px; color:#173451; cursor:pointer; text-align:left; }
     .batchCommTemplateCard.selected{ border-color:#1f5aa5; box-shadow:inset 4px 0 0 #1f5aa5; background:#f5f9ff; }
@@ -518,6 +531,7 @@
     .batchCommRecipient{ display:grid; grid-template-columns:auto minmax(0,1fr) minmax(110px,.35fr); gap:8px; align-items:start; border:1px solid #e5ebf2; border-radius:7px; background:#fbfdff; padding:7px 8px; font-size:12px; }
     .batchCommRecipient strong{ display:block; color:#0f1f35; overflow-wrap:anywhere; }
     .batchCommRecipient span{ display:block; color:#40556b; overflow-wrap:anywhere; }
+    .batchCommRecipient .reason{ margin-top:3px; color:#704a00; font-weight:800; }
     .batchCommRecipient .status{ font-weight:900; color:#174a8b; text-align:right; }
     .batchCommActions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
     .batchCommDiagnostics summary{ cursor:pointer; color:#174a8b; font-weight:900; }
@@ -527,6 +541,7 @@
     .standaloneBatchCommModal{ outline:0; }
     @media (max-width:760px){
       .batchCommStrip{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .batchCommWorkflow{ grid-template-columns:repeat(2,minmax(0,1fr)); }
       .batchCommGrid{ grid-template-columns:1fr; }
       .batchCommRecipient{ grid-template-columns:auto minmax(0,1fr); }
       .batchCommRecipient .status{ grid-column:2; text-align:left; }
@@ -682,6 +697,7 @@
     }
     .commTemplateSelectedBanner,
     .commTemplateRecommendedBanner{ display:inline-flex; align-items:center; gap:6px; margin-bottom:8px; padding:5px 9px; border-radius:999px; border:1px solid #9fc0e4; background:#eef6ff; color:#174a8b; font-size:12px; font-weight:900; letter-spacing:0; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.25; }
+    .commTemplateOtherBanner{ display:inline-flex; align-items:center; gap:6px; margin-bottom:8px; padding:5px 9px; border-radius:999px; border:1px solid #cbd8e6; background:#f8fafc; color:#40556b; font-size:12px; font-weight:900; letter-spacing:0; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.25; }
     .commTemplateSelectedBanner{ border-color:#1f5aa5; background:#1f5aa5; color:#fff; }
     .commTemplateDisabledReason{ display:inline-flex; align-items:center; gap:6px; margin-bottom:8px; padding:5px 9px; border-radius:999px; border:1px solid #8da2b7; background:#e2eaf2; color:#26384e; font-size:12px; font-weight:900; line-height:1.25; }
     .commTemplateCardTitle{ font-weight:900; color:#0f1f35; margin-bottom:4px; }
@@ -2857,20 +2873,21 @@
             <h4>Template Gallery</h4>
             <div id="standaloneBatchCommTemplateGallery" class="batchCommTemplateGallery"></div>
           </div>
-          <div class="batchCommPanel">
+          <div class="batchCommPanel batchCommSummaryPanel">
             <h4>Communication Summary</h4>
             <div id="standaloneBatchCommSummary"></div>
             <div class="batchCommActions" style="margin-top:10px;">
-              <button id="btnStandaloneBatchCommPreview" class="btn small operatorControl operatorControlSecondary" type="button" onclick="previewBatchCommunicationModal_()">Preview</button>
-              <button id="btnStandaloneBatchCommSend" class="btn small operatorControl operatorControlBatch" type="button" onclick="sendBatchCommunicationModal_()" disabled>Send Batch</button>
+              <button id="btnStandaloneBatchCommPreview" class="btn small operatorControl operatorControlSecondary" type="button" onclick="previewBatchCommunicationModal_()">Generate Preview</button>
+              <button id="btnStandaloneBatchCommSend" class="btn small operatorControl operatorControlBatch" type="button" onclick="requestBatchCommunicationConfirmation_()" disabled>Review Send</button>
             </div>
           </div>
         </div>
+        <div id="standaloneBatchCommConfirm" class="batchCommPanel batchCommConfirmPanel hidden" aria-live="polite"></div>
         <div class="batchCommPanel">
           <h4>Live Preview</h4>
           <div id="standaloneBatchCommPreview"></div>
         </div>
-        <details class="batchCommPanel">
+        <details id="standaloneBatchCommRecipientDetails" class="batchCommPanel">
           <summary>View recipients</summary>
           <div id="standaloneBatchCommRecipients" class="batchCommRecipients" style="margin-top:8px;"></div>
         </details>
@@ -3389,6 +3406,7 @@
       preview: null,
       previewStale: false,
       sendResult: null,
+      confirmOpen: false,
       busy: false,
       action: "",
       requestSeq: 0
@@ -10133,14 +10151,14 @@ function renderStageDashboard_(items, emptyMessage){
         previewBtn.disabled = !!busy || !batchCommState.selectedMessageType;
         previewBtn.classList.toggle("operatorControlBusy", !!busy && action === "preview");
         previewBtn.setAttribute("aria-busy", !!busy && action === "preview" ? "true" : "false");
-        previewBtn.textContent = !!busy && action === "preview" ? "Previewing..." : "Preview";
+        previewBtn.textContent = !!busy && action === "preview" ? "Generating..." : "Generate Preview";
       }
       if (sendBtn) {
         var canSend = batchCommCanSend_();
         sendBtn.disabled = !!busy || !canSend;
         sendBtn.classList.toggle("operatorControlBusy", !!busy && action === "send");
         sendBtn.setAttribute("aria-busy", !!busy && action === "send" ? "true" : "false");
-        sendBtn.textContent = !!busy && action === "send" ? "Sending..." : "Send Batch";
+        sendBtn.textContent = !!busy && action === "send" ? "Sending..." : "Review Send";
       }
     }
 
@@ -10163,6 +10181,7 @@ function renderStageDashboard_(items, emptyMessage){
       batchCommState.preview = null;
       batchCommState.previewStale = false;
       batchCommState.sendResult = null;
+      batchCommState.confirmOpen = false;
       batchCommState.busy = false;
       batchCommState.action = "";
       batchCommState.recommendedMessageType = String(src.recommendedMessageType || "");
@@ -10245,6 +10264,75 @@ function renderStageDashboard_(items, emptyMessage){
       return { text: "Preview required", cls: "warn" };
     }
 
+    function batchCommRecipientReason_(rec){
+      var r = rec && typeof rec === "object" ? rec : {};
+      var reason = String(r.reason || r.blockReason || r.blockedReason || r.statusReason || r.deliveryReason || "").trim();
+      var status = String(r.status || r.deliveryStatus || "").trim();
+      var email = String(r.email || "").trim();
+      if (reason) return reason;
+      if (r.included === false) return "Excluded from this batch.";
+      if (!email) return "Missing email.";
+      if (/blocked|suppressed|bounce|invalid|policy|failed/i.test(status)) return status;
+      return "";
+    }
+
+    function batchCommReasonSummaryHtml_(preview, counts){
+      var p = preview || {};
+      var recipients = Array.isArray(p.recipients) ? p.recipients : [];
+      var reasons = {};
+      recipients.forEach(function(rec){
+        var reason = batchCommRecipientReason_(rec);
+        if (!reason) return;
+        reasons[reason] = Number(reasons[reason] || 0) + 1;
+      });
+      var excluded = Object.keys(batchCommState.excludedApplicantIds || {}).length;
+      if (excluded) reasons["Manually excluded"] = Number(reasons["Manually excluded"] || 0) + excluded;
+      if (!Object.keys(reasons).length && Number(counts && counts.blocked || 0) > 0) reasons["Blocked by communication policy"] = Number(counts.blocked || 0);
+      if (!Object.keys(reasons).length && Number(counts && counts.missingEmail || 0) > 0) reasons["Missing email"] = Number(counts.missingEmail || 0);
+      var keys = Object.keys(reasons);
+      if (!keys.length) return "";
+      return '<div class="batchCommReasonList">' + keys.map(function(reason){
+        return '<div class="batchCommReason">' + esc(reasons[reason]) + ' - ' + esc(reason) + '</div>';
+      }).join("") + '</div>';
+    }
+
+    function batchCommWorkflowHtml_(){
+      function step(label, done, active){
+        return '<div class="batchCommWorkflowStep' + (done ? " done" : "") + (active ? " active" : "") + '">' + esc(label) + '</div>';
+      }
+      var hasTemplate = !!String(batchCommState.selectedMessageType || "").trim();
+      var hasPreview = !!(batchCommState.preview && batchCommState.preview.ok === true && batchCommState.previewStale !== true);
+      var hasRecipients = hasPreview && Number((batchCommState.preview || {}).recipientCount || (batchCommState.preview || {}).eligible || (batchCommState.preview || {}).count || 0) > 0;
+      var confirming = batchCommState.confirmOpen === true;
+      var sent = !!batchCommState.sendResult;
+      return '<div class="batchCommWorkflow" aria-label="Batch communication workflow">'
+        + step("Template", hasTemplate, !hasTemplate)
+        + step("Preview", hasPreview, hasTemplate && !hasPreview)
+        + step("Recipients", hasRecipients, hasPreview && !hasRecipients)
+        + step("Confirm", confirming || sent, hasPreview && !confirming && !sent)
+        + step("Send", sent, confirming)
+        + '</div>';
+    }
+
+    function batchCommConfirmHtml_(preview, counts){
+      if (batchCommState.confirmOpen !== true) return "";
+      var meta = getCommTemplateMeta_(batchCommState.selectedMessageType) || {};
+      var recipients = Number((preview && (preview.count || preview.eligible || preview.candidateCount)) || 0);
+      return '<h4>Confirm Batch Send</h4>'
+        + '<div class="batchCommStateNote warn">You are about to send ' + esc(meta.label || batchCommState.selectedMessageType || "the selected template") + ' to ' + esc(recipients) + ' applicants. Proceed?</div>'
+        + '<div class="batchCommSummaryGrid">'
+        + '<div class="batchCommSummaryItem"><strong>Template</strong><span>' + esc(meta.label || batchCommState.selectedMessageType || "Not selected") + '</span></div>'
+        + '<div class="batchCommSummaryItem"><strong>Recipients</strong><span>' + esc(recipients) + '</span></div>'
+        + '<div class="batchCommSummaryItem"><strong>Excluded</strong><span>' + esc(Number(counts.excluded || 0)) + '</span></div>'
+        + '<div class="batchCommSummaryItem"><strong>Source</strong><span>' + esc(batchCommSourceSummary_()) + '</span></div>'
+        + '</div>'
+        + batchCommReasonSummaryHtml_(preview, counts)
+        + '<div class="batchCommActions" style="margin-top:10px;">'
+        + '<button class="btn small operatorControl operatorControlBatch" type="button" onclick="sendBatchCommunicationModal_()">Proceed and Send</button>'
+        + '<button class="btn small operatorControl operatorControlSecondary" type="button" onclick="cancelBatchCommunicationConfirmation_()">Cancel</button>'
+        + '</div>';
+    }
+
     function renderBatchCommunicationModal_(){
       var sourceEl = batchCommUi_("Source");
       var readinessEl = batchCommUi_("Readiness");
@@ -10252,6 +10340,7 @@ function renderStageDashboard_(items, emptyMessage){
       var summaryEl = batchCommUi_("Summary");
       var previewEl = batchCommUi_("Preview");
       var recipientsEl = batchCommUi_("Recipients");
+      var confirmEl = batchCommUi_("Confirm");
       var diagEl = batchCommUi_("Diagnostics");
       var resultEl = batchCommUi_("Result");
       if (sourceEl) sourceEl.textContent = "Source: " + batchCommSourceSummary_();
@@ -10279,6 +10368,7 @@ function renderStageDashboard_(items, emptyMessage){
           return '<button class="batchCommTemplateCard' + (selected ? " selected" : "") + (recommended ? " recommended" : "") + '" type="button" ' + (stageLocked ? 'disabled title="Stage cohort templates are governed by lifecycle-stage policy."' : 'onclick="selectBatchCommTemplate_(\'' + esc(type) + '\')"') + '>'
             + (selected ? '<div class="commTemplateSelectedBanner">Selected template</div>' : '')
             + (recommended ? '<div class="commTemplateRecommendedBanner">Recommended</div>' : '')
+            + (!recommended ? '<div class="commTemplateOtherBanner">Other option</div>' : '')
             + (stageLocked ? '<div class="commTemplateDisabledReason">Stage policy locked</div>' : '')
             + '<div class="commTemplateCardTitle">' + esc(meta.label || type) + '</div>'
             + '<div class="muted" style="font-size:12px;">' + esc(type) + '</div>'
@@ -10289,10 +10379,16 @@ function renderStageDashboard_(items, emptyMessage){
       if (summaryEl) {
         var meta = getCommTemplateMeta_(batchCommState.selectedMessageType) || {};
         summaryEl.innerHTML = '<div class="batchCommStateNote ' + esc(stateLabel.cls) + '">' + esc(stateLabel.text) + '</div>'
-          + '<div style="margin-top:8px;"><strong>Template</strong><br>' + esc(meta.label || batchCommState.selectedMessageType || "Not selected") + '</div>'
-          + '<div style="margin-top:8px;"><strong>Recipient count</strong><br>' + esc(Number(preview.recipientCount || total || 0)) + '</div>'
-          + '<div style="margin-top:8px;"><strong>Estimated send</strong><br>' + esc(eligible) + '</div>'
-          + '<div style="margin-top:8px;"><strong>Readiness</strong><br>' + esc(batchCommCanSend_() ? "Ready to Send" : "Preview required or no eligible recipients") + '</div>';
+          + batchCommWorkflowHtml_()
+          + '<div class="batchCommSummaryGrid">'
+          + '<div class="batchCommSummaryItem"><strong>Template</strong><span>' + esc(meta.label || batchCommState.selectedMessageType || "Not selected") + '</span></div>'
+          + '<div class="batchCommSummaryItem"><strong>Recipients</strong><span>' + esc(Number(preview.recipientCount || total || 0)) + '</span></div>'
+          + '<div class="batchCommSummaryItem"><strong>Excluded / Blocked</strong><span>' + esc(Number(counts.excluded || 0)) + ' / ' + esc(Number(counts.blocked || 0)) + '</span></div>'
+          + '<div class="batchCommSummaryItem"><strong>Source</strong><span>' + esc(batchCommSourceSummary_()) + '</span></div>'
+          + '<div class="batchCommSummaryItem"><strong>Estimated send</strong><span>' + esc(eligible) + '</span></div>'
+          + '<div class="batchCommSummaryItem"><strong>Readiness</strong><span>' + esc(batchCommCanSend_() ? "Ready to Send" : "Preview required or no eligible recipients") + '</span></div>'
+          + '</div>'
+          + batchCommReasonSummaryHtml_(preview, counts);
       }
       if (previewEl) {
         previewEl.innerHTML = preview && preview.result
@@ -10302,14 +10398,30 @@ function renderStageDashboard_(items, emptyMessage){
             + '<div style="margin-top:8px;"><strong>Recipient count</strong><br>' + esc(eligible) + '</div>'
           : '<div class="muted">Choose a template and preview the cohort before sending.</div>';
       }
+      if (confirmEl) {
+        var confirmHtml = batchCommConfirmHtml_(preview, counts);
+        if (confirmHtml) {
+          confirmEl.classList.remove("hidden");
+          confirmEl.innerHTML = confirmHtml;
+        } else {
+          confirmEl.classList.add("hidden");
+          confirmEl.innerHTML = "";
+        }
+      }
       if (recipientsEl) {
         var recipients = Array.isArray(preview.recipients) ? preview.recipients : batchCommState.applicantIds.map(function(id){ return { applicantId:id, name:"", email:"", included:!batchCommState.excludedApplicantIds[id], status:"Pending", reason:"Preview required." }; });
+        var recipientDetails = document.getElementById("standaloneBatchCommRecipientDetails");
+        if (recipientDetails) {
+          if (Number(recipients.length || total || 0) <= 10) recipientDetails.setAttribute("open", "open");
+          else recipientDetails.removeAttribute("open");
+        }
         recipientsEl.innerHTML = recipients.map(function(rec){
           var id = String(rec.applicantId || "");
           var checked = batchCommState.excludedApplicantIds[id] ? "" : "checked";
+          var reason = batchCommRecipientReason_(rec);
           return '<label class="batchCommRecipient">'
             + '<input type="checkbox" ' + checked + ' onchange="toggleBatchCommRecipient_(\'' + esc(id) + '\', this.checked)">'
-            + '<span><strong>' + esc(rec.name || "Applicant") + '</strong><span>' + esc(rec.email || rec.reason || "Email pending preview") + '</span></span>'
+            + '<span><strong>' + esc(rec.name || "Applicant") + '</strong><span>' + esc(rec.email || "Email pending preview") + '</span>' + (reason ? '<span class="reason">' + esc(reason) + '</span>' : '') + '</span>'
             + '<span class="status">' + esc(rec.included === false || batchCommState.excludedApplicantIds[id] ? "Excluded" : (rec.status || "Included")) + '</span>'
             + '</label>';
         }).join("") || '<div class="muted">No recipients in this cohort.</div>';
@@ -10341,6 +10453,7 @@ function renderStageDashboard_(items, emptyMessage){
       batchCommState.selectedMessageType = String(messageType || "");
       batchCommState.preview = null;
       batchCommState.sendResult = null;
+      batchCommState.confirmOpen = false;
       renderBatchCommunicationModal_();
       if (batchCommState.selectedMessageType) previewBatchCommunicationModal_();
     }
@@ -10352,6 +10465,7 @@ function renderStageDashboard_(items, emptyMessage){
       else batchCommState.excludedApplicantIds[id] = true;
       if (batchCommState.preview) batchCommState.previewStale = true;
       batchCommState.sendResult = null;
+      batchCommState.confirmOpen = false;
       renderBatchCommunicationModal_();
     }
 
@@ -10435,6 +10549,7 @@ function renderStageDashboard_(items, emptyMessage){
       batchCommState.preview = res && typeof res === "object" ? res : { ok:false, result:"FAILED", message:"Invalid preview response." };
       batchCommState.previewStale = false;
       batchCommState.sendResult = null;
+      batchCommState.confirmOpen = false;
       renderBatchCommunicationModal_();
     }
 
@@ -10445,20 +10560,33 @@ function renderStageDashboard_(items, emptyMessage){
       batchCommState.preview = { ok:false, result:"FAILED", message:String((err && err.message) || err || "Preview request failed.") };
       batchCommState.previewStale = false;
       batchCommState.sendResult = null;
+      batchCommState.confirmOpen = false;
+      renderBatchCommunicationModal_();
+    }
+
+    function requestBatchCommunicationConfirmation_(){
+      if (batchCommState.busy || !batchCommCanSend_()) return;
+      batchCommState.confirmOpen = true;
+      renderBatchCommunicationModal_();
+      var confirmEl = batchCommUi_("Confirm");
+      if (confirmEl && typeof confirmEl.scrollIntoView === "function") confirmEl.scrollIntoView({ block:"nearest" });
+    }
+
+    function cancelBatchCommunicationConfirmation_(){
+      batchCommState.confirmOpen = false;
       renderBatchCommunicationModal_();
     }
 
     function sendBatchCommunicationModal_(){
       if (batchCommState.busy || !batchCommCanSend_()) return;
+      if (batchCommState.confirmOpen !== true) {
+        requestBatchCommunicationConfirmation_();
+        return;
+      }
       var preview = batchCommState.preview || {};
-      var count = Number(preview.count || preview.eligible || preview.candidateCount || 0);
-      var meta = getCommTemplateMeta_(batchCommState.selectedMessageType) || {};
-      var confirmText = "You are about to send " + String(meta.label || batchCommState.selectedMessageType || "the selected template") + " to " + String(count) + " applicants."
-        + "\n\nSource: " + batchCommSourceSummary_()
-        + "\n\nProceed?";
-      if (!window.confirm(confirmText)) return;
       batchCommState.requestSeq++;
       var seq = batchCommState.requestSeq;
+      batchCommState.confirmOpen = false;
       setBatchCommBusy_(true, "send");
       var payload = {
         messageType: batchCommState.selectedMessageType,
@@ -10485,6 +10613,7 @@ function renderStageDashboard_(items, emptyMessage){
       batchCommState.busy = false;
       batchCommState.action = "";
       batchCommState.sendResult = res && typeof res === "object" ? res : { ok:false, result:"FAILED", message:"Invalid send response." };
+      batchCommState.confirmOpen = false;
       renderBatchCommunicationModal_();
       loadActionabilityPreview_({ force: true });
     }
@@ -10494,6 +10623,7 @@ function renderStageDashboard_(items, emptyMessage){
       batchCommState.busy = false;
       batchCommState.action = "";
       batchCommState.sendResult = { ok:false, result:"FAILED", message:String((err && err.message) || err || "Send request failed.") };
+      batchCommState.confirmOpen = false;
       renderBatchCommunicationModal_();
     }
 
