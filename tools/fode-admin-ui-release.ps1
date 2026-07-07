@@ -5,7 +5,8 @@ param(
   [string[]]$Markers = @("openModalLoading_", "setReviewHeaderLoading_", "clearReviewHeaderFacts_", "resetReviewModalScroll_", "reviewOwnerDisplayLabel_", "reviewLoadingBanner", "reviewHeaderGrid loading", "docStatus", "docComment", "docRecommendation"),
   [string[]]$AbsentMarkers = @("not_in_loaded_review_queue"),
   [string]$VersionDescription = "Admin UI-only release",
-  [switch]$SkipCommit
+  [switch]$SkipCommit,
+  [switch]$DryRun
 )
 
 $ErrorActionPreference = "Stop"
@@ -16,6 +17,7 @@ function Show-Help {
   Write-Host ""
   Write-Host "Usage:"
   Write-Host "  powershell -ExecutionPolicy Bypass -File tools\fode-admin-ui-release.ps1 -CommitMessage `"fix: stabilise review modal identity and document controls`" -VersionDescription `"Admin UI modal stabilisation`""
+  Write-Host "  powershell -ExecutionPolicy Bypass -File tools\fode-admin-ui-release.ps1 -DryRun -VersionDescription `"preflight dry run`""
   Write-Host ""
   Write-Host "What it runs:"
   Write-Host "  validation, optional commit, git push, clasp push, Apps Script readback marker proof, one clasp version, Admin-only repin, whoami verifier, operator/surfaces smoke."
@@ -29,10 +31,90 @@ function Show-Help {
 function Invoke-Step {
   param([string]$Name, [scriptblock]$Block)
   Write-Host "RUN: $Name"
-  & $Block
+  try {
+    & $Block
+  } catch {
+    $code = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
+    if ($code -ne 0) { throw }
+    Write-Warning $_
+  }
   $code = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
   if ($code -ne 0) { throw "$Name failed with exit code $code" }
   Write-Host "PASS: $Name" -ForegroundColor Green
+}
+
+function PassFail {
+  param([bool]$Ok)
+  if ($Ok) { return "PASS" }
+  return "FAIL"
+}
+
+function Get-GitRemoteUrl {
+  $remote = (& git remote get-url origin 2>$null)
+  if ($LASTEXITCODE -ne 0 -or !$remote) { return "" }
+  return [string]$remote
+}
+
+function Test-ClaspReachable {
+  $output = & clasp.cmd status --json 2>$null
+  if ($LASTEXITCODE -ne 0) { return "FAIL" }
+  if (!$output) { return "unknown" }
+  return "reachable"
+}
+
+function Write-ReleasePreflight {
+  param(
+    [string]$RepoRoot,
+    [object]$Project,
+    [bool]$DryRunValue
+  )
+  $expectedRepo = [System.IO.Path]::GetFullPath($Project.repository.path).TrimEnd("\")
+  $actualRepo = [System.IO.Path]::GetFullPath($RepoRoot).TrimEnd("\")
+  $repoOk = $expectedRepo -eq $actualRepo
+  $branch = (& git branch --show-current 2>$null).Trim()
+  $remoteUrl = Get-GitRemoteUrl
+  $claspPath = Join-Path $RepoRoot ".clasp.json"
+  $claspOk = $false
+  if (Test-Path -LiteralPath $claspPath -PathType Leaf) {
+    try {
+      $scriptId = [string]((Get-Content -LiteralPath $claspPath -Raw | ConvertFrom-Json).scriptId)
+      $claspOk = $scriptId -eq [string]$Project.appsScript.scriptId
+    } catch {
+      $claspOk = $false
+    }
+  }
+  $requiredFiles = @(
+    "tools\fode-admin-ui-release.ps1",
+    "tools\fode-admin-ui-remote-markers.ps1",
+    "tools\fode-preflight.ps1",
+    "tools\fode-smoke.ps1",
+    "tools\verify-runtime.ps1",
+    "AdminUI.html"
+  )
+  $missingRequired = @($requiredFiles | Where-Object { !(Test-Path -LiteralPath (Join-Path $RepoRoot $_) -PathType Leaf) })
+  $status = @(& git status --porcelain=v1)
+  $treeState = if ($status.Count -eq 0) { "CLEAN" } else { "CHANGES" }
+  $appsScriptState = if ($claspOk) { Test-ClaspReachable } else { "FAIL" }
+  $remoteState = if ($remoteUrl) { $remoteUrl } else { "FAIL" }
+
+  Write-Host "FODE Admin UI Release"
+  Write-Host "====================="
+  Write-Host ("Repository ........ " + (PassFail ($repoOk -and $missingRequired.Count -eq 0)))
+  Write-Host ("Working tree ...... " + $treeState)
+  Write-Host ("Current branch .... " + ($(if ($branch) { $branch } else { "FAIL" })))
+  Write-Host ("Git remote ........ " + $remoteState)
+  Write-Host ("clasp config ...... " + (PassFail $claspOk))
+  Write-Host ("Apps Script ....... " + $appsScriptState)
+  Write-Host "Target deployment . Admin Staging"
+  Write-Host ("Dry run ........... " + ([string]$DryRunValue).ToLowerInvariant())
+  Write-Host ""
+
+  if (!$repoOk) { throw "Repository path mismatch: expected $expectedRepo got $actualRepo" }
+  if (!$branch) { throw "Current branch could not be resolved." }
+  if (!$remoteUrl) { throw "Git origin remote could not be resolved." }
+  if (!$claspOk) { throw "clasp config missing or scriptId mismatch." }
+  if ($appsScriptState -eq "FAIL") { throw "Apps Script status check failed." }
+  if ($missingRequired.Count -gt 0) { throw "Required script files missing: $($missingRequired -join ', ')" }
 }
 
 if ($Help) {
@@ -48,10 +130,7 @@ $admin = $project.deployments.adminStaging
 $student = $project.deployments.studentStaging
 $adminDeployId = [string]$admin.deploymentId
 
-Write-Host "FODE Admin UI-only release"
-Write-Host "Repo: $repoRoot"
-Write-Host "Admin deployment: $adminDeployId"
-Write-Host "Student protected: $($student.deploymentId)"
+Write-ReleasePreflight -RepoRoot $repoRoot -Project $project -DryRunValue ([bool]$DryRun)
 Write-Host "No Student/Production/OPS/Sheet/Drive/Gmail/WhatsApp/applicant mutation."
 
 Invoke-Step "node --check Admin.js" { & node --check Admin.js }
@@ -61,7 +140,17 @@ Invoke-Step "node tests\admin-review-workspace-ux-surface.test.js" { & node test
 Invoke-Step "tools\fode-preflight.ps1" { & (Join-Path $PSScriptRoot "fode-preflight.ps1") }
 Invoke-Step "tools\fode-smoke.ps1 -Profile operator" { & (Join-Path $PSScriptRoot "fode-smoke.ps1") -Profile operator }
 Invoke-Step "tools\fode-smoke.ps1 -Profile surfaces" { & (Join-Path $PSScriptRoot "fode-smoke.ps1") -Profile surfaces }
-Invoke-Step "git diff --check" { & git diff --check }
+Invoke-Step "git diff --check" { & git -c core.autocrlf=false diff --check }
+
+Write-Host "Proof-readiness markers: $($Markers -join ', ')"
+Write-Host "Proof-readiness absent markers: $($AbsentMarkers -join ', ')"
+
+if ($DryRun) {
+  Write-Host ""
+  Write-Host "DRY RUN PASS" -ForegroundColor Green
+  Write-Host "No git push, clasp push, Apps Script version, deployment repin, or data mutation performed."
+  exit 0
+}
 
 if (!$SkipCommit) {
   if (!$CommitMessage) { throw "CommitMessage is required unless -SkipCommit is used." }
