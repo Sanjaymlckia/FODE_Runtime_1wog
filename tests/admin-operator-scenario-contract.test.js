@@ -31,11 +31,15 @@ mustMatch(adminUi, /Current page selection/, "Select Visible scenario must ident
 mustMatch(adminUi, /Full Bounded Cohort/, "Select All scenario must identify full bounded cohort source");
 
 mustMatch(adminUi, /id="batchCommModalBack"/, "Batch communication scenario must open a dedicated modal");
-mustMatch(adminUi, /Batch Communication Handoff/, "Batch communication scenario must retain the selected-cohort handoff summary");
-mustMatch(adminUi, /Recommended templates/, "Batch handoff must expose recommended templates");
-mustMatch(adminUi, /Blocked reasons/, "Batch handoff must expose blocked reasons");
-mustMatch(adminUi, /Recommended next action/, "Batch handoff must expose next safe action");
-mustNotMatch(adminUi, /function actionabilityBatchCommunication_[\s\S]{0,700}admin_sendApplicantMessage/, "Batch handoff must not create a send path");
+mustMatch(adminUi, /id="batchCommModalBack" class="modalBack"/, "Batch communication scenario must render an actual modal container");
+mustMatch(adminUi, /back\.classList\.add\("open"\)/, "Batch communication scenario must visibly open the modal");
+mustMatch(adminUi, /id="batchCommTemplateGallery"/, "Batch communication scenario must show the template gallery inside the modal");
+mustMatch(adminUi, /Selected template[\s\S]*Recommended/, "Batch communication scenario must highlight the recommended template");
+mustMatch(adminUi, /Recipient count/, "Batch communication scenario must show recipient count");
+mustMatch(adminUi, /id="btnBatchCommPreview"[\s\S]*>Preview<\/button>[\s\S]*id="btnBatchCommSend"[\s\S]*>Send Batch<\/button>/, "Batch communication scenario must expose preview and confirm flow");
+mustNotMatch(adminUi, /Batch Communication Handoff|Batch Reminder Handoff/, "Batch communication scenario must not stop at a handoff panel");
+mustNotMatch(adminUi, /Open first eligible in Review/, "Batch communication scenario must not route multi-applicant cohorts through Review");
+mustNotMatch(adminUi, /function actionabilityBatchCommunication_[\s\S]{0,700}admin_sendApplicantMessage/, "Batch modal must not create a single-applicant send path");
 mustMatch(adminUi, /admin_previewSelectedApplicantBatch/, "Selected cohorts must use the selected batch preview wrapper");
 mustMatch(adminUi, /admin_sendSelectedApplicantBatch/, "Selected cohorts must use the selected batch send wrapper");
 mustNotMatch(adminUi, /function sendBatchCommunicationModal_[\s\S]*admin_sendApplicantMessage/, "Batch modal must not route through the single-applicant Review RPC");

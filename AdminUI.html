@@ -10040,15 +10040,15 @@ function renderStageDashboard_(items, emptyMessage){
 
     function actionabilityBatchRecommendedNextAction_(summary){
       if (!summary || !summary.selected) return "Select applicants first.";
-      if (summary.eligible > 0 && summary.blocked > 0) return "Open first eligible applicant in Review, then resolve blocked rows through Contactability Gate.";
-      if (summary.eligible > 0) return "Open first eligible applicant in Review or use existing gated batch tools. No send occurs from this panel.";
+      if (summary.eligible > 0 && summary.blocked > 0) return "Open Batch Communication to preview eligible recipients and resolve blocked rows through Contactability Gate.";
+      if (summary.eligible > 0) return "Open Batch Communication to preview this cohort. Send remains gated by batch authority.";
       return "Resolve Contactability Gate issues before email communication.";
     }
 
     function renderActionabilityBatchPanel_(){
       if (!actionabilityBatchPanelMode) return "";
       var summary = actionabilitySelectionSummary_();
-      var modeLabel = actionabilityBatchPanelMode === "reminder" ? "Batch Reminder Handoff" : "Batch Communication Handoff";
+      var modeLabel = actionabilityBatchPanelMode === "reminder" ? "Batch Reminder Readiness" : "Batch Communication Readiness";
       var next = actionabilityBatchRecommendedNextAction_(summary);
       return '<div class="actionabilityBatchPanel" role="region" aria-label="' + esc(modeLabel) + '">'
         + '<h4>' + esc(modeLabel) + '</h4>'
@@ -10063,7 +10063,7 @@ function renderStageDashboard_(items, emptyMessage){
         + '<div class="actionabilityBatchDetails">'
         + '<div><strong>Recommended templates</strong>' + esc(actionabilitySummaryList_(summary.templateCounts, "No email-ready templates")) + '</div>'
         + '<div><strong>Blocked reasons</strong>' + esc(actionabilitySummaryList_(summary.blockedReasons, "No blocked selected rows")) + '</div>'
-        + '<div><strong>Recommended next action</strong>' + esc(next) + '<div style="margin-top:6px;"><button class="btn small operatorControl operatorControlPrimary" type="button" onclick="openFirstActionabilityEligibleReview_()" ' + (summary.eligible ? "" : "disabled") + '>Open first eligible in Review</button></div></div>'
+        + '<div><strong>Recommended next action</strong>' + esc(next) + '</div>'
         + '</div></div>';
     }
 
@@ -10076,7 +10076,7 @@ function renderStageDashboard_(items, emptyMessage){
       var status = actionabilityBatchMessage || (selected
         ? sourceLabel + String(selected) + " selected. " + String(eligible) + " email-ready, " + String(blocked) + " blocked by Contactability Gate or cooldown."
         : "No applicants selected.");
-      var canBatchEmail = selected > 0 && eligible > 0;
+      var canBatchEmail = selected > 1;
       var canExport = selected > 0;
       return '<div class="actionabilitySelectionBar" aria-label="Current Worklist selection and batch readiness">'
         + '<div><strong>Selection</strong><span class="actionabilitySelectionStatus">' + esc(status) + '</span></div>'
@@ -10084,8 +10084,8 @@ function renderStageDashboard_(items, emptyMessage){
         + '<button class="btn small operatorControl operatorControlSecondary" type="button" onclick="selectVisibleActionabilityRows_()">Select Visible</button>'
         + '<button class="btn small operatorControl operatorControlSecondary" type="button" onclick="selectAllActionabilityRows_()">Select All</button>'
         + '<button class="btn small operatorControl operatorControlSecondary" type="button" onclick="clearActionabilitySelection_()" ' + (selected ? "" : "disabled") + '>Clear Selection</button>'
-        + '<button class="btn small operatorControl operatorControlBatch" type="button" onclick="actionabilityBatchCommunication_()" ' + (canBatchEmail ? "" : "disabled") + ' title="' + esc(canBatchEmail ? "Preview communication readiness for selected rows." : "Select at least one email-ready applicant.") + '">Batch Communication</button>'
-        + '<button class="btn small operatorControl operatorControlBatch" type="button" onclick="actionabilityBatchReminder_()" ' + (canBatchEmail ? "" : "disabled") + ' title="' + esc(canBatchEmail ? "Preview reminder readiness for selected rows." : "Blocked until selected rows include an email-ready applicant.") + '">Batch Reminder</button>'
+        + '<button class="btn small operatorControl operatorControlBatch" type="button" onclick="actionabilityBatchCommunication_()" ' + (canBatchEmail ? "" : "disabled") + ' title="' + esc(canBatchEmail ? "Open Batch Communication for the selected cohort." : "Select at least two applicants to open Batch Communication.") + '">Batch Communication</button>'
+        + '<button class="btn small operatorControl operatorControlBatch" type="button" onclick="actionabilityBatchReminder_()" ' + (canBatchEmail ? "" : "disabled") + ' title="' + esc(canBatchEmail ? "Open Batch Reminder for the selected cohort." : "Select at least two applicants to open Batch Reminder.") + '">Batch Reminder</button>'
         + '<button class="btn small operatorControl operatorControlBatch" type="button" onclick="exportActionabilitySelection_()" ' + (canExport ? "" : "disabled") + '>Batch Export</button>'
         + '</div></div>';
     }
@@ -10342,14 +10342,14 @@ function renderStageDashboard_(items, emptyMessage){
       var ids = rows.map(function(row){ return String(row && row.applicantId || "").trim(); }).filter(Boolean);
       if (!ids.length) {
         actionabilityBatchMessage = "Select at least two applicants before opening Batch Communication.";
-        actionabilityBatchPanelMode = "communication";
+        actionabilityBatchPanelMode = "";
         renderActionabilityPreview_({ preserveRows: true });
         setMsg("msg", "Select at least two applicants before opening Batch Communication.");
         return;
       }
       if (ids.length === 1) {
         actionabilityBatchMessage = "Single applicant selected. Use the Review Workspace communication flow for one applicant.";
-        actionabilityBatchPanelMode = "communication";
+        actionabilityBatchPanelMode = "";
         renderActionabilityPreview_({ preserveRows: true });
         setMsg("msg", "Single applicant selected. Use the Review Workspace communication flow for one applicant.");
         return;
@@ -10531,13 +10531,12 @@ function renderStageDashboard_(items, emptyMessage){
         actionabilityBatchMessage = Number(summary.selected || 0)
           ? "Single applicant selected. Use the Review Workspace communication flow for one applicant."
           : "Select at least two applicants before opening Batch Communication.";
-        actionabilityBatchPanelMode = "communication";
+        actionabilityBatchPanelMode = "";
         renderActionabilityPreview_({ preserveRows: true });
         return;
       }
-      actionabilityBatchMessage = "Batch Communication modal opened: " + String(summary.eligible) + " eligible, " + String(summary.blocked) + " blocked. Send authority remains gated by batch communication policy.";
-      actionabilityBatchPanelMode = "communication";
-      renderActionabilityPreview_({ preserveRows: true });
+      actionabilityBatchMessage = "";
+      actionabilityBatchPanelMode = "";
       openBatchCommunicationFromSelection_("selected");
     }
 
@@ -10547,13 +10546,12 @@ function renderStageDashboard_(items, emptyMessage){
         actionabilityBatchMessage = Number(summary.selected || 0)
           ? "Single applicant selected. Use the Review Workspace communication flow for one applicant."
           : "Select at least two applicants before opening Batch Reminder.";
-        actionabilityBatchPanelMode = "reminder";
+        actionabilityBatchPanelMode = "";
         renderActionabilityPreview_({ preserveRows: true });
         return;
       }
-      actionabilityBatchMessage = "Batch Reminder modal opened: " + String(summary.eligible) + " eligible, " + String(summary.blocked) + " blocked by Contactability Gate, bounce, or cooldown.";
-      actionabilityBatchPanelMode = "reminder";
-      renderActionabilityPreview_({ preserveRows: true });
+      actionabilityBatchMessage = "";
+      actionabilityBatchPanelMode = "";
       openBatchCommunicationFromSelection_("reminder");
     }
 
