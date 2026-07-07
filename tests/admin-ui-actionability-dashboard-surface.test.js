@@ -70,9 +70,17 @@ assert.match(cssRule(".btn:disabled,\n    .btn[disabled]"), /opacity:1;[\s\S]*co
   ".commTemplateChip",
   ".opsStatusPill",
   ".opsSortableHeader",
-  ".opsActionBtn"
+  ".opsActionBtn",
+  ".operatorControl"
 ].forEach(expectReadableControl);
+assert.match(adminUi, /\.operatorControlPrimary\{[^}]*background:#1f5aa5;[^}]*color:#fff;/, "Primary operator controls must use a consistent readable primary state");
+assert.match(adminUi, /\.operatorControlSecondary\{[^}]*background:#fff;[^}]*color:#173451;/, "Secondary operator controls must use a consistent readable secondary state");
+assert.match(adminUi, /\.operatorControlBatch\{[^}]*background:#fff7e8;[^}]*color:#704a00;/, "Batch operator controls must use a consistent readable batch state");
+assert.match(adminUi, /\.operatorControl:disabled,[\s\S]*\.operatorControl\[disabled\],[\s\S]*\.operatorControlDisabled\{[\s\S]*cursor:not-allowed;[\s\S]*background:#e2eaf2;[\s\S]*color:#26384e;[\s\S]*opacity:1;/, "Disabled operator controls must remain readable and unavailable");
+assert.match(adminUi, /\.operatorControlBusy,[\s\S]*\.operatorControl\[aria-busy="true"\]\{[\s\S]*cursor:progress;[\s\S]*background:#dbeafe;[\s\S]*color:#173451;/, "Busy operator controls must have a distinct readable busy state");
 assert.match(cssRule(".actionabilityBucketReviewBtn:disabled"), /background:#e2eaf2;[\s\S]*color:#26384e;[\s\S]*opacity:1;/, "Disabled bucket review buttons must remain readable");
+assert.match(adminUi, /\.actionabilityBucketReviewBtn\.operatorControlSecondary\{[\s\S]*background:#fff;[\s\S]*color:#174a8b;/, "Show Worklist must render as a secondary operator control");
+assert.match(adminUi, /\.actionabilityReviewBtn\.operatorControlPrimary\{[\s\S]*background:#1f5aa5;[\s\S]*color:#fff;/, "Row Review must render as the primary operator control");
 assert.match(cssRule(".opsModeBtn[disabled]"), /opacity:1;[\s\S]*color:#d6e7f8;/, "Disabled mode buttons must not be washed out");
 assert.match(cssRule(".opsActionBtn[disabled]"), /color:#26384e;[\s\S]*background:#e2eaf2;[\s\S]*opacity:1;/, "Disabled ops action buttons must remain readable");
 [
@@ -178,7 +186,7 @@ assert.match(adminUi, /reviewActionabilityRow_\('[^']*'|reviewActionabilityRow_\
 assert.match(adminUi, /actionabilityRenderedRows/, "Dashboard Review buttons must use the currently rendered row list");
 assert.match(functionSource("reviewActionabilityRow_"), /actionabilityRenderedRows[\s\S]*reviewActionabilityRecord_\(rows\[Number\(index\)\]/, "Row Review must open the exact rendered row");
 assert.match(functionSource("reviewActionabilityRecord_"), /review\(Number\(row\.rowNumber \|\| 0\)[\s\S]*String\(row\.applicantId \|\| ""\)/, "Row Review must pass the selected applicant ID into the modal opener");
-assert.match(adminUi, /class="btn actionabilityReviewBtn"/, "Dashboard Review button must use the emphasized operator action style");
+assert.match(adminUi, /class="btn actionabilityReviewBtn operatorControl operatorControlPrimary"/, "Dashboard Review button must use the emphasized operator action style");
 assert.match(adminUi, /Current Worklist/, "Operations Workspace must label the dense worklist");
 assert.ok(adminUi.includes("Review opens authoritative editing."), "Worklist helper text must reinforce Review as the edit handoff");
 assert.match(adminUi, /class="actionabilityWorklist"/, "Applicant rows must render in the OPS-style worklist structure");
@@ -192,7 +200,7 @@ assert.doesNotMatch(adminUi, /\.actionabilityWorklistTable\{[^}]*min-width:/, "P
   assert.ok(adminUi.includes(`class="actionabilityClusterLabel">${label}</span>`), `Worklist must cluster operator facts under ${label}`);
 });
 assert.match(adminUi, /actionabilityReviewCell[\s\S]+actionabilityReviewBtn/, "Review must remain a dedicated visible action column");
-assert.match(adminUi, /class="btn actionabilityReviewBtn"/, "Review must keep primary button hierarchy");
+assert.match(adminUi, /class="btn actionabilityReviewBtn operatorControl operatorControlPrimary"/, "Review must keep primary button hierarchy");
 assert.match(adminUi, /id="actionabilityContextMenu"/, "Current Worklist must expose an OPS-style context menu");
 assert.match(adminUi, /oncontextmenu="return openActionabilityContextMenu_/, "Current Worklist rows must open the safe context menu");
 assert.match(adminUi, /data-actionability-context="review"/, "Context menu must include Review handoff");
@@ -216,6 +224,17 @@ assert.match(adminUi, /Batch Communication Handoff/, "Batch panel must name the 
 assert.match(adminUi, /Recommended templates/, "Batch panel must show recommended template groups");
 assert.match(adminUi, /Blocked reasons/, "Batch panel must show blocked reasons");
 assert.match(adminUi, /Open first eligible in Review/, "Batch panel must provide a safe next action");
+assert.match(adminUi, /Select Visible<\/button>[\s\S]*Select All<\/button>[\s\S]*Clear Selection<\/button>/, "Selection controls must remain visible in the operator control strip");
+assert.match(adminUi, /class="btn small operatorControl operatorControlSecondary" type="button" onclick="selectVisibleActionabilityRows_\(\)">Select Visible/, "Select Visible must use secondary operator control semantics");
+assert.match(adminUi, /class="btn small operatorControl operatorControlSecondary" type="button" onclick="selectAllActionabilityRows_\(\)">Select All/, "Select All must use secondary operator control semantics");
+assert.match(adminUi, /class="btn small operatorControl operatorControlSecondary" type="button" onclick="clearActionabilitySelection_\(\)"[\s\S]*disabled/, "Clear Selection must use disabled secondary semantics when nothing is selected");
+assert.match(adminUi, /class="btn small operatorControl operatorControlBatch" type="button" onclick="actionabilityBatchCommunication_\(\)"[\s\S]*>Batch Communication<\/button>/, "Batch Communication must use batch operator control semantics");
+assert.match(adminUi, /class="btn small operatorControl operatorControlBatch" type="button" onclick="actionabilityBatchReminder_\(\)"[\s\S]*>Batch Reminder<\/button>/, "Batch Reminder must use batch operator control semantics");
+assert.match(adminUi, /class="btn small operatorControl operatorControlBatch" type="button" onclick="exportActionabilitySelection_\(\)"[\s\S]*>Batch Export<\/button>/, "Batch Export must use batch operator control semantics");
+assert.match(adminUi, /class="actionabilityBucketReviewBtn operatorControl operatorControlSecondary"[\s\S]*>Show Worklist<\/button>/, "Show Worklist must use secondary operator control semantics");
+assert.match(adminUi, /class="btn actionabilityReviewBtn operatorControl operatorControlPrimary"[\s\S]*>Review<\/button>/, "Row Review must use primary operator control semantics");
+assert.match(functionSource("setReviewButtonLoading_"), /classList\.add\("operatorControlBusy"\)[\s\S]*setAttribute\("aria-busy", "true"\)[\s\S]*btn\.disabled = true/, "Review loading must be busy and disabled to prevent double-submit");
+assert.match(functionSource("setReviewButtonLoading_"), /classList\.remove\("operatorControlBusy"\)[\s\S]*removeAttribute\("aria-busy"\)/, "Review loading state must be cleared after detail load");
 assert.match(adminUi, /\.modal\{[\s\S]*background: #f8fafc;[\s\S]*border: 1px solid #dbe5ef;/, "Review modal must visually align with the operator workspace surface");
 assert.doesNotMatch(renderActionabilityRowBody_(), /<strong>Invoice:<\/strong> <span>Not shown<\/span>|<strong>CRM:<\/strong> <span>Not shown<\/span>/, "Dashboard rows must not spend scan space on Not shown filler facts");
 [

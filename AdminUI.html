@@ -443,6 +443,22 @@
     .actionabilityReviewCell{ display:flex; align-items:center; justify-content:center; }
     .actionabilityReviewBtn{ width:100%; padding:9px 10px; border-radius:6px; background:#1f5aa5; border-color:#174a8b; color:#fff; font-size:12px; font-weight:850; }
     .actionabilityReviewBtn:hover{ background:#174a8b; }
+    .operatorControl{ border:1px solid #9fb4ca; border-radius:6px; color:#173451; background:#fff; box-shadow:none; font-weight:900; cursor:pointer; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.2; }
+    .operatorControlPrimary{ background:#1f5aa5; border-color:#174a8b; color:#fff; }
+    .operatorControlPrimary:hover:not(:disabled){ background:#174a8b; color:#fff; filter:none; }
+    .operatorControlSecondary{ background:#fff; border-color:#9fb4ca; color:#173451; }
+    .operatorControlSecondary:hover:not(:disabled){ background:#eef6ff; border-color:#7fa6d1; color:#0f3f78; filter:none; }
+    .operatorControlBatch{ background:#fff7e8; border-color:#d7a755; color:#704a00; }
+    .operatorControlBatch:hover:not(:disabled){ background:#fff2dc; border-color:#bd7d13; color:#5b3b00; filter:none; }
+    .operatorControl:disabled,
+    .operatorControl[disabled],
+    .operatorControlDisabled{ cursor:not-allowed; background:#e2eaf2; border-color:#8da2b7; color:#26384e; opacity:1; filter:none; box-shadow:inset 0 0 0 1px rgba(38,56,78,.08); }
+    .operatorControlBusy,
+    .operatorControl[aria-busy="true"]{ cursor:progress; background:#dbeafe; border-color:#7fa6d1; color:#173451; opacity:1; filter:none; }
+    .actionabilityReviewBtn.operatorControlPrimary{ background:#1f5aa5; border-color:#174a8b; color:#fff; }
+    .actionabilityReviewBtn.operatorControlPrimary:hover:not(:disabled){ background:#174a8b; color:#fff; }
+    .actionabilityBucketReviewBtn.operatorControlSecondary{ background:#fff; border-color:#7fa6d1; color:#174a8b; }
+    .actionabilityBucketReviewBtn.operatorControlSecondary:hover:not(:disabled){ background:#eef6ff; color:#0f3f78; }
     .actionabilityFilterNote{ color:#1f5aa5; font-size:12px; font-weight:900; margin:4px 0 8px; }
     .actionabilitySelectionBar{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 10px; border-bottom:1px solid #e5ebf2; background:#fbfdff; color:#24445f; font-size:12px; font-weight:800; flex-wrap:wrap; }
     .actionabilitySelectionActions{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
@@ -9800,7 +9816,7 @@ function renderStageDashboard_(items, emptyMessage){
         + '<div class="actionabilityBucketLead">'
         + '<div><div class="actionabilityBucketTitle">' + esc(actionabilityGroupLabel_(key)) + '</div><div class="actionabilityBucketDescription">' + esc(actionabilityBucketDescription_(key)) + '</div></div>'
         + '<div class="actionabilityBucketActions">'
-        + '<button class="actionabilityBucketReviewBtn" type="button" onclick="filterActionabilityBucketForReview_(\'' + esc(key) + '\', this)" ' + (visibleCount ? "" : "disabled") + ' title="Show this bucket worklist. Use row Review to open an exact applicant.">Show Worklist</button>'
+        + '<button class="actionabilityBucketReviewBtn operatorControl operatorControlSecondary" type="button" onclick="filterActionabilityBucketForReview_(\'' + esc(key) + '\', this)" ' + (visibleCount ? "" : "disabled") + ' title="Show this bucket worklist. Use row Review to open an exact applicant.">Show Worklist</button>'
         + actionabilityHiddenPanel_(key, populationCount, visibleCount)
         + '</div></div>'
         + '<div class="actionabilityBucketMain">'
@@ -9898,7 +9914,7 @@ function renderStageDashboard_(items, emptyMessage){
         + '<div class="actionabilityBatchDetails">'
         + '<div><strong>Recommended templates</strong>' + esc(actionabilitySummaryList_(summary.templateCounts, "No email-ready templates")) + '</div>'
         + '<div><strong>Blocked reasons</strong>' + esc(actionabilitySummaryList_(summary.blockedReasons, "No blocked selected rows")) + '</div>'
-        + '<div><strong>Recommended next action</strong>' + esc(next) + '<div style="margin-top:6px;"><button class="btn small" type="button" onclick="openFirstActionabilityEligibleReview_()" ' + (summary.eligible ? "" : "disabled") + '>Open first eligible in Review</button></div></div>'
+        + '<div><strong>Recommended next action</strong>' + esc(next) + '<div style="margin-top:6px;"><button class="btn small operatorControl operatorControlPrimary" type="button" onclick="openFirstActionabilityEligibleReview_()" ' + (summary.eligible ? "" : "disabled") + '>Open first eligible in Review</button></div></div>'
         + '</div></div>';
     }
 
@@ -9915,12 +9931,12 @@ function renderStageDashboard_(items, emptyMessage){
       return '<div class="actionabilitySelectionBar" aria-label="Current Worklist selection and batch readiness">'
         + '<div><strong>Selection</strong><span class="actionabilitySelectionStatus">' + esc(status) + '</span></div>'
         + '<div class="actionabilitySelectionActions">'
-        + '<button class="btn small" type="button" onclick="selectVisibleActionabilityRows_()">Select Visible</button>'
-        + '<button class="btn small" type="button" onclick="selectAllActionabilityRows_()">Select All</button>'
-        + '<button class="btn small" type="button" onclick="clearActionabilitySelection_()" ' + (selected ? "" : "disabled") + '>Clear Selection</button>'
-        + '<button class="btn small" type="button" onclick="actionabilityBatchCommunication_()" ' + (canBatchEmail ? "" : "disabled") + ' title="' + esc(canBatchEmail ? "Preview communication readiness for selected rows." : "Select at least one email-ready applicant.") + '">Batch Communication</button>'
-        + '<button class="btn small" type="button" onclick="actionabilityBatchReminder_()" ' + (canBatchEmail ? "" : "disabled") + ' title="' + esc(canBatchEmail ? "Preview reminder readiness for selected rows." : "Blocked until selected rows include an email-ready applicant.") + '">Batch Reminder</button>'
-        + '<button class="btn small" type="button" onclick="exportActionabilitySelection_()" ' + (canExport ? "" : "disabled") + '>Batch Export</button>'
+        + '<button class="btn small operatorControl operatorControlSecondary" type="button" onclick="selectVisibleActionabilityRows_()">Select Visible</button>'
+        + '<button class="btn small operatorControl operatorControlSecondary" type="button" onclick="selectAllActionabilityRows_()">Select All</button>'
+        + '<button class="btn small operatorControl operatorControlSecondary" type="button" onclick="clearActionabilitySelection_()" ' + (selected ? "" : "disabled") + '>Clear Selection</button>'
+        + '<button class="btn small operatorControl operatorControlBatch" type="button" onclick="actionabilityBatchCommunication_()" ' + (canBatchEmail ? "" : "disabled") + ' title="' + esc(canBatchEmail ? "Preview communication readiness for selected rows." : "Select at least one email-ready applicant.") + '">Batch Communication</button>'
+        + '<button class="btn small operatorControl operatorControlBatch" type="button" onclick="actionabilityBatchReminder_()" ' + (canBatchEmail ? "" : "disabled") + ' title="' + esc(canBatchEmail ? "Preview reminder readiness for selected rows." : "Blocked until selected rows include an email-ready applicant.") + '">Batch Reminder</button>'
+        + '<button class="btn small operatorControl operatorControlBatch" type="button" onclick="exportActionabilitySelection_()" ' + (canExport ? "" : "disabled") + '>Batch Export</button>'
         + '</div></div>';
     }
 
@@ -10155,7 +10171,7 @@ function renderStageDashboard_(items, emptyMessage){
         html += '<div class="actionabilityWorklistCell actionabilityOwnerCell" role="cell"><strong>' + esc(actionabilityGroupLabel_(actionabilityGroupKey_(r))) + '</strong><span class="actionabilityAuthority">' + esc(authority) + '</span><span class="opsStatusPill ' + priorityClass + '">' + esc(priority) + '</span></div>';
         html += '<div class="actionabilityWorklistCell actionabilityStatusChips actionabilityProgressCell" role="cell"><span class="actionabilityMiniChip ' + (state.portalSubmitted ? "ok" : "warn") + '">' + esc(portalLabel) + '</span><span class="actionabilityMiniChip ' + docsClass + '">' + esc(docsLabel) + '</span><span class="actionabilityMiniChip ' + paymentClass + '">' + esc(paymentLabel) + '</span><span class="actionabilityMiniChip ' + contactClass + '">' + esc(contactLabel) + '</span></div>';
         html += '<div class="actionabilityWorklistCell actionabilityDueBlock" role="cell"><strong>' + esc(due) + '</strong><span>Age ' + esc(r.ageDays === "" || r.ageDays === undefined ? "-" : String(r.ageDays) + "d") + ' | Last ' + esc(r.lastContactAgeDays === "" ? "none" : String(r.lastContactAgeDays) + "d") + '</span><span>' + esc(commNext) + '</span></div>';
-        html += '<div class="actionabilityWorklistCell actionabilityReviewCell" role="cell"><button class="btn actionabilityReviewBtn" type="button" onclick="reviewActionabilityRow_(' + String(index) + ', this)">Review</button></div>';
+        html += '<div class="actionabilityWorklistCell actionabilityReviewCell" role="cell"><button class="btn actionabilityReviewBtn operatorControl operatorControlPrimary" type="button" onclick="reviewActionabilityRow_(' + String(index) + ', this)">Review</button></div>';
         html += '<details class="actionabilityDetails actionabilityWorklistDetails"><summary>Details</summary>'
           + '<div class="actionabilityFactGrid" style="margin-top:8px;">'
           + '<div class="actionabilityFact"><strong>Priority:</strong> <span>' + esc(r.urgencyReason || priority) + '</span></div>'
@@ -10460,12 +10476,16 @@ function renderStageDashboard_(items, emptyMessage){
       if (!btn) return;
       if (isLoading) {
         if (!btn.dataset.origText) btn.dataset.origText = btn.textContent || "Review";
+        btn.classList.add("operatorControlBusy");
+        btn.setAttribute("aria-busy", "true");
         btn.disabled = true;
         btn.textContent = "Loading...";
         return;
       }
       btn.disabled = false;
       btn.textContent = btn.dataset.origText || "Review";
+      btn.classList.remove("operatorControlBusy");
+      btn.removeAttribute("aria-busy");
       delete btn.dataset.origText;
     }
 
