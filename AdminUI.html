@@ -708,6 +708,9 @@
     .reviewHeaderFact{ min-width:0; border-left:2px solid rgba(214,231,248,.42); padding-left:8px; }
     .reviewHeaderFactLabel{ color:#e6f2ff; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; line-height:1.2; opacity:1; }
     .reviewHeaderFactValue{ color:#ffffff; font-size:13px; font-weight:900; margin-top:3px; overflow:visible; text-overflow:clip; white-space:normal; line-height:1.28; overflow-wrap:anywhere; opacity:1; text-shadow:0 1px 1px rgba(0,0,0,.22); }
+    .reviewHeaderGrid.loading{ display:none; }
+    .reviewLoadingBanner{ display:none; margin-top:12px; border:1px solid rgba(214,231,248,.42); border-radius:8px; background:rgba(255,255,255,.12); color:#ffffff; padding:9px 10px; font-size:13px; font-weight:900; line-height:1.3; }
+    .reviewLoadingBanner.active{ display:block; }
     .reviewHeaderActions{ display:flex; align-items:flex-start; justify-content:flex-end; gap:8px; }
     .reviewHeaderClose{ background:#fff; color:#0f1f35; border-color:#dbe5ef; min-width:78px; }
     .reviewWorkspaceBody{ padding:14px 16px 16px; display:flex; flex-direction:column; gap:12px; }
@@ -1051,6 +1054,7 @@
     .docMeta{ font-size:12px; color:#40556b; line-height:1.45; margin-top:4px; word-break:break-word; }
     .docActionRow{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; align-items:center; }
     .docActionRow .btn{ text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+    .docRecommendation{ display:inline-flex; align-items:center; min-height:30px; padding:5px 9px; border:1px solid #9fb4ca; border-radius:6px; background:#fff; color:#173451; font-size:12px; font-weight:850; line-height:1.25; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; }
     .docPreviewStatus{ font-size:12px; color:#40556b; margin-top:6px; }
     .docVisualPreview{
       min-height:220px;
@@ -1089,9 +1093,15 @@
       padding:8px;
       font-size:.95rem;
       border-radius:6px;
-      background: var(--fieldBg);
-      color: var(--text);
+      background:#fff;
+      color:#102030;
+      border:1px solid #9fb4ca;
+      line-height:1.4;
     }
+    .modal .docStatus{ background:#fff; color:#102030; border:1px solid #9fb4ca; border-radius:6px; min-height:38px; font-weight:800; }
+    .modal .docStatus:disabled,
+    .modal .docComment:disabled{ background:#e2eaf2; color:#26384e; border-color:#8da2b7; opacity:1; cursor:not-allowed; }
+    .modal .docComment::placeholder{ color:#52677d; opacity:1; }
     .comment-box{
       min-height:60px;
       height:60px;
@@ -2777,14 +2787,15 @@
           <div class="reviewIdentityKicker">Applicant Review Workspace</div>
           <div class="reviewApplicantName" id="mApplicantName">Applicant</div>
           <div class="reviewApplicantId" id="mApplicantId">Applicant ID</div>
+          <div class="reviewLoadingBanner" id="reviewLoadingBanner" role="status" aria-live="polite">Loading applicant details...</div>
           <div class="reviewHeaderGrid" aria-label="Applicant review identity">
-            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Email</div><div class="reviewHeaderFactValue" id="mHeaderEmail">-</div></div>
-            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Phone</div><div class="reviewHeaderFactValue" id="mHeaderPhone">-</div></div>
-            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Submitted</div><div class="reviewHeaderFactValue" id="mHeaderSubmitted">-</div></div>
-            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Current Stage</div><div class="reviewHeaderFactValue" id="mHeaderStage">-</div></div>
-            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Owner</div><div class="reviewHeaderFactValue" id="mHeaderOwner">Review Workspace</div></div>
-            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Delivery Health</div><div class="reviewHeaderFactValue" id="mHeaderDeliveryHealth">Unknown</div></div>
-            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Token Age</div><div class="reviewHeaderFactValue" id="mHeaderTokenAge">-</div></div>
+            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Email</div><div class="reviewHeaderFactValue" id="mHeaderEmail"></div></div>
+            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Phone</div><div class="reviewHeaderFactValue" id="mHeaderPhone"></div></div>
+            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Submitted</div><div class="reviewHeaderFactValue" id="mHeaderSubmitted"></div></div>
+            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Current Stage</div><div class="reviewHeaderFactValue" id="mHeaderStage"></div></div>
+            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Owner</div><div class="reviewHeaderFactValue" id="mHeaderOwner"></div></div>
+            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Delivery Health</div><div class="reviewHeaderFactValue" id="mHeaderDeliveryHealth"></div></div>
+            <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Token Age</div><div class="reviewHeaderFactValue" id="mHeaderTokenAge"></div></div>
           </div>
           <div class="hidden" id="mTitle">Applicant Review</div>
           <div class="hidden" id="mSub"></div>
@@ -6086,7 +6097,7 @@
             <div class="documentGalleryActions">
               ${file && file.previewEligible === true && canAct
                 ? `<button type="button" class="btn small galleryPreviewBtn" data-source-field="${esc(sourceField)}" data-item-index="${esc(String(itemIndex))}" data-label="${esc(label)}" ${busy ? "disabled" : ""}>${busy ? "Working..." : "Preview Image"}</button>`
-                : `<span class="muted" aria-label="Recommendation">Recommended: Download</span>`}
+                : `<span class="docRecommendation" aria-label="Recommendation">Recommended: Download</span>`}
               ${canAct
                 ? `<button type="button" class="btn small accent galleryDownloadBtn" data-source-field="${esc(sourceField)}" data-item-index="${esc(String(itemIndex))}" data-label="${esc(label)}" ${busy ? "disabled" : ""}>${busy ? "Working..." : "Download"}</button>
                    <button type="button" class="btn small galleryOpenBtn" data-source-field="${esc(sourceField)}" data-item-index="${esc(String(itemIndex))}" data-label="${esc(label)}" ${busy ? "disabled" : ""}>${busy ? "Working..." : "Open in New Tab"}</button>`
@@ -10279,13 +10290,9 @@ function renderStageDashboard_(items, emptyMessage){
       if (Number.isFinite(ctxRow) && ctxRow >= 2 && Number.isFinite(detailRow) && detailRow >= 2 && ctxRow !== detailRow) return;
       window.setTimeout(function(){
         if (Number(ctx.requestId || 0) !== Number(lastRequestId || 0)) return;
-        var targetId = "applicantStatusStrip";
-        if (ctx.target === "docs") targetId = "docs";
-        else if (ctx.target === "payment") targetId = "mPayment";
-        else if (ctx.target === "academic") targetId = "booksDryRunCard";
-        else if (ctx.target === "exception") targetId = "commDerivedMeta";
-        var el = document.getElementById(targetId) || document.getElementById("applicantStatusStrip");
-        if (el && typeof el.scrollIntoView === "function") el.scrollIntoView({ behavior: "smooth", block: "start" });
+        var modal = document.querySelector("#modalBack .modal");
+        if (modal) modal.setAttribute("data-actionability-focus-target", String(ctx.target || "summary"));
+        resetReviewModalScroll_();
       }, 350);
     }
 
@@ -10469,21 +10476,45 @@ function renderStageDashboard_(items, emptyMessage){
       el.textContent = text;
     }
 
+    function setReviewHeaderLoading_(isLoading){
+      var grid = document.querySelector(".reviewHeaderGrid");
+      var banner = document.getElementById("reviewLoadingBanner");
+      if (grid) grid.classList.toggle("loading", !!isLoading);
+      if (banner) banner.classList.toggle("active", !!isLoading);
+    }
+
+    function clearReviewHeaderFacts_(){
+      ["mHeaderEmail", "mHeaderPhone", "mHeaderSubmitted", "mHeaderStage", "mHeaderOwner", "mHeaderDeliveryHealth", "mHeaderTokenAge"].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.textContent = "";
+      });
+    }
+
+    function resetReviewModalScroll_(){
+      var modal = document.querySelector("#modalBack .modal");
+      var back = document.getElementById("modalBack");
+      if (modal) modal.scrollTop = 0;
+      if (back) back.scrollTop = 0;
+    }
+
+    function reviewOwnerDisplayLabel_(value){
+      var raw = String(value || "").trim();
+      var normalized = raw.toLowerCase().replace(/\s+/g, "_");
+      if (!raw || normalized === "not_in_loaded_review_queue" || normalized === "unknown" || normalized === "none") return "Review Workspace / Unassigned / System-derived";
+      return raw.replace(/_/g, " ");
+    }
+
     function openModalLoading_(applicantId, rowNumber){
       document.getElementById("mTitle").textContent = "Applicant Review - " + (applicantId || "Unknown");
       document.getElementById("mSub").textContent = "RowNumber: " + String(rowNumber || "");
-      setReviewHeaderValue_("mApplicantName", "Loading applicant");
+      setReviewHeaderLoading_(true);
+      setReviewHeaderValue_("mApplicantName", "Loading applicant details...");
       setReviewHeaderValue_("mApplicantId", applicantId || "Unknown ApplicantID");
-      setReviewHeaderValue_("mHeaderEmail", "-");
-      setReviewHeaderValue_("mHeaderPhone", "-");
-      setReviewHeaderValue_("mHeaderSubmitted", "-");
-      setReviewHeaderValue_("mHeaderStage", "Loading");
-      setReviewHeaderValue_("mHeaderOwner", "Review Workspace");
-      setReviewHeaderValue_("mHeaderDeliveryHealth", "Unknown");
-      setReviewHeaderValue_("mHeaderTokenAge", "-");
+      clearReviewHeaderFacts_();
       document.getElementById("docs").innerHTML = '<div class="muted">Loading...</div>';
       document.getElementById("mMsg").textContent = "Loading...";
       document.getElementById("modalBack").style.display = "flex";
+      resetReviewModalScroll_();
     }
 
     function clearDocsLoading_(msg){
@@ -10851,6 +10882,7 @@ function renderStageDashboard_(items, emptyMessage){
           } catch (_e) {}
           if (!apiResult || apiResult.ok !== true) {
             clearPendingActionabilityReviewContext_(reqId);
+            setReviewHeaderLoading_(false);
             clearDocsLoading_("Detail request failed");
             setActionButtonsEnabled(false);
             setReviewButtonLoading_(triggerBtn, false);
@@ -10866,6 +10898,7 @@ function renderStageDashboard_(items, emptyMessage){
 
           if (!detail) {
             clearPendingActionabilityReviewContext_(reqId);
+            setReviewHeaderLoading_(false);
             var invalidMsg = "Invalid detail response";
             setMsg("mMsg", invalidMsg);
             setMsg("msg", invalidMsg);
@@ -10898,6 +10931,7 @@ function renderStageDashboard_(items, emptyMessage){
             return;
           }
           clearPendingActionabilityReviewContext_(reqId);
+          setReviewHeaderLoading_(false);
           console.error("[AdminUI] SIG detail_json failure:", err);
           var failMsg = "Detail request failed: " + (err && err.message ? err.message : String(err));
           setModalMsg_(failMsg);
@@ -11077,12 +11111,13 @@ function renderStageDashboard_(items, emptyMessage){
 
       var facts = opsPortalDiagnosticsFacts_(d);
       var proof = facts && facts.resolverProof ? facts.resolverProof : {};
-      var ownerLabel = proof.currentQueueBucket || proof.resolverNextAction || facts.nextActionLabel || "Review Workspace";
+      var ownerLabel = reviewOwnerDisplayLabel_(proof.currentQueueBucket || proof.resolverNextAction || facts.nextActionLabel || "Review Workspace");
       var submittedLabel = formatApplicantDateTime(opsFirstNonBlank_(d.Timestamp, d.timestamp, d.Created_At, d.Submitted_At, d.PortalTokenIssuedAt));
       var phoneLabel = opsFirstNonBlank_(facts.phone, d.Parent_Phone, d.Parent_Mobile, d.Phone_Number, d.Mobile, d.Phone);
       var deliveryHealthLabel = opsFirstNonBlank_(d.Delivery_Health, d.Last_Delivery_Status, "");
       if (!deliveryHealthLabel && isCommBounceFlagTrue_(d.Email_Bounce_Flag)) deliveryHealthLabel = "Permanent Failure";
       if (!deliveryHealthLabel) deliveryHealthLabel = "Unknown";
+      setReviewHeaderLoading_(false);
       setReviewHeaderValue_("mApplicantName", fullName || opsDetailName_(d) || "Unnamed Applicant");
       setReviewHeaderValue_("mApplicantId", d.ApplicantID || "Unknown ApplicantID");
       setReviewHeaderValue_("mHeaderEmail", emailLabel);
@@ -11170,6 +11205,7 @@ function renderStageDashboard_(items, emptyMessage){
       });
 
       document.getElementById("modalBack").style.display = "flex";
+      resetReviewModalScroll_();
       syncDocumentGalleryUi_();
       syncModalEditControls_();
       focusActionabilityReviewTarget_(d);
@@ -11192,7 +11228,7 @@ function renderStageDashboard_(items, emptyMessage){
             <div class="docActionRow">
               ${x.hasFile
                 ? (x.fileProxyOpenUrl
-                    ? `${canInlinePreviewDoc_(x) ? `<button type="button" class="btn small docPreviewBtn" data-label="${esc(x.label)}" data-url="${esc(x.fileProxyOpenUrl)}" data-download-url="${esc(x.fileProxyDownloadUrl || x.fileProxyOpenUrl)}">Preview Image</button>` : `<span class="muted" aria-label="Recommendation">Recommended: Download</span>`}
+                    ? `${canInlinePreviewDoc_(x) ? `<button type="button" class="btn small docPreviewBtn" data-label="${esc(x.label)}" data-url="${esc(x.fileProxyOpenUrl)}" data-download-url="${esc(x.fileProxyDownloadUrl || x.fileProxyOpenUrl)}">Preview Image</button>` : `<span class="docRecommendation" aria-label="Recommendation">Recommended: Download</span>`}
                        <a class="btn small accent" href="${esc(x.fileProxyDownloadUrl || x.fileProxyOpenUrl)}" target="_blank" rel="noopener">Download</a>
                        <a class="btn small" href="${esc(x.fileProxyOpenUrl)}" target="_blank" rel="noopener">Open in New Tab <span class="muted">(browser-dependent)</span></a>`
                     : `<span class="muted">Resolving secure link...</span>`)

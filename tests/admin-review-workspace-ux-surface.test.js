@@ -26,6 +26,13 @@ function expectReadableHeader(selector) {
   assert.match(rule, /overflow-wrap:anywhere;/, `${selector} must support long identity values`);
 }
 
+function functionSource(name) {
+  const start = source.indexOf(`function ${name}`);
+  assert.notEqual(start, -1, `Missing function ${name}`);
+  const next = source.indexOf("\n    function ", start + 1);
+  return source.slice(start, next === -1 ? source.length : next);
+}
+
 expectMatch(/reviewIdentityKicker[\s\S]*Applicant Review Workspace/, "Review modal must expose a strong workspace identity header");
 expectMatch(/\.modalHead\{[\s\S]*background:#0b1c30;[\s\S]*color:#eef6ff;/, "Review modal header must keep a high-contrast dark identity bar");
 expectMatch(/\.reviewHeaderFactLabel\{ color:#e6f2ff;[\s\S]*opacity:1;/, "Review header labels must use explicit readable label class");
@@ -40,6 +47,10 @@ expectMatch(/id="mApplicantId"/, "Review header must include applicant ID");
 expectMatch(/id="mHeaderEmail"[\s\S]*id="mHeaderPhone"[\s\S]*id="mHeaderSubmitted"/, "Review header must include contact and submitted facts");
 expectMatch(/id="mHeaderStage"[\s\S]*id="mHeaderOwner"[\s\S]*id="mHeaderTokenAge"/, "Review header must include stage, owner, and token age facts");
 expectMatch(/Delivery Health[\s\S]*id="mHeaderDeliveryHealth"/, "Review header must expose reconciled delivery health");
+expectMatch(/id="reviewLoadingBanner"[\s\S]*Loading applicant details\.\.\./, "Review modal must show a clean loading banner");
+expectMatch(/\.reviewHeaderGrid\.loading\{ display:none; \}/, "Review loading state must hide incomplete identity facts");
+expectNoMatch(/id="mHeader(?:Email|Phone|Submitted|Stage|Owner|DeliveryHealth|TokenAge)"[^>]*>-\s*<\/div>/, "Review header markup must not seed fake dash identity facts");
+expectNoMatch(/openModalLoading_[\s\S]*setReviewHeaderValue_\("mHeader(?:Email|Phone|Submitted|Stage|Owner|DeliveryHealth|TokenAge)",\s*"-"\)/, "Review loading path must not render fake dash identity facts");
 expectMatch(/class="reviewHeaderFactLabel">Email[\s\S]*class="reviewHeaderFactValue" id="mHeaderEmail"/, "Email header fact must use explicit readable classes");
 expectMatch(/class="reviewHeaderFactLabel">Phone[\s\S]*class="reviewHeaderFactValue" id="mHeaderPhone"/, "Phone header fact must use explicit readable classes");
 expectMatch(/class="reviewHeaderFactLabel">Current Stage[\s\S]*class="reviewHeaderFactValue" id="mHeaderStage"/, "Current Stage header fact must use explicit readable classes");
@@ -50,8 +61,15 @@ expectMatch(/setReviewHeaderValue_\("mApplicantId", d\.ApplicantID/, "Loaded mod
 expectMatch(/setReviewHeaderValue_\("mHeaderEmail", emailLabel\)/, "Loaded modal must bind effective email label");
 expectMatch(/setReviewHeaderValue_\("mHeaderSubmitted", submittedLabel/, "Loaded modal must bind submitted date");
 expectMatch(/setReviewHeaderValue_\("mHeaderStage", deriveApplicantDisplayStage\(d\)/, "Loaded modal must bind current display stage");
+expectMatch(/function reviewOwnerDisplayLabel_/, "Review owner display must normalize internal sentinel values");
+expectMatch(/not_in_loaded_review_queue[\s\S]*Review Workspace \/ Unassigned \/ System-derived/, "Internal queue sentinel must map to operator-facing owner text");
+expectMatch(/setReviewHeaderValue_\("mHeaderOwner", ownerLabel\)/, "Loaded modal must bind mapped owner label");
 expectMatch(/setReviewHeaderValue_\("mHeaderDeliveryHealth", deliveryHealthLabel\)/, "Loaded modal must bind reconciled delivery health");
 expectMatch(/setReviewHeaderValue_\("mHeaderTokenAge", tokenText\)/, "Loaded modal must bind token age");
+expectMatch(/function resetReviewModalScroll_/, "Review modal must have an explicit scroll reset helper");
+expectMatch(/openModalLoading_[\s\S]*resetReviewModalScroll_\(\)/, "Review modal open must reset scroll before hydration");
+expectMatch(/focusActionabilityReviewTarget_[\s\S]*resetReviewModalScroll_\(\)/, "Review actionability focus must not leave the modal scrolled into documents");
+assert.doesNotMatch(functionSource("focusActionabilityReviewTarget_"), /scrollIntoView/, "Review focus context must not scroll the modal into lower sections");
 expectMatch(/class="kv reviewCardGrid"/, "Primary facts must use balanced review card grid");
 expectMatch(/class="box reviewCardWide"[\s\S]*Workflow Fields/, "Workflow fields must be grouped into a wider balanced card");
 expectMatch(/class="box reviewPanel" id="communicationsCard"/, "Communications must use the shared review panel rhythm");
@@ -72,6 +90,11 @@ expectMatch(/\.modal #commDebug\{[\s\S]*opacity:\.82;[\s\S]*border-style:dashed;
 expectMatch(/id="booksDryRunCard" class="box booksDryRunPanel reviewPanel"/, "Books preview must use the shared review panel rhythm");
 expectMatch(/id="documentReviewWorkflow" class="reviewDocumentWorkflow reviewPanel"/, "Document verification must use the shared review panel rhythm");
 expectMatch(/class="reviewGuidance"[\s\S]*Document saves remain authority-gated/, "Document section must keep concise authority guidance");
+expectMatch(/\.modal \.docStatus\{[\s\S]*background:#fff;[\s\S]*color:#102030;[\s\S]*border:1px solid #9fb4ca;/, "Document status dropdowns must use readable light controls");
+expectMatch(/\.docComment\{[\s\S]*background:#fff;[\s\S]*color:#102030;[\s\S]*border:1px solid #9fb4ca;/, "Document comments must use readable light controls");
+expectMatch(/\.modal \.docStatus:disabled,[\s\S]*\.modal \.docComment:disabled\{[\s\S]*background:#e2eaf2;[\s\S]*color:#26384e;[\s\S]*opacity:1;/, "Disabled document controls must remain readable");
+expectMatch(/\.docRecommendation\{[\s\S]*background:#fff;[\s\S]*color:#173451;[\s\S]*font-weight:850;/, "Document recommendation/download guidance must use readable contrast");
+expectMatch(/class="docRecommendation" aria-label="Recommendation">Recommended: Download/, "Recommended download text must use the readable recommendation class");
 expectMatch(/class="documentReviewActionBar"[\s\S]*Review workflow[\s\S]*id="btnSaveDocs"[\s\S]*Secondary[\s\S]*id="btnRefreshDetails"[\s\S]*id="btnCopyLink"[\s\S]*id="btnResetLink"/, "Footer actions must be grouped into primary review workflow and secondary actions");
 expectMatch(/id="btnOpenDocumentGallery"/, "Document gallery entry must remain available");
 expectMatch(/id="btnSaveOverall"[\s\S]*onclick="saveOverall\(\)"/, "Overall save workflow must remain wired to existing handler");
