@@ -39,6 +39,12 @@ mustNotMatch(adminUi, /function actionabilityBatchCommunication_[\s\S]{0,700}adm
 mustMatch(adminUi, /admin_previewSelectedApplicantBatch/, "Selected cohorts must use the selected batch preview wrapper");
 mustMatch(adminUi, /admin_sendSelectedApplicantBatch/, "Selected cohorts must use the selected batch send wrapper");
 mustNotMatch(adminUi, /function sendBatchCommunicationModal_[\s\S]*admin_sendApplicantMessage/, "Batch modal must not route through the single-applicant Review RPC");
+mustMatch(adminUi, /onclick="openBatchCommunicationFromStage_\(\)">Open Batch Communication/, "Stage cohort scenario must open the Batch Communication modal as the primary path");
+mustNotMatch(adminUi, /Confirm in Batch Modal/, "Stage batch scenario must not expose a competing inline confirmation path");
+mustMatch(adminUi, /Default batch size: 30\. Larger batches may be restricted by send policy\./, "Batch scenario must explain the 30-row default and policy cap");
+mustNotMatch(adminUi, /id="(?:opsStageBatchLimit|stageBatchLimit)"[^>]*value="50"/, "Batch scenario must not default to 50-row production batches");
+mustMatch(adminUi, /ids\.length === 1[\s\S]*Single applicant selected[\s\S]*Review Workspace communication flow/, "Single applicant scenario must route operators to the single-recipient Review path");
+mustMatch(adminUi, /!ids\.length[\s\S]*Select at least two applicants/, "No-cohort scenario must provide clear guidance instead of opening an empty batch modal");
 mustMatch(adminUi, /Recipients[\s\S]*Valid email[\s\S]*Blocked[\s\S]*Missing email[\s\S]*Excluded/, "Batch modal must reconcile recipient readiness counts");
 ["Preview required", "Ready to Send", "Sending", "Completed", "Failed / Partial"].forEach((label) => {
   mustMatch(adminUi, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `Batch modal must expose send lifecycle state: ${label}`);

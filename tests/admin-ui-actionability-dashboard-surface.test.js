@@ -241,7 +241,13 @@ assert.match(functionSource("sendBatchCommunicationModal_"), /admin_sendStageBat
 assert.doesNotMatch(functionSource("previewBatchCommunicationModal_") + functionSource("sendBatchCommunicationModal_"), /admin_sendApplicantMessage/, "Batch modal must not fall back to the single-applicant Review RPC");
 assert.match(functionSource("selectBatchCommTemplate_"), /batchCommState\.sourceType === "stage"[\s\S]*batchCommState\.recommendedMessageType/, "Stage cohort template changes must remain locked to lifecycle-stage policy");
 assert.match(adminUi, /Stage policy locked/, "Batch modal must explain disabled stage template overrides");
-assert.match(adminUi, /onclick="openBatchCommunicationFromStage_\(\)">Open Batch Modal/, "Stage cohort controls must open the batch communication modal");
+assert.match(adminUi, /onclick="openBatchCommunicationFromStage_\(\)">Open Batch Communication/, "Stage cohort controls must open the batch communication modal as the primary workflow");
+assert.doesNotMatch(adminUi, /Confirm in Batch Modal/, "Old inline confirmation controls must not compete with the batch modal");
+assert.match(adminUi, /Default batch size: 30\. Larger batches may be restricted by send policy\./, "Batch UI must explain the default batch size and send-policy cap");
+assert.doesNotMatch(adminUi, /id="(?:opsStageBatchLimit|stageBatchLimit)"[^>]*value="50"/, "Stage batch defaults must not advertise 50-row production batches");
+assert.match(functionSource("openBatchCommunicationFromSelection_"), /ids\.length === 1[\s\S]*Single applicant selected[\s\S]*Review Workspace communication flow/, "Single selected applicant must use an explicit single-recipient path instead of the batch modal");
+assert.match(functionSource("openBatchCommunicationFromSelection_"), /!ids\.length[\s\S]*Select at least two applicants/, "Empty selected cohorts must explain why the batch modal cannot open");
+assert.match(functionSource("renderBatchPanel"), /sendBtn\.style\.display = "none"/, "Legacy inline stage send control must be hidden so the modal remains primary");
 assert.match(functionSource("openBatchCommunicationFromSelection_"), /actionabilitySelectionSourceLabel_\(\)/, "Selected cohort modal source must identify page, manual, or full bounded cohort source");
 assert.match(functionSource("selectVisibleActionabilityRows_"), /Current page selection[\s\S]*actionabilityRenderedRows/, "Select Visible must select the current page only");
 assert.match(functionSource("selectAllActionabilityRows_"), /actionabilitySelectionSource = "all"/, "Select All must mark the full bounded cohort source");

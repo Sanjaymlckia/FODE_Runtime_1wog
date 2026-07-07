@@ -1944,19 +1944,19 @@
             <div class="opsMetric"><div class="k">Backend sendable</div><div class="v" id="opsStageBatchSendable">&mdash;</div></div>
           </div>
           <div class="opsDraftGrid" style="margin-top:12px;">
-            <div class="field"><label>Preview limit</label><input id="opsStageBatchLimit" type="number" min="1" max="100" step="1" value="50"></div>
+            <div class="field"><label>Batch size</label><input id="opsStageBatchLimit" type="number" min="1" max="100" step="1" value="30"></div>
             <div class="field"><label>Diagnostic offset</label><input id="opsStageBatchOffset" type="number" min="0" step="1" value="0"></div>
             <div class="field"><label>Selected applicant</label><input type="text" id="opsStageBatchApplicantContext" readonly value="No applicant selected"></div>
             <div class="field"><label>Gate / status reason</label><input type="text" id="opsStageBatchDisabledReason" readonly value="Switch to Admin/Super Admin mode to run gated bulk tools."></div>
           </div>
           <div class="opsActionRow">
-            <button id="btnOpsStageBatchPreview" class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Open Batch Modal" onclick="openBatchCommunicationFromStage_()">Open Batch Modal</button>
-            <button id="btnOpsStageBatchSend" class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Confirm in Batch Modal" onclick="openBatchCommunicationFromStage_()">Confirm in Batch Modal</button>
+            <button id="btnOpsStageBatchPreview" class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Open Batch Communication" onclick="openBatchCommunicationFromStage_()">Open Batch Communication</button>
+            <button id="btnOpsStageBatchSend" class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Batch modal confirmation only" onclick="openBatchCommunicationFromStage_()" style="display:none;" aria-hidden="true" tabindex="-1">Batch modal confirmation only</button>
             <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Choose Lifecycle Stage</button>
           </div>
-          <div class="opsInspectPanel" id="opsStageBatchInlineNote">Bulk communication requires Operations Admin or Super Admin authority, plus preview, confirmation, caps, and backend gates.</div>
-          <div class="opsInspectPanel" style="margin-top:10px;">Operations Workspace shows operator workload. Not all rows are currently mail-eligible. Preview Cohort Result appears below in the Stage Batch Preview Result / Diagnostics panel.</div>
-          <div class="opsSectionHeader" style="margin-top:12px;"><div><h3 style="margin:0;font-size:15px;">Stage Batch Preview Result</h3><p style="margin:4px 0 0;">Stage Batch Preview shows mail eligibility for the selected stage.</p></div><span class="opsStatusPill info">Separate from Operations Workspace</span></div>
+          <div class="opsInspectPanel" id="opsStageBatchInlineNote">Default batch size: 30. Larger batches may be restricted by send policy. Preview, confirmation, caps, and backend gates run inside the Batch Communication modal.</div>
+          <div class="opsInspectPanel" style="margin-top:10px;">Operations Workspace shows operator workload. Not all rows are currently mail-eligible. Stage batch details below are diagnostics; the modal is the primary operator path.</div>
+          <div class="opsSectionHeader" style="margin-top:12px;"><div><h3 style="margin:0;font-size:15px;">Stage Batch Technical Diagnostics</h3><p style="margin:4px 0 0;">Diagnostics show mail eligibility for the selected stage after modal preview.</p></div><span class="opsStatusPill info">Collapsed technical evidence</span></div>
           <div id="opsStageBatchSummary" class="opsResultBox hidden" tabindex="-1" aria-live="polite"></div>
           <div id="opsStageBatchPreviewDiagnostics" class="opsResultBox hidden" tabindex="-1" aria-live="polite"></div>
         </div>
@@ -2161,8 +2161,7 @@
           </div>
           <div class="opsActionRow">
             <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Choose Lifecycle Stage</button>
-            <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Open Batch Modal" onclick="openBatchCommunicationFromStage_()">Open Batch Modal</button>
-            <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Confirm in Batch Modal" onclick="openBatchCommunicationFromStage_()">Confirm in Batch Modal</button>
+            <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Open Batch Communication" onclick="openBatchCommunicationFromStage_()">Open Batch Communication</button>
           </div>
           <div class="opsSafetyNotice">Bulk preview/send remains governed by existing stage batch preview cache, caps, confirmation, role checks, and backend gates. No automatic sends are introduced.</div>
         </div>
@@ -2658,8 +2657,8 @@
     </details>
 
     <section id="stageBatchPanel" class="legacyPanelBlock">
-      <h3>Stage Batch Communications</h3>
-      <div class="muted" style="margin-bottom:10px;">Operations Workspace shows operational workload. Not all rows are currently mail-eligible. Preview Cohort Result appears below in the Stage Batch Preview Result / Diagnostics panel.</div>
+      <h3>Batch Communication Launcher</h3>
+      <div class="muted" style="margin-bottom:10px;">Operations Workspace shows operational workload. Stage batch details remain here as compatibility diagnostics; the Batch Communication modal is the primary preview, confirmation, and send workflow.</div>
       <div class="commMeta">
         <div class="box"><div class="k">Selected Stage</div><div class="v" id="stageBatchSelectedStage">&mdash;</div></div>
         <div class="box"><div class="k">Priority</div><div class="v" id="stageBatchPriority">&mdash;</div></div>
@@ -2670,18 +2669,19 @@
       <div class="commControls">
         <div class="field" style="max-width:180px;">
           <label>Batch Size</label>
-          <input id="stageBatchLimit" type="number" min="1" max="100" step="1" value="50">
+          <input id="stageBatchLimit" type="number" min="1" max="100" step="1" value="30">
+          <div class="muted" style="font-size:11px;margin-top:4px;">Default batch size: 30. Larger batches may be restricted by send policy.</div>
         </div>
         <div class="field" style="max-width:180px;">
           <label>Diagnostic Offset (ignored in production)</label>
           <input id="stageBatchOffset" type="number" min="0" step="1" value="0">
         </div>
-        <button id="btnStageBatchPreview" class="btn small" type="button" onclick="openBatchCommunicationFromStage_()">Open Batch Modal</button>
-        <button id="btnStageBatchSend" class="btn small ok" type="button" onclick="openBatchCommunicationFromStage_()" disabled>Confirm in Batch Modal</button>
-        <div id="stageBatchInlineNote" class="muted" style="font-size:12px;">Standard production stage sends automatically use the next eligible unsent records. Diagnostic offset is ignored unless a separate diagnostic flow is introduced.</div>
+        <button id="btnStageBatchPreview" class="btn small" type="button" onclick="openBatchCommunicationFromStage_()">Open Batch Communication</button>
+        <button id="btnStageBatchSend" class="btn small ok" type="button" onclick="openBatchCommunicationFromStage_()" disabled style="display:none;" aria-hidden="true" tabindex="-1">Batch modal confirmation only</button>
+        <div id="stageBatchInlineNote" class="muted" style="font-size:12px;">Standard production stage sends use the Batch Communication modal. Diagnostic offset is ignored unless a separate diagnostic flow is introduced.</div>
       </div>
-      <div style="font-weight:800;margin-top:12px;">Preview Cohort Result</div>
-      <div class="muted" style="font-size:12px;margin-top:4px;">Stage Batch Preview shows mail eligibility for the selected stage. Operations Workspace remains the operator workload surface.</div>
+      <div style="font-weight:800;margin-top:12px;">Stage Batch Technical Diagnostics</div>
+      <div class="muted" style="font-size:12px;margin-top:4px;">Stage diagnostics are secondary evidence. Operations Workspace and the Batch Communication modal remain the operator workflow.</div>
       <div id="stageBatchSummary" class="sendSummary hidden" tabindex="-1" aria-live="polite"></div>
       <div id="stageBatchPreviewDiagnostics" class="sendSummary hidden">
         <div style="font-weight:800;">Preview Diagnostics</div>
@@ -8200,7 +8200,7 @@
     }
     function clampStageBatchLimitUi_(raw){
       var n = Math.floor(Number(raw || 0));
-      if (!(n > 0)) return 50;
+      if (!(n > 0)) return 30;
       return Math.max(1, Math.min(100, n));
     }
     function clampStageBatchOffsetUi_(raw){
@@ -8458,22 +8458,24 @@ function renderBatchPanel(){
     : stageBatchPolicyBlockReason_();
   if (previewBtn) {
     previewBtn.disabled = !selectedStage || batchState.busy || !stageBatchAllowed;
-    previewBtn.textContent = batchState.busy && batchState.action === "preview" ? "Opening..." : "Open Batch Modal";
+    previewBtn.textContent = batchState.busy && batchState.action === "preview" ? "Opening..." : "Open Batch Communication";
     previewBtn.style.opacity = previewBtn.disabled ? "0.55" : "1";
+    previewBtn.title = previewBtn.disabled ? "Choose a lifecycle stage and confirm authority before opening batch communication." : "Open the Batch Communication modal. Preview and confirmation occur inside the modal.";
   }
   if (sendBtn) {
-    sendBtn.disabled = !selectedStage || batchState.busy || !stageBatchAllowed;
-    sendBtn.textContent = batchState.busy && batchState.action === "send" ? "Opening..." : "Confirm in Batch Modal";
-    sendBtn.style.opacity = sendBtn.disabled ? "0.55" : "1";
-    sendBtn.setAttribute("aria-disabled", sendBtn.disabled ? "true" : "false");
-    sendBtn.title = sendBtn.disabled ? "Choose a stage and confirm authority before opening batch communication." : "Opens the batch communication modal; preview and confirmation are required before send.";
+    sendBtn.disabled = true;
+    sendBtn.textContent = "Batch modal confirmation only";
+    sendBtn.style.display = "none";
+    sendBtn.setAttribute("aria-hidden", "true");
+    sendBtn.setAttribute("aria-disabled", "true");
+    sendBtn.title = "Send confirmation occurs inside the Batch Communication modal after preview.";
   }
   if (noteEl) {
     if (batchState.busy && batchState.action === "preview") noteEl.textContent = "Loading the next eligible unsent cohort...";
     else if (batchState.busy && batchState.action === "send") noteEl.textContent = "Sending the next eligible unsent cohort...";
     else if (disabledReason) noteEl.textContent = disabledReason;
-    else if (previewReady) noteEl.textContent = "Ready for confirmation. Preview cache is valid; stage, message type, count, caps, cooldown, idempotency, and backend gates are re-checked before send.";
-    else noteEl.textContent = "Preview is required before send. Standard production flow uses the next eligible unsent records; diagnostic offset is ignored.";
+    else if (previewReady) noteEl.textContent = "Ready in the Batch Communication modal. Preview cache is valid; stage, message type, count, caps, cooldown, idempotency, and backend gates are re-checked before send.";
+    else noteEl.textContent = "Default batch size: 30. Larger batches may be restricted by send policy. Open the modal to preview and confirm before send.";
   }
   renderStageBatchSummary_(batchState.result);
   renderOpsCommunicationBulkBridge_();
@@ -10338,6 +10340,20 @@ function renderStageDashboard_(items, emptyMessage){
       var rows = actionabilitySelectedRows_();
       if (!rows.length && mode === "visible") rows = Array.isArray(actionabilityRenderedRows) ? actionabilityRenderedRows.slice() : [];
       var ids = rows.map(function(row){ return String(row && row.applicantId || "").trim(); }).filter(Boolean);
+      if (!ids.length) {
+        actionabilityBatchMessage = "Select at least two applicants before opening Batch Communication.";
+        actionabilityBatchPanelMode = "communication";
+        renderActionabilityPreview_({ preserveRows: true });
+        setMsg("msg", "Select at least two applicants before opening Batch Communication.");
+        return;
+      }
+      if (ids.length === 1) {
+        actionabilityBatchMessage = "Single applicant selected. Use the Review Workspace communication flow for one applicant.";
+        actionabilityBatchPanelMode = "communication";
+        renderActionabilityPreview_({ preserveRows: true });
+        setMsg("msg", "Single applicant selected. Use the Review Workspace communication flow for one applicant.");
+        return;
+      }
       var recommended = mode === "reminder" ? "reminder" : batchCommRecommendedFromRows_(rows);
       var label = actionabilitySelectionSourceLabel_();
       if (mode === "visible") label = "Current Page Selection";
@@ -10511,6 +10527,14 @@ function renderStageDashboard_(items, emptyMessage){
 
     function actionabilityBatchCommunication_(){
       var summary = actionabilitySelectionSummary_();
+      if (Number(summary.selected || 0) < 2) {
+        actionabilityBatchMessage = Number(summary.selected || 0)
+          ? "Single applicant selected. Use the Review Workspace communication flow for one applicant."
+          : "Select at least two applicants before opening Batch Communication.";
+        actionabilityBatchPanelMode = "communication";
+        renderActionabilityPreview_({ preserveRows: true });
+        return;
+      }
       actionabilityBatchMessage = "Batch Communication modal opened: " + String(summary.eligible) + " eligible, " + String(summary.blocked) + " blocked. Send authority remains gated by batch communication policy.";
       actionabilityBatchPanelMode = "communication";
       renderActionabilityPreview_({ preserveRows: true });
@@ -10519,6 +10543,14 @@ function renderStageDashboard_(items, emptyMessage){
 
     function actionabilityBatchReminder_(){
       var summary = actionabilitySelectionSummary_();
+      if (Number(summary.selected || 0) < 2) {
+        actionabilityBatchMessage = Number(summary.selected || 0)
+          ? "Single applicant selected. Use the Review Workspace communication flow for one applicant."
+          : "Select at least two applicants before opening Batch Reminder.";
+        actionabilityBatchPanelMode = "reminder";
+        renderActionabilityPreview_({ preserveRows: true });
+        return;
+      }
       actionabilityBatchMessage = "Batch Reminder modal opened: " + String(summary.eligible) + " eligible, " + String(summary.blocked) + " blocked by Contactability Gate, bounce, or cooldown.";
       actionabilityBatchPanelMode = "reminder";
       renderActionabilityPreview_({ preserveRows: true });
