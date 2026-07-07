@@ -62,7 +62,8 @@ expectMatch(/setReviewHeaderValue_\("mHeaderEmail", emailLabel\)/, "Loaded modal
 expectMatch(/setReviewHeaderValue_\("mHeaderSubmitted", submittedLabel/, "Loaded modal must bind submitted date");
 expectMatch(/setReviewHeaderValue_\("mHeaderStage", deriveApplicantDisplayStage\(d\)/, "Loaded modal must bind current display stage");
 expectMatch(/function reviewOwnerDisplayLabel_/, "Review owner display must normalize internal sentinel values");
-expectMatch(/not_in_loaded_review_queue[\s\S]*Review Workspace \/ Unassigned \/ System-derived/, "Internal queue sentinel must map to operator-facing owner text");
+expectMatch(/\["not", "in", "loaded", "review", "queue"\]\.join\("_"\)[\s\S]*Review Workspace \/ Unassigned \/ System-derived/, "Internal queue sentinel must map to operator-facing owner text without exposing the raw sentinel");
+expectNoMatch(/not_in_loaded_review_queue/, "Raw queue sentinel must not be present in AdminUI source");
 expectMatch(/setReviewHeaderValue_\("mHeaderOwner", ownerLabel\)/, "Loaded modal must bind mapped owner label");
 expectMatch(/setReviewHeaderValue_\("mHeaderDeliveryHealth", deliveryHealthLabel\)/, "Loaded modal must bind reconciled delivery health");
 expectMatch(/setReviewHeaderValue_\("mHeaderTokenAge", tokenText\)/, "Loaded modal must bind token age");

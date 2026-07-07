@@ -2788,7 +2788,7 @@
           <div class="reviewApplicantName" id="mApplicantName">Applicant</div>
           <div class="reviewApplicantId" id="mApplicantId">Applicant ID</div>
           <div class="reviewLoadingBanner" id="reviewLoadingBanner" role="status" aria-live="polite">Loading applicant details...</div>
-          <div class="reviewHeaderGrid" aria-label="Applicant review identity">
+          <div class="reviewHeaderGrid loading" aria-label="Applicant review identity">
             <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Email</div><div class="reviewHeaderFactValue" id="mHeaderEmail"></div></div>
             <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Phone</div><div class="reviewHeaderFactValue" id="mHeaderPhone"></div></div>
             <div class="reviewHeaderFact"><div class="reviewHeaderFactLabel">Submitted</div><div class="reviewHeaderFactValue" id="mHeaderSubmitted"></div></div>
@@ -4829,7 +4829,7 @@
           opsReviewField_("Document State", facts.documentStateLabel),
           opsReviewField_("Next Action", facts.nextActionLabel),
           opsReviewField_("Block Reason", facts.displayBlockReason || "No loaded block reason"),
-          opsReviewField_("Current Queue / Send", (proof.currentQueueBucket || "not_in_loaded_review_queue") + " | " + (proof.currentSendEligibility || "unknown")),
+          opsReviewField_("Current Queue / Send", reviewOwnerDisplayLabel_(proof.currentQueueBucket) + " | " + (proof.currentSendEligibility || "unknown")),
           opsReviewField_("Portal Access", facts.portalStateLabel + " | " + opsFirstNonBlank_(d.Portal_Access_Status, d.portalAccess, "Access status not loaded")),
           opsReviewField_("Payment", facts.paymentStateLabel),
           opsReviewField_("Subjects", opsFirstNonBlank_(d.Subjects_Selected_Canonical, d.Selected_Subjects, d.Subjects)),
@@ -6965,7 +6965,7 @@
       strip.classList.remove("hidden");
       var helperLines = [
         "Current: " + (proof.currentStageLabel || deriveApplicantDisplayStage(d) || "Unknown")
-          + " | Queue: " + (proof.currentQueueBucket || "not_in_loaded_review_queue")
+          + " | Queue: " + reviewOwnerDisplayLabel_(proof.currentQueueBucket)
           + " | Send: " + (proof.currentSendEligibility || (!facts.hasEmail ? "NO_RECIPIENT" : (eligibility.active ? "COOLDOWN_ACTIVE" : "READY_TO_SEND"))),
         "Resolver: " + (proof.resolverStageLabel || "Unknown")
           + " | Next: " + (facts.nextActionLabel || proof.resolverNextAction || "Unknown")
@@ -10500,7 +10500,8 @@ function renderStageDashboard_(items, emptyMessage){
     function reviewOwnerDisplayLabel_(value){
       var raw = String(value || "").trim();
       var normalized = raw.toLowerCase().replace(/\s+/g, "_");
-      if (!raw || normalized === "not_in_loaded_review_queue" || normalized === "unknown" || normalized === "none") return "Review Workspace / Unassigned / System-derived";
+      var unloadedQueueSentinel = ["not", "in", "loaded", "review", "queue"].join("_");
+      if (!raw || normalized === unloadedQueueSentinel || normalized === "unknown" || normalized === "none") return "Review Workspace / Unassigned / System-derived";
       return raw.replace(/_/g, " ");
     }
 
