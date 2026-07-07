@@ -420,6 +420,10 @@
     .actionabilityClusterSorts{ display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-top:2px; }
     .actionabilitySortBtn{ display:inline-flex; align-items:center; border:1px solid #9fb4ca; border-radius:4px; background:#fff; color:#173451; font:inherit; font-size:10px; font-weight:850; text-transform:none; padding:3px 6px; cursor:pointer; text-align:left; line-height:1.2; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; min-height:26px; }
     .actionabilitySortBtn:hover{ color:#1f5aa5; border-color:#9fc0e4; background:#f5f9ff; text-decoration:none; }
+    .actionabilitySortBtn.active{ border-color:#1f5aa5; background:#eef6ff; color:#0f3f78; box-shadow:inset 0 -2px 0 #1f5aa5; }
+    .actionabilityPager{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-bottom:1px solid #e5ebf2; background:#fff; color:#31516f; font-size:12px; font-weight:850; flex-wrap:wrap; }
+    .actionabilityPagerControls{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .actionabilityPagerControls .btn:disabled{ background:#e2eaf2; color:#26384e; border-color:#8da2b7; opacity:1; cursor:not-allowed; }
     .actionabilityWorklistDetails{ grid-column:1 / -1; border-top:1px solid #edf2f7; padding:6px 7px; background:#fbfcfe; }
     .actionabilityFactGrid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:4px 8px; font-size:11px; line-height:1.28; }
     .actionabilityFact{ min-width:0; }
@@ -497,6 +501,10 @@
     .batchCommMetric{ background:#fff; border:1px solid #dbe5ef; border-radius:8px; padding:8px 9px; min-width:0; }
     .batchCommMetric .k{ display:block; color:#61748a; font-size:10px; font-weight:900; text-transform:uppercase; line-height:1.2; }
     .batchCommMetric .v{ display:block; margin-top:4px; color:#0f1f35; font-size:16px; font-weight:900; overflow-wrap:anywhere; }
+    .batchCommStateNote{ border:1px solid #dbe5ef; border-radius:8px; background:#fff; color:#173451; padding:8px 10px; font-size:12px; font-weight:850; }
+    .batchCommStateNote.ready{ border-color:#8cc79f; background:#f1fbf4; color:#155724; }
+    .batchCommStateNote.warn{ border-color:#e7b95b; background:#fff8e8; color:#704a00; }
+    .batchCommStateNote.fail{ border-color:#d99; background:#fff5f5; color:#7b1d1d; }
     .batchCommGrid{ display:grid; grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr); gap:12px; align-items:start; }
     .batchCommPanel{ background:#fff; border:1px solid #dbe5ef; border-radius:8px; padding:12px; color:#173451; }
     .batchCommPanel h4{ margin:0 0 8px; color:#0f1f35; font-size:14px; font-weight:900; }
@@ -3350,6 +3358,9 @@
     let lastSearchRows = [];
     let actionabilityPreviewRows = [];
     let actionabilityRenderedRows = [];
+    let actionabilityCurrentCohortRows = [];
+    const ACTIONABILITY_PAGE_SIZE = 10;
+    let actionabilityPageState = { page: 0 };
     let actionabilitySortState = { key: "default", dir: "desc" };
     let actionabilityBucketSortState = "operational";
     let actionabilityActiveGroup = "";
@@ -3360,6 +3371,7 @@
     let actionabilityHiddenRecordsState = { byGroup: {}, totalByGroup: {}, perBucketLimit: 5 };
     let actionabilityContextMenuIndex = null;
     let actionabilitySelectedKeys = {};
+    let actionabilitySelectionSource = "";
     let actionabilityBatchMessage = "";
     let actionabilityBatchPanelMode = "";
     let batchCommState = {
@@ -3372,6 +3384,7 @@
       selectedMessageType: "",
       recommendedMessageType: "",
       preview: null,
+      previewStale: false,
       sendResult: null,
       busy: false,
       action: "",
@@ -9526,6 +9539,7 @@ function renderStageDashboard_(items, emptyMessage){
     function selectActionabilityGroup_(key){
       var normalized = String(key || "").trim().toUpperCase();
       actionabilityActiveGroup = actionabilityActiveGroup === normalized ? "" : normalized;
+      actionabilityPageState.page = 0;
       renderActionabilityPreview_({ preserveRows: true });
       window.setTimeout(function(){
         var target = document.getElementById(actionabilityActiveGroup ? "actionabilityPreviewRows" : "actionabilityPreviewSummary");
@@ -9535,6 +9549,7 @@ function renderStageDashboard_(items, emptyMessage){
 
     function showAllActionability_(){
       actionabilityActiveGroup = "";
+      actionabilityPageState.page = 0;
       renderActionabilityPreview_({ preserveRows: true });
       window.setTimeout(function(){
         var target = document.getElementById("actionabilityPreviewSummary");
@@ -9546,6 +9561,7 @@ function renderStageDashboard_(items, emptyMessage){
       var normalized = String(key || "").trim().toUpperCase();
       if (!normalized) return;
       actionabilityActiveGroup = normalized;
+      actionabilityPageState.page = 0;
       renderActionabilityPreview_({ preserveRows: true });
       setMsg("msg", "Showing " + actionabilityGroupLabel_(normalized) + " worklist. Use a row Review button to open an exact applicant.");
       if (triggerBtn && typeof triggerBtn.blur === "function") triggerBtn.blur();
@@ -9649,7 +9665,39 @@ function renderStageDashboard_(items, emptyMessage){
         actionabilitySortState.key = normalized;
         actionabilitySortState.dir = (normalized === "applicantId" || normalized === "name" || normalized === "owner" || normalized === "nextAction" || normalized === "suppressor") ? "asc" : "desc";
       }
+      actionabilityPageState.page = 0;
       renderActionabilityPreview_({ preserveRows: true });
+    }
+
+    function actionabilityPageInfo_(rows){
+      var total = Array.isArray(rows) ? rows.length : 0;
+      var totalPages = Math.max(1, Math.ceil(total / ACTIONABILITY_PAGE_SIZE));
+      var page = Math.max(0, Math.min(Number(actionabilityPageState.page || 0), totalPages - 1));
+      actionabilityPageState.page = page;
+      var start = total ? page * ACTIONABILITY_PAGE_SIZE : 0;
+      var end = total ? Math.min(total, start + ACTIONABILITY_PAGE_SIZE) : 0;
+      return { total: total, totalPages: totalPages, page: page, start: start, end: end };
+    }
+
+    function pageActionabilityWorklist_(dir){
+      var delta = Number(dir || 0);
+      actionabilityPageState.page = Math.max(0, Number(actionabilityPageState.page || 0) + delta);
+      renderActionabilityPreview_({ preserveRows: true });
+    }
+
+    function renderActionabilityPager_(info){
+      var meta = info || { total: 0, totalPages: 1, page: 0, start: 0, end: 0 };
+      var onlyOne = Number(meta.totalPages || 1) <= 1;
+      var showing = Number(meta.total || 0) > 0
+        ? "Showing " + String(Number(meta.start || 0) + 1) + "-" + String(Number(meta.end || 0)) + " of " + String(Number(meta.total || 0))
+        : "Showing 0 of 0";
+      return '<div class="actionabilityPager" aria-label="Current Worklist pagination">'
+        + '<span>' + esc(showing) + '</span>'
+        + '<span class="muted">Page size: ' + esc(ACTIONABILITY_PAGE_SIZE) + '</span>'
+        + '<div class="actionabilityPagerControls">'
+        + '<button class="btn small operatorControl operatorControlSecondary" type="button" onclick="pageActionabilityWorklist_(-1)" ' + (onlyOne || Number(meta.page || 0) <= 0 ? "disabled" : "") + '>Previous</button>'
+        + '<button class="btn small operatorControl operatorControlSecondary" type="button" onclick="pageActionabilityWorklist_(1)" ' + (onlyOne || Number(meta.page || 0) >= Number(meta.totalPages || 1) - 1 ? "disabled" : "") + '>Next</button>'
+        + '</div></div>';
     }
 
     function actionabilityLedgerValue_(value){
@@ -9946,6 +9994,13 @@ function renderStageDashboard_(items, emptyMessage){
       return source.filter(function(row){ return !!actionabilitySelectedKeys[actionabilityRowKey_(row)]; });
     }
 
+    function actionabilitySelectionSourceLabel_(){
+      if (actionabilitySelectionSource === "page") return "Current Page Selection";
+      if (actionabilitySelectionSource === "all") return actionabilityActiveGroup ? "Full Bounded Cohort: " + actionabilityGroupLabel_(actionabilityActiveGroup) : "Full Bounded Cohort";
+      if (actionabilitySelectionSource === "manual") return "Manual Selection";
+      return "Selected Applicants";
+    }
+
     function actionabilitySelectionSummary_(rows){
       var selected = Array.isArray(rows) ? rows : actionabilitySelectedRows_();
       var eligible = selected.filter(actionabilityIsEmailActionable_);
@@ -10015,8 +10070,9 @@ function renderStageDashboard_(items, emptyMessage){
       var selected = summary.selected;
       var eligible = summary.eligible;
       var blocked = summary.blocked;
+      var sourceLabel = selected ? actionabilitySelectionSourceLabel_() + ": " : "";
       var status = actionabilityBatchMessage || (selected
-        ? String(selected) + " selected. " + String(eligible) + " email-ready, " + String(blocked) + " blocked by Contactability Gate or cooldown."
+        ? sourceLabel + String(selected) + " selected. " + String(eligible) + " email-ready, " + String(blocked) + " blocked by Contactability Gate or cooldown."
         : "No applicants selected.");
       var canBatchEmail = selected > 0 && eligible > 0;
       var canExport = selected > 0;
@@ -10082,6 +10138,7 @@ function renderStageDashboard_(items, emptyMessage){
     function batchCommCanSend_(){
       var preview = batchCommState.preview || null;
       if (!preview || preview.ok !== true) return false;
+      if (batchCommState.previewStale === true) return false;
       if (!String(preview.requestId || "").trim() || !String(preview.candidateHash || "").trim()) return false;
       return Number(preview.count || preview.eligible || preview.candidateCount || 0) > 0;
     }
@@ -10095,6 +10152,7 @@ function renderStageDashboard_(items, emptyMessage){
       batchCommState.applicantIds = normalizeBatchCommApplicantIds_(src.applicantIds || []);
       batchCommState.excludedApplicantIds = {};
       batchCommState.preview = null;
+      batchCommState.previewStale = false;
       batchCommState.sendResult = null;
       batchCommState.busy = false;
       batchCommState.action = "";
@@ -10125,11 +10183,45 @@ function renderStageDashboard_(items, emptyMessage){
 
     function batchCommSourceSummary_(){
       if (batchCommState.sourceType === "stage") return "Stage " + String(batchCommState.stage || batchCommState.sourceLabel || "");
+      if (batchCommState.sourceLabel) return String(batchCommState.sourceLabel);
       return String(batchCommState.applicantIds.length || 0) + " Selected Applicants";
     }
 
     function batchCommMetricHtml_(label, value){
       return '<div class="batchCommMetric"><span class="k">' + esc(label) + '</span><span class="v">' + esc(value) + '</span></div>';
+    }
+
+    function batchCommRecipientCounts_(preview){
+      var p = preview || {};
+      var recipients = Array.isArray(p.recipients) ? p.recipients : [];
+      var counts = {
+        recipients: Number(p.recipientCount || p.totalActionable || p.totalInStage || batchCommState.applicantIds.length || 0),
+        validEmail: Number(p.eligible || p.count || p.candidateCount || 0),
+        blocked: Number(p.blocked || 0),
+        missingEmail: 0,
+        excluded: Number(p.excluded || 0),
+        alreadyCommunicated: Number(p.alreadyCommunicated || p.alreadySentExcluded || p.alreadyProcessedCount || 0),
+        remaining: Number(p.remainingAfterBatch || p.remainingEligibleEstimate || 0)
+      };
+      recipients.forEach(function(rec){
+        var id = String(rec && rec.applicantId || "");
+        var text = String((rec && (rec.reason || rec.status || rec.email)) || "").toLowerCase();
+        if (batchCommState.previewStale === true && batchCommState.excludedApplicantIds[id]) counts.excluded++;
+        if (text.indexOf("no email") >= 0 || text.indexOf("missing email") >= 0 || text.indexOf("no usable email") >= 0) counts.missingEmail++;
+      });
+      if (batchCommState.previewStale === true) {
+        counts.validEmail = Math.max(0, counts.validEmail - Object.keys(batchCommState.excludedApplicantIds || {}).length);
+      }
+      return counts;
+    }
+
+    function batchCommStateLabel_(){
+      if (batchCommState.busy && batchCommState.action === "send") return { text: "Sending", cls: "warn" };
+      if (batchCommState.sendResult && batchCommState.sendResult.ok === false) return { text: "Failed / Partial", cls: "fail" };
+      if (batchCommState.sendResult) return { text: "Completed", cls: "ready" };
+      if (batchCommCanSend_()) return { text: "Ready to Send", cls: "ready" };
+      if (batchCommState.previewStale === true) return { text: "Preview required after exclusions", cls: "warn" };
+      return { text: "Preview required", cls: "warn" };
     }
 
     function renderBatchCommunicationModal_(){
@@ -10143,19 +10235,18 @@ function renderStageDashboard_(items, emptyMessage){
       var resultEl = document.getElementById("batchCommResult");
       if (sourceEl) sourceEl.textContent = "Source: " + batchCommSourceSummary_();
       var preview = batchCommState.preview || {};
-      var total = Number(preview.totalActionable || batchCommState.applicantIds.length || preview.totalInStage || 0);
-      var eligible = Number(preview.eligible || preview.count || preview.candidateCount || 0);
-      var blocked = Number(preview.blocked || 0);
-      var excluded = Number(preview.excluded || 0);
-      var remaining = Number(preview.remainingAfterBatch || preview.remainingEligibleEstimate || 0);
+      var counts = batchCommRecipientCounts_(preview);
+      var total = counts.recipients;
+      var eligible = counts.validEmail;
+      var stateLabel = batchCommStateLabel_();
       if (readinessEl) {
         readinessEl.innerHTML = [
-          batchCommMetricHtml_("Total actionable", total),
-          batchCommMetricHtml_("Already communicated", Number(preview.alreadyCommunicated || preview.alreadySentExcluded || preview.alreadyProcessedCount || 0)),
-          batchCommMetricHtml_("Eligible this run", eligible),
-          batchCommMetricHtml_("Blocked", blocked),
-          batchCommMetricHtml_("Excluded", excluded),
-          batchCommMetricHtml_("Remaining after batch", remaining)
+          batchCommMetricHtml_("Recipients", total),
+          batchCommMetricHtml_("Valid email", counts.validEmail),
+          batchCommMetricHtml_("Blocked", counts.blocked),
+          batchCommMetricHtml_("Missing email", counts.missingEmail),
+          batchCommMetricHtml_("Excluded", counts.excluded),
+          batchCommMetricHtml_("Remaining after send", counts.remaining)
         ].join("");
       }
       if (galleryEl) {
@@ -10176,7 +10267,8 @@ function renderStageDashboard_(items, emptyMessage){
       }
       if (summaryEl) {
         var meta = getCommTemplateMeta_(batchCommState.selectedMessageType) || {};
-        summaryEl.innerHTML = '<div><strong>Template</strong><br>' + esc(meta.label || batchCommState.selectedMessageType || "Not selected") + '</div>'
+        summaryEl.innerHTML = '<div class="batchCommStateNote ' + esc(stateLabel.cls) + '">' + esc(stateLabel.text) + '</div>'
+          + '<div style="margin-top:8px;"><strong>Template</strong><br>' + esc(meta.label || batchCommState.selectedMessageType || "Not selected") + '</div>'
           + '<div style="margin-top:8px;"><strong>Recipients</strong><br>' + esc(Number(preview.recipientCount || total || 0)) + '</div>'
           + '<div style="margin-top:8px;"><strong>Estimated send</strong><br>' + esc(eligible) + '</div>'
           + '<div style="margin-top:8px;"><strong>Readiness</strong><br>' + esc(batchCommCanSend_() ? "Ready to Send" : "Preview required or no eligible recipients") + '</div>';
@@ -10237,7 +10329,7 @@ function renderStageDashboard_(items, emptyMessage){
       if (!id) return;
       if (included) delete batchCommState.excludedApplicantIds[id];
       else batchCommState.excludedApplicantIds[id] = true;
-      batchCommState.preview = null;
+      if (batchCommState.preview) batchCommState.previewStale = true;
       batchCommState.sendResult = null;
       renderBatchCommunicationModal_();
     }
@@ -10247,9 +10339,12 @@ function renderStageDashboard_(items, emptyMessage){
       if (!rows.length && mode === "visible") rows = Array.isArray(actionabilityRenderedRows) ? actionabilityRenderedRows.slice() : [];
       var ids = rows.map(function(row){ return String(row && row.applicantId || "").trim(); }).filter(Boolean);
       var recommended = mode === "reminder" ? "reminder" : batchCommRecommendedFromRows_(rows);
+      var label = actionabilitySelectionSourceLabel_();
+      if (mode === "visible") label = "Current Page Selection";
+      if (mode === "reminder") label = label + " for Reminder";
       openBatchCommunicationModal_({
         sourceType: "selected",
-        sourceLabel: mode === "reminder" ? ids.length + " Selected Applicants for Reminder" : ids.length + " Selected Applicants",
+        sourceLabel: label + " - " + ids.length + " applicants",
         applicantIds: ids,
         recommendedMessageType: recommended
       });
@@ -10303,6 +10398,7 @@ function renderStageDashboard_(items, emptyMessage){
       batchCommState.busy = false;
       batchCommState.action = "";
       batchCommState.preview = res && typeof res === "object" ? res : { ok:false, result:"FAILED", message:"Invalid preview response." };
+      batchCommState.previewStale = false;
       batchCommState.sendResult = null;
       renderBatchCommunicationModal_();
     }
@@ -10312,6 +10408,7 @@ function renderStageDashboard_(items, emptyMessage){
       batchCommState.busy = false;
       batchCommState.action = "";
       batchCommState.preview = { ok:false, result:"FAILED", message:String((err && err.message) || err || "Preview request failed.") };
+      batchCommState.previewStale = false;
       batchCommState.sendResult = null;
       renderBatchCommunicationModal_();
     }
@@ -10321,9 +10418,8 @@ function renderStageDashboard_(items, emptyMessage){
       var preview = batchCommState.preview || {};
       var count = Number(preview.count || preview.eligible || preview.candidateCount || 0);
       var meta = getCommTemplateMeta_(batchCommState.selectedMessageType) || {};
-      var confirmText = "Batch Communication\n\nTemplate: " + String(meta.label || batchCommState.selectedMessageType)
-        + "\nRecipients: " + String(count)
-        + "\nSource: " + batchCommSourceSummary_()
+      var confirmText = "You are about to send " + String(meta.label || batchCommState.selectedMessageType || "the selected template") + " to " + String(count) + " applicants."
+        + "\n\nSource: " + batchCommSourceSummary_()
         + "\n\nProceed?";
       if (!window.confirm(confirmText)) return;
       batchCommState.requestSeq++;
@@ -10372,6 +10468,7 @@ function renderStageDashboard_(items, emptyMessage){
       if (!key) return;
       if (checked) actionabilitySelectedKeys[key] = true;
       else delete actionabilitySelectedKeys[key];
+      actionabilitySelectionSource = "manual";
       actionabilityBatchMessage = "";
       renderActionabilityPreview_({ preserveRows: true });
     }
@@ -10381,7 +10478,8 @@ function renderStageDashboard_(items, emptyMessage){
         var key = actionabilityRowKey_(row);
         if (key) actionabilitySelectedKeys[key] = true;
       });
-      actionabilityBatchMessage = "Visible worklist rows selected. Batch actions remain read-only handoffs.";
+      actionabilitySelectionSource = "page";
+      actionabilityBatchMessage = "Current page selection: " + String((actionabilityRenderedRows || []).length) + " visible rows selected.";
       renderActionabilityPreview_({ preserveRows: true });
     }
 
@@ -10396,6 +10494,7 @@ function renderStageDashboard_(items, emptyMessage){
         var key = actionabilityRowKey_(row);
         if (key) actionabilitySelectedKeys[key] = true;
       });
+      actionabilitySelectionSource = "all";
       actionabilityBatchMessage = actionabilityActiveGroup
         ? "All bounded rows selected for " + actionabilityGroupLabel_(actionabilityActiveGroup) + "."
         : "All bounded returned worklist rows selected.";
@@ -10404,6 +10503,7 @@ function renderStageDashboard_(items, emptyMessage){
 
     function clearActionabilitySelection_(){
       actionabilitySelectedKeys = {};
+      actionabilitySelectionSource = "";
       actionabilityBatchMessage = "";
       actionabilityBatchPanelMode = "";
       renderActionabilityPreview_({ preserveRows: true });
@@ -10548,25 +10648,30 @@ function renderStageDashboard_(items, emptyMessage){
         + '</div>';
       renderActionabilityResponseTraffic_();
       var displayRows = actionabilityActiveGroup ? (groupRows[actionabilityActiveGroup] || []) : rows;
-      actionabilityRenderedRows = displayRows.slice();
+      actionabilityCurrentCohortRows = displayRows.slice();
+      var pageInfo = actionabilityPageInfo_(displayRows);
+      var pageRows = displayRows.slice(pageInfo.start, pageInfo.end);
+      actionabilityRenderedRows = pageRows.slice();
       if (metaEl) {
         var populationTotal = Number(actionabilityPreviewMetaState.applicantIdRows || actionabilityPreviewMetaState.includedRows || rows.length || 0);
         var filterLabel = actionabilityActiveGroup ? actionabilityGroupLabel_(actionabilityActiveGroup) : "All";
         var integrity = actionabilityPreviewMetaState.integrityStatus ? (" | Ledger " + actionabilityPreviewMetaState.integrityStatus) : "";
-        metaEl.textContent = String(displayRows.length) + " visible worklist rows / " + String(populationTotal) + " total applicant population | Filter: " + filterLabel + integrity;
+        metaEl.textContent = String(displayRows.length) + " bounded worklist rows / " + String(populationTotal) + " total applicant population | Filter: " + filterLabel + integrity;
       }
       if (!displayRows.length) {
         rowsEl.innerHTML = '<div class="actionabilityEmpty">No actionable work returned.</div>';
         return;
       }
       var sortHeader = function(key, label){
-        return '<button class="actionabilitySortBtn" type="button" data-actionability-sort="' + esc(key) + '" onclick="sortActionabilityPreview_(\'' + esc(key) + '\')">' + esc(label + actionabilitySortLabel_(key)) + '</button>';
+        var active = actionabilitySortState && actionabilitySortState.key === key;
+        return '<button class="actionabilitySortBtn' + (active ? ' active' : '') + '" type="button" data-actionability-sort="' + esc(key) + '" aria-pressed="' + (active ? "true" : "false") + '" onclick="sortActionabilityPreview_(\'' + esc(key) + '\')">' + esc(label + actionabilitySortLabel_(key)) + '</button>';
       };
       var html = actionabilityActiveGroup ? '<div class="actionabilityFilterNote">Showing: ' + esc(actionabilityGroupLabel_(actionabilityActiveGroup)) + ' <button class="btn small" type="button" onclick="selectActionabilityGroup_(\'' + esc(actionabilityActiveGroup) + '\')">Show All</button></div>' : "";
       html += '<div class="actionabilityWorklist" aria-label="Current Worklist">'
         + '<div class="actionabilityWorklistTitle"><span>Current Worklist</span><span class="muted">Review opens authoritative editing.</span></div>'
         + renderActionabilitySelectionControls_(displayRows)
         + renderActionabilityBatchPanel_()
+        + renderActionabilityPager_(pageInfo)
         + '<div class="actionabilityWorklistTable" role="table" aria-label="Operations Workspace Current Worklist">'
         + '<div class="actionabilityWorklistHeader" role="row">'
         + '<div class="actionabilityWorklistCell actionabilityClusterHeader" role="columnheader"><span class="actionabilityClusterLabel">Applicant</span><span class="actionabilityClusterSorts">' + sortHeader("applicantId", "Applicant ID") + sortHeader("name", "Applicant Name") + sortHeader("nextAction", "Next Action") + '</span></div>'
@@ -10575,7 +10680,7 @@ function renderStageDashboard_(items, emptyMessage){
         + '<div class="actionabilityWorklistCell actionabilityClusterHeader" role="columnheader"><span class="actionabilityClusterLabel">Timeline</span><span class="actionabilityClusterSorts">' + sortHeader("age", "Age / Last") + sortHeader("due", "Priority / Next") + '</span></div>'
         + '<div class="actionabilityWorklistCell" role="columnheader">Review</div>'
         + '</div>';
-      displayRows.forEach(function(row, index){
+      pageRows.forEach(function(row, index){
         var r = row || {};
         var state = r.authorityState || {};
         var priority = actionabilityPriorityLabel_(r.urgencyLevel);
@@ -10754,7 +10859,7 @@ function renderStageDashboard_(items, emptyMessage){
           if (rowsEl) rowsEl.innerHTML = '<div class="queue-empty">Could not load Operations Workspace.</div>';
           if (metaEl) metaEl.textContent = "Operations Workspace unavailable.";
         })
-        .admin_getActionabilityPreview({ limit: 40, force: o.force ? 1 : 0 });
+        .admin_getActionabilityPreview({ limit: 100, force: o.force ? 1 : 0 });
     }
 
     function initQueuePanelEvents_(){

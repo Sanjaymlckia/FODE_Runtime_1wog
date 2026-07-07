@@ -25,6 +25,10 @@ mustMatch(adminUi, /function selectVisibleActionabilityRows_/, "Selection scenar
 mustMatch(adminUi, /function selectAllActionabilityRows_/, "Selection scenario must support bounded Select All");
 mustMatch(adminUi, /function clearActionabilitySelection_/, "Selection scenario must support Clear Selection");
 mustMatch(adminUi, /Total selected[\s\S]*Contactable[\s\S]*No email/, "Selection scenario must expose cohort summary counts");
+mustMatch(adminUi, /const ACTIONABILITY_PAGE_SIZE = 10/, "Selection scenario must paginate the worklist at 10 rows");
+mustMatch(adminUi, /Showing " \+ String\(Number\(meta\.start \|\| 0\) \+ 1\) \+ "-" \+ String\(Number\(meta\.end/, "Selection scenario must show visible page range");
+mustMatch(adminUi, /Current page selection/, "Select Visible scenario must identify current-page cohort source");
+mustMatch(adminUi, /Full Bounded Cohort/, "Select All scenario must identify full bounded cohort source");
 
 mustMatch(adminUi, /id="batchCommModalBack"/, "Batch communication scenario must open a dedicated modal");
 mustMatch(adminUi, /Batch Communication Handoff/, "Batch communication scenario must retain the selected-cohort handoff summary");
@@ -35,6 +39,12 @@ mustNotMatch(adminUi, /function actionabilityBatchCommunication_[\s\S]{0,700}adm
 mustMatch(adminUi, /admin_previewSelectedApplicantBatch/, "Selected cohorts must use the selected batch preview wrapper");
 mustMatch(adminUi, /admin_sendSelectedApplicantBatch/, "Selected cohorts must use the selected batch send wrapper");
 mustNotMatch(adminUi, /function sendBatchCommunicationModal_[\s\S]*admin_sendApplicantMessage/, "Batch modal must not route through the single-applicant Review RPC");
+mustMatch(adminUi, /Recipients[\s\S]*Valid email[\s\S]*Blocked[\s\S]*Missing email[\s\S]*Excluded/, "Batch modal must reconcile recipient readiness counts");
+["Preview required", "Ready to Send", "Sending", "Completed", "Failed / Partial"].forEach((label) => {
+  mustMatch(adminUi, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `Batch modal must expose send lifecycle state: ${label}`);
+});
+mustMatch(adminUi, /You are about to send [\s\S]* to [\s\S]* applicants/, "Batch modal confirmation must name template and recipient count");
+mustMatch(adminUi, /Technical Diagnostics/, "Batch modal diagnostics must remain available but separated");
 
 mustMatch(adminUi, /function commContactabilityGate_/, "Contactability Gate scenario must be first-class");
 mustMatch(adminUi, /Email workflow unavailable/, "Contactability Gate must suppress normal email workflow");

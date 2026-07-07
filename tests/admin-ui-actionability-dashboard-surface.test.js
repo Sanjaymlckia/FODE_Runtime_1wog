@@ -168,7 +168,7 @@ assert.match(adminUi, /actionabilityPopulationLedgerState\s*=\s*ledger/, "Operat
 assert.match(adminUi, /function actionabilityPopulationCountForGroup_/, "Operations Workspace KPI totals must have a ledger-backed count resolver");
 assert.match(adminUi, /operationalBucketCounts/, "Operations Workspace must consume ledger operational bucket counts");
 assert.match(adminUi, /actionabilityPopulationCountForGroup_\(key,\s*rows\.length\)/, "Operational bucket cards must render full population bucket counts with visible-row fallback only");
-assert.match(adminUi, /visible worklist rows \/ " \+ String\(populationTotal\) \+ " total applicant population/, "Operations Workspace meta must separate visible worklist rows from population totals");
+assert.match(adminUi, /bounded worklist rows \/ " \+ String\(populationTotal\) \+ " total applicant population/, "Operations Workspace meta must separate bounded worklist rows from population totals");
 assert.doesNotMatch(renderActionabilityRowBody_(), /Newest:/, "Operational bucket cards must not spend benchmark scan space on newest metadata");
 assert.match(adminUi, /stagePopulationLedgerState/, "Lifecycle Map must retain Population Ledger summary from the backend");
 assert.match(adminUi, /Population Ledger: " \+ String\(Number\(ledger\.applicantIdRows/, "Lifecycle Map metadata must report ledger applicant population");
@@ -193,6 +193,12 @@ assert.match(adminUi, /class="actionabilityWorklist"/, "Applicant rows must rend
 assert.match(adminUi, /role="table" aria-label="Operations Workspace Current Worklist"/, "Worklist must use a predictable table/list geometry");
 assert.match(adminUi, /class="actionabilityWorklistRow" role="row" data-actionability-row=/, "Applicant rows must render as fixed worklist rows");
 assert.doesNotMatch(renderActionabilityRowBody_(), /class="actionabilityTask"/, "Applicant rows must not render as the old irregular card blocks");
+assert.match(adminUi, /const ACTIONABILITY_PAGE_SIZE = 10/, "Current Worklist must use deterministic page size 10");
+assert.match(adminUi, /function renderActionabilityPager_/, "Current Worklist must render pagination controls");
+assert.match(adminUi, /Showing " \+ String\(Number\(meta\.start \|\| 0\) \+ 1\) \+ "-" \+ String\(Number\(meta\.end/, "Pagination must show range text such as Showing 1-10 of N");
+assert.match(adminUi, /Previous<\/button>[\s\S]*Next<\/button>/, "Pagination must expose Previous and Next controls");
+assert.match(adminUi, /actionabilityRenderedRows = pageRows\.slice\(\)/, "Rendered rows must be the current page only");
+assert.match(adminUi, /actionabilityCurrentCohortRows = displayRows\.slice\(\)/, "Full bounded cohort must remain available outside the current page");
 assert.match(adminUi, /actionabilityStatusChips/, "Dashboard rows must expose compact status chips");
 assert.doesNotMatch(adminUi, /\.actionabilityWorklist\{[^}]*overflow-x:auto/, "Primary worklist must not require horizontal scrolling");
 assert.doesNotMatch(adminUi, /\.actionabilityWorklistTable\{[^}]*min-width:/, "Primary worklist table must not force horizontal overflow");
@@ -236,6 +242,13 @@ assert.doesNotMatch(functionSource("previewBatchCommunicationModal_") + function
 assert.match(functionSource("selectBatchCommTemplate_"), /batchCommState\.sourceType === "stage"[\s\S]*batchCommState\.recommendedMessageType/, "Stage cohort template changes must remain locked to lifecycle-stage policy");
 assert.match(adminUi, /Stage policy locked/, "Batch modal must explain disabled stage template overrides");
 assert.match(adminUi, /onclick="openBatchCommunicationFromStage_\(\)">Open Batch Modal/, "Stage cohort controls must open the batch communication modal");
+assert.match(functionSource("openBatchCommunicationFromSelection_"), /actionabilitySelectionSourceLabel_\(\)/, "Selected cohort modal source must identify page, manual, or full bounded cohort source");
+assert.match(functionSource("selectVisibleActionabilityRows_"), /Current page selection[\s\S]*actionabilityRenderedRows/, "Select Visible must select the current page only");
+assert.match(functionSource("selectAllActionabilityRows_"), /actionabilitySelectionSource = "all"/, "Select All must mark the full bounded cohort source");
+assert.match(functionSource("loadActionabilityPreview_"), /admin_getActionabilityPreview\(\{ limit: 100/, "Operations Workspace must load the full existing bounded worklist cap before client pagination");
+assert.match(functionSource("batchCommCanSend_"), /previewStale === true/, "Quick exclusions must make preview stale before send");
+assert.match(functionSource("toggleBatchCommRecipient_"), /previewStale = true/, "Quick exclusions must update counts and require a fresh preview");
+assert.match(functionSource("sendBatchCommunicationModal_"), /You are about to send [\s\S]* to [\s\S]* applicants/, "Batch confirmation must name template and recipient count");
 assert.match(adminUi, /Select Visible<\/button>[\s\S]*Select All<\/button>[\s\S]*Clear Selection<\/button>/, "Selection controls must remain visible in the operator control strip");
 assert.match(adminUi, /class="btn small operatorControl operatorControlSecondary" type="button" onclick="selectVisibleActionabilityRows_\(\)">Select Visible/, "Select Visible must use secondary operator control semantics");
 assert.match(adminUi, /class="btn small operatorControl operatorControlSecondary" type="button" onclick="selectAllActionabilityRows_\(\)">Select All/, "Select All must use secondary operator control semantics");
@@ -309,8 +322,11 @@ assert.match(adminUi, /cumulativeIsHistorical === true/, "UI must distinguish hi
 assert.doesNotMatch(adminUi, /admin_sendCommunicationsActivity|admin_updateCommunicationsActivity|admin_createCommunicationsLedger/, "Communications Activity surface must not add mutation RPCs");
 assert.match(adminUi, /function actionabilityManagementExceptionBreakdown_/, "Management Exceptions must expose a scoped breakdown when visible rows support it");
 assert.match(adminUi, /Visible breakdown: Uncontactable/, "Management Exceptions breakdown must be labelled as visible-row derived");
-assert.match(adminUi, /class="actionabilitySortBtn"[\s\S]*esc\(label \+ actionabilitySortLabel_\(key\)\)/, "Grouped worklist headers must render separated sort button labels");
+assert.match(adminUi, /class="actionabilitySortBtn' \+ \(active \? ' active' : ''\)/, "Grouped worklist headers must render active sort state");
+assert.match(adminUi, /aria-pressed="' \+ \(active \? "true" : "false"\)/, "Grouped worklist sort controls must expose active state accessibly");
+assert.match(adminUi, /class="actionabilitySortBtn' \+ \(active \? ' active' : ''\)[\s\S]*esc\(label \+ actionabilitySortLabel_\(key\)\)/, "Grouped worklist headers must render separated sort button labels");
 assert.match(adminUi, /\.actionabilitySortBtn\{[^}]*border:1px solid #9fb4ca[^}]*text-transform:none/s, "Grouped worklist headers must avoid merged-looking uppercase labels");
+assert.match(adminUi, /\.actionabilitySortBtn\.active\{[^}]*background:#eef6ff[^}]*color:#0f3f78/s, "Active worklist controls must be visibly active");
 assert.match(adminJs, /function admin_getPopulationLedger/, "Population Ledger RPC must exist as a read-only authority foundation");
 assert.match(adminJs, /function buildPopulationLedgerFromValues_/, "Population Ledger must be reusable by dashboard and lifecycle consumers");
 assert.match(adminJs, /contactabilityState: isUncontactable \? "UNCONTACTABLE"/, "Actionability payload must classify no-email/no-phone applicants as uncontactable");
