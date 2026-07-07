@@ -1,31 +1,79 @@
 param(
-  [switch]$Help,
-  [string]$CommitMessage = "",
-  [string[]]$Files = @("AdminUI.html", "tests/admin-review-workspace-ux-surface.test.js", "tests/admin-ui-actionability-dashboard-surface.test.js"),
-  [string[]]$Markers = @("openModalLoading_", "setReviewHeaderLoading_", "clearReviewHeaderFacts_", "resetReviewModalScroll_", "reviewOwnerDisplayLabel_", "reviewLoadingBanner", "reviewHeaderGrid loading", "docStatus", "docComment", "docRecommendation"),
-  [string[]]$AbsentMarkers = @("not_in_loaded_review_queue"),
-  [string]$VersionDescription = "Admin UI-only release",
-  [switch]$SkipCommit,
-  [switch]$DryRun
+  [Parameter(ValueFromRemainingArguments=$true)]
+  [string[]]$RawArgs
 )
 
 $ErrorActionPreference = "Stop"
 $script:VersionNumber = ""
 
+$Help = $false
+$CommitMessage = ""
+$Files = @("AdminUI.html", "tests/admin-review-workspace-ux-surface.test.js", "tests/admin-ui-actionability-dashboard-surface.test.js")
+$Markers = @()
+$AbsentMarkers = @()
+$VersionDescription = "Admin UI-only release"
+$SkipCommit = $false
+$DryRun = $false
+
+for ($i = 0; $i -lt @($RawArgs).Count; $i++) {
+  $arg = [string]$RawArgs[$i]
+  switch ($arg) {
+    "-Help" { $Help = $true }
+    "-CommitMessage" { $i++; $CommitMessage = [string]$RawArgs[$i] }
+    "-Files" {
+      $Files = @()
+      while ($i + 1 -lt @($RawArgs).Count -and -not ([string]$RawArgs[$i + 1]).StartsWith("-")) {
+        $i++
+        $Files += [string]$RawArgs[$i]
+      }
+    }
+    "-Markers" {
+      while ($i + 1 -lt @($RawArgs).Count -and -not ([string]$RawArgs[$i + 1]).StartsWith("-")) {
+        $i++
+        $Markers += [string]$RawArgs[$i]
+      }
+    }
+    "-AbsentMarkers" {
+      while ($i + 1 -lt @($RawArgs).Count -and -not ([string]$RawArgs[$i + 1]).StartsWith("-")) {
+        $i++
+        $AbsentMarkers += [string]$RawArgs[$i]
+      }
+    }
+    "-VersionDescription" { $i++; $VersionDescription = [string]$RawArgs[$i] }
+    "-SkipCommit" { $SkipCommit = $true }
+    "-DryRun" { $DryRun = $true }
+    default { throw "Unknown argument: $arg" }
+  }
+}
+
 function Show-Help {
   Write-Host "FODE Admin UI-only release helper"
   Write-Host ""
   Write-Host "Usage:"
-  Write-Host "  powershell -ExecutionPolicy Bypass -File tools\fode-admin-ui-release.ps1 -CommitMessage `"fix: stabilise review modal identity and document controls`" -VersionDescription `"Admin UI modal stabilisation`""
-  Write-Host "  powershell -ExecutionPolicy Bypass -File tools\fode-admin-ui-release.ps1 -DryRun -VersionDescription `"preflight dry run`""
+  Write-Host "  powershell -ExecutionPolicy Bypass -File tools\fode-admin-ui-release.ps1 -CommitMessage `"fix: visible admin ui change`" -VersionDescription `"Admin UI release`" -Markers `"Batch Communication`" `"Recipient count`" -AbsentMarkers `"Batch Communication Handoff`""
+  Write-Host "  powershell -ExecutionPolicy Bypass -File tools\fode-admin-ui-release.ps1 -DryRun -SkipCommit -VersionDescription `"preflight dry run`" -Markers `"Batch Communication`" -AbsentMarkers `"Batch Communication Handoff`""
   Write-Host ""
   Write-Host "What it runs:"
   Write-Host "  validation, optional commit, git push, clasp push, Apps Script readback marker proof, one clasp version, Admin-only repin, whoami verifier, operator/surfaces smoke."
   Write-Host ""
   Write-Host "Safety:"
   Write-Host "  UI-only release does not require Config.js identity bump."
+  Write-Host "  Remote proof markers are explicit per release; there are no feature-specific default markers."
   Write-Host "  Does not touch Student, Production, OPS, Sheets, Drive, Gmail/email, WhatsApp, or applicant data."
   Write-Host "  Fails before version creation if remote marker proof fails."
+}
+
+function Normalize-MarkerList {
+  param([string[]]$Values)
+  $out = @()
+  foreach ($value in @($Values)) {
+    if ($null -eq $value) { continue }
+    foreach ($part in ([string]$value -split ",")) {
+      $trimmed = $part.Trim()
+      if ($trimmed) { $out += $trimmed }
+    }
+  }
+  return @($out)
 }
 
 function Invoke-Step {
@@ -122,6 +170,12 @@ if ($Help) {
   exit 0
 }
 
+$Markers = Normalize-MarkerList -Values $Markers
+$AbsentMarkers = Normalize-MarkerList -Values $AbsentMarkers
+if ($Markers.Count -eq 0 -and $AbsentMarkers.Count -eq 0) {
+  throw "At least one explicit -Markers or -AbsentMarkers value is required for Admin UI release proof."
+}
+
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 Set-Location -LiteralPath $repoRoot
 $context = Get-Content -LiteralPath (Join-Path $repoRoot "runtime-context.json") -Raw | ConvertFrom-Json
@@ -132,6 +186,8 @@ $adminDeployId = [string]$admin.deploymentId
 
 Write-ReleasePreflight -RepoRoot $repoRoot -Project $project -DryRunValue ([bool]$DryRun)
 Write-Host "No Student/Production/OPS/Sheet/Drive/Gmail/WhatsApp/applicant mutation."
+Write-Host "Admin expected whoami: $($admin.expectedRuntime) / $($admin.expectedDeploy)"
+Write-Host "Student expected whoami: $($student.expectedRuntime) / $($student.expectedDeploy)"
 
 Invoke-Step "node --check Admin.js" { & node --check Admin.js }
 Invoke-Step "node tests\admin-operator-scenario-contract.test.js" { & node tests\admin-operator-scenario-contract.test.js }
