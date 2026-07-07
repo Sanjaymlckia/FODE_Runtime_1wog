@@ -522,6 +522,9 @@
     .batchCommActions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
     .batchCommDiagnostics summary{ cursor:pointer; color:#174a8b; font-weight:900; }
     .batchCommDiagnostics pre{ white-space:pre-wrap; max-height:240px; overflow:auto; background:#0f1f35; color:#e6f2ff; border-radius:8px; padding:10px; font-size:11px; }
+    .standaloneBatchCommBack{ z-index:9300; }
+    .standaloneBatchCommBack.open{ display:flex; }
+    .standaloneBatchCommModal{ outline:0; }
     @media (max-width:760px){
       .batchCommStrip{ grid-template-columns:repeat(2,minmax(0,1fr)); }
       .batchCommGrid{ grid-template-columns:1fr; }
@@ -2837,45 +2840,45 @@
     </div>
   </div>
 
-  <div id="batchCommModalBack" class="modalBack">
-    <div class="batchCommModal" role="dialog" aria-modal="true" aria-labelledby="batchCommTitle">
+  <div id="standaloneBatchCommModalBack" class="modalBack standaloneBatchCommBack" aria-hidden="true">
+    <div id="standaloneBatchCommModal" class="batchCommModal standaloneBatchCommModal" role="dialog" aria-modal="true" aria-labelledby="standaloneBatchCommTitle" tabindex="-1">
       <div class="batchCommHead">
         <div>
           <div class="batchCommKicker">Operations Workspace</div>
-          <div class="batchCommTitle" id="batchCommTitle">Batch Communication</div>
-          <div class="batchCommSource" id="batchCommSource">Source: not selected</div>
+          <div class="batchCommTitle" id="standaloneBatchCommTitle">Batch Communication</div>
+          <div class="batchCommSource" id="standaloneBatchCommSource">Source: not selected</div>
         </div>
         <button class="btn small reviewHeaderClose" type="button" onclick="closeBatchCommunicationModal_()">Close</button>
       </div>
       <div class="batchCommBody">
-        <div id="batchCommReadiness" class="batchCommStrip" aria-live="polite"></div>
+        <div id="standaloneBatchCommReadiness" class="batchCommStrip" aria-live="polite"></div>
         <div class="batchCommGrid">
           <div class="batchCommPanel">
             <h4>Template Gallery</h4>
-            <div id="batchCommTemplateGallery" class="batchCommTemplateGallery"></div>
+            <div id="standaloneBatchCommTemplateGallery" class="batchCommTemplateGallery"></div>
           </div>
           <div class="batchCommPanel">
             <h4>Communication Summary</h4>
-            <div id="batchCommSummary"></div>
+            <div id="standaloneBatchCommSummary"></div>
             <div class="batchCommActions" style="margin-top:10px;">
-              <button id="btnBatchCommPreview" class="btn small operatorControl operatorControlSecondary" type="button" onclick="previewBatchCommunicationModal_()">Preview</button>
-              <button id="btnBatchCommSend" class="btn small operatorControl operatorControlBatch" type="button" onclick="sendBatchCommunicationModal_()" disabled>Send Batch</button>
+              <button id="btnStandaloneBatchCommPreview" class="btn small operatorControl operatorControlSecondary" type="button" onclick="previewBatchCommunicationModal_()">Preview</button>
+              <button id="btnStandaloneBatchCommSend" class="btn small operatorControl operatorControlBatch" type="button" onclick="sendBatchCommunicationModal_()" disabled>Send Batch</button>
             </div>
           </div>
         </div>
         <div class="batchCommPanel">
           <h4>Live Preview</h4>
-          <div id="batchCommPreview"></div>
+          <div id="standaloneBatchCommPreview"></div>
         </div>
         <details class="batchCommPanel">
           <summary>View recipients</summary>
-          <div id="batchCommRecipients" class="batchCommRecipients" style="margin-top:8px;"></div>
+          <div id="standaloneBatchCommRecipients" class="batchCommRecipients" style="margin-top:8px;"></div>
         </details>
         <details class="batchCommPanel batchCommDiagnostics">
           <summary>Technical Diagnostics</summary>
-          <pre id="batchCommDiagnostics">{}</pre>
+          <pre id="standaloneBatchCommDiagnostics">{}</pre>
         </details>
-        <div id="batchCommResult" class="batchCommPanel hidden" aria-live="polite"></div>
+        <div id="standaloneBatchCommResult" class="batchCommPanel hidden" aria-live="polite"></div>
       </div>
     </div>
   </div>
@@ -10104,6 +10107,10 @@ function renderStageDashboard_(items, emptyMessage){
       });
     }
 
+    function batchCommUi_(id){
+      return document.getElementById("standaloneBatchComm" + id);
+    }
+
     function batchCommRecommendedFromRows_(rows){
       var counts = {};
       (Array.isArray(rows) ? rows : []).forEach(function(row){
@@ -10120,8 +10127,8 @@ function renderStageDashboard_(items, emptyMessage){
     function setBatchCommBusy_(busy, action){
       batchCommState.busy = !!busy;
       batchCommState.action = busy ? String(action || "") : "";
-      var previewBtn = document.getElementById("btnBatchCommPreview");
-      var sendBtn = document.getElementById("btnBatchCommSend");
+      var previewBtn = document.getElementById("btnStandaloneBatchCommPreview");
+      var sendBtn = document.getElementById("btnStandaloneBatchCommSend");
       if (previewBtn) {
         previewBtn.disabled = !!busy || !batchCommState.selectedMessageType;
         previewBtn.classList.toggle("operatorControlBusy", !!busy && action === "preview");
@@ -10160,15 +10167,27 @@ function renderStageDashboard_(items, emptyMessage){
       batchCommState.action = "";
       batchCommState.recommendedMessageType = String(src.recommendedMessageType || "");
       batchCommState.selectedMessageType = batchCommState.recommendedMessageType || "reminder";
-      var back = document.getElementById("batchCommModalBack");
-      if (back) back.classList.add("open");
+      var back = document.getElementById("standaloneBatchCommModalBack");
+      if (!back) {
+        setMsg("msg", "BLOCKED: Batch Communication modal container is missing.");
+        return;
+      }
+      back.classList.add("open");
+      back.style.display = "flex";
+      back.setAttribute("aria-hidden", "false");
       renderBatchCommunicationModal_();
+      var modal = document.getElementById("standaloneBatchCommModal");
+      if (modal && typeof modal.focus === "function") modal.focus();
     }
 
     function closeBatchCommunicationModal_(){
       batchCommState.open = false;
-      var back = document.getElementById("batchCommModalBack");
-      if (back) back.classList.remove("open");
+      var back = document.getElementById("standaloneBatchCommModalBack");
+      if (back) {
+        back.classList.remove("open");
+        back.style.display = "";
+        back.setAttribute("aria-hidden", "true");
+      }
     }
 
     function normalizeBatchCommApplicantIds_(ids){
@@ -10227,14 +10246,14 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function renderBatchCommunicationModal_(){
-      var sourceEl = document.getElementById("batchCommSource");
-      var readinessEl = document.getElementById("batchCommReadiness");
-      var galleryEl = document.getElementById("batchCommTemplateGallery");
-      var summaryEl = document.getElementById("batchCommSummary");
-      var previewEl = document.getElementById("batchCommPreview");
-      var recipientsEl = document.getElementById("batchCommRecipients");
-      var diagEl = document.getElementById("batchCommDiagnostics");
-      var resultEl = document.getElementById("batchCommResult");
+      var sourceEl = batchCommUi_("Source");
+      var readinessEl = batchCommUi_("Readiness");
+      var galleryEl = batchCommUi_("TemplateGallery");
+      var summaryEl = batchCommUi_("Summary");
+      var previewEl = batchCommUi_("Preview");
+      var recipientsEl = batchCommUi_("Recipients");
+      var diagEl = batchCommUi_("Diagnostics");
+      var resultEl = batchCommUi_("Result");
       if (sourceEl) sourceEl.textContent = "Source: " + batchCommSourceSummary_();
       var preview = batchCommState.preview || {};
       var counts = batchCommRecipientCounts_(preview);
@@ -10271,7 +10290,7 @@ function renderStageDashboard_(items, emptyMessage){
         var meta = getCommTemplateMeta_(batchCommState.selectedMessageType) || {};
         summaryEl.innerHTML = '<div class="batchCommStateNote ' + esc(stateLabel.cls) + '">' + esc(stateLabel.text) + '</div>'
           + '<div style="margin-top:8px;"><strong>Template</strong><br>' + esc(meta.label || batchCommState.selectedMessageType || "Not selected") + '</div>'
-          + '<div style="margin-top:8px;"><strong>Recipients</strong><br>' + esc(Number(preview.recipientCount || total || 0)) + '</div>'
+          + '<div style="margin-top:8px;"><strong>Recipient count</strong><br>' + esc(Number(preview.recipientCount || total || 0)) + '</div>'
           + '<div style="margin-top:8px;"><strong>Estimated send</strong><br>' + esc(eligible) + '</div>'
           + '<div style="margin-top:8px;"><strong>Readiness</strong><br>' + esc(batchCommCanSend_() ? "Ready to Send" : "Preview required or no eligible recipients") + '</div>';
       }

@@ -30,13 +30,15 @@ mustMatch(adminUi, /Showing " \+ String\(Number\(meta\.start \|\| 0\) \+ 1\) \+ 
 mustMatch(adminUi, /Current page selection/, "Select Visible scenario must identify current-page cohort source");
 mustMatch(adminUi, /Full Bounded Cohort/, "Select All scenario must identify full bounded cohort source");
 
-mustMatch(adminUi, /id="batchCommModalBack"/, "Batch communication scenario must open a dedicated modal");
-mustMatch(adminUi, /id="batchCommModalBack" class="modalBack"/, "Batch communication scenario must render an actual modal container");
-mustMatch(adminUi, /back\.classList\.add\("open"\)/, "Batch communication scenario must visibly open the modal");
-mustMatch(adminUi, /id="batchCommTemplateGallery"/, "Batch communication scenario must show the template gallery inside the modal");
+mustMatch(adminUi, /id="standaloneBatchCommModalBack"/, "Batch communication scenario must open a dedicated standalone modal");
+mustMatch(adminUi, /id="standaloneBatchCommModalBack" class="modalBack standaloneBatchCommBack"/, "Batch communication scenario must render an actual standalone modal container");
+mustMatch(adminUi, /\.standaloneBatchCommBack\.open\{ display:flex; \}/, "Batch communication scenario must visibly display the standalone modal");
+mustMatch(adminUi, /standaloneBatchCommModalBack[\s\S]*back\.classList\.add\("open"\)[\s\S]*back\.style\.display = "flex"/, "Batch communication scenario must open the standalone modal every time");
+mustMatch(adminUi, /BLOCKED: Batch Communication modal container is missing/, "Batch communication scenario must show a blocked reason instead of failing silently");
+mustMatch(adminUi, /id="standaloneBatchCommTemplateGallery"/, "Batch communication scenario must show the template gallery inside the modal");
 mustMatch(adminUi, /Selected template[\s\S]*Recommended/, "Batch communication scenario must highlight the recommended template");
 mustMatch(adminUi, /Recipient count/, "Batch communication scenario must show recipient count");
-mustMatch(adminUi, /id="btnBatchCommPreview"[\s\S]*>Preview<\/button>[\s\S]*id="btnBatchCommSend"[\s\S]*>Send Batch<\/button>/, "Batch communication scenario must expose preview and confirm flow");
+mustMatch(adminUi, /id="btnStandaloneBatchCommPreview"[\s\S]*>Preview<\/button>[\s\S]*id="btnStandaloneBatchCommSend"[\s\S]*>Send Batch<\/button>/, "Batch communication scenario must expose preview and confirm flow");
 mustNotMatch(adminUi, /Batch Communication Handoff|Batch Reminder Handoff/, "Batch communication scenario must not stop at a handoff panel");
 mustNotMatch(adminUi, /Open first eligible in Review/, "Batch communication scenario must not route multi-applicant cohorts through Review");
 mustNotMatch(adminUi, /function actionabilityBatchCommunication_[\s\S]{0,700}admin_sendApplicantMessage/, "Batch modal must not create a single-applicant send path");
