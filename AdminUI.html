@@ -487,6 +487,39 @@
     .actionabilityContextMenu.open{ display:block; }
     .actionabilityContextMenu button{ display:block; width:100%; border:0; border-radius:4px; background:transparent; color:#0f1f35; text-align:left; padding:7px 8px; font-size:12px; font-weight:800; cursor:pointer; }
     .actionabilityContextMenu button:hover{ background:#eef6ff; color:#174a8b; }
+    .batchCommModal{ width:min(1040px, calc(100vw - 32px)); max-height:calc(100vh - 38px); overflow:auto; background:#f8fafc; border:1px solid #dbe5ef; border-radius:10px; box-shadow:var(--shadowModal); color:#0f1f35; }
+    .batchCommHead{ display:flex; justify-content:space-between; gap:12px; padding:14px 16px; background:#0f1f35; color:#fff; border-radius:10px 10px 0 0; }
+    .batchCommKicker{ font-size:11px; font-weight:900; text-transform:uppercase; color:#d6e7f8; letter-spacing:.04em; }
+    .batchCommTitle{ margin-top:4px; font-size:21px; line-height:1.15; font-weight:900; }
+    .batchCommSource{ margin-top:4px; color:#e6f2ff; font-size:13px; font-weight:850; }
+    .batchCommBody{ padding:14px 16px; display:grid; gap:12px; }
+    .batchCommStrip{ display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; }
+    .batchCommMetric{ background:#fff; border:1px solid #dbe5ef; border-radius:8px; padding:8px 9px; min-width:0; }
+    .batchCommMetric .k{ display:block; color:#61748a; font-size:10px; font-weight:900; text-transform:uppercase; line-height:1.2; }
+    .batchCommMetric .v{ display:block; margin-top:4px; color:#0f1f35; font-size:16px; font-weight:900; overflow-wrap:anywhere; }
+    .batchCommGrid{ display:grid; grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr); gap:12px; align-items:start; }
+    .batchCommPanel{ background:#fff; border:1px solid #dbe5ef; border-radius:8px; padding:12px; color:#173451; }
+    .batchCommPanel h4{ margin:0 0 8px; color:#0f1f35; font-size:14px; font-weight:900; }
+    .batchCommTemplateGallery{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:8px; }
+    .batchCommTemplateCard{ border:1px solid #cbd8e6; border-radius:8px; background:#fff; padding:10px; color:#173451; cursor:pointer; text-align:left; }
+    .batchCommTemplateCard.selected{ border-color:#1f5aa5; box-shadow:inset 4px 0 0 #1f5aa5; background:#f5f9ff; }
+    .batchCommTemplateCard.recommended{ border-color:#7db7f0; box-shadow:0 0 0 3px rgba(125,183,240,.18); }
+    .batchCommTemplateCard:disabled{ cursor:not-allowed; background:#e2eaf2; border-color:#8da2b7; color:#26384e; opacity:1; }
+    .batchCommPreviewBody{ white-space:pre-wrap; max-height:260px; overflow:auto; border:1px solid #dbe5ef; background:#fbfdff; border-radius:8px; padding:10px; color:#0f1f35; font-size:12px; line-height:1.45; }
+    .batchCommRecipients{ display:grid; gap:6px; max-height:320px; overflow:auto; }
+    .batchCommRecipient{ display:grid; grid-template-columns:auto minmax(0,1fr) minmax(110px,.35fr); gap:8px; align-items:start; border:1px solid #e5ebf2; border-radius:7px; background:#fbfdff; padding:7px 8px; font-size:12px; }
+    .batchCommRecipient strong{ display:block; color:#0f1f35; overflow-wrap:anywhere; }
+    .batchCommRecipient span{ display:block; color:#40556b; overflow-wrap:anywhere; }
+    .batchCommRecipient .status{ font-weight:900; color:#174a8b; text-align:right; }
+    .batchCommActions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .batchCommDiagnostics summary{ cursor:pointer; color:#174a8b; font-weight:900; }
+    .batchCommDiagnostics pre{ white-space:pre-wrap; max-height:240px; overflow:auto; background:#0f1f35; color:#e6f2ff; border-radius:8px; padding:10px; font-size:11px; }
+    @media (max-width:760px){
+      .batchCommStrip{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .batchCommGrid{ grid-template-columns:1fr; }
+      .batchCommRecipient{ grid-template-columns:auto minmax(0,1fr); }
+      .batchCommRecipient .status{ grid-column:2; text-align:left; }
+    }
     .actionabilityDetails{ grid-column:1 / -1; color:#66788c; font-size:11px; border-top:1px solid #edf2f7; padding-top:7px; }
     .actionabilityDetails summary{ cursor:pointer; font-weight:900; color:#31516f; }
     .actionabilityEmpty{ border:1px dashed #d5e2ee; border-radius:8px; padding:16px; color:#66788c; background:#fff; }
@@ -639,6 +672,7 @@
     .commTemplateSelectedBanner,
     .commTemplateRecommendedBanner{ display:inline-flex; align-items:center; gap:6px; margin-bottom:8px; padding:5px 9px; border-radius:999px; border:1px solid #9fc0e4; background:#eef6ff; color:#174a8b; font-size:12px; font-weight:900; letter-spacing:0; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.25; }
     .commTemplateSelectedBanner{ border-color:#1f5aa5; background:#1f5aa5; color:#fff; }
+    .commTemplateDisabledReason{ display:inline-flex; align-items:center; gap:6px; margin-bottom:8px; padding:5px 9px; border-radius:999px; border:1px solid #8da2b7; background:#e2eaf2; color:#26384e; font-size:12px; font-weight:900; line-height:1.25; }
     .commTemplateCardTitle{ font-weight:900; color:#0f1f35; margin-bottom:4px; }
     .commTemplateCardMeta{ display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
     .commTemplateChip{ font-size:11px; padding:3px 7px; border-radius:999px; border:1px solid #dbe5ef; background:#f8fafc; color:#31516f; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.25; }
@@ -1908,8 +1942,8 @@
             <div class="field"><label>Gate / status reason</label><input type="text" id="opsStageBatchDisabledReason" readonly value="Switch to Admin/Super Admin mode to run gated bulk tools."></div>
           </div>
           <div class="opsActionRow">
-            <button id="btnOpsStageBatchPreview" class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Preview Cohort" onclick="previewStageBatchUi_()">Preview Cohort</button>
-            <button id="btnOpsStageBatchSend" class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Stage Batch" onclick="sendStageBatchUi_()">Send Stage Batch</button>
+            <button id="btnOpsStageBatchPreview" class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Open Batch Modal" onclick="openBatchCommunicationFromStage_()">Open Batch Modal</button>
+            <button id="btnOpsStageBatchSend" class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Confirm in Batch Modal" onclick="openBatchCommunicationFromStage_()">Confirm in Batch Modal</button>
             <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Choose Lifecycle Stage</button>
           </div>
           <div class="opsInspectPanel" id="opsStageBatchInlineNote">Bulk communication requires Operations Admin or Super Admin authority, plus preview, confirmation, caps, and backend gates.</div>
@@ -2119,8 +2153,8 @@
           </div>
           <div class="opsActionRow">
             <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Choose Lifecycle Stage</button>
-            <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Preview Cohort" onclick="previewStageBatchUi_()">Preview Cohort</button>
-            <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Send Stage Batch" onclick="sendStageBatchUi_()">Send Stage Batch</button>
+            <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Open Batch Modal" onclick="openBatchCommunicationFromStage_()">Open Batch Modal</button>
+            <button class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Confirm in Batch Modal" onclick="openBatchCommunicationFromStage_()">Confirm in Batch Modal</button>
           </div>
           <div class="opsSafetyNotice">Bulk preview/send remains governed by existing stage batch preview cache, caps, confirmation, role checks, and backend gates. No automatic sends are introduced.</div>
         </div>
@@ -2634,8 +2668,8 @@
           <label>Diagnostic Offset (ignored in production)</label>
           <input id="stageBatchOffset" type="number" min="0" step="1" value="0">
         </div>
-        <button id="btnStageBatchPreview" class="btn small" type="button" onclick="previewStageBatchUi_()">Preview Cohort</button>
-        <button id="btnStageBatchSend" class="btn small ok" type="button" onclick="sendStageBatchUi_()" disabled>Send Stage Batch</button>
+        <button id="btnStageBatchPreview" class="btn small" type="button" onclick="openBatchCommunicationFromStage_()">Open Batch Modal</button>
+        <button id="btnStageBatchSend" class="btn small ok" type="button" onclick="openBatchCommunicationFromStage_()" disabled>Confirm in Batch Modal</button>
         <div id="stageBatchInlineNote" class="muted" style="font-size:12px;">Standard production stage sends automatically use the next eligible unsent records. Diagnostic offset is ignored unless a separate diagnostic flow is introduced.</div>
       </div>
       <div style="font-weight:800;margin-top:12px;">Preview Cohort Result</div>
@@ -2791,6 +2825,49 @@
             <tr><td colspan="7" class="muted">No results yet.</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="batchCommModalBack" class="modalBack">
+    <div class="batchCommModal" role="dialog" aria-modal="true" aria-labelledby="batchCommTitle">
+      <div class="batchCommHead">
+        <div>
+          <div class="batchCommKicker">Operations Workspace</div>
+          <div class="batchCommTitle" id="batchCommTitle">Batch Communication</div>
+          <div class="batchCommSource" id="batchCommSource">Source: not selected</div>
+        </div>
+        <button class="btn small reviewHeaderClose" type="button" onclick="closeBatchCommunicationModal_()">Close</button>
+      </div>
+      <div class="batchCommBody">
+        <div id="batchCommReadiness" class="batchCommStrip" aria-live="polite"></div>
+        <div class="batchCommGrid">
+          <div class="batchCommPanel">
+            <h4>Template Gallery</h4>
+            <div id="batchCommTemplateGallery" class="batchCommTemplateGallery"></div>
+          </div>
+          <div class="batchCommPanel">
+            <h4>Communication Summary</h4>
+            <div id="batchCommSummary"></div>
+            <div class="batchCommActions" style="margin-top:10px;">
+              <button id="btnBatchCommPreview" class="btn small operatorControl operatorControlSecondary" type="button" onclick="previewBatchCommunicationModal_()">Preview</button>
+              <button id="btnBatchCommSend" class="btn small operatorControl operatorControlBatch" type="button" onclick="sendBatchCommunicationModal_()" disabled>Send Batch</button>
+            </div>
+          </div>
+        </div>
+        <div class="batchCommPanel">
+          <h4>Live Preview</h4>
+          <div id="batchCommPreview"></div>
+        </div>
+        <details class="batchCommPanel">
+          <summary>View recipients</summary>
+          <div id="batchCommRecipients" class="batchCommRecipients" style="margin-top:8px;"></div>
+        </details>
+        <details class="batchCommPanel batchCommDiagnostics">
+          <summary>Technical Diagnostics</summary>
+          <pre id="batchCommDiagnostics">{}</pre>
+        </details>
+        <div id="batchCommResult" class="batchCommPanel hidden" aria-live="polite"></div>
       </div>
     </div>
   </div>
@@ -3285,6 +3362,21 @@
     let actionabilitySelectedKeys = {};
     let actionabilityBatchMessage = "";
     let actionabilityBatchPanelMode = "";
+    let batchCommState = {
+      open: false,
+      sourceType: "",
+      sourceLabel: "",
+      stage: "",
+      applicantIds: [],
+      excludedApplicantIds: {},
+      selectedMessageType: "",
+      recommendedMessageType: "",
+      preview: null,
+      sendResult: null,
+      busy: false,
+      action: "",
+      requestSeq: 0
+    };
     let stagePopulationLedgerState = null;
     let pendingActionabilityReviewContext = null;
     let selectedDocsRowNumbers = {};
@@ -8353,15 +8445,15 @@ function renderBatchPanel(){
     : stageBatchPolicyBlockReason_();
   if (previewBtn) {
     previewBtn.disabled = !selectedStage || batchState.busy || !stageBatchAllowed;
-    previewBtn.textContent = batchState.busy && batchState.action === "preview" ? "Previewing..." : "Preview Cohort";
+    previewBtn.textContent = batchState.busy && batchState.action === "preview" ? "Opening..." : "Open Batch Modal";
     previewBtn.style.opacity = previewBtn.disabled ? "0.55" : "1";
   }
   if (sendBtn) {
-    sendBtn.disabled = !previewReady || batchState.busy || !stageBatchAllowed;
-    sendBtn.textContent = batchState.busy && batchState.action === "send" ? "Sending..." : "Send Stage Batch";
+    sendBtn.disabled = !selectedStage || batchState.busy || !stageBatchAllowed;
+    sendBtn.textContent = batchState.busy && batchState.action === "send" ? "Opening..." : "Confirm in Batch Modal";
     sendBtn.style.opacity = sendBtn.disabled ? "0.55" : "1";
     sendBtn.setAttribute("aria-disabled", sendBtn.disabled ? "true" : "false");
-    sendBtn.title = sendBtn.disabled ? (previewReady ? "Send is temporarily unavailable." : "Preview Cohort must complete successfully before send is enabled.") : "Enabled only after successful fresh preview.";
+    sendBtn.title = sendBtn.disabled ? "Choose a stage and confirm authority before opening batch communication." : "Opens the batch communication modal; preview and confirmation are required before send.";
   }
   if (noteEl) {
     if (batchState.busy && batchState.action === "preview") noteEl.textContent = "Loading the next eligible unsent cohort...";
@@ -9940,6 +10032,340 @@ function renderStageDashboard_(items, emptyMessage){
         + '</div></div>';
     }
 
+    function actionabilityBatchMessageType_(value){
+      var normalized = String(value || "").trim().toLowerCase();
+      if (normalized === "document_completion_reminder" || normalized === "document_completion_escalation") return "docs_missing";
+      if (normalized === "payment_reminder" || normalized === "payment_escalation") return "payment_followup";
+      if (normalized === "docs_missing" || normalized === "payment_followup" || normalized === "legacy_invite" || normalized === "reminder") return normalized;
+      return "";
+    }
+
+    function batchCommTemplateItems_(){
+      return commTemplateGalleryItems_().filter(function(meta){
+        return meta && meta.batchSafe === true && Array.isArray(meta.allowedSendModes) && meta.allowedSendModes.indexOf("batch") >= 0;
+      });
+    }
+
+    function batchCommRecommendedFromRows_(rows){
+      var counts = {};
+      (Array.isArray(rows) ? rows : []).forEach(function(row){
+        var type = actionabilityBatchMessageType_(row && row.recommendedMessageType);
+        if (type) counts[type] = Number(counts[type] || 0) + 1;
+      });
+      var best = "";
+      Object.keys(counts).forEach(function(type){
+        if (!best || Number(counts[type] || 0) > Number(counts[best] || 0)) best = type;
+      });
+      return best || "reminder";
+    }
+
+    function setBatchCommBusy_(busy, action){
+      batchCommState.busy = !!busy;
+      batchCommState.action = busy ? String(action || "") : "";
+      var previewBtn = document.getElementById("btnBatchCommPreview");
+      var sendBtn = document.getElementById("btnBatchCommSend");
+      if (previewBtn) {
+        previewBtn.disabled = !!busy || !batchCommState.selectedMessageType;
+        previewBtn.classList.toggle("operatorControlBusy", !!busy && action === "preview");
+        previewBtn.setAttribute("aria-busy", !!busy && action === "preview" ? "true" : "false");
+        previewBtn.textContent = !!busy && action === "preview" ? "Previewing..." : "Preview";
+      }
+      if (sendBtn) {
+        var canSend = batchCommCanSend_();
+        sendBtn.disabled = !!busy || !canSend;
+        sendBtn.classList.toggle("operatorControlBusy", !!busy && action === "send");
+        sendBtn.setAttribute("aria-busy", !!busy && action === "send" ? "true" : "false");
+        sendBtn.textContent = !!busy && action === "send" ? "Sending..." : "Send Batch";
+      }
+    }
+
+    function batchCommCanSend_(){
+      var preview = batchCommState.preview || null;
+      if (!preview || preview.ok !== true) return false;
+      if (!String(preview.requestId || "").trim() || !String(preview.candidateHash || "").trim()) return false;
+      return Number(preview.count || preview.eligible || preview.candidateCount || 0) > 0;
+    }
+
+    function openBatchCommunicationModal_(source){
+      var src = source && typeof source === "object" ? source : {};
+      batchCommState.open = true;
+      batchCommState.sourceType = String(src.sourceType || "selected");
+      batchCommState.sourceLabel = String(src.sourceLabel || "Selected applicants");
+      batchCommState.stage = String(src.stage || "");
+      batchCommState.applicantIds = normalizeBatchCommApplicantIds_(src.applicantIds || []);
+      batchCommState.excludedApplicantIds = {};
+      batchCommState.preview = null;
+      batchCommState.sendResult = null;
+      batchCommState.busy = false;
+      batchCommState.action = "";
+      batchCommState.recommendedMessageType = String(src.recommendedMessageType || "");
+      batchCommState.selectedMessageType = batchCommState.recommendedMessageType || "reminder";
+      var back = document.getElementById("batchCommModalBack");
+      if (back) back.classList.add("open");
+      renderBatchCommunicationModal_();
+    }
+
+    function closeBatchCommunicationModal_(){
+      batchCommState.open = false;
+      var back = document.getElementById("batchCommModalBack");
+      if (back) back.classList.remove("open");
+    }
+
+    function normalizeBatchCommApplicantIds_(ids){
+      var out = [];
+      var seen = {};
+      (Array.isArray(ids) ? ids : []).forEach(function(value){
+        var id = String(value || "").trim();
+        if (!id || seen[id]) return;
+        seen[id] = true;
+        out.push(id);
+      });
+      return out;
+    }
+
+    function batchCommSourceSummary_(){
+      if (batchCommState.sourceType === "stage") return "Stage " + String(batchCommState.stage || batchCommState.sourceLabel || "");
+      return String(batchCommState.applicantIds.length || 0) + " Selected Applicants";
+    }
+
+    function batchCommMetricHtml_(label, value){
+      return '<div class="batchCommMetric"><span class="k">' + esc(label) + '</span><span class="v">' + esc(value) + '</span></div>';
+    }
+
+    function renderBatchCommunicationModal_(){
+      var sourceEl = document.getElementById("batchCommSource");
+      var readinessEl = document.getElementById("batchCommReadiness");
+      var galleryEl = document.getElementById("batchCommTemplateGallery");
+      var summaryEl = document.getElementById("batchCommSummary");
+      var previewEl = document.getElementById("batchCommPreview");
+      var recipientsEl = document.getElementById("batchCommRecipients");
+      var diagEl = document.getElementById("batchCommDiagnostics");
+      var resultEl = document.getElementById("batchCommResult");
+      if (sourceEl) sourceEl.textContent = "Source: " + batchCommSourceSummary_();
+      var preview = batchCommState.preview || {};
+      var total = Number(preview.totalActionable || batchCommState.applicantIds.length || preview.totalInStage || 0);
+      var eligible = Number(preview.eligible || preview.count || preview.candidateCount || 0);
+      var blocked = Number(preview.blocked || 0);
+      var excluded = Number(preview.excluded || 0);
+      var remaining = Number(preview.remainingAfterBatch || preview.remainingEligibleEstimate || 0);
+      if (readinessEl) {
+        readinessEl.innerHTML = [
+          batchCommMetricHtml_("Total actionable", total),
+          batchCommMetricHtml_("Already communicated", Number(preview.alreadyCommunicated || preview.alreadySentExcluded || preview.alreadyProcessedCount || 0)),
+          batchCommMetricHtml_("Eligible this run", eligible),
+          batchCommMetricHtml_("Blocked", blocked),
+          batchCommMetricHtml_("Excluded", excluded),
+          batchCommMetricHtml_("Remaining after batch", remaining)
+        ].join("");
+      }
+      if (galleryEl) {
+        galleryEl.innerHTML = batchCommTemplateItems_().map(function(meta){
+          var type = String(meta.messageType || "");
+          var selected = type === batchCommState.selectedMessageType;
+          var recommended = type === batchCommState.recommendedMessageType;
+          var stageLocked = batchCommState.sourceType === "stage" && !recommended;
+          return '<button class="batchCommTemplateCard' + (selected ? " selected" : "") + (recommended ? " recommended" : "") + '" type="button" ' + (stageLocked ? 'disabled title="Stage cohort templates are governed by lifecycle-stage policy."' : 'onclick="selectBatchCommTemplate_(\'' + esc(type) + '\')"') + '>'
+            + (selected ? '<div class="commTemplateSelectedBanner">Selected template</div>' : '')
+            + (recommended ? '<div class="commTemplateRecommendedBanner">Recommended</div>' : '')
+            + (stageLocked ? '<div class="commTemplateDisabledReason">Stage policy locked</div>' : '')
+            + '<div class="commTemplateCardTitle">' + esc(meta.label || type) + '</div>'
+            + '<div class="muted" style="font-size:12px;">' + esc(type) + '</div>'
+            + '<div style="margin-top:6px;font-size:12px;line-height:1.4;">' + esc(meta.purpose || '') + '</div>'
+            + '</button>';
+        }).join("") || '<div class="muted">No batch-safe templates available.</div>';
+      }
+      if (summaryEl) {
+        var meta = getCommTemplateMeta_(batchCommState.selectedMessageType) || {};
+        summaryEl.innerHTML = '<div><strong>Template</strong><br>' + esc(meta.label || batchCommState.selectedMessageType || "Not selected") + '</div>'
+          + '<div style="margin-top:8px;"><strong>Recipients</strong><br>' + esc(Number(preview.recipientCount || total || 0)) + '</div>'
+          + '<div style="margin-top:8px;"><strong>Estimated send</strong><br>' + esc(eligible) + '</div>'
+          + '<div style="margin-top:8px;"><strong>Readiness</strong><br>' + esc(batchCommCanSend_() ? "Ready to Send" : "Preview required or no eligible recipients") + '</div>';
+      }
+      if (previewEl) {
+        previewEl.innerHTML = preview && preview.result
+          ? '<div><strong>Subject</strong><br>' + esc(preview.subject || "No subject returned") + '</div>'
+            + '<div style="margin-top:8px;"><strong>Body</strong></div><div class="batchCommPreviewBody">' + esc(preview.body || preview.message || "No preview body returned") + '</div>'
+            + '<div style="margin-top:8px;"><strong>Variables resolved</strong><br>' + esc(preview.body ? "Preview generated through communication authority." : "No body returned.") + '</div>'
+            + '<div style="margin-top:8px;"><strong>Recipient count</strong><br>' + esc(eligible) + '</div>'
+          : '<div class="muted">Choose a template and preview the cohort before sending.</div>';
+      }
+      if (recipientsEl) {
+        var recipients = Array.isArray(preview.recipients) ? preview.recipients : batchCommState.applicantIds.map(function(id){ return { applicantId:id, name:"", email:"", included:!batchCommState.excludedApplicantIds[id], status:"Pending", reason:"Preview required." }; });
+        recipientsEl.innerHTML = recipients.map(function(rec){
+          var id = String(rec.applicantId || "");
+          var checked = batchCommState.excludedApplicantIds[id] ? "" : "checked";
+          return '<label class="batchCommRecipient">'
+            + '<input type="checkbox" ' + checked + ' onchange="toggleBatchCommRecipient_(\'' + esc(id) + '\', this.checked)">'
+            + '<span><strong>' + esc(rec.name || "Applicant") + '</strong><span>' + esc(rec.email || rec.reason || "Email pending preview") + '</span></span>'
+            + '<span class="status">' + esc(rec.included === false || batchCommState.excludedApplicantIds[id] ? "Excluded" : (rec.status || "Included")) + '</span>'
+            + '</label>';
+        }).join("") || '<div class="muted">No recipients in this cohort.</div>';
+      }
+      if (diagEl) diagEl.textContent = JSON.stringify(preview.technicalDiagnostics || preview || {}, null, 2);
+      if (resultEl) {
+        var result = batchCommState.sendResult;
+        if (!result) {
+          resultEl.classList.add("hidden");
+          resultEl.innerHTML = "";
+        } else {
+          resultEl.classList.remove("hidden");
+          resultEl.innerHTML = '<h4>Completion Summary</h4>'
+            + '<div class="batchCommStrip">'
+            + batchCommMetricHtml_("Attempted", Number(result.attempted || 0))
+            + batchCommMetricHtml_("Sent", Number(result.sent || 0))
+            + batchCommMetricHtml_("Skipped", Number(result.skipped || 0))
+            + batchCommMetricHtml_("Failed", Number(result.failed || 0))
+            + batchCommMetricHtml_("Blocked", Number(result.blocked || 0))
+            + batchCommMetricHtml_("Batch ID", result.batchId || result.requestId || "")
+            + '</div>';
+        }
+      }
+      setBatchCommBusy_(batchCommState.busy, batchCommState.action);
+    }
+
+    function selectBatchCommTemplate_(messageType){
+      if (batchCommState.sourceType === "stage" && String(messageType || "") !== String(batchCommState.recommendedMessageType || "")) return;
+      batchCommState.selectedMessageType = String(messageType || "");
+      batchCommState.preview = null;
+      batchCommState.sendResult = null;
+      renderBatchCommunicationModal_();
+      if (batchCommState.selectedMessageType) previewBatchCommunicationModal_();
+    }
+
+    function toggleBatchCommRecipient_(applicantId, included){
+      var id = String(applicantId || "").trim();
+      if (!id) return;
+      if (included) delete batchCommState.excludedApplicantIds[id];
+      else batchCommState.excludedApplicantIds[id] = true;
+      batchCommState.preview = null;
+      batchCommState.sendResult = null;
+      renderBatchCommunicationModal_();
+    }
+
+    function openBatchCommunicationFromSelection_(mode){
+      var rows = actionabilitySelectedRows_();
+      if (!rows.length && mode === "visible") rows = Array.isArray(actionabilityRenderedRows) ? actionabilityRenderedRows.slice() : [];
+      var ids = rows.map(function(row){ return String(row && row.applicantId || "").trim(); }).filter(Boolean);
+      var recommended = mode === "reminder" ? "reminder" : batchCommRecommendedFromRows_(rows);
+      openBatchCommunicationModal_({
+        sourceType: "selected",
+        sourceLabel: mode === "reminder" ? ids.length + " Selected Applicants for Reminder" : ids.length + " Selected Applicants",
+        applicantIds: ids,
+        recommendedMessageType: recommended
+      });
+    }
+
+    function openBatchCommunicationFromStage_(){
+      var stage = String(batchState.selectedStage || selectedStageFilter || "").trim().toUpperCase();
+      if (!stage) {
+        setMsg("msg", "Choose a lifecycle stage before opening batch communication.");
+        return;
+      }
+      openBatchCommunicationModal_({
+        sourceType: "stage",
+        sourceLabel: "Stage " + stage,
+        stage: stage,
+        recommendedMessageType: getBatchMessageTypeForStageUi_(stage) || "reminder"
+      });
+    }
+
+    function previewBatchCommunicationModal_(){
+      if (batchCommState.busy || !batchCommState.selectedMessageType) return;
+      batchCommState.requestSeq++;
+      var seq = batchCommState.requestSeq;
+      setBatchCommBusy_(true, "preview");
+      var payload = {
+        messageType: batchCommState.selectedMessageType,
+        sourceType: batchCommState.sourceType,
+        sourceLabel: batchCommSourceSummary_(),
+        excludedApplicantIds: Object.keys(batchCommState.excludedApplicantIds)
+      };
+      var runner = null;
+      if (batchCommState.sourceType === "stage") {
+        payload.stage = batchCommState.stage;
+        payload.limit = getStageBatchLimitUi_();
+        payload.offset = getStageBatchOffsetUi_();
+        runner = google.script.run
+          .withSuccessHandler(function(res){ handleBatchCommPreviewResult_(seq, res); })
+          .withFailureHandler(function(err){ handleBatchCommPreviewFailure_(seq, err); });
+        runner.admin_previewStageBatch(payload);
+        return;
+      }
+      payload.applicantIds = batchCommState.applicantIds.slice();
+      runner = google.script.run
+        .withSuccessHandler(function(res){ handleBatchCommPreviewResult_(seq, res); })
+        .withFailureHandler(function(err){ handleBatchCommPreviewFailure_(seq, err); });
+      runner.admin_previewSelectedApplicantBatch(payload);
+    }
+
+    function handleBatchCommPreviewResult_(seq, res){
+      if (seq !== batchCommState.requestSeq) return;
+      batchCommState.busy = false;
+      batchCommState.action = "";
+      batchCommState.preview = res && typeof res === "object" ? res : { ok:false, result:"FAILED", message:"Invalid preview response." };
+      batchCommState.sendResult = null;
+      renderBatchCommunicationModal_();
+    }
+
+    function handleBatchCommPreviewFailure_(seq, err){
+      if (seq !== batchCommState.requestSeq) return;
+      batchCommState.busy = false;
+      batchCommState.action = "";
+      batchCommState.preview = { ok:false, result:"FAILED", message:String((err && err.message) || err || "Preview request failed.") };
+      batchCommState.sendResult = null;
+      renderBatchCommunicationModal_();
+    }
+
+    function sendBatchCommunicationModal_(){
+      if (batchCommState.busy || !batchCommCanSend_()) return;
+      var preview = batchCommState.preview || {};
+      var count = Number(preview.count || preview.eligible || preview.candidateCount || 0);
+      var meta = getCommTemplateMeta_(batchCommState.selectedMessageType) || {};
+      var confirmText = "Batch Communication\n\nTemplate: " + String(meta.label || batchCommState.selectedMessageType)
+        + "\nRecipients: " + String(count)
+        + "\nSource: " + batchCommSourceSummary_()
+        + "\n\nProceed?";
+      if (!window.confirm(confirmText)) return;
+      batchCommState.requestSeq++;
+      var seq = batchCommState.requestSeq;
+      setBatchCommBusy_(true, "send");
+      var payload = {
+        messageType: batchCommState.selectedMessageType,
+        sourceLabel: batchCommSourceSummary_(),
+        previewRequestId: String(preview.requestId || ""),
+        candidateHash: String(preview.candidateHash || ""),
+        confirmSend: true
+      };
+      var runner = google.script.run
+        .withSuccessHandler(function(res){ handleBatchCommSendResult_(seq, res); })
+        .withFailureHandler(function(err){ handleBatchCommSendFailure_(seq, err); });
+      if (batchCommState.sourceType === "stage") {
+        payload.stage = batchCommState.stage;
+        payload.limit = getStageBatchLimitUi_();
+        payload.offset = getStageBatchOffsetUi_();
+        runner.admin_sendStageBatch(payload);
+      } else {
+        runner.admin_sendSelectedApplicantBatch(payload);
+      }
+    }
+
+    function handleBatchCommSendResult_(seq, res){
+      if (seq !== batchCommState.requestSeq) return;
+      batchCommState.busy = false;
+      batchCommState.action = "";
+      batchCommState.sendResult = res && typeof res === "object" ? res : { ok:false, result:"FAILED", message:"Invalid send response." };
+      renderBatchCommunicationModal_();
+      loadActionabilityPreview_({ force: true });
+    }
+
+    function handleBatchCommSendFailure_(seq, err){
+      if (seq !== batchCommState.requestSeq) return;
+      batchCommState.busy = false;
+      batchCommState.action = "";
+      batchCommState.sendResult = { ok:false, result:"FAILED", message:String((err && err.message) || err || "Send request failed.") };
+      renderBatchCommunicationModal_();
+    }
+
     function toggleActionabilitySelection_(index, checked){
       var row = (Array.isArray(actionabilityRenderedRows) ? actionabilityRenderedRows : [])[Number(index)] || null;
       var key = actionabilityRowKey_(row);
@@ -9985,16 +10411,18 @@ function renderStageDashboard_(items, emptyMessage){
 
     function actionabilityBatchCommunication_(){
       var summary = actionabilitySelectionSummary_();
-      actionabilityBatchMessage = "Batch Communication readiness: " + String(summary.eligible) + " eligible, " + String(summary.blocked) + " blocked. Send authority remains in Review Workspace or existing gated batch tools.";
+      actionabilityBatchMessage = "Batch Communication modal opened: " + String(summary.eligible) + " eligible, " + String(summary.blocked) + " blocked. Send authority remains gated by batch communication policy.";
       actionabilityBatchPanelMode = "communication";
       renderActionabilityPreview_({ preserveRows: true });
+      openBatchCommunicationFromSelection_("selected");
     }
 
     function actionabilityBatchReminder_(){
       var summary = actionabilitySelectionSummary_();
-      actionabilityBatchMessage = "Batch Reminder readiness: " + String(summary.eligible) + " eligible, " + String(summary.blocked) + " blocked by Contactability Gate, bounce, or cooldown.";
+      actionabilityBatchMessage = "Batch Reminder modal opened: " + String(summary.eligible) + " eligible, " + String(summary.blocked) + " blocked by Contactability Gate, bounce, or cooldown.";
       actionabilityBatchPanelMode = "reminder";
       renderActionabilityPreview_({ preserveRows: true });
+      openBatchCommunicationFromSelection_("reminder");
     }
 
     function openFirstActionabilityEligibleReview_(){

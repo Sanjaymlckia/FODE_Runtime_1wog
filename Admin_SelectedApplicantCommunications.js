@@ -111,3 +111,313 @@ function admin_sendApplicantMessage(payload) {
     return sendResult;
   });
 }
+
+function selectedApplicantBatchLimit_() {
+  return 100;
+}
+
+function selectedApplicantBatchCacheKey_(adminEmail) {
+  return "SELECTED_BATCH_PREVIEW::" + clean_(adminEmail || "unknown").toLowerCase();
+}
+
+function readSelectedApplicantBatchPreviewCache_(adminEmail) {
+  try {
+    var raw = CacheService.getUserCache().get(selectedApplicantBatchCacheKey_(adminEmail));
+    return raw ? JSON.parse(raw) : null;
+  } catch (_err) {
+    return null;
+  }
+}
+
+function writeSelectedApplicantBatchPreviewCache_(adminEmail, value) {
+  CacheService.getUserCache().put(selectedApplicantBatchCacheKey_(adminEmail), JSON.stringify(value || {}), 600);
+}
+
+function clearSelectedApplicantBatchPreviewCache_(adminEmail) {
+  try {
+    CacheService.getUserCache().remove(selectedApplicantBatchCacheKey_(adminEmail));
+  } catch (_err) {}
+}
+
+function normalizeSelectedApplicantBatchIds_(ids) {
+  var out = [];
+  var seen = {};
+  (Array.isArray(ids) ? ids : []).forEach(function (value) {
+    var id = clean_(value || "");
+    if (!id || seen[id]) return;
+    seen[id] = true;
+    if (out.length < selectedApplicantBatchLimit_()) out.push(id);
+  });
+  return out;
+}
+
+function buildSelectedApplicantRowLookup_(sheet) {
+  var values = sheet.getDataRange().getValues();
+  var headers = (values && values.length) ? values[0] : [];
+  var byApplicantId = {};
+  for (var r = 1; r < values.length; r++) {
+    var rowObj = {};
+    for (var c = 0; c < headers.length; c++) {
+      var h = clean_(headers[c]);
+      if (h) rowObj[h] = values[r][c];
+    }
+    var applicantId = clean_(rowObj.ApplicantID || "");
+    if (!applicantId || byApplicantId[applicantId]) continue;
+    rowObj._rowNumber = r + 1;
+    byApplicantId[applicantId] = rowObj;
+  }
+  return byApplicantId;
+}
+
+function selectedApplicantBatchRecipientName_(rowObj) {
+  var row = rowObj || {};
+  return clean_([row.First_Name, row.Last_Name].join(" ").trim() || row.Student_Name || row.Full_Name || row.Name || row.Applicant_Name || "");
+}
+
+function selectedApplicantBatchHash_(ids) {
+  var list = normalizeSelectedApplicantBatchIds_(ids);
+  if (typeof stageBatchCandidateHash_ === "function") return stageBatchCandidateHash_(list);
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, list.join("|"))
+    .map(function (b) { return ("0" + ((b < 0 ? b + 256 : b).toString(16))).slice(-2); })
+    .join("");
+}
+
+function selectedApplicantBatchResponse_(payload) {
+  var data = payload && typeof payload === "object" ? payload : {};
+  data.ok = data.ok !== false;
+  data.action = clean_(data.action || "selected_applicant_batch");
+  return data;
+}
+
+function admin_previewSelectedApplicantBatch(payload) {
+  return withEnvelope_("admin_previewSelectedApplicantBatch", function (dbgId) {
+    var startedAtMs = new Date().getTime();
+    var adminEmail = getCallerEmail_();
+    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    requireOperationsAdmin_(adminEmail);
+    var p = payload && typeof payload === "object" ? payload : {};
+    var requestedType = clean_(p.messageType || "");
+    var messageType = normalizeApplicantMessageType_(requestedType);
+    var sourceLabel = clean_(p.sourceLabel || "Selected applicants");
+    var applicantIds = normalizeSelectedApplicantBatchIds_(p.applicantIds || []);
+    var excluded = {};
+    normalizeSelectedApplicantBatchIds_(p.excludedApplicantIds || []).forEach(function (id) { excluded[id] = true; });
+    var actor = resolveAdminCommActor_(p);
+    var requestId = clean_(dbgId || newDebugId_());
+    if (!messageType) {
+      return selectedApplicantBatchResponse_({
+        ok: false,
+        result: "BLOCKED",
+        blockCode: "UNSUPPORTED_MESSAGE_TYPE",
+        blockReason: "Unsupported message type.",
+        requestId: requestId,
+        messageType: requestedType,
+        sourceLabel: sourceLabel
+      });
+    }
+    if (typeof isCommunicationTypeBatchSafe_ === "function" && isCommunicationTypeBatchSafe_(messageType) !== true) {
+      return selectedApplicantBatchResponse_({
+        ok: false,
+        result: "BLOCKED",
+        blockCode: "MESSAGE_TYPE_NOT_BATCH_SAFE",
+        blockReason: "Selected template is not approved for batch communication.",
+        requestId: requestId,
+        messageType: messageType,
+        sourceLabel: sourceLabel
+      });
+    }
+    if (!applicantIds.length) {
+      return selectedApplicantBatchResponse_({
+        ok: false,
+        result: "BLOCKED",
+        blockCode: "EMPTY_COHORT",
+        blockReason: "Select at least one applicant before previewing batch communication.",
+        requestId: requestId,
+        messageType: messageType,
+        sourceLabel: sourceLabel
+      });
+    }
+    var sh = openDataSheet_();
+    var lookup = buildSelectedApplicantRowLookup_(sh);
+    var recipients = [];
+    var blockedByReason = {};
+    var eligibleIds = [];
+    var previewSubject = "";
+    var previewBody = "";
+    var total = applicantIds.length;
+    var excludedCount = 0;
+    var missing = 0;
+    var blocked = 0;
+    applicantIds.forEach(function (applicantId) {
+      var rowObj = lookup[applicantId] || null;
+      var name = selectedApplicantBatchRecipientName_(rowObj || {});
+      if (excluded[applicantId]) {
+        excludedCount++;
+        recipients.push({ applicantId: applicantId, name: name, email: "", status: "Excluded", included: false, excluded: true, reason: "Operator excluded before send." });
+        return;
+      }
+      if (!rowObj) {
+        missing++;
+        blockedByReason.APPLICANT_NOT_FOUND = Number(blockedByReason.APPLICANT_NOT_FOUND || 0) + 1;
+        recipients.push({ applicantId: applicantId, name: "", email: "", status: "Excluded", included: false, reason: "Applicant record not found." });
+        return;
+      }
+      var context = resolveApplicantMessageContextFromRow_(rowObj, Number(rowObj._rowNumber || 0), sh, messageType, {
+        action: "selectedBatchPreview",
+        actorEmail: actor.actorEmail,
+        actorRole: actor.actorRole,
+        debugId: requestId,
+        requestId: requestId,
+        batchLabel: "SELECTED_BATCH_PREVIEW::" + requestId
+      });
+      if (context && context.eligible === true) {
+        var built = buildApplicantMessage_(context);
+        if (!previewSubject) previewSubject = clean_(built.subject || "");
+        if (!previewBody) previewBody = String(built.body || "");
+        eligibleIds.push(applicantId);
+        recipients.push({ applicantId: applicantId, name: name, email: clean_(context.effectiveEmail || ""), status: "Included", included: true, reason: "Ready to send." });
+        return;
+      }
+      blocked++;
+      var code = clean_(context && (context.blockCode || context.code) || "BLOCKED");
+      blockedByReason[code] = Number(blockedByReason[code] || 0) + 1;
+      recipients.push({
+        applicantId: applicantId,
+        name: name,
+        email: clean_(context && context.effectiveEmail || ""),
+        status: "Excluded",
+        included: false,
+        reason: clean_(context && (context.blockReason || context.message || context.error) || code)
+      });
+    });
+    var candidateHash = selectedApplicantBatchHash_(eligibleIds);
+    var elapsedMs = new Date().getTime() - startedAtMs;
+    var out = selectedApplicantBatchResponse_({
+      ok: true,
+      result: "PREVIEW",
+      requestId: requestId,
+      sourceLabel: sourceLabel,
+      sourceType: clean_(p.sourceType || "selected"),
+      messageType: messageType,
+      totalActionable: total,
+      alreadyCommunicated: Number(blockedByReason.COOLDOWN_ACTIVE || 0),
+      eligible: eligibleIds.length,
+      count: eligibleIds.length,
+      blocked: blocked + missing,
+      excluded: excludedCount,
+      remainingAfterBatch: Math.max(0, total - excludedCount - eligibleIds.length - blocked - missing),
+      blockedByReason: blockedByReason,
+      recipients: recipients.slice(0, selectedApplicantBatchLimit_()),
+      recipientCount: recipients.length,
+      candidateIds: eligibleIds,
+      candidateCount: eligibleIds.length,
+      candidateHash: candidateHash,
+      subject: previewSubject,
+      body: previewBody,
+      elapsedMs: elapsedMs,
+      technicalDiagnostics: {
+        requestId: requestId,
+        candidateHash: candidateHash,
+        boundedLimit: selectedApplicantBatchLimit_(),
+        inputCount: total,
+        elapsedMs: elapsedMs
+      }
+    });
+    if (eligibleIds.length) {
+      writeSelectedApplicantBatchPreviewCache_(adminEmail, {
+        requestId: requestId,
+        sourceLabel: sourceLabel,
+        messageType: messageType,
+        candidateIds: eligibleIds,
+        candidateCount: eligibleIds.length,
+        candidateHash: candidateHash,
+        writtenAt: new Date().toISOString()
+      });
+    } else {
+      clearSelectedApplicantBatchPreviewCache_(adminEmail);
+    }
+    return out;
+  });
+}
+
+function admin_sendSelectedApplicantBatch(payload) {
+  return withEnvelope_("admin_sendSelectedApplicantBatch", function (dbgId) {
+    var adminEmail = getCallerEmail_();
+    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    requireOperationsAdmin_(adminEmail);
+    var p = payload && typeof payload === "object" ? payload : {};
+    if (isBatchSendEnabled_() !== true) {
+      return adminCommBlockedResult_("send_selected_batch", "BATCH_SENDS_DISABLED_PREVIEW_ONLY_MODE", dbgId, { blockReason: "Batch sends are disabled in preview-only mode." });
+    }
+    if (p.confirmSend !== true) {
+      return adminCommBlockedResult_("send_selected_batch", "CONFIRM_REQUIRED", dbgId, { blockReason: "Explicit confirmation is required before selected batch send." });
+    }
+    var messageType = normalizeApplicantMessageType_(p.messageType || "");
+    if (!messageType) return adminCommBlockedResult_("send_selected_batch", "UNSUPPORTED_MESSAGE_TYPE", dbgId, { blockReason: "Unsupported message type." });
+    if (typeof isCommunicationTypeBatchSafe_ === "function" && isCommunicationTypeBatchSafe_(messageType) !== true) {
+      return adminCommBlockedResult_("send_selected_batch", "MESSAGE_TYPE_NOT_BATCH_SAFE", dbgId, { blockReason: "Selected template is not approved for batch communication." });
+    }
+    var preview = readSelectedApplicantBatchPreviewCache_(adminEmail);
+    var previewRequestId = clean_(p.previewRequestId || "");
+    var candidateHash = clean_(p.candidateHash || "");
+    var cachedHash = clean_(preview && preview.candidateHash || "");
+    var cachedRequestId = clean_(preview && preview.requestId || "");
+    var cachedMessageType = clean_(preview && preview.messageType || "");
+    var candidateIds = Array.isArray(preview && preview.candidateIds) ? normalizeSelectedApplicantBatchIds_(preview.candidateIds) : [];
+    if (!preview || !previewRequestId || previewRequestId !== cachedRequestId || !candidateHash || candidateHash !== cachedHash || cachedMessageType !== messageType || !candidateIds.length) {
+      return adminCommBlockedResult_("send_selected_batch", "PREVIEW_REQUIRED", dbgId, {
+        blockReason: "A matching selected-batch preview is required before send.",
+        previewRequestId: previewRequestId,
+        cachedRequestId: cachedRequestId,
+        candidateHashPresent: !!candidateHash,
+        cachedCandidateHashPresent: !!cachedHash
+      });
+    }
+    var actor = resolveAdminCommActor_(p);
+    var requestId = clean_(dbgId || newDebugId_());
+    var batchLabel = "SELECTED_BATCH_SEND::" + requestId;
+    var out = {
+      ok: true,
+      action: "send_selected_batch",
+      result: "COMPLETE",
+      requestId: requestId,
+      previewRequestId: previewRequestId,
+      sourceLabel: clean_(preview.sourceLabel || p.sourceLabel || "Selected applicants"),
+      messageType: messageType,
+      candidateHash: candidateHash,
+      attempted: 0,
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+      blocked: 0,
+      blockedByReason: {},
+      sentApplicantIdsSample: [],
+      batchId: batchLabel
+    };
+    candidateIds.forEach(function (applicantId) {
+      out.attempted++;
+      var sendResult = sendApplicantMessage_(applicantId, messageType, {
+        actorEmail: actor.actorEmail,
+        actorRole: actor.actorRole,
+        batchLabel: batchLabel,
+        debugId: requestId,
+        sendSource: "ADMIN_SELECTED_BATCH",
+        unattended: false
+      });
+      var resultType = clean_(sendResult && sendResult.result || "").toUpperCase();
+      if (resultType === "SENT") {
+        out.sent++;
+        if (out.sentApplicantIdsSample.length < 10) out.sentApplicantIdsSample.push(applicantId);
+      } else if (resultType === "BLOCKED") {
+        out.blocked++;
+        var code = clean_(sendResult && (sendResult.blockCode || sendResult.code) || "BLOCKED");
+        out.blockedByReason[code] = Number(out.blockedByReason[code] || 0) + 1;
+      } else {
+        out.failed++;
+      }
+    });
+    out.skipped = Math.max(0, Number(preview.candidateCount || candidateIds.length) - out.attempted);
+    clearSelectedApplicantBatchPreviewCache_(adminEmail);
+    return out;
+  });
+}

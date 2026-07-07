@@ -73,6 +73,8 @@ const protectedRpcs = [
   "admin_sendApplicantMessage",
   "admin_previewStageBatch",
   "admin_sendStageBatch",
+  "admin_previewSelectedApplicantBatch",
+  "admin_sendSelectedApplicantBatch",
   "admin_setPaymentVerified",
   "admin_previewZohoBooksFodePayload",
   "admin_createZohoBooksFodeDraftInvoice"

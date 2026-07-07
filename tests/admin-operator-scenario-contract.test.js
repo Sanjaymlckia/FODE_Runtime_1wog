@@ -26,11 +26,15 @@ mustMatch(adminUi, /function selectAllActionabilityRows_/, "Selection scenario m
 mustMatch(adminUi, /function clearActionabilitySelection_/, "Selection scenario must support Clear Selection");
 mustMatch(adminUi, /Total selected[\s\S]*Contactable[\s\S]*No email/, "Selection scenario must expose cohort summary counts");
 
-mustMatch(adminUi, /Batch Communication Handoff/, "Batch communication scenario must open a handoff panel");
+mustMatch(adminUi, /id="batchCommModalBack"/, "Batch communication scenario must open a dedicated modal");
+mustMatch(adminUi, /Batch Communication Handoff/, "Batch communication scenario must retain the selected-cohort handoff summary");
 mustMatch(adminUi, /Recommended templates/, "Batch handoff must expose recommended templates");
 mustMatch(adminUi, /Blocked reasons/, "Batch handoff must expose blocked reasons");
 mustMatch(adminUi, /Recommended next action/, "Batch handoff must expose next safe action");
 mustNotMatch(adminUi, /function actionabilityBatchCommunication_[\s\S]{0,700}admin_sendApplicantMessage/, "Batch handoff must not create a send path");
+mustMatch(adminUi, /admin_previewSelectedApplicantBatch/, "Selected cohorts must use the selected batch preview wrapper");
+mustMatch(adminUi, /admin_sendSelectedApplicantBatch/, "Selected cohorts must use the selected batch send wrapper");
+mustNotMatch(adminUi, /function sendBatchCommunicationModal_[\s\S]*admin_sendApplicantMessage/, "Batch modal must not route through the single-applicant Review RPC");
 
 mustMatch(adminUi, /function commContactabilityGate_/, "Contactability Gate scenario must be first-class");
 mustMatch(adminUi, /Email workflow unavailable/, "Contactability Gate must suppress normal email workflow");

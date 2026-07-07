@@ -89,6 +89,16 @@ const surfaces = [
     blockedWrites: [/sendApplicantMessage_/]
   },
   {
+    name: "selected cohort batch send",
+    source: adminSource,
+    functionName: "admin_sendSelectedApplicantBatch",
+    mutationType: "selected cohort batch email send",
+    protectedSurface: "Selected cohort communications",
+    allow: [/isAdmin_\(adminEmail\)/, /requireOperationsAdmin_\(adminEmail\)/],
+    deny: [/isBatchSendEnabled_\(\) !== true/, /BATCH_SENDS_DISABLED_PREVIEW_ONLY_MODE/, /readSelectedApplicantBatchPreviewCache_\(adminEmail\)/],
+    blockedWrites: [/sendApplicantMessage_/]
+  },
+  {
     name: "portal reset",
     source: adminSource,
     functionName: "admin_resetPortalLink",
