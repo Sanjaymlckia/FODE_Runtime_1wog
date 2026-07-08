@@ -149,12 +149,29 @@ const adminSend = extractFunction(adminSource, "admin_sendApplicantMessage");
 const stageSend = extractFunction(adminSource, "admin_sendStageBatch");
 const selectedBatchPreview = extractFunction(adminSource, "admin_previewSelectedApplicantBatch");
 const selectedBatchSend = extractFunction(adminSource, "admin_sendSelectedApplicantBatch");
+vm.runInContext([
+  extractFunction(adminSource, "selectedApplicantBatchTemplateLabel_"),
+  extractFunction(adminSource, "selectedApplicantBatchOperatorBlockReason_")
+].join("\n\n"), context);
 assert.match(adminPreview, /authorityOverrideReason/, "Selected preview wrapper must pass authority override reason to backend authority");
 assert.match(adminSend, /authorityOverrideReason/, "Selected send wrapper must pass authority override reason to backend authority");
 assert.match(adminSend, /BULK_NOT_ALLOWED/, "Single-applicant Review send RPC must continue blocking bulk payloads");
 assert.doesNotMatch(stageSend, /authorityOverride/, "Stage Batch must not provide an override bypass");
 assert.match(selectedBatchPreview, /requireOperationsAdmin_\(adminEmail\)/, "Selected cohort batch preview must remain Operations/Super gated");
 assert.match(selectedBatchSend, /requireOperationsAdmin_\(adminEmail\)/, "Selected cohort batch send must remain Operations/Super gated");
+assert.match(selectedBatchPreview, /technicalReason:\s*rawReason/, "Selected cohort preview must retain raw authority detail only as technical diagnostics");
+assert.match(selectedBatchPreview, /selectedApplicantBatchOperatorBlockReason_\(code, rawReason, messageType\)/, "Selected cohort preview must map raw block reasons to operator-readable text");
+const matrixReason = "Blocked by communication authority matrix. Requires: ✗ Lifecycle stage: DOCS_REQUIRED / PROCESSING - Current: REMINDER_DUE; ✓ Documents missing or not verified; ✗ No acceptance/enrolment confirmation";
+assert.equal(
+  context.selectedApplicantBatchOperatorBlockReason_("COMM_AUTHORITY_BLOCKED", matrixReason, "docs_missing"),
+  "Blocked: This template is not allowed for this applicant's current status. Use the recommended template or review the applicant individually.",
+  "Selected batch recipients must not expose raw authority matrix text to operators"
+);
+assert.equal(
+  context.selectedApplicantBatchOperatorBlockReason_("COOLDOWN_ACTIVE", "A recent message of this type was already sent. Try again later.", "docs_missing"),
+  "Blocked: Missing Documents Follow-Up was already sent recently. Wait for cooldown or review applicant individually.",
+  "Cooldown blocks must explain already-sent behaviour in operator language"
+);
 assert.match(selectedBatchPreview, /isCommunicationTypeBatchSafe_\(messageType\)/, "Selected cohort preview must only allow batch-safe message types");
 assert.match(selectedBatchSend, /isCommunicationTypeBatchSafe_\(messageType\)/, "Selected cohort send must only allow batch-safe message types");
 assert.match(selectedBatchSend, /isBatchSendEnabled_\(\) !== true/, "Selected cohort send must preserve the batch-send feature gate");

@@ -206,6 +206,47 @@ function selectedApplicantBatchResponse_(payload) {
   return data;
 }
 
+function selectedApplicantBatchTemplateLabel_(messageType) {
+  var type = clean_(messageType || "");
+  var labels = {
+    docs_missing: "Missing Documents Follow-Up",
+    reminder: "Reminder",
+    legacy_invite: "Portal Invitation",
+    payment_followup: "Payment Follow-Up",
+    fd_acknowledgement: "Application Acknowledgement"
+  };
+  return labels[type] || "Selected communication";
+}
+
+function selectedApplicantBatchOperatorBlockReason_(code, rawReason, messageType) {
+  var blockCode = clean_(code || "").toUpperCase();
+  var raw = clean_(rawReason || "");
+  var templateLabel = selectedApplicantBatchTemplateLabel_(messageType);
+  if (blockCode === "COOLDOWN_ACTIVE") {
+    return "Blocked: " + templateLabel + " was already sent recently. Wait for cooldown or review applicant individually.";
+  }
+  if (blockCode === "NO_EFFECTIVE_EMAIL" || blockCode === "INVALID_EMAIL") {
+    return "Blocked: No valid email address.";
+  }
+  if (blockCode === "BOUNCED") {
+    return "Blocked: Email delivery previously bounced. Review contact details before sending.";
+  }
+  if (blockCode === "DO_NOT_CONTACT") {
+    return "Blocked: Applicant is marked do not contact.";
+  }
+  if (blockCode === "APPLICANT_NOT_FOUND") {
+    return "Blocked: Applicant record was not found.";
+  }
+  if (blockCode === "UNKNOWN_MESSAGE_TYPE") {
+    return "Blocked: This communication template is not available for batch sending.";
+  }
+  if (blockCode === "COMM_AUTHORITY_BLOCKED" || /communication authority matrix/i.test(raw)) {
+    return "Blocked: This template is not allowed for this applicant's current status. Use the recommended template or review the applicant individually.";
+  }
+  if (raw) return raw;
+  return "Blocked: Communication policy did not allow this recipient.";
+}
+
 function admin_previewSelectedApplicantBatch(payload) {
   return withEnvelope_("admin_previewSelectedApplicantBatch", function (dbgId) {
     var startedAtMs = new Date().getTime();
@@ -297,6 +338,7 @@ function admin_previewSelectedApplicantBatch(payload) {
       }
       blocked++;
       var code = clean_(context && (context.blockCode || context.code) || "BLOCKED");
+      var rawReason = clean_(context && (context.blockReason || context.message || context.error) || code);
       blockedByReason[code] = Number(blockedByReason[code] || 0) + 1;
       recipients.push({
         applicantId: applicantId,
@@ -304,7 +346,8 @@ function admin_previewSelectedApplicantBatch(payload) {
         email: clean_(context && context.effectiveEmail || ""),
         status: "Excluded",
         included: false,
-        reason: clean_(context && (context.blockReason || context.message || context.error) || code)
+        reason: selectedApplicantBatchOperatorBlockReason_(code, rawReason, messageType),
+        technicalReason: rawReason
       });
     });
     var candidateHash = selectedApplicantBatchHash_(eligibleIds);
