@@ -7196,6 +7196,37 @@ function communicationAuthorityPrerequisiteText_(items) {
   }).join("; ");
 }
 
+function communicationCanonicalLifecycleContext_(rowObj, opts) {
+  var options = opts && typeof opts === "object" ? opts : {};
+  var supplied = options.canonicalLifecycle && typeof options.canonicalLifecycle === "object"
+    ? options.canonicalLifecycle
+    : null;
+  var canonical = supplied || (typeof resolveCanonicalApplicantLifecycle_ === "function"
+    ? resolveCanonicalApplicantLifecycle_(rowObj || {}, {})
+    : null);
+  return {
+    available: !!(canonical && typeof canonical === "object"),
+    baseState: clean_(canonical && (canonical.baseState || canonical.lifecycleStage) || "").toUpperCase(),
+    lifecycleStage: clean_(canonical && canonical.lifecycleStage || "").toUpperCase(),
+    overlays: Array.isArray(canonical && canonical.overlays)
+      ? canonical.overlays.map(function (item) { return clean_(item || "").toUpperCase(); }).filter(function (item) { return !!item; })
+      : [],
+    recommendedMessageType: clean_(canonical && canonical.recommendedMessageType || "").toLowerCase(),
+    reason: clean_(canonical && canonical.reason || "")
+  };
+}
+
+function communicationCanonicalLifecycleAllows_(messageType, canonical) {
+  var type = normalizeApplicantMessageType_(messageType || "");
+  var ctx = canonical && typeof canonical === "object" ? canonical : {};
+  if (type === "docs_missing") {
+    return ctx.available === true
+      && (ctx.baseState === "INCOMPLETE_DOCUMENTS" || ctx.baseState === "DOCUMENT_CORRECTION_REQUIRED")
+      && ctx.recommendedMessageType === "docs_missing";
+  }
+  return false;
+}
+
 function evaluateCommunicationAuthority_(rowObj, messageType, baseState, opts) {
   var row = rowObj || {};
   var normalizedType = normalizeApplicantMessageType_(messageType || "");
@@ -7207,6 +7238,17 @@ function evaluateCommunicationAuthority_(rowObj, messageType, baseState, opts) {
   }
   var state = baseState && typeof baseState === "object" ? baseState : deriveCommunicationState_(row, normalizedType, options).base;
   var lifecycleStage = normalizeLifecycleStageKey_(deriveApplicantLifecycleStage_(row));
+  var canonicalLifecycle = communicationCanonicalLifecycleContext_(row, options);
+  var canonicalLifecycleAllowed = communicationCanonicalLifecycleAllows_(normalizedType, canonicalLifecycle);
+  var authoritySource = canonicalLifecycleAllowed ? "CANONICAL_LIFECYCLE" : "LEGACY_LIFECYCLE";
+  var lifecycleDiagnostics = {
+    authoritySource: authoritySource,
+    legacyStage: lifecycleStage,
+    canonicalBaseState: canonicalLifecycle.baseState,
+    canonicalOverlays: canonicalLifecycle.overlays,
+    canonicalRecommendedMessageType: canonicalLifecycle.recommendedMessageType,
+    canonicalReason: canonicalLifecycle.reason
+  };
   var applicantState = communicationApplicantAuthorityState_(row, state);
   var docsVerified = state.docsVerified === true;
   var docsMissing = state.docsMissing === true;
@@ -7223,7 +7265,16 @@ function evaluateCommunicationAuthority_(rowObj, messageType, baseState, opts) {
   }
 
   var permittedStages = Array.isArray(rule.permittedLifecycleStages) ? rule.permittedLifecycleStages : [];
-  if (permittedStages.indexOf("ANY") < 0) add("Lifecycle stage: " + permittedStages.join(" / "), permittedStages.indexOf(lifecycleStage) >= 0, "Current: " + lifecycleStage);
+  var lifecycleStageAllowed = permittedStages.indexOf("ANY") >= 0 || permittedStages.indexOf(lifecycleStage) >= 0 || canonicalLifecycleAllowed === true;
+  if (permittedStages.indexOf("ANY") < 0) {
+    add(
+      "Lifecycle stage: " + permittedStages.join(" / "),
+      lifecycleStageAllowed,
+      canonicalLifecycleAllowed
+        ? "Current: " + lifecycleStage + "; canonical: " + canonicalLifecycle.baseState
+        : "Current: " + lifecycleStage
+    );
+  }
 
   if (rule.requiredApplicantState === "ACTIVE") add("Applicant active", applicantState === "ACTIVE", "Current: " + applicantState);
   else if (rule.requiredApplicantState === "ACCEPTED") add("Applicant accepted/enrolled", applicantState === "ACCEPTED", "Current: " + applicantState);
@@ -7256,6 +7307,8 @@ function evaluateCommunicationAuthority_(rowObj, messageType, baseState, opts) {
       missingPrerequisites: [],
       prerequisiteChecks: checks,
       lifecycleStage: lifecycleStage,
+      legacyLifecycleStage: lifecycleStage,
+      canonicalLifecycleAuthority: lifecycleDiagnostics,
       applicantState: applicantState
     };
   }
@@ -7274,6 +7327,8 @@ function evaluateCommunicationAuthority_(rowObj, messageType, baseState, opts) {
         missingPrerequisites: missing,
         prerequisiteChecks: checks,
         lifecycleStage: lifecycleStage,
+        legacyLifecycleStage: lifecycleStage,
+        canonicalLifecycleAuthority: lifecycleDiagnostics,
         applicantState: applicantState
       };
     }
@@ -7288,6 +7343,8 @@ function evaluateCommunicationAuthority_(rowObj, messageType, baseState, opts) {
         missingPrerequisites: missing,
         prerequisiteChecks: checks,
         lifecycleStage: lifecycleStage,
+        legacyLifecycleStage: lifecycleStage,
+        canonicalLifecycleAuthority: lifecycleDiagnostics,
         applicantState: applicantState
       };
     }
@@ -7303,6 +7360,8 @@ function evaluateCommunicationAuthority_(rowObj, messageType, baseState, opts) {
       missingPrerequisites: missing,
       prerequisiteChecks: checks,
       lifecycleStage: lifecycleStage,
+      legacyLifecycleStage: lifecycleStage,
+      canonicalLifecycleAuthority: lifecycleDiagnostics,
       applicantState: applicantState
     };
   }
@@ -7317,6 +7376,8 @@ function evaluateCommunicationAuthority_(rowObj, messageType, baseState, opts) {
     missingPrerequisites: missing,
     prerequisiteChecks: checks,
     lifecycleStage: lifecycleStage,
+    legacyLifecycleStage: lifecycleStage,
+    canonicalLifecycleAuthority: lifecycleDiagnostics,
     applicantState: applicantState
   };
 }
@@ -8293,6 +8354,8 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
     prerequisiteChecks: [],
     missingPrerequisites: [],
     lifecycleStage: "",
+    legacyLifecycleStage: "",
+    canonicalLifecycleAuthority: null,
     applicantState: "",
     rowNumber: Number(rowNumber || 0),
     sheet: sheet || null,
@@ -8329,8 +8392,12 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
   if (context.emailStatus === "DO_NOT_CONTACT") return block("DO_NOT_CONTACT");
   if (communicationState.cooldownActive) return block("COOLDOWN_ACTIVE");
 
+  var canonicalLifecycle = typeof resolveCanonicalApplicantLifecycle_ === "function"
+    ? resolveCanonicalApplicantLifecycle_(row, {})
+    : null;
   var authority = evaluateCommunicationAuthority_(row, normalizedType, baseState, Object.assign({}, options, {
     actor: actor,
+    canonicalLifecycle: canonicalLifecycle,
     authorityOverride: options.authorityOverride === true,
     authorityOverrideReason: clean_(options.authorityOverrideReason || "")
   }));
@@ -8341,6 +8408,8 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
   context.prerequisiteChecks = authority.prerequisiteChecks || [];
   context.missingPrerequisites = authority.missingPrerequisites || [];
   context.lifecycleStage = clean_(authority.lifecycleStage || "");
+  context.legacyLifecycleStage = clean_(authority.legacyLifecycleStage || authority.lifecycleStage || "");
+  context.canonicalLifecycleAuthority = authority.canonicalLifecycleAuthority || null;
   context.applicantState = clean_(authority.applicantState || "");
   if (!authority.ok) return block(authority.blockCode, authority.blockReason);
   if (authority.overrideApplied === true) logCommunicationAuthorityOverride_(context, authority, clean_(options.action || ""));

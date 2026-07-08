@@ -109,6 +109,8 @@ for (const entry of planned) {
 }
 
 const stageMapper = extractFunction(adminSource, "getBatchMessageTypeForStage_");
+const stageCollect = extractFunction(adminSource, "collectStageBatchCohort_");
+const stagePriorSuccess = extractFunction(adminSource, "stageBatchShouldExcludePriorSuccessDefault_");
 const sharedStageMap = extractFunction(codeSource, "lifecycleStageMessageTypeMap_");
 assert.match(stageMapper, /communicationRecommendedMessageTypeForStage_\(normalized\)/, "Stage Batch must delegate to shared lifecycle-stage message mapping");
 assert.equal(context.communicationRecommendedMessageTypeForStage_("DOCS_REQUIRED"), "docs_missing", "DOCS_REQUIRED Stage Batch mapping must use document wording");
@@ -120,6 +122,8 @@ assert.equal(context.communicationRecommendedMessageTypeForStage_("RECEIPT_AWAIT
 assert.equal(context.communicationRecommendedMessageTypeForStage_("PROCESSING"), "", "PROCESSING must remain unsupported for Stage Batch messaging");
 assert.equal(context.communicationRecommendedMessageTypeForStage_("application_exam_fee_reminder"), "", "Planned template keys must not become lifecycle-stage mappings");
 assert.doesNotMatch(sharedStageMap, /custom_email|application_verified_quote|application_acceptance_confirmation|application_exam_fee_reminder/, "Selected/manual templates must not be Stage Batch mapped");
+assert.match(stageCollect, /stageBatchShouldExcludePriorSuccessDefault_\(rowObj, normalizedStage, messageType\)/, "Stage Batch must still exclude prior successful reminder groups before resolver eligibility");
+assert.match(stagePriorSuccess, /lastContactMatchesScopedType[\s\S]*lastContactWasSent[\s\S]*priorGroup === currentGroup/, "Stage Batch duplicate reminder protection must remain durable-group based");
 
 const resolveFromRow = extractFunction(codeSource, "resolveApplicantMessageContextFromRow_");
 const authorityMatrixSource = extractFunction(codeSource, "getCommunicationAuthorityMatrix_");
@@ -129,6 +133,8 @@ assert.match(resolveFromRow, /evaluateCommunicationAuthority_/, "Selected and ba
 assert.match(resolveFromRow, /logCommunicationAuthorityOverride_/, "Super Admin authority override must be audit logged by the resolver");
 assert.match(authorityEvaluateSource, /actor\.isSuper !== true/, "Normal Admin must not bypass protected communication authority");
 assert.match(authorityEvaluateSource, /reason\.length < 20/, "Super Admin override must require a written justification");
+assert.match(authorityEvaluateSource, /communicationCanonicalLifecycleContext_/, "Communication Authority must consume canonical lifecycle diagnostics");
+assert.match(authorityEvaluateSource, /communicationCanonicalLifecycleAllows_/, "Communication Authority must apply canonical lifecycle allowances through a narrow helper");
 assert.match(overrideLogSource, /COMM_AUTHORITY_OVERRIDE/, "Override audit log must use a distinct communication authority event");
 assert.match(overrideLogSource, /missingPrerequisites/, "Override audit log must include missing prerequisites");
 assert.match(authorityMatrixSource, /application_acceptance_confirmation[\s\S]*protectedAction:\s*true/, "Acceptance confirmation must be a protected communication");
@@ -141,6 +147,80 @@ assert.match(resolveFromRow, /normalizedType === "payment_followup"[\s\S]*DOCS_N
 assert.match(resolveFromRow, /normalizedType === "application_receipt_request"[\s\S]*communicationPaymentEvidenceMissing_/, "receipt request must require missing payment evidence");
 assert.match(resolveFromRow, /normalizedType === "application_verified_quote"[\s\S]*communicationQuoteEligible_/, "verified quote must require quote eligibility");
 assert.match(resolveFromRow, /PAYMENT_ALREADY_RESOLVED/, "payment templates must block after canonical payment resolution");
+assert.match(resolveFromRow, /canonicalLifecycle[\s\S]*resolveCanonicalApplicantLifecycle_/, "Applicant message resolver must pass canonical lifecycle context into Communication Authority");
+
+context.communicationGetActorInfo_ = () => ({ isAdmin: true, isSuper: false, role: "ADMIN", email: "operator@example.test" });
+context.communicationApplicantAuthorityState_ = () => "ACTIVE";
+context.communicationPaymentEvidencePresent_ = () => false;
+context.communicationPaymentEvidenceMissing_ = () => true;
+context.communicationQuoteEligible_ = () => false;
+context.communicationAcceptanceConfirmed_ = () => false;
+context.deriveApplicantLifecycleStage_ = () => "REMINDER_DUE";
+context.deriveCommunicationState_ = () => ({ base: {} });
+context.resolveCanonicalApplicantLifecycle_ = () => ({
+  baseState: "INCOMPLETE_DOCUMENTS",
+  lifecycleStage: "INCOMPLETE_DOCUMENTS",
+  overlays: ["REMINDER_DUE"],
+  recommendedMessageType: "docs_missing",
+  reason: "Required upload evidence is incomplete."
+});
+vm.runInContext([
+  extractFunction(codeSource, "communicationAuthorityPrerequisiteLine_"),
+  extractFunction(codeSource, "communicationAuthorityPrerequisiteText_"),
+  extractFunction(codeSource, "communicationCanonicalLifecycleContext_"),
+  extractFunction(codeSource, "communicationCanonicalLifecycleAllows_"),
+  extractFunction(codeSource, "evaluateCommunicationAuthority_")
+].join("\n\n"), context);
+
+const fode2844StyleBaseState = {
+  docsVerified: false,
+  docsMissing: true,
+  paymentVerified: false,
+  paymentOutstanding: true
+};
+const docsMissingCanonical = context.evaluateCommunicationAuthority_(
+  {
+    ApplicantID: "FODE-26-002844",
+    Last_Contact_Type: "reminder",
+    Last_Contact_Result: "SENT",
+    Last_Contact_Batch: "STAGE_SEND::REMINDER_DUE::DBG-20260612020234-7f88e1be",
+    Email_Next_Action_Date: "2026-06-15T14:00:00.000Z"
+  },
+  "docs_missing",
+  fode2844StyleBaseState,
+  {
+    canonicalLifecycle: {
+      baseState: "INCOMPLETE_DOCUMENTS",
+      lifecycleStage: "INCOMPLETE_DOCUMENTS",
+      overlays: ["REMINDER_DUE"],
+      recommendedMessageType: "docs_missing"
+    },
+    actor: { isAdmin: true, isSuper: false, role: "ADMIN", email: "operator@example.test" }
+  }
+);
+assert.equal(docsMissingCanonical.ok, true, "Canonical INCOMPLETE_DOCUMENTS + docs_missing recommendation must allow docs_missing despite legacy REMINDER_DUE");
+assert.equal(docsMissingCanonical.canonicalLifecycleAuthority.authoritySource, "CANONICAL_LIFECYCLE");
+assert.equal(docsMissingCanonical.canonicalLifecycleAuthority.legacyStage, "REMINDER_DUE");
+assert.equal(docsMissingCanonical.canonicalLifecycleAuthority.canonicalBaseState, "INCOMPLETE_DOCUMENTS");
+assert.deepEqual(docsMissingCanonical.canonicalLifecycleAuthority.canonicalOverlays, ["REMINDER_DUE"]);
+assert.equal(docsMissingCanonical.canonicalLifecycleAuthority.canonicalRecommendedMessageType, "docs_missing");
+
+const reminderCanonical = context.evaluateCommunicationAuthority_(
+  { ApplicantID: "FODE-26-002844" },
+  "reminder",
+  fode2844StyleBaseState,
+  {
+    canonicalLifecycle: {
+      baseState: "INCOMPLETE_DOCUMENTS",
+      lifecycleStage: "INCOMPLETE_DOCUMENTS",
+      overlays: ["REMINDER_DUE"],
+      recommendedMessageType: "docs_missing"
+    },
+    actor: { isAdmin: true, isSuper: false, role: "ADMIN", email: "operator@example.test" }
+  }
+);
+assert.equal(reminderCanonical.ok, true, "Canonical docs_missing convergence must not weaken legacy reminder lifecycle allowance");
+assert.equal(reminderCanonical.canonicalLifecycleAuthority.authoritySource, "LEGACY_LIFECYCLE", "Reminder authority must remain legacy-stage sourced");
 
 const sendApplicant = extractFunction(codeSource, "sendApplicantMessage_");
 const dispatchApplicant = extractFunction(codeSource, "dispatchApplicantMessage_");
