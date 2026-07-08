@@ -2999,6 +2999,13 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
   var paymentVerified = paymentFacts.paymentVerified;
   var enrolled = isYes_(row.Registration_Complete) || isYes_(row.Enrolled_Confirmed) || !!clean_(row.Enrolled_At || "");
   var lifecycleStage = clean_(deriveApplicantLifecycleStage_(row) || deriveOperationalPipelineStage_(row) || "UNKNOWN").toUpperCase();
+  var canonicalLifecycle = resolveCanonicalApplicantLifecycle_(row, {
+    uploadSummary: uploadSummary,
+    paymentFacts: paymentFacts,
+    portalSubmitted: portalSubmitted,
+    docsVerified: docsVerified
+  });
+  var lifecycleMismatch = compareLegacyCanonicalLifecycle_(lifecycleStage, canonicalLifecycle);
   var documentState = adminOpsDocumentStateFromRow_(row);
   var dateInfo = actionabilityPreviewDateInfo_(row);
   var lastContactAgeDays = actionabilityPreviewLastContactAgeDays_(row);
@@ -3079,6 +3086,22 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     urgencyReason: urgency.reason,
     suppressor: suppressor,
     recommendedMessageType: recommendedMessageType,
+    canonicalLifecycle: {
+      baseState: clean_(canonicalLifecycle && canonicalLifecycle.baseState || "UNKNOWN").toUpperCase(),
+      lifecycleStage: clean_(canonicalLifecycle && canonicalLifecycle.lifecycleStage || "UNKNOWN").toUpperCase(),
+      overlays: Array.isArray(canonicalLifecycle && canonicalLifecycle.overlays) ? canonicalLifecycle.overlays.slice() : [],
+      recommendedNextAction: clean_(canonicalLifecycle && canonicalLifecycle.recommendedNextAction || ""),
+      recommendedMessageType: clean_(canonicalLifecycle && canonicalLifecycle.recommendedMessageType || ""),
+      actionOwner: clean_(canonicalLifecycle && canonicalLifecycle.actionOwner || ""),
+      reason: clean_(canonicalLifecycle && canonicalLifecycle.reason || "")
+    },
+    lifecycleMismatch: {
+      hasLifecycleMismatch: lifecycleMismatch.hasLifecycleMismatch === true,
+      legacyLifecycle: clean_(lifecycleMismatch.legacyLifecycle || ""),
+      canonicalBaseState: clean_(lifecycleMismatch.canonicalBaseState || ""),
+      canonicalOverlays: Array.isArray(lifecycleMismatch.canonicalOverlays) ? lifecycleMismatch.canonicalOverlays.slice() : [],
+      mismatchReason: clean_(lifecycleMismatch.mismatchReason || "")
+    },
     explanation: explanation,
     lastRelevantDate: dateInfo.value,
     lastRelevantDateSource: dateInfo.source,
@@ -3188,6 +3211,54 @@ function buildActionabilityHiddenRecords_(rows, visibleRows, perBucketLimit) {
   return out;
 }
 
+function lifecycleDriftEmptySummary_() {
+  return {
+    totalRows: 0,
+    mismatchCount: 0,
+    mismatchByLegacyStage: {},
+    mismatchByCanonicalBaseState: {},
+    topMismatchReasons: []
+  };
+}
+
+function lifecycleDriftIncrement_(map, key) {
+  var target = map && typeof map === "object" ? map : {};
+  var normalized = clean_(key || "UNKNOWN").toUpperCase() || "UNKNOWN";
+  target[normalized] = Number(target[normalized] || 0) + 1;
+  return target;
+}
+
+function lifecycleDriftRecordReason_(summary, reason) {
+  var s = summary && typeof summary === "object" ? summary : lifecycleDriftEmptySummary_();
+  var label = clean_(reason || "Unspecified lifecycle mismatch.");
+  var reasons = Array.isArray(s.topMismatchReasons) ? s.topMismatchReasons : [];
+  var found = false;
+  for (var i = 0; i < reasons.length; i++) {
+    if (clean_(reasons[i] && reasons[i].reason || "") === label) {
+      reasons[i].count = Number(reasons[i].count || 0) + 1;
+      found = true;
+      break;
+    }
+  }
+  if (!found) reasons.push({ reason: label, count: 1 });
+  reasons.sort(function(a, b) {
+    return Number(b && b.count || 0) - Number(a && a.count || 0);
+  });
+  s.topMismatchReasons = reasons.slice(0, 5);
+  return s;
+}
+
+function lifecycleDriftRecord_(summary, mismatch) {
+  var s = summary && typeof summary === "object" ? summary : lifecycleDriftEmptySummary_();
+  var m = mismatch && typeof mismatch === "object" ? mismatch : {};
+  s.totalRows = Number(s.totalRows || 0) + 1;
+  if (m.hasLifecycleMismatch !== true) return s;
+  s.mismatchCount = Number(s.mismatchCount || 0) + 1;
+  s.mismatchByLegacyStage = lifecycleDriftIncrement_(s.mismatchByLegacyStage, m.legacyLifecycle);
+  s.mismatchByCanonicalBaseState = lifecycleDriftIncrement_(s.mismatchByCanonicalBaseState, m.canonicalBaseState);
+  return lifecycleDriftRecordReason_(s, m.mismatchReason);
+}
+
 function admin_getActionabilityPreview(payload) {
   var adminEmail = getCallerEmail_();
   if (!isAdmin_(adminEmail)) throw new Error("Access denied");
@@ -3206,6 +3277,7 @@ function admin_getActionabilityPreview(payload) {
     includedRows: 0,
     countsByOwner: { APPLICANT: 0, OFFICER: 0, FINANCE: 0, ADMIN: 0, SYSTEM: 0, NONE: 0 },
     workloadSummary: { READY: 0, COOLING_OFF: 0, AWAITING_APPLICANT: 0, AWAITING_PAYMENT: 0, REVIEW_REQUIRED: 0, COMPLETE: 0, UNKNOWN: 0 },
+    lifecycleDriftSummary: lifecycleDriftEmptySummary_(),
     populationLedger: populationLedgerPublicSummary_(ledger),
     rows: [],
     hiddenRecords: { perBucketLimit: 5, byGroup: {}, totalByGroup: {} }
@@ -3228,6 +3300,7 @@ function admin_getActionabilityPreview(payload) {
     var state = clean_(item.actionabilityState || "UNKNOWN").toUpperCase() || "UNKNOWN";
     if (!Object.prototype.hasOwnProperty.call(out.workloadSummary, state)) out.workloadSummary[state] = 0;
     out.workloadSummary[state]++;
+    out.lifecycleDriftSummary = lifecycleDriftRecord_(out.lifecycleDriftSummary, item.lifecycleMismatch);
     rows.push(item);
   }
   rows.sort(compareActionabilityPreviewRows_);

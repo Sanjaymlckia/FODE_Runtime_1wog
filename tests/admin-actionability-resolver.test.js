@@ -1,5 +1,6 @@
 const fs = require("node:fs");
 const assert = require("node:assert/strict");
+const vm = require("node:vm");
 
 const adminJs = fs.readFileSync("Admin.js", "utf8");
 const adminUi = fs.readFileSync("AdminUI.html", "utf8");
@@ -33,6 +34,12 @@ function extractFunction(source, name) {
 const resolver = extractFunction(adminJs, "resolveActionabilityState_");
 const builder = extractFunction(adminJs, "buildActionabilityPreviewRow_");
 const preview = extractFunction(adminJs, "admin_getActionabilityPreview");
+const driftHelpers = [
+  "lifecycleDriftEmptySummary_",
+  "lifecycleDriftIncrement_",
+  "lifecycleDriftRecordReason_",
+  "lifecycleDriftRecord_"
+].map((name) => extractFunction(adminJs, name)).join("\n\n");
 const selectVisible = extractFunction(adminUi, "selectVisibleActionabilityRows_");
 const selectAll = extractFunction(adminUi, "selectAllActionabilityRows_");
 const toggle = extractFunction(adminUi, "toggleActionabilitySelection_");
@@ -48,10 +55,43 @@ assert.match(resolver, /TEMPLATE_STAGE_MISMATCH/, "Lifecycle/template mismatch m
 assert.match(resolver, /communicationRecommendedMessageTypeForStage_/, "Resolver must consume shared lifecycle-stage message mapping instead of duplicating matrix policy");
 assert.doesNotMatch(resolver, /evaluateCommunicationAuthority_/, "Resolver must not duplicate or replace Communication Authority");
 assert.match(builder, /resolveActionabilityState_/, "Preview row builder must consume the resolver");
+assert.match(builder, /resolveCanonicalApplicantLifecycle_/, "Preview row builder must expose canonical lifecycle diagnostics without changing behaviour");
+assert.match(builder, /canonicalLifecycle:[\s\S]*baseState:[\s\S]*lifecycleStage:[\s\S]*overlays:[\s\S]*recommendedNextAction:[\s\S]*recommendedMessageType:[\s\S]*actionOwner:[\s\S]*reason:/, "Every preview row must expose the passive canonicalLifecycle DTO");
+assert.match(builder, /compareLegacyCanonicalLifecycle_\(lifecycleStage, canonicalLifecycle\)/, "Preview row builder must compare legacy and canonical lifecycle passively");
+assert.match(builder, /lifecycleMismatch:[\s\S]*hasLifecycleMismatch:[\s\S]*legacyLifecycle:[\s\S]*canonicalBaseState:[\s\S]*canonicalOverlays:[\s\S]*mismatchReason:/, "Every preview row must expose the passive lifecycle mismatch DTO");
 assert.match(builder, /actionabilityState:[\s\S]*selectable:[\s\S]*selectBlockReason:[\s\S]*coolingOffUntil:[\s\S]*recommendedAction:[\s\S]*reasonCode:/, "Every preview row must expose A1 fields");
 assert.match(preview, /workloadSummary/, "Actionability preview must return workload summary separate from ledger");
+assert.match(preview, /lifecycleDriftSummary: lifecycleDriftEmptySummary_\(\)/, "Actionability preview must return passive lifecycle drift summary");
+assert.match(preview, /out\.lifecycleDriftSummary = lifecycleDriftRecord_\(out\.lifecycleDriftSummary, item\.lifecycleMismatch\)/, "Lifecycle drift summary must count existing preview rows passively");
+assert.match(preview, /populationLedger: populationLedgerPublicSummary_\(ledger\)/, "Population Ledger summary must remain separate from drift diagnostics");
 assert.match(selectVisible, /if \(!actionabilityIsSelectable_\(row\)\) return;/, "Select Visible must select READY rows only");
 assert.match(selectAll, /if \(!actionabilityIsSelectable_\(row\)\) return;/, "Select All must select READY rows only");
 assert.match(toggle, /checked && !actionabilityIsSelectable_\(row\)/, "Manual checkbox selection must reject non-READY rows");
+
+const context = {
+  clean_: (value) => String(value == null ? "" : value).trim()
+};
+vm.createContext(context);
+vm.runInContext(driftHelpers, context);
+
+let summary = context.lifecycleDriftEmptySummary_();
+summary = context.lifecycleDriftRecord_(summary, {
+  hasLifecycleMismatch: true,
+  legacyLifecycle: "REMINDER_DUE",
+  canonicalBaseState: "INCOMPLETE_DOCUMENTS",
+  mismatchReason: "Legacy lifecycle represents a timing/contact overlay while canonical lifecycle preserves applicant base state."
+});
+summary = context.lifecycleDriftRecord_(summary, {
+  hasLifecycleMismatch: false,
+  legacyLifecycle: "DOCS_REQUIRED",
+  canonicalBaseState: "INCOMPLETE_DOCUMENTS",
+  mismatchReason: ""
+});
+assert.equal(summary.totalRows, 2, "Drift summary must count all preview rows inspected");
+assert.equal(summary.mismatchCount, 1, "Drift summary must count only mismatched rows");
+assert.equal(summary.mismatchByLegacyStage.REMINDER_DUE, 1, "REMINDER_DUE mismatch must be counted by legacy stage");
+assert.equal(summary.mismatchByCanonicalBaseState.INCOMPLETE_DOCUMENTS, 1, "INCOMPLETE_DOCUMENTS mismatch must be counted by canonical base state");
+assert.equal(summary.mismatchByLegacyStage.DOCS_REQUIRED, undefined, "Equivalent DOCS_REQUIRED mapping must not be counted as mismatch");
+assert.equal(Array.from(summary.topMismatchReasons)[0].count, 1, "Top mismatch reasons must retain counts");
 
 console.log("PASS Actionability A1 resolver contract");

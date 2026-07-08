@@ -25,6 +25,192 @@ function deriveOperationalPipelineStage_(rowObj) {
   return "New To MLCKIA";
 }
 
+function resolveCanonicalApplicantLifecycle_(rowObj, opts) {
+  var row = rowObj || {};
+  var options = opts && typeof opts === "object" ? opts : {};
+  var uploadSummary = typeof options.uploadSummary === "object" && options.uploadSummary
+    ? options.uploadSummary
+    : adminOpsRequiredDocumentUploadSummary_(row);
+  var paymentFacts = typeof options.paymentFacts === "object" && options.paymentFacts
+    ? options.paymentFacts
+    : adminRowPaymentAuthorityFacts_(row);
+  var portalSubmitted = typeof options.portalSubmitted === "boolean"
+    ? options.portalSubmitted
+    : adminRowPortalSubmitted_(row);
+  var docReviewStatus = clean_(options.docReviewStatus || computeDocVerificationStatus_(row) || "Pending");
+  var docsVerified = typeof options.docsVerified === "boolean"
+    ? options.docsVerified
+    : adminDocumentReviewVerifiedForAutomation_(row);
+  var requiredComplete = uploadSummary && uploadSummary.requiredDocumentUploadComplete === true;
+  var uploadedRequiredCount = Number(uploadSummary && uploadSummary.uploadedRequiredCount || 0);
+  var requiredCount = Number(uploadSummary && uploadSummary.requiredCount || 0);
+  var missingRequiredDocuments = Array.isArray(uploadSummary && uploadSummary.missingRequiredDocuments)
+    ? uploadSummary.missingRequiredDocuments.slice()
+    : [];
+  var paymentEvidencePresent = paymentFacts && paymentFacts.paymentEvidencePresent === true;
+  var paymentVerified = paymentFacts && paymentFacts.paymentVerified === true;
+  var enrolled = isYes_(row.Registration_Complete)
+    || isYes_(row.Enrolled_Confirmed)
+    || !!clean_(row.Enrolled_At || "");
+  var emailStatus = clean_(row.Email_Status || "").toUpperCase();
+  var bounceFlag = /^(YES|TRUE|1|BOUNCED)$/i.test(clean_(row.Email_Bounce_Flag || ""));
+  var effectiveEmail = clean_(row.Effective_Email || row.Parent_Email_Corrected || row.Parent_Email || "");
+  var hasValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(effectiveEmail);
+  var portalIssued = !!clean_(row.PortalURL || row.Portal_Link || row.Portal_Token_Status || row.portalLastUpdateAt || row.PortalLastUpdateAt || "");
+  var communicationStarted = emailStatus === "SENT"
+    || emailStatus === "SEND_ATTEMPT"
+    || !!clean_(row.Last_Contact_Result || row.Last_Contacted_At || row.Email_Last_Sent_At || "");
+  var attemptCount = typeof campaignAttemptCount_ === "function" ? campaignAttemptCount_(row) : Number(row.Email_Attempt_Count || 0);
+  var nextActionTs = parseTime_(row.Email_Next_Action_Date || "");
+  var nowTs = options.nowTs ? Number(options.nowTs) : Date.now();
+  var now = new Date(nowTs);
+  var todayTs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  var coolingOff = nextActionTs > nowTs;
+  var reminderDue = emailStatus === "SENT"
+    && portalSubmitted !== true
+    && bounceFlag !== true
+    && attemptCount >= 1
+    && attemptCount < 3
+    && nextActionTs > 0
+    && nextActionTs <= todayTs;
+  var baseState = "UNKNOWN";
+  var actionOwner = "SYSTEM";
+  var recommendedNextAction = "REVIEW_APPLICANT";
+  var recommendedMessageType = "";
+  var reason = "";
+
+  if (!clean_(row.ApplicantID || "")) {
+    reason = "ApplicantID is missing.";
+  } else if (!portalSubmitted && !uploadedRequiredCount && !communicationStarted && !portalIssued) {
+    baseState = "APPLICATION_RECEIVED";
+    actionOwner = "ADMIN";
+    recommendedNextAction = "ISSUE_PORTAL_OR_INVITE";
+    recommendedMessageType = "legacy_invite";
+    reason = "Application row exists before portal/intake follow-up has begun.";
+  } else if (!portalSubmitted && !uploadedRequiredCount && portalIssued && !communicationStarted) {
+    baseState = "AWAITING_PORTAL_OR_INTAKE";
+    actionOwner = "APPLICANT";
+    recommendedNextAction = "COMPLETE_PORTAL_OR_INTAKE";
+    recommendedMessageType = "legacy_invite";
+    reason = "Portal/intake access exists and applicant completion is pending.";
+  } else if (enrolled) {
+    baseState = "COMPLETE";
+    actionOwner = "NONE";
+    recommendedNextAction = "NO_ACTION";
+    reason = "Enrollment or registration completion is recorded.";
+  } else if (paymentVerified && docsVerified) {
+    baseState = "ENROLMENT_READY";
+    actionOwner = "ADMIN";
+    recommendedNextAction = "COMPLETE_ENROLMENT";
+    reason = "Documents and payment are verified; enrolment authority is next.";
+  } else if (docsVerified && paymentEvidencePresent && !paymentVerified) {
+    baseState = "PAYMENT_TO_VERIFY";
+    actionOwner = "FINANCE";
+    recommendedNextAction = "VERIFY_PAYMENT";
+    reason = "Payment evidence is present and awaiting finance verification.";
+  } else if (docsVerified && !paymentVerified) {
+    baseState = "PAYMENT_PENDING";
+    actionOwner = "APPLICANT";
+    recommendedNextAction = "SEND_PAYMENT_REMINDER";
+    recommendedMessageType = "payment_followup";
+    reason = "Documents are verified and payment evidence is missing.";
+  } else if (docReviewStatus === "Rejected") {
+    baseState = "DOCUMENT_CORRECTION_REQUIRED";
+    actionOwner = "APPLICANT";
+    recommendedNextAction = "RESUBMIT_DOCUMENTS";
+    recommendedMessageType = "docs_missing";
+    reason = "Document review requires correction or resubmission.";
+  } else if (requiredComplete && !docsVerified) {
+    baseState = "DOCUMENTS_TO_VERIFY";
+    actionOwner = "OFFICER";
+    recommendedNextAction = "REVIEW_DOCUMENTS";
+    reason = "All required uploads are present and awaiting document verification.";
+  } else if (!requiredComplete) {
+    baseState = "INCOMPLETE_DOCUMENTS";
+    actionOwner = "APPLICANT";
+    recommendedNextAction = "UPLOAD_REQUIRED_DOCUMENTS";
+    recommendedMessageType = "docs_missing";
+    reason = "Required upload evidence is incomplete.";
+  } else {
+    reason = "Lifecycle state could not be resolved from current facts.";
+  }
+
+  var overlays = [];
+  if (reminderDue) overlays.push("REMINDER_DUE");
+  if (coolingOff) overlays.push("COOLING_OFF");
+  if (!hasValidEmail || emailStatus === "DO_NOT_CONTACT") overlays.push("CONTACT_BLOCKED");
+  if (bounceFlag || emailStatus === "BOUNCED") overlays.push("BOUNCED");
+  if (actionOwner === "APPLICANT") overlays.push("AWAITING_APPLICANT");
+
+  return {
+    ok: true,
+    readOnly: true,
+    source: "resolveCanonicalApplicantLifecycle_",
+    applicantId: clean_(row.ApplicantID || ""),
+    baseState: baseState,
+    lifecycleStage: baseState,
+    overlays: overlays,
+    recommendedNextAction: recommendedNextAction,
+    actionOwner: actionOwner,
+    recommendedMessageType: recommendedMessageType,
+    reason: reason,
+    facts: {
+      portalSubmitted: portalSubmitted === true,
+      requiredDocumentUploadComplete: requiredComplete,
+      uploadedRequiredDocumentCount: uploadedRequiredCount,
+      requiredDocumentCount: requiredCount,
+      missingRequiredDocuments: missingRequiredDocuments,
+      docReviewStatus: docReviewStatus,
+      docsVerified: docsVerified === true,
+      paymentEvidencePresent: paymentEvidencePresent,
+      paymentVerified: paymentVerified,
+      enrolled: enrolled,
+      emailStatus: emailStatus,
+      portalIssued: portalIssued,
+      communicationStarted: communicationStarted,
+      reminderDue: reminderDue,
+      coolingOff: coolingOff,
+      contactBlocked: !hasValidEmail || emailStatus === "DO_NOT_CONTACT",
+      bounced: bounceFlag || emailStatus === "BOUNCED"
+    }
+  };
+}
+
+function compareLegacyCanonicalLifecycle_(legacyLifecycle, canonicalLifecycle) {
+  var legacy = clean_(legacyLifecycle || "UNKNOWN").toUpperCase() || "UNKNOWN";
+  var canonical = canonicalLifecycle && typeof canonicalLifecycle === "object" ? canonicalLifecycle : {};
+  var baseState = clean_(canonical.baseState || canonical.lifecycleStage || "UNKNOWN").toUpperCase() || "UNKNOWN";
+  var overlays = Array.isArray(canonical.overlays) ? canonical.overlays.map(function (item) {
+    return clean_(item || "").toUpperCase();
+  }).filter(Boolean) : [];
+  var equivalent = {
+    INVITE_PENDING: ["APPLICATION_RECEIVED", "AWAITING_PORTAL_OR_INTAKE"],
+    DOCS_REQUIRED: ["INCOMPLETE_DOCUMENTS", "DOCUMENT_CORRECTION_REQUIRED"],
+    PAYMENT_REQUIRED: ["PAYMENT_PENDING"],
+    RECEIPT_AWAITING_VERIFICATION: ["PAYMENT_TO_VERIFY"],
+    COMPLETE: ["COMPLETE"]
+  };
+  var expected = equivalent[legacy] || [legacy];
+  var matchesBase = expected.indexOf(baseState) >= 0;
+  var out = {
+    hasLifecycleMismatch: false,
+    legacyLifecycle: legacy,
+    canonicalBaseState: baseState,
+    canonicalOverlays: overlays,
+    mismatchReason: ""
+  };
+
+  if (matchesBase) return out;
+  if (overlays.indexOf(legacy) >= 0) {
+    out.hasLifecycleMismatch = true;
+    out.mismatchReason = "Legacy lifecycle represents a timing/contact overlay while canonical lifecycle preserves applicant base state.";
+    return out;
+  }
+  out.hasLifecycleMismatch = true;
+  out.mismatchReason = "Legacy lifecycle does not match canonical applicant base state.";
+  return out;
+}
+
 function campaignReportPortalSubmitted_(rowObj) {
   var row = rowObj || {};
   var raw = clean_(row.Portal_Submitted || "");
