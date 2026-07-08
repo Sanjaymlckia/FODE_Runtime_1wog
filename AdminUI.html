@@ -2720,6 +2720,22 @@
           <div class="box"><div class="k">Replay Protection Active</div><div class="v" id="diagPreviewReplayActive">-</div></div>
         </div>
       </div>
+      <div style="font-weight:800;margin-top:12px;">Canonical Lifecycle Trace Export</div>
+      <div class="muted" style="font-size:12px;margin-top:4px;">Super Admin read-only diagnostic. Runs the existing Stage Batch eligibility trace for one ApplicantID and exports local JSON/CSV evidence. It does not preview, send, mutate queues, or write applicant data.</div>
+      <div class="commControls" id="stageBatchCanonicalTraceControls">
+        <div class="field" style="max-width:220px;">
+          <label>Trace Stage</label>
+          <input id="stageBatchTraceStage" placeholder="e.g. REMINDER_DUE">
+        </div>
+        <div class="field" style="max-width:240px;">
+          <label>ApplicantID</label>
+          <input id="stageBatchTraceApplicantId" placeholder="e.g. FODE-26-002879">
+        </div>
+        <button id="btnStageBatchTraceRun" class="btn small" type="button" onclick="runStageBatchCanonicalTrace_()">Run Read-only Trace</button>
+        <button id="btnStageBatchTraceJson" class="btn small" type="button" onclick="downloadStageBatchCanonicalTraceJson_()" disabled>Download JSON</button>
+        <button id="btnStageBatchTraceCsv" class="btn small" type="button" onclick="downloadStageBatchCanonicalTraceCsv_()" disabled>Download CSV</button>
+      </div>
+      <div id="stageBatchCanonicalTraceResult" class="sendSummary hidden" tabindex="-1" aria-live="polite"></div>
     </section>
       </div>
     </details>
@@ -8527,6 +8543,138 @@ function bindStageBatchControls_(){
     offsetInput.addEventListener("input", onStageBatchOffsetChange_);
   }
   renderBatchPanel();
+}
+var stageBatchCanonicalTraceResult_ = null;
+function stageBatchCanonicalTracePayload_(){
+  var stageEl = document.getElementById("stageBatchTraceStage");
+  var applicantEl = document.getElementById("stageBatchTraceApplicantId");
+  var stage = String((stageEl && stageEl.value) || batchState.selectedStage || selectedStageFilter || "").trim().toUpperCase();
+  var applicantId = String((applicantEl && applicantEl.value) || "").trim();
+  return { stage: stage, applicantId: applicantId };
+}
+function stageBatchTraceDownloadName_(ext){
+  var payload = stageBatchCanonicalTracePayload_();
+  var id = String(payload.applicantId || "applicant").replace(/[^A-Za-z0-9_-]+/g, "-");
+  var stage = String(payload.stage || "stage").replace(/[^A-Za-z0-9_-]+/g, "-");
+  return "stage-batch-canonical-trace-" + stage + "-" + id + "." + ext;
+}
+function downloadStageBatchTraceBlob_(filename, body, mimeType){
+  var blob = new Blob([body], { type: mimeType || "text/plain;charset=utf-8" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  window.setTimeout(function(){
+    try { URL.revokeObjectURL(url); } catch (_err) {}
+    try { document.body.removeChild(a); } catch (_err2) {}
+  }, 0);
+}
+function stageBatchTraceCsvCell_(value){
+  var text = Array.isArray(value) || (value && typeof value === "object") ? JSON.stringify(value || "") : String(value == null ? "" : value);
+  return '"' + text.replace(/"/g, '""') + '"';
+}
+function stageBatchTraceCsv_(res){
+  var diag = res && res.canonicalLifecycleDiagnostics && typeof res.canonicalLifecycleDiagnostics === "object" ? res.canonicalLifecycleDiagnostics : {};
+  var rowState = res && res.rowState && typeof res.rowState === "object" ? res.rowState : {};
+  var preview = res && res.preview && typeof res.preview === "object" ? res.preview : {};
+  var dashboard = res && res.dashboard && typeof res.dashboard === "object" ? res.dashboard : {};
+  var rows = [
+    ["applicantId", res && res.applicantId],
+    ["rowNumber", res && res.rowNumber],
+    ["selectedStage", res && res.selectedStage],
+    ["dashboardStage", dashboard.stage],
+    ["legacyStage", diag.rowLegacyStage],
+    ["canonicalBaseState", diag.canonicalBaseState],
+    ["canonicalOverlays", diag.canonicalOverlays],
+    ["canonicalRecommendedMessageType", diag.canonicalRecommendedMessageType],
+    ["hasLegacyCanonicalMismatch", diag.hasLegacyCanonicalMismatch === true ? "YES" : "NO"],
+    ["mismatchReason", diag.mismatchReason],
+    ["messageType", preview.messageType],
+    ["previewIncluded", preview.included === true ? "YES" : "NO"],
+    ["previewBlockCode", preview.resolver && preview.resolver.blockCode],
+    ["previewExclusionReason", preview.exclusionReason],
+    ["cooldownActive", rowState.cooldownActive === true ? "YES" : "NO"],
+    ["lastContactType", rowState.lastContactType],
+    ["lastContactResult", rowState.lastContactResult],
+    ["lastContactedAt", rowState.lastContactedAt]
+  ];
+  return rows.map(function(row){ return row.map(stageBatchTraceCsvCell_).join(","); }).join("\n");
+}
+function setStageBatchCanonicalTraceResult_(res){
+  stageBatchCanonicalTraceResult_ = res && typeof res === "object" ? res : null;
+  var box = document.getElementById("stageBatchCanonicalTraceResult");
+  var jsonBtn = document.getElementById("btnStageBatchTraceJson");
+  var csvBtn = document.getElementById("btnStageBatchTraceCsv");
+  if (jsonBtn) jsonBtn.disabled = !(stageBatchCanonicalTraceResult_ && stageBatchCanonicalTraceResult_.ok === true);
+  if (csvBtn) csvBtn.disabled = !(stageBatchCanonicalTraceResult_ && stageBatchCanonicalTraceResult_.ok === true);
+  if (!box) return;
+  if (!stageBatchCanonicalTraceResult_) {
+    box.classList.add("hidden");
+    box.classList.remove("err");
+    box.innerHTML = "";
+    return;
+  }
+  var diag = stageBatchCanonicalTraceResult_.canonicalLifecycleDiagnostics || {};
+  var preview = stageBatchCanonicalTraceResult_.preview || {};
+  var rowState = stageBatchCanonicalTraceResult_.rowState || {};
+  var parts = [];
+  if (stageBatchCanonicalTraceResult_.ok === false) {
+    parts.push('<div style="font-weight:800;">Trace blocked</div>');
+    parts.push('<div style="margin-top:6px;">Code: ' + esc(stageBatchCanonicalTraceResult_.code || "TRACE_FAILED") + '</div>');
+    parts.push('<div style="margin-top:6px;">Reason: ' + esc(stageBatchCanonicalTraceResult_.message || "Read-only trace failed.") + '</div>');
+  } else {
+    parts.push('<div style="font-weight:800;">Canonical Lifecycle Trace</div>');
+    parts.push('<div class="muted" style="margin-top:6px;font-size:12px;">Read-only Super Admin diagnostic from admin_traceStageBatchEligibility(). Candidate selection and send behaviour are unchanged.</div>');
+    parts.push('<div style="margin-top:6px;">Applicant: ' + esc(stageBatchCanonicalTraceResult_.applicantId || "") + ' | Row: ' + esc(String(stageBatchCanonicalTraceResult_.rowNumber || "")) + ' | Selected Stage: ' + esc(stageBatchCanonicalTraceResult_.selectedStage || "") + '</div>');
+    parts.push('<div style="margin-top:6px;">Legacy Stage: ' + esc(diag.rowLegacyStage || "") + ' | Canonical Base: ' + esc(diag.canonicalBaseState || "") + ' | Canonical Message: ' + esc(diag.canonicalRecommendedMessageType || "") + '</div>');
+    parts.push('<div style="margin-top:6px;">Overlays: ' + esc(Array.isArray(diag.canonicalOverlays) ? diag.canonicalOverlays.join(", ") : "") + ' | Mismatch: ' + esc(diag.hasLegacyCanonicalMismatch === true ? "YES" : "NO") + '</div>');
+    if (diag.mismatchReason) parts.push('<div style="margin-top:6px;">Mismatch Reason: ' + esc(diag.mismatchReason) + '</div>');
+    parts.push('<div style="margin-top:6px;">Preview Message Type: ' + esc(preview.messageType || "") + ' | Included: ' + esc(preview.included === true ? "YES" : "NO") + ' | Cooldown: ' + esc(rowState.cooldownActive === true ? "YES" : "NO") + '</div>');
+    if (preview.exclusionReason) parts.push('<div style="margin-top:6px;">Preview Exclusion: ' + esc(preview.exclusionReason) + '</div>');
+    parts.push('<details style="margin-top:8px;"><summary>Raw diagnostic JSON</summary><pre style="margin-top:8px;">' + esc(JSON.stringify(stageBatchCanonicalTraceResult_, null, 2)) + '</pre></details>');
+  }
+  box.classList.remove("hidden");
+  box.classList.toggle("err", stageBatchCanonicalTraceResult_.ok === false);
+  box.innerHTML = parts.join("");
+}
+function runStageBatchCanonicalTrace_(){
+  var payload = stageBatchCanonicalTracePayload_();
+  if (!payload.applicantId) {
+    setStageBatchCanonicalTraceResult_({ ok:false, code:"MISSING_APPLICANT_ID", message:"ApplicantID is required for read-only canonical lifecycle trace." });
+    return;
+  }
+  var btn = document.getElementById("btnStageBatchTraceRun");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Running...";
+  }
+  setStageBatchCanonicalTraceResult_(null);
+  google.script.run
+    .withSuccessHandler(function(res){
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Run Read-only Trace";
+      }
+      setStageBatchCanonicalTraceResult_(res && typeof res === "object" ? res : { ok:false, code:"INVALID_TRACE_RESPONSE", message:"Invalid trace response." });
+    })
+    .withFailureHandler(function(err){
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Run Read-only Trace";
+      }
+      setStageBatchCanonicalTraceResult_({ ok:false, code:"TRACE_RPC_FAILED", message:String((err && err.message) || err || "Read-only trace failed.") });
+    })
+    .admin_traceStageBatchEligibility(payload);
+}
+function downloadStageBatchCanonicalTraceJson_(){
+  if (!stageBatchCanonicalTraceResult_ || stageBatchCanonicalTraceResult_.ok !== true) return;
+  downloadStageBatchTraceBlob_(stageBatchTraceDownloadName_("json"), JSON.stringify(stageBatchCanonicalTraceResult_, null, 2), "application/json;charset=utf-8");
+}
+function downloadStageBatchCanonicalTraceCsv_(){
+  if (!stageBatchCanonicalTraceResult_ || stageBatchCanonicalTraceResult_.ok !== true) return;
+  downloadStageBatchTraceBlob_(stageBatchTraceDownloadName_("csv"), stageBatchTraceCsv_(stageBatchCanonicalTraceResult_), "text/csv;charset=utf-8");
 }
 var STAGE_BATCH_PREVIEW_TIMEOUT_MS = 180000;
 function previewStageBatchUi_(){

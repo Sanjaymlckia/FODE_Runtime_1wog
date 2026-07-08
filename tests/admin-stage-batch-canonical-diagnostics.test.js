@@ -4,6 +4,7 @@ const vm = require("node:vm");
 
 const stageBatchSource = fs.readFileSync("Admin_StageBatchCommunications.js", "utf8");
 const adminSource = fs.readFileSync("Admin.js", "utf8");
+const adminUiSource = fs.readFileSync("AdminUI.html", "utf8");
 
 function extractFunction(source, name) {
   const marker = `function ${name}`;
@@ -36,6 +37,9 @@ const collect = extractFunction(stageBatchSource, "collectStageBatchCohort_");
 const previewResponse = extractFunction(stageBatchSource, "stageBatchPreviewResponse_");
 const send = extractFunction(stageBatchSource, "admin_sendStageBatch");
 const trace = extractFunction(adminSource, "admin_traceStageBatchEligibility");
+const runTraceUi = extractFunction(adminUiSource, "runStageBatchCanonicalTrace_");
+const renderTraceUi = extractFunction(adminUiSource, "setStageBatchCanonicalTraceResult_");
+const traceCsv = extractFunction(adminUiSource, "stageBatchTraceCsv_");
 const diagnosticHelpers = [
   "stageBatchCanonicalLifecycleDiagnostics_",
   "stageBatchCanonicalDiagnosticsSummary_",
@@ -48,8 +52,20 @@ assert.match(collect, /if \(clean_\(snapshot\.stage \|\| ""\)\.toUpperCase\(\) !
 assert.match(collect, /stageBatchCanonicalLifecycleDiagnostics_/, "Cohort collection may record read-only canonical diagnostics");
 assert.match(previewResponse, /canonicalLifecycleDiagnostics/, "Preview response must expose canonical diagnostics");
 assert.match(trace, /canonicalLifecycleDiagnostics/, "Trace output must expose canonical diagnostics");
+assert.match(trace, /requireSuperAdmin_\(adminEmail\)/, "Live Stage Batch canonical trace must require Super Admin");
+assert.match(trace, /readOnly:\s*true/, "Live Stage Batch canonical trace must identify itself as read-only");
+assert.doesNotMatch(trace, /admin_sendStageBatch|sendApplicantMessage_|admin_sendSelectedApplicantBatch|admin_sendApplicantMessage/, "Live Stage Batch canonical trace must not invoke any send path");
 assert.doesNotMatch(send, /canonicalLifecycleDiagnostics|resolveCanonicalApplicantLifecycle_|compareLegacyCanonicalLifecycle_/, "Stage Batch send must not consume canonical diagnostics");
 assert.doesNotMatch(send, /authorityOverride/, "Stage Batch send must not gain override bypasses");
+assert.match(adminUiSource, /Canonical Lifecycle Trace Export/, "Admin UI must expose the Super Admin canonical trace export surface");
+assert.match(adminUiSource, /id="stageBatchTraceApplicantId"/, "Trace export must require an explicit ApplicantID");
+assert.match(adminUiSource, /id="stageBatchTraceStage"/, "Trace export must allow stage selection/input");
+assert.match(adminUiSource, /id="btnStageBatchTraceRun"[\s\S]*runStageBatchCanonicalTrace_/, "Trace export run button must call the read-only trace action");
+assert.match(runTraceUi, /admin_traceStageBatchEligibility\(payload\)/, "Trace UI must call the existing read-only diagnostic RPC");
+assert.doesNotMatch(runTraceUi, /admin_previewStageBatch|admin_sendStageBatch|admin_sendSelectedApplicantBatch|admin_sendApplicantMessage|sendApplicantMessage_/, "Trace UI must not call preview or send RPCs");
+assert.match(renderTraceUi, /Legacy Stage:[\s\S]*Canonical Base:[\s\S]*Canonical Message:/, "Trace UI must display legacy/canonical lifecycle fields");
+assert.match(renderTraceUi, /Mismatch Reason/, "Trace UI must display mismatch reason when present");
+assert.match(traceCsv, /canonicalBaseState[\s\S]*canonicalOverlays[\s\S]*canonicalRecommendedMessageType[\s\S]*hasLegacyCanonicalMismatch/, "Trace CSV must include canonical lifecycle diagnostic fields");
 
 const cacheWriteMatch = stageBatchSource.match(/writeStageBatchPreviewCache_\(adminEmail,\s*\{([\s\S]*?)\n\s*\}\);/);
 assert.ok(cacheWriteMatch, "Stage Batch preview cache write must be present");
