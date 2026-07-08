@@ -58,9 +58,14 @@ assert.doesNotMatch(trace, /admin_sendStageBatch|sendApplicantMessage_|admin_sen
 assert.doesNotMatch(send, /canonicalLifecycleDiagnostics|resolveCanonicalApplicantLifecycle_|compareLegacyCanonicalLifecycle_/, "Stage Batch send must not consume canonical diagnostics");
 assert.doesNotMatch(send, /authorityOverride/, "Stage Batch send must not gain override bypasses");
 assert.match(adminUiSource, /Canonical Lifecycle Trace Export/, "Admin UI must expose the Super Admin canonical trace export surface");
+assert.match(adminUiSource, /id="opsStageBatchCanonicalTraceControls"/, "Canonical trace export must mount in the live Operations Workspace Stage Batch surface");
+assert.match(adminUiSource, /id="opsStageBatchCanonicalTraceResult"/, "Canonical trace results must render in the live Operations Workspace Stage Batch surface");
+assert.match(adminUiSource, /id="btnOpsStageBatchTraceRun"[\s\S]*runStageBatchCanonicalTrace_/, "Live Operations Workspace trace button must run the read-only trace action");
 assert.match(adminUiSource, /id="stageBatchTraceApplicantId"/, "Trace export must require an explicit ApplicantID");
 assert.match(adminUiSource, /id="stageBatchTraceStage"/, "Trace export must allow stage selection/input");
 assert.match(adminUiSource, /id="btnStageBatchTraceRun"[\s\S]*runStageBatchCanonicalTrace_/, "Trace export run button must call the read-only trace action");
+assert.match(adminUiSource, /stageBatchTraceSurfaceEl_/, "Trace functions must resolve the mounted Ops surface before legacy fallback");
+assert.match(runTraceUi, /stageBatchTraceSurfaceEl_\("btnOpsStageBatchTraceRun", "btnStageBatchTraceRun"\)/, "Trace action must bind to the visible Ops button when mounted");
 assert.match(runTraceUi, /admin_traceStageBatchEligibility\(payload\)/, "Trace UI must call the existing read-only diagnostic RPC");
 assert.doesNotMatch(runTraceUi, /admin_previewStageBatch|admin_sendStageBatch|admin_sendSelectedApplicantBatch|admin_sendApplicantMessage|sendApplicantMessage_/, "Trace UI must not call preview or send RPCs");
 assert.match(renderTraceUi, /Legacy Stage:[\s\S]*Canonical Base:[\s\S]*Canonical Message:/, "Trace UI must display legacy/canonical lifecycle fields");

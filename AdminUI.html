@@ -1978,6 +1978,19 @@
           <div class="opsSectionHeader" style="margin-top:12px;"><div><h3 style="margin:0;font-size:15px;">Stage Batch Technical Diagnostics</h3><p style="margin:4px 0 0;">Diagnostics show mail eligibility for the selected stage after modal preview.</p></div><span class="opsStatusPill info">Collapsed technical evidence</span></div>
           <div id="opsStageBatchSummary" class="opsResultBox hidden" tabindex="-1" aria-live="polite"></div>
           <div id="opsStageBatchPreviewDiagnostics" class="opsResultBox hidden" tabindex="-1" aria-live="polite"></div>
+          <div class="opsSectionHeader" style="margin-top:12px;"><div><h3 style="margin:0;font-size:15px;">Canonical Lifecycle Trace Export</h3><p style="margin:4px 0 0;">Super Admin read-only trace for one ApplicantID. Exports local JSON/CSV evidence only; no preview, send, queue mutation, or applicant write occurs.</p></div><span class="opsStatusPill info">Read-only</span></div>
+          <div class="opsDraftGrid" id="opsStageBatchCanonicalTraceControls" style="margin-top:10px;">
+            <div class="field"><label>Trace stage</label><input id="opsStageBatchTraceStage" placeholder="e.g. REMINDER_DUE"></div>
+            <div class="field"><label>ApplicantID</label><input id="opsStageBatchTraceApplicantId" placeholder="e.g. FODE-26-002879"></div>
+            <div class="field"><label>Trace output</label><input type="text" readonly value="Uses admin_traceStageBatchEligibility()"></div>
+            <div class="field"><label>Authority</label><input type="text" readonly value="Super Admin only"></div>
+          </div>
+          <div class="opsActionRow">
+            <button id="btnOpsStageBatchTraceRun" class="opsActionBtn live" type="button" onclick="runStageBatchCanonicalTrace_()">Run Read-only Trace</button>
+            <button id="btnOpsStageBatchTraceJson" class="opsActionBtn" type="button" onclick="downloadStageBatchCanonicalTraceJson_()" disabled>Download JSON</button>
+            <button id="btnOpsStageBatchTraceCsv" class="opsActionBtn" type="button" onclick="downloadStageBatchCanonicalTraceCsv_()" disabled>Download CSV</button>
+          </div>
+          <div id="opsStageBatchCanonicalTraceResult" class="opsResultBox hidden" tabindex="-1" aria-live="polite"></div>
         </div>
       </section>
 <?!= HtmlService.createHtmlOutputFromFile('AdminUI_OpsLifecycle').getContent(); ?>
@@ -8545,9 +8558,16 @@ function bindStageBatchControls_(){
   renderBatchPanel();
 }
 var stageBatchCanonicalTraceResult_ = null;
+function stageBatchTraceSurfaceEl_(opsId, legacyId){
+  var opsEl = opsId ? document.getElementById(opsId) : null;
+  var legacyEl = legacyId ? document.getElementById(legacyId) : null;
+  if (stageBatchSurfaceVisible_(opsEl)) return opsEl;
+  if (stageBatchSurfaceVisible_(legacyEl)) return legacyEl;
+  return opsEl || legacyEl || null;
+}
 function stageBatchCanonicalTracePayload_(){
-  var stageEl = document.getElementById("stageBatchTraceStage");
-  var applicantEl = document.getElementById("stageBatchTraceApplicantId");
+  var stageEl = stageBatchTraceSurfaceEl_("opsStageBatchTraceStage", "stageBatchTraceStage");
+  var applicantEl = stageBatchTraceSurfaceEl_("opsStageBatchTraceApplicantId", "stageBatchTraceApplicantId");
   var stage = String((stageEl && stageEl.value) || batchState.selectedStage || selectedStageFilter || "").trim().toUpperCase();
   var applicantId = String((applicantEl && applicantEl.value) || "").trim();
   return { stage: stage, applicantId: applicantId };
@@ -8604,9 +8624,9 @@ function stageBatchTraceCsv_(res){
 }
 function setStageBatchCanonicalTraceResult_(res){
   stageBatchCanonicalTraceResult_ = res && typeof res === "object" ? res : null;
-  var box = document.getElementById("stageBatchCanonicalTraceResult");
-  var jsonBtn = document.getElementById("btnStageBatchTraceJson");
-  var csvBtn = document.getElementById("btnStageBatchTraceCsv");
+  var box = stageBatchTraceSurfaceEl_("opsStageBatchCanonicalTraceResult", "stageBatchCanonicalTraceResult");
+  var jsonBtn = stageBatchTraceSurfaceEl_("btnOpsStageBatchTraceJson", "btnStageBatchTraceJson");
+  var csvBtn = stageBatchTraceSurfaceEl_("btnOpsStageBatchTraceCsv", "btnStageBatchTraceCsv");
   if (jsonBtn) jsonBtn.disabled = !(stageBatchCanonicalTraceResult_ && stageBatchCanonicalTraceResult_.ok === true);
   if (csvBtn) csvBtn.disabled = !(stageBatchCanonicalTraceResult_ && stageBatchCanonicalTraceResult_.ok === true);
   if (!box) return;
@@ -8645,7 +8665,7 @@ function runStageBatchCanonicalTrace_(){
     setStageBatchCanonicalTraceResult_({ ok:false, code:"MISSING_APPLICANT_ID", message:"ApplicantID is required for read-only canonical lifecycle trace." });
     return;
   }
-  var btn = document.getElementById("btnStageBatchTraceRun");
+  var btn = stageBatchTraceSurfaceEl_("btnOpsStageBatchTraceRun", "btnStageBatchTraceRun");
   if (btn) {
     btn.disabled = true;
     btn.textContent = "Running...";
