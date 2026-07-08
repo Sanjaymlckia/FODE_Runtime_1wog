@@ -202,7 +202,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\fode-release-preflig
   -ExpectedStudentDeploymentVersion 247
 ```
 
-It verifies main/HEAD, clean or explicitly allowed changes, the exact 12-file clasp allowlist, latest Apps Script version, and independent Admin/Student deployment metadata. It performs no mutation.
+It verifies main/HEAD, clean or explicitly allowed changes, the deployable `.claspignore` contract, latest Apps Script version when supplied, and independent Admin/Student deployment metadata. It performs no mutation.
 
 ### `fode-close-runtime.ps1`
 
@@ -218,23 +218,23 @@ Runtime files and non-Markdown files are rejected unless the operator deliberate
 
 ### `verify-remote-config-before-version.ps1`
 
-External remote-source proof gate. It requires explicit `-AllowExternalRemoteCheck`.
+Apps Script API remote-source proof gate.
 
 It:
 
 - validates the script ID and local Config identity;
-- refuses proof folders inside the repo;
-- pulls source into the approved external proof folder;
-- requires exactly the 12 allowlisted runtime files;
-- hash-compares every runtime file with local source;
-- optionally verifies required `Code.js` and `AdminUI.html` markers;
-- prints the proof path and `SAFE TO RUN clasp version` only after all checks pass.
+- derives expected deployable files from `.claspignore`;
+- reads remote Apps Script source through `projects.getContent`;
+- verifies the remote file set matches the deployable contract;
+- verifies remote Config identity matches local Config identity;
+- optionally verifies required `Code.js`, `Admin.js`, `AdminUI.html`, and `Admin_LifecycleAuthority.js` markers;
+- prints `SAFE TO RUN clasp version` only after all checks pass.
 
 It does not run `clasp push`, create a version, or repin.
 
 ### `verify-runtime.ps1`
 
-Read-only live whoami verification with independent Admin and Student identities:
+Read-only live whoami verification with independent Admin and Student identities. By default, expected identities and whoami URLs come from `runtime-context.json`; pass explicit values only for special checks:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-runtime.ps1 `

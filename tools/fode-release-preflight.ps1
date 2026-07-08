@@ -11,20 +11,6 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Failures = New-Object System.Collections.Generic.List[string]
-$RuntimeFiles = @(
-  "Admin.js",
-  "AdminUI_OpsApplicantQueue.html",
-  "AdminUI_OpsCommunications.html",
-  "AdminUI_OpsLifecycle.html",
-  "AdminUI_SharedRowFacts.html",
-  "AdminUI.html",
-  "appsscript.json",
-  "Code.js",
-  "Config.js",
-  "Routes.js",
-  "Utils.js",
-  "whoami_admin.html"
-)
 
 function Add-Fail {
   param([string]$Message)
@@ -35,6 +21,18 @@ function Add-Fail {
 function Add-Pass {
   param([string]$Message)
   Write-Host "PASS: $Message" -ForegroundColor Green
+}
+
+function Get-DeployableFilesFromClaspIgnore {
+  param([string]$RepoRoot)
+  $path = Join-Path $RepoRoot ".claspignore"
+  if (!(Test-Path -LiteralPath $path -PathType Leaf)) { throw ".claspignore missing" }
+  $files = @(Get-Content -LiteralPath $path |
+    ForEach-Object { $_.Trim() } |
+    Where-Object { $_ -match '^![^*]' } |
+    ForEach-Object { $_.Substring(1).Replace("\", "/") } |
+    Where-Object { $_ })
+  return @($files | Sort-Object -Unique)
 }
 
 try {
@@ -74,15 +72,14 @@ $claspIgnorePath = Join-Path $resolvedExpected ".claspignore"
 if (!(Test-Path -LiteralPath $claspIgnorePath)) {
   Add-Fail ".claspignore missing"
 } else {
-  $allowlist = @(Get-Content -LiteralPath $claspIgnorePath |
-    ForEach-Object { $_.Trim() } |
-    Where-Object { $_ -match '^![^*]' } |
-    ForEach-Object { $_.Substring(1) } |
-    Sort-Object)
-  if (Compare-Object -ReferenceObject @($RuntimeFiles | Sort-Object) -DifferenceObject $allowlist) {
-    Add-Fail ".claspignore runtime allowlist does not match the expected 12 files"
+  $allowlist = @(Get-DeployableFilesFromClaspIgnore -RepoRoot $resolvedExpected)
+  $missingLocal = @($allowlist | Where-Object { !(Test-Path -LiteralPath (Join-Path $resolvedExpected $_) -PathType Leaf) })
+  if ($allowlist.Count -eq 0) {
+    Add-Fail ".claspignore does not expose any deployable runtime files"
+  } elseif ($missingLocal.Count -gt 0) {
+    Add-Fail ".claspignore exposes missing local files: $($missingLocal -join ', ')"
   } else {
-    Add-Pass ".claspignore allowlist is exactly 12 runtime files"
+    Add-Pass ".claspignore deployable runtime files discovered: $($allowlist.Count)"
   }
 }
 

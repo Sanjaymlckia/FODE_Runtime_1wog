@@ -1,10 +1,11 @@
 param(
-  [string]$AdminExpectedRuntime = "r316",
-  [int]$AdminExpectedDeploy = 316,
-  [string]$StudentExpectedRuntime = "r217",
-  [int]$StudentExpectedDeploy = 217,
-  [string]$AdminUrl = "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami",
-  [string]$StudentUrl = "https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec?view=whoami"
+  [string]$AdminExpectedRuntime = "",
+  [int]$AdminExpectedDeploy = 0,
+  [string]$StudentExpectedRuntime = "",
+  [int]$StudentExpectedDeploy = 0,
+  [string]$AdminUrl = "",
+  [string]$StudentUrl = "",
+  [string]$ContextPath = "runtime-context.json"
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,9 +13,30 @@ $ErrorActionPreference = "Stop"
 $ExpectedScriptId = "1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90"
 $Failures = New-Object System.Collections.Generic.List[string]
 
+function Resolve-Context {
+  param([string]$Path)
+  $resolved = Join-Path (Get-Location) $Path
+  if (!(Test-Path -LiteralPath $resolved -PathType Leaf)) {
+    throw "runtime context not found: $resolved"
+  }
+  $ctx = Get-Content -LiteralPath $resolved -Raw | ConvertFrom-Json
+  return $ctx.projects.FODE
+}
+
+$project = Resolve-Context -Path $ContextPath
+$admin = $project.deployments.adminStaging
+$student = $project.deployments.studentStaging
+if (!$AdminExpectedRuntime) { $AdminExpectedRuntime = [string]$admin.expectedRuntime }
+if ($AdminExpectedDeploy -le 0) { $AdminExpectedDeploy = [int]$admin.expectedDeploy }
+if (!$StudentExpectedRuntime) { $StudentExpectedRuntime = [string]$student.expectedRuntime }
+if ($StudentExpectedDeploy -le 0) { $StudentExpectedDeploy = [int]$student.expectedDeploy }
+if (!$AdminUrl) { $AdminUrl = [string]$admin.whoamiUrl }
+if (!$StudentUrl) { $StudentUrl = [string]$student.whoamiUrl }
+if ($project.appsScript.scriptId) { $ExpectedScriptId = [string]$project.appsScript.scriptId }
+
 Write-Host "Expected Admin whoami: $AdminExpectedRuntime / $AdminExpectedDeploy"
 Write-Host "Expected Student whoami: $StudentExpectedRuntime / $StudentExpectedDeploy"
-Write-Host "Override these parameters explicitly during identity-bump releases."
+Write-Host "Source: $ContextPath unless parameters are explicitly supplied."
 Write-Host ""
 
 function Add-Fail {

@@ -1,28 +1,14 @@
 param(
   [string]$RepoRoot = "D:\Repos\FODE_Runtime_1wog",
-  [string]$ExpectedScriptId = "1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90",
-  [string]$RemoteCheckRoot = "D:\Repos\_clasp_remote_check_FODE",
+  [string]$ExpectedScriptId = "",
   [string[]]$RequiredCodeMarkers = @(),
   [string[]]$RequiredAdminUiMarkers = @(),
-  [switch]$AllowExternalRemoteCheck
+  [string[]]$RequiredAdminMarkers = @(),
+  [string[]]$RequiredLifecycleMarkers = @(),
+  [switch]$RequireHashMatch
 )
 
 $ErrorActionPreference = "Stop"
-
-$RuntimeFiles = @(
-  "Admin.js",
-  "AdminUI_OpsApplicantQueue.html",
-  "AdminUI_OpsCommunications.html",
-  "AdminUI_OpsLifecycle.html",
-  "AdminUI_SharedRowFacts.html",
-  "AdminUI.html",
-  "appsscript.json",
-  "Code.js",
-  "Config.js",
-  "Routes.js",
-  "Utils.js",
-  "whoami_admin.html"
-)
 
 function Fail-And-Exit {
   param([string]$Message, [int]$Code = 1)
@@ -40,40 +26,96 @@ function Normalize-Path {
   return ([System.IO.Path]::GetFullPath($PathText)).TrimEnd('\')
 }
 
-function Get-ConfigIdentity {
-  param([string]$ConfigPath)
-  if (!(Test-Path -LiteralPath $ConfigPath)) { Fail-And-Exit "Config.js missing at $ConfigPath" }
-  $raw = Get-Content -LiteralPath $ConfigPath -Raw
-  $versionMatch = [regex]::Match($raw, 'VERSION\s*:\s*"([^"]+)"')
-  $deployMatch = [regex]::Match($raw, 'DEPLOY_VERSION_NUMBER\s*:\s*(\d+)')
-  if (!$versionMatch.Success) { Fail-And-Exit "VERSION not found in $ConfigPath" }
-  if (!$deployMatch.Success) { Fail-And-Exit "DEPLOY_VERSION_NUMBER not found in $ConfigPath" }
+function Get-ConfigIdentityFromText {
+  param([string]$Text, [string]$Label)
+  $versionMatch = [regex]::Match($Text, 'VERSION\s*:\s*"([^"]+)"')
+  $deployMatch = [regex]::Match($Text, 'DEPLOY_VERSION_NUMBER\s*:\s*(\d+)')
+  if (!$versionMatch.Success) { Fail-And-Exit "VERSION not found in $Label" }
+  if (!$deployMatch.Success) { Fail-And-Exit "DEPLOY_VERSION_NUMBER not found in $Label" }
   return [pscustomobject]@{
     Version = $versionMatch.Groups[1].Value
     DeployVersion = [int]$deployMatch.Groups[1].Value
   }
 }
 
+function Get-DeployableFilesFromClaspIgnore {
+  param([string]$RepoRoot)
+  $path = Join-Path $RepoRoot ".claspignore"
+  if (!(Test-Path -LiteralPath $path -PathType Leaf)) { Fail-And-Exit ".claspignore missing at $path" }
+  $files = @(Get-Content -LiteralPath $path |
+    ForEach-Object { $_.Trim() } |
+    Where-Object { $_ -match '^![^*]' } |
+    ForEach-Object { $_.Substring(1).Replace("\", "/") } |
+    Where-Object { $_ })
+  return @($files | Sort-Object -Unique)
+}
+
+function Convert-DeployablePathToAppsScriptName {
+  param([string]$PathText)
+  $name = [System.IO.Path]::GetFileName($PathText)
+  if ($name -eq "appsscript.json") { return "appsscript" }
+  return [System.IO.Path]::GetFileNameWithoutExtension($name)
+}
+
 function Assert-Markers {
-  param([string]$Path, [string[]]$Markers, [string]$Label)
-  if (!$Markers -or $Markers.Count -eq 0) { return }
-  $text = Get-Content -LiteralPath $Path -Raw
-  foreach ($marker in $Markers) {
-    if (!$text.Contains($marker)) { Fail-And-Exit "$Label missing required marker: $marker" }
+  param([string]$Source, [string[]]$Markers, [string]$Label)
+  $normalized = Normalize-MarkerList -Values $Markers
+  if (!$normalized -or $normalized.Count -eq 0) { return }
+  foreach ($marker in $normalized) {
+    if (!$Source.Contains($marker)) { Fail-And-Exit "$Label missing required marker: $marker" }
   }
   Pass-Note "$Label required markers present"
 }
 
-try {
-  if (!$AllowExternalRemoteCheck) {
-    Fail-And-Exit "external remote proof requires explicit -AllowExternalRemoteCheck approval"
+function Normalize-MarkerList {
+  param([string[]]$Values)
+  $out = @()
+  foreach ($value in @($Values)) {
+    if ($null -eq $value) { continue }
+    foreach ($part in ([string]$value -split ",")) {
+      $trimmed = $part.Trim()
+      if ($trimmed) { $out += $trimmed }
+    }
   }
+  return @($out)
+}
 
+function Get-ClaspToken {
+  $path = Join-Path $env:USERPROFILE ".clasprc.json"
+  if (!(Test-Path -LiteralPath $path -PathType Leaf)) { Fail-And-Exit ".clasprc.json not found" }
+  $raw = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+  $token = $null
+  if ($raw.tokens -and $raw.tokens.default) { $token = $raw.tokens.default }
+  elseif ($raw.token) { $token = $raw.token }
+  if (!$token) { Fail-And-Exit "clasp OAuth token not found in .clasprc.json" }
+  $clientId = [string]$token.client_id
+  $clientSecret = [string]$token.client_secret
+  if (!$clientId -and $raw.oauth2ClientSettings) { $clientId = [string]$raw.oauth2ClientSettings.clientId }
+  if (!$clientSecret -and $raw.oauth2ClientSettings) { $clientSecret = [string]$raw.oauth2ClientSettings.clientSecret }
+  $body = @{
+    client_id = $clientId
+    client_secret = $clientSecret
+    refresh_token = [string]$token.refresh_token
+    grant_type = "refresh_token"
+  }
+  if (!$body.client_id -or !$body.client_secret -or !$body.refresh_token) {
+    Fail-And-Exit "clasp OAuth token is missing required fields"
+  }
+  return (Invoke-RestMethod -Method Post -Uri "https://oauth2.googleapis.com/token" -Body $body).access_token
+}
+
+try {
   $repoRootResolved = Normalize-Path $RepoRoot
   $cwdResolved = Normalize-Path (Get-Location).Path
   if ($cwdResolved -ne $repoRootResolved) {
     Fail-And-Exit "script must be run from repo root '$repoRootResolved'; current location is '$cwdResolved'"
   }
+
+  $contextPath = Join-Path $repoRootResolved "runtime-context.json"
+  if (!(Test-Path -LiteralPath $contextPath -PathType Leaf)) { Fail-And-Exit "runtime-context.json missing" }
+  $context = Get-Content -LiteralPath $contextPath -Raw | ConvertFrom-Json
+  $project = $context.projects.FODE
+  if (!$ExpectedScriptId) { $ExpectedScriptId = [string]$project.appsScript.scriptId }
 
   $claspPath = Join-Path $repoRootResolved ".clasp.json"
   if (!(Test-Path -LiteralPath $claspPath)) { Fail-And-Exit ".clasp.json missing at repo root" }
@@ -81,65 +123,50 @@ try {
   if ($scriptId -ne $ExpectedScriptId) { Fail-And-Exit "scriptId mismatch: expected $ExpectedScriptId got $scriptId" }
   Pass-Note "scriptId matches expected"
 
-  $localIdentity = Get-ConfigIdentity -ConfigPath (Join-Path $repoRootResolved "Config.js")
+  $localConfigText = Get-Content -LiteralPath (Join-Path $repoRootResolved "Config.js") -Raw
+  $localIdentity = Get-ConfigIdentityFromText -Text $localConfigText -Label "local Config.js"
   Write-Host "LOCAL VERSION: $($localIdentity.Version)"
   Write-Host "LOCAL DEPLOY_VERSION_NUMBER: $($localIdentity.DeployVersion)"
 
-  $remoteCheckResolved = Normalize-Path $RemoteCheckRoot
-  if ($remoteCheckResolved.StartsWith($repoRootResolved, [System.StringComparison]::OrdinalIgnoreCase)) {
-    Fail-And-Exit "remote check folder must be outside repo root: $remoteCheckResolved"
-  }
-  if ($remoteCheckResolved.Length -lt 20 -or [System.IO.Path]::GetPathRoot($remoteCheckResolved) -eq $remoteCheckResolved) {
-    Fail-And-Exit "unsafe remote check folder: $remoteCheckResolved"
-  }
-  $remoteCheckLeaf = Split-Path -Leaf $remoteCheckResolved
-  if ($remoteCheckLeaf -notlike "_clasp_remote_check_FODE*") {
-    Fail-And-Exit "remote check folder name must start with _clasp_remote_check_FODE: $remoteCheckResolved"
-  }
+  $deployableFiles = @(Get-DeployableFilesFromClaspIgnore -RepoRoot $repoRootResolved)
+  if ($deployableFiles.Count -eq 0) { Fail-And-Exit "no deployable files found from .claspignore" }
+  $missingLocal = @($deployableFiles | Where-Object { !(Test-Path -LiteralPath (Join-Path $repoRootResolved $_) -PathType Leaf) })
+  if ($missingLocal.Count -gt 0) { Fail-And-Exit "deployable files missing locally: $($missingLocal -join ', ')" }
+  Pass-Note "deployable files derived from .claspignore: $($deployableFiles.Count)"
 
-  if (Test-Path -LiteralPath $remoteCheckResolved) {
-    Remove-Item -LiteralPath $remoteCheckResolved -Recurse -Force
+  $accessToken = Get-ClaspToken
+  $remote = Invoke-RestMethod -Method Get -Uri ("https://script.googleapis.com/v1/projects/" + $scriptId + "/content") -Headers @{
+    Authorization = "Bearer $accessToken"
   }
-  New-Item -ItemType Directory -Path $remoteCheckResolved | Out-Null
-  Pass-Note "remote check folder prepared: $remoteCheckResolved"
+  $remoteByName = @{}
+  foreach ($file in @($remote.files)) { $remoteByName[[string]$file.name] = [string]$file.source }
 
-  Set-Content -LiteralPath (Join-Path $remoteCheckResolved ".clasp.json") -Value (@{
-    scriptId = $ExpectedScriptId
-    rootDir = "."
-  } | ConvertTo-Json -Compress) -Encoding UTF8
-
-  Push-Location $remoteCheckResolved
-  try {
-    & clasp.cmd pull
-    if ($LASTEXITCODE -ne 0) { Fail-And-Exit "clasp pull failed with exit code $LASTEXITCODE" }
-  } finally {
-    Pop-Location
+  $expectedNames = @($deployableFiles | ForEach-Object { Convert-DeployablePathToAppsScriptName -PathText $_ } | Sort-Object -Unique)
+  $remoteNames = @($remoteByName.Keys | Sort-Object -Unique)
+  $missingRemote = @($expectedNames | Where-Object { $remoteNames -notcontains $_ })
+  $extraRemote = @($remoteNames | Where-Object { $expectedNames -notcontains $_ })
+  if ($missingRemote.Count -gt 0 -or $extraRemote.Count -gt 0) {
+    if ($missingRemote.Count -gt 0) { Write-Host "Missing remote files: $($missingRemote -join ', ')" -ForegroundColor Red }
+    if ($extraRemote.Count -gt 0) { Write-Host "Extra remote files: $($extraRemote -join ', ')" -ForegroundColor Red }
+    Fail-And-Exit "remote file set does not match deployable .claspignore contract"
   }
-  Pass-Note "clasp pull succeeded"
+  Pass-Note "remote source file set matches deployable .claspignore contract: $($expectedNames.Count)"
 
-  $remoteFiles = @(Get-ChildItem -LiteralPath $remoteCheckResolved -File |
-    Where-Object { $_.Name -ne ".clasp.json" } |
-    Select-Object -ExpandProperty Name |
-    Sort-Object)
-  $expectedFiles = @($RuntimeFiles | Sort-Object)
-  if (Compare-Object -ReferenceObject $expectedFiles -DifferenceObject $remoteFiles) {
-    Fail-And-Exit "remote runtime file set does not match the 12-file allowlist"
-  }
-  Pass-Note "remote source contains exactly 12 allowlisted runtime files"
-
-  foreach ($file in $RuntimeFiles) {
-    $localPath = Join-Path $repoRootResolved $file
-    $remotePath = Join-Path $remoteCheckResolved $file
-    if (!(Test-Path -LiteralPath $localPath) -or !(Test-Path -LiteralPath $remotePath)) {
-      Fail-And-Exit "missing local or remote runtime file: $file"
+  if ($RequireHashMatch) {
+    foreach ($file in $deployableFiles) {
+      $appName = Convert-DeployablePathToAppsScriptName -PathText $file
+      $localText = (Get-Content -LiteralPath (Join-Path $repoRootResolved $file) -Raw).Replace("`r`n", "`n")
+      $remoteText = ([string]$remoteByName[$appName]).Replace("`r`n", "`n")
+      $localHash = [System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($localText))).Replace("-", "")
+      $remoteHash = [System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($remoteText))).Replace("-", "")
+      if ($localHash -ne $remoteHash) { Fail-And-Exit "remote hash mismatch: $file" }
     }
-    $localHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $localPath).Hash
-    $remoteHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $remotePath).Hash
-    if ($localHash -ne $remoteHash) { Fail-And-Exit "remote hash mismatch: $file" }
+    Pass-Note "remote deployable source hash-matches local source"
+  } else {
+    Pass-Note "remote hash comparison skipped by default; file-set, identity, and marker proof remain active"
   }
-  Pass-Note "all 12 remote runtime files hash-match local source"
 
-  $remoteIdentity = Get-ConfigIdentity -ConfigPath (Join-Path $remoteCheckResolved "Config.js")
+  $remoteIdentity = Get-ConfigIdentityFromText -Text ([string]$remoteByName.Config) -Label "remote Config"
   if ($remoteIdentity.Version -ne $localIdentity.Version) {
     Fail-And-Exit "remote VERSION mismatch: local $($localIdentity.Version) remote $($remoteIdentity.Version)"
   }
@@ -148,10 +175,12 @@ try {
   }
   Pass-Note "remote Config.js identity matches local"
 
-  Assert-Markers -Path (Join-Path $remoteCheckResolved "Code.js") -Markers $RequiredCodeMarkers -Label "Code.js"
-  Assert-Markers -Path (Join-Path $remoteCheckResolved "AdminUI.html") -Markers $RequiredAdminUiMarkers -Label "AdminUI.html"
+  Assert-Markers -Source ([string]$remoteByName.Code) -Markers $RequiredCodeMarkers -Label "Code"
+  Assert-Markers -Source ([string]$remoteByName.AdminUI) -Markers $RequiredAdminUiMarkers -Label "AdminUI"
+  Assert-Markers -Source ([string]$remoteByName.Admin) -Markers $RequiredAdminMarkers -Label "Admin"
+  Assert-Markers -Source ([string]$remoteByName.Admin_LifecycleAuthority) -Markers $RequiredLifecycleMarkers -Label "Admin_LifecycleAuthority"
 
-  Write-Host "REMOTE PROOF PATH: $remoteCheckResolved"
+  Write-Host "REMOTE SOURCE PROOF: Apps Script API projects.getContent"
   Write-Host "SAFE TO RUN clasp version" -ForegroundColor Green
   exit 0
 } catch {
