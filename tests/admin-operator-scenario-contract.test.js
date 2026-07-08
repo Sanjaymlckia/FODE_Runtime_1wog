@@ -31,6 +31,12 @@ mustNotMatch(adminUi, />\s*1 hidden by current filter\s*</, "Hidden bucket scena
 mustMatch(adminUi, /function selectVisibleActionabilityRows_/, "Selection scenario must support Select Visible");
 mustMatch(adminUi, /function selectAllActionabilityRows_/, "Selection scenario must support bounded Select All");
 mustMatch(adminUi, /function clearActionabilitySelection_/, "Selection scenario must support Clear Selection");
+mustMatch(adminJs, /function resolveActionabilityState_/, "Selection scenario must use server-side Actionability Resolver");
+mustMatch(adminJs, /COOLING_OFF[\s\S]*COOLDOWN_ACTIVE/, "Cooling-off rows must be explicitly classified before batch preview");
+mustMatch(adminUi, /function actionabilityIsSelectable_/, "Selection scenario must have a single client helper for server selectable state");
+mustMatch(adminUi, /if \(!actionabilityIsSelectable_\(row\)\) return;/, "Select Visible/All must leave non-READY rows unselected");
+mustMatch(adminUi, /READY rows selected/, "Selection scenario must explain that auto-selection uses READY rows only");
+mustMatch(adminUi, /selectBlockReason/, "Disabled row selection must expose the server-provided reason");
 mustMatch(adminUi, /Total selected[\s\S]*Contactable[\s\S]*No email/, "Selection scenario must expose cohort summary counts");
 mustMatch(adminUi, /const ACTIONABILITY_PAGE_SIZE = 10/, "Selection scenario must paginate the worklist at 10 rows");
 mustMatch(adminUi, /Showing " \+ String\(Number\(meta\.start \|\| 0\) \+ 1\) \+ "-" \+ String\(Number\(meta\.end/, "Selection scenario must show visible page range");

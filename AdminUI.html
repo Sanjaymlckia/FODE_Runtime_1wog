@@ -3386,6 +3386,7 @@
     let actionabilityActiveGroup = "";
     let actionabilityPreviewMetaState = { includedRows: 0, scannedRows: 0, applicantIdRows: 0, integrityStatus: "" };
     let actionabilityPreviewCountsState = {};
+    let actionabilityWorkloadSummaryState = {};
     let actionabilityPopulationLedgerState = null;
     let actionabilityResponseTrafficState = null;
     let actionabilityHiddenRecordsState = { byGroup: {}, totalByGroup: {}, perBucketLimit: 5 };
@@ -9504,6 +9505,7 @@ function renderStageDashboard_(items, emptyMessage){
 
     function actionabilityIsEmailActionable_(row){
       var r = row || {};
+      if (Object.prototype.hasOwnProperty.call(r, "selectable")) return actionabilityIsSelectable_(r);
       var state = r.authorityState || {};
       var suppressor = String(r.suppressor || "").toUpperCase();
       if (actionabilityIsUncontactable_(r)) return false;
@@ -10008,6 +10010,17 @@ function renderStageDashboard_(items, emptyMessage){
       return String(r.applicantId || r.rowNumber || "").trim();
     }
 
+    function actionabilityIsSelectable_(row){
+      return !!(row && row.selectable === true && String(row.actionabilityState || "").toUpperCase() === "READY");
+    }
+
+    function actionabilitySelectionGuidance_(row){
+      var r = row || {};
+      if (actionabilityIsSelectable_(r)) return "Ready for batch communication.";
+      if (r.selectBlockReason) return String(r.selectBlockReason);
+      return actionabilityContactGuidance_(r);
+    }
+
     function actionabilitySelectedRows_(){
       var hidden = actionabilityHiddenRecordsState && actionabilityHiddenRecordsState.byGroup ? actionabilityHiddenRecordsState.byGroup : {};
       var source = Array.isArray(actionabilityPreviewRows) ? actionabilityPreviewRows.slice() : [];
@@ -10036,7 +10049,7 @@ function renderStageDashboard_(items, emptyMessage){
         var template = actionabilityIsEmailActionable_(row) ? actionabilityCommsLabel_(row && row.recommendedMessageType) : "";
         if (template) templateCounts[template] = Number(templateCounts[template] || 0) + 1;
         if (!actionabilityIsEmailActionable_(row)) {
-          var reason = actionabilityContactGuidance_(row);
+          var reason = actionabilitySelectionGuidance_(row);
           blockedReasons[reason] = Number(blockedReasons[reason] || 0) + 1;
         }
       });
@@ -10097,7 +10110,7 @@ function renderStageDashboard_(items, emptyMessage){
       var status = actionabilityBatchMessage || (selected
         ? sourceLabel + String(selected) + " selected. " + String(eligible) + " email-ready, " + String(blocked) + " blocked by Contactability Gate or cooldown."
         : "No applicants selected.");
-      var canBatchEmail = selected > 1;
+      var canBatchEmail = eligible > 1;
       var canExport = selected > 0;
       return '<div class="actionabilitySelectionBar" aria-label="Current Worklist selection and batch readiness">'
         + '<div><strong>Selection</strong><span class="actionabilitySelectionStatus">' + esc(status) + '</span></div>'
@@ -10633,6 +10646,13 @@ function renderStageDashboard_(items, emptyMessage){
       var row = (Array.isArray(actionabilityRenderedRows) ? actionabilityRenderedRows : [])[Number(index)] || null;
       var key = actionabilityRowKey_(row);
       if (!key) return;
+      if (checked && !actionabilityIsSelectable_(row)) {
+        delete actionabilitySelectedKeys[key];
+        actionabilitySelectionSource = "manual";
+        actionabilityBatchMessage = actionabilitySelectionGuidance_(row);
+        renderActionabilityPreview_({ preserveRows: true });
+        return;
+      }
       if (checked) actionabilitySelectedKeys[key] = true;
       else delete actionabilitySelectedKeys[key];
       actionabilitySelectionSource = "manual";
@@ -10641,12 +10661,18 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function selectVisibleActionabilityRows_(){
-      (Array.isArray(actionabilityRenderedRows) ? actionabilityRenderedRows : []).forEach(function(row){
+      var visible = Array.isArray(actionabilityRenderedRows) ? actionabilityRenderedRows : [];
+      var ready = 0;
+      visible.forEach(function(row){
+        if (!actionabilityIsSelectable_(row)) return;
         var key = actionabilityRowKey_(row);
-        if (key) actionabilitySelectedKeys[key] = true;
+        if (key) {
+          actionabilitySelectedKeys[key] = true;
+          ready++;
+        }
       });
       actionabilitySelectionSource = "page";
-      actionabilityBatchMessage = "Current page selection: " + String((actionabilityRenderedRows || []).length) + " visible rows selected.";
+      actionabilityBatchMessage = "Current page selection: " + String(ready) + " READY rows selected; " + String(Math.max(0, visible.length - ready)) + " non-actionable rows left visible with reasons.";
       renderActionabilityPreview_({ preserveRows: true });
     }
 
@@ -10657,14 +10683,19 @@ function renderStageDashboard_(items, emptyMessage){
         var hidden = actionabilityHiddenRecordsState && actionabilityHiddenRecordsState.byGroup && actionabilityHiddenRecordsState.byGroup[actionabilityActiveGroup];
         if (Array.isArray(hidden)) rows = rows.concat(hidden);
       }
+      var ready = 0;
       rows.forEach(function(row){
+        if (!actionabilityIsSelectable_(row)) return;
         var key = actionabilityRowKey_(row);
-        if (key) actionabilitySelectedKeys[key] = true;
+        if (key) {
+          actionabilitySelectedKeys[key] = true;
+          ready++;
+        }
       });
       actionabilitySelectionSource = "all";
       actionabilityBatchMessage = actionabilityActiveGroup
-        ? "All bounded rows selected for " + actionabilityGroupLabel_(actionabilityActiveGroup) + "."
-        : "All bounded returned worklist rows selected.";
+        ? "All READY rows selected for " + actionabilityGroupLabel_(actionabilityActiveGroup) + ": " + String(ready) + "."
+        : "All READY rows selected from the bounded returned worklist: " + String(ready) + ".";
       renderActionabilityPreview_({ preserveRows: true });
     }
 
@@ -10805,6 +10836,7 @@ function renderStageDashboard_(items, emptyMessage){
           integrityStatus: String(ledger && ledger.integrityStatus || "")
         };
         actionabilityPreviewCountsState = data.countsByOwner || {};
+        actionabilityWorkloadSummaryState = data.workloadSummary || {};
         actionabilityHiddenRecordsState = data.hiddenRecords && typeof data.hiddenRecords === "object" ? data.hiddenRecords : { byGroup: {}, totalByGroup: {}, perBucketLimit: 5 };
       }
       if (data.preserveRows !== true && Array.isArray(data.rows)) actionabilityPreviewRows = data.rows.slice();
@@ -10837,7 +10869,15 @@ function renderStageDashboard_(items, emptyMessage){
         var populationTotal = Number(actionabilityPreviewMetaState.applicantIdRows || actionabilityPreviewMetaState.includedRows || rows.length || 0);
         var filterLabel = actionabilityActiveGroup ? actionabilityGroupLabel_(actionabilityActiveGroup) : "All";
         var integrity = actionabilityPreviewMetaState.integrityStatus ? (" | Ledger " + actionabilityPreviewMetaState.integrityStatus) : "";
-        metaEl.textContent = String(displayRows.length) + " bounded worklist rows / " + String(populationTotal) + " total applicant population | Filter: " + filterLabel + integrity;
+        var workload = actionabilityWorkloadSummaryState || {};
+        var workloadText = "READY " + String(Number(workload.READY || 0))
+          + " / COOLING_OFF " + String(Number(workload.COOLING_OFF || 0))
+          + " / AWAITING_APPLICANT " + String(Number(workload.AWAITING_APPLICANT || 0))
+          + " / AWAITING_PAYMENT " + String(Number(workload.AWAITING_PAYMENT || 0))
+          + " / REVIEW_REQUIRED " + String(Number(workload.REVIEW_REQUIRED || 0))
+          + " / COMPLETE " + String(Number(workload.COMPLETE || 0))
+          + " / UNKNOWN " + String(Number(workload.UNKNOWN || 0));
+        metaEl.textContent = String(displayRows.length) + " bounded worklist rows / " + String(populationTotal) + " total applicant population | Filter: " + filterLabel + " | Workload: " + workloadText + integrity;
       }
       if (!displayRows.length) {
         rowsEl.innerHTML = '<div class="actionabilityEmpty">No actionable work returned.</div>';
@@ -10879,9 +10919,11 @@ function renderStageDashboard_(items, emptyMessage){
         var paymentClass = state.paymentVerified ? "ok" : (state.paymentEvidencePresent ? "warn" : "blocked");
         var contactClass = actionabilityIsEmailActionable_(r) ? "ok" : (actionabilityContactStatus_(r) === "Available" ? "warn" : "blocked");
         var rowKey = actionabilityRowKey_(r);
-        var selected = !!actionabilitySelectedKeys[rowKey];
-        html += '<div class="actionabilityWorklistRow" role="row" data-actionability-row="' + esc(String(index)) + '" oncontextmenu="return openActionabilityContextMenu_(event, ' + String(index) + ')">';
-        html += '<div class="actionabilityWorklistCell actionabilityApplicantCell" role="cell"><label class="actionabilitySelectBox"><input type="checkbox" aria-label="Select applicant ' + esc(r.applicantId || "") + '" onchange="toggleActionabilitySelection_(' + String(index) + ', this.checked)" ' + (selected ? "checked" : "") + '><strong>' + esc(r.name || "Name not shown") + '</strong></label><span class="actionabilityApplicantId">' + esc(r.applicantId || "") + '</span><span class="actionabilityNextAction">' + esc(nextAction) + '</span><span class="actionabilityBlocker">' + esc(blocker) + '</span><span class="actionabilityGuidance">' + esc(actionabilityContactGuidance_(r)) + '</span></div>';
+        var selectable = actionabilityIsSelectable_(r);
+        var selected = selectable && !!actionabilitySelectedKeys[rowKey];
+        if (!selectable && rowKey && actionabilitySelectedKeys[rowKey]) delete actionabilitySelectedKeys[rowKey];
+        html += '<div class="actionabilityWorklistRow" role="row" data-actionability-row="' + esc(String(index)) + '" data-actionability-state="' + esc(r.actionabilityState || "UNKNOWN") + '" oncontextmenu="return openActionabilityContextMenu_(event, ' + String(index) + ')">';
+        html += '<div class="actionabilityWorklistCell actionabilityApplicantCell" role="cell"><label class="actionabilitySelectBox"><input type="checkbox" aria-label="Select applicant ' + esc(r.applicantId || "") + '" onchange="toggleActionabilitySelection_(' + String(index) + ', this.checked)" ' + (selected ? "checked" : "") + (selectable ? "" : " disabled") + ' title="' + esc(selectable ? "READY for batch communication." : actionabilitySelectionGuidance_(r)) + '"><strong>' + esc(r.name || "Name not shown") + '</strong></label><span class="actionabilityApplicantId">' + esc(r.applicantId || "") + '</span><span class="actionabilityNextAction">' + esc(nextAction) + '</span><span class="actionabilityBlocker">' + esc(blocker) + '</span><span class="actionabilityGuidance">' + esc(actionabilitySelectionGuidance_(r)) + '</span></div>';
         html += '<div class="actionabilityWorklistCell actionabilityOwnerCell" role="cell"><strong>' + esc(actionabilityGroupLabel_(actionabilityGroupKey_(r))) + '</strong><span class="actionabilityAuthority">' + esc(authority) + '</span><span class="opsStatusPill ' + priorityClass + '">' + esc(priority) + '</span></div>';
         html += '<div class="actionabilityWorklistCell actionabilityStatusChips actionabilityProgressCell" role="cell"><span class="actionabilityMiniChip ' + (state.portalSubmitted ? "ok" : "warn") + '">' + esc(portalLabel) + '</span><span class="actionabilityMiniChip ' + docsClass + '">' + esc(docsLabel) + '</span><span class="actionabilityMiniChip ' + paymentClass + '">' + esc(paymentLabel) + '</span><span class="actionabilityMiniChip ' + contactClass + '">' + esc(contactLabel) + '</span></div>';
         html += '<div class="actionabilityWorklistCell actionabilityDueBlock" role="cell"><strong>' + esc(due) + '</strong><span>Age ' + esc(r.ageDays === "" || r.ageDays === undefined ? "-" : String(r.ageDays) + "d") + ' | Last ' + esc(r.lastContactAgeDays === "" ? "none" : String(r.lastContactAgeDays) + "d") + '</span><span>' + esc(commNext) + '</span></div>';
@@ -10893,6 +10935,7 @@ function renderStageDashboard_(items, emptyMessage){
           + '<div class="actionabilityFact"><strong>Missing Documents:</strong> <span>' + esc(actionabilityMissingDocumentsDetail_(r)) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Lifecycle:</strong> <span>' + esc(String(state.lifecycleStage || "Not shown").replace(/_/g, " ")) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Next Message:</strong> <span>' + esc(commNext) + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Actionability:</strong> <span>' + esc(r.actionabilityState || "UNKNOWN") + ' | ' + esc(r.reasonCode || "") + '</span></div>'
           + '<div class="actionabilityFact"><strong>Row:</strong> <span>' + esc(String(Number(r.rowNumber || 0) || "-")) + '</span></div>'
           + '</div></details>';
         html += '</div>';

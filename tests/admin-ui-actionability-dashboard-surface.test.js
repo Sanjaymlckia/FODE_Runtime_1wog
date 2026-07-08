@@ -217,6 +217,14 @@ assert.match(adminUi, /data-actionability-context="copy-contact"/, "Context menu
 assert.match(adminUi, /data-actionability-context="copy-blocker"/, "Context menu must include safe blocker copy action");
 assert.doesNotMatch(adminUi, /data-actionability-context="(?:send|reset|status|payment|document)/i, "Context menu must not expose mutation actions");
 assert.match(adminUi, /let actionabilitySelectedKeys = \{\}/, "Current Worklist must keep explicit selection state");
+assert.match(adminJs, /function resolveActionabilityState_/, "Server-side Actionability Resolver must exist");
+assert.match(adminJs, /actionabilityState:[\s\S]*selectable:[\s\S]*selectBlockReason:[\s\S]*coolingOffUntil:[\s\S]*recommendedAction:[\s\S]*reasonCode:/, "Actionability rows must expose workload state, selection eligibility, and operator reasons");
+assert.match(adminJs, /workloadSummary:\s*\{ READY: 0, COOLING_OFF: 0, AWAITING_APPLICANT: 0, AWAITING_PAYMENT: 0, REVIEW_REQUIRED: 0, COMPLETE: 0, UNKNOWN: 0 \}/, "Actionability preview must return workload summaries separately from Population Ledger counts");
+assert.match(functionSource("actionabilityIsEmailActionable_"), /Object\.prototype\.hasOwnProperty\.call\(r, "selectable"\)[\s\S]*actionabilityIsSelectable_\(r\)/, "Client email actionability must defer to server-provided selectable state");
+assert.match(functionSource("selectVisibleActionabilityRows_"), /if \(!actionabilityIsSelectable_\(row\)\) return;/, "Select Visible must auto-select READY rows only");
+assert.match(functionSource("selectAllActionabilityRows_"), /if \(!actionabilityIsSelectable_\(row\)\) return;/, "Select All must auto-select READY rows only");
+assert.match(adminUi, /READY rows selected/, "Selection feedback must tell operators that only READY rows were selected");
+assert.match(adminUi, /data-actionability-state=/, "Worklist rows must expose server-derived actionability state");
 assert.match(adminUi, /function selectVisibleActionabilityRows_/, "Current Worklist must support Select Visible");
 assert.match(adminUi, /function selectAllActionabilityRows_/, "Current Worklist must support Select All bounded by current authority/filter");
 assert.match(adminUi, /function clearActionabilitySelection_/, "Current Worklist must support Clear Selection");
@@ -242,7 +250,7 @@ assert.match(adminUi, /Technical Diagnostics/, "Batch modal must keep diagnostic
 assert.match(functionSource("actionabilityBatchCommunication_"), /openBatchCommunicationFromSelection_\("selected"\)/, "Selected cohort batch communication must open the batch modal");
 assert.match(functionSource("actionabilityBatchCommunication_"), /actionabilityBatchMessage = ""[\s\S]*actionabilityBatchPanelMode = ""[\s\S]*openBatchCommunicationFromSelection_\("selected"\)/, "Selected cohort batch communication must open the modal directly without a handoff panel");
 assert.match(functionSource("actionabilityBatchReminder_"), /openBatchCommunicationFromSelection_\("reminder"\)/, "Selected reminder cohort must open the batch modal with reminder intent");
-assert.match(functionSource("renderActionabilitySelectionControls_"), /var canBatchEmail = selected > 1;/, "Batch Communication must be enabled for multi-applicant cohorts so the modal can reconcile eligibility");
+assert.match(functionSource("renderActionabilitySelectionControls_"), /var canBatchEmail = eligible > 1;/, "Batch Communication must be enabled only when two or more READY rows are selected");
 assert.doesNotMatch(adminUi, /Batch Communication Handoff|Batch Reminder Handoff/, "Batch workflow must not expose a handoff panel as the primary result");
 assert.doesNotMatch(adminUi, /Open first eligible in Review/, "Batch workflow must not route multi-applicant cohorts through the Review Workspace path");
 assert.match(functionSource("previewBatchCommunicationModal_"), /admin_previewStageBatch[\s\S]*admin_previewSelectedApplicantBatch/, "Batch modal preview must support both stage and selected cohort sources");
@@ -258,7 +266,7 @@ assert.match(functionSource("openBatchCommunicationFromSelection_"), /ids\.lengt
 assert.match(functionSource("openBatchCommunicationFromSelection_"), /!ids\.length[\s\S]*Select at least two applicants/, "Empty selected cohorts must explain why the batch modal cannot open");
 assert.match(functionSource("renderBatchPanel"), /sendBtn\.style\.display = "none"/, "Legacy inline stage send control must be hidden so the modal remains primary");
 assert.match(functionSource("openBatchCommunicationFromSelection_"), /actionabilitySelectionSourceLabel_\(\)/, "Selected cohort modal source must identify page, manual, or full bounded cohort source");
-assert.match(functionSource("selectVisibleActionabilityRows_"), /Current page selection[\s\S]*actionabilityRenderedRows/, "Select Visible must select the current page only");
+assert.match(functionSource("selectVisibleActionabilityRows_"), /var visible = Array\.isArray\(actionabilityRenderedRows\)[\s\S]*Current page selection[\s\S]*READY rows selected/, "Select Visible must select READY rows from the current page only");
 assert.match(functionSource("selectAllActionabilityRows_"), /actionabilitySelectionSource = "all"/, "Select All must mark the full bounded cohort source");
 assert.match(functionSource("loadActionabilityPreview_"), /admin_getActionabilityPreview\(\{ limit: 100/, "Operations Workspace must load the full existing bounded worklist cap before client pagination");
 assert.match(functionSource("batchCommCanSend_"), /previewStale === true/, "Quick exclusions must make preview stale before send");

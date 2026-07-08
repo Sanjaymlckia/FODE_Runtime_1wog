@@ -2869,6 +2869,113 @@ function actionabilityPreviewUrgency_(owner, nextAction, dateInfo, suppressor, c
   return { level: "NORMAL", reason: "Case is current or has insufficient date evidence for escalation." };
 }
 
+function actionabilityBatchMessageTypeForRecommendation_(recommendedMessageType) {
+  var normalized = clean_(recommendedMessageType || "").toLowerCase();
+  if (normalized === "document_completion_reminder" || normalized === "document_completion_escalation") return "docs_missing";
+  if (normalized === "payment_reminder" || normalized === "payment_escalation") return "payment_followup";
+  if (normalized === "docs_missing" || normalized === "payment_followup" || normalized === "legacy_invite" || normalized === "reminder") return normalized;
+  return "";
+}
+
+function resolveActionabilityState_(facts) {
+  var f = facts && typeof facts === "object" ? facts : {};
+  var owner = clean_(f.owner || "").toUpperCase();
+  var nextAction = clean_(f.nextAction || "").toUpperCase();
+  var suppressor = clean_(f.suppressor || "").toUpperCase();
+  var lifecycleStage = clean_(f.lifecycleStage || "").toUpperCase();
+  var recommendedMessageType = clean_(f.recommendedMessageType || "");
+  var recommendedBatchType = actionabilityBatchMessageTypeForRecommendation_(recommendedMessageType);
+  var stageRecommendedType = typeof communicationRecommendedMessageTypeForStage_ === "function"
+    ? clean_(communicationRecommendedMessageTypeForStage_(lifecycleStage) || "")
+    : "";
+  var coolingOffUntil = clean_(f.coolingOffUntil || "");
+  var out = {
+    actionabilityState: "UNKNOWN",
+    selectable: false,
+    selectBlockReason: "Actionability could not be derived. Open Review Workspace before batch action.",
+    coolingOffUntil: coolingOffUntil,
+    recommendedAction: clean_(f.nextAction || "REVIEW"),
+    reasonCode: "UNKNOWN"
+  };
+
+  if (owner === "NONE" || nextAction === "NO_ACTION" || suppressor === "COMPLETED_OR_ENROLLED") {
+    out.actionabilityState = "COMPLETE";
+    out.selectBlockReason = "No operator action is required.";
+    out.recommendedAction = "NO_ACTION";
+    out.reasonCode = "COMPLETE";
+    return out;
+  }
+  if (suppressor === "COOLDOWN_ACTIVE") {
+    out.actionabilityState = "COOLING_OFF";
+    out.selectBlockReason = coolingOffUntil
+      ? "Cooling-off active until " + coolingOffUntil + "."
+      : "Cooling-off active after a recent communication.";
+    out.recommendedAction = "WAIT";
+    out.reasonCode = "COOLDOWN_ACTIVE";
+    return out;
+  }
+  if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") {
+    out.actionabilityState = "REVIEW_REQUIRED";
+    out.selectBlockReason = "Contactability Gate must be resolved before batch communication.";
+    out.recommendedAction = "FIX_CONTACT_DETAILS";
+    out.reasonCode = suppressor;
+    return out;
+  }
+  if (suppressor === "OFFICER_ACTION_PENDING" || owner === "OFFICER") {
+    out.actionabilityState = "REVIEW_REQUIRED";
+    out.selectBlockReason = "Admissions review is required before applicant communication.";
+    out.recommendedAction = "REVIEW_DOCUMENTS";
+    out.reasonCode = "OFFICER_ACTION_PENDING";
+    return out;
+  }
+  if (suppressor === "FINANCE_ACTION_PENDING" || owner === "FINANCE") {
+    out.actionabilityState = "REVIEW_REQUIRED";
+    out.selectBlockReason = "Finance verification is required before applicant communication.";
+    out.recommendedAction = "VERIFY_PAYMENT";
+    out.reasonCode = "FINANCE_ACTION_PENDING";
+    return out;
+  }
+  if (suppressor === "ADMIN_ACTION_PENDING" || owner === "ADMIN") {
+    out.actionabilityState = "REVIEW_REQUIRED";
+    out.selectBlockReason = "Admin review is required before batch communication.";
+    out.recommendedAction = clean_(f.nextAction || "REVIEW");
+    out.reasonCode = "ADMIN_ACTION_PENDING";
+    return out;
+  }
+  if (owner === "APPLICANT") {
+    if (!recommendedBatchType) {
+      out.actionabilityState = nextAction === "SEND_PAYMENT_REMINDER" ? "AWAITING_PAYMENT" : "AWAITING_APPLICANT";
+      out.selectBlockReason = nextAction === "SEND_PAYMENT_REMINDER"
+        ? "Waiting for payment action; no batch-safe payment follow-up is currently recommended."
+        : "Waiting for applicant action; no batch-safe communication is currently recommended.";
+      out.recommendedAction = clean_(f.nextAction || "WAIT");
+      out.reasonCode = out.actionabilityState;
+      return out;
+    }
+    if (stageRecommendedType && stageRecommendedType !== recommendedBatchType) {
+      out.actionabilityState = nextAction === "SEND_PAYMENT_REMINDER" ? "AWAITING_PAYMENT" : "AWAITING_APPLICANT";
+      out.selectBlockReason = "Current lifecycle stage recommends " + stageRecommendedType + ", not " + recommendedBatchType + ".";
+      out.recommendedAction = "WAIT";
+      out.reasonCode = "TEMPLATE_STAGE_MISMATCH";
+      return out;
+    }
+    out.actionabilityState = "READY";
+    out.selectable = true;
+    out.selectBlockReason = "";
+    out.recommendedAction = recommendedBatchType;
+    out.reasonCode = "READY";
+    return out;
+  }
+  if (nextAction === "SEND_PAYMENT_REMINDER") {
+    out.actionabilityState = "AWAITING_PAYMENT";
+    out.selectBlockReason = "Payment follow-up is not currently ready for batch communication.";
+    out.recommendedAction = "WAIT";
+    out.reasonCode = "AWAITING_PAYMENT";
+    return out;
+  }
+  return out;
+}
+
 function buildActionabilityPreviewRow_(rowObj, rowNumber) {
   var row = rowObj || {};
   var applicantId = clean_(row.ApplicantID || "");
@@ -2948,12 +3055,26 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
   if (isUncontactable) {
     urgency = { level: "UNCONTACTABLE", reason: "No valid email or phone fallback is available." };
   }
+  var actionabilityState = resolveActionabilityState_({
+    owner: owner,
+    nextAction: nextAction,
+    suppressor: suppressor,
+    lifecycleStage: lifecycleStage,
+    recommendedMessageType: recommendedMessageType,
+    coolingOffUntil: row.Email_Next_Action_Date || ""
+  });
   return {
     rowNumber: rowNumber,
     applicantId: applicantId,
     name: name,
     actionOwner: owner,
     nextAction: nextAction,
+    actionabilityState: actionabilityState.actionabilityState,
+    selectable: actionabilityState.selectable === true,
+    selectBlockReason: actionabilityState.selectBlockReason,
+    coolingOffUntil: actionabilityState.coolingOffUntil,
+    recommendedAction: actionabilityState.recommendedAction,
+    reasonCode: actionabilityState.reasonCode,
     urgencyLevel: urgency.level,
     urgencyReason: urgency.reason,
     suppressor: suppressor,
@@ -3084,6 +3205,7 @@ function admin_getActionabilityPreview(payload) {
     scannedRows: Math.max(0, (data || []).length - 1),
     includedRows: 0,
     countsByOwner: { APPLICANT: 0, OFFICER: 0, FINANCE: 0, ADMIN: 0, SYSTEM: 0, NONE: 0 },
+    workloadSummary: { READY: 0, COOLING_OFF: 0, AWAITING_APPLICANT: 0, AWAITING_PAYMENT: 0, REVIEW_REQUIRED: 0, COMPLETE: 0, UNKNOWN: 0 },
     populationLedger: populationLedgerPublicSummary_(ledger),
     rows: [],
     hiddenRecords: { perBucketLimit: 5, byGroup: {}, totalByGroup: {} }
@@ -3103,6 +3225,9 @@ function admin_getActionabilityPreview(payload) {
     var owner = clean_(item.actionOwner || "NONE").toUpperCase() || "NONE";
     if (!Object.prototype.hasOwnProperty.call(out.countsByOwner, owner)) out.countsByOwner[owner] = 0;
     out.countsByOwner[owner]++;
+    var state = clean_(item.actionabilityState || "UNKNOWN").toUpperCase() || "UNKNOWN";
+    if (!Object.prototype.hasOwnProperty.call(out.workloadSummary, state)) out.workloadSummary[state] = 0;
+    out.workloadSummary[state]++;
     rows.push(item);
   }
   rows.sort(compareActionabilityPreviewRows_);
