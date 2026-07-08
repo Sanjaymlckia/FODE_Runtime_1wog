@@ -10446,6 +10446,39 @@ function renderStageDashboard_(items, emptyMessage){
       return { text: "Preview required", cls: "warn" };
     }
 
+    function batchCommAuthoritySummary_(preview){
+      var p = preview || {};
+      var recipients = Array.isArray(p.recipients) ? p.recipients : [];
+      var counts = {};
+      var mismatch = 0;
+      recipients.forEach(function(rec){
+        var auth = rec && rec.authorityDiagnostics && typeof rec.authorityDiagnostics === "object" ? rec.authorityDiagnostics : {};
+        var source = String(auth.authoritySource || "").trim().toUpperCase();
+        if (!source) return;
+        counts[source] = Number(counts[source] || 0) + 1;
+        if (auth.hasLifecycleMismatch === true) mismatch++;
+      });
+      var keys = Object.keys(counts).sort();
+      return {
+        label: keys.length ? keys.map(function(key){ return key + " " + counts[key]; }).join(" / ") : "Pending preview",
+        mismatchCount: mismatch
+      };
+    }
+
+    function batchCommAuthorityDetail_(rec){
+      var r = rec && typeof rec === "object" ? rec : {};
+      var auth = r.authorityDiagnostics && typeof r.authorityDiagnostics === "object" ? r.authorityDiagnostics : {};
+      var source = String(auth.authoritySource || "").trim();
+      if (!source) return "";
+      var parts = ["Authority: " + source];
+      if (auth.legacyLifecycleStage) parts.push("Legacy: " + String(auth.legacyLifecycleStage));
+      if (auth.canonicalBaseState) parts.push("Canonical: " + String(auth.canonicalBaseState));
+      if (Array.isArray(auth.canonicalOverlays) && auth.canonicalOverlays.length) parts.push("Overlays: " + auth.canonicalOverlays.join(", "));
+      if (auth.canonicalRecommendedMessageType) parts.push("Recommended: " + String(auth.canonicalRecommendedMessageType));
+      if (auth.hasLifecycleMismatch === true) parts.push(auth.mismatchReason || "Lifecycle mismatch");
+      return parts.join(" | ");
+    }
+
     function batchCommRecipientReason_(rec){
       var r = rec && typeof rec === "object" ? rec : {};
       var reason = String(r.reason || r.blockReason || r.blockedReason || r.statusReason || r.deliveryReason || "").trim();
@@ -10528,6 +10561,7 @@ function renderStageDashboard_(items, emptyMessage){
       if (sourceEl) sourceEl.textContent = "Source: " + batchCommSourceSummary_();
       var preview = batchCommState.preview || {};
       var counts = batchCommRecipientCounts_(preview);
+      var authoritySummary = batchCommAuthoritySummary_(preview);
       var total = counts.recipients;
       var eligible = counts.validEmail;
       var stateLabel = batchCommStateLabel_();
@@ -10568,7 +10602,9 @@ function renderStageDashboard_(items, emptyMessage){
           + '<div class="batchCommSummaryItem"><strong>Excluded / Blocked</strong><span>' + esc(Number(counts.excluded || 0)) + ' / ' + esc(Number(counts.blocked || 0)) + '</span></div>'
           + '<div class="batchCommSummaryItem"><strong>Source</strong><span>' + esc(batchCommSourceSummary_()) + '</span></div>'
           + '<div class="batchCommSummaryItem"><strong>Estimated send</strong><span>' + esc(eligible) + '</span></div>'
-          + '<div class="batchCommSummaryItem"><strong>Readiness</strong><span>' + esc(batchCommCanSend_() ? "Ready to Send" : "Preview required or no eligible recipients") + '</span></div>'
+          + '<div class="batchCommSummaryItem"><strong>Readiness</strong><span>' + esc(batchCommCanSend_() ? "Ready to Send | Authority: " + authoritySummary.label : "Preview required or no eligible recipients") + '</span></div>'
+          + '<div class="batchCommSummaryItem"><strong>Communication Authority</strong><span>' + esc(authoritySummary.label) + '</span></div>'
+          + '<div class="batchCommSummaryItem"><strong>Lifecycle Mismatches</strong><span>' + esc(Number(authoritySummary.mismatchCount || 0)) + '</span></div>'
           + '</div>'
           + batchCommReasonSummaryHtml_(preview, counts);
       }
@@ -10601,14 +10637,22 @@ function renderStageDashboard_(items, emptyMessage){
           var id = String(rec.applicantId || "");
           var checked = batchCommState.excludedApplicantIds[id] ? "" : "checked";
           var reason = batchCommRecipientReason_(rec);
+          var authorityDetail = batchCommAuthorityDetail_(rec);
           return '<label class="batchCommRecipient">'
             + '<input type="checkbox" ' + checked + ' onchange="toggleBatchCommRecipient_(\'' + esc(id) + '\', this.checked)">'
-            + '<span><strong>' + esc(rec.name || "Applicant") + '</strong><span>' + esc(rec.email || "Email pending preview") + '</span>' + (reason ? '<span class="reason">' + esc(reason) + '</span>' : '') + '</span>'
+            + '<span><strong>' + esc(rec.name || "Applicant") + '</strong><span>' + esc(rec.email || "Email pending preview") + '</span>' + (reason ? '<span class="reason">' + esc(reason) + '</span>' : '') + (authorityDetail ? '<span class="reason">' + esc(authorityDetail) + '</span>' : '') + '</span>'
             + '<span class="status">' + esc(rec.included === false || batchCommState.excludedApplicantIds[id] ? "Excluded" : (rec.status || "Included")) + '</span>'
             + '</label>';
         }).join("") || '<div class="muted">No recipients in this cohort.</div>';
       }
-      if (diagEl) diagEl.textContent = JSON.stringify(preview.technicalDiagnostics || preview || {}, null, 2);
+      if (diagEl) {
+        var technical = Object.assign({}, preview.technicalDiagnostics || {}, {
+          selectionAuthority: "Actionability",
+          communicationAuthority: "Send gate",
+          communicationAuthoritySummary: authoritySummary
+        });
+        diagEl.textContent = JSON.stringify(technical, null, 2);
+      }
       if (resultEl) {
         var result = batchCommState.sendResult;
         if (!result) {

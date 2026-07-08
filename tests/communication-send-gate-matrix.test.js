@@ -229,9 +229,11 @@ const adminSend = extractFunction(adminSource, "admin_sendApplicantMessage");
 const stageSend = extractFunction(adminSource, "admin_sendStageBatch");
 const selectedBatchPreview = extractFunction(adminSource, "admin_previewSelectedApplicantBatch");
 const selectedBatchSend = extractFunction(adminSource, "admin_sendSelectedApplicantBatch");
+const selectedBatchAuthorityDiagnostics = extractFunction(adminSource, "selectedApplicantBatchAuthorityDiagnostics_");
 vm.runInContext([
   extractFunction(adminSource, "selectedApplicantBatchTemplateLabel_"),
-  extractFunction(adminSource, "selectedApplicantBatchOperatorBlockReason_")
+  extractFunction(adminSource, "selectedApplicantBatchOperatorBlockReason_"),
+  selectedBatchAuthorityDiagnostics
 ].join("\n\n"), context);
 assert.match(adminPreview, /authorityOverrideReason/, "Selected preview wrapper must pass authority override reason to backend authority");
 assert.match(adminSend, /authorityOverrideReason/, "Selected send wrapper must pass authority override reason to backend authority");
@@ -241,6 +243,21 @@ assert.match(selectedBatchPreview, /requireOperationsAdmin_\(adminEmail\)/, "Sel
 assert.match(selectedBatchSend, /requireOperationsAdmin_\(adminEmail\)/, "Selected cohort batch send must remain Operations/Super gated");
 assert.match(selectedBatchPreview, /technicalReason:\s*rawReason/, "Selected cohort preview must retain raw authority detail only as technical diagnostics");
 assert.match(selectedBatchPreview, /selectedApplicantBatchOperatorBlockReason_\(code, rawReason, messageType\)/, "Selected cohort preview must map raw block reasons to operator-readable text");
+assert.match(selectedBatchPreview, /authorityDiagnostics:\s*selectedApplicantBatchAuthorityDiagnostics_/, "Selected cohort preview must expose per-recipient Communication Authority diagnostics");
+assert.match(selectedBatchAuthorityDiagnostics, /authoritySource[\s\S]*legacyLifecycleStage[\s\S]*canonicalBaseState[\s\S]*canonicalOverlays[\s\S]*canonicalRecommendedMessageType[\s\S]*hasLifecycleMismatch/, "Recipient authority diagnostics must expose legacy/canonical lifecycle disagreement fields");
+const canonicalRecipientDiagnostics = context.selectedApplicantBatchAuthorityDiagnostics_({
+  lifecycleStage: "REMINDER_DUE",
+  canonicalLifecycleAuthority: {
+    authoritySource: "CANONICAL_LIFECYCLE",
+    legacyStage: "REMINDER_DUE",
+    canonicalBaseState: "INCOMPLETE_DOCUMENTS",
+    canonicalOverlays: ["REMINDER_DUE"],
+    canonicalRecommendedMessageType: "docs_missing"
+  }
+}, true, "");
+assert.equal(canonicalRecipientDiagnostics.authoritySource, "CANONICAL_LIFECYCLE");
+assert.equal(canonicalRecipientDiagnostics.explanation, "Allowed by Canonical Lifecycle (INCOMPLETE_DOCUMENTS -> docs_missing).");
+assert.equal(canonicalRecipientDiagnostics.hasLifecycleMismatch, true);
 const matrixReason = "Blocked by communication authority matrix. Requires: ✗ Lifecycle stage: DOCS_REQUIRED / PROCESSING - Current: REMINDER_DUE; ✓ Documents missing or not verified; ✗ No acceptance/enrolment confirmation";
 assert.equal(
   context.selectedApplicantBatchOperatorBlockReason_("COMM_AUTHORITY_BLOCKED", matrixReason, "docs_missing"),

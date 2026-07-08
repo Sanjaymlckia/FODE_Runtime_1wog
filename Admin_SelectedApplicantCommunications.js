@@ -247,6 +247,39 @@ function selectedApplicantBatchOperatorBlockReason_(code, rawReason, messageType
   return "Blocked: Communication policy did not allow this recipient.";
 }
 
+function selectedApplicantBatchAuthorityDiagnostics_(context, included, reason) {
+  var ctx = context && typeof context === "object" ? context : {};
+  var auth = ctx.canonicalLifecycleAuthority && typeof ctx.canonicalLifecycleAuthority === "object"
+    ? ctx.canonicalLifecycleAuthority
+    : {};
+  var authoritySource = clean_(auth.authoritySource || "LEGACY_LIFECYCLE").toUpperCase() || "LEGACY_LIFECYCLE";
+  var legacyStage = clean_(auth.legacyStage || ctx.legacyLifecycleStage || ctx.lifecycleStage || "");
+  var canonicalBaseState = clean_(auth.canonicalBaseState || "");
+  var canonicalOverlays = Array.isArray(auth.canonicalOverlays) ? auth.canonicalOverlays.slice() : [];
+  var canonicalRecommendedMessageType = clean_(auth.canonicalRecommendedMessageType || "");
+  var mismatch = !!(legacyStage && canonicalBaseState && legacyStage !== canonicalBaseState);
+  var explanation = clean_(reason || "");
+  if (!explanation && included === true) {
+    if (authoritySource === "CANONICAL_LIFECYCLE" && canonicalBaseState && canonicalRecommendedMessageType) {
+      explanation = "Allowed by Canonical Lifecycle (" + canonicalBaseState + " -> " + canonicalRecommendedMessageType + ").";
+    } else if (legacyStage) {
+      explanation = "Allowed by Legacy Lifecycle (" + legacyStage + ").";
+    } else {
+      explanation = "Allowed by Communication Authority.";
+    }
+  }
+  return {
+    authoritySource: authoritySource,
+    legacyLifecycleStage: legacyStage,
+    canonicalBaseState: canonicalBaseState,
+    canonicalOverlays: canonicalOverlays,
+    canonicalRecommendedMessageType: canonicalRecommendedMessageType,
+    hasLifecycleMismatch: mismatch,
+    mismatchReason: mismatch ? "Legacy lifecycle and canonical applicant state disagree for this communication decision." : "",
+    explanation: explanation
+  };
+}
+
 function admin_previewSelectedApplicantBatch(payload) {
   return withEnvelope_("admin_previewSelectedApplicantBatch", function (dbgId) {
     var startedAtMs = new Date().getTime();
@@ -333,12 +366,22 @@ function admin_previewSelectedApplicantBatch(payload) {
         if (!previewSubject) previewSubject = clean_(built.subject || "");
         if (!previewBody) previewBody = String(built.body || "");
         eligibleIds.push(applicantId);
-        recipients.push({ applicantId: applicantId, name: name, email: clean_(context.effectiveEmail || ""), status: "Included", included: true, reason: "Ready to send." });
+        var includedAuthority = selectedApplicantBatchAuthorityDiagnostics_(context, true, "");
+        recipients.push({
+          applicantId: applicantId,
+          name: name,
+          email: clean_(context.effectiveEmail || ""),
+          status: "Included",
+          included: true,
+          reason: includedAuthority.explanation,
+          authorityDiagnostics: includedAuthority
+        });
         return;
       }
       blocked++;
       var code = clean_(context && (context.blockCode || context.code) || "BLOCKED");
       var rawReason = clean_(context && (context.blockReason || context.message || context.error) || code);
+      var operatorReason = selectedApplicantBatchOperatorBlockReason_(code, rawReason, messageType);
       blockedByReason[code] = Number(blockedByReason[code] || 0) + 1;
       recipients.push({
         applicantId: applicantId,
@@ -346,8 +389,9 @@ function admin_previewSelectedApplicantBatch(payload) {
         email: clean_(context && context.effectiveEmail || ""),
         status: "Excluded",
         included: false,
-        reason: selectedApplicantBatchOperatorBlockReason_(code, rawReason, messageType),
-        technicalReason: rawReason
+        reason: operatorReason,
+        technicalReason: rawReason,
+        authorityDiagnostics: selectedApplicantBatchAuthorityDiagnostics_(context, false, operatorReason)
       });
     });
     var candidateHash = selectedApplicantBatchHash_(eligibleIds);

@@ -247,6 +247,10 @@ assert.match(adminUi, /batchCommWorkflow[\s\S]*Template[\s\S]*Preview[\s\S]*Reci
 assert.match(adminUi, /commTemplateOtherBanner[\s\S]*Other option/, "Batch modal must mark non-recommended templates as other options");
 assert.match(adminUi, /Excluded \/ Blocked/, "Batch modal summary must make exclusions and blocked records prominent");
 assert.match(adminUi, /Technical Diagnostics/, "Batch modal must keep diagnostics collapsed under a technical section");
+assert.match(functionSource("batchCommAuthoritySummary_"), /authoritySource[\s\S]*mismatchCount/, "Batch modal must summarize Communication Authority source and lifecycle mismatch counts");
+assert.match(functionSource("batchCommAuthorityDetail_"), /Authority:[\s\S]*Legacy:[\s\S]*Canonical:[\s\S]*Overlays:[\s\S]*Recommended:/, "Batch modal recipient rows must show legacy/canonical authority details");
+assert.match(functionSource("renderBatchCommunicationModal_"), /Ready to Send \| Authority:/, "Batch modal readiness must display the Communication Authority source");
+assert.match(functionSource("renderBatchCommunicationModal_"), /selectionAuthority:\s*"Actionability"[\s\S]*communicationAuthority:\s*"Send gate"/, "Batch modal technical diagnostics must distinguish selection and communication authority");
 assert.match(functionSource("actionabilityBatchCommunication_"), /openBatchCommunicationFromSelection_\("selected"\)/, "Selected cohort batch communication must open the batch modal");
 assert.match(functionSource("actionabilityBatchCommunication_"), /actionabilityBatchMessage = ""[\s\S]*actionabilityBatchPanelMode = ""[\s\S]*openBatchCommunicationFromSelection_\("selected"\)/, "Selected cohort batch communication must open the modal directly without a handoff panel");
 assert.match(functionSource("actionabilityBatchReminder_"), /openBatchCommunicationFromSelection_\("reminder"\)/, "Selected reminder cohort must open the batch modal with reminder intent");
