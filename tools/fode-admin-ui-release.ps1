@@ -91,6 +91,24 @@ function Invoke-Step {
   Write-Host "PASS: $Name" -ForegroundColor Green
 }
 
+function Get-RemoteMarkerProofArgs {
+  param(
+    [string]$RemoteCheckRoot,
+    [string[]]$PresentMarkers,
+    [string[]]$MissingMarkers
+  )
+  $args = @("-RemoteCheckRoot", $RemoteCheckRoot)
+  if (@($PresentMarkers).Count -gt 0) {
+    $args += "-Markers"
+    foreach ($marker in @($PresentMarkers)) { $args += [string]$marker }
+  }
+  if (@($MissingMarkers).Count -gt 0) {
+    $args += "-AbsentMarkers"
+    foreach ($marker in @($MissingMarkers)) { $args += [string]$marker }
+  }
+  return @($args)
+}
+
 function PassFail {
   param([bool]$Ok)
   if ($Ok) { return "PASS" }
@@ -202,8 +220,12 @@ Invoke-Step "git diff --check" { & git -c core.autocrlf=false diff --check }
 Write-Host "Proof-readiness markers: $($Markers -join ', ')"
 Write-Host "Proof-readiness absent markers: $($AbsentMarkers -join ', ')"
 Write-Host "Proof-readiness path: $remoteProofRoot"
+$remoteMarkerProofArgs = Get-RemoteMarkerProofArgs -RemoteCheckRoot $remoteProofRoot -PresentMarkers $Markers -MissingMarkers $AbsentMarkers
 
 if ($DryRun) {
+  Invoke-Step "remote marker proof dry run" {
+    & (Join-Path $PSScriptRoot "fode-admin-ui-remote-markers.ps1") @remoteMarkerProofArgs
+  }
   Write-Host ""
   Write-Host "DRY RUN PASS" -ForegroundColor Green
   Write-Host "No git push, clasp push, Apps Script version, deployment repin, or data mutation performed."
@@ -225,7 +247,7 @@ if (!$SkipCommit) {
 Invoke-Step "git push origin main" { & git push origin main }
 Invoke-Step "clasp push" { & clasp.cmd push }
 Invoke-Step "remote marker proof" {
-  & (Join-Path $PSScriptRoot "fode-admin-ui-remote-markers.ps1") -RemoteCheckRoot $remoteProofRoot -Markers $Markers -AbsentMarkers $AbsentMarkers
+  & (Join-Path $PSScriptRoot "fode-admin-ui-remote-markers.ps1") @remoteMarkerProofArgs
 }
 
 Invoke-Step "clasp version" {

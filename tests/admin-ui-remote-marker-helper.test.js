@@ -14,5 +14,10 @@ assert.match(helper, /IsPathRooted\(\$RemoteCheckRoot\)/, "Relative proof folder
 assert.match(helper, /Join-Path \$repo \$RemoteCheckRoot/, "Relative proof folders must resolve against repo root");
 assert.match(releaseHelper, /\$remoteProofRoot = Join-Path/, "Release helper must allocate a concrete proof folder");
 assert.match(releaseHelper, /-RemoteCheckRoot \$remoteProofRoot/, "Release helper must pass the proof folder to marker helper");
+assert.match(releaseHelper, /remote marker proof dry run/, "DryRun must execute the read-only remote marker proof");
+assert.match(releaseHelper, /function Get-RemoteMarkerProofArgs/, "Release helper must build marker proof arguments explicitly");
+assert.match(releaseHelper, /foreach \(\$marker in @\(\$PresentMarkers\)\)/, "Release helper must pass multiple present markers as separate arguments");
+assert.match(releaseHelper, /foreach \(\$marker in @\(\$MissingMarkers\)\)/, "Release helper must pass multiple absent markers as separate arguments");
+assert.match(releaseHelper, /@remoteMarkerProofArgs/, "Release helper must splat the marker proof argument vector");
 
 console.log("PASS admin UI remote marker helper contract");
