@@ -3700,6 +3700,9 @@ function admin_traceStageBatchEligibility(payload) {
     var dashboardSnapshot = stageAggregationSnapshot_(rowObj);
     var dashboardStage = clean_(dashboardSnapshot.stage || "");
     var comparisonStage = selectedStage || dashboardStage;
+    var canonicalLifecycleDiagnostics = typeof stageBatchCanonicalLifecycleDiagnostics_ === "function"
+      ? stageBatchCanonicalLifecycleDiagnostics_(rowObj, comparisonStage, dashboardStage)
+      : {};
     var messageType = normalizeApplicantMessageType_(getBatchMessageTypeForStage_(comparisonStage) || "");
     var actorRole = getAdminRole_(adminEmail);
     var communicationState = deriveCommunicationState_(rowObj, messageType, {
@@ -3784,6 +3787,7 @@ function admin_traceStageBatchEligibility(payload) {
           ? "Dashboard counts this row as operator-actionable under resolveEligibility=false."
           : clean_(dashboardActionability.blockReason || "")
       },
+      canonicalLifecycleDiagnostics: canonicalLifecycleDiagnostics,
       preview: {
         selectedStage: comparisonStage,
         messageType: messageType,

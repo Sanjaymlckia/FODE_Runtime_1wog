@@ -221,6 +221,58 @@ function stageBatchShouldExcludePriorSuccessDefault_(rowObj, stage, messageType)
   return priorGroup === currentGroup;
 }
 
+function stageBatchCanonicalLifecycleDiagnostics_(rowObj, selectedLegacyStage, rowLegacyStage) {
+  var legacyStage = clean_(rowLegacyStage || deriveApplicantLifecycleStage_(rowObj || {}) || "UNKNOWN").toUpperCase() || "UNKNOWN";
+  var selectedStage = clean_(selectedLegacyStage || "").toUpperCase();
+  var canonical = typeof resolveCanonicalApplicantLifecycle_ === "function"
+    ? resolveCanonicalApplicantLifecycle_(rowObj || {}, {})
+    : null;
+  var mismatch = typeof compareLegacyCanonicalLifecycle_ === "function"
+    ? compareLegacyCanonicalLifecycle_(legacyStage, canonical)
+    : { hasLifecycleMismatch: false };
+  return {
+    selectedLegacyStage: selectedStage,
+    rowLegacyStage: legacyStage,
+    canonicalBaseState: clean_(canonical && (canonical.baseState || canonical.lifecycleStage) || "UNKNOWN").toUpperCase() || "UNKNOWN",
+    canonicalOverlays: Array.isArray(canonical && canonical.overlays) ? canonical.overlays.slice() : [],
+    canonicalRecommendedMessageType: clean_(canonical && canonical.recommendedMessageType || ""),
+    hasLegacyCanonicalMismatch: mismatch && mismatch.hasLifecycleMismatch === true,
+    mismatchReason: clean_(mismatch && mismatch.mismatchReason || "")
+  };
+}
+
+function stageBatchCanonicalDiagnosticsSummary_() {
+  return {
+    readOnly: true,
+    selectionUnaffected: true,
+    messageMappingUnaffected: true,
+    selectedLegacyStage: "",
+    rowsInspected: 0,
+    mismatchCount: 0,
+    samples: []
+  };
+}
+
+function stageBatchRecordCanonicalDiagnostics_(summary, diagnostics) {
+  var out = summary && typeof summary === "object" ? summary : stageBatchCanonicalDiagnosticsSummary_();
+  var diag = diagnostics && typeof diagnostics === "object" ? diagnostics : {};
+  out.selectedLegacyStage = clean_(out.selectedLegacyStage || diag.selectedLegacyStage || "");
+  out.rowsInspected = Number(out.rowsInspected || 0) + 1;
+  if (diag.hasLegacyCanonicalMismatch === true) out.mismatchCount = Number(out.mismatchCount || 0) + 1;
+  if (out.samples.length < 10) {
+    out.samples.push({
+      selectedLegacyStage: clean_(diag.selectedLegacyStage || ""),
+      rowLegacyStage: clean_(diag.rowLegacyStage || ""),
+      canonicalBaseState: clean_(diag.canonicalBaseState || ""),
+      canonicalOverlays: Array.isArray(diag.canonicalOverlays) ? diag.canonicalOverlays.slice() : [],
+      canonicalRecommendedMessageType: clean_(diag.canonicalRecommendedMessageType || ""),
+      hasLegacyCanonicalMismatch: diag.hasLegacyCanonicalMismatch === true,
+      mismatchReason: clean_(diag.mismatchReason || "")
+    });
+  }
+  return out;
+}
+
 function stageBatchLogSummary_(eventName, payload) {
   var tag = clean_(eventName || "STAGE_BATCH");
   var data = payload && typeof payload === "object" ? payload : {};
@@ -302,6 +354,9 @@ function stageBatchPreviewResponse_(data) {
     alreadySentExcluded: Number(src.alreadySentExcluded || 0),
     failedExcluded: Number(src.failedExcluded || 0),
     blockedByReason: src.blockedByReason || {},
+    canonicalLifecycleDiagnostics: src.canonicalLifecycleDiagnostics && typeof src.canonicalLifecycleDiagnostics === "object"
+      ? JSON.parse(JSON.stringify(src.canonicalLifecycleDiagnostics))
+      : stageBatchCanonicalDiagnosticsSummary_(),
     eligibleApplicantIdsSample: Array.isArray(src.eligibleApplicantIdsSample) ? src.eligibleApplicantIdsSample.slice(0, 10) : [],
     blockedApplicantIdsSample: Array.isArray(src.blockedApplicantIdsSample) ? src.blockedApplicantIdsSample.slice(0, 10) : [],
     warning: warning,
@@ -407,6 +462,8 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
   var blockedByReason = {};
   var blockedApplicantIdsSample = [];
   var candidates = [];
+  var canonicalLifecycleDiagnostics = stageBatchCanonicalDiagnosticsSummary_();
+  canonicalLifecycleDiagnostics.selectedLegacyStage = normalizedStage;
   var startedAtMs = new Date().getTime();
   var portalSecretLookup = options.portalSecretLookup && typeof options.portalSecretLookup === "object" ? options.portalSecretLookup : null;
   var cooldownLookup = options.cooldownLookup && typeof options.cooldownLookup === "object" ? options.cooldownLookup : null;
@@ -451,6 +508,7 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
       blockedByReason: {},
       blockedApplicantIdsSample: [],
       candidates: [],
+      canonicalLifecycleDiagnostics: canonicalLifecycleDiagnostics,
       elapsedMs: new Date().getTime() - startedAtMs,
       phaseTimings: phaseTimings
     };
@@ -496,6 +554,10 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
       var candidateStartedAtMs = new Date().getTime();
       var snapshot = stageAggregationSnapshot_(rowObj);
       phaseTimings.candidateSelectionMs += new Date().getTime() - candidateStartedAtMs;
+      canonicalLifecycleDiagnostics = stageBatchRecordCanonicalDiagnostics_(
+        canonicalLifecycleDiagnostics,
+        stageBatchCanonicalLifecycleDiagnostics_(rowObj, normalizedStage, snapshot.stage)
+      );
       if (clean_(snapshot.stage || "").toUpperCase() !== normalizedStage) continue;
       totalInStage++;
       var filterStartedAtMs = new Date().getTime();
@@ -621,6 +683,7 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
     scanStoppedBySafetyCap: scanStoppedBySafetyCap,
     partial: partial,
     partialReason: partialReason,
+    canonicalLifecycleDiagnostics: canonicalLifecycleDiagnostics,
     elapsedMs: new Date().getTime() - startedAtMs,
     phaseTimings: phaseTimings
   };
@@ -812,6 +875,7 @@ function admin_previewStageBatch(payload) {
         blockedByReason: cohort.blockedByReason || {},
         eligibleApplicantIdsSample: [],
         blockedApplicantIdsSample: Array.isArray(cohort.blockedApplicantIdsSample) ? cohort.blockedApplicantIdsSample.slice(0, 10) : [],
+        canonicalLifecycleDiagnostics: cohort.canonicalLifecycleDiagnostics || stageBatchCanonicalDiagnosticsSummary_(),
         propertyGuard: propertyGuard,
         emptyReason: emptyReason,
         eligibleCountBounded: cohort.eligibleCountBounded === true,
