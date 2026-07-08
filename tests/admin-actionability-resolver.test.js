@@ -32,6 +32,7 @@ function extractFunction(source, name) {
 }
 
 const resolver = extractFunction(adminJs, "resolveActionabilityState_");
+const batchMessageTypeMapping = extractFunction(adminJs, "actionabilityBatchMessageTypeForRecommendation_");
 const builder = extractFunction(adminJs, "buildActionabilityPreviewRow_");
 const preview = extractFunction(adminJs, "admin_getActionabilityPreview");
 const driftHelpers = [
@@ -53,8 +54,11 @@ assert.match(resolver, /actionabilityState = "REVIEW_REQUIRED"/, "Review-require
 assert.match(resolver, /actionabilityState = "COMPLETE"/, "Complete rows must be explicit");
 assert.match(resolver, /TEMPLATE_STAGE_MISMATCH/, "Lifecycle/template mismatch must be visible before batch preview");
 assert.match(resolver, /communicationRecommendedMessageTypeForStage_/, "Resolver must consume shared lifecycle-stage message mapping instead of duplicating matrix policy");
+assert.match(resolver, /canonicalRecommendedMessageType/, "Resolver must prefer canonical lifecycle recommendations when available");
+assert.doesNotMatch(resolver, /Current lifecycle stage recommends/, "Operator-facing mismatch text must not expose legacy lifecycle-stage wording");
 assert.doesNotMatch(resolver, /evaluateCommunicationAuthority_/, "Resolver must not duplicate or replace Communication Authority");
 assert.match(builder, /resolveActionabilityState_/, "Preview row builder must consume the resolver");
+assert.match(builder, /canonicalRecommendedMessageType:[\s\S]*canonicalLifecycle && canonicalLifecycle\.recommendedMessageType/, "Preview row builder must pass canonical lifecycle recommendations into actionability");
 assert.match(builder, /resolveCanonicalApplicantLifecycle_/, "Preview row builder must expose canonical lifecycle diagnostics without changing behaviour");
 assert.match(builder, /canonicalLifecycle:[\s\S]*baseState:[\s\S]*lifecycleStage:[\s\S]*overlays:[\s\S]*recommendedNextAction:[\s\S]*recommendedMessageType:[\s\S]*actionOwner:[\s\S]*reason:/, "Every preview row must expose the passive canonicalLifecycle DTO");
 assert.match(builder, /compareLegacyCanonicalLifecycle_\(lifecycleStage, canonicalLifecycle\)/, "Preview row builder must compare legacy and canonical lifecycle passively");
@@ -93,5 +97,63 @@ assert.equal(summary.mismatchByLegacyStage.REMINDER_DUE, 1, "REMINDER_DUE mismat
 assert.equal(summary.mismatchByCanonicalBaseState.INCOMPLETE_DOCUMENTS, 1, "INCOMPLETE_DOCUMENTS mismatch must be counted by canonical base state");
 assert.equal(summary.mismatchByLegacyStage.DOCS_REQUIRED, undefined, "Equivalent DOCS_REQUIRED mapping must not be counted as mismatch");
 assert.equal(Array.from(summary.topMismatchReasons)[0].count, 1, "Top mismatch reasons must retain counts");
+
+const resolverContext = {
+  clean_: (value) => String(value == null ? "" : value).trim(),
+  communicationRecommendedMessageTypeForStage_: (stage) => {
+    const normalized = String(stage || "").trim().toUpperCase();
+    if (normalized === "REMINDER_DUE") return "reminder";
+    if (normalized === "DOCS_REQUIRED") return "docs_missing";
+    return "";
+  }
+};
+vm.createContext(resolverContext);
+vm.runInContext(`${batchMessageTypeMapping}\n${resolver}`, resolverContext);
+
+const canonicalDocsMissing = resolverContext.resolveActionabilityState_({
+  owner: "APPLICANT",
+  nextAction: "UPLOAD_REQUIRED_DOCUMENTS",
+  suppressor: "",
+  lifecycleStage: "REMINDER_DUE",
+  recommendedMessageType: "document_completion_reminder",
+  canonicalRecommendedMessageType: "docs_missing"
+});
+assert.equal(canonicalDocsMissing.actionabilityState, "READY", "Canonical INCOMPLETE_DOCUMENTS/docs_missing recommendation must override legacy REMINDER_DUE overlay mismatch");
+assert.equal(canonicalDocsMissing.selectable, true, "Canonical docs-missing rows must be selectable when no suppressor is active");
+assert.equal(canonicalDocsMissing.recommendedAction, "docs_missing", "Canonical docs-missing rows must recommend docs_missing");
+
+const coolingOffDocsMissing = resolverContext.resolveActionabilityState_({
+  owner: "APPLICANT",
+  nextAction: "UPLOAD_REQUIRED_DOCUMENTS",
+  suppressor: "COOLDOWN_ACTIVE",
+  lifecycleStage: "REMINDER_DUE",
+  recommendedMessageType: "document_completion_reminder",
+  canonicalRecommendedMessageType: "docs_missing",
+  coolingOffUntil: "2026-07-15T00:00:00.000Z"
+});
+assert.equal(coolingOffDocsMissing.actionabilityState, "COOLING_OFF", "Cooling-off remains authoritative over canonical readiness");
+assert.equal(coolingOffDocsMissing.selectable, false, "Cooling-off rows must never be auto-selected");
+
+const contactBlockedDocsMissing = resolverContext.resolveActionabilityState_({
+  owner: "APPLICANT",
+  nextAction: "UPLOAD_REQUIRED_DOCUMENTS",
+  suppressor: "NO_EFFECTIVE_EMAIL",
+  lifecycleStage: "REMINDER_DUE",
+  recommendedMessageType: "document_completion_reminder",
+  canonicalRecommendedMessageType: "docs_missing"
+});
+assert.equal(contactBlockedDocsMissing.actionabilityState, "REVIEW_REQUIRED", "Contactability Gate remains authoritative over canonical readiness");
+assert.equal(contactBlockedDocsMissing.selectable, false, "Contact-blocked rows must never be auto-selected");
+
+const legacyMismatch = resolverContext.resolveActionabilityState_({
+  owner: "APPLICANT",
+  nextAction: "UPLOAD_REQUIRED_DOCUMENTS",
+  suppressor: "",
+  lifecycleStage: "REMINDER_DUE",
+  recommendedMessageType: "document_completion_reminder"
+});
+assert.equal(legacyMismatch.reasonCode, "TEMPLATE_STAGE_MISMATCH", "Legacy stage mismatch fallback remains visible when canonical recommendation is absent");
+assert.equal(legacyMismatch.selectable, false, "Legacy mismatch fallback remains non-selectable");
+assert.match(legacyMismatch.selectBlockReason, /Current applicant state is not ready/, "Mismatch fallback must use operator-readable state wording");
 
 console.log("PASS Actionability A1 resolver contract");

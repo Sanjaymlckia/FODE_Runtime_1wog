@@ -2885,9 +2885,12 @@ function resolveActionabilityState_(facts) {
   var lifecycleStage = clean_(f.lifecycleStage || "").toUpperCase();
   var recommendedMessageType = clean_(f.recommendedMessageType || "");
   var recommendedBatchType = actionabilityBatchMessageTypeForRecommendation_(recommendedMessageType);
-  var stageRecommendedType = typeof communicationRecommendedMessageTypeForStage_ === "function"
+  var canonicalRecommendedMessageType = clean_(f.canonicalRecommendedMessageType || "");
+  var canonicalRecommendedBatchType = actionabilityBatchMessageTypeForRecommendation_(canonicalRecommendedMessageType);
+  var legacyStageRecommendedType = typeof communicationRecommendedMessageTypeForStage_ === "function"
     ? clean_(communicationRecommendedMessageTypeForStage_(lifecycleStage) || "")
     : "";
+  var stageRecommendedType = canonicalRecommendedBatchType || legacyStageRecommendedType;
   var coolingOffUntil = clean_(f.coolingOffUntil || "");
   var out = {
     actionabilityState: "UNKNOWN",
@@ -2954,7 +2957,7 @@ function resolveActionabilityState_(facts) {
     }
     if (stageRecommendedType && stageRecommendedType !== recommendedBatchType) {
       out.actionabilityState = nextAction === "SEND_PAYMENT_REMINDER" ? "AWAITING_PAYMENT" : "AWAITING_APPLICANT";
-      out.selectBlockReason = "Current lifecycle stage recommends " + stageRecommendedType + ", not " + recommendedBatchType + ".";
+      out.selectBlockReason = "Current applicant state is not ready for " + recommendedBatchType + ". Recommended action: " + stageRecommendedType + ".";
       out.recommendedAction = "WAIT";
       out.reasonCode = "TEMPLATE_STAGE_MISMATCH";
       return out;
@@ -3068,6 +3071,7 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     suppressor: suppressor,
     lifecycleStage: lifecycleStage,
     recommendedMessageType: recommendedMessageType,
+    canonicalRecommendedMessageType: canonicalLifecycle && canonicalLifecycle.recommendedMessageType || "",
     coolingOffUntil: row.Email_Next_Action_Date || ""
   });
   return {

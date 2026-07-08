@@ -65,3 +65,19 @@ Review Queue membership describes compatibility workflow cohorts.
 
 A single lifecycle state can appear in different queue contexts depending on owner, urgency, communication history, and payment/document readiness.
 
+## A3.3 Canonical Lifecycle Migration Boundary
+
+Operations Workspace actionability now consumes canonical lifecycle recommendations when available.
+
+Queue/worklist selection must follow the server `selectable` DTO, not client-side lifecycle labels.
+
+Canonical lifecycle distinguishes:
+
+- base applicant state, such as `INCOMPLETE_DOCUMENTS`
+- overlays, such as `REMINDER_DUE`
+- actionability readiness, such as `READY` or `COOLING_OFF`
+
+This means a missing-document applicant can remain in the base state `INCOMPLETE_DOCUMENTS` while also carrying the `REMINDER_DUE` overlay. The overlay may affect urgency, but it must not replace the base state or block the `docs_missing` action path by itself.
+
+Stage Batch and Communication Authority still use their existing authority paths until a later Track H migration explicitly changes them.
+

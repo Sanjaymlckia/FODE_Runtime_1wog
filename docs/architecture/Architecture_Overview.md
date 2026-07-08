@@ -23,7 +23,7 @@ The r301+ runtime clarifies several protected authority boundaries:
 - Zoho Books Workflow
 - Disaster Recovery Tooling
 
-The next documented layer is the Operator Actionability Resolver.
+The Operator Actionability Resolver is now partially implemented for Admin Operations Workspace workload selection.
 
 ## Problem Statement
 
@@ -49,6 +49,7 @@ Intake Sources
 -> Raw Row Facts
 -> Shared Row Facts
 -> Authority Layer
+-> Canonical Lifecycle Resolver
 -> Operator Actionability Resolver
 -> Operator Surfaces
 -> Action Backends
@@ -88,9 +89,29 @@ Protected live action backends include:
 | Raw Facts | Sheet values, uploads, payment rows, communication fields | No |
 | Shared Row Facts | normalized row facts for shared consumers | No |
 | Authority Layer | derives domain truth | No by default |
-| Operator Actionability Resolver | derives next operational recommendation | No |
+| Canonical Lifecycle Resolver | derives applicant base lifecycle state and overlays from current facts | No |
+| Operator Actionability Resolver | derives next operational recommendation and selection readiness | No |
 | Operator Surfaces | displays, requests actions, and shows confirmations | No by display alone |
 | Action Backends | execute approved mutations/sends | Yes, only when explicitly invoked |
+
+## A3.3 Lifecycle / Actionability Milestone
+
+Admin now exposes and begins consuming canonical lifecycle output:
+
+- `resolveCanonicalApplicantLifecycle_()` derives base lifecycle state separately from overlays.
+- `REMINDER_DUE` is treated as an overlay/timing signal, not the base applicant lifecycle.
+- Actionability prefers canonical `recommendedMessageType` when available.
+- Operations Workspace selection remains server-driven through the row `selectable` DTO.
+- Cooling-off and Contactability Gate still override readiness.
+- Communication Authority remains the final preview/send gate and is unchanged by A3.3.
+- Population Ledger remains exactly-once accounting authority and is unchanged by A3.3.
+
+Deferred migrations:
+
+- Stage Batch lifecycle input migration.
+- Population Ledger canonical lifecycle reporting/migration.
+- Communication Authority canonical input migration.
+- Retirement of legacy lifecycle derivation functions after all consumers are migrated.
 
 ## r301+ Protected Live Surfaces
 
