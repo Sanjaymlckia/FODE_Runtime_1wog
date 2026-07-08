@@ -159,8 +159,13 @@ assert.match(selectedBatchPreview, /isCommunicationTypeBatchSafe_\(messageType\)
 assert.match(selectedBatchSend, /isCommunicationTypeBatchSafe_\(messageType\)/, "Selected cohort send must only allow batch-safe message types");
 assert.match(selectedBatchSend, /isBatchSendEnabled_\(\) !== true/, "Selected cohort send must preserve the batch-send feature gate");
 assert.match(selectedBatchSend, /readSelectedApplicantBatchPreviewCache_\(adminEmail\)/, "Selected cohort send must require a cached preview");
+assert.match(selectedBatchSend, /withSelectedApplicantBatchSendLock_\(adminEmail, dbgId/, "Selected cohort send must be protected by a server-side user lock");
+assert.match(selectedBatchSend, /clearSelectedApplicantBatchPreviewCache_\(adminEmail\)[\s\S]*sendApplicantMessage_\(applicantId, messageType/, "Selected cohort send must consume the preview snapshot before sending");
 assert.match(selectedBatchSend, /sendApplicantMessage_\(applicantId, messageType/, "Selected cohort send must reuse the existing applicant message send pipeline");
 assert.doesNotMatch(selectedBatchSend, /authorityOverride/, "Selected cohort batch send must not introduce selected-applicant override bypasses");
+assert.match(stageSend, /readStageBatchPreviewCache_\(adminEmail\)/, "Stage Batch send must require a cached preview");
+assert.match(stageSend, /LockService\.getUserLock\(\)[\s\S]*tryLock\(30000\)/, "Stage Batch send must be protected by a server-side user lock");
+assert.match(stageSend, /clearStageBatchPreviewCache_\(adminEmail\)/, "Stage Batch send must clear preview cache after send");
 assert.match(sendApplicant, /isSystemStabilizationModeActive_/, "Selected send must preserve stabilization gate");
 assert.match(sendApplicant, /ENABLE_PRODUCTION_EMAIL_SENDS/, "Selected send must preserve production-send gate");
 assert.match(sendApplicant, /dispatchApplicantMessage_\(context, built, options\)/, "Selected send must route through guarded delivery dispatch");

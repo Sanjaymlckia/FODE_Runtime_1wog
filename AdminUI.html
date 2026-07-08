@@ -10164,6 +10164,7 @@ function renderStageDashboard_(items, emptyMessage){
 
     function batchCommCanSend_(){
       var preview = batchCommState.preview || null;
+      if (batchCommState.sendResult && batchCommState.sendResult.ok !== false) return false;
       if (!preview || preview.ok !== true) return false;
       if (batchCommState.previewStale === true) return false;
       if (!String(preview.requestId || "").trim() || !String(preview.candidateHash || "").trim()) return false;
@@ -10614,6 +10615,7 @@ function renderStageDashboard_(items, emptyMessage){
       batchCommState.action = "";
       batchCommState.sendResult = res && typeof res === "object" ? res : { ok:false, result:"FAILED", message:"Invalid send response." };
       batchCommState.confirmOpen = false;
+      if (batchCommState.sendResult && batchCommState.sendResult.ok !== false) batchCommState.previewStale = true;
       renderBatchCommunicationModal_();
       loadActionabilityPreview_({ force: true });
     }

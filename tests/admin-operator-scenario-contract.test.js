@@ -68,6 +68,8 @@ mustMatch(adminUi, /commTemplateOtherBanner[\s\S]*Other option/, "Batch modal mu
 mustMatch(adminUi, /Excluded \/ Blocked/, "Batch modal summary must expose exclusions and blocked records");
 mustMatch(adminUi, /You are about to send [\s\S]* to [\s\S]* applicants[\s\S]*Proceed\?/, "Batch modal confirmation must name template and recipient count");
 mustNotMatch(functionSource("sendBatchCommunicationModal_"), /window\.confirm/, "Batch modal must not use browser-native confirmation");
+mustMatch(functionSource("batchCommCanSend_"), /sendResult[\s\S]*ok !== false[\s\S]*return false/, "Batch modal must disable repeat sends after completion");
+mustMatch(functionSource("handleBatchCommSendResult_"), /previewStale = true[\s\S]*loadActionabilityPreview_\(\{ force: true \}\)/, "Batch modal must invalidate preview and refresh worklist after send");
 mustMatch(adminUi, /Technical Diagnostics/, "Batch modal diagnostics must remain available but separated");
 
 mustMatch(adminUi, /function commContactabilityGate_/, "Contactability Gate scenario must be first-class");

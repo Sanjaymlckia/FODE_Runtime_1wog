@@ -909,9 +909,16 @@ function admin_sendStageBatch(payload) {
     var adminEmail = getCallerEmail_();
     var stage = "";
     var messageType = "";
+    var stageBatchSendLock = null;
     try {
       if (!isAdmin_(adminEmail)) throw new Error("Access denied");
       requireOperationsAdmin_(adminEmail);
+      stageBatchSendLock = LockService.getUserLock();
+      if (!stageBatchSendLock.tryLock(30000)) {
+        return adminCommBlockedResult_("send_stage_batch", "BATCH_SEND_IN_PROGRESS", requestId, {
+          blockReason: "A stage batch send is already in progress for this operator. Wait for it to finish before retrying."
+        });
+      }
       var p = payload && typeof payload === "object" ? payload : {};
       if (isBatchSendEnabled_() !== true) {
         var blockCode = "BATCH_SENDS_DISABLED_PREVIEW_ONLY_MODE";
@@ -1285,6 +1292,10 @@ function admin_sendStageBatch(payload) {
         error: String(e && e.message ? e.message : e || "Stage batch send failed.")
       });
       throw e;
+    } finally {
+      try {
+        if (stageBatchSendLock) stageBatchSendLock.releaseLock();
+      } catch (_stageBatchLockReleaseErr) {}
     }
   });
 }

@@ -139,6 +139,23 @@ function clearSelectedApplicantBatchPreviewCache_(adminEmail) {
   } catch (_err) {}
 }
 
+function withSelectedApplicantBatchSendLock_(adminEmail, dbgId, callback) {
+  var lock = null;
+  try {
+    lock = LockService.getUserLock();
+    if (!lock.tryLock(30000)) {
+      return adminCommBlockedResult_("send_selected_batch", "BATCH_SEND_IN_PROGRESS", dbgId, {
+        blockReason: "A selected batch send is already in progress for this operator. Wait for it to finish before retrying."
+      });
+    }
+    return callback();
+  } finally {
+    try {
+      if (lock) lock.releaseLock();
+    } catch (_releaseErr) {}
+  }
+}
+
 function normalizeSelectedApplicantBatchIds_(ids) {
   var out = [];
   var seen = {};
@@ -357,6 +374,7 @@ function admin_sendSelectedApplicantBatch(payload) {
     if (typeof isCommunicationTypeBatchSafe_ === "function" && isCommunicationTypeBatchSafe_(messageType) !== true) {
       return adminCommBlockedResult_("send_selected_batch", "MESSAGE_TYPE_NOT_BATCH_SAFE", dbgId, { blockReason: "Selected template is not approved for batch communication." });
     }
+    return withSelectedApplicantBatchSendLock_(adminEmail, dbgId, function () {
     var preview = readSelectedApplicantBatchPreviewCache_(adminEmail);
     var previewRequestId = clean_(p.previewRequestId || "");
     var candidateHash = clean_(p.candidateHash || "");
@@ -373,6 +391,7 @@ function admin_sendSelectedApplicantBatch(payload) {
         cachedCandidateHashPresent: !!cachedHash
       });
     }
+    clearSelectedApplicantBatchPreviewCache_(adminEmail);
     var actor = resolveAdminCommActor_(p);
     var requestId = clean_(dbgId || newDebugId_());
     var batchLabel = "SELECTED_BATCH_SEND::" + requestId;
@@ -417,7 +436,7 @@ function admin_sendSelectedApplicantBatch(payload) {
       }
     });
     out.skipped = Math.max(0, Number(preview.candidateCount || candidateIds.length) - out.attempted);
-    clearSelectedApplicantBatchPreviewCache_(adminEmail);
     return out;
+    });
   });
 }

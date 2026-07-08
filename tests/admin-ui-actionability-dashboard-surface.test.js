@@ -262,7 +262,9 @@ assert.match(functionSource("selectVisibleActionabilityRows_"), /Current page se
 assert.match(functionSource("selectAllActionabilityRows_"), /actionabilitySelectionSource = "all"/, "Select All must mark the full bounded cohort source");
 assert.match(functionSource("loadActionabilityPreview_"), /admin_getActionabilityPreview\(\{ limit: 100/, "Operations Workspace must load the full existing bounded worklist cap before client pagination");
 assert.match(functionSource("batchCommCanSend_"), /previewStale === true/, "Quick exclusions must make preview stale before send");
+assert.match(functionSource("batchCommCanSend_"), /sendResult[\s\S]*ok !== false[\s\S]*return false/, "Completed batch sends must disable repeat send attempts from the same preview");
 assert.match(functionSource("toggleBatchCommRecipient_"), /previewStale = true/, "Quick exclusions must update counts and require a fresh preview");
+assert.match(functionSource("handleBatchCommSendResult_"), /previewStale = true[\s\S]*loadActionabilityPreview_\(\{ force: true \}\)/, "Successful batch send must invalidate the preview and refresh the worklist");
 assert.match(functionSource("batchCommConfirmHtml_"), /You are about to send [\s\S]* to [\s\S]* applicants[\s\S]*Proceed\?/, "Batch confirmation panel must name template and recipient count");
 assert.doesNotMatch(functionSource("sendBatchCommunicationModal_"), /window\.confirm/, "Batch send must use the in-app confirmation panel instead of browser-native confirm");
 assert.match(adminUi, /Select Visible<\/button>[\s\S]*Select All<\/button>[\s\S]*Clear Selection<\/button>/, "Selection controls must remain visible in the operator control strip");
