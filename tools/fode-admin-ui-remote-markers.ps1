@@ -103,6 +103,8 @@ if (!$ExpectedScriptId) { throw "Expected Apps Script scriptId is required." }
 
 if (!$RemoteCheckRoot) {
   $RemoteCheckRoot = Join-Path (Join-Path $repo ".release-proof") ("admin-ui-" + (Get-Date -Format "yyyyMMddHHmmss"))
+} elseif (![System.IO.Path]::IsPathRooted($RemoteCheckRoot)) {
+  $RemoteCheckRoot = Join-Path $repo $RemoteCheckRoot
 }
 
 $resolvedRemote = [System.IO.Path]::GetFullPath($RemoteCheckRoot).TrimEnd("\")

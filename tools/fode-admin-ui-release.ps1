@@ -178,6 +178,7 @@ if ($Markers.Count -eq 0 -and $AbsentMarkers.Count -eq 0) {
 
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 Set-Location -LiteralPath $repoRoot
+$remoteProofRoot = Join-Path (Join-Path $repoRoot ".release-proof") ("admin-ui-" + (Get-Date -Format "yyyyMMddHHmmss"))
 $context = Get-Content -LiteralPath (Join-Path $repoRoot "runtime-context.json") -Raw | ConvertFrom-Json
 $project = $context.projects.FODE
 $admin = $project.deployments.adminStaging
@@ -200,6 +201,7 @@ Invoke-Step "git diff --check" { & git -c core.autocrlf=false diff --check }
 
 Write-Host "Proof-readiness markers: $($Markers -join ', ')"
 Write-Host "Proof-readiness absent markers: $($AbsentMarkers -join ', ')"
+Write-Host "Proof-readiness path: $remoteProofRoot"
 
 if ($DryRun) {
   Write-Host ""
@@ -223,7 +225,7 @@ if (!$SkipCommit) {
 Invoke-Step "git push origin main" { & git push origin main }
 Invoke-Step "clasp push" { & clasp.cmd push }
 Invoke-Step "remote marker proof" {
-  & (Join-Path $PSScriptRoot "fode-admin-ui-remote-markers.ps1") -Markers $Markers -AbsentMarkers $AbsentMarkers
+  & (Join-Path $PSScriptRoot "fode-admin-ui-remote-markers.ps1") -RemoteCheckRoot $remoteProofRoot -Markers $Markers -AbsentMarkers $AbsentMarkers
 }
 
 Invoke-Step "clasp version" {
