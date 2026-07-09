@@ -10094,7 +10094,7 @@ function renderStageDashboard_(items, emptyMessage){
           var label = item[1];
           return '<button class="actionabilityBucketSortBtn' + (actionabilityBucketSortState === key ? ' active' : '') + '" type="button" data-actionability-bucket-sort="' + esc(key) + '" onclick="setActionabilityBucketSort_(\'' + esc(key) + '\')">' + esc(label) + '</button>';
         }).join("")
-        + '</div><div class="actionabilityWorkloadLegend"><span class="needs">Needs Action</span><span class="hidden">Hidden</span><span class="completed">Completed</span></div></div>';
+        + '</div><div class="actionabilityWorkloadLegend"><span class="needs">Eligible Now</span><span class="cooling">Cooling-off / Contacted</span><span class="hidden">Hidden</span><span class="completed">Completed</span></div></div>';
     }
 
     function actionabilityHiddenPanel_(key, populationCount, visibleCount){
@@ -10135,9 +10135,9 @@ function renderStageDashboard_(items, emptyMessage){
       var rows = Array.isArray(list) ? list : [];
       var populationCount = actionabilityPopulationCountForGroup_(key, rows.length);
       var visibleCount = rows.length;
-      var eligibleNowCount = rows.filter(actionabilityIsSelectable_).length;
-      var coolingOffCount = rows.filter(function(row){ return String(row && row.actionabilityState || "").toUpperCase() === "COOLING_OFF"; }).length;
-      var hiddenCount = Math.max(0, Number(populationCount || 0) - Number(visibleCount || 0));
+      var eligibleNowCount = actionabilityEligibleNowCountForGroup_(key, rows);
+      var coolingOffCount = actionabilityCoolingOffCountForGroup_(key, rows);
+      var hiddenCount = Math.max(0, Number(populationCount || 0) - Number(eligibleNowCount || 0) - Number(coolingOffCount || 0));
       var top = rows[0] || {};
       var oldest = actionabilityOldestAgeForList_(rows);
       var completed = key === "COMPLETE" ? populationCount : 0;
@@ -10185,6 +10185,26 @@ function renderStageDashboard_(items, emptyMessage){
 
     function actionabilityIsSelectable_(row){
       return !!(row && row.selectable === true && String(row.actionabilityState || "").toUpperCase() === "READY");
+    }
+
+    function actionabilityEligibleNowCountForGroup_(key, rows){
+      var list = Array.isArray(rows) ? rows : [];
+      var workload = actionabilityWorkloadSummaryState || {};
+      if (key === "APPLICANT" && Object.prototype.hasOwnProperty.call(workload, "READY")) return Number(workload.READY || 0);
+      return list.filter(actionabilityIsSelectable_).length;
+    }
+
+    function actionabilityCoolingOffCountForGroup_(key, rows){
+      var list = Array.isArray(rows) ? rows : [];
+      var workload = actionabilityWorkloadSummaryState || {};
+      if (key === "APPLICANT" && Object.prototype.hasOwnProperty.call(workload, "COOLING_OFF")) return Number(workload.COOLING_OFF || 0);
+      return list.filter(function(row){ return String(row && row.actionabilityState || "").toUpperCase() === "COOLING_OFF"; }).length;
+    }
+
+    function actionabilityDisplayRowsForGroup_(key, rows){
+      var list = Array.isArray(rows) ? rows.slice() : [];
+      if (key === "APPLICANT") return list.filter(actionabilityIsSelectable_);
+      return list;
     }
 
     function actionabilitySelectionGuidance_(row){
@@ -11082,7 +11102,7 @@ function renderStageDashboard_(items, emptyMessage){
       var visible = keys.filter(function(key){ return Number(data[key] || 0) > 0; });
       if (!visible.length) return "";
       return '<div class="actionabilityTraffic" aria-label="Remaining work explanation">'
-        + '<div class="actionabilityTrafficTitle"><span>Why Work Remains</span><span class="muted">Derived from Actionability Resolver row facts; send authority remains Communication Authority.</span></div>'
+        + '<div class="actionabilityTrafficTitle"><span>What Work Remains</span><span class="muted">Derived from Actionability Resolver row facts; send authority remains Communication Authority.</span></div>'
         + '<div class="actionabilityTrafficGrid">'
         + visible.map(function(key){
           return '<div class="actionabilityTrafficItem"><div class="k">' + esc(key) + '</div><div class="v">' + esc(Number(data[key] || 0)) + '</div></div>';
@@ -11133,7 +11153,8 @@ function renderStageDashboard_(items, emptyMessage){
         + '</div>';
       renderActionabilityResponseTraffic_();
       summaryEl.innerHTML += renderActionabilityWorkloadExplanation_();
-      var displayRows = actionabilityActiveGroup ? (groupRows[actionabilityActiveGroup] || []) : rows;
+      var rawDisplayRows = actionabilityActiveGroup ? (groupRows[actionabilityActiveGroup] || []) : rows;
+      var displayRows = actionabilityActiveGroup ? actionabilityDisplayRowsForGroup_(actionabilityActiveGroup, rawDisplayRows) : rawDisplayRows;
       actionabilityCurrentCohortRows = displayRows.slice();
       var pageInfo = actionabilityPageInfo_(displayRows);
       var pageRows = displayRows.slice(pageInfo.start, pageInfo.end);
@@ -11150,10 +11171,11 @@ function renderStageDashboard_(items, emptyMessage){
           + " / REVIEW_REQUIRED " + String(Number(workload.REVIEW_REQUIRED || 0))
           + " / COMPLETE " + String(Number(workload.COMPLETE || 0))
           + " / UNKNOWN " + String(Number(workload.UNKNOWN || 0));
-        metaEl.textContent = String(displayRows.length) + " bounded worklist rows / " + String(populationTotal) + " total applicant population | Filter: " + filterLabel + " | Workload: " + workloadText + integrity;
+        var displayNote = actionabilityActiveGroup === "APPLICANT" ? " eligible-now rows shown" : " bounded worklist rows";
+        metaEl.textContent = String(displayRows.length) + displayNote + " / " + String(populationTotal) + " total applicant population | Filter: " + filterLabel + " | Workload: " + workloadText + integrity;
       }
       if (!displayRows.length) {
-        rowsEl.innerHTML = '<div class="actionabilityEmpty">No actionable work returned.</div>';
+        rowsEl.innerHTML = '<div class="actionabilityEmpty">' + (actionabilityActiveGroup === "APPLICANT" ? 'No eligible-now Applicant Action rows. Cooling-off/contacted rows remain counted in the bucket population.' : 'No actionable work returned.') + '</div>';
         return;
       }
       var sortHeader = function(key, label){

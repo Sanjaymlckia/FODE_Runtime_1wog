@@ -46,7 +46,10 @@ assert.match(buildRow, /communicationProgress:/, "Actionability row DTO must inc
 assert.match(buildRow, /communicationProgressDetail:/, "Actionability row DTO must include operator-readable progress detail");
 assert.match(preview, /workloadExplanation:\s*actionabilityWorkloadExplanationEmpty_\(\)/, "Actionability preview must initialize workload explanation summary");
 assert.match(preview, /incrementActionabilityWorkloadExplanation_/, "Actionability preview must summarize why work remains");
-assert.match(renderExplanation, /Why Work Remains/, "Operations Workspace must render the remaining-work explanation panel");
+assert.match(renderExplanation, /What Work Remains/, "Operations Workspace must render the remaining-work explanation panel");
+assert.doesNotMatch(renderExplanation, /Why Work Remains/, "Operations Workspace remaining-work panel must not use ambiguous Why wording");
+assert.match(renderPreview, /actionabilityDisplayRowsForGroup_\(actionabilityActiveGroup, rawDisplayRows\)/, "Active bucket worklist must pass through the shared Actionability display-row authority");
+assert.match(renderPreview, /No eligible-now Applicant Action rows/, "Applicant Action worklist must clearly explain when all rows are cooling-off/contacted");
 assert.match(renderPreview, /communicationProgress/, "Current Worklist rows must render communication progress");
 assert.match(afterAction, /Accepted for send[\s\S]*Sent by runtime[\s\S]*Delivered[\s\S]*Not confirmed by runtime ledger[\s\S]*Confirmed[\s\S]*Awaiting reconciliation/, "Batch after-action feedback must separate accepted, sent, delivered, and confirmed states");
 
