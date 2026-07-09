@@ -50,6 +50,7 @@ assert.match(renderExplanation, /What Work Remains/, "Operations Workspace must 
 assert.doesNotMatch(renderExplanation, /Why Work Remains/, "Operations Workspace remaining-work panel must not use ambiguous Why wording");
 assert.match(renderPreview, /actionabilityDisplayRowsForGroup_\(actionabilityActiveGroup, rawDisplayRows\)/, "Active bucket worklist must pass through the shared Actionability display-row authority");
 assert.match(renderPreview, /No eligible-now Applicant Action rows/, "Applicant Action worklist must clearly explain when all rows are cooling-off/contacted");
+assert.match(renderPreview, /eligible-now rows shown/, "Current Worklist meta must keep returned workload rows distinct from full applicant population");
 assert.match(renderPreview, /communicationProgress/, "Current Worklist rows must render communication progress");
 assert.match(afterAction, /Accepted for send[\s\S]*Sent by runtime[\s\S]*Delivered[\s\S]*Not confirmed by runtime ledger[\s\S]*Confirmed[\s\S]*Awaiting reconciliation/, "Batch after-action feedback must separate accepted, sent, delivered, and confirmed states");
 

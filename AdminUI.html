@@ -10150,8 +10150,12 @@ function renderStageDashboard_(items, emptyMessage){
       var populationCount = actionabilityPopulationCountForGroup_(key, rows.length);
       var visibleCount = Number(summary.visibleCount || rows.length || 0);
       var eligibleNowCount = actionabilityEligibleNowCountForGroup_(key, rows);
+      var returnedEligibleCount = actionabilityReturnedEligibleCountForGroup_(key, rows);
+      var outsideWindowEligibleCount = actionabilityEligibleOutsideCurrentWindowCountForGroup_(key, rows);
       var coolingOffCount = actionabilityCoolingOffCountForGroup_(key, rows);
-      var hiddenCount = Number(summary.hiddenCount || Math.max(0, Number(populationCount || 0) - Number(eligibleNowCount || 0) - Number(coolingOffCount || 0)));
+      var hiddenCount = key === "APPLICANT"
+        ? outsideWindowEligibleCount
+        : Number(summary.hiddenCount || Math.max(0, Number(populationCount || 0) - Number(eligibleNowCount || 0) - Number(coolingOffCount || 0)));
       var top = rows[0] || {};
       var oldest = summary.oldestVisibleAgeDays === "" || summary.oldestVisibleAgeDays === undefined
         ? actionabilityOldestAgeForList_(rows)
@@ -10162,8 +10166,13 @@ function renderStageDashboard_(items, emptyMessage){
       var statusReason = actionabilityBucketStatusReason_(key, populationCount, visibleCount);
       var hiddenTotal = actionabilityHiddenTotalForGroup_(key) || hiddenCount;
       var hiddenShown = actionabilityHiddenDisplayedRowsForGroup_(key);
-      var hiddenSummary = hiddenCount ? ("Showing " + String(hiddenShown) + " / " + String(hiddenTotal) + " hidden") : "No hidden records";
-      var hiddenBreakdown = hiddenCount ? actionabilityHiddenBreakdown_(key) : "No records hidden from this bucket.";
+      var hiddenSummary = key === "APPLICANT"
+        ? (outsideWindowEligibleCount ? (String(outsideWindowEligibleCount) + " eligible rows outside current returned worklist") : "No eligible rows outside current returned worklist")
+        : (hiddenCount ? ("Showing " + String(hiddenShown) + " / " + String(hiddenTotal) + " hidden") : "No hidden records");
+      var hiddenBreakdown = key === "APPLICANT"
+        ? (outsideWindowEligibleCount ? (String(returnedEligibleCount) + " returned eligible now / " + String(eligibleNowCount) + " eligible now total") : "Returned worklist currently includes all eligible-now rows.")
+        : (hiddenCount ? actionabilityHiddenBreakdown_(key) : "No records hidden from this bucket.");
+      var hiddenMetricLabel = key === "APPLICANT" ? "Eligible Outside Current Window" : "Hidden";
       return '<div class="actionabilityBucketCard' + (actionabilityActiveGroup === key ? ' active' : '') + '" data-actionability-kpi="' + esc(key) + '">'
         + '<div class="actionabilityBucketLead">'
         + '<div><div class="actionabilityBucketTitle">' + esc(actionabilityGroupLabel_(key)) + '</div><div class="actionabilityBucketDescription">' + esc(actionabilityBucketDescription_(key)) + '</div></div>'
@@ -10175,8 +10184,9 @@ function renderStageDashboard_(items, emptyMessage){
         + '<div class="actionabilityBucketMetricGrid">'
         + '<div class="actionabilityBucketMetric"><div class="v">' + esc(String(populationCount)) + '</div><div class="k">Population</div></div>'
         + '<div class="actionabilityBucketMetric primary"><div class="v">' + esc(String(eligibleNowCount)) + '</div><div class="k">Eligible Now</div></div>'
+        + (key === "APPLICANT" ? ('<div class="actionabilityBucketMetric"><div class="v">' + esc(String(returnedEligibleCount)) + '</div><div class="k">Current Worklist Eligible</div></div>') : '')
         + '<div class="actionabilityBucketMetric"><div class="v">' + esc(String(coolingOffCount)) + '</div><div class="k">Cooling-off / Contacted</div></div>'
-        + '<div class="actionabilityBucketMetric"><div class="v">' + esc(String(hiddenCount)) + '</div><div class="k">Hidden</div></div>'
+        + '<div class="actionabilityBucketMetric"><div class="v">' + esc(String(hiddenCount)) + '</div><div class="k">' + esc(hiddenMetricLabel) + '</div></div>'
         + '</div>'
         + '<div class="actionabilityWorkloadBar" aria-label="Workload bar">'
         + actionabilityWorkloadSegment_("needs", eligibleNowCount, populationCount)
@@ -10184,7 +10194,7 @@ function renderStageDashboard_(items, emptyMessage){
         + actionabilityWorkloadSegment_("completed", completed, populationCount)
         + actionabilityWorkloadSegment_("hidden", hiddenCount, populationCount)
         + '</div>'
-        + '<div class="actionabilityWorkloadLegend"><span class="needs">' + esc(actionabilityPercent_(eligibleNowCount, populationCount)) + ' Eligible Now</span><span class="cooling">' + esc(actionabilityPercent_(coolingOffCount, populationCount)) + ' Cooling-off / Contacted</span><span class="hidden">' + esc(actionabilityPercent_(hiddenCount, populationCount)) + ' Hidden</span></div>'
+        + '<div class="actionabilityWorkloadLegend"><span class="needs">' + esc(actionabilityPercent_(eligibleNowCount, populationCount)) + ' Eligible Now</span>' + (key === "APPLICANT" ? ('<span class="needs">' + esc(actionabilityPercent_(returnedEligibleCount, populationCount)) + ' Current Worklist Eligible</span>') : '') + '<span class="cooling">' + esc(actionabilityPercent_(coolingOffCount, populationCount)) + ' Cooling-off / Contacted</span><span class="hidden">' + esc(actionabilityPercent_(hiddenCount, populationCount)) + ' ' + esc(hiddenMetricLabel) + '</span></div>'
         + '</div>'
         + '<div class="actionabilityBucketState">'
         + '<div class="actionabilityBucketNext"><strong>Next Operator Action</strong>' + esc(nextAction) + '<br><span>' + esc(oldest !== "" ? ("Oldest visible: " + String(oldest) + "d") : "No visible age evidence") + '</span></div>'
@@ -10219,6 +10229,19 @@ function renderStageDashboard_(items, emptyMessage){
       var workload = actionabilityWorkloadSummaryState || {};
       if (key === "APPLICANT" && Object.prototype.hasOwnProperty.call(workload, "COOLING_OFF")) return Number(workload.COOLING_OFF || 0);
       return list.filter(function(row){ return String(row && row.actionabilityState || "").toUpperCase() === "COOLING_OFF"; }).length;
+    }
+
+    function actionabilityReturnedEligibleCountForGroup_(key, rows){
+      var summary = actionabilityBucketSummaryForGroup_(key);
+      if (summary && Number.isFinite(Number(summary.visibleCount))) return Number(summary.visibleCount || 0);
+      var list = Array.isArray(rows) ? rows : [];
+      return actionabilityDisplayRowsForGroup_(key, list).length;
+    }
+
+    function actionabilityEligibleOutsideCurrentWindowCountForGroup_(key, rows){
+      var eligibleNow = Number(actionabilityEligibleNowCountForGroup_(key, rows) || 0);
+      var returned = Number(actionabilityReturnedEligibleCountForGroup_(key, rows) || 0);
+      return Math.max(0, eligibleNow - returned);
     }
 
     function actionabilityDisplayRowsForGroup_(key, rows){
@@ -10331,7 +10354,7 @@ function renderStageDashboard_(items, emptyMessage){
         + '<div><strong>Selection</strong><span class="actionabilitySelectionStatus">' + esc(status) + '</span></div>'
         + '<div class="actionabilitySelectionActions">'
         + '<button class="btn small operatorControl operatorControlSecondary" type="button" onclick="selectVisibleActionabilityRows_()">Select Visible</button>'
-        + '<button class="btn small operatorControl operatorControlSecondary" type="button" onclick="selectAllActionabilityRows_()">Select All</button>'
+        + '<button class="btn small operatorControl operatorControlSecondary" type="button" onclick="selectAllActionabilityRows_()">Select All Returned</button>'
         + '<button class="btn small operatorControl operatorControlSecondary" type="button" onclick="clearActionabilitySelection_()" ' + (selected ? "" : "disabled") + '>Clear Selection</button>'
         + '<button class="btn small operatorControl operatorControlBatch" type="button" onclick="actionabilityBatchCommunication_()" ' + (canBatchEmail ? "" : "disabled") + ' title="' + esc(canBatchEmail ? "Open Batch Communication for the selected cohort." : "Select at least two applicants to open Batch Communication.") + '">Batch Communication</button>'
         + '<button class="btn small operatorControl operatorControlBatch" type="button" onclick="actionabilityBatchReminder_()" ' + (canBatchEmail ? "" : "disabled") + ' title="' + esc(canBatchEmail ? "Open Batch Reminder for the selected cohort." : "Select at least two applicants to open Batch Reminder.") + '">Batch Reminder</button>'
@@ -10990,9 +11013,14 @@ function renderStageDashboard_(items, emptyMessage){
         }
       });
       actionabilitySelectionSource = "all";
-      actionabilityBatchMessage = actionabilityActiveGroup
-        ? "All READY rows selected for " + actionabilityGroupLabel_(actionabilityActiveGroup) + ": " + String(ready) + "."
-        : "All READY rows selected from the bounded returned worklist: " + String(ready) + ".";
+      if (actionabilityActiveGroup === "APPLICANT") {
+        var eligibleTotal = Number(actionabilityEligibleNowCountForGroup_("APPLICANT", rows) || 0);
+        actionabilityBatchMessage = "All returned READY rows selected for Applicant Action: " + String(ready) + " of " + String(eligibleTotal) + " eligible now.";
+      } else {
+        actionabilityBatchMessage = actionabilityActiveGroup
+          ? "All returned READY rows selected for " + actionabilityGroupLabel_(actionabilityActiveGroup) + ": " + String(ready) + "."
+          : "All READY rows selected from the bounded returned worklist: " + String(ready) + ".";
+      }
       renderActionabilityPreview_({ preserveRows: true });
     }
 
