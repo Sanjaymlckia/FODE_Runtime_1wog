@@ -59,6 +59,8 @@ assert.doesNotMatch(resolver, /Current lifecycle stage recommends/, "Operator-fa
 assert.doesNotMatch(resolver, /evaluateCommunicationAuthority_/, "Resolver must not duplicate or replace Communication Authority");
 assert.match(builder, /resolveActionabilityState_/, "Preview row builder must consume the resolver");
 assert.match(builder, /canonicalRecommendedMessageType:[\s\S]*canonicalLifecycle && canonicalLifecycle\.recommendedMessageType/, "Preview row builder must pass canonical lifecycle recommendations into actionability");
+assert.match(builder, /postDocsMissingSentCoolingOff[\s\S]*Last_Contact_Type[\s\S]*docs_missing[\s\S]*Last_Contact_Result[\s\S]*SENT/, "Post-send docs_missing rows with future next-action dates must be recognized as cooling-off workload");
+assert.match(builder, /postDocsMissingSentCoolingOff \|\| cooldownActive\)[\s\S]*suppressor = "COOLDOWN_ACTIVE"/, "Post-send docs_missing cooling-off must feed the server-side selectable=false resolver path");
 assert.match(builder, /resolveCanonicalApplicantLifecycle_/, "Preview row builder must expose canonical lifecycle diagnostics without changing behaviour");
 assert.match(builder, /canonicalLifecycle:[\s\S]*baseState:[\s\S]*lifecycleStage:[\s\S]*overlays:[\s\S]*recommendedNextAction:[\s\S]*recommendedMessageType:[\s\S]*actionOwner:[\s\S]*reason:/, "Every preview row must expose the passive canonicalLifecycle DTO");
 assert.match(builder, /compareLegacyCanonicalLifecycle_\(lifecycleStage, canonicalLifecycle\)/, "Preview row builder must compare legacy and canonical lifecycle passively");

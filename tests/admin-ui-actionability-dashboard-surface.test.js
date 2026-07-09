@@ -134,7 +134,9 @@ assert.match(adminUi, /Integrity/, "Ledger bar must expose integrity status");
 assert.match(adminUi, /Generated/, "Ledger bar must expose generated timestamp");
 assert.match(adminUi, /class="actionabilityBucketDeck"/, "Operational buckets must render as a card deck");
 assert.match(adminUi, /class="actionabilityBucketCard/, "Operational buckets must render horizontal cards");
-assert.match(adminUi, /Population[\s\S]+Today&apos;s Work[\s\S]+Hidden/, "Operational cards must separate population, today's work, and hidden counts");
+assert.match(adminUi, /Population[\s\S]+Eligible Now[\s\S]+Cooling-off \/ Contacted[\s\S]+Hidden/, "Operational cards must separate population, eligible-now workload, cooling-off/contacted, and hidden counts");
+assert.match(functionSource("renderActionabilityBucketCard_"), /eligibleNowCount = rows\.filter\(actionabilityIsSelectable_\)\.length/, "Operational cards must count only selectable rows as eligible-now workload");
+assert.match(functionSource("renderActionabilityBucketCard_"), /coolingOffCount = rows\.filter[\s\S]*COOLING_OFF/, "Operational cards must expose cooling-off/contacted rows separately from eligible-now workload");
 assert.match(adminUi, /Next Operator Action/, "Operational cards must preserve next action scanning");
 assert.match(adminUi, /actionabilityBucketStatusBlock/, "Operational cards must expose concise status blocks");
 assert.doesNotMatch(adminUi, /Not derived|Cooling not yet derived|Cooling Off/, "Operational cards must not advertise unfinished Cooling Off placeholders");
@@ -224,6 +226,7 @@ assert.match(functionSource("actionabilityIsEmailActionable_"), /Object\.prototy
 assert.match(functionSource("selectVisibleActionabilityRows_"), /if \(!actionabilityIsSelectable_\(row\)\) return;/, "Select Visible must auto-select READY rows only");
 assert.match(functionSource("selectAllActionabilityRows_"), /if \(!actionabilityIsSelectable_\(row\)\) return;/, "Select All must auto-select READY rows only");
 assert.match(adminUi, /READY rows selected/, "Selection feedback must tell operators that only READY rows were selected");
+assert.match(adminUi, /eligible for batch preview now/, "Selection summary must describe eligible-now preview readiness instead of guaranteed send readiness");
 assert.match(adminUi, /data-actionability-state=/, "Worklist rows must expose server-derived actionability state");
 assert.match(adminUi, /function selectVisibleActionabilityRows_/, "Current Worklist must support Select Visible");
 assert.match(adminUi, /function selectAllActionabilityRows_/, "Current Worklist must support Select All bounded by current authority/filter");

@@ -10135,6 +10135,8 @@ function renderStageDashboard_(items, emptyMessage){
       var rows = Array.isArray(list) ? list : [];
       var populationCount = actionabilityPopulationCountForGroup_(key, rows.length);
       var visibleCount = rows.length;
+      var eligibleNowCount = rows.filter(actionabilityIsSelectable_).length;
+      var coolingOffCount = rows.filter(function(row){ return String(row && row.actionabilityState || "").toUpperCase() === "COOLING_OFF"; }).length;
       var hiddenCount = Math.max(0, Number(populationCount || 0) - Number(visibleCount || 0));
       var top = rows[0] || {};
       var oldest = actionabilityOldestAgeForList_(rows);
@@ -10156,15 +10158,17 @@ function renderStageDashboard_(items, emptyMessage){
         + '<div class="actionabilityBucketMain">'
         + '<div class="actionabilityBucketMetricGrid">'
         + '<div class="actionabilityBucketMetric"><div class="v">' + esc(String(populationCount)) + '</div><div class="k">Population</div></div>'
-        + '<div class="actionabilityBucketMetric primary"><div class="v">' + esc(String(visibleCount)) + '</div><div class="k">Today&apos;s Work</div></div>'
+        + '<div class="actionabilityBucketMetric primary"><div class="v">' + esc(String(eligibleNowCount)) + '</div><div class="k">Eligible Now</div></div>'
+        + '<div class="actionabilityBucketMetric"><div class="v">' + esc(String(coolingOffCount)) + '</div><div class="k">Cooling-off / Contacted</div></div>'
         + '<div class="actionabilityBucketMetric"><div class="v">' + esc(String(hiddenCount)) + '</div><div class="k">Hidden</div></div>'
         + '</div>'
         + '<div class="actionabilityWorkloadBar" aria-label="Workload bar">'
-        + actionabilityWorkloadSegment_("needs", visibleCount, populationCount)
+        + actionabilityWorkloadSegment_("needs", eligibleNowCount, populationCount)
+        + actionabilityWorkloadSegment_("cooling", coolingOffCount, populationCount)
         + actionabilityWorkloadSegment_("completed", completed, populationCount)
         + actionabilityWorkloadSegment_("hidden", hiddenCount, populationCount)
         + '</div>'
-        + '<div class="actionabilityWorkloadLegend"><span class="needs">' + esc(actionabilityPercent_(visibleCount, populationCount)) + ' Needs Action</span><span class="hidden">' + esc(actionabilityPercent_(hiddenCount, populationCount)) + ' Hidden</span></div>'
+        + '<div class="actionabilityWorkloadLegend"><span class="needs">' + esc(actionabilityPercent_(eligibleNowCount, populationCount)) + ' Eligible Now</span><span class="cooling">' + esc(actionabilityPercent_(coolingOffCount, populationCount)) + ' Cooling-off / Contacted</span><span class="hidden">' + esc(actionabilityPercent_(hiddenCount, populationCount)) + ' Hidden</span></div>'
         + '</div>'
         + '<div class="actionabilityBucketState">'
         + '<div class="actionabilityBucketNext"><strong>Next Operator Action</strong>' + esc(nextAction) + '<br><span>' + esc(oldest !== "" ? ("Oldest visible: " + String(oldest) + "d") : "No visible age evidence") + '</span></div>'
@@ -10264,7 +10268,7 @@ function renderStageDashboard_(items, emptyMessage){
         + '<div class="actionabilityBatchMetric"><span class="k">Blocked</span><span class="v">' + esc(summary.blocked) + '</span></div>'
         + '</div>'
         + '<div class="actionabilityBatchDetails">'
-        + '<div><strong>Recommended templates</strong>' + esc(actionabilitySummaryList_(summary.templateCounts, "No email-ready templates")) + '</div>'
+        + '<div><strong>Recommended templates</strong>' + esc(actionabilitySummaryList_(summary.templateCounts, "No eligible-now templates")) + '</div>'
         + '<div><strong>Blocked reasons</strong>' + esc(actionabilitySummaryList_(summary.blockedReasons, "No blocked selected rows")) + '</div>'
         + '<div><strong>Recommended next action</strong>' + esc(next) + '</div>'
         + '</div></div>';
@@ -10277,7 +10281,7 @@ function renderStageDashboard_(items, emptyMessage){
       var blocked = summary.blocked;
       var sourceLabel = selected ? actionabilitySelectionSourceLabel_() + ": " : "";
       var status = actionabilityBatchMessage || (selected
-        ? sourceLabel + String(selected) + " selected. " + String(eligible) + " email-ready, " + String(blocked) + " blocked by Contactability Gate or cooldown."
+        ? sourceLabel + String(selected) + " selected. " + String(eligible) + " eligible for batch preview now, " + String(blocked) + " blocked by Contactability Gate, cooling-off, or review state."
         : "No applicants selected.");
       var canBatchEmail = eligible > 1;
       var canExport = selected > 0;

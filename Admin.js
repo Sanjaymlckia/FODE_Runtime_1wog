@@ -3072,6 +3072,9 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
   var lastContactAgeDays = actionabilityPreviewLastContactAgeDays_(row);
   var nextActionTs = parseTime_(row.Email_Next_Action_Date || "");
   var cooldownActive = nextActionTs > Date.now();
+  var postDocsMissingSentCoolingOff = cooldownActive
+    && clean_(row.Last_Contact_Type || "").toLowerCase() === "docs_missing"
+    && clean_(row.Last_Contact_Result || "").toUpperCase() === "SENT";
   var owner = "NONE";
   var nextAction = "NO_ACTION";
   var recommendedMessageType = "";
@@ -3080,7 +3083,7 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
 
   if (!hasValidEmail) suppressor = "NO_EFFECTIVE_EMAIL";
   else if (emailIssue) suppressor = "EMAIL_BLOCKED_OR_BOUNCED";
-  else if (cooldownActive) suppressor = "COOLDOWN_ACTIVE";
+  else if (postDocsMissingSentCoolingOff || cooldownActive) suppressor = "COOLDOWN_ACTIVE";
 
   if (enrolled) {
     owner = "NONE";
