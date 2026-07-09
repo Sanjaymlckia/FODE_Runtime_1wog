@@ -43,6 +43,8 @@ assert.doesNotMatch(ledgerBuilder, /admin_getReviewQueues|isQueueCandidateRow_/,
 
 assert.match(adminUi, /actionabilityPopulationCountForGroup_/, "Operations Workspace must resolve KPI counts from ledger population totals");
 assert.match(adminUi, /bounded worklist rows \/ " \+ String\(populationTotal\) \+ " total applicant population/, "Operations Workspace must label bounded worklist rows separately from population totals");
+assert.match(adminSource, /workloadExplanation:\s*actionabilityWorkloadExplanationEmpty_\(\)/, "Operations Workspace must keep workload explanations separate from Population Ledger counts");
+assert.match(adminUi, /Why Work Remains/, "Operations Workspace must explain workload separately from population accounting");
 assert.doesNotMatch(adminUi, /Review Queues remains the primary action surface/i, "Review Queues must not claim primary authority");
 assert.match(adminUi, /Compatibility: Review Queues/, "Review Queues must remain compatibility-only navigation");
 

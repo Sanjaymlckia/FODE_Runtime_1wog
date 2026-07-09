@@ -2489,11 +2489,14 @@ function isPreviousLocalMonth_(value, now) {
 function buildCommunicationsActivityShell_() {
   return {
     reliable: true,
-    sourceType: "latest_row_state",
-    sourceLabel: "Source: latest row state only - not cumulative history",
+    sourceType: "communications_ledger_latest_row_state",
+    authorityName: "Communications Ledger",
+    sourceLabel: "Source: Communications Ledger - latest row state only",
     sourceDetail: "Window counts are rows whose latest communication state falls in the period. Mailbox bounces affect reliability metrics only after deterministic runtime reconciliation.",
+    authorityDetail: "Single runtime communications accounting DTO derived from row communication fields; not Gmail and not System Health send caps.",
+    lifetimePolicy: "Latest-row proxy; true lifetime counters require historical send records and must not be compared to cumulative Gmail volume.",
     cumulativeIsHistorical: false,
-    cumulativeLabel: "Rows with latest status SENT",
+    cumulativeLabel: "Current applicants with latest status SENT",
     sent: { today: 0, last7Days: 0, monthToDate: 0, previousMonth: 0, cumulative: 0 },
     failed: { today: 0, last7Days: 0, monthToDate: 0, previousMonth: 0 },
     suppressed: { total: 0 },
@@ -2511,12 +2514,67 @@ function buildCommunicationsActivityShell_() {
     },
     lastSuccessfulSend: "",
     lastSentAt: "",
+    metricAuthority: {
+      today: "Communications Ledger latest-row timestamp",
+      last7Days: "Communications Ledger latest-row timestamp",
+      monthToDate: "Communications Ledger latest-row timestamp",
+      previousMonth: "Communications Ledger latest-row timestamp",
+      cumulative: "Current applicants whose latest communication status is SENT",
+      failures: "Latest Email_Status / Last_Contact_Result evidence",
+      suppressedBounced: "Latest runtime row reliability evidence",
+      lastSuccessfulSend: "Latest successful row timestamp"
+    },
     sourceFields: ["Email_Last_Sent_At", "Last_Contacted_At", "Email_Status", "Last_Contact_Result", "Email_Bounce_Flag", "Delivery_Health", "Last_Delivery_Status", "Last_Bounce_Date"]
   };
 }
 
 function buildEmailResponseTrafficShell_() {
   return buildCommunicationsActivityShell_();
+}
+
+function actionabilityWorkloadExplanationEmpty_() {
+  return {
+    "Awaiting applicant upload": 0,
+    "Reminder sent today": 0,
+    "Awaiting applicant response": 0,
+    "Cooling-off": 0,
+    "Escalation due": 0,
+    "Ready for reminder": 0,
+    "Ready for academic review": 0,
+    "Document received today": 0,
+    "Other": 0
+  };
+}
+
+function incrementActionabilityWorkloadExplanation_(summary, label) {
+  var key = clean_(label || "Other") || "Other";
+  if (!summary || typeof summary !== "object") summary = actionabilityWorkloadExplanationEmpty_();
+  if (!Object.prototype.hasOwnProperty.call(summary, key)) summary[key] = 0;
+  summary[key] = Number(summary[key] || 0) + 1;
+  return summary;
+}
+
+function actionabilityWorkloadExplanationForRow_(row) {
+  var r = row || {};
+  var state = clean_(r.actionabilityState || "").toUpperCase();
+  var reason = clean_(r.reasonCode || "").toUpperCase();
+  var next = clean_(r.nextAction || "").toUpperCase();
+  var recommended = clean_(r.recommendedAction || r.recommendedMessageType || "").toLowerCase();
+  var authority = r.authorityState || {};
+  var uploaded = Number(authority.uploadedRequiredDocumentCount || 0);
+  var required = Number(authority.requiredDocumentCount || 0);
+  if (state === "COOLING_OFF" || reason === "COOLDOWN_ACTIVE") return "Cooling-off";
+  if (isSameLocalDate_(r.lastRelevantDate || "", new Date()) && uploaded > 0 && required > uploaded) return "Document received today";
+  if (next === "REVIEW_DOCUMENTS" || state === "REVIEW_REQUIRED") return "Ready for academic review";
+  if (state === "AWAITING_APPLICANT") return "Awaiting applicant response";
+  if (next === "UPLOAD_REQUIRED_DOCUMENTS") {
+    if (Number(r.lastContactAgeDays || 0) === 0) return "Reminder sent today";
+    if (recommended.indexOf("escalation") >= 0 || Number(r.lastContactAgeDays || 0) >= 14) return "Escalation due";
+    if (state === "READY") return "Ready for reminder";
+    return "Awaiting applicant upload";
+  }
+  if (state === "AWAITING_PAYMENT") return "Awaiting applicant response";
+  return "Other";
 }
 
 function addEmailTrafficPeriod_(bucket, timestamp, now) {
@@ -3074,6 +3132,19 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     canonicalRecommendedMessageType: canonicalLifecycle && canonicalLifecycle.recommendedMessageType || "",
     coolingOffUntil: row.Email_Next_Action_Date || ""
   });
+  var communicationProgress = actionabilityWorkloadExplanationForRow_({
+    actionabilityState: actionabilityState.actionabilityState,
+    reasonCode: actionabilityState.reasonCode,
+    nextAction: nextAction,
+    recommendedAction: actionabilityState.recommendedAction,
+    recommendedMessageType: recommendedMessageType,
+    lastRelevantDate: dateInfo.value,
+    lastContactAgeDays: lastContactAgeDays,
+    authorityState: {
+      uploadedRequiredDocumentCount: Number(uploadSummary.uploadedRequiredCount || 0),
+      requiredDocumentCount: Number(uploadSummary.requiredCount || 0)
+    }
+  });
   return {
     rowNumber: rowNumber,
     applicantId: applicantId,
@@ -3090,6 +3161,10 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     urgencyReason: urgency.reason,
     suppressor: suppressor,
     recommendedMessageType: recommendedMessageType,
+    communicationProgress: communicationProgress,
+    communicationProgressDetail: actionabilityState.selectable === true
+      ? "Ready for batch preview; Communication Authority remains the send gate."
+      : (actionabilityState.selectBlockReason || explanation || communicationProgress),
     canonicalLifecycle: {
       baseState: clean_(canonicalLifecycle && canonicalLifecycle.baseState || "UNKNOWN").toUpperCase(),
       lifecycleStage: clean_(canonicalLifecycle && canonicalLifecycle.lifecycleStage || "UNKNOWN").toUpperCase(),
@@ -3281,6 +3356,7 @@ function admin_getActionabilityPreview(payload) {
     includedRows: 0,
     countsByOwner: { APPLICANT: 0, OFFICER: 0, FINANCE: 0, ADMIN: 0, SYSTEM: 0, NONE: 0 },
     workloadSummary: { READY: 0, COOLING_OFF: 0, AWAITING_APPLICANT: 0, AWAITING_PAYMENT: 0, REVIEW_REQUIRED: 0, COMPLETE: 0, UNKNOWN: 0 },
+    workloadExplanation: actionabilityWorkloadExplanationEmpty_(),
     lifecycleDriftSummary: lifecycleDriftEmptySummary_(),
     populationLedger: populationLedgerPublicSummary_(ledger),
     rows: [],
@@ -3304,6 +3380,7 @@ function admin_getActionabilityPreview(payload) {
     var state = clean_(item.actionabilityState || "UNKNOWN").toUpperCase() || "UNKNOWN";
     if (!Object.prototype.hasOwnProperty.call(out.workloadSummary, state)) out.workloadSummary[state] = 0;
     out.workloadSummary[state]++;
+    out.workloadExplanation = incrementActionabilityWorkloadExplanation_(out.workloadExplanation, item.communicationProgress);
     out.lifecycleDriftSummary = lifecycleDriftRecord_(out.lifecycleDriftSummary, item.lifecycleMismatch);
     rows.push(item);
   }

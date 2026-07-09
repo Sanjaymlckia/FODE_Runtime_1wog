@@ -336,15 +336,20 @@ assert.match(adminJs, /communicationsActivity:\s*buildCommunicationsActivityShel
 assert.match(adminJs, /emailResponseTraffic\s*=\s*out\.communicationsActivity/, "Legacy emailResponseTraffic field must remain a compatibility alias");
 assert.match(adminUi, /id="actionabilityResponseTraffic"/, "Operations Workspace must have a read-only response traffic surface");
 assert.match(adminUi, /Communications Activity/, "Operations Workspace must label the surface as Communications Activity");
-["Today", "Last 7 Days", "Month-to-Date", "Previous Month", "Failed", "Suppressed / Bounced", "Last Successful Send", "Cumulative Emails Sent"].forEach((label) => {
+["Today", "Last 7 Days", "Month-to-Date", "Previous Month", "Failed", "Suppressed / Bounced", "Last Successful Send", "Latest SENT Applicants"].forEach((label) => {
   assert.match(adminUi, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `Communications Activity must include ${label}`);
 });
 ["Permanent Bounces", "Temporary Bounces", "Bounce Rate", "Last Bounce", "Successful Deliveries"].forEach((label) => {
   assert.match(adminUi, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `Communications Activity must support reconciled delivery metric ${label}`);
 });
-assert.match(adminJs, /Source: latest row state only/, "Communications Activity must label latest-row source limitations");
+assert.match(adminJs, /Source: Communications Ledger - latest row state only/, "Communications Activity must label latest-row source limitations");
+assert.match(adminJs, /sourceType:\s*"communications_ledger_latest_row_state"/, "Communications Activity must expose a single communications ledger source type");
+assert.match(adminJs, /authorityName:\s*"Communications Ledger"/, "Communications Activity must name the communications ledger authority");
+assert.match(adminUi, /Why Work Remains/, "Operations Workspace must explain why work remains after communications");
+assert.match(adminUi, /Communication Progress/, "Worklist details must expose communication progress without internal diagnostics");
 assert.match(adminJs, /Mailbox bounces affect reliability metrics only after deterministic runtime reconciliation/, "Communications Activity must disclose that mailbox bounces require runtime reconciliation before dashboard use");
-assert.match(adminJs, /cumulativeLabel:\s*"Rows with latest status SENT"/, "Cumulative metric must be labelled as row-latest proxy when no true ledger exists");
+assert.match(adminJs, /cumulativeLabel:\s*"Current applicants with latest status SENT"/, "Snapshot SENT metric must be labelled as row-latest proxy when no true ledger exists");
+assert.doesNotMatch(adminUi, /Cumulative Emails Sent|Lifetime|Emails Ever Sent/, "Communications Activity must not imply historical send accounting without a true ledger");
 assert.match(adminJs, /deliveryHealth:\s*\{[\s\S]*Source: reconciled runtime delivery health/, "Communications Activity must define runtime delivery-health metrics separately from Gmail");
 assert.match(adminUi, /delivery\.available === true/, "Reconciled delivery metrics must only render when runtime evidence exists");
 assert.doesNotMatch(adminJs, /GmailApp\.search[\s\S]*communicationsActivity/, "Communications Activity metrics must not query Gmail directly");
