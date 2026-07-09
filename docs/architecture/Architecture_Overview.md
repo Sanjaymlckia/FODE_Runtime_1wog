@@ -113,6 +113,16 @@ Deferred migrations:
 - Communication Authority canonical input migration.
 - Retirement of legacy lifecycle derivation functions after all consumers are migrated.
 
+## ACP Phase 1 Authority Consolidation
+
+ACP Phase 1 reduces duplication around already-approved authority outcomes:
+
+- shared batch policy helpers now own cap/default/max, normalization, candidate hashing, and preview-cache primitives
+- selected/manual batch and Stage Batch reuse those helpers where behaviour already matched
+- Operations Workspace bucket summaries are now produced on the server and consumed by the UI
+
+ACP Phase 1 does not migrate Stage Batch behaviour or Communication Authority outcomes.
+
 ## r301+ Protected Live Surfaces
 
 Do not prune, archive, or refactor these surfaces without a dedicated CIS and proof:

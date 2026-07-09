@@ -30,6 +30,8 @@ Do not collapse separate authorities into one state. Do not let UI labels become
 | LAP automation | Stage resolver and automation scaffolds | Partial/future; scheduled action authority is not broadly active. |
 | Population Ledger | `buildPopulationLedgerFromValues_()` / `admin_getPopulationLedger()` | Read-only exactly-once applicant population accounting. |
 | Operator actionability | Operator Actionability Resolver | Derived/read-only/non-authoritative. |
+| Operations Workspace bucket summaries | `admin_getActionabilityPreview()` server DTO | Derived/read-only presentation summary. UI consumes, does not own. |
+| Shared batch policy | shared batch policy helpers in runtime source | Shared cap/normalization/cache/hash policy for selected/manual and Stage Batch paths. |
 
 ## Important Distinctions
 

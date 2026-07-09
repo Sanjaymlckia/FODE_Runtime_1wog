@@ -13,6 +13,9 @@ Runtime source, Apps Script deployment, queues, communications, Sheets, and send
 |---|---|
 | Architecture overview | [Architecture_Overview.md](Architecture_Overview.md) |
 | Authority model | [Authority_Model.md](Authority_Model.md) |
+| ACP Phase 1 ADR | [ACP_Phase_1_Authority_Consolidation_ADR.md](ACP_Phase_1_Authority_Consolidation_ADR.md) |
+| Legacy retirement register | [Legacy_Retirement_Register.md](Legacy_Retirement_Register.md) |
+| Compatibility shim register | [Compatibility_Shim_Register.md](Compatibility_Shim_Register.md) |
 | Operational model | [Operational_Model.md](Operational_Model.md) |
 | Population Ledger model | [Population_Ledger_Model.md](Population_Ledger_Model.md) |
 | Operator Actionability Resolver | [Operator_Actionability_Resolver.md](Operator_Actionability_Resolver.md) |
@@ -76,6 +79,15 @@ Historical Playwright reports remain valid evidence for the releases they docume
 Docs-only work uses the lightest deterministic closure: `git status -sb`, `git diff --check`, exact-file staging, one final `git diff --cached --check`, commit, and push. Do not run Node tests or Playwright for docs-only tasks unless the CIS explicitly requires docs tooling validation.
 
 Refactor work validates only changed runtime files and the tests protecting the changed authority surface. Do not run broad exploratory validation unless a concrete defect is found.
+
+## ACP Phase 1
+
+ACP Phase 1 consolidates shared authority DTOs and shared batch policy helpers without changing runtime decision authority.
+
+Key rule:
+
+- server DTOs own workload summaries
+- UI presents them and keeps bounded compatibility fallback only where required
 
 Playwright is reserved for visible UI behavior changes, release proof, suspected browser-only regressions, or explicit operator request.
 

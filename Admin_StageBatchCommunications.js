@@ -15,11 +15,7 @@ function isBatchSendableStage_(stage) {
 }
 
 function clampStageBatchLimit_(rawLimit) {
-  var n = Math.floor(Number(rawLimit || 0));
-  var safeDefault = Math.max(1, Number(CONFIG.DEFAULT_STAGE_BATCH_SIZE || 20));
-  var safeMax = Math.max(1, Number(CONFIG.MAX_STAGE_BATCH_SIZE || 30));
-  if (!(n > 0)) return Math.min(safeDefault, safeMax);
-  return Math.max(1, Math.min(safeMax, n));
+  return batchPolicyClampStageLimit_(rawLimit);
 }
 
 function clampStageBatchOffset_(rawOffset) {
@@ -43,32 +39,23 @@ function stageBatchLimitMeta_(rawLimit) {
 }
 
 function getStageBatchPreviewCacheKey_(adminEmail) {
-  return "ADMIN_STAGE_BATCH_PREVIEW::" + clean_(adminEmail || "").toLowerCase();
+  return batchPolicyPreviewCacheKey_("ADMIN_STAGE_BATCH_PREVIEW", adminEmail);
 }
 
 function readStageBatchPreviewCache_(adminEmail) {
-  try {
-    var raw = CacheService.getUserCache().get(getStageBatchPreviewCacheKey_(adminEmail));
-    return raw ? JSON.parse(raw) : null;
-  } catch (_cacheErr) {
-    return null;
-  }
+  return batchPolicyReadPreviewCache_("ADMIN_STAGE_BATCH_PREVIEW", adminEmail);
 }
 
 function stageBatchPreviewCacheTtlSeconds_() {
-  return 600;
+  return batchPolicyPreviewCacheTtlSeconds_();
 }
 
 function writeStageBatchPreviewCache_(adminEmail, value) {
-  try {
-    CacheService.getUserCache().put(getStageBatchPreviewCacheKey_(adminEmail), JSON.stringify(value || {}), stageBatchPreviewCacheTtlSeconds_());
-  } catch (_cacheErr) {}
+  batchPolicyWritePreviewCache_("ADMIN_STAGE_BATCH_PREVIEW", adminEmail, value, stageBatchPreviewCacheTtlSeconds_());
 }
 
 function clearStageBatchPreviewCache_(adminEmail) {
-  try {
-    CacheService.getUserCache().remove(getStageBatchPreviewCacheKey_(adminEmail));
-  } catch (_cacheErr) {}
+  batchPolicyClearPreviewCache_("ADMIN_STAGE_BATCH_PREVIEW", adminEmail);
 }
 
 function incrementStageBatchReason_(map, code) {
@@ -97,14 +84,7 @@ function stageBatchCandidateIds_(cohort) {
 }
 
 function stageBatchCandidateHash_(candidateIds) {
-  var ids = Array.isArray(candidateIds) ? candidateIds : [];
-  var normalized = [];
-  for (var i = 0; i < ids.length; i++) {
-    var applicantId = clean_(ids[i] || "");
-    if (!applicantId) continue;
-    normalized.push(applicantId);
-  }
-  return normalized.join("|");
+  return batchPolicyCandidateHash_(candidateIds);
 }
 
 function stageBatchPreviewAgeSeconds_(writtenAt) {

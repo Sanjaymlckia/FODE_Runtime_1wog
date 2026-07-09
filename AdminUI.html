@@ -3417,6 +3417,7 @@
     let actionabilityPreviewCountsState = {};
     let actionabilityWorkloadSummaryState = {};
     let actionabilityWorkloadExplanationState = {};
+    let actionabilityBucketSummariesState = {};
     let actionabilityPopulationLedgerState = null;
     let actionabilityResponseTrafficState = null;
     let actionabilityHiddenRecordsState = { byGroup: {}, totalByGroup: {}, perBucketLimit: 5 };
@@ -9528,7 +9529,15 @@ function renderStageDashboard_(items, emptyMessage){
       return "Unknown / Unclassified";
     }
 
+    function actionabilityBucketSummaryForGroup_(key){
+      var state = actionabilityBucketSummariesState || {};
+      var normalized = String(key || "").trim().toUpperCase();
+      return state[normalized] || null;
+    }
+
     function actionabilityPopulationCountForGroup_(key, fallbackCount){
+      var summary = actionabilityBucketSummaryForGroup_(key);
+      if (summary && Number.isFinite(Number(summary.populationCount))) return Number(summary.populationCount || 0);
       var ledger = actionabilityPopulationLedgerState || {};
       var counts = ledger.operationalBucketCounts || {};
       var value = Number(counts[actionabilityPopulationBucketForGroup_(key)]);
@@ -9907,6 +9916,8 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function actionabilityHiddenTotalForGroup_(key){
+      var summary = actionabilityBucketSummaryForGroup_(key);
+      if (summary && Number.isFinite(Number(summary.hiddenCount))) return Number(summary.hiddenCount || 0);
       var state = actionabilityHiddenRecordsState || {};
       var totals = state.totalByGroup || {};
       var direct = Number(totals[key] || 0);
@@ -10054,7 +10065,7 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function actionabilityBucketStatusReason_(key, populationCount, visibleCount){
-      var hidden = Math.max(0, Number(populationCount || 0) - Number(visibleCount || 0));
+      var hidden = Number(actionabilityHiddenTotalForGroup_(key) || Math.max(0, Number(populationCount || 0) - Number(visibleCount || 0)));
       if (actionabilityActiveGroup === key) return "Current filter";
       if (Number(populationCount || 0) === 0) return "No records in bucket";
       if (hidden > 0) return "Outside current worklist";
@@ -10069,11 +10080,13 @@ function renderStageDashboard_(items, emptyMessage){
       keys.sort(function(a, b){
         var aList = groupRows[a] || [];
         var bList = groupRows[b] || [];
+        var aSummary = actionabilityBucketSummaryForGroup_(a) || {};
+        var bSummary = actionabilityBucketSummaryForGroup_(b) || {};
         var aPop = actionabilityPopulationCountForGroup_(a, aList.length);
         var bPop = actionabilityPopulationCountForGroup_(b, bList.length);
-        if (mode === "visible") return bList.length - aList.length || order[a] - order[b];
+        if (mode === "visible") return Number(bSummary.visibleCount || bList.length) - Number(aSummary.visibleCount || aList.length) || order[a] - order[b];
         if (mode === "population") return bPop - aPop || order[a] - order[b];
-        if (mode === "oldest") return Number(actionabilityOldestAgeForList_(bList) || 0) - Number(actionabilityOldestAgeForList_(aList) || 0) || order[a] - order[b];
+        if (mode === "oldest") return Number(bSummary.oldestVisibleAgeDays || actionabilityOldestAgeForList_(bList) || 0) - Number(aSummary.oldestVisibleAgeDays || actionabilityOldestAgeForList_(aList) || 0) || order[a] - order[b];
         if (mode === "alpha") return actionabilityGroupLabel_(a).localeCompare(actionabilityGroupLabel_(b));
         return order[a] - order[b];
       });
@@ -10098,7 +10111,7 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function actionabilityHiddenPanel_(key, populationCount, visibleCount){
-      var hiddenCount = Math.max(0, Number(populationCount || 0) - Number(visibleCount || 0));
+      var hiddenCount = Number(actionabilityHiddenTotalForGroup_(key) || Math.max(0, Number(populationCount || 0) - Number(visibleCount || 0)));
       if (!hiddenCount) return "";
       var state = actionabilityHiddenRecordsState || {};
       var records = actionabilityHiddenRecordsForGroup_(key);
@@ -10133,15 +10146,18 @@ function renderStageDashboard_(items, emptyMessage){
 
     function renderActionabilityBucketCard_(key, list){
       var rows = Array.isArray(list) ? list : [];
+      var summary = actionabilityBucketSummaryForGroup_(key) || {};
       var populationCount = actionabilityPopulationCountForGroup_(key, rows.length);
-      var visibleCount = rows.length;
+      var visibleCount = Number(summary.visibleCount || rows.length || 0);
       var eligibleNowCount = actionabilityEligibleNowCountForGroup_(key, rows);
       var coolingOffCount = actionabilityCoolingOffCountForGroup_(key, rows);
-      var hiddenCount = Math.max(0, Number(populationCount || 0) - Number(eligibleNowCount || 0) - Number(coolingOffCount || 0));
+      var hiddenCount = Number(summary.hiddenCount || Math.max(0, Number(populationCount || 0) - Number(eligibleNowCount || 0) - Number(coolingOffCount || 0)));
       var top = rows[0] || {};
-      var oldest = actionabilityOldestAgeForList_(rows);
+      var oldest = summary.oldestVisibleAgeDays === "" || summary.oldestVisibleAgeDays === undefined
+        ? actionabilityOldestAgeForList_(rows)
+        : summary.oldestVisibleAgeDays;
       var completed = key === "COMPLETE" ? populationCount : 0;
-      var nextAction = actionabilityNextActionLabel_(top.nextAction || "NO_ACTION");
+      var nextAction = actionabilityNextActionLabel_(summary.nextAction || top.nextAction || "NO_ACTION");
       var stateBadge = actionabilityBucketStateBadge_(key, populationCount, visibleCount);
       var statusReason = actionabilityBucketStatusReason_(key, populationCount, visibleCount);
       var hiddenTotal = actionabilityHiddenTotalForGroup_(key) || hiddenCount;
@@ -10188,6 +10204,8 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function actionabilityEligibleNowCountForGroup_(key, rows){
+      var summary = actionabilityBucketSummaryForGroup_(key);
+      if (summary && Number.isFinite(Number(summary.eligibleNowCount))) return Number(summary.eligibleNowCount || 0);
       var list = Array.isArray(rows) ? rows : [];
       var workload = actionabilityWorkloadSummaryState || {};
       if (key === "APPLICANT" && Object.prototype.hasOwnProperty.call(workload, "READY")) return Number(workload.READY || 0);
@@ -10195,6 +10213,8 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function actionabilityCoolingOffCountForGroup_(key, rows){
+      var summary = actionabilityBucketSummaryForGroup_(key);
+      if (summary && Number.isFinite(Number(summary.coolingOffCount))) return Number(summary.coolingOffCount || 0);
       var list = Array.isArray(rows) ? rows : [];
       var workload = actionabilityWorkloadSummaryState || {};
       if (key === "APPLICANT" && Object.prototype.hasOwnProperty.call(workload, "COOLING_OFF")) return Number(workload.COOLING_OFF || 0);
@@ -10202,7 +10222,9 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function actionabilityDisplayRowsForGroup_(key, rows){
+      var summary = actionabilityBucketSummaryForGroup_(key);
       var list = Array.isArray(rows) ? rows.slice() : [];
+      if (summary && key !== "APPLICANT") return list.slice(0, Number(summary.visibleCount || list.length));
       if (key === "APPLICANT") return list.filter(actionabilityIsSelectable_);
       return list;
     }
@@ -11129,6 +11151,7 @@ function renderStageDashboard_(items, emptyMessage){
         actionabilityPreviewCountsState = data.countsByOwner || {};
         actionabilityWorkloadSummaryState = data.workloadSummary || {};
         actionabilityWorkloadExplanationState = data.workloadExplanation || {};
+        actionabilityBucketSummariesState = data.bucketSummaries || {};
         actionabilityHiddenRecordsState = data.hiddenRecords && typeof data.hiddenRecords === "object" ? data.hiddenRecords : { byGroup: {}, totalByGroup: {}, perBucketLimit: 5 };
       }
       if (data.preserveRows !== true && Array.isArray(data.rows)) actionabilityPreviewRows = data.rows.slice();

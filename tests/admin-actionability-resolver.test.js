@@ -67,6 +67,9 @@ assert.match(builder, /compareLegacyCanonicalLifecycle_\(lifecycleStage, canonic
 assert.match(builder, /lifecycleMismatch:[\s\S]*hasLifecycleMismatch:[\s\S]*legacyLifecycle:[\s\S]*canonicalBaseState:[\s\S]*canonicalOverlays:[\s\S]*mismatchReason:/, "Every preview row must expose the passive lifecycle mismatch DTO");
 assert.match(builder, /actionabilityState:[\s\S]*selectable:[\s\S]*selectBlockReason:[\s\S]*coolingOffUntil:[\s\S]*recommendedAction:[\s\S]*reasonCode:/, "Every preview row must expose A1 fields");
 assert.match(preview, /workloadSummary/, "Actionability preview must return workload summary separate from ledger");
+assert.match(preview, /bucketSummaries:\s*\{\}/, "Actionability preview must initialize server-authored bucket summaries");
+assert.match(preview, /worklistSummary:\s*\{ totalRows: 0, returnedRows: 0, boundedRows: 0, limit: limit \}/, "Actionability preview must initialize a server-authored worklist summary");
+assert.match(preview, /buildActionabilityBucketSummaries_\(rows, out\.rows, ledger, out\.hiddenRecords\)/, "Actionability preview must build authoritative bucket summaries on the server");
 assert.match(preview, /lifecycleDriftSummary: lifecycleDriftEmptySummary_\(\)/, "Actionability preview must return passive lifecycle drift summary");
 assert.match(preview, /out\.lifecycleDriftSummary = lifecycleDriftRecord_\(out\.lifecycleDriftSummary, item\.lifecycleMismatch\)/, "Lifecycle drift summary must count existing preview rows passively");
 assert.match(preview, /populationLedger: populationLedgerPublicSummary_\(ledger\)/, "Population Ledger summary must remain separate from drift diagnostics");

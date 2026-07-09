@@ -238,9 +238,21 @@ const selectedBatchLimit = extractFunction(adminSource, "selectedApplicantBatchL
 const selectedBatchInputLimit = extractFunction(adminSource, "selectedApplicantBatchInputLimit_");
 const selectedBatchNormalize = extractFunction(adminSource, "normalizeSelectedApplicantBatchIds_");
 const selectedBatchAuthorityDiagnostics = extractFunction(adminSource, "selectedApplicantBatchAuthorityDiagnostics_");
+const batchPolicyPerRunCap = extractFunction(codeSource, "batchPolicyConfiguredPerRunCap_");
+const batchPolicyNormalize = extractFunction(codeSource, "batchPolicyNormalizeCandidateIds_");
+const batchPolicyCandidateHash = extractFunction(codeSource, "batchPolicyCandidateHash_");
+const batchPolicyStageDefault = extractFunction(codeSource, "batchPolicyConfiguredStageDefault_");
+const batchPolicyStageMax = extractFunction(codeSource, "batchPolicyConfiguredStageMax_");
+const batchPolicyClampStageLimit = extractFunction(codeSource, "batchPolicyClampStageLimit_");
 vm.runInContext([
   extractFunction(adminSource, "selectedApplicantBatchTemplateLabel_"),
   extractFunction(adminSource, "selectedApplicantBatchOperatorBlockReason_"),
+  batchPolicyPerRunCap,
+  batchPolicyNormalize,
+  batchPolicyCandidateHash,
+  batchPolicyStageDefault,
+  batchPolicyStageMax,
+  batchPolicyClampStageLimit,
   selectedBatchLimit,
   selectedBatchInputLimit,
   selectedBatchNormalize,
@@ -282,8 +294,8 @@ assert.equal(
 );
 assert.match(selectedBatchPreview, /isCommunicationTypeBatchSafe_\(messageType\)/, "Selected cohort preview must only allow batch-safe message types");
 assert.match(selectedBatchSend, /isCommunicationTypeBatchSafe_\(messageType\)/, "Selected cohort send must only allow batch-safe message types");
-assert.match(selectedBatchLimit, /MAX_PER_RUN_BATCH_SIZE[\s\S]*MAX_STAGE_BATCH_SIZE[\s\S]*DEFAULT_STAGE_BATCH_SIZE/, "Selected/manual batch cap must use the configured per-run/stage policy cap");
-assert.match(selectedBatchNormalize, /limitOpt[\s\S]*selectedApplicantBatchLimit_\(\)/, "Selected/manual batch normalization must accept an explicit input limit while defaulting to policy cap");
+assert.match(selectedBatchLimit, /batchPolicyConfiguredPerRunCap_/, "Selected/manual batch cap must resolve through the shared batch policy helper");
+assert.match(selectedBatchNormalize, /batchPolicyNormalizeCandidateIds_[\s\S]*selectedApplicantBatchLimit_\(\)/, "Selected/manual batch normalization must use the shared batch policy helper while defaulting to the policy cap");
 assert.match(selectedBatchPreview, /selectedApplicantBatchInputLimit_\(\)[\s\S]*previewSendCap = selectedApplicantBatchLimit_\(\)[\s\S]*selectedIds\.slice\(0, previewSendCap\)/, "Selected/manual preview must preserve selected total while capping this-run candidates");
 assert.match(selectedBatchPreview, /selectedTotal:[\s\S]*previewSendCap:[\s\S]*willSendThisRun:[\s\S]*remainingAfterCap:/, "Selected/manual preview must expose selected total, cap, this-run send count, and remaining-after-cap");
 assert.match(selectedBatchPreview, /writeSelectedApplicantBatchPreviewCache_[\s\S]*candidateIds:\s*eligibleIds[\s\S]*candidateCount:\s*eligibleIds\.length/, "Selected/manual preview cache must contain only capped eligible candidates");
@@ -302,6 +314,8 @@ assert.doesNotMatch(selectedBatchSend, /authorityOverride/, "Selected cohort bat
 assert.match(stageSend, /readStageBatchPreviewCache_\(adminEmail\)/, "Stage Batch send must require a cached preview");
 assert.match(stageSend, /LockService\.getUserLock\(\)[\s\S]*tryLock\(30000\)/, "Stage Batch send must be protected by a server-side user lock");
 assert.match(stageSend, /clearStageBatchPreviewCache_\(adminEmail\)/, "Stage Batch send must clear preview cache after send");
+assert.match(extractFunction(adminSource, "clampStageBatchLimit_"), /batchPolicyClampStageLimit_/, "Stage Batch must consume the shared batch-policy clamp helper");
+assert.match(extractFunction(adminSource, "stageBatchCandidateHash_"), /batchPolicyCandidateHash_/, "Stage Batch candidate hashing must route through the shared batch-policy helper");
 assert.match(sendApplicant, /isSystemStabilizationModeActive_/, "Selected send must preserve stabilization gate");
 assert.match(sendApplicant, /ENABLE_PRODUCTION_EMAIL_SENDS/, "Selected send must preserve production-send gate");
 assert.match(sendApplicant, /dispatchApplicantMessage_\(context, built, options\)/, "Selected send must route through guarded delivery dispatch");

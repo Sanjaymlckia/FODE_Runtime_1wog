@@ -113,8 +113,7 @@ function admin_sendApplicantMessage(payload) {
 }
 
 function selectedApplicantBatchLimit_() {
-  var configured = Number(CONFIG && (CONFIG.MAX_PER_RUN_BATCH_SIZE || CONFIG.MAX_STAGE_BATCH_SIZE || CONFIG.DEFAULT_STAGE_BATCH_SIZE) || 30);
-  return Math.max(1, Math.floor(configured || 30));
+  return batchPolicyConfiguredPerRunCap_();
 }
 
 function selectedApplicantBatchInputLimit_() {
@@ -122,26 +121,19 @@ function selectedApplicantBatchInputLimit_() {
 }
 
 function selectedApplicantBatchCacheKey_(adminEmail) {
-  return "SELECTED_BATCH_PREVIEW::" + clean_(adminEmail || "unknown").toLowerCase();
+  return batchPolicyPreviewCacheKey_("SELECTED_BATCH_PREVIEW", adminEmail);
 }
 
 function readSelectedApplicantBatchPreviewCache_(adminEmail) {
-  try {
-    var raw = CacheService.getUserCache().get(selectedApplicantBatchCacheKey_(adminEmail));
-    return raw ? JSON.parse(raw) : null;
-  } catch (_err) {
-    return null;
-  }
+  return batchPolicyReadPreviewCache_("SELECTED_BATCH_PREVIEW", adminEmail);
 }
 
 function writeSelectedApplicantBatchPreviewCache_(adminEmail, value) {
-  CacheService.getUserCache().put(selectedApplicantBatchCacheKey_(adminEmail), JSON.stringify(value || {}), 600);
+  batchPolicyWritePreviewCache_("SELECTED_BATCH_PREVIEW", adminEmail, value, batchPolicyPreviewCacheTtlSeconds_());
 }
 
 function clearSelectedApplicantBatchPreviewCache_(adminEmail) {
-  try {
-    CacheService.getUserCache().remove(selectedApplicantBatchCacheKey_(adminEmail));
-  } catch (_err) {}
+  batchPolicyClearPreviewCache_("SELECTED_BATCH_PREVIEW", adminEmail);
 }
 
 function withSelectedApplicantBatchSendLock_(adminEmail, dbgId, callback) {
@@ -162,16 +154,7 @@ function withSelectedApplicantBatchSendLock_(adminEmail, dbgId, callback) {
 }
 
 function normalizeSelectedApplicantBatchIds_(ids, limitOpt) {
-  var out = [];
-  var seen = {};
-  var limit = Math.max(1, Math.floor(Number(limitOpt || selectedApplicantBatchLimit_())));
-  (Array.isArray(ids) ? ids : []).forEach(function (value) {
-    var id = clean_(value || "");
-    if (!id || seen[id]) return;
-    seen[id] = true;
-    if (out.length < limit) out.push(id);
-  });
-  return out;
+  return batchPolicyNormalizeCandidateIds_(ids, limitOpt || selectedApplicantBatchLimit_());
 }
 
 function buildSelectedApplicantRowLookup_(sheet) {
@@ -198,11 +181,7 @@ function selectedApplicantBatchRecipientName_(rowObj) {
 }
 
 function selectedApplicantBatchHash_(ids) {
-  var list = normalizeSelectedApplicantBatchIds_(ids);
-  if (typeof stageBatchCandidateHash_ === "function") return stageBatchCandidateHash_(list);
-  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, list.join("|"))
-    .map(function (b) { return ("0" + ((b < 0 ? b + 256 : b).toString(16))).slice(-2); })
-    .join("");
+  return batchPolicyCandidateHash_(normalizeSelectedApplicantBatchIds_(ids));
 }
 
 function selectedApplicantBatchResponse_(payload) {

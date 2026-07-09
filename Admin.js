@@ -3257,6 +3257,114 @@ function actionabilityHiddenSuggestedAction_(groupKey, row) {
   return clean_(row && row.nextAction || "").toUpperCase() === "NO_ACTION" ? "Explain Only" : "Switch Filter";
 }
 
+function actionabilityPopulationBucketForGroupKey_(groupKey) {
+  var key = clean_(groupKey || "").toUpperCase();
+  if (key === "APPLICANT") return "Applicant Action";
+  if (key === "ADMISSIONS") return "Admissions Review";
+  if (key === "FINANCE") return "Finance";
+  if (key === "ACADEMIC") return "Academic Admin";
+  if (key === "MANAGEMENT") return "Management Exceptions";
+  if (key === "DORMANT") return "Dormant";
+  if (key === "COMPLETE") return "Completed / No Action";
+  return "Unknown / Unclassified";
+}
+
+function actionabilityDisplayRowsForGroup_(groupKey, rows) {
+  var key = clean_(groupKey || "").toUpperCase();
+  var list = Array.isArray(rows) ? rows.slice() : [];
+  if (key === "APPLICANT") {
+    return list.filter(function (row) {
+      return row && row.selectable === true && clean_(row.actionabilityState || "").toUpperCase() === "READY";
+    });
+  }
+  return list;
+}
+
+function actionabilityBucketSummarySkeleton_(groupKey) {
+  return {
+    groupKey: groupKey,
+    populationBucket: actionabilityPopulationBucketForGroupKey_(groupKey),
+    totalRows: 0,
+    visibleCount: 0,
+    eligibleNowCount: 0,
+    coolingOffCount: 0,
+    hiddenCount: 0,
+    hiddenByWindowCount: 0,
+    oldestVisibleAgeDays: "",
+    nextAction: "NO_ACTION"
+  };
+}
+
+function buildActionabilityBucketSummaries_(rows, visibleRows, ledger, hiddenRecords) {
+  var allRows = Array.isArray(rows) ? rows : [];
+  var boundedRows = Array.isArray(visibleRows) ? visibleRows : [];
+  var keys = ["APPLICANT", "ADMISSIONS", "FINANCE", "ACADEMIC", "MANAGEMENT", "DORMANT", "COMPLETE", "UNKNOWN"];
+  var counts = ledger && ledger.operationalBucketCounts && typeof ledger.operationalBucketCounts === "object"
+    ? ledger.operationalBucketCounts
+    : {};
+  var hiddenTotals = hiddenRecords && hiddenRecords.totalByGroup && typeof hiddenRecords.totalByGroup === "object"
+    ? hiddenRecords.totalByGroup
+    : {};
+  var summaries = {};
+  var allByGroup = {};
+  var visibleByGroup = {};
+  keys.forEach(function (key) {
+    summaries[key] = actionabilityBucketSummarySkeleton_(key);
+    allByGroup[key] = [];
+    visibleByGroup[key] = [];
+  });
+  allRows.forEach(function (row) {
+    var key = actionabilityPreviewGroupKey_(row);
+    if (!summaries[key]) summaries[key] = actionabilityBucketSummarySkeleton_(key);
+    if (!allByGroup[key]) allByGroup[key] = [];
+    allByGroup[key].push(row);
+    summaries[key].totalRows++;
+    if (row && row.selectable === true && clean_(row.actionabilityState || "").toUpperCase() === "READY") {
+      summaries[key].eligibleNowCount++;
+    }
+    if (clean_(row && row.actionabilityState || "").toUpperCase() === "COOLING_OFF") {
+      summaries[key].coolingOffCount++;
+    }
+  });
+  boundedRows.forEach(function (row) {
+    var key = actionabilityPreviewGroupKey_(row);
+    if (!visibleByGroup[key]) visibleByGroup[key] = [];
+    visibleByGroup[key].push(row);
+  });
+  Object.keys(summaries).forEach(function (key) {
+    var summary = summaries[key];
+    var bucket = summary.populationBucket;
+    var ledgerPopulation = Number(counts[bucket]);
+    var populationCount = Number.isFinite(ledgerPopulation) ? ledgerPopulation : Number(summary.totalRows || 0);
+    var displayRows = actionabilityDisplayRowsForGroup_(key, visibleByGroup[key] || []);
+    var oldestVisible = "";
+    displayRows.forEach(function (row) {
+      var age = Number(row && row.ageDays);
+      if (Number.isFinite(age) && (oldestVisible === "" || age > Number(oldestVisible))) oldestVisible = age;
+    });
+    summary.populationCount = populationCount;
+    summary.visibleCount = displayRows.length;
+    summary.hiddenByWindowCount = Number(hiddenTotals[key] || 0);
+    summary.oldestVisibleAgeDays = oldestVisible;
+    summary.nextAction = clean_((displayRows[0] && displayRows[0].nextAction) || ((visibleByGroup[key] || [])[0] && (visibleByGroup[key] || [])[0].nextAction) || "NO_ACTION").toUpperCase() || "NO_ACTION";
+    summary.hiddenCount = key === "APPLICANT"
+      ? Math.max(0, populationCount - Number(summary.eligibleNowCount || 0) - Number(summary.coolingOffCount || 0))
+      : Math.max(0, populationCount - Number(summary.visibleCount || 0));
+  });
+  return summaries;
+}
+
+function buildActionabilityWorklistSummary_(rows, visibleRows, limit) {
+  var allRows = Array.isArray(rows) ? rows : [];
+  var boundedRows = Array.isArray(visibleRows) ? visibleRows : [];
+  return {
+    totalRows: allRows.length,
+    returnedRows: boundedRows.length,
+    boundedRows: boundedRows.length,
+    limit: Math.max(1, Number(limit || 0) || 0)
+  };
+}
+
 function buildActionabilityHiddenRecords_(rows, visibleRows, perBucketLimit) {
   var limit = Math.max(1, Math.min(10, Number(perBucketLimit || 5)));
   var visible = {};
@@ -3362,6 +3470,8 @@ function admin_getActionabilityPreview(payload) {
     workloadExplanation: actionabilityWorkloadExplanationEmpty_(),
     lifecycleDriftSummary: lifecycleDriftEmptySummary_(),
     populationLedger: populationLedgerPublicSummary_(ledger),
+    bucketSummaries: {},
+    worklistSummary: { totalRows: 0, returnedRows: 0, boundedRows: 0, limit: limit },
     rows: [],
     hiddenRecords: { perBucketLimit: 5, byGroup: {}, totalByGroup: {} }
   };
@@ -3391,6 +3501,8 @@ function admin_getActionabilityPreview(payload) {
   out.includedRows = rows.length;
   out.rows = rows.slice(0, limit);
   out.hiddenRecords = buildActionabilityHiddenRecords_(rows, out.rows, p.hiddenLimit || 5);
+  out.bucketSummaries = buildActionabilityBucketSummaries_(rows, out.rows, ledger, out.hiddenRecords);
+  out.worklistSummary = buildActionabilityWorklistSummary_(rows, out.rows, limit);
   return out;
 }
 

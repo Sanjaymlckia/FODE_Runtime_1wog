@@ -42,6 +42,8 @@ assert.doesNotMatch(ledgerBuilder, /admin_getReviewQueues|isQueueCandidateRow_/,
 });
 
 assert.match(adminUi, /actionabilityPopulationCountForGroup_/, "Operations Workspace must resolve KPI counts from ledger population totals");
+assert.match(actionabilityPreview, /bucketSummaries:\s*\{\}/, "Operations Workspace preview must initialize authoritative bucket summaries");
+assert.match(actionabilityPreview, /buildActionabilityBucketSummaries_\(rows, out\.rows, ledger, out\.hiddenRecords\)/, "Operations Workspace preview must expose server-authored bucket summaries");
 assert.match(adminUi, /eligible-now rows shown/, "Operations Workspace must label eligible workload rows separately from population totals");
 assert.match(adminUi, /bounded worklist rows/, "Operations Workspace must retain bounded worklist wording for non-Applicant filters");
 assert.match(adminUi, /String\(populationTotal\) \+ " total applicant population/, "Operations Workspace must label displayed workload rows separately from population totals");

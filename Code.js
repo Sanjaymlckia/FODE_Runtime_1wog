@@ -7196,6 +7196,79 @@ function communicationAuthorityPrerequisiteText_(items) {
   }).join("; ");
 }
 
+// COMPATIBILITY SHIM: shared batch policy used by both Stage Batch and selected/manual batch paths.
+function batchPolicyConfiguredPerRunCap_() {
+  var configured = Number(CONFIG && (CONFIG.MAX_PER_RUN_BATCH_SIZE || CONFIG.MAX_STAGE_BATCH_SIZE || CONFIG.DEFAULT_STAGE_BATCH_SIZE) || 30);
+  return Math.max(1, Math.floor(configured || 30));
+}
+
+function batchPolicyConfiguredStageDefault_() {
+  var configured = Number(CONFIG && CONFIG.DEFAULT_STAGE_BATCH_SIZE || batchPolicyConfiguredPerRunCap_());
+  return Math.max(1, Math.floor(configured || batchPolicyConfiguredPerRunCap_()));
+}
+
+function batchPolicyConfiguredStageMax_() {
+  var configured = Number(CONFIG && CONFIG.MAX_STAGE_BATCH_SIZE || batchPolicyConfiguredPerRunCap_());
+  return Math.max(1, Math.floor(configured || batchPolicyConfiguredPerRunCap_()));
+}
+
+function batchPolicyClampStageLimit_(rawLimit) {
+  var n = Math.floor(Number(rawLimit || 0));
+  var safeDefault = Math.min(batchPolicyConfiguredStageDefault_(), batchPolicyConfiguredStageMax_());
+  if (!(n > 0)) return safeDefault;
+  return Math.max(1, Math.min(batchPolicyConfiguredStageMax_(), n));
+}
+
+function batchPolicyPreviewCacheTtlSeconds_() {
+  return 600;
+}
+
+function batchPolicyPreviewCacheKey_(prefix, adminEmail) {
+  return clean_(prefix || "BATCH_PREVIEW") + "::" + clean_(adminEmail || "unknown").toLowerCase();
+}
+
+function batchPolicyReadPreviewCache_(prefix, adminEmail) {
+  try {
+    var raw = CacheService.getUserCache().get(batchPolicyPreviewCacheKey_(prefix, adminEmail));
+    return raw ? JSON.parse(raw) : null;
+  } catch (_err) {
+    return null;
+  }
+}
+
+function batchPolicyWritePreviewCache_(prefix, adminEmail, value, ttlSeconds) {
+  try {
+    CacheService.getUserCache().put(
+      batchPolicyPreviewCacheKey_(prefix, adminEmail),
+      JSON.stringify(value || {}),
+      Math.max(1, Math.floor(Number(ttlSeconds || batchPolicyPreviewCacheTtlSeconds_())))
+    );
+  } catch (_err) {}
+}
+
+function batchPolicyClearPreviewCache_(prefix, adminEmail) {
+  try {
+    CacheService.getUserCache().remove(batchPolicyPreviewCacheKey_(prefix, adminEmail));
+  } catch (_err) {}
+}
+
+function batchPolicyNormalizeCandidateIds_(ids, limitOpt) {
+  var out = [];
+  var seen = {};
+  var limit = Math.max(1, Math.floor(Number(limitOpt || batchPolicyConfiguredPerRunCap_())));
+  (Array.isArray(ids) ? ids : []).forEach(function (value) {
+    var id = clean_(value || "");
+    if (!id || seen[id]) return;
+    seen[id] = true;
+    if (out.length < limit) out.push(id);
+  });
+  return out;
+}
+
+function batchPolicyCandidateHash_(candidateIds) {
+  return batchPolicyNormalizeCandidateIds_(candidateIds, Number.MAX_SAFE_INTEGER).join("|");
+}
+
 function communicationCanonicalLifecycleContext_(rowObj, opts) {
   var options = opts && typeof opts === "object" ? opts : {};
   var supplied = options.canonicalLifecycle && typeof options.canonicalLifecycle === "object"
