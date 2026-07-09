@@ -113,7 +113,12 @@ function admin_sendApplicantMessage(payload) {
 }
 
 function selectedApplicantBatchLimit_() {
-  return 100;
+  var configured = Number(CONFIG && (CONFIG.MAX_PER_RUN_BATCH_SIZE || CONFIG.MAX_STAGE_BATCH_SIZE || CONFIG.DEFAULT_STAGE_BATCH_SIZE) || 30);
+  return Math.max(1, Math.floor(configured || 30));
+}
+
+function selectedApplicantBatchInputLimit_() {
+  return 500;
 }
 
 function selectedApplicantBatchCacheKey_(adminEmail) {
@@ -156,14 +161,15 @@ function withSelectedApplicantBatchSendLock_(adminEmail, dbgId, callback) {
   }
 }
 
-function normalizeSelectedApplicantBatchIds_(ids) {
+function normalizeSelectedApplicantBatchIds_(ids, limitOpt) {
   var out = [];
   var seen = {};
+  var limit = Math.max(1, Math.floor(Number(limitOpt || selectedApplicantBatchLimit_())));
   (Array.isArray(ids) ? ids : []).forEach(function (value) {
     var id = clean_(value || "");
     if (!id || seen[id]) return;
     seen[id] = true;
-    if (out.length < selectedApplicantBatchLimit_()) out.push(id);
+    if (out.length < limit) out.push(id);
   });
   return out;
 }
@@ -290,9 +296,13 @@ function admin_previewSelectedApplicantBatch(payload) {
     var requestedType = clean_(p.messageType || "");
     var messageType = normalizeApplicantMessageType_(requestedType);
     var sourceLabel = clean_(p.sourceLabel || "Selected applicants");
-    var applicantIds = normalizeSelectedApplicantBatchIds_(p.applicantIds || []);
+    var selectedIds = normalizeSelectedApplicantBatchIds_(p.applicantIds || [], selectedApplicantBatchInputLimit_());
+    var previewSendCap = selectedApplicantBatchLimit_();
+    var applicantIds = selectedIds.slice(0, previewSendCap);
+    var selectedTotal = selectedIds.length;
+    var remainingAfterCap = Math.max(0, selectedTotal - applicantIds.length);
     var excluded = {};
-    normalizeSelectedApplicantBatchIds_(p.excludedApplicantIds || []).forEach(function (id) { excluded[id] = true; });
+    normalizeSelectedApplicantBatchIds_(p.excludedApplicantIds || [], selectedApplicantBatchInputLimit_()).forEach(function (id) { excluded[id] = true; });
     var actor = resolveAdminCommActor_(p);
     var requestId = clean_(dbgId || newDebugId_());
     if (!messageType) {
@@ -335,7 +345,7 @@ function admin_previewSelectedApplicantBatch(payload) {
     var eligibleIds = [];
     var previewSubject = "";
     var previewBody = "";
-    var total = applicantIds.length;
+    var total = selectedTotal;
     var excludedCount = 0;
     var missing = 0;
     var blocked = 0;
@@ -404,6 +414,11 @@ function admin_previewSelectedApplicantBatch(payload) {
       sourceType: clean_(p.sourceType || "selected"),
       messageType: messageType,
       totalActionable: total,
+      selectedTotal: selectedTotal,
+      previewSendCap: previewSendCap,
+      willSendThisRun: eligibleIds.length,
+      remainingAfterCap: remainingAfterCap,
+      capApplied: remainingAfterCap > 0,
       alreadyCommunicated: Number(blockedByReason.COOLDOWN_ACTIVE || 0),
       eligible: eligibleIds.length,
       count: eligibleIds.length,
@@ -411,7 +426,7 @@ function admin_previewSelectedApplicantBatch(payload) {
       excluded: excludedCount,
       remainingAfterBatch: Math.max(0, total - excludedCount - eligibleIds.length - blocked - missing),
       blockedByReason: blockedByReason,
-      recipients: recipients.slice(0, selectedApplicantBatchLimit_()),
+      recipients: recipients.slice(0, previewSendCap),
       recipientCount: recipients.length,
       candidateIds: eligibleIds,
       candidateCount: eligibleIds.length,
@@ -422,8 +437,11 @@ function admin_previewSelectedApplicantBatch(payload) {
       technicalDiagnostics: {
         requestId: requestId,
         candidateHash: candidateHash,
-        boundedLimit: selectedApplicantBatchLimit_(),
+        boundedLimit: previewSendCap,
+        previewSendCap: previewSendCap,
         inputCount: total,
+        cappedInputCount: applicantIds.length,
+        remainingAfterCap: remainingAfterCap,
         elapsedMs: elapsedMs
       }
     });
@@ -432,6 +450,11 @@ function admin_previewSelectedApplicantBatch(payload) {
         requestId: requestId,
         sourceLabel: sourceLabel,
         messageType: messageType,
+        selectedTotal: selectedTotal,
+        previewSendCap: previewSendCap,
+        willSendThisRun: eligibleIds.length,
+        remainingAfterCap: remainingAfterCap,
+        capApplied: remainingAfterCap > 0,
         candidateIds: eligibleIds,
         candidateCount: eligibleIds.length,
         candidateHash: candidateHash,
@@ -490,6 +513,11 @@ function admin_sendSelectedApplicantBatch(payload) {
       previewRequestId: previewRequestId,
       sourceLabel: clean_(preview.sourceLabel || p.sourceLabel || "Selected applicants"),
       messageType: messageType,
+      selectedTotal: Number(preview.selectedTotal || candidateIds.length),
+      previewSendCap: Number(preview.previewSendCap || selectedApplicantBatchLimit_()),
+      willSendThisRun: candidateIds.length,
+      remainingAfterCap: Number(preview.remainingAfterCap || 0),
+      capApplied: preview.capApplied === true,
       candidateHash: candidateHash,
       attempted: 0,
       sent: 0,

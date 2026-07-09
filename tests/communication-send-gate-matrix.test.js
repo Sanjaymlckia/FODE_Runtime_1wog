@@ -44,7 +44,12 @@ function configuredAllowedTypes() {
 }
 
 const context = {
-  CONFIG: { COMMUNICATION_ALLOWED_MESSAGE_TYPES: configuredAllowedTypes() },
+  CONFIG: {
+    COMMUNICATION_ALLOWED_MESSAGE_TYPES: configuredAllowedTypes(),
+    MAX_PER_RUN_BATCH_SIZE: 30,
+    MAX_STAGE_BATCH_SIZE: 30,
+    DEFAULT_STAGE_BATCH_SIZE: 30
+  },
   clean_: (value) => String(value == null ? "" : value).trim()
 };
 vm.createContext(context);
@@ -229,10 +234,16 @@ const adminSend = extractFunction(adminSource, "admin_sendApplicantMessage");
 const stageSend = extractFunction(adminSource, "admin_sendStageBatch");
 const selectedBatchPreview = extractFunction(adminSource, "admin_previewSelectedApplicantBatch");
 const selectedBatchSend = extractFunction(adminSource, "admin_sendSelectedApplicantBatch");
+const selectedBatchLimit = extractFunction(adminSource, "selectedApplicantBatchLimit_");
+const selectedBatchInputLimit = extractFunction(adminSource, "selectedApplicantBatchInputLimit_");
+const selectedBatchNormalize = extractFunction(adminSource, "normalizeSelectedApplicantBatchIds_");
 const selectedBatchAuthorityDiagnostics = extractFunction(adminSource, "selectedApplicantBatchAuthorityDiagnostics_");
 vm.runInContext([
   extractFunction(adminSource, "selectedApplicantBatchTemplateLabel_"),
   extractFunction(adminSource, "selectedApplicantBatchOperatorBlockReason_"),
+  selectedBatchLimit,
+  selectedBatchInputLimit,
+  selectedBatchNormalize,
   selectedBatchAuthorityDiagnostics
 ].join("\n\n"), context);
 assert.match(adminPreview, /authorityOverrideReason/, "Selected preview wrapper must pass authority override reason to backend authority");
@@ -271,10 +282,21 @@ assert.equal(
 );
 assert.match(selectedBatchPreview, /isCommunicationTypeBatchSafe_\(messageType\)/, "Selected cohort preview must only allow batch-safe message types");
 assert.match(selectedBatchSend, /isCommunicationTypeBatchSafe_\(messageType\)/, "Selected cohort send must only allow batch-safe message types");
+assert.match(selectedBatchLimit, /MAX_PER_RUN_BATCH_SIZE[\s\S]*MAX_STAGE_BATCH_SIZE[\s\S]*DEFAULT_STAGE_BATCH_SIZE/, "Selected/manual batch cap must use the configured per-run/stage policy cap");
+assert.match(selectedBatchNormalize, /limitOpt[\s\S]*selectedApplicantBatchLimit_\(\)/, "Selected/manual batch normalization must accept an explicit input limit while defaulting to policy cap");
+assert.match(selectedBatchPreview, /selectedApplicantBatchInputLimit_\(\)[\s\S]*previewSendCap = selectedApplicantBatchLimit_\(\)[\s\S]*selectedIds\.slice\(0, previewSendCap\)/, "Selected/manual preview must preserve selected total while capping this-run candidates");
+assert.match(selectedBatchPreview, /selectedTotal:[\s\S]*previewSendCap:[\s\S]*willSendThisRun:[\s\S]*remainingAfterCap:/, "Selected/manual preview must expose selected total, cap, this-run send count, and remaining-after-cap");
+assert.match(selectedBatchPreview, /writeSelectedApplicantBatchPreviewCache_[\s\S]*candidateIds:\s*eligibleIds[\s\S]*candidateCount:\s*eligibleIds\.length/, "Selected/manual preview cache must contain only capped eligible candidates");
 assert.match(selectedBatchSend, /isBatchSendEnabled_\(\) !== true/, "Selected cohort send must preserve the batch-send feature gate");
 assert.match(selectedBatchSend, /readSelectedApplicantBatchPreviewCache_\(adminEmail\)/, "Selected cohort send must require a cached preview");
 assert.match(selectedBatchSend, /withSelectedApplicantBatchSendLock_\(adminEmail, dbgId/, "Selected cohort send must be protected by a server-side user lock");
 assert.match(selectedBatchSend, /clearSelectedApplicantBatchPreviewCache_\(adminEmail\)[\s\S]*sendApplicantMessage_\(applicantId, messageType/, "Selected cohort send must consume the preview snapshot before sending");
+assert.match(selectedBatchSend, /var candidateIds = Array\.isArray\(preview && preview\.candidateIds\)[\s\S]*candidateIds\.forEach/, "Selected/manual send must reuse cached capped candidates instead of raw selected rows");
+assert.doesNotMatch(selectedBatchSend, /p\.applicantIds|payload\.applicantIds/, "Selected/manual send must not rebuild recipients from the raw selected payload");
+const sixtyNineSelected = Array.from({ length: 69 }, (_, i) => `FODE-26-${String(i + 1).padStart(6, "0")}`);
+assert.equal(context.selectedApplicantBatchLimit_(), 30, "Selected/manual policy cap must resolve to 30 from runtime config");
+assert.equal(context.normalizeSelectedApplicantBatchIds_(sixtyNineSelected).length, 30, "Default selected/manual normalization must cap 69 selected applicants to 30 this-run candidates");
+assert.equal(context.normalizeSelectedApplicantBatchIds_(sixtyNineSelected, context.selectedApplicantBatchInputLimit_()).length, 69, "Preview must preserve the selected total before applying the send cap");
 assert.match(selectedBatchSend, /sendApplicantMessage_\(applicantId, messageType/, "Selected cohort send must reuse the existing applicant message send pipeline");
 assert.doesNotMatch(selectedBatchSend, /authorityOverride/, "Selected cohort batch send must not introduce selected-applicant override bypasses");
 assert.match(stageSend, /readStageBatchPreviewCache_\(adminEmail\)/, "Stage Batch send must require a cached preview");

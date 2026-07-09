@@ -251,6 +251,8 @@ assert.match(functionSource("batchCommAuthoritySummary_"), /authoritySource[\s\S
 assert.match(functionSource("batchCommAuthorityDetail_"), /Authority:[\s\S]*Legacy:[\s\S]*Canonical:[\s\S]*Overlays:[\s\S]*Recommended:/, "Batch modal recipient rows must show legacy/canonical authority details");
 assert.match(functionSource("renderBatchCommunicationModal_"), /Ready to Send \| Authority:/, "Batch modal readiness must display the Communication Authority source");
 assert.match(functionSource("renderBatchCommunicationModal_"), /selectionAuthority:\s*"Actionability"[\s\S]*communicationAuthority:\s*"Send gate"/, "Batch modal technical diagnostics must distinguish selection and communication authority");
+assert.match(functionSource("renderBatchCommunicationModal_"), /Selected total[\s\S]*Preview\/send cap[\s\S]*Will send this run[\s\S]*Remaining after cap/, "Batch modal summary must distinguish selected total from capped this-run send count");
+assert.match(functionSource("batchCommRecipientCounts_"), /selectedTotal[\s\S]*previewSendCap[\s\S]*willSendThisRun[\s\S]*remainingAfterCap/, "Batch modal recipient counts must consume selected-batch cap fields from the backend");
 assert.match(functionSource("actionabilityBatchCommunication_"), /openBatchCommunicationFromSelection_\("selected"\)/, "Selected cohort batch communication must open the batch modal");
 assert.match(functionSource("actionabilityBatchCommunication_"), /actionabilityBatchMessage = ""[\s\S]*actionabilityBatchPanelMode = ""[\s\S]*openBatchCommunicationFromSelection_\("selected"\)/, "Selected cohort batch communication must open the modal directly without a handoff panel");
 assert.match(functionSource("actionabilityBatchReminder_"), /openBatchCommunicationFromSelection_\("reminder"\)/, "Selected reminder cohort must open the batch modal with reminder intent");
@@ -277,8 +279,11 @@ assert.match(functionSource("batchCommCanSend_"), /previewStale === true/, "Quic
 assert.match(functionSource("batchCommCanSend_"), /sendResult[\s\S]*ok !== false[\s\S]*return false/, "Completed batch sends must disable repeat send attempts from the same preview");
 assert.match(functionSource("toggleBatchCommRecipient_"), /previewStale = true/, "Quick exclusions must update counts and require a fresh preview");
 assert.match(functionSource("handleBatchCommSendResult_"), /previewStale = true[\s\S]*loadActionabilityPreview_\(\{ force: true \}\)/, "Successful batch send must invalidate the preview and refresh the worklist");
-assert.match(functionSource("batchCommConfirmHtml_"), /You are about to send [\s\S]* to [\s\S]* applicants[\s\S]*Proceed\?/, "Batch confirmation panel must name template and recipient count");
+assert.match(functionSource("batchCommConfirmHtml_"), /This action will immediately send[\s\S]*emails[\s\S]*<strong>Template<\/strong>[\s\S]*<strong>Recipients<\/strong>[\s\S]*<strong>Cap<\/strong>[\s\S]*<strong>Authority<\/strong>/, "Batch confirmation panel must name template, recipient count, cap, and authority");
+assert.match(functionSource("batchCommConfirmHtml_"), /Send ' \+ esc\(recipients\) \+ ' Emails/, "Batch confirmation button must use exact send count");
 assert.doesNotMatch(functionSource("sendBatchCommunicationModal_"), /window\.confirm/, "Batch send must use the in-app confirmation panel instead of browser-native confirm");
+assert.ok(adminUi.includes("Eligible for batch preview."), "Selectable rows must describe preview eligibility instead of guaranteed send readiness");
+assert.doesNotMatch(adminUi, /Ready for batch communication|READY for batch communication/, "Worklist rows must not overstate selected-batch send readiness");
 assert.match(adminUi, /Select Visible<\/button>[\s\S]*Select All<\/button>[\s\S]*Clear Selection<\/button>/, "Selection controls must remain visible in the operator control strip");
 assert.match(adminUi, /class="btn small operatorControl operatorControlSecondary" type="button" onclick="selectVisibleActionabilityRows_\(\)">Select Visible/, "Select Visible must use secondary operator control semantics");
 assert.match(adminUi, /class="btn small operatorControl operatorControlSecondary" type="button" onclick="selectAllActionabilityRows_\(\)">Select All/, "Select All must use secondary operator control semantics");
