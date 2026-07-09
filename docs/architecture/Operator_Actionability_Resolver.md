@@ -1,15 +1,15 @@
 # Operator Actionability Resolver
 
-Status: A3.3 partially implemented
+Status: r338 implemented workload authority
 Scope: Admin Operations Workspace actionability and selection readiness
 
 ## Definition
 
-The Operator Actionability Resolver is a derived, read-only, non-authoritative layer.
+The Operator Actionability Resolver is a derived, read-only workload authority layer.
 
 It consumes existing authority outputs and derives operational recommendations.
 
-It does not replace:
+It does not replace or bypass:
 
 - Lifecycle Authority
 - Document Completeness Authority
@@ -22,17 +22,19 @@ It does not replace:
 
 ## Core Rule
 
-Truth Authorities determine what is true.
+Truth authorities determine what is true.
 
 Operator Actionability Resolver determines what should happen next.
 
 ## Current Runtime Boundary
 
-A3.3 wires the Admin Operations Workspace actionability path to prefer canonical lifecycle recommendations when available.
+The Admin Operations Workspace actionability path prefers canonical lifecycle recommendations when available.
 
 The resolver consumes the canonical lifecycle `recommendedMessageType` before falling back to legacy lifecycle-stage message mapping. This corrects the unsafe workload interpretation where a row with missing required uploads could be treated as `REMINDER_DUE` base lifecycle and blocked from the `docs_missing` action path.
 
-The resolver remains derived/read-only. It does not change Communication Authority, send policy, cooldown duration, Population Ledger accounting, Review Queue membership, or Stage Batch send authority.
+The resolver remains derived/read-only. It does not change Population Ledger accounting, Review Queue membership, or Stage Batch send authority.
+
+Communication Authority remains the final send gate, but now accepts narrow canonical lifecycle context for the missing-documents workflow while preserving cooldown, contactability, idempotency, manual restrictions, and legacy fallback.
 
 ## Inputs
 
@@ -68,6 +70,7 @@ Potential inputs:
 | `staleDays` | numeric day count |
 | `lastContactAgeDays` | numeric day count |
 | `sourceAuthoritySummary` | compact authority explanation |
+| `operationalBucket` | bucket used by Operations Workspace and compatible workload views |
 
 ## Non-Goals
 
@@ -101,11 +104,11 @@ Recommended message type: docs_missing
 Operations Workspace selection is server-driven.
 
 - `Select Visible` selects only rows whose DTO has `selectable: true`.
-- `Select All` selects only rows whose DTO has `selectable: true`.
+- `Select All Returned` selects only rows whose DTO has `selectable: true`.
 - Non-ready rows remain visible with `selectBlockReason`.
 - Client code must not invent readiness policy.
 
-## A3.3 Milestone Note
+## Current Milestone State
 
 Completed:
 
@@ -114,11 +117,12 @@ Completed:
 - lifecycle mismatch diagnostics
 - lifecycle drift summary
 - actionability canonical recommendation consumption
+- selected/manual batch cap alignment with configured policy
+- cooling-off surfaced in workload state after successful send
+- contactability promoted to a first-class operational bucket
 
 Remaining:
 
 - Stage Batch migration
 - Population Ledger canonical lifecycle reporting/migration
-- Communication Authority canonical input migration
 - legacy lifecycle retirement
-

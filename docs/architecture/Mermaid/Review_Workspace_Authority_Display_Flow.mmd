@@ -1,0 +1,20 @@
+flowchart TD
+  A["Shared row facts"] --> B["Canonical lifecycle resolver"]
+  A --> C["Operator actionability resolver"]
+  A --> D["Communication authority"]
+  A --> E["Payment authority"]
+  A --> F["Document review authority"]
+
+  B --> G["Review display DTO"]
+  C --> G
+  D --> G
+  E --> G
+  F --> G
+
+  G --> H["Review Workspace header<br/>owner, stage, next action"]
+  G --> I["Review Workspace payment state"]
+  G --> J["Review Workspace communication guidance"]
+  G --> K["Review Workspace document panels"]
+
+  G -.-> L["Review Workspace mutation actions"]
+  L --> M["Backend mutation handlers"]

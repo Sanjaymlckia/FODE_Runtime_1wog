@@ -1,95 +1,69 @@
 # Architecture Roadmap
 
-Status: r301+ architecture sync
+Status: r338 authority convergence sync
 Scope: documentation only
 
-## Implemented at r301+
+## Implemented
 
-- Admin Dashboard / Legacy Admin remains the live operator authority surface.
+- Admin / Operations Workspace remains the live operator authority surface.
+- Population Ledger is the accounting authority.
+- Canonical Lifecycle Resolver is the applicant-state authority.
+- Operator Actionability Resolver is the workload authority.
+- Communication Authority is the final send authority.
+- Review Workspace remains the mutation authority.
+- Contactability Exceptions is a first-class operational bucket.
 - Document verification, status persistence, `Docs_Verified` rollup, signed file routes, preview/gallery/lightbox, and applicant-folder `FODE_PREVIEW` renditions are live.
 - Payment verification and Zoho Books are protected live surfaces.
 - H1-H5 communication semantic registry, template text, selected-applicant exposure, and Stage Batch separation are live.
-- D1Y.5 empty document payload diagnostic is live.
 - DR tooling, release recording, and DR5 verification are established.
-- F1, F2A, and F2A.5 audit baselines are complete.
+- ACP / CAP authority convergence has removed the main missing-documents authority mismatch between actionability and communication admission.
 
 ## Partial / In Progress
 
-- 7C-D preview backfill and future-upload preview closure.
-- Contactability and bounce evidence visibility.
-- Classroom acceptance/handover authority.
+- Stage Batch candidate-selection migration off legacy lifecycle stage inputs.
+- broader Population Ledger canonical lifecycle reporting.
+- legacy lifecycle retirement after consumer migration.
+- classroom acceptance/handover authority.
 - LAP scheduled automation and single state-machine authority.
-- Operator actionability owner/next-action queue model.
+- bounce evidence ingestion and reconciliation.
 - Full Sheet/Drive DR backup execution schedule.
 
 ## Deferred / Future
 
 - Google Forms replacement for FormDesigner.
 - AI-assisted document review, advisory only.
-- Visual redesign.
-- Broad F3 refactor after F2 proof-backed archive passes.
+- broad visual redesign beyond authority/workload correction.
 
 ## Frozen
 
 - OPS remains frozen as a reference/secondary surface.
 
-## Original Architecture Phases
+## Current Safe Migration Order
 
-### Phase 1: Documentation Consolidation
+### Stage 1: Authority Convergence
 
-- Create `docs/architecture/` entrypoint.
-- Consolidate architecture, authority, operational, communication, queue, and roadmap docs.
-- Consolidate Mermaid sources.
-- Preserve source documents.
+Completed:
 
-### Phase 2: Operator Actionability Contract
+- canonical lifecycle resolver
+- actionability canonical recommendation consumption
+- communication authority canonical convergence for missing-documents workflow
+- contactability operational bucket promotion
 
-- Finalize the read-only resolver contract.
-- Define input authority dependencies.
-- Define output fields.
-- Define non-goals and send guardrails.
+### Stage 2: Compatibility Reduction
 
-### Phase 3: Read-Only Runtime Discovery
+Next safe slices:
 
-Future CIS only:
+- Stage Batch legacy input migration
+- review and retire legacy lifecycle consumers
+- remove bounded UI fallback once server DTOs are proven stable across releases
 
-- add read-only backend diagnostic/helper
-- return actionability for one applicant row
-- no row mutation
-- no send
-- no cache authority
-- no OPS activation
+### Stage 3: Reporting Completion
 
-### Phase 4: Legacy Admin Display
+Later slices:
 
-Future CIS only:
-
-- display action owner, next action, and urgency in Legacy Admin
-- keep details drill-down for authority truth
-- keep send/preview authority separate
-
-### Phase 5: Queue Refinement
-
-Future CIS only:
-
-- separate applicant-action, officer-review, finance-action, escalated, and dormant queues
-- avoid using visible queue rows as send authority
-
-### Phase 6: Communication Alignment
-
-Future CIS only:
-
-- use actionability as recommendation input
-- keep Preview Authority and Send Authority authoritative
-- no OPS bulk send unless separately approved
-
-### Phase 7: OPS Reassessment
-
-OPS remains frozen until:
-
-- Legacy Admin authority model is stable
-- Operator Actionability Resolver is proven
-- marketing/intake priorities are stabilized
+- broader Population Ledger canonical reporting
+- dashboard/report surfaces that still expose legacy terminology
+- frozen compatibility queue retirement planning
 
 ## Documentation Impact Rule
 

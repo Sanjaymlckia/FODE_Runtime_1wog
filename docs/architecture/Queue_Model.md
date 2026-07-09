@@ -1,6 +1,6 @@
 # Queue Model
 
-Status: r23B consolidation draft
+Status: r338 authority convergence sync
 Scope: documentation only
 
 ## Purpose
@@ -33,15 +33,16 @@ portalSubmitted
 
 Stage Batch Preview remains separate from Review Queues.
 
-## Future Queue Direction
+## Current Queue Direction
 
-Queues should move toward owner/action orientation:
+Queues now move toward owner/action orientation:
 
 | Queue | Owner | Meaning |
 |---|---|---|
 | Applicant Action Queue | Applicant | Applicant must upload, pay, correct, or respond. |
 | Officer Review Queue | Officer | Officer must verify complete evidence. |
 | Finance Action Queue | Finance/Admin | Payment evidence or finance exception needs action. |
+| Contactability Exceptions | Applicant/Intake | Contactability failure prevents normal communication workflow. |
 | Escalated Queue | Operator/Admin | Overdue or unresolved record needs escalation. |
 | Dormant Queue | Operator/Admin | Record exceeded final follow-up window. |
 
@@ -65,9 +66,9 @@ Review Queue membership describes compatibility workflow cohorts.
 
 A single lifecycle state can appear in different queue contexts depending on owner, urgency, communication history, and payment/document readiness.
 
-## A3.3 Canonical Lifecycle Migration Boundary
+## Current Migration Boundary
 
-Operations Workspace actionability now consumes canonical lifecycle recommendations when available.
+Operations Workspace actionability consumes canonical lifecycle recommendations when available.
 
 Queue/worklist selection must follow the server `selectable` DTO, not client-side lifecycle labels.
 
@@ -79,5 +80,6 @@ Canonical lifecycle distinguishes:
 
 This means a missing-document applicant can remain in the base state `INCOMPLETE_DOCUMENTS` while also carrying the `REMINDER_DUE` overlay. The overlay may affect urgency, but it must not replace the base state or block the `docs_missing` action path by itself.
 
-Stage Batch and Communication Authority still use their existing authority paths until a later Track H migration explicitly changes them.
+Communication Authority now accepts narrow canonical lifecycle context for the missing-documents workflow while preserving legacy fallback and send gates.
 
+Stage Batch candidate selection remains on its existing legacy-compatible path until a later Track H migration explicitly changes it.

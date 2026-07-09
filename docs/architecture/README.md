@@ -1,6 +1,6 @@
 # FODE Runtime Architecture
 
-Status: r301+ architecture sync
+Status: r338 authority convergence sync
 Scope: documentation and governance only
 
 This folder is the consolidated architecture entrypoint for FODE Runtime.
@@ -13,7 +13,9 @@ Runtime source, Apps Script deployment, queues, communications, Sheets, and send
 |---|---|
 | Architecture overview | [Architecture_Overview.md](Architecture_Overview.md) |
 | Authority model | [Authority_Model.md](Authority_Model.md) |
+| Operational bucket model | [Operational_Bucket_Model.md](Operational_Bucket_Model.md) |
 | ACP Phase 1 ADR | [ACP_Phase_1_Authority_Consolidation_ADR.md](ACP_Phase_1_Authority_Consolidation_ADR.md) |
+| Contactability ADR | [../adr/ADR_Contactability_Exceptions_as_First_Class_Operational_Bucket.md](../adr/ADR_Contactability_Exceptions_as_First_Class_Operational_Bucket.md) |
 | Legacy retirement register | [Legacy_Retirement_Register.md](Legacy_Retirement_Register.md) |
 | Compatibility shim register | [Compatibility_Shim_Register.md](Compatibility_Shim_Register.md) |
 | Operational model | [Operational_Model.md](Operational_Model.md) |
@@ -29,11 +31,15 @@ Runtime source, Apps Script deployment, queues, communications, Sheets, and send
 
 ## Core Architecture Rule
 
-Truth authorities determine what is true.
+Population Ledger determines where every applicant is accounted.
 
-The Operator Actionability Resolver determines what should happen next.
+Canonical Lifecycle determines applicant state.
 
-The Operator Actionability Resolver is derived, read-only, and non-authoritative.
+Operator Actionability Resolver determines what work exists now.
+
+Communication Authority determines whether communication may preview/send now.
+
+Review Workspace remains mutation authority.
 
 ## Target Flow
 
@@ -42,17 +48,19 @@ Raw Facts
 -> Shared Row Facts
 -> Authority Layer
 -> Population Ledger
+-> Canonical Lifecycle Resolver
 -> Operator Actionability Resolver
--> Dashboard / Operations Workspace / Lifecycle Map / Communications
+-> Communication Authority
+-> Dashboard / Operations Workspace / Lifecycle Map / Review Workspace / Communications
 ```
 
-## r301+ Runtime Truth
+## r338 Runtime Truth
 
-As of the r301 baseline, Legacy/Admin is the live operational authority surface. OPS is frozen as a reference/secondary surface. FormDesigner remains the current intake path, while Google Forms replacement remains future work.
+As of r338, Admin / Operations Workspace is the live operational authority surface. OPS is frozen as a reference/secondary surface. FormDesigner remains the current intake path, while Google Forms replacement remains future work.
 
 Protected live surfaces include document verification, signed document routes, applicant-folder preview/gallery/lightbox, payment verification, Zoho Books, communication semantic registry, Stage Batch separation, runtime identity, release governance, and DR tooling.
 
-Partial/future surfaces include classroom acceptance/handover authority, LAP automation, contactability/bounce ingestion, AI-assisted document precheck, and Google Forms replacement.
+Partial/future surfaces include classroom acceptance/handover authority, LAP automation, bounce ingestion, AI-assisted document precheck, and Google Forms replacement.
 
 ## Documentation Impact Rule
 
@@ -79,21 +87,6 @@ Historical Playwright reports remain valid evidence for the releases they docume
 Docs-only work uses the lightest deterministic closure: `git status -sb`, `git diff --check`, exact-file staging, one final `git diff --cached --check`, commit, and push. Do not run Node tests or Playwright for docs-only tasks unless the CIS explicitly requires docs tooling validation.
 
 Refactor work validates only changed runtime files and the tests protecting the changed authority surface. Do not run broad exploratory validation unless a concrete defect is found.
-
-## ACP Phase 1
-
-ACP Phase 1 consolidates shared authority DTOs and shared batch policy helpers without changing runtime decision authority.
-
-Key rule:
-
-- server DTOs own workload summaries
-- UI presents them and keeps bounded compatibility fallback only where required
-
-Playwright is reserved for visible UI behavior changes, release proof, suspected browser-only regressions, or explicit operator request.
-
-For Windows runner/session failures, attempt normal execution once. If `CreateProcessAsUserW failed: 1312` or an equivalent session failure occurs, immediately use the approved repo-local execution path and do not spend time on repeated recovery attempts.
-
-Apps Script operations remain prohibited unless explicitly authorized by the active release CIS.
 
 ## Current Google Drive Folder
 

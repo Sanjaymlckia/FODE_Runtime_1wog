@@ -1,11 +1,13 @@
 # Communication Model
 
-Status: r23B consolidation draft
+Status: r338 authority convergence sync
 Scope: documentation only
 
 ## Communication Principle
 
-Actionability recommends.
+Canonical Lifecycle describes state.
+
+Actionability recommends workload.
 
 Preview selects.
 
@@ -17,6 +19,7 @@ Send Authority remains authoritative.
 
 ```text
 Authority Truth
+-> Canonical Lifecycle
 -> Actionability Recommendation
 -> Preview Cohort
 -> Confirmation
@@ -29,6 +32,7 @@ Authority Truth
 | Component | Responsibility |
 |---|---|
 | Authority Layer | Determines current truth. |
+| Canonical Lifecycle Resolver | Determines base state and overlays. |
 | Operator Actionability Resolver | Recommends whether communication is appropriate. |
 | Preview Authority | Builds visible recipient cohort. |
 | Operator Confirmation | Confirms real-world intent. |
@@ -64,9 +68,24 @@ Do not bypass:
 - candidate parity/hash
 - result logging
 
+## Current Convergence Boundary
+
+Communication Authority now accepts narrow canonical lifecycle context for the missing-documents workflow.
+
+That means a row may be admitted by canonical `INCOMPLETE_DOCUMENTS -> docs_missing` even when a legacy overlay-oriented lifecycle label would otherwise have caused an unsafe block.
+
+This convergence does not change:
+
+- cooldown
+- contactability
+- idempotency
+- role restrictions
+- preview/send parity
+- confirmation
+- Stage Batch candidate selection
+
 ## OPS Boundary
 
 OPS bulk send remains disabled unless separately approved.
 
 OPS must consume shared backend authority, not add a separate communication authority.
-

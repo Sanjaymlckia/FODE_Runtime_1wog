@@ -1,31 +1,38 @@
 stateDiagram-v2
   [*] --> APPLICATION_RECEIVED
-  APPLICATION_RECEIVED --> DOCS_REQUIRED
-  APPLICATION_RECEIVED --> DOCUMENTS_TO_VERIFY
+  APPLICATION_RECEIVED --> AWAITING_PORTAL_OR_INTAKE
+  APPLICATION_RECEIVED --> INCOMPLETE_DOCUMENTS
+  AWAITING_PORTAL_OR_INTAKE --> INCOMPLETE_DOCUMENTS
 
-  DOCS_REQUIRED --> DOCUMENTS_TO_VERIFY: required evidence supplied
-  DOCS_REQUIRED --> CONTACTABILITY_REVIEW: invalid/missing contact evidence
+  INCOMPLETE_DOCUMENTS --> DOCUMENTS_TO_VERIFY: required evidence supplied
+  INCOMPLETE_DOCUMENTS --> DOCUMENT_CORRECTION_REQUIRED: document rejected or correction requested
+  INCOMPLETE_DOCUMENTS --> CONTACTABILITY_EXCEPTION: no effective email or bounce
 
-  DOCUMENTS_TO_VERIFY --> DOCS_VERIFIED: required document statuses verified
-  DOCUMENTS_TO_VERIFY --> DOCS_REQUIRED: missing/rejected evidence
-  DOCUMENTS_TO_VERIFY --> FRAUD_OR_EXCEPTION_REVIEW
+  DOCUMENT_CORRECTION_REQUIRED --> INCOMPLETE_DOCUMENTS: corrected evidence supplied
+  DOCUMENT_CORRECTION_REQUIRED --> DOCUMENTS_TO_VERIFY: corrected evidence ready for review
 
-  DOCS_VERIFIED --> AWAITING_PAYMENT: no receipt/payment evidence
-  DOCS_VERIFIED --> PAYMENTS_TO_VERIFY: receipt/payment evidence present
+  DOCUMENTS_TO_VERIFY --> PAYMENT_PENDING: required document statuses verified
+  DOCUMENTS_TO_VERIFY --> INCOMPLETE_DOCUMENTS: missing evidence
+  DOCUMENTS_TO_VERIFY --> DOCUMENT_CORRECTION_REQUIRED: rejected evidence
 
-  AWAITING_PAYMENT --> PAYMENTS_TO_VERIFY: receipt/payment evidence received
-  PAYMENTS_TO_VERIFY --> PAYMENT_VERIFIED: payment authority verifies
-  PAYMENTS_TO_VERIFY --> PAYMENT_FIRST_ANOMALY: payment before document authority
+  PAYMENT_PENDING --> PAYMENT_TO_VERIFY: receipt/payment evidence received
+  PAYMENT_PENDING --> DORMANT: exceeded follow-up window
+  PAYMENT_TO_VERIFY --> ENROLMENT_READY: payment authority verifies
+  PAYMENT_TO_VERIFY --> PAYMENT_PENDING: payment evidence absent or rejected
 
-  PAYMENT_VERIFIED --> CLASSROOM_HANDOVER_PENDING
-  CLASSROOM_HANDOVER_PENDING --> CLASSROOM_READY: future/partial authority
+  ENROLMENT_READY --> COMPLETE: enrolment confirmed
+  ENROLMENT_READY --> DORMANT: stalled post-payment
 
-  CONTACTABILITY_REVIEW --> DOCS_REQUIRED
-  FRAUD_OR_EXCEPTION_REVIEW --> DROPPED_OR_INELIGIBLE
-  DROPPED_OR_INELIGIBLE --> [*]
+  CONTACTABILITY_EXCEPTION --> INCOMPLETE_DOCUMENTS: contact path restored
+  INCOMPLETE_DOCUMENTS --> DORMANT: exceeded follow-up window
 
-  CLASSROOM_READY --> [*]
+  COMPLETE --> [*]
 
-  state FUTURE_LAP_AUTOMATION
-  FUTURE_LAP_AUTOMATION --> DOCS_REQUIRED
-  FUTURE_LAP_AUTOMATION --> AWAITING_PAYMENT
+  state "Lifecycle overlays" as OVERLAYS {
+    [*] --> REMINDER_DUE
+    [*] --> COOLING_OFF
+    [*] --> AWAITING_APPLICANT
+    [*] --> SLA_OVERDUE
+    [*] --> CONTACT_BLOCKED
+    [*] --> BOUNCED
+  }

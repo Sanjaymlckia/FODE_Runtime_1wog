@@ -1,0 +1,12 @@
+flowchart TD
+  G07["G-07 Timeline authority leakage"] --> F07["Fixed<br/>timeline and workload views consume actionability DTO"]
+  G08["G-08 Management Exceptions catch-all bucket"] --> F08["Fixed / mostly fixed<br/>contactability promoted to first-class bucket"]
+  G09["G-09 Urgency provenance missing"] --> F09["Fixed<br/>urgency reason surfaced from resolver output"]
+  G10["G-10 Contactability misclassified as management"] --> F10["Fixed<br/>operator UI now exposes Contactability Exceptions"]
+
+  F07 --> STATE["Current status<br/>authority surfaces substantially reconciled"]
+  F08 --> STATE
+  F09 --> STATE
+  F10 --> STATE
+
+  STATE --> NEXT["Remaining work<br/>Stage Batch migration, legacy lifecycle retirement, canonical ledger reporting"]

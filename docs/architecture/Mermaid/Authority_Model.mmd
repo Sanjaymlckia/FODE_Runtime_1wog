@@ -1,29 +1,36 @@
 flowchart TD
-  A["Shared row facts"] --> B["Lifecycle / queue authority"]
+  A["Shared row facts"] --> B["Canonical lifecycle resolver<br/>applicant-state authority"]
   A --> C["Document completeness authority"]
   A --> D["Document review authority"]
   A --> E["Payment authority"]
-  A --> F["Communication authority"]
+  A --> F["Communication authority<br/>send authority"]
   A --> G["Classroom / enrolment authority<br/>partial/future"]
   A --> I["Signed document route authority"]
   A --> J["Preview rendition authority<br/>derived evidence only"]
   A --> K["Zoho Books workflow<br/>protected payment-adjacent"]
-  A --> L["Contactability evidence<br/>partial/future"]
+  A --> L["Contactability evidence"]
 
-  B --> Q["Population Ledger<br/>exactly-once read-only accounting"]
+  B --> H["Operator actionability resolver<br/>workload authority"]
+  C --> H
+  D --> H
+  E --> H
+  L --> H
+
+  H --> Q["Population Ledger<br/>exactly-once read-only accounting"]
   C --> Q
   D --> Q
   E --> Q
   F --> Q
-  Q --> H["Operator actionability resolver<br/>derived/read-only"]
   G -.-> H
   I --> H
   J --> H
   K --> E
   L --> F
 
-  H --> M["Admin operator surfaces"]
-  Q --> M
+  Q --> M["Operations Workspace / Lifecycle Map<br/>accounting and workload surfaces"]
+  H --> M
+  H --> R["Review Workspace display DTO"]
+  R --> S["Review Workspace<br/>mutation authority"]
   F --> N["Stage Batch preview/send gates"]
   F --> O["Selected-applicant communication gates"]
   P["OPS frozen reference"] -.-> H

@@ -1,19 +1,24 @@
 flowchart TD
-  A["Authority outputs"] --> B["Operator Actionability Resolver<br/>derived/read-only"]
-  A --> A1["Document status + Docs_Verified"]
-  A --> A2["Payment/receipt state"]
-  A --> A3["Communication state"]
-  A --> A4["Queue classification"]
+  A["Authority outputs"] --> B["Operator Actionability Resolver<br/>workload authority"]
+  A --> A1["Canonical lifecycle<br/>base state + overlays"]
+  A --> A2["Document and payment state"]
+  A --> A3["Communication state / cooldown / contactability"]
+  A --> A4["Population context"]
 
-  B --> C["actionOwner<br/>future canonical field"]
-  B --> D["nextAction<br/>future canonical field"]
-  B --> E["urgencyLevel<br/>future canonical field"]
-  B --> F["urgencyReason<br/>future canonical field"]
+  B --> C["actionOwner"]
+  B --> D["nextAction"]
+  B --> E["urgencyLevel"]
+  B --> F["urgencyReason"]
   B --> G["recommendedMessageType<br/>recommendation only"]
   B --> H["sourceAuthoritySummary"]
+  B --> H1["operationalBucket"]
+  B --> H2["actionabilityState"]
+  B --> H3["selectable"]
 
   G --> I["Preview authority"]
   I --> J["Send authority"]
-  K["Admin Dashboard"] --> B
+  H1 --> K["Operations Workspace<br/>bucket cards + current worklist"]
+  H2 --> K
+  H3 --> K
   L["OPS frozen reference"] -.-> B
   M["LAP automation<br/>future"] -.-> B

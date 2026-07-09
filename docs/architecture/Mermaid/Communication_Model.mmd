@@ -1,5 +1,6 @@
 flowchart LR
-  A["Authority truth"] --> B["Actionability recommendation<br/>read-only"]
+  A["Authority truth"] --> A1["Canonical lifecycle"]
+  A1 --> B["Actionability recommendation<br/>workload only"]
   B --> C["Communication semantic registry"]
 
   C --> D["Selected-applicant templates"]
@@ -14,7 +15,8 @@ flowchart LR
   J --> H
 
   H --> K["Audit/log meaning"]
+  H --> K1["Authority source<br/>canonical or legacy fallback"]
   L["custom_email"] --> D
   LNOTE["selected-only<br/>not batch-safe"] -.-> L
   M["Prospect guidance<br/>future, not applicant Stage Batch"] -.-> F
-  N["Contactability evidence<br/>partial/future warning source"] -.-> H
+  N["Contactability evidence<br/>warning source"] -.-> H

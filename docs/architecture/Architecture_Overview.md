@@ -1,46 +1,44 @@
 # Architecture Overview
 
-Status: r301+ architecture sync
+Status: r338 authority convergence sync
 Scope: architecture documentation only
 
 ## Purpose
 
-FODE Runtime separates domain truth from workflow interpretation.
+FODE Runtime separates domain truth from workflow interpretation and from mutation authority.
 
-The r301+ runtime clarifies several protected authority boundaries:
+The current runtime clarifies these protected authority boundaries:
 
-- Lifecycle Authority
+- Population Ledger
+- Canonical Lifecycle Resolver
+- Operator Actionability Resolver
+- Communication Authority
+- Review Workspace mutation authority
 - Document Completeness Authority
 - Document Review Authority
 - Payment Authority
-- Communication Authority
 - Enrollment Authority
 - Shared Row Facts Layer
-- Admin Dashboard / Legacy Admin Surface
+- Operations Workspace / Admin surface
+- Review Queues compatibility surface
 - Frozen OPS Surface
 - Signed Document Routes
 - Applicant-Folder Preview Renditions
 - Zoho Books Workflow
 - Disaster Recovery Tooling
 
-The Operator Actionability Resolver is now partially implemented for Admin Operations Workspace workload selection.
-
 ## Problem Statement
 
-The system increasingly answers:
+The runtime must answer four different questions without letting one surface impersonate another:
 
 ```text
 What is true?
+Where is every applicant accounted?
+What work exists now?
+What may be sent or mutated now?
 ```
 
-It still needs a consistent derived answer to:
-
-```text
-What should happen next?
-Who should act?
-How urgent is it?
-Should communication be recommended?
-```
+That split prevents queue names, bucket labels, and UI summaries from becoming hidden authorities.
 
 ## Current Target Architecture
 
@@ -48,16 +46,20 @@ Should communication be recommended?
 Intake Sources
 -> Raw Row Facts
 -> Shared Row Facts
--> Authority Layer
+-> Domain Authorities
+-> Population Ledger
 -> Canonical Lifecycle Resolver
 -> Operator Actionability Resolver
+-> Communication Authority
 -> Operator Surfaces
 -> Action Backends
 ```
 
 Operator surfaces include:
 
-- Admin Dashboard / Legacy Admin
+- Operations Workspace / Admin
+- Lifecycle Map
+- Review Workspace
 - Review Queues
 - Applicant Detail / Review Modal
 - Document Gallery and Lightbox
@@ -81,49 +83,57 @@ Protected live action backends include:
 - payment verification and Zoho Books
 - DR/release evidence tooling
 
-## Layer Responsibilities
+## Current Authority Chain
 
-| Layer | Responsibility | Mutates Data |
-|---|---|---|
-| Intake Sources | FormDesigner and future Google Forms intake | External to runtime |
-| Raw Facts | Sheet values, uploads, payment rows, communication fields | No |
-| Shared Row Facts | normalized row facts for shared consumers | No |
-| Authority Layer | derives domain truth | No by default |
-| Canonical Lifecycle Resolver | derives applicant base lifecycle state and overlays from current facts | No |
-| Operator Actionability Resolver | derives next operational recommendation and selection readiness | No |
-| Operator Surfaces | displays, requests actions, and shows confirmations | No by display alone |
-| Action Backends | execute approved mutations/sends | Yes, only when explicitly invoked |
+```text
+Shared Row Facts
+-> Population Ledger (accounting authority)
+-> Canonical Lifecycle Resolver (applicant-state authority)
+-> Operator Actionability Resolver (workload authority)
+-> Communication Authority (send authority)
+-> Operations Workspace / Review Workspace / compatible queue surfaces
+-> Mutation backends
+```
 
-## A3.3 Lifecycle / Actionability Milestone
+| Surface / layer | Current responsibility |
+|---|---|
+| Population Ledger | exactly-once applicant accounting |
+| Canonical Lifecycle Resolver | base applicant state plus overlays |
+| Operator Actionability Resolver | what the operator should work now |
+| Communication Authority | whether a message may preview/send now |
+| Operations Workspace | workload surface |
+| Review Workspace | mutation authority and authority-backed display |
+| Review Queues | compatibility/workflow only |
 
-Admin now exposes and begins consuming canonical lifecycle output:
+## Converged Milestones
 
-- `resolveCanonicalApplicantLifecycle_()` derives base lifecycle state separately from overlays.
-- `REMINDER_DUE` is treated as an overlay/timing signal, not the base applicant lifecycle.
-- Actionability prefers canonical `recommendedMessageType` when available.
-- Operations Workspace selection remains server-driven through the row `selectable` DTO.
-- Cooling-off and Contactability Gate still override readiness.
-- Communication Authority remains the final preview/send gate and is unchanged by A3.3.
-- Population Ledger remains exactly-once accounting authority and is unchanged by A3.3.
+Completed and reflected in runtime source:
 
-Deferred migrations:
+- canonical lifecycle base state and overlays are separated
+- `REMINDER_DUE` is an overlay, not a base lifecycle
+- actionability consumes canonical recommendations where available
+- Communication Authority accepts narrow canonical lifecycle context for the missing-documents workflow while preserving legacy fallback and all send gates
+- Operations Workspace selection is server-driven through `selectable`
+- contactability is promoted to a first-class operational bucket rather than being presented as Management work
+- Review Workspace remains mutation authority; display labels are expected to consume authority output rather than re-derive state independently
 
-- Stage Batch lifecycle input migration.
-- Population Ledger canonical lifecycle reporting/migration.
-- Communication Authority canonical input migration.
-- Retirement of legacy lifecycle derivation functions after all consumers are migrated.
+Still deferred:
+
+- Stage Batch candidate-selection migration from legacy lifecycle inputs
+- broader Population Ledger canonical reporting/migration
+- retirement of legacy lifecycle helpers after all consumers migrate
 
 ## ACP Phase 1 Authority Consolidation
 
-ACP Phase 1 reduces duplication around already-approved authority outcomes:
+ACP Phase 1 reduced duplication around already-approved authority outcomes:
 
-- shared batch policy helpers now own cap/default/max, normalization, candidate hashing, and preview-cache primitives
+- shared batch policy helpers own cap/default/max, normalization, candidate hashing, and preview-cache primitives
 - selected/manual batch and Stage Batch reuse those helpers where behaviour already matched
-- Operations Workspace bucket summaries are now produced on the server and consumed by the UI
+- Operations Workspace bucket summaries are produced on the server and consumed by the UI
 
-ACP Phase 1 does not migrate Stage Batch behaviour or Communication Authority outcomes.
+ACP Phase 1 did not migrate Stage Batch candidate selection.
 
-## r301+ Protected Live Surfaces
+## r338 Protected Live Surfaces
 
 Do not prune, archive, or refactor these surfaces without a dedicated CIS and proof:
 
@@ -139,7 +149,7 @@ Do not prune, archive, or refactor these surfaces without a dedicated CIS and pr
 
 ## OPS Boundary
 
-Admin Dashboard / Legacy Admin remains the primary operational surface.
+Admin / Operations Workspace remains the primary operational surface.
 
 OPS is frozen as a secondary/reference surface:
 
@@ -149,7 +159,7 @@ OPS is frozen as a secondary/reference surface:
 - no added client-side classification logic
 - critical bug fixes only
 
-OPS should survive only as a cleaner view over proven shared backend authority.
+OPS should survive only as a frozen reference over proven shared backend authority.
 
 ## Future/Partial Surfaces
 
@@ -161,6 +171,7 @@ These surfaces are not removal candidates:
 - classroom acceptance and handover authority
 - AI-assisted document precheck, advisory only
 - broader actionability owner/next-action queue model
+- further lifecycle retirement after canonical migration is complete
 
 ## Source Documents
 

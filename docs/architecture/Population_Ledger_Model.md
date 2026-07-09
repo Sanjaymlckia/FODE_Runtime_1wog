@@ -1,6 +1,6 @@
 # Population Ledger Model
 
-Status: implemented read-only foundation
+Status: implemented read-only authority
 Scope: Admin runtime population accounting
 
 ## Purpose
@@ -45,16 +45,21 @@ The server response exposes:
 
 ## Operational Buckets
 
-The initial mutually exclusive buckets are:
+The current mutually exclusive buckets are:
 
 - `Applicant Action`
 - `Admissions Review`
 - `Finance`
 - `Academic Admin`
+- `Contactability Exceptions`
 - `Management Exceptions`
 - `Dormant`
 - `Completed / No Action`
 - `Unknown / Unclassified`
+
+`Management Exceptions` is reserved for governance/manual/policy/escalation work.
+
+`Contactability Exceptions` is a first-class operational bucket for contactability-gated rows such as `NO_EFFECTIVE_EMAIL` and `EMAIL_BLOCKED_OR_BOUNCED`.
 
 ## Runtime Boundary
 
