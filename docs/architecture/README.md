@@ -88,6 +88,10 @@ Docs-only work uses the lightest deterministic closure: `git status -sb`, `git d
 
 Refactor work validates only changed runtime files and the tests protecting the changed authority surface. Do not run broad exploratory validation unless a concrete defect is found.
 
+Mermaid diagrams may be validated using:
+
+`tools\validate-mermaid-docs.ps1`
+
 ## Current Google Drive Folder
 
 Archived Google Drive workspace folder:
