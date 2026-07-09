@@ -3437,6 +3437,8 @@
       recommendedMessageType: "",
       preview: null,
       previewStale: false,
+      sentThisSession: false,
+      refreshAfterSendPending: false,
       sendResult: null,
       confirmOpen: false,
       busy: false,
@@ -10413,6 +10415,46 @@ function renderStageDashboard_(items, emptyMessage){
       }
     }
 
+    function clearActionabilitySelectionKeysForNonSelectableRows_(){
+      Object.keys(actionabilitySelectedKeys || {}).forEach(function(key){
+        var match = (Array.isArray(actionabilityPreviewRows) ? actionabilityPreviewRows : []).filter(function(row){
+          return actionabilityRowKey_(row) === key;
+        })[0] || null;
+        if (!match || !actionabilityIsSelectable_(match)) delete actionabilitySelectedKeys[key];
+      });
+    }
+
+    function resetBatchCommunicationSessionState_(){
+      batchCommState.excludedApplicantIds = {};
+      batchCommState.preview = null;
+      batchCommState.previewStale = false;
+      batchCommState.sendResult = null;
+      batchCommState.confirmOpen = false;
+      batchCommState.busy = false;
+      batchCommState.action = "";
+      batchCommState.requestSeq = 0;
+      batchCommState.sentThisSession = false;
+      batchCommState.refreshAfterSendPending = false;
+    }
+
+    function refreshActionabilityAfterBatchSend_(reason){
+      batchCommState.refreshAfterSendPending = true;
+      loadActionabilityPreview_({
+        force: true,
+        onSuccess: function(){
+          clearActionabilitySelectionKeysForNonSelectableRows_();
+          actionabilityBatchMessage = "";
+          actionabilityBatchPanelMode = "";
+          batchCommState.refreshAfterSendPending = false;
+          if (batchCommState.open !== true) renderActionabilityPreview_({ preserveRows: true });
+        },
+        onFailure: function(){
+          batchCommState.refreshAfterSendPending = true;
+        }
+      });
+      return reason || "send";
+    }
+
     function batchCommCanSend_(){
       var preview = batchCommState.preview || null;
       if (batchCommState.sendResult && batchCommState.sendResult.ok !== false) return false;
@@ -10447,13 +10489,7 @@ function renderStageDashboard_(items, emptyMessage){
       batchCommState.sourceLabel = String(src.sourceLabel || "Selected applicants");
       batchCommState.stage = String(src.stage || "");
       batchCommState.applicantIds = normalizeBatchCommApplicantIds_(src.applicantIds || []);
-      batchCommState.excludedApplicantIds = {};
-      batchCommState.preview = null;
-      batchCommState.previewStale = false;
-      batchCommState.sendResult = null;
-      batchCommState.confirmOpen = false;
-      batchCommState.busy = false;
-      batchCommState.action = "";
+      resetBatchCommunicationSessionState_();
       batchCommState.recommendedMessageType = String(src.recommendedMessageType || "");
       batchCommState.selectedMessageType = batchCommState.recommendedMessageType || "reminder";
       var back = document.getElementById("standaloneBatchCommModalBack");
@@ -10470,6 +10506,8 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function closeBatchCommunicationModal_(){
+      var sentThisSession = batchCommState.sentThisSession === true;
+      var refreshPending = batchCommState.refreshAfterSendPending === true;
       batchCommState.open = false;
       var back = document.getElementById("standaloneBatchCommModalBack");
       if (back) {
@@ -10477,6 +10515,14 @@ function renderStageDashboard_(items, emptyMessage){
         back.style.display = "";
         back.setAttribute("aria-hidden", "true");
       }
+      if (sentThisSession || refreshPending) {
+        clearActionabilitySelectionKeysForNonSelectableRows_();
+        actionabilitySelectionSource = "";
+        actionabilityBatchMessage = "";
+        actionabilityBatchPanelMode = "";
+        refreshActionabilityAfterBatchSend_("close_after_send");
+      }
+      resetBatchCommunicationSessionState_();
     }
 
     function normalizeBatchCommApplicantIds_(ids){
@@ -10948,9 +10994,16 @@ function renderStageDashboard_(items, emptyMessage){
       batchCommState.action = "";
       batchCommState.sendResult = res && typeof res === "object" ? res : { ok:false, result:"FAILED", message:"Invalid send response." };
       batchCommState.confirmOpen = false;
-      if (batchCommState.sendResult && batchCommState.sendResult.ok !== false) batchCommState.previewStale = true;
+      if (batchCommState.sendResult && batchCommState.sendResult.ok !== false) {
+        batchCommState.previewStale = true;
+        batchCommState.sentThisSession = true;
+        actionabilitySelectedKeys = {};
+        actionabilitySelectionSource = "";
+        actionabilityBatchMessage = "";
+        actionabilityBatchPanelMode = "";
+      }
       renderBatchCommunicationModal_();
-      loadActionabilityPreview_({ force: true });
+      if (batchCommState.sendResult && batchCommState.sendResult.ok !== false) refreshActionabilityAfterBatchSend_("send_success");
     }
 
     function handleBatchCommSendFailure_(seq, err){
@@ -11424,12 +11477,14 @@ function renderStageDashboard_(items, emptyMessage){
       google.script.run
         .withSuccessHandler(function(res){
           renderActionabilityPreview_(res || {});
+          if (typeof o.onSuccess === "function") o.onSuccess(res || {});
         })
         .withFailureHandler(function(err){
           console.error("[AdminUI] admin_getActionabilityPreview failure:", err);
           var rowsEl = document.getElementById("actionabilityPreviewRows");
           if (rowsEl) rowsEl.innerHTML = '<div class="queue-empty">Could not load Operations Workspace.</div>';
           if (metaEl) metaEl.textContent = "Operations Workspace unavailable.";
+          if (typeof o.onFailure === "function") o.onFailure(err);
         })
         .admin_getActionabilityPreview({ limit: 100, force: o.force ? 1 : 0 });
     }
