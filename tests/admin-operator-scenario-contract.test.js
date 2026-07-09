@@ -76,7 +76,8 @@ mustMatch(adminUi, /This action will immediately send[\s\S]*emails[\s\S]*<strong
 mustMatch(adminUi, /Send ' \+ esc\(recipients\) \+ ' Emails/, "Batch modal confirmation button must use the exact send count");
 mustNotMatch(functionSource("sendBatchCommunicationModal_"), /window\.confirm/, "Batch modal must not use browser-native confirmation");
 mustMatch(functionSource("batchCommCanSend_"), /sendResult[\s\S]*ok !== false[\s\S]*return false/, "Batch modal must disable repeat sends after completion");
-mustMatch(functionSource("handleBatchCommSendResult_"), /previewStale = true[\s\S]*loadActionabilityPreview_\(\{ force: true \}\)/, "Batch modal must invalidate preview and refresh worklist after send");
+mustMatch(functionSource("handleBatchCommSendResult_"), /previewStale = true[\s\S]*refreshActionabilityAfterBatchSend_\("send_success"\)/, "Batch modal must invalidate preview and delegate post-send worklist refresh through the shared helper");
+mustMatch(functionSource("refreshActionabilityAfterBatchSend_"), /loadActionabilityPreview_\(\{[\s\S]*force: true/, "Post-send batch refresh helper must force a server-derived actionability reload");
 mustMatch(adminUi, /Technical Diagnostics/, "Batch modal diagnostics must remain available but separated");
 
 mustMatch(adminUi, /function commContactabilityGate_/, "Contactability Gate scenario must be first-class");
