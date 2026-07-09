@@ -414,7 +414,7 @@
     .actionabilityWorklistRow:last-child{ border-bottom:0; }
     .actionabilityWorklistCell{ min-width:0; padding:7px 9px; overflow:visible; text-overflow:clip; }
     .actionabilityWorklistCell strong{ display:block; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; line-height:1.25; }
-    .actionabilityWorklistCell span{ display:block; color:#40556b; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; line-height:1.25; }
+    .actionabilityWorklistCell span{ display:block; color:#2f4458; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; line-height:1.25; }
     .actionabilityClusterHeader{ display:flex; flex-direction:column; justify-content:center; gap:3px; }
     .actionabilityClusterLabel{ color:#0f1f35; font-size:11px; line-height:1; }
     .actionabilityClusterSorts{ display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-top:2px; }
@@ -440,10 +440,11 @@
     .actionabilityOwnerCell strong{ color:#0f1f35; font-weight:800; }
     .actionabilityOwnerCell .opsStatusPill{ display:inline-flex; margin-top:5px; width:auto; }
     .actionabilityProgressCell{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; align-content:center; }
-    .actionabilityBlocker{ color:#9a2d2d; font-weight:800; }
-    .actionabilityAuthority{ color:#31516f; font-weight:800; }
+    .actionabilityBlocker{ color:#8a1f1f; font-weight:850; }
+    .actionabilityAuthority{ color:#244766; font-weight:850; }
     .actionabilityDueBlock{ font-size:11px; color:#40556b; font-weight:800; }
     .actionabilityDueBlock span{ display:block; color:#0f172a; margin-top:2px; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; }
+    .actionabilityUrgencyReason{ color:#244766 !important; font-weight:800; }
     .actionabilityReviewCell{ display:flex; align-items:center; justify-content:center; }
     .actionabilityReviewBtn{ width:100%; padding:9px 10px; border-radius:6px; background:#1f5aa5; border-color:#174a8b; color:#fff; font-size:12px; font-weight:850; }
     .actionabilityReviewBtn:hover{ background:#174a8b; }
@@ -470,7 +471,7 @@
     .actionabilitySelectBox{ display:inline-flex; align-items:center; gap:6px; max-width:100%; cursor:pointer; }
     .actionabilitySelectBox input{ width:15px; height:15px; accent-color:#1f5aa5; flex:0 0 auto; }
     .actionabilitySelectBox strong{ min-width:0; }
-    .actionabilityGuidance{ display:block; color:#40556b; font-size:11px; font-weight:800; margin-top:2px; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; line-height:1.25; }
+    .actionabilityGuidance{ display:block; color:#2f4458; font-size:11px; font-weight:800; margin-top:2px; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; line-height:1.3; }
     .actionabilityHiddenPanel, .actionabilityBatchPanel{ border-top:1px solid #e5ebf2; background:#fbfdff; padding:9px 10px; color:#173451; }
     .actionabilityHiddenPanel summary{ cursor:pointer; font-weight:900; color:#174a8b; }
     .actionabilityHiddenList{ display:grid; gap:6px; margin-top:8px; }
@@ -9517,6 +9518,13 @@ function renderStageDashboard_(items, emptyMessage){
       return "Other";
     }
 
+    function actionabilityBucketDisplayLabel_(row){
+      var r = row || {};
+      if (actionabilityIsUncontactable_(r)) return "Contactability Exception";
+      if (String(r.suppressor || "").trim().toUpperCase() === "EMAIL_BLOCKED_OR_BOUNCED") return "Contactability Exception";
+      return actionabilityGroupLabel_(actionabilityGroupKey_(r));
+    }
+
     function actionabilityPopulationBucketForGroup_(key){
       var normalized = String(key || "").trim().toUpperCase();
       if (normalized === "APPLICANT") return "Applicant Action";
@@ -9607,6 +9615,23 @@ function renderStageDashboard_(items, emptyMessage){
       return "Normal";
     }
 
+    function actionabilityUrgencyProvenance_(row){
+      var r = row || {};
+      var suppressor = String(r.suppressor || "").trim().toUpperCase();
+      var urgency = String(r.urgencyLevel || "").trim().toUpperCase();
+      var reasonCode = String(r.reasonCode || "").trim().toUpperCase();
+      if (urgency === "UNCONTACTABLE" || suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "Blocked by contactability";
+      if (urgency === "DORMANT") return "Dormant case";
+      if (urgency === "ESCALATED") return "Stale 21+ days";
+      if (urgency === "OVERDUE") return "Stale 14+ days";
+      if (urgency === "DUE") return "Open 3+ days";
+      if (suppressor === "COOLDOWN_ACTIVE") return "Cooling period active";
+      if (reasonCode === "OFFICER_ACTION_PENDING") return "Waiting for document review";
+      if (reasonCode === "FINANCE_ACTION_PENDING") return "Waiting for finance review";
+      if (reasonCode === "ADMIN_ACTION_PENDING") return "Waiting for admin completion";
+      return "Current workload";
+    }
+
     function actionabilityPriorityClass_(value){
       var normalized = String(value || "NORMAL").trim().toUpperCase();
       if (normalized === "ESCALATED" || normalized === "DORMANT" || normalized === "UNCONTACTABLE") return "danger";
@@ -9648,8 +9673,10 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function actionabilityAuthorityLabel_(row){
-      var group = actionabilityGroupKey_(row);
-      if (actionabilityIsUncontactable_(row)) return "Contactability Gate";
+      var r = row || {};
+      var group = actionabilityGroupKey_(r);
+      var suppressor = String(r.suppressor || "").trim().toUpperCase();
+      if (actionabilityIsUncontactable_(r) || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "Contactability Exception";
       if (group === "APPLICANT") return "LAP D3";
       if (group === "ADMISSIONS") return "Admissions V1";
       if (group === "FINANCE") return "Finance F2";
@@ -11322,9 +11349,9 @@ function renderStageDashboard_(items, emptyMessage){
         if (!selectable && rowKey && actionabilitySelectedKeys[rowKey]) delete actionabilitySelectedKeys[rowKey];
         html += '<div class="actionabilityWorklistRow" role="row" data-actionability-row="' + esc(String(index)) + '" data-actionability-state="' + esc(r.actionabilityState || "UNKNOWN") + '" oncontextmenu="return openActionabilityContextMenu_(event, ' + String(index) + ')">';
         html += '<div class="actionabilityWorklistCell actionabilityApplicantCell" role="cell"><label class="actionabilitySelectBox"><input type="checkbox" aria-label="Select applicant ' + esc(r.applicantId || "") + '" onchange="toggleActionabilitySelection_(' + String(index) + ', this.checked)" ' + (selected ? "checked" : "") + (selectable ? "" : " disabled") + ' title="' + esc(selectable ? "Eligible for batch preview." : actionabilitySelectionGuidance_(r)) + '"><strong>' + esc(r.name || "Name not shown") + '</strong></label><span class="actionabilityApplicantId">' + esc(r.applicantId || "") + '</span><span class="actionabilityNextAction">' + esc(nextAction) + '</span><span class="actionabilityBlocker">' + esc(blocker) + '</span><span class="actionabilityGuidance">' + esc(actionabilitySelectionGuidance_(r)) + '</span></div>';
-        html += '<div class="actionabilityWorklistCell actionabilityOwnerCell" role="cell"><strong>' + esc(actionabilityGroupLabel_(actionabilityGroupKey_(r))) + '</strong><span class="actionabilityAuthority">' + esc(authority) + '</span><span class="opsStatusPill ' + priorityClass + '">' + esc(priority) + '</span></div>';
+        html += '<div class="actionabilityWorklistCell actionabilityOwnerCell" role="cell"><strong>' + esc(actionabilityBucketDisplayLabel_(r)) + '</strong><span class="actionabilityAuthority">' + esc(authority) + '</span><span class="opsStatusPill ' + priorityClass + '" title="' + esc(r.urgencyReason || priority) + '">' + esc(priority) + '</span></div>';
         html += '<div class="actionabilityWorklistCell actionabilityStatusChips actionabilityProgressCell" role="cell"><span class="actionabilityMiniChip ' + (state.portalSubmitted ? "ok" : "warn") + '">' + esc(portalLabel) + '</span><span class="actionabilityMiniChip ' + docsClass + '">' + esc(docsLabel) + '</span><span class="actionabilityMiniChip ' + paymentClass + '">' + esc(paymentLabel) + '</span><span class="actionabilityMiniChip ' + contactClass + '">' + esc(contactLabel) + '</span></div>';
-        html += '<div class="actionabilityWorklistCell actionabilityDueBlock" role="cell"><strong>' + esc(due) + '</strong><span>Age ' + esc(r.ageDays === "" || r.ageDays === undefined ? "-" : String(r.ageDays) + "d") + ' | Last ' + esc(r.lastContactAgeDays === "" ? "none" : String(r.lastContactAgeDays) + "d") + '</span><span>' + esc(commProgress || commNext) + '</span><span>' + esc(commNext) + '</span></div>';
+        html += '<div class="actionabilityWorklistCell actionabilityDueBlock" role="cell"><strong>' + esc(due) + '</strong><span class="actionabilityUrgencyReason">Urgency: ' + esc(actionabilityUrgencyProvenance_(r)) + '</span><span>Age ' + esc(r.ageDays === "" || r.ageDays === undefined ? "-" : String(r.ageDays) + "d") + ' | Last ' + esc(r.lastContactAgeDays === "" ? "none" : String(r.lastContactAgeDays) + "d") + '</span><span>' + esc(commProgress || commNext) + '</span><span>' + esc(commNext) + '</span></div>';
         html += '<div class="actionabilityWorklistCell actionabilityReviewCell" role="cell"><button class="btn actionabilityReviewBtn operatorControl operatorControlPrimary" type="button" onclick="reviewActionabilityRow_(' + String(index) + ', this)">Review</button></div>';
         html += '<details class="actionabilityDetails actionabilityWorklistDetails"><summary>Details</summary>'
           + '<div class="actionabilityFactGrid" style="margin-top:8px;">'

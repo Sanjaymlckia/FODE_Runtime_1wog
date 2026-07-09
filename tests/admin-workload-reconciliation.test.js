@@ -29,6 +29,7 @@ const afterAction = extractFunction(adminUi, "batchCommAfterActionHtml_");
 
 [
   "Awaiting applicant upload",
+  "Contactability exception",
   "Reminder sent today",
   "Awaiting applicant response",
   "Cooling-off",
@@ -41,7 +42,9 @@ const afterAction = extractFunction(adminUi, "batchCommAfterActionHtml_");
 });
 
 assert.match(explanationForRow, /COOLDOWN_ACTIVE[\s\S]*Cooling-off/, "Cooling-off rows must explain remaining work before batch");
+assert.match(explanationForRow, /NO_EFFECTIVE_EMAIL[\s\S]*Contactability exception/, "Contactability-gated rows must explain contactability work explicitly");
 assert.match(explanationForRow, /UPLOAD_REQUIRED_DOCUMENTS[\s\S]*Ready for reminder/, "Document-upload rows must distinguish ready reminder work");
+assert.match(explanationForRow, /OFFICER_ACTION_PENDING[\s\S]*Ready for academic review/, "Only true academic-review rows must use academic-review wording");
 assert.match(buildRow, /communicationProgress:/, "Actionability row DTO must include communication progress");
 assert.match(buildRow, /communicationProgressDetail:/, "Actionability row DTO must include operator-readable progress detail");
 assert.match(preview, /workloadExplanation:\s*actionabilityWorkloadExplanationEmpty_\(\)/, "Actionability preview must initialize workload explanation summary");

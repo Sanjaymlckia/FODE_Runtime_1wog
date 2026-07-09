@@ -2574,6 +2574,7 @@ function buildEmailResponseTrafficShell_() {
 function actionabilityWorkloadExplanationEmpty_() {
   return {
     "Awaiting applicant upload": 0,
+    "Contactability exception": 0,
     "Reminder sent today": 0,
     "Awaiting applicant response": 0,
     "Cooling-off": 0,
@@ -2598,13 +2599,19 @@ function actionabilityWorkloadExplanationForRow_(row) {
   var state = clean_(r.actionabilityState || "").toUpperCase();
   var reason = clean_(r.reasonCode || "").toUpperCase();
   var next = clean_(r.nextAction || "").toUpperCase();
+  var suppressor = clean_(r.suppressor || "").toUpperCase();
   var recommended = clean_(r.recommendedAction || r.recommendedMessageType || "").toLowerCase();
   var authority = r.authorityState || {};
   var uploaded = Number(authority.uploadedRequiredDocumentCount || 0);
   var required = Number(authority.requiredDocumentCount || 0);
+  if (reason === "NO_EFFECTIVE_EMAIL" || reason === "EMAIL_BLOCKED_OR_BOUNCED" || suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") {
+    return "Contactability exception";
+  }
   if (state === "COOLING_OFF" || reason === "COOLDOWN_ACTIVE") return "Cooling-off";
   if (isSameLocalDate_(r.lastRelevantDate || "", new Date()) && uploaded > 0 && required > uploaded) return "Document received today";
-  if (next === "REVIEW_DOCUMENTS" || state === "REVIEW_REQUIRED") return "Ready for academic review";
+  if (next === "REVIEW_DOCUMENTS" || reason === "OFFICER_ACTION_PENDING") return "Ready for academic review";
+  if (reason === "FINANCE_ACTION_PENDING") return "Awaiting finance review";
+  if (reason === "ADMIN_ACTION_PENDING") return "Awaiting admin completion";
   if (state === "AWAITING_APPLICANT") return "Awaiting applicant response";
   if (next === "UPLOAD_REQUIRED_DOCUMENTS") {
     if (Number(r.lastContactAgeDays || 0) === 0) return "Reminder sent today";

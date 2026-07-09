@@ -390,13 +390,18 @@ assert.match(adminJs, /function admin_getPopulationLedger/, "Population Ledger R
 assert.match(adminJs, /function buildPopulationLedgerFromValues_/, "Population Ledger must be reusable by dashboard and lifecycle consumers");
 assert.match(adminJs, /contactabilityState: isUncontactable \? "UNCONTACTABLE"/, "Actionability payload must classify no-email/no-phone applicants as uncontactable");
 assert.match(adminUi, /return "Uncontactable"/, "Dashboard priority language must show Uncontactable");
+assert.match(adminUi, /function actionabilityUrgencyProvenance_/, "Dashboard must expose compact urgency provenance");
+assert.match(adminUi, /return "Blocked by contactability"/, "Urgency provenance must distinguish contactability blocks");
+assert.match(adminUi, /return "Stale 21\+ days"/, "Urgency provenance must distinguish stale urgent work");
 assert.match(adminUi, /return "Contact details required"/, "Dashboard due language must replace urgent due text for uncontactable applicants");
 assert.match(adminUi, /return "No email, no phone"/, "Dashboard blocker must show no-email/no-phone facts");
-assert.match(adminUi, /return "Contactability Gate"/, "Dashboard authority must show Contactability Gate");
+assert.match(adminUi, /return "Contactability Exception"/, "Dashboard authority must show Contactability Exception for contactability failures");
 assert.match(adminUi, /function actionabilityIsEmailActionable_/, "Dashboard must gate worklist email actions before presenting batch communication");
 assert.match(adminUi, /NO_EFFECTIVE_EMAIL[\s\S]*EMAIL_BLOCKED_OR_BOUNCED/, "Dashboard email actionability must reject no-email and bounced/blocked suppressors");
 assert.match(adminUi, /function actionabilityContactGuidance_/, "Dashboard must expose operator contactability guidance");
 assert.match(adminUi, /No usable email or phone\. Route to Contactability Gate\./, "No-contact rows must route operators to Contactability Gate");
+assert.match(adminUi, /function actionabilityBucketDisplayLabel_/, "Dashboard rows must support contactability-specific bucket display");
+assert.match(adminUi, /return "Contactability Exception"/, "Contactability-gated rows must not present as management override work by default");
 assert.match(adminUi, /function actionabilityDocumentCompletenessLabel_/, "Worklist must render document completeness evidence");
 assert.match(adminUi, /All Required Missing/, "Document completeness must distinguish no uploads");
 assert.match(adminUi, /Required Uploaded - Review/, "Document completeness must distinguish uploaded-but-unverified records");
@@ -416,6 +421,7 @@ assert.match(adminUi, /hidden by worklist window, completion state, or another a
 assert.doesNotMatch(renderActionabilityRowBody_(), /View Hidden|Show Hidden:/, "Bucket cards must not duplicate old View Hidden / Show Hidden language");
 assert.match(adminUi, /Explain/, "Bucket action must explain buckets with population but no visible rows");
 assert.match(adminUi, /Priority \/ Next/, "Timing column must honestly describe priority/next-action sorting");
+assert.match(adminUi, /Urgency: ' \+ esc\(actionabilityUrgencyProvenance_\(r\)\)/, "Worklist timeline must render compact urgency provenance in-row");
 assert.doesNotMatch(adminUi, /Due \/ Next/, "Timing column must not imply a due-date scheduler when none exists");
 assert.match(adminUi, /function commContactabilityGate_/, "Review modal must treat Contactability Gate as a first-class workflow state");
 assert.match(adminUi, /Email workflow unavailable/, "Contactability Gate must suppress normal email template workflow");
