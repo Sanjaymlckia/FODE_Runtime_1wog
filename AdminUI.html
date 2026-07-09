@@ -358,7 +358,8 @@
     .actionabilityBucketCard[data-actionability-kpi="ADMISSIONS"]:before{ background:#6957d8; }
     .actionabilityBucketCard[data-actionability-kpi="FINANCE"]:before{ background:#1f8a4c; }
     .actionabilityBucketCard[data-actionability-kpi="ACADEMIC"]:before{ background:#bd6b08; }
-    .actionabilityBucketCard[data-actionability-kpi="MANAGEMENT"]:before{ background:#a83030; }
+    .actionabilityBucketCard[data-actionability-kpi="CONTACTABILITY"]:before{ background:#a83030; }
+    .actionabilityBucketCard[data-actionability-kpi="MANAGEMENT"]:before{ background:#7f3f98; }
     .actionabilityBucketCard[data-actionability-kpi="DORMANT"]:before{ background:#64748b; }
     .actionabilityBucketCard[data-actionability-kpi="COMPLETE"]:before{ background:#27744b; }
     .actionabilityBucketCard[data-actionability-kpi="UNKNOWN"]:before{ background:#805006; }
@@ -9479,6 +9480,7 @@ function renderStageDashboard_(items, emptyMessage){
       if (normalized === "OFFICER") return "Admissions Review";
       if (normalized === "FINANCE") return "Finance";
       if (normalized === "ADMIN") return "Academic Administration";
+      if (normalized === "CONTACTABILITY") return "Contactability Exceptions";
       if (normalized === "SYSTEM") return "Management Exceptions";
       if (normalized === "NONE") return "No Action";
       return normalized || "Unknown";
@@ -9491,7 +9493,7 @@ function renderStageDashboard_(items, emptyMessage){
       var suppressor = String(r.suppressor || "").trim().toUpperCase();
       if (owner === "NONE" || String(r.nextAction || "").trim().toUpperCase() === "NO_ACTION") return "COMPLETE";
       if (urgency === "DORMANT") return "DORMANT";
-      if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "MANAGEMENT";
+      if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "CONTACTABILITY";
       if (owner === "APPLICANT") return "APPLICANT";
       if (owner === "OFFICER") return "ADMISSIONS";
       if (owner === "FINANCE") return "FINANCE";
@@ -9511,6 +9513,7 @@ function renderStageDashboard_(items, emptyMessage){
       if (normalized === "ADMISSIONS") return "Admissions Review";
       if (normalized === "FINANCE") return "Finance";
       if (normalized === "ACADEMIC") return "Academic Administration";
+      if (normalized === "CONTACTABILITY") return "Contactability Exceptions";
       if (normalized === "MANAGEMENT") return "Management Exceptions";
       if (normalized === "DORMANT") return "Dormant";
       if (normalized === "COMPLETE") return "Completed / No Action";
@@ -9519,10 +9522,7 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function actionabilityBucketDisplayLabel_(row){
-      var r = row || {};
-      if (actionabilityIsUncontactable_(r)) return "Contactability Exception";
-      if (String(r.suppressor || "").trim().toUpperCase() === "EMAIL_BLOCKED_OR_BOUNCED") return "Contactability Exception";
-      return actionabilityGroupLabel_(actionabilityGroupKey_(r));
+      return actionabilityGroupLabel_(actionabilityGroupKey_(row));
     }
 
     function actionabilityPopulationBucketForGroup_(key){
@@ -9531,6 +9531,7 @@ function renderStageDashboard_(items, emptyMessage){
       if (normalized === "ADMISSIONS") return "Admissions Review";
       if (normalized === "FINANCE") return "Finance";
       if (normalized === "ACADEMIC") return "Academic Admin";
+      if (normalized === "CONTACTABILITY") return "Contactability Exceptions";
       if (normalized === "MANAGEMENT") return "Management Exceptions";
       if (normalized === "DORMANT") return "Dormant";
       if (normalized === "COMPLETE") return "Completed / No Action";
@@ -9558,6 +9559,7 @@ function renderStageDashboard_(items, emptyMessage){
       if (text === "ADMISSIONS REVIEW") return "ADMISSIONS";
       if (text === "FINANCE") return "FINANCE";
       if (text === "ACADEMIC ADMIN" || text === "ACADEMIC ADMINISTRATION") return "ACADEMIC";
+      if (text === "CONTACTABILITY EXCEPTIONS" || text === "CONTACTABILITY EXCEPTION") return "CONTACTABILITY";
       if (text === "MANAGEMENT EXCEPTIONS" || text === "EXCEPTIONS") return "MANAGEMENT";
       if (text === "DORMANT") return "DORMANT";
       if (text === "COMPLETED / NO ACTION" || text === "COMPLETE") return "COMPLETE";
@@ -9570,6 +9572,7 @@ function renderStageDashboard_(items, emptyMessage){
       if (normalized === "ADMISSIONS") return "Applications ready for academic document review.";
       if (normalized === "FINANCE") return "Payment and financial verification actions.";
       if (normalized === "ACADEMIC") return "Academic placement and administrative actions.";
+      if (normalized === "CONTACTABILITY") return "Applicants blocked by missing, invalid, or unreliable contact details.";
       if (normalized === "MANAGEMENT") return "Exceptions requiring management attention and remediation.";
       if (normalized === "DORMANT") return "Applicants dormant per lifecycle rules.";
       if (normalized === "COMPLETE") return "No action required.";
@@ -9676,7 +9679,7 @@ function renderStageDashboard_(items, emptyMessage){
       var r = row || {};
       var group = actionabilityGroupKey_(r);
       var suppressor = String(r.suppressor || "").trim().toUpperCase();
-      if (actionabilityIsUncontactable_(r) || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "Contactability Exception";
+      if (group === "CONTACTABILITY" || actionabilityIsUncontactable_(r) || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "Contactability Exception";
       if (group === "APPLICANT") return "LAP D3";
       if (group === "ADMISSIONS") return "Admissions V1";
       if (group === "FINANCE") return "Finance F2";
@@ -9756,6 +9759,7 @@ function renderStageDashboard_(items, emptyMessage){
       if (group === "ADMISSIONS" || String(row && row.nextAction || "").toUpperCase().indexOf("DOCUMENT") >= 0) return "docs";
       if (group === "FINANCE") return "payment";
       if (group === "ACADEMIC") return "academic";
+      if (group === "CONTACTABILITY") return "exception";
       if (group === "MANAGEMENT") return "exception";
       return "summary";
     }
@@ -10002,6 +10006,24 @@ function renderStageDashboard_(items, emptyMessage){
         + " / Other " + counts.other;
     }
 
+    function actionabilityContactabilityExceptionBreakdown_(list){
+      var rows = Array.isArray(list) ? list : [];
+      var counts = { uncontactable: 0, bounced: 0, phoneOnly: 0, other: 0 };
+      rows.forEach(function(row){
+        var r = row || {};
+        var suppressor = String(r.suppressor || "").trim().toUpperCase();
+        var state = r.authorityState || {};
+        if (actionabilityIsUncontactable_(r) || suppressor === "NO_EFFECTIVE_EMAIL") counts.uncontactable++;
+        else if (suppressor === "EMAIL_BLOCKED_OR_BOUNCED") counts.bounced++;
+        else if (state.hasPhoneFallback === true && state.hasValidEmail !== true) counts.phoneOnly++;
+        else counts.other++;
+      });
+      return "Visible breakdown: No effective email " + counts.uncontactable
+        + " / Bounced or blocked " + counts.bounced
+        + " / Phone fallback only " + counts.phoneOnly
+        + " / Other " + counts.other;
+    }
+
     function actionabilityHiddenExplanation_(key, populationCount, visibleCount){
       var hidden = Math.max(0, Number(populationCount || 0) - Number(visibleCount || 0));
       if (!hidden) return "";
@@ -10198,7 +10220,9 @@ function renderStageDashboard_(items, emptyMessage){
         : (hiddenCount ? ("Showing " + String(hiddenShown) + " / " + String(hiddenTotal) + " hidden") : "No hidden records");
       var hiddenBreakdown = key === "APPLICANT"
         ? (outsideWindowEligibleCount ? (String(returnedEligibleCount) + " returned eligible now / " + String(eligibleNowCount) + " eligible now total") : "Returned worklist currently includes all eligible-now rows.")
-        : (hiddenCount ? actionabilityHiddenBreakdown_(key) : "No records hidden from this bucket.");
+        : (key === "CONTACTABILITY"
+          ? actionabilityContactabilityExceptionBreakdown_(rows)
+          : (hiddenCount ? actionabilityHiddenBreakdown_(key) : "No records hidden from this bucket."));
       var hiddenMetricLabel = key === "APPLICANT" ? "Eligible Outside Current Window" : "Hidden";
       return '<div class="actionabilityBucketCard' + (actionabilityActiveGroup === key ? ' active' : '') + '" data-actionability-kpi="' + esc(key) + '">'
         + '<div class="actionabilityBucketLead">'
@@ -11262,7 +11286,7 @@ function renderStageDashboard_(items, emptyMessage){
       }
       if (data.preserveRows !== true && Array.isArray(data.rows)) actionabilityPreviewRows = data.rows.slice();
       var rows = sortedActionabilityRows_(actionabilityPreviewRows);
-      var groups = ["APPLICANT", "ADMISSIONS", "FINANCE", "ACADEMIC", "MANAGEMENT", "DORMANT", "COMPLETE", "UNKNOWN"];
+      var groups = ["APPLICANT", "ADMISSIONS", "FINANCE", "ACADEMIC", "CONTACTABILITY", "MANAGEMENT", "DORMANT", "COMPLETE", "UNKNOWN"];
       var groupRows = {};
       groups.forEach(function(key){ groupRows[key] = []; });
       rows.forEach(function(row){

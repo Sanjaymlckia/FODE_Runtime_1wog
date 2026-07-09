@@ -3275,7 +3275,7 @@ function actionabilityPreviewGroupKey_(row) {
   var suppressor = clean_(r.suppressor || "").toUpperCase();
   if (owner === "NONE" || clean_(r.nextAction || "").toUpperCase() === "NO_ACTION") return "COMPLETE";
   if (urgency === "DORMANT") return "DORMANT";
-  if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "MANAGEMENT";
+  if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "CONTACTABILITY";
   if (owner === "APPLICANT") return "APPLICANT";
   if (owner === "OFFICER") return "ADMISSIONS";
   if (owner === "FINANCE") return "FINANCE";
@@ -3289,7 +3289,7 @@ function actionabilityHiddenReasonForGroup_(groupKey) {
   if (key === "COMPLETE") return "COMPLETED_NO_ACTION";
   if (key === "DORMANT") return "DORMANT";
   if (key === "UNKNOWN") return "UNKNOWN";
-  if (key === "ACADEMIC" || key === "ADMISSIONS" || key === "FINANCE" || key === "MANAGEMENT") return "OTHER_AUTHORITY";
+  if (key === "ACADEMIC" || key === "ADMISSIONS" || key === "FINANCE" || key === "MANAGEMENT" || key === "CONTACTABILITY") return "OTHER_AUTHORITY";
   return "FILTERED_BY_WORKLIST";
 }
 
@@ -3299,7 +3299,7 @@ function actionabilityHiddenSuggestedAction_(groupKey, row) {
   if (key === "DORMANT") return "Open Applicant";
   if (key === "UNKNOWN") return "Open Applicant";
   if (key === "FINANCE") return "Open Applicant";
-  if (key === "ADMISSIONS" || key === "ACADEMIC" || key === "MANAGEMENT") return "Open Applicant";
+  if (key === "ADMISSIONS" || key === "ACADEMIC" || key === "MANAGEMENT" || key === "CONTACTABILITY") return "Open Applicant";
   return clean_(row && row.nextAction || "").toUpperCase() === "NO_ACTION" ? "Explain Only" : "Switch Filter";
 }
 
@@ -3309,6 +3309,7 @@ function actionabilityPopulationBucketForGroupKey_(groupKey) {
   if (key === "ADMISSIONS") return "Admissions Review";
   if (key === "FINANCE") return "Finance";
   if (key === "ACADEMIC") return "Academic Admin";
+  if (key === "CONTACTABILITY") return "Contactability Exceptions";
   if (key === "MANAGEMENT") return "Management Exceptions";
   if (key === "DORMANT") return "Dormant";
   if (key === "COMPLETE") return "Completed / No Action";
@@ -3344,7 +3345,7 @@ function actionabilityBucketSummarySkeleton_(groupKey) {
 function buildActionabilityBucketSummaries_(rows, visibleRows, ledger, hiddenRecords) {
   var allRows = Array.isArray(rows) ? rows : [];
   var boundedRows = Array.isArray(visibleRows) ? visibleRows : [];
-  var keys = ["APPLICANT", "ADMISSIONS", "FINANCE", "ACADEMIC", "MANAGEMENT", "DORMANT", "COMPLETE", "UNKNOWN"];
+  var keys = ["APPLICANT", "ADMISSIONS", "FINANCE", "ACADEMIC", "CONTACTABILITY", "MANAGEMENT", "DORMANT", "COMPLETE", "UNKNOWN"];
   var counts = ledger && ledger.operationalBucketCounts && typeof ledger.operationalBucketCounts === "object"
     ? ledger.operationalBucketCounts
     : {};
@@ -3558,6 +3559,7 @@ function populationLedgerBucketNames_() {
     "Admissions Review",
     "Finance",
     "Academic Admin",
+    "Contactability Exceptions",
     "Management Exceptions",
     "Dormant",
     "Completed / No Action",
@@ -3591,7 +3593,7 @@ function populationLedgerNextActionFamily_(nextAction) {
   if (action === "REVIEW_DOCUMENTS") return "ADMISSIONS_REVIEW";
   if (action === "VERIFY_PAYMENT") return "FINANCE";
   if (action === "ENROLL") return "ACADEMIC_ADMIN";
-  if (action === "FIX_CONTACT_DETAILS") return "MANAGEMENT_EXCEPTION";
+  if (action === "FIX_CONTACT_DETAILS") return "CONTACTABILITY_EXCEPTION";
   return "MANAGEMENT_EXCEPTION";
 }
 
@@ -3605,7 +3607,7 @@ function populationLedgerBucketFromActionability_(item) {
   if (!owner || !nextAction) return { bucket: "Unknown / Unclassified", reason: "Missing actionability owner or next action." };
   if (owner === "NONE" || nextAction === "NO_ACTION") return { bucket: "Completed / No Action", reason: "" };
   if (urgency === "DORMANT") return { bucket: "Dormant", reason: "" };
-  if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return { bucket: "Management Exceptions", reason: "" };
+  if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return { bucket: "Contactability Exceptions", reason: "" };
   if (owner === "APPLICANT") return { bucket: "Applicant Action", reason: "" };
   if (owner === "OFFICER") return { bucket: "Admissions Review", reason: "" };
   if (owner === "FINANCE") return { bucket: "Finance", reason: "" };

@@ -154,6 +154,7 @@ assert.doesNotMatch(adminUi, /class="actionabilityGroupCard/, "Operations Worksp
   "Admissions Review",
   "Finance",
   "Academic Admin",
+  "Contactability Exceptions",
   "Exceptions",
   "Dormant",
   "Completed / No Action",
@@ -186,7 +187,7 @@ assert.doesNotMatch(adminUi, /review queue visible/i, "Lifecycle Map must not la
 assert.match(adminUi, /var ledger = data\.populationLedger/, "Global Dashboard renderer must consume Population Ledger summary");
 assert.match(adminUi, /ApplicantID \/ " \+ Number\(data\.scannedRows/, "Global Dashboard scan metric must separate ApplicantID rows from scanned rows");
 
-["APPLICANT", "ADMISSIONS", "FINANCE", "ACADEMIC", "MANAGEMENT", "DORMANT", "COMPLETE", "UNKNOWN"].forEach((key) => {
+["APPLICANT", "ADMISSIONS", "FINANCE", "ACADEMIC", "CONTACTABILITY", "MANAGEMENT", "DORMANT", "COMPLETE", "UNKNOWN"].forEach((key) => {
   assert.ok(adminUi.includes(`data-actionability-kpi="' + esc(key) + '"`) || adminUi.includes(`data-actionability-kpi="${key}"`), `KPI bucket key must be rendered: ${key}`);
 });
 
@@ -381,6 +382,8 @@ assert.match(adminUi, /cumulativeIsHistorical === true/, "UI must distinguish hi
 assert.doesNotMatch(adminUi, /admin_sendCommunicationsActivity|admin_updateCommunicationsActivity|admin_createCommunicationsLedger/, "Communications Activity surface must not add mutation RPCs");
 assert.match(adminUi, /function actionabilityManagementExceptionBreakdown_/, "Management Exceptions must expose a scoped breakdown when visible rows support it");
 assert.match(adminUi, /Visible breakdown: Uncontactable/, "Management Exceptions breakdown must be labelled as visible-row derived");
+assert.match(adminUi, /function actionabilityContactabilityExceptionBreakdown_/, "Contactability Exceptions must expose a scoped breakdown");
+assert.match(adminUi, /Visible breakdown: No effective email/, "Contactability Exceptions breakdown must explain contactability failure types");
 assert.match(adminUi, /class="actionabilitySortBtn' \+ \(active \? ' active' : ''\)/, "Grouped worklist headers must render active sort state");
 assert.match(adminUi, /aria-pressed="' \+ \(active \? "true" : "false"\)/, "Grouped worklist sort controls must expose active state accessibly");
 assert.match(adminUi, /class="actionabilitySortBtn' \+ \(active \? ' active' : ''\)[\s\S]*esc\(label \+ actionabilitySortLabel_\(key\)\)/, "Grouped worklist headers must render separated sort button labels");
@@ -396,12 +399,13 @@ assert.match(adminUi, /return "Stale 21\+ days"/, "Urgency provenance must disti
 assert.match(adminUi, /return "Contact details required"/, "Dashboard due language must replace urgent due text for uncontactable applicants");
 assert.match(adminUi, /return "No email, no phone"/, "Dashboard blocker must show no-email/no-phone facts");
 assert.match(adminUi, /return "Contactability Exception"/, "Dashboard authority must show Contactability Exception for contactability failures");
+assert.match(adminJs, /return "CONTACTABILITY";/, "Server-side bucket routing must promote contactability suppressors into a first-class CONTACTABILITY group");
 assert.match(adminUi, /function actionabilityIsEmailActionable_/, "Dashboard must gate worklist email actions before presenting batch communication");
 assert.match(adminUi, /NO_EFFECTIVE_EMAIL[\s\S]*EMAIL_BLOCKED_OR_BOUNCED/, "Dashboard email actionability must reject no-email and bounced/blocked suppressors");
 assert.match(adminUi, /function actionabilityContactGuidance_/, "Dashboard must expose operator contactability guidance");
 assert.match(adminUi, /No usable email or phone\. Route to Contactability Gate\./, "No-contact rows must route operators to Contactability Gate");
 assert.match(adminUi, /function actionabilityBucketDisplayLabel_/, "Dashboard rows must support contactability-specific bucket display");
-assert.match(adminUi, /return "Contactability Exception"/, "Contactability-gated rows must not present as management override work by default");
+assert.match(adminUi, /return "Contactability Exceptions"/, "Contactability rows must render under a first-class Contactability Exceptions bucket");
 assert.match(adminUi, /function actionabilityDocumentCompletenessLabel_/, "Worklist must render document completeness evidence");
 assert.match(adminUi, /All Required Missing/, "Document completeness must distinguish no uploads");
 assert.match(adminUi, /Required Uploaded - Review/, "Document completeness must distinguish uploaded-but-unverified records");
