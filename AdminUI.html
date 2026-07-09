@@ -6537,9 +6537,10 @@
       if (!d || !String(d.ApplicantID || "").trim()) {
         return { messageType:"", reason:"Select an applicant before choosing an operational template.", actionable:false };
       }
+      var authority = reviewAuthoritySnapshot_(d);
       var backendType = String(d.Comm_Recommended_Message_Type || "").trim();
       var canSendNow = d.Comm_Can_Send_Now === true;
-      var blockReason = String(d.Comm_Block_Reason || d.Comm_Block_Code || "").trim();
+      var blockReason = String(d.Comm_Block_Reason || d.Comm_Block_Code || (authority && authority.selectBlockReason) || "").trim();
       if (backendType && canSendNow) {
         return { messageType:backendType, reason:"Recommended next action from communication authority.", actionable:true };
       }
@@ -9156,10 +9157,7 @@ function renderStageDashboard_(items, emptyMessage){
     function deriveApplicantDisplayStage(detail){
       var d = detail || {};
       var facts = opsPortalDiagnosticsFacts_(d);
-      var displayStage = String((facts && (facts.displayStageLabel || facts.lifecycleLabel)) || "").trim();
-      if (displayStage) return displayStage;
-      if (isApplicantPendingDocsOrPayment_(d)) return "Required documents/payment evidence missing or unverified";
-      return String(d.Comm_Stage || d.Stage || d.Overall_Status || d.Payment_Badge || "—").trim() || "—";
+      return reviewDisplayStageFromAuthority_(d, facts);
     }
     function deriveCommunicationStatus(detail){
       var d = detail || {};
@@ -11685,6 +11683,60 @@ function renderStageDashboard_(items, emptyMessage){
       return raw.replace(/_/g, " ");
     }
 
+    function reviewAuthoritySnapshot_(detail){
+      return (detail && typeof detail._authorityDisplay === "object" && detail._authorityDisplay) ? detail._authorityDisplay : null;
+    }
+
+    function reviewCanonicalStageLabel_(baseState){
+      var normalized = String(baseState || "").trim().toUpperCase();
+      if (normalized === "APPLICATION_RECEIVED") return "Application Received";
+      if (normalized === "AWAITING_PORTAL_OR_INTAKE") return "Awaiting Portal / Intake";
+      if (normalized === "INCOMPLETE_DOCUMENTS") return "Incomplete Documents";
+      if (normalized === "DOCUMENTS_TO_VERIFY") return "Documents to Verify";
+      if (normalized === "DOCUMENT_CORRECTION_REQUIRED") return "Document Correction Required";
+      if (normalized === "PAYMENT_PENDING") return "Awaiting Payment Evidence";
+      if (normalized === "PAYMENT_TO_VERIFY") return "Payment Under Review";
+      if (normalized === "ENROLMENT_READY") return "Enrolment Ready";
+      if (normalized === "COMPLETE") return "Complete";
+      if (normalized === "DORMANT") return "Dormant";
+      return "";
+    }
+
+    function reviewDisplayStageFromAuthority_(detail, facts){
+      var authority = reviewAuthoritySnapshot_(detail);
+      var canonicalBase = String(authority && authority.canonicalLifecycle && authority.canonicalLifecycle.baseState || "").trim().toUpperCase();
+      var authorityLabel = reviewCanonicalStageLabel_(canonicalBase);
+      if (authorityLabel) return authorityLabel;
+      var displayStage = String((facts && (facts.displayStageLabel || facts.lifecycleLabel)) || "").trim();
+      if (displayStage) return displayStage;
+      if (isApplicantPendingDocsOrPayment_(detail || {})) return "Required documents/payment evidence missing or unverified";
+      return String((detail && (detail.Comm_Stage || detail.Stage || detail.Overall_Status || detail.Payment_Badge)) || "—").trim() || "—";
+    }
+
+    function reviewOwnerLabelFromAuthority_(detail, facts, proof){
+      var authority = reviewAuthoritySnapshot_(detail);
+      var authorityOwner = String(authority && authority.actionOwner || "").trim().toUpperCase();
+      if (authorityOwner) return actionabilityOwnerLabel_(authorityOwner);
+      return reviewOwnerDisplayLabel_((proof && proof.currentQueueBucket) || (proof && proof.resolverNextAction) || (facts && facts.nextActionLabel) || "Review Workspace");
+    }
+
+    function reviewPaymentLabelFromAuthority_(detail, facts){
+      var authority = reviewAuthoritySnapshot_(detail);
+      var authorityState = authority && authority.authorityState ? authority.authorityState : {};
+      if (authorityState.paymentVerified === true) return "Payment Verified";
+      if (authorityState.paymentEvidencePresent === true) return "Payment Under Review";
+      if (String(authority && authority.nextAction || "").trim().toUpperCase() === "SEND_PAYMENT_REMINDER") return "Awaiting Payment Evidence";
+      if (String(authority && authority.canonicalLifecycle && authority.canonicalLifecycle.baseState || "").trim().toUpperCase() === "PAYMENT_PENDING") return "Awaiting Payment Evidence";
+      return (facts && facts.paymentStateLabel) || "Payment Pending";
+    }
+
+    function reviewCommunicationEligibilityLabelFromAuthority_(detail, facts){
+      var authority = reviewAuthoritySnapshot_(detail);
+      if (authority && authority.selectable === true) return "Eligible for batch preview";
+      if (authority && authority.selectBlockReason) return authority.selectBlockReason;
+      return String((facts && facts.blockReason) || "").trim();
+    }
+
     function openModalLoading_(applicantId, rowNumber){
       document.getElementById("mTitle").textContent = "Applicant Review - " + (applicantId || "Unknown");
       document.getElementById("mSub").textContent = "RowNumber: " + String(rowNumber || "");
@@ -12292,12 +12344,15 @@ function renderStageDashboard_(items, emptyMessage){
 
       var facts = opsPortalDiagnosticsFacts_(d);
       var proof = facts && facts.resolverProof ? facts.resolverProof : {};
-      var ownerLabel = reviewOwnerDisplayLabel_(proof.currentQueueBucket || proof.resolverNextAction || facts.nextActionLabel || "Review Workspace");
+      var authority = reviewAuthoritySnapshot_(d);
+      var ownerLabel = reviewOwnerLabelFromAuthority_(d, facts, proof);
       var submittedLabel = formatApplicantDateTime(opsFirstNonBlank_(d.Timestamp, d.timestamp, d.Created_At, d.Submitted_At, d.PortalTokenIssuedAt));
       var phoneLabel = opsFirstNonBlank_(facts.phone, d.Parent_Phone, d.Parent_Mobile, d.Phone_Number, d.Mobile, d.Phone);
       var deliveryHealthLabel = opsFirstNonBlank_(d.Delivery_Health, d.Last_Delivery_Status, "");
       if (!deliveryHealthLabel && isCommBounceFlagTrue_(d.Email_Bounce_Flag)) deliveryHealthLabel = "Permanent Failure";
       if (!deliveryHealthLabel) deliveryHealthLabel = "Unknown";
+      var paymentDisplayLabel = reviewPaymentLabelFromAuthority_(d, facts);
+      var communicationEligibilityLabel = reviewCommunicationEligibilityLabelFromAuthority_(d, facts);
       setReviewHeaderLoading_(false);
       setReviewHeaderValue_("mApplicantName", fullName || opsDetailName_(d) || "Unnamed Applicant");
       setReviewHeaderValue_("mApplicantId", d.ApplicantID || "Unknown ApplicantID");
@@ -12317,11 +12372,11 @@ function renderStageDashboard_(items, emptyMessage){
       document.getElementById("mOverall").textContent = String(docComputed || "Pending");
       var overallComputedEl = document.getElementById("mOverallComputed");
       if (overallComputedEl) overallComputedEl.textContent = String(overallComputed || "Pending");
-      document.getElementById("mPayment").textContent = paymentBadge === "Rejected" ? "Payment Rejected" : facts.paymentStateLabel;
+      document.getElementById("mPayment").textContent = paymentBadge === "Rejected" ? "Payment Rejected" : paymentDisplayLabel;
       document.getElementById("mWorkflowPortalSubmitted").textContent = "Portal State: " + facts.portalStateLabel + " - Portal submitted does not imply documents uploaded.";
       document.getElementById("mWorkflowDocsVerified").textContent = "Document State: " + facts.documentStateLabel + " - Uploaded / Review Required requires loaded evidence.";
-      document.getElementById("mWorkflowPaymentReceived").textContent = "Payment State: " + facts.paymentStateLabel + " - Payment evidence is distinct from verification.";
-      document.getElementById("mWorkflowPaymentVerified").textContent = "Payment Verified: " + (facts.paymentVerified ? "Yes" : "No") + " - Verification remains separate from uploaded evidence.";
+      document.getElementById("mWorkflowPaymentReceived").textContent = "Payment State: " + paymentDisplayLabel + " - Payment evidence is distinct from verification.";
+      document.getElementById("mWorkflowPaymentVerified").textContent = "Communication Eligibility: " + (communicationEligibilityLabel || "No communication guidance available") + ".";
       document.getElementById("mWorkflowEnrolledConfirmed").textContent = "Classroom / Handover: " + facts.classroomStateLabel + " - Classroom readiness is separate from payment verification.";
       var overrideTag = document.getElementById("mOverallOverride");
       if (overrideTag) {

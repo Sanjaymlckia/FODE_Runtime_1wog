@@ -61,9 +61,15 @@ expectMatch(/setReviewHeaderValue_\("mApplicantId", d\.ApplicantID/, "Loaded mod
 expectMatch(/setReviewHeaderValue_\("mHeaderEmail", emailLabel\)/, "Loaded modal must bind effective email label");
 expectMatch(/setReviewHeaderValue_\("mHeaderSubmitted", submittedLabel/, "Loaded modal must bind submitted date");
 expectMatch(/setReviewHeaderValue_\("mHeaderStage", deriveApplicantDisplayStage\(d\)/, "Loaded modal must bind current display stage");
+expectMatch(/var ownerLabel = reviewOwnerLabelFromAuthority_\(d, facts, proof\)/, "Loaded modal must derive owner from authority-backed helper before any queue fallback");
 expectMatch(/function reviewOwnerDisplayLabel_/, "Review owner display must normalize internal sentinel values");
+expectMatch(/function reviewAuthoritySnapshot_/, "Review modal must read an authority display snapshot from applicant detail");
+expectMatch(/function reviewDisplayStageFromAuthority_/, "Review modal stage display must prefer authority-backed state");
+expectMatch(/function reviewOwnerLabelFromAuthority_/, "Review modal owner display must prefer authority-backed ownership");
+expectMatch(/function reviewPaymentLabelFromAuthority_/, "Review modal payment display must prefer authority-backed payment state");
 expectMatch(/\["not", "in", "loaded", "review", "queue"\]\.join\("_"\)[\s\S]*Review Workspace \/ Unassigned \/ System-derived/, "Internal queue sentinel must map to operator-facing owner text without exposing the raw sentinel");
 expectNoMatch(/not_in_loaded_review_queue/, "Raw queue sentinel must not be present in AdminUI source");
+expectMatch(/actionabilityOwnerLabel_\(authorityOwner\)/, "Queue bucket must not override authority-backed owner display when actionability owner is available");
 expectMatch(/setReviewHeaderValue_\("mHeaderOwner", ownerLabel\)/, "Loaded modal must bind mapped owner label");
 expectMatch(/setReviewHeaderValue_\("mHeaderDeliveryHealth", deliveryHealthLabel\)/, "Loaded modal must bind reconciled delivery health");
 expectMatch(/setReviewHeaderValue_\("mHeaderTokenAge", tokenText\)/, "Loaded modal must bind token age");
@@ -96,6 +102,10 @@ expectMatch(/\.docComment\{[\s\S]*background:#fff;[\s\S]*color:#102030;[\s\S]*bo
 expectMatch(/\.modal \.docStatus:disabled,[\s\S]*\.modal \.docComment:disabled\{[\s\S]*background:#e2eaf2;[\s\S]*color:#26384e;[\s\S]*opacity:1;/, "Disabled document controls must remain readable");
 expectMatch(/\.docRecommendation\{[\s\S]*background:#fff;[\s\S]*color:#173451;[\s\S]*font-weight:850;/, "Document recommendation/download guidance must use readable contrast");
 expectMatch(/class="docRecommendation" aria-label="Recommendation">Recommended: Download/, "Recommended download text must use the readable recommendation class");
+expectMatch(/paymentEvidencePresent === true\) return "Payment Under Review"/, "Receipt evidence must exist before Review Workspace shows Payment Under Review");
+expectMatch(/nextAction \|\| ""\)\.trim\(\)\.toUpperCase\(\) === "SEND_PAYMENT_REMINDER"\) return "Awaiting Payment Evidence"/, "Pending receipt cases without payment evidence must remain applicant-action awaiting payment evidence");
+expectMatch(/document\.getElementById\("mPayment"\)\.textContent = paymentBadge === "Rejected" \? "Payment Rejected" : paymentDisplayLabel;/, "Loaded modal payment label must use authority-backed payment display");
+expectMatch(/Communication Eligibility: /, "Review workflow summary must expose communication eligibility guidance");
 expectMatch(/class="documentReviewActionBar"[\s\S]*Review workflow[\s\S]*id="btnSaveDocs"[\s\S]*Secondary[\s\S]*id="btnRefreshDetails"[\s\S]*id="btnCopyLink"[\s\S]*id="btnResetLink"/, "Footer actions must be grouped into primary review workflow and secondary actions");
 expectMatch(/id="btnOpenDocumentGallery"/, "Document gallery entry must remain available");
 expectMatch(/id="btnSaveOverall"[\s\S]*onclick="saveOverall\(\)"/, "Overall save workflow must remain wired to existing handler");

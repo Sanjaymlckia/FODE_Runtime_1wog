@@ -449,6 +449,45 @@ function admin_getApplicantDetail(payload) {
       d.hasFile = hasUploadEvidence_(d.rawValue || d.url, d.file);
       return d;
     });
+    if (typeof buildActionabilityPreviewRow_ === "function") {
+      var authorityRow = buildActionabilityPreviewRow_(detailObj, rowNumber);
+      detailObj._authorityDisplay = {
+        actionOwner: clean_(authorityRow && authorityRow.actionOwner || ""),
+        nextAction: clean_(authorityRow && authorityRow.nextAction || ""),
+        actionabilityState: clean_(authorityRow && authorityRow.actionabilityState || ""),
+        selectable: !!(authorityRow && authorityRow.selectable === true),
+        selectBlockReason: clean_(authorityRow && authorityRow.selectBlockReason || ""),
+        recommendedAction: clean_(authorityRow && authorityRow.recommendedAction || ""),
+        reasonCode: clean_(authorityRow && authorityRow.reasonCode || ""),
+        communicationProgress: clean_(authorityRow && authorityRow.communicationProgress || ""),
+        communicationProgressDetail: clean_(authorityRow && authorityRow.communicationProgressDetail || ""),
+        recommendedMessageType: clean_(authorityRow && authorityRow.recommendedMessageType || ""),
+        canonicalLifecycle: authorityRow && authorityRow.canonicalLifecycle ? {
+          baseState: clean_(authorityRow.canonicalLifecycle.baseState || ""),
+          lifecycleStage: clean_(authorityRow.canonicalLifecycle.lifecycleStage || ""),
+          overlays: Array.isArray(authorityRow.canonicalLifecycle.overlays) ? authorityRow.canonicalLifecycle.overlays.slice() : [],
+          recommendedNextAction: clean_(authorityRow.canonicalLifecycle.recommendedNextAction || ""),
+          recommendedMessageType: clean_(authorityRow.canonicalLifecycle.recommendedMessageType || ""),
+          actionOwner: clean_(authorityRow.canonicalLifecycle.actionOwner || ""),
+          reason: clean_(authorityRow.canonicalLifecycle.reason || "")
+        } : null,
+        authorityState: authorityRow && authorityRow.authorityState ? {
+          lifecycleStage: clean_(authorityRow.authorityState.lifecycleStage || ""),
+          documentState: clean_(authorityRow.authorityState.documentState || ""),
+          requiredDocumentUploadComplete: authorityRow.authorityState.requiredDocumentUploadComplete === true,
+          uploadedRequiredDocumentCount: Number(authorityRow.authorityState.uploadedRequiredDocumentCount || 0),
+          requiredDocumentCount: Number(authorityRow.authorityState.requiredDocumentCount || 0),
+          missingRequiredDocuments: Array.isArray(authorityRow.authorityState.missingRequiredDocuments) ? authorityRow.authorityState.missingRequiredDocuments.slice() : [],
+          docsVerified: authorityRow.authorityState.docsVerified === true,
+          portalSubmitted: authorityRow.authorityState.portalSubmitted === true,
+          paymentEvidencePresent: authorityRow.authorityState.paymentEvidencePresent === true,
+          paymentVerified: authorityRow.authorityState.paymentVerified === true,
+          hasValidEmail: authorityRow.authorityState.hasValidEmail === true,
+          hasPhoneFallback: authorityRow.authorityState.hasPhoneFallback === true,
+          contactabilityState: clean_(authorityRow.authorityState.contactabilityState || "")
+        } : null
+      };
+    }
 
     if (!detailObj) {
       return { ok: false, error: "Failed to build detail object" };

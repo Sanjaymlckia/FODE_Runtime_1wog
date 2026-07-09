@@ -34,6 +34,7 @@ function extractFunction(source, name) {
 const resolver = extractFunction(adminJs, "resolveActionabilityState_");
 const batchMessageTypeMapping = extractFunction(adminJs, "actionabilityBatchMessageTypeForRecommendation_");
 const builder = extractFunction(adminJs, "buildActionabilityPreviewRow_");
+const applicantDetail = extractFunction(adminJs, "admin_getApplicantDetail");
 const preview = extractFunction(adminJs, "admin_getActionabilityPreview");
 const driftHelpers = [
   "lifecycleDriftEmptySummary_",
@@ -73,6 +74,9 @@ assert.match(preview, /buildActionabilityBucketSummaries_\(rows, out\.rows, ledg
 assert.match(preview, /lifecycleDriftSummary: lifecycleDriftEmptySummary_\(\)/, "Actionability preview must return passive lifecycle drift summary");
 assert.match(preview, /out\.lifecycleDriftSummary = lifecycleDriftRecord_\(out\.lifecycleDriftSummary, item\.lifecycleMismatch\)/, "Lifecycle drift summary must count existing preview rows passively");
 assert.match(preview, /populationLedger: populationLedgerPublicSummary_\(ledger\)/, "Population Ledger summary must remain separate from drift diagnostics");
+assert.match(applicantDetail, /buildActionabilityPreviewRow_\(detailObj, rowNumber\)/, "Review Workspace detail payload must reuse the Actionability resolver for authority-aligned display");
+assert.match(applicantDetail, /detailObj\._authorityDisplay = \{[\s\S]*actionOwner:[\s\S]*nextAction:[\s\S]*actionabilityState:[\s\S]*selectable:[\s\S]*selectBlockReason:/, "Review Workspace detail payload must expose an authority display snapshot");
+assert.match(applicantDetail, /authorityState:[\s\S]*paymentEvidencePresent:[\s\S]*paymentVerified:/, "Review Workspace authority snapshot must distinguish payment evidence from payment verification");
 assert.match(selectVisible, /if \(!actionabilityIsSelectable_\(row\)\) return;/, "Select Visible must select READY rows only");
 assert.match(selectAll, /if \(!actionabilityIsSelectable_\(row\)\) return;/, "Select All must select READY rows only");
 assert.match(toggle, /checked && !actionabilityIsSelectable_\(row\)/, "Manual checkbox selection must reject non-READY rows");
