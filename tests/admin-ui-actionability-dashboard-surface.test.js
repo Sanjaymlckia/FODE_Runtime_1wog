@@ -283,8 +283,10 @@ assert.doesNotMatch(adminUi, /Open first eligible in Review/, "Batch workflow mu
 assert.match(functionSource("previewBatchCommunicationModal_"), /admin_previewStageBatch[\s\S]*admin_previewSelectedApplicantBatch/, "Batch modal preview must support both stage and selected cohort sources");
 assert.match(functionSource("sendBatchCommunicationModal_"), /admin_sendStageBatch[\s\S]*admin_sendSelectedApplicantBatch/, "Batch modal send must support both stage and selected cohort sources");
 assert.doesNotMatch(functionSource("previewBatchCommunicationModal_") + functionSource("sendBatchCommunicationModal_"), /admin_sendApplicantMessage/, "Batch modal must not fall back to the single-applicant Review RPC");
-assert.match(functionSource("selectBatchCommTemplate_"), /batchCommState\.sourceType === "stage"[\s\S]*batchCommState\.recommendedMessageType/, "Stage cohort template changes must remain locked to lifecycle-stage policy");
-assert.match(adminUi, /Stage policy locked/, "Batch modal must explain disabled stage template overrides");
+assert.match(functionSource("loadStageBatchCommunicationCohorts_"), /admin_previewStageBatch\(\{[\s\S]*discoverOnly:\s*true/, "Stage batch modal must discover authoritative communication cohorts before preview");
+assert.match(functionSource("openBatchCommunicationFromStage_"), /sourceType:\s*"stage"[\s\S]*stage:\s*stage/, "Stage cohort entry must open the batch modal with a stage source");
+assert.match(functionSource("batchCommCohortSummaryHtml_"), /Stage membership is operational navigation only\. Preview and send require one authoritative communication cohort\./, "Stage cohort chooser must explain that stage source is not communication authority");
+assert.match(functionSource("batchCommSourceTemplateItems_"), /batchCommState\.sourceType !== "selected" && batchCommState\.sourceType !== "stage"[\s\S]*batchCommSelectedCohort_\(\)/, "Stage and selected sources must both bind the template gallery to the active authoritative cohort");
 assert.match(adminUi, /onclick="openBatchCommunicationFromStage_\(\)">Open Batch Communication/, "Stage cohort controls must open the batch communication modal as the primary workflow");
 assert.doesNotMatch(adminUi, /Confirm in Batch Modal/, "Old inline confirmation controls must not compete with the batch modal");
 assert.match(adminUi, /Default batch size: 30\. Larger batches may be restricted by send policy\./, "Batch UI must explain the default batch size and send-policy cap");

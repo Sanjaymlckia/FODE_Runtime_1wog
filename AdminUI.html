@@ -3448,6 +3448,7 @@
       excludedApplicantIds: {},
       selectedMessageType: "",
       recommendedMessageType: "",
+      loadingCohorts: false,
       preview: null,
       previewStale: false,
       sentThisSession: false,
@@ -10489,7 +10490,7 @@ function renderStageDashboard_(items, emptyMessage){
 
     function batchCommSourceTemplateItems_(){
       var items = batchCommTemplateItems_();
-      if (batchCommState.sourceType !== "selected") return items;
+      if (batchCommState.sourceType !== "selected" && batchCommState.sourceType !== "stage") return items;
       var active = batchCommSelectedCohort_();
       if (!active) return [];
       return items.filter(function(meta){
@@ -10505,7 +10506,9 @@ function renderStageDashboard_(items, emptyMessage){
       var type = String(messageType || "").trim();
       batchCommState.activeCohortType = type;
       var active = batchCommSelectedCohort_();
-      batchCommState.applicantIds = active ? normalizeBatchCommApplicantIds_(active.applicantIds || []) : [];
+      if (batchCommState.sourceType === "selected") {
+        batchCommState.applicantIds = active ? normalizeBatchCommApplicantIds_(active.applicantIds || []) : [];
+      }
       batchCommState.recommendedMessageType = active ? String(active.messageType || "") : "";
       batchCommState.selectedMessageType = batchCommState.recommendedMessageType || "";
       batchCommState.excludedApplicantIds = {};
@@ -10552,6 +10555,7 @@ function renderStageDashboard_(items, emptyMessage){
       batchCommState.applicantIds = [];
       batchCommState.selectedMessageType = "";
       batchCommState.recommendedMessageType = "";
+      batchCommState.loadingCohorts = false;
       batchCommState.preview = null;
       batchCommState.previewStale = false;
       batchCommState.sendResult = null;
@@ -10637,6 +10641,11 @@ function renderStageDashboard_(items, emptyMessage){
           batchCommState.recommendedMessageType = "";
           batchCommState.selectedMessageType = "";
         }
+      } else if (batchCommState.sourceType === "stage") {
+        batchCommState.activeCohortType = "";
+        batchCommState.recommendedMessageType = "";
+        batchCommState.selectedMessageType = "";
+        batchCommState.loadingCohorts = true;
       } else if (!batchCommState.selectedMessageType) {
         batchCommState.selectedMessageType = "reminder";
       }
@@ -10649,6 +10658,7 @@ function renderStageDashboard_(items, emptyMessage){
       back.style.display = "flex";
       back.setAttribute("aria-hidden", "false");
       renderBatchCommunicationModal_();
+      if (batchCommState.sourceType === "stage") loadStageBatchCommunicationCohorts_();
       var modal = document.getElementById("standaloneBatchCommModal");
       if (modal && typeof modal.focus === "function") modal.focus();
     }
@@ -10686,7 +10696,12 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function batchCommSourceSummary_(){
-      if (batchCommState.sourceType === "stage") return "Stage " + String(batchCommState.stage || batchCommState.sourceLabel || "");
+      if (batchCommState.sourceType === "stage") {
+        var activeStageCohort = batchCommSelectedCohort_();
+        if (activeStageCohort) return "Stage " + String(batchCommState.stage || batchCommState.sourceLabel || "") + " | Cohort: " + String(activeStageCohort.label || batchCommMessageTypeLabel_(activeStageCohort.messageType)) + " (" + String(Number(activeStageCohort.count || 0)) + ")";
+        if (Array.isArray(batchCommState.cohortGroups) && batchCommState.cohortGroups.length > 1) return "Stage " + String(batchCommState.stage || batchCommState.sourceLabel || "") + " | Choose a communication cohort";
+        return "Stage " + String(batchCommState.stage || batchCommState.sourceLabel || "");
+      }
       if (batchCommState.sourceType === "selected") {
         var active = batchCommSelectedCohort_();
         if (active) return String(batchCommState.sourceLabel || "Selected Applicants") + " | Cohort: " + String(active.label || batchCommMessageTypeLabel_(active.messageType)) + " (" + String(Number(active.count || active.applicantIds.length || 0)) + ")";
@@ -10697,14 +10712,21 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function batchCommCohortSummaryHtml_(){
-      if (batchCommState.sourceType !== "selected") return "";
+      if (batchCommState.sourceType !== "selected" && batchCommState.sourceType !== "stage") return "";
       var cohorts = Array.isArray(batchCommState.cohortGroups) ? batchCommState.cohortGroups : [];
+      if (batchCommState.loadingCohorts === true) {
+        return '<h4>Communication Cohorts</h4>'
+          + '<div class="batchCommCohortSummary">Loading authoritative communication cohorts for this stage.</div>';
+      }
       if (!cohorts.length) return "";
       var sourceTotal = Number(batchCommState.sourceSelectedTotal || 0);
+      var summaryText = batchCommState.sourceType === "stage"
+        ? "Stage membership is operational navigation only. Preview and send require one authoritative communication cohort."
+        : "Selected rows are partitioned by authoritative recommended communication. Operational ownership does not imply one shared template.";
       return '<h4>Communication Cohorts</h4>'
-        + '<div class="batchCommCohortSummary">Selected rows are partitioned by authoritative recommended communication. Operational ownership does not imply one shared template.</div>'
+        + '<div class="batchCommCohortSummary">' + esc(summaryText) + '</div>'
         + '<div class="batchCommSummaryGrid">'
-        + '<div class="batchCommSummaryItem"><strong>Selected Rows</strong><span>' + esc(sourceTotal || cohorts.reduce(function(sum, cohort){ return sum + Number(cohort.count || 0); }, 0)) + '</span></div>'
+        + '<div class="batchCommSummaryItem"><strong>' + esc(batchCommState.sourceType === "stage" ? "Stage Source Rows" : "Selected Rows") + '</strong><span>' + esc(sourceTotal || cohorts.reduce(function(sum, cohort){ return sum + Number(cohort.count || 0); }, 0)) + '</span></div>'
         + '<div class="batchCommSummaryItem"><strong>Communication Cohorts</strong><span>' + esc(cohorts.length) + '</span></div>'
         + '<div class="batchCommSummaryItem"><strong>Active Cohort</strong><span>' + esc((batchCommSelectedCohort_() || {}).label || "Choose a cohort") + '</span></div>'
         + '</div>'
@@ -10917,17 +10939,15 @@ function renderStageDashboard_(items, emptyMessage){
           var type = String(meta.messageType || "");
           var selected = type === batchCommState.selectedMessageType;
           var recommended = type === batchCommState.recommendedMessageType;
-          var stageLocked = batchCommState.sourceType === "stage" && !recommended;
-          return '<button class="batchCommTemplateCard' + (selected ? " selected" : "") + (recommended ? " recommended" : "") + '" type="button" ' + (stageLocked ? 'disabled title="Stage cohort templates are governed by lifecycle-stage policy."' : 'onclick="selectBatchCommTemplate_(\'' + esc(type) + '\')"') + '>'
+          return '<button class="batchCommTemplateCard' + (selected ? " selected" : "") + (recommended ? " recommended" : "") + '" type="button" onclick="selectBatchCommTemplate_(\'' + esc(type) + '\')">'
             + (selected ? '<div class="commTemplateSelectedBanner">Selected template</div>' : '')
             + (recommended ? '<div class="commTemplateRecommendedBanner">Recommended</div>' : '')
             + (!recommended ? '<div class="commTemplateOtherBanner">Other option</div>' : '')
-            + (stageLocked ? '<div class="commTemplateDisabledReason">Stage policy locked</div>' : '')
             + '<div class="commTemplateCardTitle">' + esc(meta.label || type) + '</div>'
             + '<div class="muted" style="font-size:12px;">' + esc(type) + '</div>'
             + '<div style="margin-top:6px;font-size:12px;line-height:1.4;">' + esc(meta.purpose || '') + '</div>'
             + '</button>';
-        }).join("") || '<div class="muted">' + esc(batchCommState.sourceType === "selected" && !batchCommSelectedCohort_() ? "Choose a communication cohort to load its authoritative template." : "No batch-safe templates available.") + '</div>';
+        }).join("") || '<div class="muted">' + esc((batchCommState.sourceType === "selected" || batchCommState.sourceType === "stage") && !batchCommSelectedCohort_() ? "Choose a communication cohort to load its authoritative template." : "No batch-safe templates available.") + '</div>';
       }
       if (summaryEl) {
         var meta = getCommTemplateMeta_(batchCommState.selectedMessageType) || {};
@@ -11016,7 +11036,6 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function selectBatchCommTemplate_(messageType){
-      if (batchCommState.sourceType === "stage" && String(messageType || "") !== String(batchCommState.recommendedMessageType || "")) return;
       batchCommState.selectedMessageType = String(messageType || "");
       batchCommState.preview = null;
       batchCommState.sendResult = null;
@@ -11028,6 +11047,49 @@ function renderStageDashboard_(items, emptyMessage){
     function selectBatchCommCohort_(messageType){
       setBatchCommSelectedCohort_(messageType);
       renderBatchCommunicationModal_();
+    }
+
+    function loadStageBatchCommunicationCohorts_(){
+      if (batchCommState.sourceType !== "stage" || !batchCommState.stage) return;
+      batchCommState.requestSeq++;
+      var seq = batchCommState.requestSeq;
+      batchCommState.loadingCohorts = true;
+      batchCommState.preview = null;
+      batchCommState.previewStale = false;
+      batchCommState.sendResult = null;
+      batchCommState.confirmOpen = false;
+      renderBatchCommunicationModal_();
+      google.script.run
+        .withSuccessHandler(function(res){
+          if (seq !== batchCommState.requestSeq || batchCommState.sourceType !== "stage") return;
+          var response = res && typeof res === "object" ? res : {};
+          var cohorts = Array.isArray(response.communicationCohorts) ? response.communicationCohorts : [];
+          batchCommState.loadingCohorts = false;
+          batchCommState.cohortGroups = cohorts.map(function(group){
+            return {
+              messageType: String(group && group.messageType || "").trim(),
+              label: String(group && group.label || batchCommMessageTypeLabel_(group && group.messageType || "")).trim(),
+              applicantIds: [],
+              count: Number(group && group.count || 0),
+              authoritySource: String(group && group.authoritySource || "").trim()
+            };
+          }).filter(function(group){ return !!group.messageType; });
+          batchCommState.sourceSelectedTotal = Number(response.totalInStage || batchCommState.sourceSelectedTotal || 0);
+          if (batchCommState.cohortGroups.length === 1) setBatchCommSelectedCohort_(batchCommState.cohortGroups[0].messageType);
+          renderBatchCommunicationModal_();
+        })
+        .withFailureHandler(function(err){
+          if (seq !== batchCommState.requestSeq || batchCommState.sourceType !== "stage") return;
+          batchCommState.loadingCohorts = false;
+          renderBatchCommunicationModal_();
+          setMsg("msg", String((err && err.message) || err || "Stage communication cohort discovery failed."));
+        })
+        .admin_previewStageBatch({
+          stage: batchCommState.stage,
+          limit: getStageBatchLimitUi_(),
+          offset: getStageBatchOffsetUi_(),
+          discoverOnly: true
+        });
     }
 
     function toggleBatchCommRecipient_(applicantId, included){
@@ -11090,8 +11152,7 @@ function renderStageDashboard_(items, emptyMessage){
       openBatchCommunicationModal_({
         sourceType: "stage",
         sourceLabel: "Stage " + stage,
-        stage: stage,
-        recommendedMessageType: getBatchMessageTypeForStageUi_(stage) || "reminder"
+        stage: stage
       });
     }
 

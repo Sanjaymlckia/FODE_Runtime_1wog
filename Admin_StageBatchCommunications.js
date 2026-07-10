@@ -221,6 +221,66 @@ function stageBatchCanonicalLifecycleDiagnostics_(rowObj, selectedLegacyStage, r
   };
 }
 
+function stageBatchCommunicationCohortLabel_(messageType) {
+  var normalized = normalizeApplicantMessageType_(messageType || "");
+  if (normalized === "docs_missing") return "Missing Documents Follow-Up";
+  if (normalized === "payment_followup") return "Payment Follow-Up";
+  if (normalized === "reminder") return "Reminder";
+  if (normalized === "legacy_invite") return "Portal Invitation";
+  return normalized || "Unclassified";
+}
+
+function stageBatchAuthoritativeMessageTypeForRow_(rowObj, selectedLegacyStage, rowLegacyStage, diagnosticsOpt) {
+  var diagnostics = diagnosticsOpt && typeof diagnosticsOpt === "object" ? diagnosticsOpt : stageBatchCanonicalLifecycleDiagnostics_(rowObj || {}, selectedLegacyStage, rowLegacyStage);
+  var canonicalType = normalizeApplicantMessageType_(diagnostics.canonicalRecommendedMessageType || "");
+  if (canonicalType && typeof isCommunicationTypeBatchSafe_ === "function" && isCommunicationTypeBatchSafe_(canonicalType) === true) {
+    return {
+      messageType: canonicalType,
+      authoritySource: "CANONICAL_LIFECYCLE"
+    };
+  }
+  var legacyStage = clean_(rowLegacyStage || selectedLegacyStage || "").toUpperCase();
+  var legacyType = normalizeApplicantMessageType_(getBatchMessageTypeForStage_(legacyStage) || "");
+  return {
+    messageType: legacyType,
+    authoritySource: legacyType ? "LEGACY_STAGE_FALLBACK" : ""
+  };
+}
+
+function stageBatchRecordCommunicationCohort_(map, authoritative) {
+  var out = map && typeof map === "object" ? map : {};
+  var info = authoritative && typeof authoritative === "object" ? authoritative : {};
+  var messageType = normalizeApplicantMessageType_(info.messageType || "");
+  if (!messageType) return out;
+  if (!out[messageType]) {
+    out[messageType] = {
+      messageType: messageType,
+      label: stageBatchCommunicationCohortLabel_(messageType),
+      count: 0,
+      authoritySource: clean_(info.authoritySource || "")
+    };
+  }
+  out[messageType].count = Number(out[messageType].count || 0) + 1;
+  return out;
+}
+
+function stageBatchCommunicationCohortsList_(map) {
+  var src = map && typeof map === "object" ? map : {};
+  return Object.keys(src).map(function (key) {
+    var item = src[key] && typeof src[key] === "object" ? src[key] : {};
+    return {
+      messageType: normalizeApplicantMessageType_(item.messageType || key),
+      label: clean_(item.label || stageBatchCommunicationCohortLabel_(key) || key),
+      count: Number(item.count || 0),
+      authoritySource: clean_(item.authoritySource || "")
+    };
+  }).filter(function (item) {
+    return !!item.messageType;
+  }).sort(function (a, b) {
+    return String(a.label || "").localeCompare(String(b.label || ""));
+  });
+}
+
 function stageBatchCanonicalDiagnosticsSummary_() {
   return {
     readOnly: true,
@@ -297,6 +357,14 @@ function stageBatchPreviewResponse_(data) {
     debugId: clean_(src.debugId || src.requestId || adminDebugId_()),
     stage: clean_(src.stage || ""),
     messageType: clean_(src.messageType || ""),
+    communicationCohorts: Array.isArray(src.communicationCohorts) ? src.communicationCohorts.map(function (cohort) {
+      return {
+        messageType: clean_(cohort && cohort.messageType || ""),
+        label: clean_(cohort && cohort.label || ""),
+        count: Number(cohort && cohort.count || 0),
+        authoritySource: clean_(cohort && cohort.authoritySource || "")
+      };
+    }) : [],
     batchId: clean_(src.batchId || ""),
     count: Number(src.count != null ? src.count : src.eligible || 0),
     clientElapsedMs: Number(src.clientElapsedMs || 0),
@@ -419,7 +487,9 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
   var batchLimit = clampStageBatchLimit_(limit);
   var requestedOffset = clampStageBatchOffset_(offset);
   var options = opts && typeof opts === "object" ? opts : {};
-  var messageType = normalizeApplicantMessageType_(options.messageType || getBatchMessageTypeForStage_(normalizedStage) || "");
+  var requestedMessageType = normalizeApplicantMessageType_(options.messageType || "");
+  var discoverOnly = options.discoverOnly === true;
+  var messageType = requestedMessageType || (discoverOnly ? "" : normalizeApplicantMessageType_(getBatchMessageTypeForStage_(normalizedStage) || ""));
   var actorEmail = clean_(options.actorEmail || "");
   var actorRole = clean_(options.actorRole || "");
   var debugId = clean_(options.debugId || newDebugId_());
@@ -442,6 +512,7 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
   var blockedByReason = {};
   var blockedApplicantIdsSample = [];
   var candidates = [];
+  var communicationCohortMap = {};
   var canonicalLifecycleDiagnostics = stageBatchCanonicalDiagnosticsSummary_();
   canonicalLifecycleDiagnostics.selectedLegacyStage = normalizedStage;
   var startedAtMs = new Date().getTime();
@@ -534,14 +605,21 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
       var candidateStartedAtMs = new Date().getTime();
       var snapshot = stageAggregationSnapshot_(rowObj);
       phaseTimings.candidateSelectionMs += new Date().getTime() - candidateStartedAtMs;
+      var rowDiagnostics = stageBatchCanonicalLifecycleDiagnostics_(rowObj, normalizedStage, snapshot.stage);
       canonicalLifecycleDiagnostics = stageBatchRecordCanonicalDiagnostics_(
         canonicalLifecycleDiagnostics,
-        stageBatchCanonicalLifecycleDiagnostics_(rowObj, normalizedStage, snapshot.stage)
+        rowDiagnostics
       );
       if (clean_(snapshot.stage || "").toUpperCase() !== normalizedStage) continue;
       totalInStage++;
+      var authoritative = stageBatchAuthoritativeMessageTypeForRow_(rowObj, normalizedStage, snapshot.stage, rowDiagnostics);
+      stageBatchRecordCommunicationCohort_(communicationCohortMap, authoritative);
       var filterStartedAtMs = new Date().getTime();
       if (!messageType) {
+        phaseTimings.eligibilityFilteringMs += new Date().getTime() - filterStartedAtMs;
+        continue;
+      }
+      if (!authoritative.messageType || authoritative.messageType !== messageType) {
         phaseTimings.eligibilityFilteringMs += new Date().getTime() - filterStartedAtMs;
         continue;
       }
@@ -647,6 +725,7 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
     blockedByReason: blockedByReason,
     blockedApplicantIdsSample: blockedApplicantIdsSample,
     candidates: candidates,
+    communicationCohorts: stageBatchCommunicationCohortsList_(communicationCohortMap),
     eligibleCountBounded: eligibleCountBounded,
     scanCursor: cursor,
     firstScannedRow: scanStartRow,
@@ -745,10 +824,11 @@ function admin_previewStageBatch(payload) {
       }
       var actor = resolveAdminCommActor_(p);
       stage = normalizeStageBatchStage_(p.stage || "");
+      var discoverOnly = p.discoverOnly === true;
       var limitMeta = stageBatchLimitMeta_(p.limit);
       limit = limitMeta.effective;
       requestedOffset = clampStageBatchOffset_(p.offset);
-      messageType = getBatchMessageTypeForStage_(stage);
+      messageType = normalizeApplicantMessageType_(p.messageType || "") || (discoverOnly ? "" : getBatchMessageTypeForStage_(stage));
       stageBatchPreviewLog_("MANUAL_BATCH_PREVIEW_BEGIN", {
         batchId: "",
         stage: stage,
@@ -792,6 +872,7 @@ function admin_previewStageBatch(payload) {
         phaseTimings: phaseTimings,
         portalSecretLookup: previewPortalSecretLookup && previewPortalSecretLookup.ok ? previewPortalSecretLookup : null,
         cooldownLookup: previewCooldownLookup && previewCooldownLookup.ok ? previewCooldownLookup : null,
+        discoverOnly: discoverOnly,
         previewEarlyStop: true,
         previewEligibleBuffer: 2,
         deterministicPreview: true
@@ -818,6 +899,7 @@ function admin_previewStageBatch(payload) {
         requestId: requestId,
         debugId: dbgId,
         messageType: messageType,
+        communicationCohorts: cohort.communicationCohorts || [],
         sendable: sendable,
         sendDisabledReason: sendable ? "" : "No batch message is supported for this stage.",
         totalInStage: Number(cohort.totalInStage || 0),
@@ -868,7 +950,7 @@ function admin_previewStageBatch(payload) {
       phaseTimings.payloadAssemblyMs += new Date().getTime() - assemblyStartedAtMs;
       if (!sendable || out.count <= 0) {
         clearStageBatchPreviewCache_(adminEmail);
-      } else {
+      } else if (!discoverOnly) {
         writeStageBatchPreviewCache_(adminEmail, {
           stage: stage,
           limit: Number(out.previewLimit || limit),
@@ -888,7 +970,11 @@ function admin_previewStageBatch(payload) {
       }
       out.elapsedMs = Math.max(Number(out.elapsedMs || 0), new Date().getTime() - startedAtMs);
       out.phaseTimings = phaseTimings;
-      out.message = out.count > 0
+      out.message = discoverOnly
+        ? (out.communicationCohorts.length
+          ? "Communication cohorts discovered for the selected stage."
+          : "No communication cohorts are available for the selected stage.")
+        : out.count > 0
         ? (cohort.partial === true && clean_(cohort.partialReason || "") === "PREVIEW_CANDIDATES_FOUND_BELOW_LIMIT"
           ? "Partial preview ready. Candidates found below requested limit."
           : (cohort.partial === true
@@ -1002,7 +1088,7 @@ function admin_sendStageBatch(payload) {
           offset: requestedOffset
         });
       }
-      messageType = getBatchMessageTypeForStage_(stage);
+      messageType = normalizeApplicantMessageType_(p.messageType || "") || getBatchMessageTypeForStage_(stage);
       if (!messageType) {
         return adminCommBlockedResult_("send_stage_batch", "STAGE_NOT_SENDABLE", requestId, {
           blockReason: "No batch message is supported for this stage.",
