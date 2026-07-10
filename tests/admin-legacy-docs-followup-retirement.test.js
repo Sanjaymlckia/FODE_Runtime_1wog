@@ -34,7 +34,6 @@ function extractFunction(source, name) {
 const compatibilityProjection = extractFunction(adminSource, "compatibilityCommunicationAuthorityProjection_");
 const searchFn = extractFunction(adminSource, "admin_searchApplicants");
 const legacyEndpoint = extractFunction(adminSource, "admin_sendDocsFollowupEmails");
-const queueRouteFn = extractFunction(adminUi, "sendDocsFollowup_");
 const openCompatibilityRows = extractFunction(adminUi, "openCompatibilityCommunicationRows_");
 const queueEventFn = extractFunction(adminUi, "initQueuePanelEvents_");
 const resultsClickFn = extractFunction(adminUi, "onResultsClick_");
@@ -56,18 +55,16 @@ assert.match(legacyEndpoint, /Use Review Workspace or Batch Communication/, "Leg
 assert.doesNotMatch(legacyEndpoint, /adminSendEmail_\(/, "Legacy endpoint must no longer send directly");
 assert.doesNotMatch(legacyEndpoint, /PropertiesService\.getScriptProperties\(\)\.setProperty/, "Legacy endpoint must no longer mutate docs-followup sent markers");
 
-assert.match(queueRouteFn, /openCompatibilityCommunicationRows_/, "Legacy UI route must delegate to authoritative compatibility routing");
-assert.doesNotMatch(queueRouteFn, /admin_sendDocsFollowupEmails/, "Legacy UI route must no longer call the retired backend send endpoint");
-assert.doesNotMatch(queueRouteFn, /google\.script\.run/, "Legacy UI route must not issue a direct send RPC");
-
 assert.match(openCompatibilityRows, /ids\.length === 1[\s\S]*Opening Review Workspace/, "Single compatibility row must route to Review Workspace");
 assert.match(openCompatibilityRows, /batchCommSelectedCohortsFromRows_/, "Compatibility bulk routing must partition authoritative communication cohorts");
 assert.match(openCompatibilityRows, /openBatchCommunicationModal_\(/, "Compatibility bulk routing must open the shared Batch Communication modal");
 assert.match(openCompatibilityRows, /No authoritative communication cohort is available/, "Compatibility bulk routing must fail clearly when no authoritative cohort exists");
 
-assert.match(queueEventFn, /Legacy Docs Follow-Up send retired\. Opening Review Workspace/, "Queue single action must redirect to Review Workspace");
 assert.match(queueEventFn, /openCompatibilityCommunicationRows_\(compatibilitySelectedRowsForSource_\(selectedRows, "queue-bulk"\), "queue-bulk"\)/, "Queue selected action must redirect to shared compatibility batch routing");
-assert.match(resultsClickFn, /Legacy Docs Follow-Up send retired\. Opening Review Workspace/, "Search single action must redirect to Review Workspace");
+assert.doesNotMatch(queueEventFn, /send-docs-single/, "Queue events must remove dead direct-send button branches");
+assert.doesNotMatch(resultsClickFn, /send-docs-single/, "Search results must remove dead direct-send button branches");
+assert.doesNotMatch(adminUi, /function sendDocsFollowup_\(/, "Compatibility UI must remove the dead sendDocsFollowup helper once direct send is retired");
+assert.doesNotMatch(adminUi, /docsFollowupSentRows/, "Compatibility UI must not keep per-session sent-row state once no send path remains");
 
 assert.doesNotMatch(adminUi, /Send Quote to Selected|Send Docs Quote to Selected|Send docs quote email now\./, "Legacy docs-follow-up send wording must be removed from compatibility UI");
 assert.doesNotMatch(adminUi, /data-action='send-docs-single'/, "Compatibility UI must not render direct single-send controls");

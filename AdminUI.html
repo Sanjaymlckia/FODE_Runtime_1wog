@@ -3360,7 +3360,6 @@
     const DEPLOY_VERSION_NUMBER = <?!= JSON.stringify(Number((CONFIG && CONFIG.DEPLOY_VERSION_NUMBER) || 0)) ?>;
     const DOCS_FOLLOWUP_ENABLED = <?!= JSON.stringify(!!(CONFIG && CONFIG.DOCS_FOLLOWUP_ENABLE)) ?>;
     const DOCS_FOLLOWUP_SHOW_IN_QUEUES = <?!= JSON.stringify(!!(CONFIG && CONFIG.DOCS_FOLLOWUP_SHOW_IN_QUEUES)) ?>;
-    const DOCS_FOLLOWUP_COOLDOWN_MS = <?!= JSON.stringify(Number((CONFIG && CONFIG.DOCS_FOLLOWUP_COOLDOWN_MS) || 300000)) ?>;
     const COMM_TEMPLATE_GALLERY = <?!= JSON.stringify(communicationTemplateGalleryMetadata_()) ?>;
     const QUEUE_PAGE_SIZE = 10;
     const QUEUE_FETCH_SIZE = 20;
@@ -3462,7 +3461,6 @@
     let stagePopulationLedgerState = null;
     let pendingActionabilityReviewContext = null;
     let selectedDocsRowNumbers = {};
-    let lastDocsSendAttemptByApplicantId = {};
     let isDocsSendBusy = false;
     let isBounceScanBusy = false;
     let currentPortalLinkInfo = null;
@@ -5561,7 +5559,6 @@
     }
     let commDerivedRequestId = 0;
     // Session-only fallback for "Sent" state when no persistent sent field is present in payload.
-    let docsFollowupSentRows = new Set();
     let lastBackfillMode = "dry";
 
     function setMsg(id, txt){
@@ -9355,8 +9352,7 @@ function renderStageDashboard_(items, emptyMessage){
             var sentAt = String(row && row.docsFollowupSentAt || "");
             var sentFlag = !!(row && (row.docsFollowupSent || row.docsFollowupStatus === "Sent"));
             var hasPersistentSent = !!sentAt || sentFlag;
-            var hasSessionSent = docsFollowupSentRows.has(rowNumber);
-            var isSent = hasPersistentSent || hasSessionSent;
+            var isSent = hasPersistentSent;
             var canSendQuote = compatibilityCommunicationEligible_(row) && !isSent;
             var canReview = !!applicantId || (Number.isFinite(rowNumber) && rowNumber >= 2);
             var reviewTitle = canReview ? "Open review" : ("RowNumber missing - cannot review." + (dbg ? (" (dbg: " + dbg + ")") : ""));
@@ -11764,19 +11760,6 @@ function renderStageDashboard_(items, emptyMessage){
           if (queueKey) toggleQueueSection(queueKey);
           return;
         }
-        var queueSendSingle = target.closest('button[data-action="send-docs-single"]');
-        if (queueSendSingle) {
-          e.preventDefault();
-          var qApplicantId = String(queueSendSingle.getAttribute("data-applicant-id") || "").trim();
-          var qRowNumber = Number(queueSendSingle.getAttribute("data-row-number") || 0);
-          if (!Number.isFinite(qRowNumber) || qRowNumber < 2) {
-            setDocsSendSummary_("Cannot open Review Workspace: invalid row number.", true);
-            return;
-          }
-          setDocsSendSummary_("Legacy Docs Follow-Up send retired. Opening Review Workspace for authoritative communication.", false);
-          review(qRowNumber, qApplicantId, null);
-          return;
-        }
         var selectReadyBtn = target.closest('button[data-action="queue-docs-select-ready"]');
         if (selectReadyBtn) {
           e.preventDefault();
@@ -11785,9 +11768,7 @@ function renderStageDashboard_(items, emptyMessage){
             var rowNum = Number(row && row.rowNumber || 0);
             var sentAt = String(row && row.docsFollowupSentAt || "");
             var sentFlag = !!(row && (row.docsFollowupSent || row.docsFollowupStatus === "Sent"));
-            var rowNumKey = Number(row && row.rowNumber || 0);
-            var hasSessionSent = docsFollowupSentRows.has(rowNumKey);
-            var canSelect = compatibilityCommunicationEligible_(row) && !sentAt && !sentFlag && !hasSessionSent;
+            var canSelect = compatibilityCommunicationEligible_(row) && !sentAt && !sentFlag;
             if (canSelect && Number.isFinite(rowNum) && rowNum >= 2) selectedDocsRowNumbers[String(rowNum)] = true;
           });
           rerenderQueue_("queueDocs");
@@ -12038,10 +12019,9 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function isDocsFollowupSent_(row){
-      var rowNumber = Number(row && row.rowNumber || 0);
       var sentAt = String((row && row.docsFollowupSentAt) || "");
       var sentFlag = !!(row && (row.docsFollowupSent || row.docsFollowupStatus === "Sent"));
-      return !!sentAt || sentFlag || docsFollowupSentRows.has(rowNumber);
+      return !!sentAt || sentFlag;
     }
 
     function compatibilityCommunicationEligible_(row){
@@ -12114,40 +12094,6 @@ function renderStageDashboard_(items, emptyMessage){
       updateBulkDocsUi_();
     }
 
-    function getDocsSendCooldownMs_(){
-      var n = Number(DOCS_FOLLOWUP_COOLDOWN_MS || 300000);
-      if (!Number.isFinite(n) || n < 0) return 300000;
-      return n;
-    }
-
-    function canAttemptDocsSend_(applicantId){
-      var id = String(applicantId || "").trim();
-      if (!id) return true;
-      var last = Number(lastDocsSendAttemptByApplicantId[id] || 0);
-      if (!last) return true;
-      return (Date.now() - last) >= getDocsSendCooldownMs_();
-    }
-
-    function rememberDocsSendAttempt_(applicantId){
-      var id = String(applicantId || "").trim();
-      if (!id) return;
-      lastDocsSendAttemptByApplicantId[id] = Date.now();
-    }
-
-    function summarizeDocsFollowupResponse_(res){
-      var list = Array.isArray(res && res.results) ? res.results : [];
-      var summary = (res && res.summary) || {};
-      var sentCount = Number(summary.sentCount || 0);
-      var failedCount = Number(summary.failedCount || 0);
-      var failures = list.filter(function(x){ return !(x && x.ok); });
-      return {
-        sentCount: sentCount,
-        failedCount: failedCount,
-        failures: failures,
-        text: "Docs Quote: Sent " + sentCount + ", Failed " + failedCount
-      };
-    }
-
     function setDocsSendSummary_(text, isErr){
       var panel = document.getElementById("docsSendSummary");
       if (!panel) return;
@@ -12172,51 +12118,6 @@ function renderStageDashboard_(items, emptyMessage){
       panel.classList.remove("hidden");
       panel.classList.remove("err");
       panel.textContent = "Failures: " + lines.join(" | ");
-    }
-
-    function refreshAfterDocsFollowup_(){
-      loadReviewQueues({ force: 1 });
-      var applicantId = (document.getElementById("qApplicantId") || {}).value || "";
-      var email = (document.getElementById("qEmail") || {}).value || "";
-      if (String(applicantId).trim() || String(email).trim() || (lastSearchRows && lastSearchRows.length)) search();
-    }
-
-    function renderDocsFollowupSummary_(res, sourceLabel){
-      if (!res || typeof res !== "object" || typeof res.ok !== "boolean") {
-        setDocsSendSummary_("Invalid server response.", true);
-        setDocsSendFailures_([]);
-        return;
-      }
-      if (!res.ok) {
-        setDocsSendSummary_("Error: " + String(res.message || "Docs follow-up send failed") + " (code: " + String(res.code || "") + ", dbg: " + String(res.debugId || res.dbg || "") + ")", true);
-        setDocsSendFailures_([]);
-        return;
-      }
-      var s = summarizeDocsFollowupResponse_(res);
-      var okRows = (Array.isArray(res.results) ? res.results : [])
-        .filter(function(x){ return !!(x && x.ok); })
-        .map(function(x){ return Number(x.rowNumber || 0); })
-        .filter(function(n){ return Number.isFinite(n) && n >= 2; });
-      okRows.forEach(function(n){ docsFollowupSentRows.add(n); });
-      setDocsSendSummary_("[" + sourceLabel + "] " + s.text + " | dbg: " + String(res.debugId || res.dbg || ""), false);
-      setDocsSendFailures_(s.failures);
-      if (okRows.length === 1) {
-        setMsg("docsBulkStatus", "Docs follow-up sent for row " + okRows[0]);
-        setMsg("msg", "Docs follow-up sent for row " + okRows[0]);
-      } else {
-        setMsg("docsBulkStatus", s.text);
-        setMsg("msg", s.text);
-      }
-      clearDocsSelection_();
-      refreshAfterDocsFollowup_();
-    }
-
-    function renderDocsFollowupError_(err){
-      var msg = (err && err.message) ? err.message : String(err || "Unknown server error");
-      setDocsSendSummary_("Server failure: " + msg, true);
-      setDocsSendFailures_([]);
-      setMsg("docsBulkStatus", "Server failure: " + msg);
-      setMsg("msg", "Server failure: " + msg);
     }
 
     function compatibilityRowsForSource_(sourceLabel){
@@ -12276,11 +12177,6 @@ function renderStageDashboard_(items, emptyMessage){
         sourceSelectedTotal: ids.length,
         cohortGroups: cohortGroups
       });
-    }
-
-    function sendDocsFollowup_(rowNumbers, sourceLabel, applicantIds){
-      void applicantIds;
-      openCompatibilityCommunicationRows_(compatibilitySelectedRowsForSource_(rowNumbers, sourceLabel), sourceLabel);
     }
 
     function search(){
@@ -12470,19 +12366,6 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function onResultsClick_(ev){
-      var singleSendBtn = ev.target && ev.target.closest ? ev.target.closest('[data-action="send-docs-single"]') : null;
-      if (singleSendBtn) {
-        ev.preventDefault();
-        var sendApplicantId = String(singleSendBtn.getAttribute("data-applicant-id") || "").trim();
-        var sendRowNumber = Number(singleSendBtn.getAttribute("data-row-number") || 0);
-        if (!Number.isFinite(sendRowNumber) || sendRowNumber < 2) {
-          setMsg("msg", "Cannot open Review Workspace: invalid row number.");
-          return;
-        }
-        setDocsSendSummary_("Legacy Docs Follow-Up send retired. Opening Review Workspace for authoritative communication.", false);
-        review(sendRowNumber, sendApplicantId, null);
-        return;
-      }
       var btn = ev.target && ev.target.closest ? ev.target.closest('[data-action="review"]') : null;
       if (!btn) return;
       ev.preventDefault();
