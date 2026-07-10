@@ -250,6 +250,15 @@ assert.match(adminUi, /\.standaloneBatchCommBack\.open\{ display:flex; \}/, "Sta
 assert.match(functionSource("openBatchCommunicationModal_"), /standaloneBatchCommModalBack[\s\S]*back\.classList\.add\("open"\)[\s\S]*back\.style\.display = "flex"/, "Batch Communication must visibly open the standalone modal container");
 assert.match(functionSource("openBatchCommunicationModal_"), /BLOCKED: Batch Communication modal container is missing/, "Batch Communication must show an explicit blocked reason if the modal cannot open");
 assert.match(adminUi, /id="standaloneBatchCommTemplateGallery"/, "Batch modal must expose the shared template gallery pattern");
+assert.match(adminUi, /id="standaloneBatchCommCohorts"/, "Batch modal must expose a communication cohort chooser for selected buckets");
+assert.match(adminUi, /function batchCommSelectedCohortsFromRows_/, "Selected cohorts must be partitioned by authoritative communication recommendation");
+assert.match(functionSource("batchCommSelectedCohortsFromRows_"), /actionabilityBatchMessageType_\(row && row\.recommendedMessageType\)/, "Selected cohorts must derive message type from each row's authoritative recommendation");
+assert.match(functionSource("batchCommSelectedCohortsFromRows_"), /recommendedType !== "reminder"/, "Reminder mode must isolate reminder-authoritative rows only");
+assert.match(functionSource("openBatchCommunicationFromSelection_"), /var cohortGroups = batchCommSelectedCohortsFromRows_\(rows, mode\);/, "Batch entry must partition the selected owner bucket before opening the modal");
+assert.match(functionSource("openBatchCommunicationFromSelection_"), /cohortGroups: cohortGroups/, "Batch entry must pass cohort partitions into the modal state");
+assert.doesNotMatch(functionSource("openBatchCommunicationFromSelection_"), /batchCommRecommendedFromRows_/, "Batch entry must not choose a default template from the majority of a mixed bucket");
+assert.match(functionSource("batchCommSourceTemplateItems_"), /batchCommState\.sourceType !== "selected"[\s\S]*batchCommSelectedCohort_\(\)/, "Selected/manual template gallery must stay bound to the active authoritative cohort");
+assert.match(functionSource("batchCommCohortSummaryHtml_"), /authoritative recommended communication/, "Modal cohort chooser must explain that operational ownership does not imply one shared template");
 assert.match(adminUi, /commTemplateSelectedBanner[\s\S]*Selected template[\s\S]*commTemplateRecommendedBanner[\s\S]*Recommended/, "Batch modal must visibly highlight the selected recommended template");
 assert.match(adminUi, /id="standaloneBatchCommRecipients"/, "Batch modal must expose recipient preview and quick exclusion");
 assert.match(adminUi, /Recipient count/, "Batch modal preview must show recipient count");

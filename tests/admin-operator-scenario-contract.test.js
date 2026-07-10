@@ -49,6 +49,11 @@ mustMatch(adminUi, /\.standaloneBatchCommBack\.open\{ display:flex; \}/, "Batch 
 mustMatch(adminUi, /standaloneBatchCommModalBack[\s\S]*back\.classList\.add\("open"\)[\s\S]*back\.style\.display = "flex"/, "Batch communication scenario must open the standalone modal every time");
 mustMatch(adminUi, /BLOCKED: Batch Communication modal container is missing/, "Batch communication scenario must show a blocked reason instead of failing silently");
 mustMatch(adminUi, /id="standaloneBatchCommTemplateGallery"/, "Batch communication scenario must show the template gallery inside the modal");
+mustMatch(adminUi, /id="standaloneBatchCommCohorts"/, "Batch communication scenario must show authoritative communication cohorts for mixed selections");
+mustMatch(adminUi, /function batchCommSelectedCohortsFromRows_/, "Batch communication scenario must partition selected rows by authoritative recommended communication");
+mustMatch(functionSource("openBatchCommunicationFromSelection_"), /var cohortGroups = batchCommSelectedCohortsFromRows_\(rows, mode\);/, "Batch communication scenario must build communication cohorts before opening the modal");
+mustMatch(functionSource("openBatchCommunicationFromSelection_"), /No authoritative communication cohort is available/, "Batch communication scenario must fail clearly when no authoritative cohort exists");
+mustNotMatch(functionSource("openBatchCommunicationFromSelection_"), /batchCommRecommendedFromRows_/, "Batch communication scenario must not infer one template from a mixed owner bucket");
 mustMatch(adminUi, /Selected template[\s\S]*Recommended/, "Batch communication scenario must highlight the recommended template");
 mustMatch(adminUi, /Recipient count/, "Batch communication scenario must show recipient count");
 mustMatch(adminUi, /id="btnStandaloneBatchCommPreview"[\s\S]*>Generate Preview<\/button>[\s\S]*id="btnStandaloneBatchCommSend"[\s\S]*onclick="requestBatchCommunicationConfirmation_\(\)"[\s\S]*>Review Send<\/button>/, "Batch communication scenario must expose generate preview and in-app confirmation flow");

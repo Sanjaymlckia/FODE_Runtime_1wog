@@ -523,6 +523,13 @@
     .batchCommReason{ border:1px solid #e3c06b; background:#fff8e8; color:#704a00; border-radius:7px; padding:6px 8px; font-size:12px; font-weight:850; }
     .batchCommConfirmPanel{ border-color:#b8cce2; background:#fbfdff; }
     .batchCommConfirmPanel.hidden{ display:none; }
+    .batchCommCohortPanel{ border-color:#b8cce2; background:#fbfdff; }
+    .batchCommCohortSummary{ color:#40556b; font-size:12px; line-height:1.45; }
+    .batchCommCohortGallery{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px; margin-top:10px; }
+    .batchCommCohortCard{ border:1px solid #cbd8e6; border-radius:8px; background:#fff; padding:10px; color:#173451; cursor:pointer; text-align:left; }
+    .batchCommCohortCard.selected{ border-color:#1f5aa5; box-shadow:inset 4px 0 0 #1f5aa5; background:#f5f9ff; }
+    .batchCommCohortCard strong{ display:block; color:#0f1f35; font-size:13px; }
+    .batchCommCohortCard span{ display:block; margin-top:4px; color:#40556b; font-size:12px; overflow-wrap:anywhere; }
     .batchCommTemplateGallery{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:8px; }
     .batchCommTemplateCard{ border:1px solid #cbd8e6; border-radius:8px; background:#fff; padding:10px; color:#173451; cursor:pointer; text-align:left; }
     .batchCommTemplateCard.selected{ border-color:#1f5aa5; box-shadow:inset 4px 0 0 #1f5aa5; background:#f5f9ff; }
@@ -2899,6 +2906,7 @@
       </div>
       <div class="batchCommBody">
         <div id="standaloneBatchCommReadiness" class="batchCommStrip" aria-live="polite"></div>
+        <div id="standaloneBatchCommCohorts" class="batchCommPanel batchCommCohortPanel hidden" aria-live="polite"></div>
         <div class="batchCommGrid">
           <div class="batchCommPanel">
             <h4>Template Gallery</h4>
@@ -3432,8 +3440,11 @@
       open: false,
       sourceType: "",
       sourceLabel: "",
+      sourceSelectedTotal: 0,
       stage: "",
       applicantIds: [],
+      cohortGroups: [],
+      activeCohortType: "",
       excludedApplicantIds: {},
       selectedMessageType: "",
       recommendedMessageType: "",
@@ -9605,6 +9616,11 @@ function renderStageDashboard_(items, emptyMessage){
       if (normalized === "payment_escalation") return "Payment Escalation";
       if (normalized === "docs_missing") return "Missing Documents";
       if (normalized === "payment_followup") return "Payment Reminder";
+      if (normalized === "legacy_invite") return "Portal Access";
+      if (normalized === "reminder") return "Reminder";
+      if (normalized === "application_verified_quote") return "Verified Quote";
+      if (normalized === "application_verified_invoice") return "Verified Invoice";
+      if (normalized === "custom_email") return "Custom Email";
       return "Manual Review";
     }
 
@@ -10427,21 +10443,76 @@ function renderStageDashboard_(items, emptyMessage){
       });
     }
 
+    function batchCommMessageTypeLabel_(messageType){
+      var type = String(messageType || "").trim();
+      if (!type) return "Unclassified";
+      var meta = getCommTemplateMeta_(type) || {};
+      return String(meta.label || actionabilityCommsLabel_(type) || type).trim();
+    }
+
+    function batchCommSelectedCohortsFromRows_(rows, mode){
+      var counts = {};
+      var types = [];
+      (Array.isArray(rows) ? rows : []).forEach(function(row){
+        if (!actionabilityIsSelectable_(row) || !actionabilityIsEmailActionable_(row)) return;
+        var recommendedType = actionabilityBatchMessageType_(row && row.recommendedMessageType);
+        if (mode === "reminder" && recommendedType !== "reminder") return;
+        if (!recommendedType) return;
+        if (!counts[recommendedType]) {
+          counts[recommendedType] = {
+            messageType: recommendedType,
+            label: batchCommMessageTypeLabel_(recommendedType),
+            applicantIds: [],
+            count: 0
+          };
+          types.push(recommendedType);
+        }
+        var applicantId = String(row && row.applicantId || "").trim();
+        if (!applicantId || counts[recommendedType].applicantIds.indexOf(applicantId) >= 0) return;
+        counts[recommendedType].applicantIds.push(applicantId);
+        counts[recommendedType].count++;
+      });
+      return types.map(function(type){ return counts[type]; }).sort(function(a, b){
+        return String(a.label || "").localeCompare(String(b.label || ""));
+      });
+    }
+
+    function batchCommSelectedCohort_(){
+      var cohorts = Array.isArray(batchCommState.cohortGroups) ? batchCommState.cohortGroups : [];
+      var activeType = String(batchCommState.activeCohortType || "").trim();
+      if (!activeType) return null;
+      for (var i = 0; i < cohorts.length; i++) {
+        if (String(cohorts[i] && cohorts[i].messageType || "") === activeType) return cohorts[i];
+      }
+      return null;
+    }
+
+    function batchCommSourceTemplateItems_(){
+      var items = batchCommTemplateItems_();
+      if (batchCommState.sourceType !== "selected") return items;
+      var active = batchCommSelectedCohort_();
+      if (!active) return [];
+      return items.filter(function(meta){
+        return String(meta && meta.messageType || "") === String(active.messageType || "");
+      });
+    }
+
     function batchCommUi_(id){
       return document.getElementById("standaloneBatchComm" + id);
     }
 
-    function batchCommRecommendedFromRows_(rows){
-      var counts = {};
-      (Array.isArray(rows) ? rows : []).forEach(function(row){
-        var type = actionabilityBatchMessageType_(row && row.recommendedMessageType);
-        if (type) counts[type] = Number(counts[type] || 0) + 1;
-      });
-      var best = "";
-      Object.keys(counts).forEach(function(type){
-        if (!best || Number(counts[type] || 0) > Number(counts[best] || 0)) best = type;
-      });
-      return best || "reminder";
+    function setBatchCommSelectedCohort_(messageType){
+      var type = String(messageType || "").trim();
+      batchCommState.activeCohortType = type;
+      var active = batchCommSelectedCohort_();
+      batchCommState.applicantIds = active ? normalizeBatchCommApplicantIds_(active.applicantIds || []) : [];
+      batchCommState.recommendedMessageType = active ? String(active.messageType || "") : "";
+      batchCommState.selectedMessageType = batchCommState.recommendedMessageType || "";
+      batchCommState.excludedApplicantIds = {};
+      batchCommState.preview = null;
+      batchCommState.previewStale = false;
+      batchCommState.sendResult = null;
+      batchCommState.confirmOpen = false;
     }
 
     function setBatchCommBusy_(busy, action){
@@ -10474,7 +10545,13 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function resetBatchCommunicationSessionState_(){
+      batchCommState.sourceSelectedTotal = 0;
+      batchCommState.cohortGroups = [];
+      batchCommState.activeCohortType = "";
       batchCommState.excludedApplicantIds = {};
+      batchCommState.applicantIds = [];
+      batchCommState.selectedMessageType = "";
+      batchCommState.recommendedMessageType = "";
       batchCommState.preview = null;
       batchCommState.previewStale = false;
       batchCommState.sendResult = null;
@@ -10536,11 +10613,33 @@ function renderStageDashboard_(items, emptyMessage){
       batchCommState.open = true;
       batchCommState.sourceType = String(src.sourceType || "selected");
       batchCommState.sourceLabel = String(src.sourceLabel || "Selected applicants");
+      batchCommState.sourceSelectedTotal = Number(src.sourceSelectedTotal || 0);
       batchCommState.stage = String(src.stage || "");
-      batchCommState.applicantIds = normalizeBatchCommApplicantIds_(src.applicantIds || []);
       resetBatchCommunicationSessionState_();
+      batchCommState.sourceSelectedTotal = Number(src.sourceSelectedTotal || 0);
+      batchCommState.cohortGroups = Array.isArray(src.cohortGroups) ? src.cohortGroups.map(function(group){
+        return {
+          messageType: String(group && group.messageType || "").trim(),
+          label: String(group && group.label || batchCommMessageTypeLabel_(group && group.messageType || "")).trim(),
+          applicantIds: normalizeBatchCommApplicantIds_(group && group.applicantIds || []),
+          count: Number(group && group.count || 0)
+        };
+      }).filter(function(group){ return !!group.messageType && group.applicantIds.length; }) : [];
+      batchCommState.applicantIds = normalizeBatchCommApplicantIds_(src.applicantIds || []);
       batchCommState.recommendedMessageType = String(src.recommendedMessageType || "");
-      batchCommState.selectedMessageType = batchCommState.recommendedMessageType || "reminder";
+      batchCommState.selectedMessageType = batchCommState.recommendedMessageType || "";
+      if (batchCommState.sourceType === "selected" && batchCommState.cohortGroups.length) {
+        if (batchCommState.cohortGroups.length === 1) setBatchCommSelectedCohort_(batchCommState.cohortGroups[0].messageType);
+        else if (src.activeCohortType) setBatchCommSelectedCohort_(src.activeCohortType);
+        else {
+          batchCommState.activeCohortType = "";
+          batchCommState.applicantIds = [];
+          batchCommState.recommendedMessageType = "";
+          batchCommState.selectedMessageType = "";
+        }
+      } else if (!batchCommState.selectedMessageType) {
+        batchCommState.selectedMessageType = "reminder";
+      }
       var back = document.getElementById("standaloneBatchCommModalBack");
       if (!back) {
         setMsg("msg", "BLOCKED: Batch Communication modal container is missing.");
@@ -10588,8 +10687,35 @@ function renderStageDashboard_(items, emptyMessage){
 
     function batchCommSourceSummary_(){
       if (batchCommState.sourceType === "stage") return "Stage " + String(batchCommState.stage || batchCommState.sourceLabel || "");
+      if (batchCommState.sourceType === "selected") {
+        var active = batchCommSelectedCohort_();
+        if (active) return String(batchCommState.sourceLabel || "Selected Applicants") + " | Cohort: " + String(active.label || batchCommMessageTypeLabel_(active.messageType)) + " (" + String(Number(active.count || active.applicantIds.length || 0)) + ")";
+        if (Array.isArray(batchCommState.cohortGroups) && batchCommState.cohortGroups.length > 1) return String(batchCommState.sourceLabel || "Selected Applicants") + " | Choose a communication cohort";
+      }
       if (batchCommState.sourceLabel) return String(batchCommState.sourceLabel);
       return String(batchCommState.applicantIds.length || 0) + " Selected Applicants";
+    }
+
+    function batchCommCohortSummaryHtml_(){
+      if (batchCommState.sourceType !== "selected") return "";
+      var cohorts = Array.isArray(batchCommState.cohortGroups) ? batchCommState.cohortGroups : [];
+      if (!cohorts.length) return "";
+      var sourceTotal = Number(batchCommState.sourceSelectedTotal || 0);
+      return '<h4>Communication Cohorts</h4>'
+        + '<div class="batchCommCohortSummary">Selected rows are partitioned by authoritative recommended communication. Operational ownership does not imply one shared template.</div>'
+        + '<div class="batchCommSummaryGrid">'
+        + '<div class="batchCommSummaryItem"><strong>Selected Rows</strong><span>' + esc(sourceTotal || cohorts.reduce(function(sum, cohort){ return sum + Number(cohort.count || 0); }, 0)) + '</span></div>'
+        + '<div class="batchCommSummaryItem"><strong>Communication Cohorts</strong><span>' + esc(cohorts.length) + '</span></div>'
+        + '<div class="batchCommSummaryItem"><strong>Active Cohort</strong><span>' + esc((batchCommSelectedCohort_() || {}).label || "Choose a cohort") + '</span></div>'
+        + '</div>'
+        + '<div class="batchCommCohortGallery">' + cohorts.map(function(cohort){
+          var selected = String(batchCommState.activeCohortType || "") === String(cohort.messageType || "");
+          return '<button class="batchCommCohortCard' + (selected ? ' selected' : '') + '" type="button" onclick="selectBatchCommCohort_(\'' + esc(String(cohort.messageType || "")) + '\')">'
+            + '<strong>' + esc(cohort.label || batchCommMessageTypeLabel_(cohort.messageType)) + '</strong>'
+            + '<span>' + esc(Number(cohort.count || cohort.applicantIds.length || 0)) + ' applicants</span>'
+            + '<span>' + esc(String(cohort.messageType || "")) + '</span>'
+            + '</button>';
+        }).join("") + '</div>';
     }
 
     function batchCommMetricHtml_(label, value){
@@ -10746,6 +10872,7 @@ function renderStageDashboard_(items, emptyMessage){
 
     function renderBatchCommunicationModal_(){
       var sourceEl = batchCommUi_("Source");
+      var cohortsEl = batchCommUi_("Cohorts");
       var readinessEl = batchCommUi_("Readiness");
       var galleryEl = batchCommUi_("TemplateGallery");
       var summaryEl = batchCommUi_("Summary");
@@ -10761,6 +10888,16 @@ function renderStageDashboard_(items, emptyMessage){
       var total = counts.recipients;
       var eligible = counts.validEmail;
       var stateLabel = batchCommStateLabel_();
+      if (cohortsEl) {
+        var cohortHtml = batchCommCohortSummaryHtml_();
+        if (cohortHtml) {
+          cohortsEl.classList.remove("hidden");
+          cohortsEl.innerHTML = cohortHtml;
+        } else {
+          cohortsEl.classList.add("hidden");
+          cohortsEl.innerHTML = "";
+        }
+      }
       if (readinessEl) {
         readinessEl.innerHTML = [
           batchCommMetricHtml_("Selected total", counts.selectedTotal),
@@ -10775,7 +10912,8 @@ function renderStageDashboard_(items, emptyMessage){
         ].join("");
       }
       if (galleryEl) {
-        galleryEl.innerHTML = batchCommTemplateItems_().map(function(meta){
+        var templateItems = batchCommSourceTemplateItems_();
+        galleryEl.innerHTML = templateItems.map(function(meta){
           var type = String(meta.messageType || "");
           var selected = type === batchCommState.selectedMessageType;
           var recommended = type === batchCommState.recommendedMessageType;
@@ -10789,7 +10927,7 @@ function renderStageDashboard_(items, emptyMessage){
             + '<div class="muted" style="font-size:12px;">' + esc(type) + '</div>'
             + '<div style="margin-top:6px;font-size:12px;line-height:1.4;">' + esc(meta.purpose || '') + '</div>'
             + '</button>';
-        }).join("") || '<div class="muted">No batch-safe templates available.</div>';
+        }).join("") || '<div class="muted">' + esc(batchCommState.sourceType === "selected" && !batchCommSelectedCohort_() ? "Choose a communication cohort to load its authoritative template." : "No batch-safe templates available.") + '</div>';
       }
       if (summaryEl) {
         var meta = getCommTemplateMeta_(batchCommState.selectedMessageType) || {};
@@ -10887,6 +11025,11 @@ function renderStageDashboard_(items, emptyMessage){
       if (batchCommState.selectedMessageType) previewBatchCommunicationModal_();
     }
 
+    function selectBatchCommCohort_(messageType){
+      setBatchCommSelectedCohort_(messageType);
+      renderBatchCommunicationModal_();
+    }
+
     function toggleBatchCommRecipient_(applicantId, included){
       var id = String(applicantId || "").trim();
       if (!id) return;
@@ -10916,15 +11059,25 @@ function renderStageDashboard_(items, emptyMessage){
         setMsg("msg", "Single applicant selected. Use the Review Workspace communication flow for one applicant.");
         return;
       }
-      var recommended = mode === "reminder" ? "reminder" : batchCommRecommendedFromRows_(rows);
+      var cohortGroups = batchCommSelectedCohortsFromRows_(rows, mode);
+      if (!cohortGroups.length) {
+        actionabilityBatchMessage = mode === "reminder"
+          ? "No reminder cohort is available from the current selection."
+          : "No authoritative communication cohort is available from the current selection.";
+        actionabilityBatchPanelMode = "";
+        renderActionabilityPreview_({ preserveRows: true });
+        setMsg("msg", actionabilityBatchMessage);
+        return;
+      }
       var label = actionabilitySelectionSourceLabel_();
       if (mode === "visible") label = "Current Page Selection";
       if (mode === "reminder") label = label + " for Reminder";
       openBatchCommunicationModal_({
         sourceType: "selected",
-        sourceLabel: label + " - " + ids.length + " applicants",
-        applicantIds: ids,
-        recommendedMessageType: recommended
+        sourceLabel: label + " - " + ids.length + " selected",
+        sourceSelectedTotal: ids.length,
+        cohortGroups: cohortGroups,
+        activeCohortType: cohortGroups.length === 1 ? cohortGroups[0].messageType : ""
       });
     }
 
