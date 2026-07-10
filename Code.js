@@ -7546,56 +7546,50 @@ function firstNonEmptyRowValue_(rowObj, fields) {
   return "";
 }
 
-function applicantGradeOrPlaceholder_(rowObj) {
+function applicantGradeValue_(rowObj) {
   return firstNonEmptyRowValue_(rowObj, [
     "Accepted_Grade",
     "Approved_Grade",
     "Grade_Applying_For",
     "Grade",
     "Upgrade_Grade_Stream"
-  ]) || actionRequiredPlaceholder_("confirm grade");
+  ]);
+}
+
+function firstCsvRowValue_(rowObj, fields) {
+  var row = rowObj || {};
+  var names = Array.isArray(fields) ? fields : [];
+  for (var i = 0; i < names.length; i++) {
+    var csv = subjectsToCsv_(row[names[i]]);
+    if (csv) return csv;
+  }
+  return "";
+}
+
+function applicantSubjectsValue_(rowObj) {
+  return firstCsvRowValue_(rowObj, [
+    "Subjects_Summary",
+    "Subjects_Selected_Canonical",
+    "Subjects_Selected",
+    "Selected_Subjects",
+    "Subjects"
+  ]);
+}
+
+function applicantGradeOrPlaceholder_(rowObj) {
+  return applicantGradeValue_(rowObj) || actionRequiredPlaceholder_("confirm grade");
 }
 
 function applicantSubjectsOrPlaceholder_(rowObj) {
-  var row = rowObj || {};
-  var fields = [
-    "Subjects_Summary",
-    "Subjects_Selected_Canonical",
-    "Subjects_Selected",
-    "Selected_Subjects",
-    "Subjects"
-  ];
-  for (var i = 0; i < fields.length; i++) {
-    var csv = subjectsToCsv_(row[fields[i]]);
-    if (csv) return csv;
-  }
-  return actionRequiredPlaceholder_("confirm subjects");
+  return applicantSubjectsValue_(rowObj) || actionRequiredPlaceholder_("confirm subjects");
 }
 
 function applicantGradeDisplayOrUnconfirmed_(rowObj) {
-  return firstNonEmptyRowValue_(rowObj, [
-    "Accepted_Grade",
-    "Approved_Grade",
-    "Grade_Applying_For",
-    "Grade",
-    "Upgrade_Grade_Stream"
-  ]) || "not yet confirmed";
+  return applicantGradeValue_(rowObj) || "not yet confirmed";
 }
 
 function applicantSubjectsDisplayOrUnconfirmed_(rowObj) {
-  var row = rowObj || {};
-  var fields = [
-    "Subjects_Summary",
-    "Subjects_Selected_Canonical",
-    "Subjects_Selected",
-    "Selected_Subjects",
-    "Subjects"
-  ];
-  for (var i = 0; i < fields.length; i++) {
-    var csv = subjectsToCsv_(row[fields[i]]);
-    if (csv) return csv;
-  }
-  return "not yet confirmed";
+  return applicantSubjectsValue_(rowObj) || "not yet confirmed";
 }
 function applicantDocumentStatusSummary_(rowObj) {
   var row = rowObj || {};

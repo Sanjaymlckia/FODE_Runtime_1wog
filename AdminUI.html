@@ -9349,10 +9349,7 @@ function renderStageDashboard_(items, emptyMessage){
             var emailLabel = formatQueueEmail_(row);
             var nameDisplay = name + (emailLabel && emailLabel !== "-" ? (" - " + emailLabel) : "");
             var dbg = String(row && row.debugId || "");
-            var sentAt = String(row && row.docsFollowupSentAt || "");
-            var sentFlag = !!(row && (row.docsFollowupSent || row.docsFollowupStatus === "Sent"));
-            var hasPersistentSent = !!sentAt || sentFlag;
-            var isSent = hasPersistentSent;
+            var isSent = isDocsFollowupSent_(row);
             var canSendQuote = compatibilityCommunicationEligible_(row) && !isSent;
             var canReview = !!applicantId || (Number.isFinite(rowNumber) && rowNumber >= 2);
             var reviewTitle = canReview ? "Open review" : ("RowNumber missing - cannot review." + (dbg ? (" (dbg: " + dbg + ")") : ""));
@@ -11766,9 +11763,7 @@ function renderStageDashboard_(items, emptyMessage){
           var qDocs = (queueRenderCache.queueDocs && queueRenderCache.queueDocs.rows) ? queueRenderCache.queueDocs.rows : [];
           qDocs.forEach(function(row){
             var rowNum = Number(row && row.rowNumber || 0);
-            var sentAt = String(row && row.docsFollowupSentAt || "");
-            var sentFlag = !!(row && (row.docsFollowupSent || row.docsFollowupStatus === "Sent"));
-            var canSelect = compatibilityCommunicationEligible_(row) && !sentAt && !sentFlag;
+            var canSelect = compatibilityCommunicationEligible_(row) && !isDocsFollowupSent_(row);
             if (canSelect && Number.isFinite(rowNum) && rowNum >= 2) selectedDocsRowNumbers[String(rowNum)] = true;
           });
           rerenderQueue_("queueDocs");

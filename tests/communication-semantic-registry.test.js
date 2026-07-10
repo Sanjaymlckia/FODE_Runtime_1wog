@@ -332,6 +332,7 @@ const recommendationContext = {
 };
 vm.createContext(recommendationContext);
 vm.runInContext([
+  extractFunction(adminUiSource, "reviewAuthoritySnapshot_"),
   extractFunction(adminUiSource, "commTemplateGalleryItems_"),
   extractFunction(adminUiSource, "getCommTemplateMeta_"),
   extractFunction(adminUiSource, "commTemplateOptionItems_"),
@@ -390,6 +391,9 @@ const templateFunctionNames = [
   "buildParentOrApplicantName_",
   "actionRequiredPlaceholder_",
   "firstNonEmptyRowValue_",
+  "applicantGradeValue_",
+  "firstCsvRowValue_",
+  "applicantSubjectsValue_",
   "applicantGradeOrPlaceholder_",
   "applicantSubjectsOrPlaceholder_",
   "applicantPaymentQuoteOrPlaceholder_",
