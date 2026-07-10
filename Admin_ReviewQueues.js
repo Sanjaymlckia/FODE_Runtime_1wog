@@ -252,11 +252,7 @@ function admin_getReviewQueues(payload) {
         var receiptUrl = clean_(rowObj.Fee_Receipt_File || "");
         var mandatoryDocIssue = hasMandatoryDocIssue_(rowObj, idx);
 
-        var docsVerifiedForFollowup = adminRowDocsReviewVerified_(rowObj);
-        var hasValidEmailForFollowup = !!getRowEmailForStudent_(rowObj);
-        var docsFollowupEligibleBase = CONFIG.DOCS_FOLLOWUP_ENABLE === true && docsVerifiedForFollowup && hasValidEmailForFollowup;
         var docsFollowupSentAt = getDocsFollowupSentAt_(rowObj);
-        var eligibleDocsFollowUp = docsFollowupEligibleBase && !safeStr_(docsFollowupSentAt || "");
         var authorityProjection = typeof compatibilityCommunicationAuthorityProjection_ === "function"
           ? compatibilityCommunicationAuthorityProjection_(rowObj, r + 1)
           : null;
@@ -287,8 +283,6 @@ function admin_getReviewQueues(payload) {
           Classroom_Handover_At: clean_(rowObj.Classroom_Handover_At || rowObj.Classroom_Notified_At || ""),
           Enrolled_By: clean_(rowObj.Enrolled_By || ""),
           Enrolled_At: clean_(rowObj.Enrolled_At || ""),
-          docsFollowupEligibleBase: !!docsFollowupEligibleBase,
-          eligibleDocsFollowUp: !!eligibleDocsFollowUp,
           docsFollowupSentAt: safeStr_(docsFollowupSentAt || "")
         };
         if (authorityProjection && typeof authorityProjection === "object") {
@@ -477,8 +471,6 @@ function admin_getReviewQueues(payload) {
             Classroom_Handover_At: clean_(it.Classroom_Handover_At || ""),
             Enrolled_By: clean_(it.Enrolled_By || ""),
             Enrolled_At: clean_(it.Enrolled_At || ""),
-            docsFollowupEligibleBase: !!it.docsFollowupEligibleBase,
-            eligibleDocsFollowUp: !!it.eligibleDocsFollowUp,
             docsFollowupSentAt: safeStr_(it.docsFollowupSentAt || ""),
             Portal_Submitted: clean_(it.Portal_Submitted || ""),
             Docs_Verified: clean_(it.Docs_Verified || ""),
@@ -614,8 +606,6 @@ function admin_getReviewQueues(payload) {
         } catch (_propErr) {}
       }
       out.docsFollowupSentAt = sentAt;
-      var eligibleBase = !!out.docsFollowupEligibleBase;
-      out.eligibleDocsFollowUp = !!(applicantId && eligibleBase && !sentAt);
       return out;
     });
   }

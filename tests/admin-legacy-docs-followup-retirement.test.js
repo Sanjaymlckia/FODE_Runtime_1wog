@@ -40,12 +40,16 @@ const queueEventFn = extractFunction(adminUi, "initQueuePanelEvents_");
 const resultsClickFn = extractFunction(adminUi, "onResultsClick_");
 
 assert.match(searchFn, /compatibilityCommunicationAuthorityProjection_\(rowObj, r \+ 1\)/, "Search results must project authoritative communication fields");
+assert.doesNotMatch(adminSource, /function computeEligibleDocsFollowUp_/, "Legacy docs-follow-up eligibility helper should be retired once compatibility routing is authoritative");
+assert.doesNotMatch(adminSource, /function composeDocsFollowupBody_/, "Legacy docs-follow-up body composer should be retired once no direct send route remains");
+assert.doesNotMatch(searchFn, /eligibleDocsFollowUp:/, "Search results must not carry obsolete docs-follow-up eligibility flags");
 assert.match(compatibilityProjection, /buildActionabilityPreviewRow_/, "Compatibility communication projection must reuse shared actionability authority");
 assert.match(compatibilityProjection, /recommendedMessageType:/, "Compatibility projection must expose authoritative recommended message type");
 assert.match(compatibilityProjection, /selectable:/, "Compatibility projection must expose authoritative selectability");
 
 assert.match(reviewQueuesSource, /compatibilityCommunicationAuthorityProjection_\(rowObj, r \+ 1\)/, "Review queue rows must project authoritative communication fields");
 assert.match(reviewQueuesSource, /for \(var authorityKey in authorityProjection\)/, "Review queue rows must merge projected compatibility authority metadata into queue items");
+assert.doesNotMatch(reviewQueuesSource, /eligibleDocsFollowUp|docsFollowupEligibleBase/, "Review queue DTOs must not carry obsolete docs-follow-up eligibility compatibility flags");
 
 assert.match(legacyEndpoint, /LEGACY_DOCS_FOLLOWUP_RETIRED/, "Legacy endpoint must explicitly report retirement");
 assert.match(legacyEndpoint, /Use Review Workspace or Batch Communication/, "Legacy endpoint must redirect operators to authoritative surfaces");

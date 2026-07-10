@@ -201,9 +201,6 @@ function admin_searchApplicants(payload) {
     };
     var paymentBadge = canonicalPaymentBadge_(statusRow);
     var docStage = computeDocVerificationStatus_(statusRow);
-    var docsFollowupSentAt = getDocsFollowupSentAt_(rowObj);
-    var eligibleDocsFollowUp = computeEligibleDocsFollowUp_(rowObj, docsFollowupSentAt);
-
     var authorityProjection = compatibilityCommunicationAuthorityProjection_(rowObj, r + 1);
     out.push(Object.assign({
       rowNumber: r + 1,
@@ -214,8 +211,7 @@ function admin_searchApplicants(payload) {
       docStatus: docStage,
       paymentVerified: paymentBadge === "Verified" ? "Payment Verified" : (paymentBadge === "Rejected" ? "Payment Rejected" : "Payment Pending"),
       portalAccess: clean_(row[idx.Portal_Access_Status - 1]) || "Open",
-      eligibleDocsFollowUp: !!eligibleDocsFollowUp,
-      docsFollowupSentAt: safeStr_(docsFollowupSentAt || ""),
+      docsFollowupSentAt: getDocsFollowupSentAt_(rowObj),
       stage: stageInfo ? clean_(stageInfo.stage || "") : "",
       priority: stageInfo ? mapStagePriority_(stageInfo.stage || "") : ""
     }, authorityProjection || {}));
@@ -1858,65 +1854,6 @@ function getDocsFollowupSentAt_(rowObj) {
   } catch (_e) {
     return "";
   }
-}
-
-function computeEligibleDocsFollowUp_(rowObj, sentAtOpt) {
-  if (CONFIG.DOCS_FOLLOWUP_ENABLE !== true) return false;
-  var row = rowObj || {};
-  var docsVerified = adminRowDocsReviewVerified_(row);
-  if (!docsVerified) return false;
-  if (!getRowEmailForStudent_(row)) return false;
-  var sentAt = safeStr_(sentAtOpt || getDocsFollowupSentAt_(row));
-  if (sentAt) return false;
-  return true;
-}
-
-function composeDocsFollowupBody_(rowObj, portalUrl) {
-  var row = rowObj || {};
-  var applicantId = safeStr_(row.ApplicantID || "");
-  var studentName = rowStudentName_(row) || "Student";
-  var subjectCount = countSubjectsFromRow_(row);
-  var baseK = Number(CONFIG.FODE_FEE_BASE_K || 600);
-  var perSubjectK = Number(CONFIG.FODE_FEE_PER_SUBJECT_K || 450);
-  var totalK = baseK + (subjectCount * perSubjectK);
-  var url = safeStr_(portalUrl || "");
-  return [
-    "Dear Parent/Guardian,",
-    "",
-    "Your student's FODE application documents have been verified.",
-    "",
-    "Student: " + studentName,
-    "Applicant ID: " + applicantId,
-    "Program/Intake: " + safeStr_(row.Program_Applied_For || row.Program || row.Intake || ""),
-    "Subjects: " + safeStr_(row.Subjects_Selected_Canonical || row.Subjects_Selected || ""),
-    "",
-    "Quote summary:",
-    "- Base fee: K" + String(baseK),
-    "- Per subject fee: K" + String(perSubjectK),
-    "- Subject count: " + String(subjectCount),
-    "- Estimated total: K" + String(totalK),
-    "",
-    "Student Portal Link:",
-    url,
-    "",
-    "Bank Details:",
-    "Kundu International Academy",
-    "Account Number: 7027138796",
-    "BSP BANK, BSP Haus, Konedobu, Port Moresby",
-    "BSB No: 088950",
-    "",
-    "Next steps:",
-    "1. Pay the total fee shown in your quote by bank deposit/transfer.",
-    "2. In the payment reference, write: Applicant ID + Student Name.",
-    "3. After payment, reopen your student portal link above and upload your payment receipt.",
-    "4. Once receipt is verified, we will confirm enrolment and release program access.",
-    "5. Keep this email and your portal link safe for re-uploads/updates.",
-    "",
-    "Support: fode@kundu.ac",
-    "",
-    "Regards,",
-    "FODE Admissions"
-  ].join("\n");
 }
 
 function admin_sendDocsFollowupEmails(payload) {
