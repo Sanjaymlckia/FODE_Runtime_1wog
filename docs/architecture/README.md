@@ -62,6 +62,35 @@ Protected live surfaces include document verification, signed document routes, a
 
 Partial/future surfaces include classroom acceptance/handover authority, LAP automation, bounce ingestion, AI-assisted document precheck, and Google Forms replacement.
 
+## ACP Closure Status
+
+ACP closure review completed on 2026-07-10 against:
+
+- commit `f10a776` `refactor: make review communication recommendation canonical-first`
+- commit `cf50e9e` `refactor: retire legacy docs follow-up send authority`
+- Admin Apps Script version `363`
+- Admin staging pin `@363`
+- live Admin runtime identity `r338 / 338`
+- live Student runtime identity `r217 / 217`
+
+Release/acceptance evidence:
+
+- `F:\Playwright\fode-secure-link-diagnostic\reports\2026-07-10T07-50-25-296Z-admin-legacy-docs-followup-authority-retirement`
+- `F:\Playwright\fode-secure-link-diagnostic\reports\2026-07-10T07-47-34-178Z-admin-operational-communication-cohort-partition`
+- `F:\Playwright\fode-secure-link-diagnostic\reports\2026-07-10T07-50-25-855Z-legacy-admin-health`
+
+Closure classification:
+
+`ACP ARCHITECTURALLY VERIFIED - COMPLETE WITH DEFERRED CLEANUP`
+
+Meaning:
+
+- no reachable operator communication route bypasses Communication Authority
+- Review Queues are compatibility/navigation only
+- legacy Docs Follow-Up queue/search send authority is retired
+- selected and stage batch communication remain bounded by authoritative preview/send gates
+- remaining work is cleanup, Stage Batch migration, broader canonical reporting, and legacy retirement
+
 ## Documentation Impact Rule
 
 Every future CIS that changes runtime architecture, state transitions, queues, authority, protected surfaces, release governance, communication semantics, payment/Zoho, document verification, intake, DR, or OPS boundaries must explicitly state whether these files need updating:

@@ -17,6 +17,11 @@ Scope: documentation only
 - H1-H5 communication semantic registry, template text, selected-applicant exposure, and Stage Batch separation are live.
 - DR tooling, release recording, and DR5 verification are established.
 - ACP / CAP authority convergence has removed the main missing-documents authority mismatch between actionability and communication admission.
+- ACP closure proof is complete for operator communication routing:
+  - canonical-first Review Workspace recommendation
+  - retired legacy Docs Follow-Up queue/search send authority
+  - compatibility queue/search routing redirected to Review Workspace or authoritative Batch Communication
+  - no reachable operator communication route bypasses Communication Authority
 
 ## Partial / In Progress
 

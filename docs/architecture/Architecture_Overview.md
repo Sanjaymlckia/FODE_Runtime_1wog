@@ -116,6 +116,38 @@ Completed and reflected in runtime source:
 - Operations Workspace selection is server-driven through `selectable`
 - contactability is promoted to a first-class operational bucket rather than being presented as Management work
 - Review Workspace remains mutation authority; display labels are expected to consume authority output rather than re-derive state independently
+- direct compatibility queue/search Docs Follow-Up send authority is retired; compatibility single-row actions route to Review Workspace and selected actions route to authoritative Batch Communication
+
+## ACP Final Closure
+
+Final closure was verified on 2026-07-10 after:
+
+- remote marker proof against released source
+- Admin staging release to Apps Script version `363`
+- live Admin `whoami` proof at `r338 / 338`
+- Student `whoami` proof unchanged at `r217 / 217`
+- Playwright acceptance covering health, operational cohort partition, and legacy Docs Follow-Up retirement
+
+Operator-route closure invariant:
+
+`No reachable operator communication route may independently determine recipients, message identity, preview population, or send authorization outside Communication Authority.`
+
+This invariant is now satisfied for:
+
+- Review Workspace single-applicant communication
+- selected/manual Batch Communication
+- Stage Batch preview/send
+- Review Queue compatibility routing
+- search compatibility routing
+
+Retained non-operator exceptions remain explicit and narrow:
+
+- payment-verified workflow notices
+- docs-verified payment-required workflow notice
+- payment receipt uploaded admin alert
+- WhatsApp fallback CSV email to admins
+
+These are governed system/admin notifications, not operator cohort send routes. They do not reopen the retired Docs Follow-Up authority path.
 
 Still deferred:
 

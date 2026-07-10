@@ -84,6 +84,36 @@ This convergence does not change:
 - confirmation
 - Stage Batch candidate selection
 
+## ACP Closure Boundary
+
+The following operator-triggered routes are now required to pass through Communication Authority before preview/send:
+
+- Review Workspace single-applicant preview/send
+- selected/manual Batch Communication preview/send
+- Stage Batch preview/send
+- compatibility queue/search communication routing
+
+Compatibility surfaces may still expose communication-related labels, but they no longer own send identity or send execution.
+
+Retired path:
+
+- `admin_sendDocsFollowupEmails()` is retained only as a non-sending compatibility wrapper and explicit retirement response
+
+Deferred cleanup:
+
+- `computeEligibleDocsFollowUp_()`
+- `composeDocsFollowupBody_()`
+- `eligibleDocsFollowUp`
+- `docsFollowupSentAt`
+- compatibility queue/search wording and controls that still mention legacy Docs Follow-Up history
+
+Retained automated exceptions:
+
+- governed unattended payment/document/admin-notification emails
+- manual WhatsApp fallback CSV email to admins
+
+These are outside the operator batch/review communication authority chain and must remain explicitly documented and narrowly scoped.
+
 ## OPS Boundary
 
 OPS bulk send remains disabled unless separately approved.
