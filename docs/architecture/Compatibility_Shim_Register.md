@@ -11,7 +11,7 @@ Status: ACP / CAP working register
 | selected/manual batch wrappers | Compatibility shim | preserve entry-point contracts while delegating policy to shared helpers | keep as surface-specific wrappers |
 | Management compatibility grouping for legacy consumers | Compatibility shim | preserves older internal grouping while contactability rows are exposed as `Contactability Exceptions` to operators | retire when all consumers use current bucket taxonomy |
 | `admin_sendDocsFollowupEmails()` | Retired compatibility wrapper | preserves old endpoint shape while returning `LEGACY_DOCS_FOLLOWUP_RETIRED` and authoritative guidance only | remove after all remaining compatibility callers and operator wording are retired |
-| `eligibleDocsFollowUp` / `docsFollowupSentAt` compatibility fields | Compatibility display shim | preserve historical queue/search row shape and legacy status labels only | remove after compatibility queue/search communication history is fully normalized |
+| `docsFollowupSentAt` compatibility field | Compatibility display shim | preserves historical queue/search legacy-send history labeling only | remove after compatibility queue/search communication history is fully normalized |
 
 ## ACP Closure Note
 

@@ -9,9 +9,6 @@ Status: ACP / CAP working register
 | Review Queues legacy wording/structures | Compatibility shim | operator compatibility surface remains live | retire only after Operations Workspace fully replaces the remaining queue workflows |
 | UI-local workload fallback helpers | Legacy retirement candidate | kept only as client fallback if server DTO is absent | retire after one full release proves `bucketSummaries` always present |
 | contactability-in-management presentation | Retired operator wording | contactability now has a first-class operational bucket | keep internal compatibility only where tests/legacy consumers still require aliases |
-| `computeEligibleDocsFollowUp_()` | Deferred cleanup candidate | legacy Docs Follow-Up eligibility computation remains in compatibility/search plumbing only | retire after compatibility queue/search history fields are removed |
-| `composeDocsFollowupBody_()` | Dead legacy composer candidate | no longer participates in any reachable operator send route | retire after one cleanup slice confirms no hidden automated consumer remains |
-| `eligibleDocsFollowUp` row field | Deferred compatibility field | retained for queue/search display continuity and retirement messaging only | retire after compatibility communication history is normalized |
 | `docsFollowupSentAt` row field | Deferred compatibility field | retained for queue/search legacy-history labeling only | retire after compatibility communication history is normalized |
 | `admin_sendDocsFollowupEmails()` | Retired wrapper | endpoint remains only to return `LEGACY_DOCS_FOLLOWUP_RETIRED` and authoritative next-step guidance | retire after no consumer expects the legacy RPC name |
 | compatibility queue/search Docs Follow-Up wording | Deferred cleanup candidate | some labels still expose legacy history context to explain prior behavior | retire after operator wording is fully normalized to Communication Authority terms |

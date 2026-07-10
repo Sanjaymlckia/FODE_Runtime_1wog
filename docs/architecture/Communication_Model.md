@@ -101,9 +101,6 @@ Retired path:
 
 Deferred cleanup:
 
-- `computeEligibleDocsFollowUp_()`
-- `composeDocsFollowupBody_()`
-- `eligibleDocsFollowUp`
 - `docsFollowupSentAt`
 - compatibility queue/search wording and controls that still mention legacy Docs Follow-Up history
 
