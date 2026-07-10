@@ -204,7 +204,8 @@ function admin_searchApplicants(payload) {
     var docsFollowupSentAt = getDocsFollowupSentAt_(rowObj);
     var eligibleDocsFollowUp = computeEligibleDocsFollowUp_(rowObj, docsFollowupSentAt);
 
-    out.push({
+    var authorityProjection = compatibilityCommunicationAuthorityProjection_(rowObj, r + 1);
+    out.push(Object.assign({
       rowNumber: r + 1,
       applicantId: rid,
       name: fullName,
@@ -217,10 +218,44 @@ function admin_searchApplicants(payload) {
       docsFollowupSentAt: safeStr_(docsFollowupSentAt || ""),
       stage: stageInfo ? clean_(stageInfo.stage || "") : "",
       priority: stageInfo ? mapStagePriority_(stageInfo.stage || "") : ""
-    });
+    }, authorityProjection || {}));
   }
 
   return { ok: true, rows: out };
+}
+
+function compatibilityCommunicationAuthorityProjection_(rowObj, rowNumber) {
+  var row = rowObj || {};
+  var rowNum = Number(rowNumber || row._rowNumber || 0);
+  if (typeof buildActionabilityPreviewRow_ !== "function") {
+    return {
+      actionabilityState: "",
+      selectable: false,
+      selectBlockReason: "",
+      recommendedAction: "",
+      recommendedMessageType: "",
+      actionOwner: "",
+      canonicalLifecycle: null
+    };
+  }
+  var authorityRow = buildActionabilityPreviewRow_(row, rowNum);
+  return {
+    actionabilityState: clean_(authorityRow && authorityRow.actionabilityState || ""),
+    selectable: !!(authorityRow && authorityRow.selectable === true),
+    selectBlockReason: clean_(authorityRow && authorityRow.selectBlockReason || ""),
+    recommendedAction: clean_(authorityRow && authorityRow.recommendedAction || ""),
+    recommendedMessageType: clean_(authorityRow && authorityRow.recommendedMessageType || ""),
+    actionOwner: clean_(authorityRow && authorityRow.actionOwner || ""),
+    canonicalLifecycle: authorityRow && authorityRow.canonicalLifecycle ? {
+      baseState: clean_(authorityRow.canonicalLifecycle.baseState || ""),
+      lifecycleStage: clean_(authorityRow.canonicalLifecycle.lifecycleStage || ""),
+      overlays: Array.isArray(authorityRow.canonicalLifecycle.overlays) ? authorityRow.canonicalLifecycle.overlays.slice() : [],
+      recommendedNextAction: clean_(authorityRow.canonicalLifecycle.recommendedNextAction || ""),
+      recommendedMessageType: clean_(authorityRow.canonicalLifecycle.recommendedMessageType || ""),
+      actionOwner: clean_(authorityRow.canonicalLifecycle.actionOwner || ""),
+      reason: clean_(authorityRow.canonicalLifecycle.reason || "")
+    } : null
+  };
 }
 
 function admin_getApplicantDetail(payload) {
@@ -1889,12 +1924,6 @@ function admin_sendDocsFollowupEmails(payload) {
     var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) return err_("ACCESS_DENIED", "Access denied", dbgId);
     requireSuperAdmin_(adminEmail);
-    if (CONFIG.DOCS_FOLLOWUP_ENABLE !== true) return ok_({
-      summary: { sentCount: 0, failedCount: 0 },
-      results: [],
-      dbg: dbgId
-    }, dbgId);
-
     payload = payload || {};
     var rowNumbers = Array.isArray(payload.rowNumbers) ? payload.rowNumbers : [];
     var normalized = [];
@@ -1912,119 +1941,28 @@ function admin_sendDocsFollowupEmails(payload) {
     }
 
     var sh = getWorkingSheet_();
-    var results = [];
-    var sentCount = 0;
-    var failedCount = 0;
-    for (var ri = 0; ri < normalized.length; ri++) {
-      var rowNumber = normalized[ri];
+    var results = normalized.map(function(rowNumber) {
       var rowObj = getRowObject_(sh, rowNumber);
       rowObj._rowNumber = rowNumber;
       var applicantId = safeStr_(rowObj.ApplicantID || ("ROW-" + rowNumber));
-      var sentAt = getDocsFollowupSentAt_(rowObj);
-      var eligible = computeEligibleDocsFollowUp_(rowObj, sentAt);
-      var baseAudit = {
-        operator: adminEmail || "",
+      var authority = compatibilityCommunicationAuthorityProjection_(rowObj, rowNumber);
+      return {
+        ok: false,
+        code: "LEGACY_DOCS_FOLLOWUP_RETIRED",
+        message: "Legacy Docs Follow-Up send has been retired. Use Review Workspace for one applicant or Batch Communication for a selected authoritative cohort.",
         applicantId: applicantId,
+        ApplicantID: applicantId,
         rowNumber: rowNumber,
-        debugId: dbgId
+        recommendedMessageType: clean_(authority && authority.recommendedMessageType || ""),
+        selectable: !!(authority && authority.selectable === true),
+        selectBlockReason: clean_(authority && authority.selectBlockReason || "")
       };
-      if (!eligible) {
-        logAdminEvent_("DOCS_FOLLOWUP_CLICK", {
-          operator: baseAudit.operator,
-          applicantId: applicantId,
-          rowNumber: rowNumber,
-          outcome: "NOT_ELIGIBLE",
-          debugId: dbgId
-        });
-        results.push({ ok: false, code: "NOT_ELIGIBLE", message: "Not eligible for docs follow-up.", applicantId: applicantId, ApplicantID: applicantId, rowNumber: rowNumber });
-        failedCount++;
-        continue;
-      }
-      var to = getRowEmailForStudent_(rowObj);
-      if (!to) {
-        logAdminEvent_("DOCS_FOLLOWUP_CLICK", {
-          operator: baseAudit.operator,
-          applicantId: applicantId,
-          rowNumber: rowNumber,
-          outcome: "NO_PARENT_EMAIL",
-          debugId: dbgId
-        });
-        results.push({ ok: false, code: "NO_PARENT_EMAIL", message: "Parent/guardian email is missing or invalid.", applicantId: applicantId, ApplicantID: applicantId, rowNumber: rowNumber });
-        failedCount++;
-        continue;
-      }
-
-      var secretRes = getPortalSecretForApplicant_(applicantId);
-      if (!secretRes || secretRes.ok !== true) {
-        logAdminEvent_("DOCS_FOLLOWUP_CLICK", {
-          operator: baseAudit.operator,
-          applicantId: applicantId,
-          rowNumber: rowNumber,
-          outcome: "PORTAL_LINK_ERROR",
-          debugId: dbgId
-        });
-        results.push({ ok: false, code: "PORTAL_LINK_ERROR", message: "Portal link error.", applicantId: applicantId, ApplicantID: applicantId, rowNumber: rowNumber });
-        failedCount++;
-        continue;
-      }
-      var portalUrl = buildStudentPortalUrl_(applicantId, secretRes.secret);
-      var subject = safeStr_(CONFIG.DOCS_FOLLOWUP_EMAIL_SUBJECT || "FODE Application - Documents Verified | Quote, Payment Instructions & Next Steps");
-      var body = composeDocsFollowupBody_(rowObj, portalUrl);
-      var sendOpts = {
-        cc: safeStr_(CONFIG.DOCS_FOLLOWUP_CC || ""),
-        replyTo: safeStr_(CONFIG.DOCS_FOLLOWUP_REPLY_TO || CONFIG.EMAIL_REPLY_TO || ""),
-        name: safeStr_(CONFIG.EMAIL_FROM_NAME || "FODE Admissions"),
-        senderMode: safeStr_(CONFIG.DOCS_FOLLOWUP_SENDER_MODE || CONFIG.EMAIL_SENDER_MODE || "DEFAULT")
-      };
-      var sent = adminSendEmail_(to, subject, body, sendOpts);
-      if (!sent.ok) {
-        logAdminEvent_("DOCS_FOLLOWUP_CLICK", {
-          operator: baseAudit.operator,
-          applicantId: applicantId,
-          rowNumber: rowNumber,
-          outcome: "EMAIL_SEND_FAILED",
-          error: safeStr_(sent.error || ""),
-          debugId: dbgId
-        });
-        results.push({ ok: false, code: "EMAIL_SEND_FAILED", message: safeStr_(sent.error || "Email send failed"), applicantId: applicantId, ApplicantID: applicantId, rowNumber: rowNumber });
-        failedCount++;
-        continue;
-      }
-
-      var idx = headerIndex_(sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0]);
-      captureOperatorAttribution_(sh, rowNumber, idx, {
-        action: "SEND_QUOTE",
-        operatorEmail: adminEmail,
-        rowObj: rowObj
-      });
-      var key = buildDocsFollowupKey_(CONFIG.DATA_MODE, applicantId);
-      var ts = nowIso_();
-      PropertiesService.getScriptProperties().setProperty(key, ts);
-      logAdminEvent_("DOCS_FOLLOWUP_CLICK", {
-        operator: baseAudit.operator,
-        applicantId: applicantId,
-        rowNumber: rowNumber,
-        outcome: "SENT",
-        debugId: dbgId
-      });
-      logAdminEvent_("DOCS_FOLLOWUP_EMAIL_SENT", {
-        operator: baseAudit.operator,
-        applicantId: applicantId,
-        rowNumber: rowNumber,
-        to: to,
-        portalUrl: portalUrl,
-        cc: safeStr_(CONFIG.DOCS_FOLLOWUP_CC || ""),
-        replyTo: safeStr_(CONFIG.DOCS_FOLLOWUP_REPLY_TO || CONFIG.EMAIL_REPLY_TO || ""),
-        sentKey: key,
-        sentAt: ts,
-        debugId: dbgId
-      });
-      results.push({ ok: true, code: "SENT", message: "Docs follow-up sent.", applicantId: applicantId, ApplicantID: applicantId, rowNumber: rowNumber, sentAt: ts });
-      sentCount++;
-    }
+    });
 
     return ok_({
-      summary: { sentCount: sentCount, failedCount: failedCount },
+      summary: { sentCount: 0, failedCount: results.length },
+      retiredLegacyRoute: true,
+      message: "Legacy Docs Follow-Up send has been retired. Use Review Workspace or Batch Communication.",
       results: results,
       dbg: dbgId
     }, dbgId);

@@ -2866,9 +2866,9 @@
         <div class="muted" style="font-size:12px;">Search by ApplicantID for exact match.</div>
       </div>
       <div class="bulk-actions-bar hidden" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px;">
-        <button id="btnSelectAllEligibleDocs" class="btn small" type="button">Select All Eligible (Docs)</button>
+        <button id="btnSelectAllEligibleDocs" class="btn small" type="button">Select All Authoritative</button>
         <button id="btnClearDocsSelection" class="btn small" type="button">Clear Selection</button>
-        <button id="btnSendDocsBulk" class="btn small accent" type="button" disabled>Send Docs Quote to Selected</button>
+        <button id="btnSendDocsBulk" class="btn small accent" type="button" disabled>Open Batch Communication</button>
         <button id="btnRefreshEligibility" class="btn small" type="button">Refresh Eligibility</button>
         <button id="btnPaymentFollowupSoon" class="btn small" type="button" disabled title="Payment creation backend is not implemented">Payment creation backend missing</button>
         <span class="muted" id="docsBulkStatus" style="font-size:12px;"></span>
@@ -2882,7 +2882,7 @@
               <th>Doc Status</th>
               <th>Payment</th>
               <th>Portal</th>
-              <th>Docs Follow-Up</th>
+              <th>Communication</th>
               <th></th>
             </tr>
           </thead>
@@ -9339,12 +9339,12 @@ function renderStageDashboard_(items, emptyMessage){
         if (isDocsQueue) {
           var selectedCount = selectedDocsRows_().length;
           html += "<div class='row' style='margin-bottom:8px;align-items:center;gap:8px;'>";
-          html += "<button class='btn small' type='button' data-action='queue-docs-select-ready'>Select All Ready</button>";
+          html += "<button class='btn small' type='button' data-action='queue-docs-select-ready'>Select All Authoritative</button>";
           html += "<button class='btn small' type='button' data-action='queue-docs-clear'>Clear</button>";
-          html += "<button class='btn small accent' type='button' data-action='queue-docs-send-selected' " + ((isDocsSendBusy || selectedCount === 0) ? "disabled" : "") + ">" + (isDocsSendBusy ? "Sending..." : "Send Quote to Selected") + "</button>";
+          html += "<button class='btn small accent' type='button' data-action='queue-docs-send-selected' " + ((selectedCount === 0) ? "disabled" : "") + ">" + "Open Batch Communication" + "</button>";
           html += "<span class='muted' style='font-size:12px;'>" + String(selectedCount) + " selected</span>";
           html += "</div>";
-          html += "<table class='queue-table'><tr><th style='width:30px;'></th><th>Applicant</th><th class='sortableHeader' onclick='sortLegacyQueue_(\"" + esc(queueKey) + "\",\"name\")'>Name" + esc(legacyQueueSortLabel_(queueKey, "name")) + "</th><th>Workflow</th><th>Status</th><th class='sortableHeader' onclick='sortLegacyQueue_(\"" + esc(queueKey) + "\",\"received\")'>Received" + esc(legacyQueueSortLabel_(queueKey, "received")) + "</th><th class='sortableHeader' onclick='sortLegacyQueue_(\"" + esc(queueKey) + "\",\"age\")'>Age" + esc(legacyQueueSortLabel_(queueKey, "age")) + "</th><th>Docs Follow-Up</th><th>Action</th></tr>";
+          html += "<table class='queue-table'><tr><th style='width:30px;'></th><th>Applicant</th><th class='sortableHeader' onclick='sortLegacyQueue_(\"" + esc(queueKey) + "\",\"name\")'>Name" + esc(legacyQueueSortLabel_(queueKey, "name")) + "</th><th>Workflow</th><th>Status</th><th class='sortableHeader' onclick='sortLegacyQueue_(\"" + esc(queueKey) + "\",\"received\")'>Received" + esc(legacyQueueSortLabel_(queueKey, "received")) + "</th><th class='sortableHeader' onclick='sortLegacyQueue_(\"" + esc(queueKey) + "\",\"age\")'>Age" + esc(legacyQueueSortLabel_(queueKey, "age")) + "</th><th>Communication</th><th>Action</th></tr>";
           pageRows.forEach(function(row){
             var rowNumber = Number(row && row.rowNumber || 0);
             var applicantId = String((row && (row.ApplicantID || row.applicantId)) || "");
@@ -9357,15 +9357,13 @@ function renderStageDashboard_(items, emptyMessage){
             var hasPersistentSent = !!sentAt || sentFlag;
             var hasSessionSent = docsFollowupSentRows.has(rowNumber);
             var isSent = hasPersistentSent || hasSessionSent;
-            var eligible = !!(row && row.eligibleDocsFollowUp);
-            var canSendQuote = IS_SUPER && DOCS_FOLLOWUP_ENABLED && eligible && !isSent;
+            var canSendQuote = compatibilityCommunicationEligible_(row) && !isSent;
             var canReview = !!applicantId || (Number.isFinite(rowNumber) && rowNumber >= 2);
             var reviewTitle = canReview ? "Open review" : ("RowNumber missing - cannot review." + (dbg ? (" (dbg: " + dbg + ")") : ""));
             var checkDisabled = (!canSendQuote || isDocsSendBusy) ? "disabled" : "";
             var checkChecked = selectedDocsRowNumbers[String(rowNumber)] ? "checked" : "";
-            var statusText = isSent ? "Sent" : (eligible ? "Ready" : "Not ready");
-            var statusClass = isSent ? "statusTag sent" : (eligible ? "statusTag ready" : "statusTag off");
-            var sendTitle = isSent ? "Already sent." : (eligible ? "Send docs quote email now." : "All required documents must be Verified first.");
+            var statusText = isSent ? "Legacy sent" : (canSendQuote ? "Authoritative route ready" : "Review required");
+            var statusClass = isSent ? "statusTag sent" : (canSendQuote ? "statusTag ready" : "statusTag off");
             var receivedText = queueReceivedText_(row);
             var ageBadge = queueAgeBadge_(row);
             html += "<tr>";
@@ -9376,8 +9374,8 @@ function renderStageDashboard_(items, emptyMessage){
             html += "<td>" + renderLifecycleBadgesHtml_(row) + "</td>";
             html += "<td title='" + esc(queueReceivedTitle_(row)) + "'>" + esc(receivedText) + "</td>";
             html += "<td><span class='" + esc(ageBadge.cls) + "' title='" + esc(ageBadge.title) + "'>" + esc(ageBadge.label) + "</span></td>";
-            html += "<td><span class='" + statusClass + "'>" + esc(statusText) + "</span></td>";
-            html += "<td><button class='btn small' data-action='send-docs-single' data-applicant-id='" + esc(applicantId) + "' data-row-number='" + esc(String(Number.isFinite(rowNumber) ? rowNumber : "")) + "' title='" + esc(sendTitle) + "' " + (canSendQuote && !isDocsSendBusy ? "" : "disabled ") + ">Send Quote</button> <button class='btn small' data-action='queue-review' data-applicant-id='" + esc(applicantId) + "' data-row-number='" + esc(String(Number.isFinite(rowNumber) ? rowNumber : "")) + "' title='" + esc(reviewTitle) + "' " + (canReview ? "" : "disabled ") + ">Review</button></td>";
+            html += "<td><span class='" + statusClass + "' title='" + esc(docsFollowupReason_(row)) + "'>" + esc(compatibilityCommunicationLabel_(row)) + "</span></td>";
+            html += "<td><button class='btn small' data-action='queue-review' data-applicant-id='" + esc(applicantId) + "' data-row-number='" + esc(String(Number.isFinite(rowNumber) ? rowNumber : "")) + "' title='" + esc(reviewTitle) + "' " + (canReview ? "" : "disabled ") + ">Review</button></td>";
             html += "</tr>";
           });
         } else if (queueKey === "queuePayments") {
@@ -11772,10 +11770,11 @@ function renderStageDashboard_(items, emptyMessage){
           var qApplicantId = String(queueSendSingle.getAttribute("data-applicant-id") || "").trim();
           var qRowNumber = Number(queueSendSingle.getAttribute("data-row-number") || 0);
           if (!Number.isFinite(qRowNumber) || qRowNumber < 2) {
-            setDocsSendSummary_("Cannot send docs quote: invalid row number.", true);
+            setDocsSendSummary_("Cannot open Review Workspace: invalid row number.", true);
             return;
           }
-          sendDocsFollowup_([qRowNumber], "queue-single", [qApplicantId]);
+          setDocsSendSummary_("Legacy Docs Follow-Up send retired. Opening Review Workspace for authoritative communication.", false);
+          review(qRowNumber, qApplicantId, null);
           return;
         }
         var selectReadyBtn = target.closest('button[data-action="queue-docs-select-ready"]');
@@ -11788,7 +11787,7 @@ function renderStageDashboard_(items, emptyMessage){
             var sentFlag = !!(row && (row.docsFollowupSent || row.docsFollowupStatus === "Sent"));
             var rowNumKey = Number(row && row.rowNumber || 0);
             var hasSessionSent = docsFollowupSentRows.has(rowNumKey);
-            var canSelect = !!(row && row.eligibleDocsFollowUp) && !sentAt && !sentFlag && !hasSessionSent;
+            var canSelect = compatibilityCommunicationEligible_(row) && !sentAt && !sentFlag && !hasSessionSent;
             if (canSelect && Number.isFinite(rowNum) && rowNum >= 2) selectedDocsRowNumbers[String(rowNum)] = true;
           });
           rerenderQueue_("queueDocs");
@@ -11813,7 +11812,7 @@ function renderStageDashboard_(items, emptyMessage){
             var row = qByRow[String(rowNum)] || {};
             return String((row.ApplicantID || row.applicantId || "") || "");
           });
-          sendDocsFollowup_(selectedRows, "queue-bulk", ids);
+          openCompatibilityCommunicationRows_(compatibilitySelectedRowsForSource_(selectedRows, "queue-bulk"), "queue-bulk");
           return;
         }
         var btn = target.closest('button[data-action="queue-review"]');
@@ -12045,27 +12044,34 @@ function renderStageDashboard_(items, emptyMessage){
       return !!sentAt || sentFlag || docsFollowupSentRows.has(rowNumber);
     }
 
+    function compatibilityCommunicationEligible_(row){
+      return actionabilityIsSelectable_(row) && !!actionabilityBatchMessageType_(row && row.recommendedMessageType);
+    }
+
+    function compatibilityCommunicationLabel_(row){
+      var type = actionabilityBatchMessageType_(row && row.recommendedMessageType);
+      return type ? actionabilityCommsLabel_(type) : "No authoritative communication";
+    }
+
     function docsFollowupReason_(row){
-      if (!DOCS_FOLLOWUP_ENABLED) return "Docs follow-up is disabled by config.";
-      if (isDocsFollowupSent_(row)) return "Already sent.";
-      return "All required documents must be Verified first.";
+      if (isDocsFollowupSent_(row)) return "Already sent through the legacy Docs Follow-Up path. Use Review Workspace or Batch Communication for current authority checks.";
+      if (compatibilityCommunicationEligible_(row)) return "Legacy Docs Follow-Up send is retired. Use authoritative Batch Communication or Review Workspace.";
+      if (row && row.selectBlockReason) return String(row.selectBlockReason);
+      if (row && row.recommendedMessageType) return "Recommended communication: " + compatibilityCommunicationLabel_(row) + ". Open Review Workspace for the authoritative path.";
+      return "No authoritative communication cohort is currently available.";
     }
 
     function renderDocsFollowupCell_(r){
-      var eligible = !!(r && r.eligibleDocsFollowUp);
       var isSent = isDocsFollowupSent_(r);
-      var applicantId = esc((r && r.applicantId) || "");
-      var rowNumber = Number(r && r.rowNumber || 0);
-      var canSend = IS_SUPER && DOCS_FOLLOWUP_ENABLED && eligible && !isSent;
-      var title = canSend ? "Eligible for manual Docs Follow-Up send." : docsFollowupReason_(r);
+      var recommended = compatibilityCommunicationLabel_(r);
+      var title = docsFollowupReason_(r);
       var html = "";
       if (isSent) {
-        html += '<span class="badge bg-secondary" title="Already sent">Sent</span>';
-      } else if (canSend) {
-        html += '<button class="btn btn-success btn-sm send-quote-btn" type="button" data-action="send-docs-single" data-applicant-id="' + applicantId + '" data-row-number="' + esc(String(Number.isFinite(rowNumber) ? rowNumber : "")) + '" title="' + esc("Send docs quote email now.") + '">Send Quote</button>';
-        html += ' <span class="badge bg-success" title="' + esc(title) + '">Ready</span>';
+        html += '<span class="badge bg-secondary" title="' + esc(title) + '">Legacy sent</span>';
+      } else if (compatibilityCommunicationEligible_(r)) {
+        html += '<span class="badge bg-success" title="' + esc(title) + '">' + esc(recommended) + '</span>';
       } else {
-        html += '<span class="badge bg-warning text-dark" title="' + esc(IS_SUPER ? title : "Supervisory action - normal Admin workflow is preview/read only.") + '">' + (IS_SUPER ? 'Not Ready' : 'Supervisory Only') + '</span>';
+        html += '<span class="badge bg-warning text-dark" title="' + esc(title) + '">' + esc(recommended) + '</span>';
       }
       return html;
     }
@@ -12085,16 +12091,13 @@ function renderStageDashboard_(items, emptyMessage){
       var selected = selectedDocsRows_();
       var count = selected.length;
       var btn = document.getElementById("btnSendDocsBulk");
-      if (btn) btn.disabled = isDocsSendBusy || count === 0 || !DOCS_FOLLOWUP_ENABLED || !IS_SUPER;
+      if (btn) btn.disabled = count === 0;
       var msg = document.getElementById("docsBulkStatus");
-      if (msg) msg.textContent = !IS_SUPER ? "Supervisory action - normal Admin workflow is preview/read only." : (DOCS_FOLLOWUP_ENABLED ? (count ? (count + " selected") : "No rows selected") : "Docs follow-up disabled");
+      if (msg) msg.textContent = count ? (count + " selected for authoritative Batch Communication") : "No rows selected";
       Array.from(document.querySelectorAll('input[data-action="docs-select-row"]')).forEach(function(chk){
         var n = Number(chk.getAttribute("data-row-number") || 0);
         chk.checked = !!selectedDocsRowNumbers[String(n)];
-        chk.disabled = isDocsSendBusy || chk.getAttribute("data-eligible") !== "1";
-      });
-      Array.from(document.querySelectorAll('button[data-action="send-docs-single"]')).forEach(function(btnEl){
-        if (isDocsSendBusy) btnEl.disabled = true;
+        chk.disabled = chk.getAttribute("data-eligible") !== "1";
       });
     }
 
@@ -12106,7 +12109,7 @@ function renderStageDashboard_(items, emptyMessage){
         if (el) el.disabled = isDocsSendBusy;
       });
       var sendBtn = document.getElementById("btnSendDocsBulk");
-      if (sendBtn) sendBtn.textContent = isDocsSendBusy ? "Sending..." : "Send Docs Quote to Selected";
+      if (sendBtn) sendBtn.textContent = isDocsSendBusy ? "Opening..." : "Open Batch Communication";
       rerenderQueue_("queueDocs");
       updateBulkDocsUi_();
     }
@@ -12216,44 +12219,68 @@ function renderStageDashboard_(items, emptyMessage){
       setMsg("msg", "Server failure: " + msg);
     }
 
-    function sendDocsFollowup_(rowNumbers, sourceLabel, applicantIds){
-      if (!IS_SUPER) {
-        setDocsSendSummary_("Supervisory action \u2014 requires approval, preview, confirmation, and audit. Normal Admin workflow cannot send document follow-up emails.", true);
-        setMsg("docsBulkStatus", "Supervisory action - normal Admin workflow is preview/read only.");
-        return;
+    function compatibilityRowsForSource_(sourceLabel){
+      if (String(sourceLabel || "").indexOf("queue-") === 0) {
+        return (queueRenderCache.queueDocs && Array.isArray(queueRenderCache.queueDocs.rows)) ? queueRenderCache.queueDocs.rows : [];
       }
-      if (!DOCS_FOLLOWUP_ENABLED) {
-        setMsg("msg", "Docs follow-up is disabled by config.");
-        return;
-      }
-      var rows = Array.isArray(rowNumbers) ? rowNumbers : [];
-      var ids = Array.isArray(applicantIds) ? applicantIds : [];
-      if (!rows.length) {
+      return Array.isArray(lastSearchRows) ? lastSearchRows : [];
+    }
+
+    function compatibilitySelectedRowsForSource_(rowNumbers, sourceLabel){
+      var byRowNumber = {};
+      compatibilityRowsForSource_(sourceLabel).forEach(function(row){
+        var rowNumber = Number(row && row.rowNumber || 0);
+        if (Number.isFinite(rowNumber) && rowNumber >= 2) byRowNumber[String(rowNumber)] = row;
+      });
+      return (Array.isArray(rowNumbers) ? rowNumbers : []).map(function(rowNumber){
+        return byRowNumber[String(Number(rowNumber || 0))] || null;
+      }).filter(Boolean);
+    }
+
+    function compatibilityBatchSourceLabel_(sourceLabel){
+      if (String(sourceLabel || "").indexOf("queue-") === 0) return "Compatibility Review Queue selection";
+      return "Legacy Search selection";
+    }
+
+    function openCompatibilityCommunicationRows_(rows, sourceLabel){
+      var list = Array.isArray(rows) ? rows.filter(Boolean) : [];
+      if (!list.length) {
         setDocsSendSummary_("No applicants selected.", true);
         return;
       }
-      var blocked = [];
-      ids.forEach(function(id){
-        if (id && !canAttemptDocsSend_(id)) blocked.push(id);
-      });
-      if (blocked.length) {
-        setDocsSendSummary_("Please wait before trying again. Blocked: " + blocked.join(", "), true);
+      var ids = normalizeBatchCommApplicantIds_(list.map(function(row){
+        return String(row && row.applicantId || row && row.ApplicantID || "");
+      }));
+      if (!ids.length) {
+        setDocsSendSummary_("No authoritative communication cohort is available for the selected compatibility rows.", true);
         return;
       }
-      ids.forEach(function(id){ rememberDocsSendAttempt_(id); });
-      setDocsSendBusy_(true);
-      setDocsSendSummary_("Sending...", false);
-      setMsg("docsBulkStatus", "Sending...");
-      google.script.run
-        .withSuccessHandler(function(res){
-          setDocsSendBusy_(false);
-          renderDocsFollowupSummary_(res, sourceLabel);
-        })
-        .withFailureHandler(function(err){
-          setDocsSendBusy_(false);
-          renderDocsFollowupError_(err);
-        })
-        .admin_sendDocsFollowupEmails({ mode: rows.length > 1 ? "bulk" : "single", rowNumbers: rows });
+      if (ids.length === 1) {
+        var one = list[0] || {};
+        setDocsSendSummary_("Legacy Docs Follow-Up send retired. Opening Review Workspace for authoritative communication.", false);
+        setMsg("docsBulkStatus", "Opening Review Workspace.");
+        review(Number(one.rowNumber || 0), String(one.applicantId || one.ApplicantID || ""), null);
+        return;
+      }
+      var cohortGroups = batchCommSelectedCohortsFromRows_(list, "selected");
+      if (!cohortGroups.length) {
+        setDocsSendSummary_("No authoritative communication cohort is available. Open Review Workspace for the selected applicants.", true);
+        setMsg("docsBulkStatus", "No authoritative communication cohort available.");
+        return;
+      }
+      setDocsSendSummary_("Legacy Docs Follow-Up send retired. Opened authoritative Batch Communication.", false);
+      setMsg("docsBulkStatus", "Opening Batch Communication.");
+      openBatchCommunicationModal_({
+        sourceType: "selected",
+        sourceLabel: compatibilityBatchSourceLabel_(sourceLabel),
+        sourceSelectedTotal: ids.length,
+        cohortGroups: cohortGroups
+      });
+    }
+
+    function sendDocsFollowup_(rowNumbers, sourceLabel, applicantIds){
+      void applicantIds;
+      openCompatibilityCommunicationRows_(compatibilitySelectedRowsForSource_(rowNumbers, sourceLabel), sourceLabel);
     }
 
     function search(){
@@ -12449,10 +12476,11 @@ function renderStageDashboard_(items, emptyMessage){
         var sendApplicantId = String(singleSendBtn.getAttribute("data-applicant-id") || "").trim();
         var sendRowNumber = Number(singleSendBtn.getAttribute("data-row-number") || 0);
         if (!Number.isFinite(sendRowNumber) || sendRowNumber < 2) {
-          setMsg("msg", "Cannot send docs quote: invalid row number.");
+          setMsg("msg", "Cannot open Review Workspace: invalid row number.");
           return;
         }
-        sendDocsFollowup_([sendRowNumber], "results-single", [sendApplicantId]);
+        setDocsSendSummary_("Legacy Docs Follow-Up send retired. Opening Review Workspace for authoritative communication.", false);
+        review(sendRowNumber, sendApplicantId, null);
         return;
       }
       var btn = ev.target && ev.target.closest ? ev.target.closest('[data-action="review"]') : null;
@@ -12504,7 +12532,7 @@ function renderStageDashboard_(items, emptyMessage){
       (lastSearchRows || []).forEach(function(r){
         var rowNumber = Number(r && r.rowNumber || 0);
         if (!Number.isFinite(rowNumber) || rowNumber < 2) return;
-        if (r && r.eligibleDocsFollowUp) selectedDocsRowNumbers[String(rowNumber)] = true;
+        if (compatibilityCommunicationEligible_(r)) selectedDocsRowNumbers[String(rowNumber)] = true;
       });
       updateBulkDocsUi_();
     }
@@ -12515,15 +12543,7 @@ function renderStageDashboard_(items, emptyMessage){
         setMsg("docsBulkStatus", "No rows selected.");
         return;
       }
-      var byRow = {};
-      (lastSearchRows || []).forEach(function(r){
-        byRow[String(Number(r && r.rowNumber || 0))] = r || {};
-      });
-      var applicantIds = selectedRows.map(function(rowNum){
-        var row = byRow[String(rowNum)] || {};
-        return String(row.applicantId || "");
-      });
-      sendDocsFollowup_(selectedRows, "results-bulk", applicantIds);
+      openCompatibilityCommunicationRows_(compatibilitySelectedRowsForSource_(selectedRows, "results-bulk"), "results-bulk");
     }
 
     function setRoleUi(){

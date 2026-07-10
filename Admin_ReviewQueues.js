@@ -257,6 +257,9 @@ function admin_getReviewQueues(payload) {
         var docsFollowupEligibleBase = CONFIG.DOCS_FOLLOWUP_ENABLE === true && docsVerifiedForFollowup && hasValidEmailForFollowup;
         var docsFollowupSentAt = getDocsFollowupSentAt_(rowObj);
         var eligibleDocsFollowUp = docsFollowupEligibleBase && !safeStr_(docsFollowupSentAt || "");
+        var authorityProjection = typeof compatibilityCommunicationAuthorityProjection_ === "function"
+          ? compatibilityCommunicationAuthorityProjection_(rowObj, r + 1)
+          : null;
         var receivedInfo = pickQueueReceivedInfo_(rowObj);
         var qItem = {
           rowNumber: r + 1,
@@ -288,6 +291,11 @@ function admin_getReviewQueues(payload) {
           eligibleDocsFollowUp: !!eligibleDocsFollowUp,
           docsFollowupSentAt: safeStr_(docsFollowupSentAt || "")
         };
+        if (authorityProjection && typeof authorityProjection === "object") {
+          for (var authorityKey in authorityProjection) {
+            if (Object.prototype.hasOwnProperty.call(authorityProjection, authorityKey)) qItem[authorityKey] = authorityProjection[authorityKey];
+          }
+        }
 
         var hasActivity = hasStudentActivity_(rowObj);
         var portalSubmitted = adminRowPortalSubmitted_(rowObj);
