@@ -8924,7 +8924,11 @@ function deriveApplicantActionability_(rowObj, lifecycleStage, opts) {
   var isValidEmail = typeof options.isValidEmail === 'function' ? options.isValidEmail : isValidEffectiveEmail_;
   var getRecommendedMessageType = typeof options.getRecommendedMessageType === 'function' ? options.getRecommendedMessageType : communicationRecommendedMessageTypeForStage_;
   var resolveEligibility = options.resolveEligibility === true;
-  var recommendedMessageType = clean_(getRecommendedMessageType(stage) || "");
+  var canonicalLifecycle = typeof resolveCanonicalApplicantLifecycle_ === 'function'
+    ? resolveCanonicalApplicantLifecycle_(row, {})
+    : null;
+  var canonicalRecommendedMessageType = clean_(canonicalLifecycle && canonicalLifecycle.recommendedMessageType || "");
+  var recommendedMessageType = clean_(canonicalRecommendedMessageType || getRecommendedMessageType(stage) || "");
   var communicationState = resolveEligibility
     ? deriveCommunicationState_(row, recommendedMessageType, { applicantId: applicantId })
     : null;
