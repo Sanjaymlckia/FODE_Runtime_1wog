@@ -142,6 +142,12 @@ assert.match(functionSource("actionabilityEligibleNowCountForGroup_"), /actionab
 assert.match(functionSource("actionabilityCoolingOffCountForGroup_"), /actionabilityBucketSummaryForGroup_\(key\)[\s\S]*summary\.coolingOffCount[\s\S]*workload\.COOLING_OFF[\s\S]*COOLING_OFF/, "Applicant Action cooling-off count must prefer server-authored bucket summaries with workload and row fallbacks");
 assert.match(functionSource("renderActionabilityBucketCard_"), /actionabilityEligibleNowCountForGroup_\(key, rows\)[\s\S]*actionabilityCoolingOffCountForGroup_\(key, rows\)/, "Operational cards must derive eligible/cooling counts from shared Actionability authority helpers");
 assert.match(functionSource("renderActionabilityPreview_"), /actionabilityBucketSummariesState = data\.bucketSummaries \|\| \{\}/, "Operations Workspace must hydrate server-authored bucket summaries");
+assert.match(functionSource("actionabilityGroupKey_"), /workloadGroupKey/, "UI bucket routing must prefer the server-authored workload group key");
+assert.match(functionSource("actionabilityGroupKey_"), /SEND_PAYMENT_REMINDER[\s\S]*VERIFY_PAYMENT[\s\S]*return "FINANCE"/, "Payment-follow-up and payment-review rows must project into the Finance workload group");
+assert.match(functionSource("actionabilityWorklistKey_"), /worklistKey/, "UI worklist routing must prefer the server-authored worklist key");
+assert.match(functionSource("actionabilityWorklistLabel_"), /PAYMENT_FOLLOW_UP[\s\S]*Payment Follow-up[\s\S]*PAYMENT_REVIEW[\s\S]*Payment Review/, "UI worklist labels must distinguish payment follow-up from payment review");
+assert.match(functionSource("actionabilityWorklistReason_"), /PAYMENT_FOLLOW_UP[\s\S]*Awaiting payment evidence[\s\S]*PAYMENT_REVIEW[\s\S]*Receipt pending verification/, "UI worklist reasons must distinguish finance follow-up from receipt verification");
+assert.match(functionSource("renderActionabilityWorklistSwitcher_"), /Worklist:[\s\S]*actionabilityWorklistLabel_[\s\S]*setActionabilityWorklistKey_/, "Finance rows must expose an immediate worklist switcher bound to the shared worklist helpers");
 assert.match(adminUi, /Next Operator Action/, "Operational cards must preserve next action scanning");
 assert.match(adminUi, /actionabilityBucketStatusBlock/, "Operational cards must expose concise status blocks");
 assert.doesNotMatch(adminUi, /Not derived|Cooling not yet derived|Cooling Off/, "Operational cards must not advertise unfinished Cooling Off placeholders");
@@ -172,7 +178,8 @@ assert.match(adminUi, /actionabilityBucketHiddenPanel[\s\S]*Hidden ' \+ esc\(hid
 assert.match(adminUi, /data-actionability-bucket-sort/, "Operational bucket cards must expose sort controls");
 assert.match(adminUi, /onclick="selectActionabilityGroup_/, "Operational bucket rows must select an actionability group");
 assert.match(adminUi, /var rawDisplayRows = actionabilityActiveGroup \? \(groupRows\[actionabilityActiveGroup\] \|\| \[\]\) : rows;/, "KPI/group filters must still drive displayed worklist source rows");
-assert.match(adminUi, /var displayRows = actionabilityActiveGroup \? actionabilityDisplayRowsForGroup_\(actionabilityActiveGroup, rawDisplayRows\) : rawDisplayRows;/, "KPI/group filters must reconcile displayed worklist rows through server actionability DTOs");
+assert.match(adminUi, /var worklistRows = actionabilityActiveGroup \? actionabilityRowsForActiveWorklist_\(actionabilityActiveGroup, rawDisplayRows\) : rawDisplayRows;/, "Displayed rows must first reconcile the immediate active worklist within the broad group");
+assert.match(adminUi, /var displayRows = actionabilityActiveGroup \? actionabilityDisplayRowsForGroup_\(actionabilityActiveGroup, worklistRows\) : worklistRows;/, "KPI/group filters must reconcile displayed worklist rows through server actionability DTOs after worklist scoping");
 assert.match(adminUi, /actionabilityPopulationLedgerState\s*=\s*ledger/, "Operations Workspace must retain Population Ledger summary from the backend");
 assert.match(adminUi, /function actionabilityPopulationCountForGroup_/, "Operations Workspace KPI totals must have a ledger-backed count resolver");
 assert.match(adminUi, /operationalBucketCounts/, "Operations Workspace must consume ledger operational bucket counts");
@@ -180,6 +187,9 @@ assert.match(adminUi, /actionabilityPopulationCountForGroup_\(key,\s*rows\.lengt
 assert.match(adminUi, /eligible-now rows shown/, "Operations Workspace meta must label Applicant Action rows as eligible-now work");
 assert.match(adminUi, /bounded worklist rows/, "Operations Workspace meta must retain bounded worklist wording for non-Applicant filters");
 assert.match(adminUi, /String\(populationTotal\) \+ " total applicant population/, "Operations Workspace meta must separate displayed worklist rows from population totals");
+assert.match(adminUi, /actionabilityActiveWorklistKey/, "Operations Workspace must track a distinct active worklist key inside aggregated buckets");
+assert.match(functionSource("renderActionabilityPreview_"), /actionabilityGroupKey_\(r\) === "FINANCE" \? \("Finance \/ " \+ worklistLabel\)/, "Finance rows must surface the immediate finance worklist label inside the current worklist");
+assert.match(functionSource("renderActionabilityPreview_"), /worklistReason/, "Finance rows must surface an immediate worklist reason alongside the worklist label");
 assert.doesNotMatch(renderActionabilityRowBody_(), /Newest:/, "Operational bucket cards must not spend benchmark scan space on newest metadata");
 assert.match(adminUi, /stagePopulationLedgerState/, "Lifecycle Map must retain Population Ledger summary from the backend");
 assert.match(adminUi, /Population Ledger: " \+ String\(Number\(ledger\.applicantIdRows/, "Lifecycle Map metadata must report ledger applicant population");
@@ -298,6 +308,8 @@ assert.match(functionSource("openBatchCommunicationFromSelection_"), /actionabil
 assert.match(functionSource("selectVisibleActionabilityRows_"), /var visible = Array\.isArray\(actionabilityRenderedRows\)[\s\S]*Current page selection[\s\S]*READY rows selected/, "Select Visible must select READY rows from the current page only");
 assert.match(functionSource("selectAllActionabilityRows_"), /actionabilitySelectionSource = "all"/, "Select All must mark the full bounded cohort source");
 assert.match(functionSource("loadActionabilityPreview_"), /admin_getActionabilityPreview\(\{ limit: 100/, "Operations Workspace must load the full existing bounded worklist cap before client pagination");
+assert.match(functionSource("selectAllActionabilityRows_"), /actionabilityRowsForActiveWorklist_\(actionabilityActiveGroup, rows\)/, "Select All must respect the active immediate worklist inside aggregated buckets");
+assert.match(functionSource("selectAllActionabilityRows_"), /All returned READY rows selected for Finance \/ /, "Finance Select All message must scope selection to the active immediate worklist");
 assert.match(functionSource("batchCommCanSend_"), /previewStale === true/, "Quick exclusions must make preview stale before send");
 assert.match(functionSource("batchCommCanSend_"), /sendResult[\s\S]*ok !== false[\s\S]*return false/, "Completed batch sends must disable repeat send attempts from the same preview");
 assert.match(functionSource("toggleBatchCommRecipient_"), /previewStale = true/, "Quick exclusions must update counts and require a fresh preview");

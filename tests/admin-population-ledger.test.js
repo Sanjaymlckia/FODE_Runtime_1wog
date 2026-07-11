@@ -20,6 +20,8 @@ function extractFunction(source, name) {
 }
 
 const ledgerFunctionNames = [
+  "actionabilityWorkloadGroupKey_",
+  "actionabilityPopulationBucketForGroupKey_",
   "populationLedgerBucketNames_",
   "populationLedgerEmptyBucketCounts_",
   "populationLedgerRowObjectFromValues_",

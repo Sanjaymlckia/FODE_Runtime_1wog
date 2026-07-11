@@ -34,6 +34,8 @@ function extractFunction(source, name) {
 const resolver = extractFunction(adminJs, "resolveActionabilityState_");
 const batchMessageTypeMapping = extractFunction(adminJs, "actionabilityBatchMessageTypeForRecommendation_");
 const builder = extractFunction(adminJs, "buildActionabilityPreviewRow_");
+const workloadGroupKey = extractFunction(adminJs, "actionabilityWorkloadGroupKey_");
+const worklistProjection = extractFunction(adminJs, "actionabilityWorklistProjection_");
 const applicantDetail = extractFunction(adminJs, "admin_getApplicantDetail");
 const preview = extractFunction(adminJs, "admin_getActionabilityPreview");
 const driftHelpers = [
@@ -60,6 +62,8 @@ assert.doesNotMatch(resolver, /Current lifecycle stage recommends/, "Operator-fa
 assert.doesNotMatch(resolver, /evaluateCommunicationAuthority_/, "Resolver must not duplicate or replace Communication Authority");
 assert.match(builder, /resolveActionabilityState_/, "Preview row builder must consume the resolver");
 assert.match(builder, /canonicalRecommendedMessageType:[\s\S]*canonicalLifecycle && canonicalLifecycle\.recommendedMessageType/, "Preview row builder must pass canonical lifecycle recommendations into actionability");
+assert.match(builder, /workloadGroupKey:[\s\S]*actionabilityWorkloadGroupKey_/, "Preview row builder must expose the broad workload group key");
+assert.match(builder, /worklistKey:[\s\S]*worklistProjection\.worklistKey[\s\S]*worklistLabel:[\s\S]*worklistProjection\.worklistLabel[\s\S]*worklistReason:[\s\S]*worklistProjection\.worklistReason/, "Preview row builder must expose the immediate worklist projection DTO");
 assert.match(builder, /postDocsMissingSentCoolingOff[\s\S]*Last_Contact_Type[\s\S]*docs_missing[\s\S]*Last_Contact_Result[\s\S]*SENT/, "Post-send docs_missing rows with future next-action dates must be recognized as cooling-off workload");
 assert.match(builder, /postDocsMissingSentCoolingOff \|\| cooldownActive\)[\s\S]*suppressor = "COOLDOWN_ACTIVE"/, "Post-send docs_missing cooling-off must feed the server-side selectable=false resolver path");
 assert.match(builder, /resolveCanonicalApplicantLifecycle_/, "Preview row builder must expose canonical lifecycle diagnostics without changing behaviour");
@@ -80,6 +84,9 @@ assert.match(applicantDetail, /authorityState:[\s\S]*paymentEvidencePresent:[\s\
 assert.match(selectVisible, /if \(!actionabilityIsSelectable_\(row\)\) return;/, "Select Visible must select READY rows only");
 assert.match(selectAll, /if \(!actionabilityIsSelectable_\(row\)\) return;/, "Select All must select READY rows only");
 assert.match(toggle, /checked && !actionabilityIsSelectable_\(row\)/, "Manual checkbox selection must reject non-READY rows");
+assert.match(workloadGroupKey, /SEND_PAYMENT_REMINDER[\s\S]*VERIFY_PAYMENT[\s\S]*return "FINANCE"/, "Finance workload grouping must aggregate both payment follow-up and payment review");
+assert.match(worklistProjection, /SEND_PAYMENT_REMINDER[\s\S]*PAYMENT_FOLLOW_UP[\s\S]*Payment Follow-up[\s\S]*Awaiting payment evidence/, "Payment follow-up rows must project to the PAYMENT_FOLLOW_UP worklist");
+assert.match(worklistProjection, /VERIFY_PAYMENT[\s\S]*PAYMENT_REVIEW[\s\S]*Payment Review[\s\S]*Receipt pending verification/, "Payment review rows must project to the PAYMENT_REVIEW worklist");
 
 const context = {
   clean_: (value) => String(value == null ? "" : value).trim()
@@ -117,7 +124,7 @@ const resolverContext = {
   }
 };
 vm.createContext(resolverContext);
-vm.runInContext(`${batchMessageTypeMapping}\n${resolver}`, resolverContext);
+vm.runInContext(`${batchMessageTypeMapping}\n${workloadGroupKey}\n${worklistProjection}\n${resolver}`, resolverContext);
 
 const canonicalDocsMissing = resolverContext.resolveActionabilityState_({
   owner: "APPLICANT",
@@ -164,5 +171,29 @@ const legacyMismatch = resolverContext.resolveActionabilityState_({
 assert.equal(legacyMismatch.reasonCode, "TEMPLATE_STAGE_MISMATCH", "Legacy stage mismatch fallback remains visible when canonical recommendation is absent");
 assert.equal(legacyMismatch.selectable, false, "Legacy mismatch fallback remains non-selectable");
 assert.match(legacyMismatch.selectBlockReason, /Current applicant state is not ready/, "Mismatch fallback must use operator-readable state wording");
+
+const paymentFollowUpProjection = resolverContext.actionabilityWorklistProjection_({
+  nextAction: "SEND_PAYMENT_REMINDER",
+  authorityState: {
+    paymentEvidencePresent: false,
+    paymentVerified: false
+  }
+});
+assert.equal(paymentFollowUpProjection.worklistKey, "PAYMENT_FOLLOW_UP", "Payment reminder rows must retain a distinct follow-up worklist");
+assert.equal(paymentFollowUpProjection.worklistLabel, "Payment Follow-up", "Payment reminder rows must expose a stable worklist label");
+assert.equal(paymentFollowUpProjection.worklistReason, "Awaiting payment evidence", "Payment reminder rows must expose the payment-evidence reason");
+assert.equal(resolverContext.actionabilityWorkloadGroupKey_({ actionOwner: "APPLICANT", nextAction: "SEND_PAYMENT_REMINDER" }), "FINANCE", "Payment reminder rows must still aggregate under the Finance workload group");
+
+const paymentReviewProjection = resolverContext.actionabilityWorklistProjection_({
+  nextAction: "VERIFY_PAYMENT",
+  authorityState: {
+    paymentEvidencePresent: true,
+    paymentVerified: false
+  }
+});
+assert.equal(paymentReviewProjection.worklistKey, "PAYMENT_REVIEW", "Verify-payment rows must retain a distinct payment review worklist");
+assert.equal(paymentReviewProjection.worklistLabel, "Payment Review", "Verify-payment rows must expose a stable worklist label");
+assert.equal(paymentReviewProjection.worklistReason, "Receipt pending verification", "Verify-payment rows must explain pending receipt verification");
+assert.equal(resolverContext.actionabilityWorkloadGroupKey_({ actionOwner: "FINANCE", nextAction: "VERIFY_PAYMENT" }), "FINANCE", "Verify-payment rows must aggregate under the Finance workload group");
 
 console.log("PASS Actionability A1 resolver contract");

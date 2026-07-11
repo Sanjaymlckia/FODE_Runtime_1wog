@@ -10,6 +10,7 @@ const adminSource = [
   fs.readFileSync("Admin_ReviewStatusAuthority.js", "utf8")
 ].join("\n");
 const codeSource = fs.readFileSync("Code.js", "utf8");
+const adminUiSource = fs.readFileSync("AdminUI.html", "utf8");
 
 function extractFunction(source, name) {
   const marker = `function ${name}`;
@@ -155,10 +156,30 @@ for (const surface of surfaces) {
 
 const selectedSendCore = extractFunction(codeSource, "sendApplicantMessage_");
 const dispatchApplicant = extractFunction(codeSource, "dispatchApplicantMessage_");
+const buildActionabilityPreviewRow = extractFunction(adminSource, "buildActionabilityPreviewRow_");
+const workloadGroupKey = extractFunction(adminSource, "actionabilityWorkloadGroupKey_");
+const worklistProjection = extractFunction(adminSource, "actionabilityWorklistProjection_");
+const actionabilityIsSelectable = extractFunction(adminUiSource, "actionabilityIsSelectable_");
+const actionabilityIsEmailActionable = extractFunction(adminUiSource, "actionabilityIsEmailActionable_");
+const getAdminRole = extractFunction(adminSource, "getAdminRole_");
+const isAdmin = extractFunction(adminSource, "isAdmin_");
+const requireSuperAdmin = extractFunction(adminSource, "requireSuperAdmin_");
+const requireOperationsAdmin = extractFunction(adminSource, "requireOperationsAdmin_");
 assert.match(selectedSendCore, /CONFIG\.ENABLE_PRODUCTION_EMAIL_SENDS !== true/, "Selected send core must retain production-send disable gate");
 assert.match(selectedSendCore, /communicationRequiresResolvedActionPlaceholders_/, "Selected send core must retain placeholder policy");
 assert.match(dispatchApplicant, /computeEmailIdempotencyKey_/, "Selected send dispatch must retain idempotency key");
 assert.match(dispatchApplicant, /wasEmailAlreadyProcessed_/, "Selected send dispatch must block replay");
 
+assert.doesNotMatch(getAdminRole + "\n" + isAdmin + "\n" + requireSuperAdmin + "\n" + requireOperationsAdmin, /FINANCE|PAYMENT_FOLLOW_UP|PAYMENT_REVIEW/, "Access-control helpers must not treat Finance workload labels as permission roles or gates");
+assert.match(buildActionabilityPreviewRow, /actionOwner:\s*owner[\s\S]*workloadGroupKey:[\s\S]*worklistKey:[\s\S]*worklistLabel:[\s\S]*worklistReason:/, "Workload group/worklist projections must remain additive to the unchanged actionOwner");
+assert.doesNotMatch(workloadGroupKey, /isAdmin_|requireOperationsAdmin_|requireSuperAdmin_|getAdminRole_/, "Broad workload grouping must not inspect admin role or permissions");
+assert.doesNotMatch(worklistProjection, /isAdmin_|requireOperationsAdmin_|requireSuperAdmin_|getAdminRole_/, "Immediate worklist projection must not inspect admin role or permissions");
+assert.doesNotMatch(actionabilityIsSelectable, /FINANCE|PAYMENT_FOLLOW_UP|PAYMENT_REVIEW/, "Selectable-state authority must not depend on finance workload classification");
+assert.doesNotMatch(actionabilityIsEmailActionable, /FINANCE|PAYMENT_FOLLOW_UP|PAYMENT_REVIEW/, "Email/batch eligibility must remain driven by shared selectable/message-type authority, not finance workload labels");
+assert.match(adminUiSource, /Review Workspace remains the editing authority\./, "Operations Workspace must continue to declare Review Workspace as the mutation surface");
+assert.match(adminUiSource, /Review opens authoritative editing\./, "Current Worklist must continue to route editing through Review Workspace");
+assert.match(adminUiSource, /if \(!actionabilityIsSelectable_\(row\)\) return;/, "Authorised operators must continue to be blocked only by server-derived selectable state, not workload grouping");
+
 console.log("PASS mutation-capable Admin RPC role gates remain explicit");
 console.log("PASS send authority retains production, placeholder, and idempotency gates");
+console.log("PASS Finance workload grouping remains classification-only and does not create departmental authority");

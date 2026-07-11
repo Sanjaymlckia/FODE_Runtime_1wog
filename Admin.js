@@ -2450,8 +2450,11 @@ function actionabilityWorkloadExplanationEmpty_() {
   return {
     "Awaiting applicant upload": 0,
     "Contactability exception": 0,
+    "Payment evidence required": 0,
+    "Payment reminder sent today": 0,
     "Reminder sent today": 0,
     "Awaiting applicant response": 0,
+    "Awaiting payment evidence": 0,
     "Cooling-off": 0,
     "Escalation due": 0,
     "Ready for reminder": 0,
@@ -2487,6 +2490,11 @@ function actionabilityWorkloadExplanationForRow_(row) {
   if (next === "REVIEW_DOCUMENTS" || reason === "OFFICER_ACTION_PENDING") return "Ready for academic review";
   if (reason === "FINANCE_ACTION_PENDING") return "Awaiting finance review";
   if (reason === "ADMIN_ACTION_PENDING") return "Awaiting admin completion";
+  if (next === "SEND_PAYMENT_REMINDER") {
+    if (Number(r.lastContactAgeDays || 0) === 0) return "Payment reminder sent today";
+    if (state === "READY") return "Payment evidence required";
+    return "Awaiting payment evidence";
+  }
   if (state === "AWAITING_APPLICANT") return "Awaiting applicant response";
   if (next === "UPLOAD_REQUIRED_DOCUMENTS") {
     if (Number(r.lastContactAgeDays || 0) === 0) return "Reminder sent today";
@@ -2494,7 +2502,7 @@ function actionabilityWorkloadExplanationForRow_(row) {
     if (state === "READY") return "Ready for reminder";
     return "Awaiting applicant upload";
   }
-  if (state === "AWAITING_PAYMENT") return "Awaiting applicant response";
+  if (state === "AWAITING_PAYMENT") return "Awaiting payment evidence";
   return "Other";
 }
 
@@ -3069,11 +3077,23 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
       requiredDocumentCount: Number(uploadSummary.requiredCount || 0)
     }
   });
+  var worklistProjection = actionabilityWorklistProjection_({
+    nextAction: nextAction,
+    authorityState: {
+      paymentEvidencePresent: paymentEvidencePresent,
+      paymentVerified: paymentVerified,
+      docsVerified: docsVerified
+    }
+  });
   return {
     rowNumber: rowNumber,
     applicantId: applicantId,
     name: name,
     actionOwner: owner,
+    workloadGroupKey: actionabilityWorkloadGroupKey_({ actionOwner: owner, nextAction: nextAction, urgencyLevel: urgency.level, suppressor: suppressor }),
+    worklistKey: clean_(worklistProjection.worklistKey || ""),
+    worklistLabel: clean_(worklistProjection.worklistLabel || ""),
+    worklistReason: clean_(worklistProjection.worklistReason || ""),
     nextAction: nextAction,
     actionabilityState: actionabilityState.actionabilityState,
     selectable: actionabilityState.selectable === true,
@@ -3143,20 +3163,79 @@ function compareActionabilityPreviewRows_(a, b) {
   return Number(b && b.ageDays || 0) - Number(a && a.ageDays || 0);
 }
 
-function actionabilityPreviewGroupKey_(row) {
+function actionabilityWorkloadGroupKey_(row) {
   var r = row || {};
   var urgency = clean_(r.urgencyLevel || "").toUpperCase();
-  var owner = clean_(r.actionOwner || "").toUpperCase();
+  var owner = clean_(r.actionOwner || r.owner || "").toUpperCase();
   var suppressor = clean_(r.suppressor || "").toUpperCase();
-  if (owner === "NONE" || clean_(r.nextAction || "").toUpperCase() === "NO_ACTION") return "COMPLETE";
+  var nextAction = clean_(r.nextAction || "").toUpperCase();
+  if (owner === "NONE" || nextAction === "NO_ACTION") return "COMPLETE";
   if (urgency === "DORMANT") return "DORMANT";
   if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "CONTACTABILITY";
+  if (nextAction === "SEND_PAYMENT_REMINDER" || nextAction === "VERIFY_PAYMENT") return "FINANCE";
   if (owner === "APPLICANT") return "APPLICANT";
   if (owner === "OFFICER") return "ADMISSIONS";
   if (owner === "FINANCE") return "FINANCE";
   if (owner === "ADMIN") return "ACADEMIC";
   if (owner === "SYSTEM") return "MANAGEMENT";
   return "UNKNOWN";
+}
+
+function actionabilityWorklistProjection_(row) {
+  var r = row || {};
+  var nextAction = clean_(r.nextAction || "").toUpperCase();
+  var authority = r.authorityState || {};
+  if (nextAction === "SEND_PAYMENT_REMINDER") {
+    return {
+      worklistKey: "PAYMENT_FOLLOW_UP",
+      worklistLabel: "Payment Follow-up",
+      worklistReason: "Awaiting payment evidence"
+    };
+  }
+  if (nextAction === "VERIFY_PAYMENT") {
+    return {
+      worklistKey: "PAYMENT_REVIEW",
+      worklistLabel: "Payment Review",
+      worklistReason: authority.paymentEvidencePresent === true ? "Receipt pending verification" : "Finance verification required"
+    };
+  }
+  if (nextAction === "UPLOAD_REQUIRED_DOCUMENTS") {
+    return {
+      worklistKey: "DOCUMENT_FOLLOW_UP",
+      worklistLabel: "Missing Documents",
+      worklistReason: "Awaiting applicant upload"
+    };
+  }
+  if (nextAction === "REVIEW_DOCUMENTS") {
+    return {
+      worklistKey: "DOCUMENT_REVIEW",
+      worklistLabel: "Document Review",
+      worklistReason: "Required uploads are ready for review"
+    };
+  }
+  if (nextAction === "FIX_CONTACT_DETAILS") {
+    return {
+      worklistKey: "CONTACTABILITY_EXCEPTION",
+      worklistLabel: "Contactability Exception",
+      worklistReason: "No effective contact path"
+    };
+  }
+  if (nextAction === "ENROLL") {
+    return {
+      worklistKey: "ENROLMENT_COMPLETION",
+      worklistLabel: "Academic Administration",
+      worklistReason: "Ready for enrolment completion"
+    };
+  }
+  return {
+    worklistKey: clean_(nextAction || "UNKNOWN"),
+    worklistLabel: clean_(nextAction || "Unknown").replace(/_/g, " "),
+    worklistReason: ""
+  };
+}
+
+function actionabilityPreviewGroupKey_(row) {
+  return actionabilityWorkloadGroupKey_(row);
 }
 
 function actionabilityHiddenReasonForGroup_(groupKey) {
@@ -3476,19 +3555,11 @@ function populationLedgerBucketFromActionability_(item) {
   var row = item || {};
   var owner = clean_(row.actionOwner || "").toUpperCase();
   var nextAction = clean_(row.nextAction || "").toUpperCase();
-  var urgency = clean_(row.urgencyLevel || "").toUpperCase();
-  var suppressor = clean_(row.suppressor || "").toUpperCase();
-
   if (!owner || !nextAction) return { bucket: "Unknown / Unclassified", reason: "Missing actionability owner or next action." };
-  if (owner === "NONE" || nextAction === "NO_ACTION") return { bucket: "Completed / No Action", reason: "" };
-  if (urgency === "DORMANT") return { bucket: "Dormant", reason: "" };
-  if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return { bucket: "Contactability Exceptions", reason: "" };
-  if (owner === "APPLICANT") return { bucket: "Applicant Action", reason: "" };
-  if (owner === "OFFICER") return { bucket: "Admissions Review", reason: "" };
-  if (owner === "FINANCE") return { bucket: "Finance", reason: "" };
-  if (owner === "ADMIN") return { bucket: "Academic Admin", reason: "" };
-  if (owner === "SYSTEM") return { bucket: "Management Exceptions", reason: "" };
-  return { bucket: "Unknown / Unclassified", reason: "Unrecognized actionability owner: " + owner };
+  var groupKey = actionabilityWorkloadGroupKey_(row);
+  var bucket = actionabilityPopulationBucketForGroupKey_(groupKey);
+  if (bucket && bucket !== "Unknown / Unclassified") return { bucket: bucket, reason: "" };
+  return { bucket: "Unknown / Unclassified", reason: "Unrecognized workload group: " + groupKey };
 }
 
 function populationLedgerClassifyRow_(rowObj, rowNumber) {

@@ -3422,6 +3422,7 @@
     let actionabilitySortState = { key: "default", dir: "desc" };
     let actionabilityBucketSortState = "operational";
     let actionabilityActiveGroup = "";
+    let actionabilityActiveWorklistKey = "";
     let actionabilityPreviewMetaState = { includedRows: 0, scannedRows: 0, applicantIdRows: 0, integrityStatus: "" };
     let actionabilityPreviewCountsState = {};
     let actionabilityWorkloadSummaryState = {};
@@ -9491,12 +9492,16 @@ function renderStageDashboard_(items, emptyMessage){
 
     function actionabilityGroupKey_(row){
       var r = row || {};
+      var explicit = String(r.workloadGroupKey || "").trim().toUpperCase();
+      if (explicit) return explicit;
       var urgency = String(r.urgencyLevel || "").trim().toUpperCase();
       var owner = String(r.actionOwner || "").trim().toUpperCase();
       var suppressor = String(r.suppressor || "").trim().toUpperCase();
-      if (owner === "NONE" || String(r.nextAction || "").trim().toUpperCase() === "NO_ACTION") return "COMPLETE";
+      var nextAction = String(r.nextAction || "").trim().toUpperCase();
+      if (owner === "NONE" || nextAction === "NO_ACTION") return "COMPLETE";
       if (urgency === "DORMANT") return "DORMANT";
       if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "CONTACTABILITY";
+      if (nextAction === "SEND_PAYMENT_REMINDER" || nextAction === "VERIFY_PAYMENT") return "FINANCE";
       if (owner === "APPLICANT") return "APPLICANT";
       if (owner === "OFFICER") return "ADMISSIONS";
       if (owner === "FINANCE") return "FINANCE";
@@ -9526,6 +9531,30 @@ function renderStageDashboard_(items, emptyMessage){
 
     function actionabilityBucketDisplayLabel_(row){
       return actionabilityGroupLabel_(actionabilityGroupKey_(row));
+    }
+
+    function actionabilityWorklistKey_(row){
+      return String(row && row.worklistKey || "").trim().toUpperCase();
+    }
+
+    function actionabilityWorklistLabel_(row){
+      var explicit = String(row && row.worklistLabel || "").trim();
+      if (explicit) return explicit;
+      var key = actionabilityWorklistKey_(row);
+      if (key === "PAYMENT_FOLLOW_UP") return "Payment Follow-up";
+      if (key === "PAYMENT_REVIEW") return "Payment Review";
+      if (key === "DOCUMENT_FOLLOW_UP") return "Missing Documents";
+      if (key === "DOCUMENT_REVIEW") return "Document Review";
+      return actionabilityNextActionLabel_(row && row.nextAction);
+    }
+
+    function actionabilityWorklistReason_(row){
+      var explicit = String(row && row.worklistReason || "").trim();
+      if (explicit) return explicit;
+      var key = actionabilityWorklistKey_(row);
+      if (key === "PAYMENT_FOLLOW_UP") return "Awaiting payment evidence";
+      if (key === "PAYMENT_REVIEW") return "Receipt pending verification";
+      return "";
     }
 
     function actionabilityPopulationBucketForGroup_(key){
@@ -9573,7 +9602,7 @@ function renderStageDashboard_(items, emptyMessage){
       var normalized = String(key || "").trim().toUpperCase();
       if (normalized === "APPLICANT") return "Applicants require document uploads or completion.";
       if (normalized === "ADMISSIONS") return "Applications ready for academic document review.";
-      if (normalized === "FINANCE") return "Payment and financial verification actions.";
+      if (normalized === "FINANCE") return "Payment evidence follow-up, receipt review, and finance verification actions.";
       if (normalized === "ACADEMIC") return "Academic placement and administrative actions.";
       if (normalized === "CONTACTABILITY") return "Applicants blocked by missing, invalid, or unreliable contact details.";
       if (normalized === "MANAGEMENT") return "Exceptions requiring management attention and remediation.";
@@ -9781,6 +9810,11 @@ function renderStageDashboard_(items, emptyMessage){
     function selectActionabilityGroup_(key){
       var normalized = String(key || "").trim().toUpperCase();
       actionabilityActiveGroup = actionabilityActiveGroup === normalized ? "" : normalized;
+      if (!actionabilityActiveGroup) {
+        actionabilityActiveWorklistKey = "";
+      } else if (actionabilityActiveGroup !== "FINANCE") {
+        actionabilityActiveWorklistKey = "";
+      }
       actionabilityPageState.page = 0;
       renderActionabilityPreview_({ preserveRows: true });
       window.setTimeout(function(){
@@ -9791,6 +9825,7 @@ function renderStageDashboard_(items, emptyMessage){
 
     function showAllActionability_(){
       actionabilityActiveGroup = "";
+      actionabilityActiveWorklistKey = "";
       actionabilityPageState.page = 0;
       renderActionabilityPreview_({ preserveRows: true });
       window.setTimeout(function(){
@@ -9803,6 +9838,7 @@ function renderStageDashboard_(items, emptyMessage){
       var normalized = String(key || "").trim().toUpperCase();
       if (!normalized) return;
       actionabilityActiveGroup = normalized;
+      if (normalized !== "FINANCE") actionabilityActiveWorklistKey = "";
       actionabilityPageState.page = 0;
       renderActionabilityPreview_({ preserveRows: true });
       setMsg("msg", "Showing " + actionabilityGroupLabel_(normalized) + " worklist. Use a row Review button to open an exact applicant.");
@@ -10311,6 +10347,64 @@ function renderStageDashboard_(items, emptyMessage){
       return list;
     }
 
+    function actionabilityWorklistKeysForGroup_(groupKey, rows){
+      var key = String(groupKey || "").trim().toUpperCase();
+      if (key !== "FINANCE") return [];
+      var counts = {};
+      (Array.isArray(rows) ? rows : []).forEach(function(row){
+        var worklistKey = actionabilityWorklistKey_(row);
+        if (!worklistKey) return;
+        counts[worklistKey] = Number(counts[worklistKey] || 0) + 1;
+      });
+      return Object.keys(counts).sort(function(a, b){
+        var rank = { PAYMENT_FOLLOW_UP: 1, PAYMENT_REVIEW: 2 };
+        var aRank = rank[a] || 99;
+        var bRank = rank[b] || 99;
+        if (aRank !== bRank) return aRank - bRank;
+        return String(a).localeCompare(String(b));
+      });
+    }
+
+    function actionabilityDefaultWorklistKeyForGroup_(groupKey, rows){
+      var keys = actionabilityWorklistKeysForGroup_(groupKey, rows);
+      return keys.length ? keys[0] : "";
+    }
+
+    function actionabilityRowsForActiveWorklist_(groupKey, rows){
+      var key = String(groupKey || "").trim().toUpperCase();
+      var worklistKey = String(actionabilityActiveWorklistKey || "").trim().toUpperCase();
+      var list = Array.isArray(rows) ? rows.slice() : [];
+      if (!worklistKey || key !== "FINANCE") return list;
+      return list.filter(function(row){
+        return actionabilityWorklistKey_(row) === worklistKey;
+      });
+    }
+
+    function setActionabilityWorklistKey_(groupKey, worklistKey){
+      var group = String(groupKey || "").trim().toUpperCase();
+      if (group !== "FINANCE") {
+        actionabilityActiveWorklistKey = "";
+      } else {
+        actionabilityActiveWorklistKey = String(worklistKey || "").trim().toUpperCase();
+      }
+      actionabilityPageState.page = 0;
+      renderActionabilityPreview_({ preserveRows: true });
+    }
+
+    function renderActionabilityWorklistSwitcher_(groupKey, rows){
+      var group = String(groupKey || "").trim().toUpperCase();
+      if (group !== "FINANCE") return "";
+      var keys = actionabilityWorklistKeysForGroup_(group, rows);
+      if (keys.length <= 1) return "";
+      return '<div class="actionabilityFilterNote">Worklist: '
+        + keys.map(function(key){
+          var selected = String(actionabilityActiveWorklistKey || "").trim().toUpperCase() === key;
+          var label = actionabilityWorklistLabel_({ worklistKey: key });
+          return '<button class="btn small' + (selected ? ' operatorControl operatorControlPrimary' : ' operatorControl operatorControlSecondary') + '" type="button" onclick="setActionabilityWorklistKey_(\'' + esc(group) + '\', \'' + esc(key) + '\')">' + esc(label) + '</button>';
+        }).join(' ')
+        + '</div>';
+    }
+
     function actionabilitySelectionGuidance_(row){
       var r = row || {};
       if (actionabilityIsSelectable_(r)) return "Eligible for batch preview.";
@@ -10329,7 +10423,13 @@ function renderStageDashboard_(items, emptyMessage){
 
     function actionabilitySelectionSourceLabel_(){
       if (actionabilitySelectionSource === "page") return "Current Page Selection";
-      if (actionabilitySelectionSource === "all") return actionabilityActiveGroup ? "Full Bounded Cohort: " + actionabilityGroupLabel_(actionabilityActiveGroup) : "Full Bounded Cohort";
+      if (actionabilitySelectionSource === "all") {
+        if (actionabilityActiveGroup) {
+          var suffix = actionabilityActiveWorklistKey ? " / " + actionabilityWorklistLabel_({ worklistKey: actionabilityActiveWorklistKey }) : "";
+          return "Full Bounded Cohort: " + actionabilityGroupLabel_(actionabilityActiveGroup) + suffix;
+        }
+        return "Full Bounded Cohort";
+      }
       if (actionabilitySelectionSource === "manual") return "Manual Selection";
       return "Selected Applicants";
     }
@@ -11307,6 +11407,7 @@ function renderStageDashboard_(items, emptyMessage){
       var rows = Array.isArray(actionabilityPreviewRows) ? actionabilityPreviewRows.slice() : [];
       if (actionabilityActiveGroup) {
         rows = rows.filter(function(row){ return actionabilityGroupKey_(row) === actionabilityActiveGroup; });
+        rows = actionabilityRowsForActiveWorklist_(actionabilityActiveGroup, rows);
         var hidden = actionabilityHiddenRecordsState && actionabilityHiddenRecordsState.byGroup && actionabilityHiddenRecordsState.byGroup[actionabilityActiveGroup];
         if (Array.isArray(hidden)) rows = rows.concat(hidden);
       }
@@ -11323,6 +11424,8 @@ function renderStageDashboard_(items, emptyMessage){
       if (actionabilityActiveGroup === "APPLICANT") {
         var eligibleTotal = Number(actionabilityEligibleNowCountForGroup_("APPLICANT", rows) || 0);
         actionabilityBatchMessage = "All returned READY rows selected for Applicant Action: " + String(ready) + " of " + String(eligibleTotal) + " eligible now.";
+      } else if (actionabilityActiveGroup === "FINANCE" && actionabilityActiveWorklistKey) {
+        actionabilityBatchMessage = "All returned READY rows selected for Finance / " + actionabilityWorklistLabel_({ worklistKey: actionabilityActiveWorklistKey }) + ": " + String(ready) + ".";
       } else {
         actionabilityBatchMessage = actionabilityActiveGroup
           ? "All returned READY rows selected for " + actionabilityGroupLabel_(actionabilityActiveGroup) + ": " + String(ready) + "."
@@ -11455,7 +11558,7 @@ function renderStageDashboard_(items, emptyMessage){
 
     function renderActionabilityWorkloadExplanation_(){
       var data = actionabilityWorkloadExplanationState || {};
-      var keys = ["Awaiting applicant upload", "Reminder sent today", "Awaiting applicant response", "Cooling-off", "Escalation due", "Ready for reminder", "Ready for academic review", "Document received today", "Other"];
+      var keys = ["Awaiting applicant upload", "Payment evidence required", "Payment reminder sent today", "Awaiting applicant response", "Awaiting payment evidence", "Reminder sent today", "Cooling-off", "Escalation due", "Ready for reminder", "Ready for academic review", "Document received today", "Other"];
       var visible = keys.filter(function(key){ return Number(data[key] || 0) > 0; });
       if (!visible.length) return "";
       return '<div class="actionabilityTraffic" aria-label="Remaining work explanation">'
@@ -11512,7 +11615,16 @@ function renderStageDashboard_(items, emptyMessage){
       renderActionabilityResponseTraffic_();
       summaryEl.innerHTML += renderActionabilityWorkloadExplanation_();
       var rawDisplayRows = actionabilityActiveGroup ? (groupRows[actionabilityActiveGroup] || []) : rows;
-      var displayRows = actionabilityActiveGroup ? actionabilityDisplayRowsForGroup_(actionabilityActiveGroup, rawDisplayRows) : rawDisplayRows;
+      if (actionabilityActiveGroup === "FINANCE") {
+        var availableWorklistKey = actionabilityDefaultWorklistKeyForGroup_(actionabilityActiveGroup, rawDisplayRows);
+        if (availableWorklistKey && actionabilityActiveWorklistKey !== availableWorklistKey && actionabilityWorklistKeysForGroup_(actionabilityActiveGroup, rawDisplayRows).indexOf(actionabilityActiveWorklistKey) < 0) {
+          actionabilityActiveWorklistKey = availableWorklistKey;
+        }
+      } else if (actionabilityActiveGroup !== "FINANCE") {
+        actionabilityActiveWorklistKey = "";
+      }
+      var worklistRows = actionabilityActiveGroup ? actionabilityRowsForActiveWorklist_(actionabilityActiveGroup, rawDisplayRows) : rawDisplayRows;
+      var displayRows = actionabilityActiveGroup ? actionabilityDisplayRowsForGroup_(actionabilityActiveGroup, worklistRows) : worklistRows;
       actionabilityCurrentCohortRows = displayRows.slice();
       var pageInfo = actionabilityPageInfo_(displayRows);
       var pageRows = displayRows.slice(pageInfo.start, pageInfo.end);
@@ -11520,6 +11632,7 @@ function renderStageDashboard_(items, emptyMessage){
       if (metaEl) {
         var populationTotal = Number(actionabilityPreviewMetaState.applicantIdRows || actionabilityPreviewMetaState.includedRows || rows.length || 0);
         var filterLabel = actionabilityActiveGroup ? actionabilityGroupLabel_(actionabilityActiveGroup) : "All";
+        if (actionabilityActiveWorklistKey) filterLabel += " / " + actionabilityWorklistLabel_({ worklistKey: actionabilityActiveWorklistKey });
         var integrity = actionabilityPreviewMetaState.integrityStatus ? (" | Ledger " + actionabilityPreviewMetaState.integrityStatus) : "";
         var workload = actionabilityWorkloadSummaryState || {};
         var workloadText = "READY " + String(Number(workload.READY || 0))
@@ -11533,14 +11646,19 @@ function renderStageDashboard_(items, emptyMessage){
         metaEl.textContent = String(displayRows.length) + displayNote + " / " + String(populationTotal) + " total applicant population | Filter: " + filterLabel + " | Workload: " + workloadText + integrity;
       }
       if (!displayRows.length) {
-        rowsEl.innerHTML = '<div class="actionabilityEmpty">' + (actionabilityActiveGroup === "APPLICANT" ? 'No eligible-now Applicant Action rows. Cooling-off/contacted rows remain counted in the bucket population.' : 'No actionable work returned.') + '</div>';
+        rowsEl.innerHTML = '<div class="actionabilityEmpty">' + (actionabilityActiveGroup === "APPLICANT"
+          ? 'No eligible-now Applicant Action rows. Cooling-off/contacted rows remain counted in the bucket population.'
+          : (actionabilityActiveWorklistKey ? ('No ' + esc(actionabilityWorklistLabel_({ worklistKey: actionabilityActiveWorklistKey })) + ' rows returned.') : 'No actionable work returned.')) + '</div>';
         return;
       }
       var sortHeader = function(key, label){
         var active = actionabilitySortState && actionabilitySortState.key === key;
         return '<button class="actionabilitySortBtn' + (active ? ' active' : '') + '" type="button" data-actionability-sort="' + esc(key) + '" aria-pressed="' + (active ? "true" : "false") + '" onclick="sortActionabilityPreview_(\'' + esc(key) + '\')">' + esc(label + actionabilitySortLabel_(key)) + '</button>';
       };
-      var html = actionabilityActiveGroup ? '<div class="actionabilityFilterNote">Showing: ' + esc(actionabilityGroupLabel_(actionabilityActiveGroup)) + ' <button class="btn small" type="button" onclick="selectActionabilityGroup_(\'' + esc(actionabilityActiveGroup) + '\')">Show All</button></div>' : "";
+      var activeFilterLabel = actionabilityActiveGroup ? actionabilityGroupLabel_(actionabilityActiveGroup) : "";
+      if (actionabilityActiveWorklistKey) activeFilterLabel += " / " + actionabilityWorklistLabel_({ worklistKey: actionabilityActiveWorklistKey });
+      var html = actionabilityActiveGroup ? '<div class="actionabilityFilterNote">Showing: ' + esc(activeFilterLabel) + ' <button class="btn small" type="button" onclick="selectActionabilityGroup_(\'' + esc(actionabilityActiveGroup) + '\')">Show All</button></div>' : "";
+      if (actionabilityActiveGroup) html += renderActionabilityWorklistSwitcher_(actionabilityActiveGroup, rawDisplayRows);
       html += '<div class="actionabilityWorklist" aria-label="Current Worklist">'
         + '<div class="actionabilityWorklistTitle"><span>Current Worklist</span><span class="muted">Review opens authoritative editing.</span></div>'
         + renderActionabilitySelectionControls_(displayRows)
@@ -11559,6 +11677,8 @@ function renderStageDashboard_(items, emptyMessage){
         var state = r.authorityState || {};
         var priority = actionabilityPriorityLabel_(r.urgencyLevel);
         var priorityClass = actionabilityPriorityClass_(r.urgencyLevel);
+        var worklistLabel = actionabilityWorklistLabel_(r);
+        var worklistReason = actionabilityWorklistReason_(r);
         var nextAction = actionabilityNextActionLabel_(r.nextAction);
         var commNext = actionabilityCommunicationGuidance_(r);
         var commProgress = String(r.communicationProgress || "");
@@ -11578,7 +11698,7 @@ function renderStageDashboard_(items, emptyMessage){
         if (!selectable && rowKey && actionabilitySelectedKeys[rowKey]) delete actionabilitySelectedKeys[rowKey];
         html += '<div class="actionabilityWorklistRow" role="row" data-actionability-row="' + esc(String(index)) + '" data-actionability-state="' + esc(r.actionabilityState || "UNKNOWN") + '" oncontextmenu="return openActionabilityContextMenu_(event, ' + String(index) + ')">';
         html += '<div class="actionabilityWorklistCell actionabilityApplicantCell" role="cell"><label class="actionabilitySelectBox"><input type="checkbox" aria-label="Select applicant ' + esc(r.applicantId || "") + '" onchange="toggleActionabilitySelection_(' + String(index) + ', this.checked)" ' + (selected ? "checked" : "") + (selectable ? "" : " disabled") + ' title="' + esc(selectable ? "Eligible for batch preview." : actionabilitySelectionGuidance_(r)) + '"><strong>' + esc(r.name || "Name not shown") + '</strong></label><span class="actionabilityApplicantId">' + esc(r.applicantId || "") + '</span><span class="actionabilityNextAction">' + esc(nextAction) + '</span><span class="actionabilityBlocker">' + esc(blocker) + '</span><span class="actionabilityGuidance">' + esc(actionabilitySelectionGuidance_(r)) + '</span></div>';
-        html += '<div class="actionabilityWorklistCell actionabilityOwnerCell" role="cell"><strong>' + esc(actionabilityBucketDisplayLabel_(r)) + '</strong><span class="actionabilityAuthority">' + esc(authority) + '</span><span class="opsStatusPill ' + priorityClass + '" title="' + esc(r.urgencyReason || priority) + '">' + esc(priority) + '</span></div>';
+        html += '<div class="actionabilityWorklistCell actionabilityOwnerCell" role="cell"><strong>' + esc(actionabilityGroupKey_(r) === "FINANCE" ? ("Finance / " + worklistLabel) : actionabilityBucketDisplayLabel_(r)) + '</strong><span class="actionabilityAuthority">' + esc(authority) + (worklistReason ? (' | ' + worklistReason) : '') + '</span><span class="opsStatusPill ' + priorityClass + '" title="' + esc(r.urgencyReason || priority) + '">' + esc(priority) + '</span></div>';
         html += '<div class="actionabilityWorklistCell actionabilityStatusChips actionabilityProgressCell" role="cell"><span class="actionabilityMiniChip ' + (state.portalSubmitted ? "ok" : "warn") + '">' + esc(portalLabel) + '</span><span class="actionabilityMiniChip ' + docsClass + '">' + esc(docsLabel) + '</span><span class="actionabilityMiniChip ' + paymentClass + '">' + esc(paymentLabel) + '</span><span class="actionabilityMiniChip ' + contactClass + '">' + esc(contactLabel) + '</span></div>';
         html += '<div class="actionabilityWorklistCell actionabilityDueBlock" role="cell"><strong>' + esc(due) + '</strong><span class="actionabilityUrgencyReason">Urgency: ' + esc(actionabilityUrgencyProvenance_(r)) + '</span><span>Age ' + esc(r.ageDays === "" || r.ageDays === undefined ? "-" : String(r.ageDays) + "d") + ' | Last ' + esc(r.lastContactAgeDays === "" ? "none" : String(r.lastContactAgeDays) + "d") + '</span><span>' + esc(commProgress || commNext) + '</span><span>' + esc(commNext) + '</span></div>';
         html += '<div class="actionabilityWorklistCell actionabilityReviewCell" role="cell"><button class="btn actionabilityReviewBtn operatorControl operatorControlPrimary" type="button" onclick="reviewActionabilityRow_(' + String(index) + ', this)">Review</button></div>';
@@ -11587,6 +11707,7 @@ function renderStageDashboard_(items, emptyMessage){
           + '<div class="actionabilityFact"><strong>Priority:</strong> <span>' + esc(r.urgencyReason || priority) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Documents:</strong> <span>' + esc(String(Number(state.uploadedRequiredDocumentCount || 0)) + "/" + String(Number(state.requiredDocumentCount || 0))) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Missing Documents:</strong> <span>' + esc(actionabilityMissingDocumentsDetail_(r)) + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Worklist:</strong> <span>' + esc(worklistLabel + (worklistReason ? (" | " + worklistReason) : "")) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Lifecycle:</strong> <span>' + esc(String(state.lifecycleStage || "Not shown").replace(/_/g, " ")) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Next Message:</strong> <span>' + esc(commNext) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Communication Progress:</strong> <span>' + esc(r.communicationProgressDetail || commProgress || commNext) + '</span></div>'
