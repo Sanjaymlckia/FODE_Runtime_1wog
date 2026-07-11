@@ -16,6 +16,9 @@ Status: ACP / CAP working register
 | `FODE_Billing_Reference` | Compatibility contract | preserves stable join key between runtime rows and Zoho Books invoice lookup/writeback | retain while Zoho Books integration depends on external reference matching |
 | `admin_sendDocsFollowupEmails()` | Retired compatibility wrapper | preserves old endpoint shape while returning `LEGACY_DOCS_FOLLOWUP_RETIRED` and authoritative guidance only | remove after all remaining compatibility callers and operator wording are retired |
 | `docsFollowupSentAt` compatibility field | Compatibility display shim | preserves historical queue/search legacy-send history labeling only | remove after compatibility queue/search communication history is fully normalized |
+| `legacy_invite` message key | Compatibility alias | preserves the external/runtime semantic token for canonical Portal Communication while internal architecture separates it from the historical recovery campaign | keep until a dedicated semantic-rename pass proves API/test/operator compatibility |
+| `legacy_invite_eligible` batch filter | Compatibility shim | preserves the historical Legacy Invite planning contract while canonical Portal Communication continues to use the same preview/send authority | retire after campaign-only planning helpers are removed |
+| `buildLegacyCampaignPortalUrl_()` / `getActivePortalSecretForCampaign_()` helper naming | Compatibility shim | legacy helper names still back canonical Portal Communication URL/secret resolution | rename only after the compatibility alias is retired or explicitly decoupled |
 
 ## ACP Closure Note
 

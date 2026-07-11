@@ -97,6 +97,25 @@ The following operator-triggered routes are now required to pass through Communi
 
 Compatibility surfaces may still expose communication-related labels, but they no longer own send identity or send execution.
 
+## Portal Communication Boundary
+
+Portal Communication is the canonical runtime capability for:
+
+- initial application portal invitation
+- resend portal access
+
+Current runtime compatibility token:
+
+- `legacy_invite`
+
+Boundary rule:
+
+- `legacy_invite` is a compatibility alias, not the architectural concept.
+- Historical Legacy Campaign helpers may continue to reference `legacy_invite`,
+  but they must not become Communication Authority or lifecycle authority.
+- No ACP slice may rename the external token, RPC names, Apps Script function
+  names, or operator-facing labels without a separate compatibility programme.
+
 Retired path:
 
 - `admin_sendDocsFollowupEmails()` is retained only as a non-sending compatibility wrapper and explicit retirement response

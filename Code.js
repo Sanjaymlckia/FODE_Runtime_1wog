@@ -6347,7 +6347,7 @@ function campaignSendEmailGmail_(toEmail, subject, body, meta) {
 
 function campaignBuildEmailPreview_(rowObj, rowNumber, attemptCount, batchLabel) {
   var applicantId = clean_(rowObj.ApplicantID || "");
-  var secretRes = getActivePortalSecretForCampaign_(applicantId);
+  var secretRes = resolvePortalCommunicationSecret_(applicantId);
   if (!secretRes.ok) {
     return {
       ok: false,
@@ -6358,7 +6358,7 @@ function campaignBuildEmailPreview_(rowObj, rowNumber, attemptCount, batchLabel)
       error: clean_(secretRes.error || secretRes.code || "Missing active secret")
     };
   }
-  var portalUrl = buildLegacyCampaignPortalUrl_(applicantId, secretRes.secretPlain);
+  var portalUrl = buildPortalCommunicationUrl_(applicantId, secretRes.secretPlain);
   var subject = campaignSubjectForAttempt_(attemptCount, rowNumber);
   var body = buildCampaignEmailBody_(rowObj, portalUrl, applicantId);
   return {
@@ -6384,6 +6384,28 @@ function normalizeApplicantBatchFilterType_(filterType) {
   var raw = clean_(filterType || "").toLowerCase();
   var allowed = Array.isArray(CONFIG.COMMUNICATION_ALLOWED_BATCH_FILTER_TYPES) ? CONFIG.COMMUNICATION_ALLOWED_BATCH_FILTER_TYPES : [];
   return allowed.indexOf(raw) >= 0 ? raw : "";
+}
+
+// Portal Communication is the canonical runtime capability. The external
+// compatibility token remains `legacy_invite` until a dedicated rename pass.
+function portalCommunicationMessageType_() {
+  return "legacy_invite";
+}
+
+function isPortalCommunicationMessageType_(messageType) {
+  return normalizeApplicantMessageType_(messageType || "") === portalCommunicationMessageType_();
+}
+
+function resolvePortalCommunicationSecret_(applicantId) {
+  return getActivePortalSecretForCampaign_(applicantId);
+}
+
+function buildPortalCommunicationUrl_(applicantId, secretPlain) {
+  return buildLegacyCampaignPortalUrl_(applicantId, secretPlain);
+}
+
+function isHistoricalLegacyInviteBatchFilter_(filterType) {
+  return normalizeApplicantBatchFilterType_(filterType) === "legacy_invite_eligible";
 }
 
 function getCommunicationSemanticRegistry_() {
@@ -7494,7 +7516,7 @@ function communicationPaymentOutstanding_(rowObj) {
 
 function communicationFamilyForMessageType_(messageType) {
   var normalizedType = normalizeApplicantMessageType_(messageType || "");
-  if (normalizedType === "legacy_invite") return "invite";
+  if (isPortalCommunicationMessageType_(normalizedType)) return "invite";
   if (normalizedType === "reminder") return "reminder";
   if (normalizedType === "fd_acknowledgement") return "fd_acknowledgement";
   if (normalizedType === "application_feedback") return "application_feedback";
@@ -8037,7 +8059,7 @@ function deriveCommunicationState_(rowObj, messageType, opts) {
 
 function communicationMessageTypeForFilter_(filterType) {
   var normalized = normalizeApplicantBatchFilterType_(filterType);
-  if (normalized === "legacy_invite_eligible") return "legacy_invite";
+  if (normalized === "legacy_invite_eligible") return portalCommunicationMessageType_();
   if (normalized === "docs_missing") return "docs_missing";
   if (normalized === "payment_pending") return "payment_followup";
   return "";
@@ -8049,7 +8071,7 @@ function communicationMatchesFilterPrecheck_(rowObj, filterType) {
   var applicantId = clean_(state.applicantId || "");
   if (!applicantId) return false;
   var normalized = normalizeApplicantBatchFilterType_(filterType);
-  if (normalized === "legacy_invite_eligible") {
+  if (isHistoricalLegacyInviteBatchFilter_(normalized)) {
     var status = clean_(state.base && state.base.emailStatus || "");
     return !status || status === "NEW" || status === "READY";
   }
@@ -8498,13 +8520,13 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
         secretHash: clean_(cachedSecret.secretHash || "")
       };
     } else {
-      secretRes = getActivePortalSecretForCampaign_(context.applicantId);
+      secretRes = resolvePortalCommunicationSecret_(context.applicantId);
       if (!secretRes.ok) return block("MISSING_PORTAL_SECRET");
     }
-    if (!options.skipPortalUrlBuild) context.portalUrl = buildLegacyCampaignPortalUrl_(context.applicantId, secretRes.secretPlain);
+    if (!options.skipPortalUrlBuild) context.portalUrl = buildPortalCommunicationUrl_(context.applicantId, secretRes.secretPlain);
   }
 
-  if ((normalizedType === "legacy_invite" || normalizedType === "reminder") && context.portalSubmittedActive) {
+  if ((isPortalCommunicationMessageType_(normalizedType) || normalizedType === "reminder") && context.portalSubmittedActive) {
     return block("PORTAL_ALREADY_SUBMITTED");
   }
   if (normalizedType === "docs_missing" && baseState.docsMissing !== true) {
@@ -9196,7 +9218,7 @@ function wasEmailAlreadyProcessed_(context, idempotencyKey) {
   var batchId = clean_(ctx.batchLabel || "");
   var durableMatch = !!(messageType && lastContactType === messageType && lastContactResult === "SENT");
   if (messageType !== "fd_acknowledgement" && batchId && lastContactBatch && batchId !== lastContactBatch) durableMatch = false;
-  var legacyInviteSent = messageType === "legacy_invite" && emailStatus === "SENT";
+  var legacyInviteSent = isPortalCommunicationMessageType_(messageType) && emailStatus === "SENT";
   var cacheState = getCommunicationCooldownState_(ctx.applicantId || "", messageType);
   var cacheMatch = !!(cacheState && clean_(cacheState.idempotencyKey || "") === clean_(idempotencyKey || ""));
   return {
@@ -10588,7 +10610,7 @@ function campaign_prepareLegacyRows_() {
   for (var r = 1; r < ctx.values.length; r++) {
     var rowNumber = r + 1;
     var rowObj = campaignRowObjectFromValues_(headers, ctx.values[r]);
-    var state = deriveCommunicationState_(rowObj, "legacy_invite", {});
+    var state = deriveCommunicationState_(rowObj, portalCommunicationMessageType_(), {});
     var applicantId = clean_(state.applicantId || "");
     var status = clean_(state.base && state.base.emailStatus || "");
     if (status === "READY") {
@@ -10603,7 +10625,7 @@ function campaign_prepareLegacyRows_() {
       skippedIneligible++;
       continue;
     }
-    var resolved = resolveApplicantMessageContext_(applicantId, "legacy_invite", {
+    var resolved = resolveApplicantMessageContext_(applicantId, portalCommunicationMessageType_(), {
       actorEmail: clean_(getCallerEmail_ && getCallerEmail_()),
       actorRole: "SUPER",
       action: "prepare",
@@ -10639,8 +10661,8 @@ function campaign_sendLegacyBatch_(limit, opts) {
 
   if (requestedId) {
     var single = dryRun
-      ? previewApplicantMessage_(requestedId, "legacy_invite", mergedOpts)
-      : sendApplicantMessage_(requestedId, "legacy_invite", mergedOpts);
+      ? previewApplicantMessage_(requestedId, portalCommunicationMessageType_(), mergedOpts)
+      : sendApplicantMessage_(requestedId, portalCommunicationMessageType_(), mergedOpts);
     return {
       ok: true,
       dryRun: dryRun,
@@ -10682,7 +10704,7 @@ function campaign_sendLegacyBatch_(limit, opts) {
       continue;
     }
     if (dryRun) {
-      var preview = previewApplicantMessage_(candidate.applicantId, "legacy_invite", mergedOpts);
+      var preview = previewApplicantMessage_(candidate.applicantId, portalCommunicationMessageType_(), mergedOpts);
       if (preview.eligible) {
         dryRunCount++;
         previews.push({
@@ -10698,7 +10720,7 @@ function campaign_sendLegacyBatch_(limit, opts) {
       }
       continue;
     }
-    var sendResult = sendApplicantMessage_(candidate.applicantId, "legacy_invite", mergedOpts);
+    var sendResult = sendApplicantMessage_(candidate.applicantId, portalCommunicationMessageType_(), mergedOpts);
     if (sendResult.result === "SENT") sent++;
     else if (sendResult.result === "FAILED") {
       sendFailed++;

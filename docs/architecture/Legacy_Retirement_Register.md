@@ -25,6 +25,18 @@ No legacy helper is retired without:
 2. test parity
 3. release proof
 
+## Future Retirement Register
+
+These items become removable only after Portal Communication keeps its current
+behaviour without depending on historical-campaign semantics or naming.
+
+| Item | Current role | Future retirement gate |
+|---|---|---|
+| `admin_planLegacyInviteBatch()` | historical planning wrapper | retire after no operator or compatibility caller depends on legacy invite batch planning |
+| `adminDryRunFirst50LegacyInvites()` | historical dry-run evidence helper | retire after campaign recovery evidence is archived and no manual runbook depends on it |
+| `legacy_invite_eligible` | historical planning filter contract | retire after legacy planning wrappers are removed |
+| `buildLegacyCampaignPortalUrl_()` / `getActivePortalSecretForCampaign_()` names | compatibility/helper naming only | retire after a dedicated semantic/helper rename pass proves no external/test coupling |
+
 ## ACP Closure Classification
 
 ACP is closed as:

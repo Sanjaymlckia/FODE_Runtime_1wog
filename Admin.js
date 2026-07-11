@@ -5816,6 +5816,9 @@ function admin_planApplicantBatch(payload) {
   });
 }
 
+// Historical Legacy Campaign compatibility wrapper.
+// Portal Communication remains the live capability; this wrapper preserves the
+// old planning/filter contract without creating a second authority path.
 function admin_planLegacyInviteBatch(payload) {
   var p = payload && typeof payload === "object" ? payload : {};
   var merged = {};
@@ -5824,6 +5827,9 @@ function admin_planLegacyInviteBatch(payload) {
   return admin_planApplicantBatch(merged);
 }
 
+// Historical Legacy Campaign region.
+// These helpers are retained for compatibility and recovery evidence only.
+// They must not be treated as the canonical Portal Communication authority.
 function adminDryRunFirst50LegacyInvites() {
   var ss = SpreadsheetApp.openById('1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4SalU');
   var sh = ss.getSheetByName('FODE_Applications_2026');
