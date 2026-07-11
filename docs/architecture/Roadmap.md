@@ -28,6 +28,7 @@ Scope: documentation only
 - Stage Batch candidate-selection migration off legacy lifecycle stage inputs.
 - broader Population Ledger canonical lifecycle reporting.
 - legacy lifecycle retirement after consumer migration.
+- Zoho Books authority-boundary freeze completed; legacy invoice-trigger compatibility path retained until dependency proof allows retirement.
 - classroom acceptance/handover authority.
 - LAP scheduled automation and single state-machine authority.
 - bounce evidence ingestion and reconciliation.

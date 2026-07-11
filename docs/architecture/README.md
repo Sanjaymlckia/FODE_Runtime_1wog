@@ -16,6 +16,7 @@ Runtime source, Apps Script deployment, queues, communications, Sheets, and send
 | Operational bucket model | [Operational_Bucket_Model.md](Operational_Bucket_Model.md) |
 | ACP Phase 1 ADR | [ACP_Phase_1_Authority_Consolidation_ADR.md](ACP_Phase_1_Authority_Consolidation_ADR.md) |
 | Contactability ADR | [../adr/ADR_Contactability_Exceptions_as_First_Class_Operational_Bucket.md](../adr/ADR_Contactability_Exceptions_as_First_Class_Operational_Bucket.md) |
+| Zoho Books authority ADR | [../adr/ADR_Zoho_Books_Authority_Boundary.md](../adr/ADR_Zoho_Books_Authority_Boundary.md) |
 | Legacy retirement register | [Legacy_Retirement_Register.md](Legacy_Retirement_Register.md) |
 | Compatibility shim register | [Compatibility_Shim_Register.md](Compatibility_Shim_Register.md) |
 | Operational model | [Operational_Model.md](Operational_Model.md) |
@@ -59,6 +60,13 @@ Raw Facts
 As of r338, Admin / Operations Workspace is the live operational authority surface. OPS is frozen as a reference/secondary surface. FormDesigner remains the current intake path, while Google Forms replacement remains future work.
 
 Protected live surfaces include document verification, signed document routes, applicant-folder preview/gallery/lightbox, payment verification, Zoho Books, communication semantic registry, Stage Batch separation, runtime identity, release governance, and DR tooling.
+
+Finance boundary freeze:
+
+- `Receipt_Status` is canonical payment authority
+- `Books_*` fields are Zoho Books integration metadata only
+- `Payment_Verified` is compatibility-only
+- legacy invoice-trigger fields/functions remain retained compatibility only until dependency proof allows retirement
 
 Partial/future surfaces include classroom acceptance/handover authority, LAP automation, bounce ingestion, AI-assisted document precheck, and Google Forms replacement.
 

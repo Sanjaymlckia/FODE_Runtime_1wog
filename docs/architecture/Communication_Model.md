@@ -83,6 +83,8 @@ This convergence does not change:
 - preview/send parity
 - confirmation
 - Stage Batch candidate selection
+- canonical payment authority
+- Zoho Books accounting-integration boundary
 
 ## ACP Closure Boundary
 
@@ -110,6 +112,21 @@ Retained automated exceptions:
 - manual WhatsApp fallback CSV email to admins
 
 These are outside the operator batch/review communication authority chain and must remain explicitly documented and narrowly scoped.
+
+## Finance Boundary
+
+Communication recommendation and communication authority must remain canonical-payment-backed.
+
+They must not infer payment completion, payment hold, or payment reminder suppression from:
+
+- `Books_Invoice_ID`
+- `Books_Invoice_Number`
+- `Books_Invoice_Status`
+- `Books_Push_Status`
+- `CRM_Invoice_Triggered`
+- `Invoice_Sent_At`
+
+Those fields are accounting integration metadata or retained compatibility state, not communication payment authority.
 
 ## OPS Boundary
 

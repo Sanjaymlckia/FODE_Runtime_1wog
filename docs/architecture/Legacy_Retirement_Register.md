@@ -12,6 +12,10 @@ Status: ACP / CAP working register
 | `docsFollowupSentAt` row field | Deferred compatibility field | retained for queue/search legacy-history labeling only | retire after compatibility communication history is normalized |
 | `admin_sendDocsFollowupEmails()` | Retired wrapper | endpoint remains only to return `LEGACY_DOCS_FOLLOWUP_RETIRED` and authoritative next-step guidance | retire after no consumer expects the legacy RPC name |
 | compatibility queue/search Docs Follow-Up wording | Deferred cleanup candidate | some labels still expose legacy history context to explain prior behavior | retire after operator wording is fully normalized to Communication Authority terms |
+| `triggerInvoiceWebhook_()` | Retained compatibility path | legacy downstream invoice/webhook handoff still exists and is explicitly non-authoritative | retire only after dependency proof confirms no external/manual consumer still relies on the handoff |
+| `handleInvoiceTrigger_()` | Retained compatibility path | wraps the legacy invoice-trigger gate/writeback path after payment verification | retire only after dependency proof confirms the legacy handoff can be removed safely |
+| `CRM_Invoice_Triggered` | Retained compatibility field | replay-avoidance marker for the legacy invoice-trigger path | retire only with `triggerInvoiceWebhook_()` / `handleInvoiceTrigger_()` and explicit dependency proof |
+| `Invoice_Sent_At` | Retained compatibility field | timestamp written by the legacy invoice-trigger path | retire only with the legacy invoice-trigger path and explicit dependency proof |
 
 ## Rule
 

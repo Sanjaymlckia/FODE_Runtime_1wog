@@ -83,6 +83,13 @@ Protected live action backends include:
 - payment verification and Zoho Books
 - DR/release evidence tooling
 
+Finance authority boundary inside that protected surface is frozen:
+
+- `Receipt_Status` is payment truth
+- Zoho Books draft/contact/test-email flows are external accounting integration
+- `Books_*` fields are integration metadata only
+- legacy invoice-trigger logic remains retained compatibility only
+
 ## Current Authority Chain
 
 ```text
@@ -104,6 +111,7 @@ Shared Row Facts
 | Operations Workspace | workload surface |
 | Review Workspace | mutation authority and authority-backed display |
 | Review Queues | compatibility/workflow only |
+| Zoho Books workflow | protected external integration; not payment, lifecycle, or workload authority |
 
 ## Converged Milestones
 
@@ -154,6 +162,7 @@ Still deferred:
 - Stage Batch candidate-selection migration from legacy lifecycle inputs
 - broader Population Ledger canonical reporting/migration
 - retirement of legacy lifecycle helpers after all consumers migrate
+- retirement of legacy finance compatibility trigger fields/functions after explicit dependency proof
 
 ## ACP Phase 1 Authority Consolidation
 

@@ -10,6 +10,10 @@ Status: ACP / CAP working register
 | UI fallback for bucket summaries | Compatibility shim | preserves Admin rendering if server `bucketSummaries` is absent | remove after stable release evidence |
 | selected/manual batch wrappers | Compatibility shim | preserve entry-point contracts while delegating policy to shared helpers | keep as surface-specific wrappers |
 | Management compatibility grouping for legacy consumers | Compatibility shim | preserves older internal grouping while contactability rows are exposed as `Contactability Exceptions` to operators | retire when all consumers use current bucket taxonomy |
+| legacy invoice-trigger workflow (`triggerInvoiceWebhook_()`, `handleInvoiceTrigger_()`) | Compatibility shim | preserves historical downstream invoice/email handoff after payment verification | retain until external/manual dependency risk is explicitly cleared |
+| `CRM_Invoice_Triggered` / `Invoice_Sent_At` | Compatibility contract | preserves replay-avoidance and legacy downstream invoice/email state | retain until the legacy invoice-trigger path is retired with dependency proof |
+| `Payment_Verified` | Compatibility mirror | preserves yes/no payment compatibility projection beside canonical `Receipt_Status` | keep as mirror only; never treat as payment authority |
+| `FODE_Billing_Reference` | Compatibility contract | preserves stable join key between runtime rows and Zoho Books invoice lookup/writeback | retain while Zoho Books integration depends on external reference matching |
 | `admin_sendDocsFollowupEmails()` | Retired compatibility wrapper | preserves old endpoint shape while returning `LEGACY_DOCS_FOLLOWUP_RETIRED` and authoritative guidance only | remove after all remaining compatibility callers and operator wording are retired |
 | `docsFollowupSentAt` compatibility field | Compatibility display shim | preserves historical queue/search legacy-send history labeling only | remove after compatibility queue/search communication history is fully normalized |
 
