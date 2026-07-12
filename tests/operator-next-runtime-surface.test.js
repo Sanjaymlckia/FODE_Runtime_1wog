@@ -21,6 +21,25 @@ function htmlEscape(value) {
     .replace(/'/g, "&#39;");
 }
 
+function makeDomNode(id) {
+  return {
+    id,
+    textContent: "",
+    innerHTML: "",
+    className: "",
+    disabled: false,
+    attributes: {},
+    style: {},
+    addEventListener() {},
+    removeAttribute(name) { delete this.attributes[name]; },
+    setAttribute(name, value) { this.attributes[name] = String(value); },
+    getAttribute(name) { return this.attributes[name]; },
+    querySelectorAll() { return []; },
+    querySelector() { return null; },
+    classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } }
+  };
+}
+
 const script = scriptFromHtml(operatorNextUi);
 assert.doesNotThrow(() => new vm.Script(script, { filename: "AdminUI_OperatorNext.script.js" }));
 
@@ -66,7 +85,7 @@ assert.match(operatorNextUi, /openBatchCommunicationFromSelection_\('selected'\)
 assert.match(operatorNextUi, /operatorNextHandleContext_[\s\S]*operatorNextOpenReview_\(row\)/, "Context actions must converge on the visible Review handler");
 assert.match(operatorNextUi, /data-onx-more=/, "Every worklist row must expose a non-right-click action alternative");
 assert.match(operatorNextUi, /operatorNextCapability_\('CAN_RUN_BATCH_COMMUNICATIONS'\)/, "Batch visibility must consume resolved capabilities");
-assert.doesNotMatch(operatorNextUi, /ADMIN_ROLE\s*===|ADMIN_ROLE\s*!==/, "Operator Next must not branch authority directly on role names");
+assert.doesNotMatch(operatorNextUi, /if\s*\([^)]*ADMIN_ROLE|ADMIN_ROLE\s*\?\s*|ADMIN_ROLE\s*:\s*/, "Operator Next must not branch authority directly on role names");
 
 assert.match(operatorNextUi, /id="onxExportVcf"[\s\S]*disabled/, "Unsafe VCF export must remain disabled in Track L");
 assert.match(operatorNextUi, /current Actionability DTO does not expose the approved phone number/, "VCF block must expose the exact missing authority contract");
@@ -81,8 +100,12 @@ const runner = {
   admin_getOperationalSafetyStatus() { calls.push("admin_getOperationalSafetyStatus"); return this; },
   admin_getOpsLifecycleSummary() { calls.push("admin_getOpsLifecycleSummary"); return this; }
 };
+const documentNodes = {};
 const documentStub = {
-  getElementById() { return null; },
+  getElementById(id) {
+    if (!documentNodes[id]) documentNodes[id] = makeDomNode(id);
+    return documentNodes[id];
+  },
   querySelectorAll() { return []; },
   addEventListener() {}
 };
@@ -96,9 +119,9 @@ const context = {
   Object,
   JSON,
   INITIAL_ADMIN_VIEW: "operator-next",
-  USER_EMAIL: "principal@kundu.ac",
+  ADMIN_EMAIL: "principal@kundu.ac",
   ADMIN_ROLE: "OPERATIONS",
-  ADMIN_CAPABILITIES: {
+  ADMIN_CAPABILITY_CONTEXT: {
     capabilities: {
       CAN_OPEN_REVIEW_WORKSPACE: true,
       CAN_RUN_BATCH_COMMUNICATIONS: true,
@@ -143,6 +166,8 @@ context.operatorNextActivateRoute_("health");
 assert.ok(calls.includes("admin_getOperationalSafetyStatus"), "Health diagnostics must load on demand");
 context.operatorNextShowGlobalCompatibility_();
 assert.ok(!calls.includes("admin_getOpsLifecycleSummary"), "Programmatic Global View activation must remain contained");
+assert.equal(documentNodes.onxAccountEmail.textContent, "principal@kundu.ac", "Operator Next must load account email from the shared Admin bootstrap");
+assert.equal(documentNodes.onxAccountRole.textContent, "OPERATIONS · capability-backed", "Operator Next must load role from the shared Admin bootstrap");
 
 const waffi = {
   rowNumber: 2959,
@@ -207,7 +232,59 @@ assert.deepEqual(Object.keys(context.actionabilitySelectedKeys).sort(), [waffi.a
 context.operatorNextReceiveActionability_({ rows: [waffi, { ...stephanie, selectable: false, actionabilityState: "COOLING_OFF" }] });
 assert.deepEqual(Object.keys(context.operatorNextState_.selected), [waffi.applicantId], "Forced refresh must clear selected IDs that are no longer selectable");
 
+const missingIdentityCalls = [];
+const missingIdentityNodes = {};
+const missingIdentityContext = {
+  console,
+  setTimeout(fn) { if (typeof fn === "function") fn(); return 0; },
+  clearTimeout() {},
+  Math,
+  Date,
+  RegExp,
+  Number,
+  Boolean,
+  String,
+  Array,
+  Object,
+  JSON,
+  INITIAL_ADMIN_VIEW: "operator-next",
+  ADMIN_EMAIL: "",
+  ADMIN_ROLE: "",
+  ADMIN_CAPABILITY_CONTEXT: null,
+  WEBAPP_URL: "https://example.invalid/exec",
+  document: {
+    getElementById(id) {
+      if (!missingIdentityNodes[id]) missingIdentityNodes[id] = makeDomNode(id);
+      return missingIdentityNodes[id];
+    },
+    querySelectorAll() { return []; },
+    addEventListener() {}
+  },
+  window: { scrollTo() {}, innerWidth: 1400, innerHeight: 900, open() {} },
+  navigator: { clipboard: { writeText: () => Promise.resolve() } },
+  google: { script: { run: { withSuccessHandler() { return this; }, withFailureHandler() { return this; } } } },
+  esc: htmlEscape,
+  loadActionabilityPreview_() { missingIdentityCalls.push("admin_getActionabilityPreview"); },
+  review() {},
+  openBatchCommunicationFromSelection_() {},
+  actionabilityRowKey_(row) { return String(row && row.applicantId || ""); },
+  actionabilityIsSelectable_(row) { return !!(row && row.selectable === true); },
+  actionabilitySelectedKeys: {},
+  actionabilityPreviewRows: [],
+  actionabilityCurrentCohortRows: [],
+  actionabilityRenderedRows: [],
+  actionabilitySelectionSource: ""
+};
+vm.createContext(missingIdentityContext);
+vm.runInContext(script, missingIdentityContext, { filename: "AdminUI_OperatorNext.script.js" });
+missingIdentityContext.operatorNextInit_();
+assert.deepEqual(missingIdentityCalls, [], "Missing bootstrap identity must stop before lifecycle loading starts");
+assert.equal(missingIdentityNodes.onxAccountEmail.textContent, "Identity unavailable", "Missing bootstrap identity must render a visible account error");
+assert.equal(missingIdentityNodes.onxAccountRole.textContent, "Role unavailable", "Missing bootstrap role must render a visible role error");
+assert.match(missingIdentityNodes.onxLifecycleGrid.innerHTML, /Authenticated Admin identity bootstrap is unavailable/, "Missing bootstrap identity must render a visible lifecycle error");
+
 console.log("PASS Operator Next route, authority, and lazy-hydration contract");
 console.log("PASS Waffi and Stephanie composed projection fixtures");
 console.log("PASS exact Review and selected Batch handler reuse");
 console.log("PASS VCF/WhatsApp Track L safety boundary");
+console.log("PASS shared Admin bootstrap identity is required and degrades visibly");
