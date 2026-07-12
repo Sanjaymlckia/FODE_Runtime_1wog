@@ -2,6 +2,11 @@ function admin_previewApplicantMessage(payload) {
   return withEnvelope_("admin_previewApplicantMessage", function (dbgId) {
     var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    if (!adminHasCapability_(adminEmail, "CAN_PREVIEW_APPLICANT_COMMUNICATION")) {
+      return adminCommBlockedResult_("preview", adminCapabilityBlockCode_("CAN_PREVIEW_APPLICANT_COMMUNICATION"), dbgId, {
+        blockReason: adminCapabilityBlockReason_("CAN_PREVIEW_APPLICANT_COMMUNICATION")
+      });
+    }
     var p = payload && typeof payload === "object" ? payload : {};
     var applicantId = clean_(p.applicantId || "");
     var requestedType = clean_(p.messageType || "");
@@ -34,9 +39,13 @@ function admin_sendApplicantMessage(payload) {
   return withEnvelope_("admin_sendApplicantMessage", function (dbgId) {
     var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
-    requireOperationsAdmin_(adminEmail);
+    if (!adminHasCapability_(adminEmail, "CAN_SEND_INDIVIDUAL_EMAIL")) {
+      return adminCommBlockedResult_("send", adminCapabilityBlockCode_("CAN_SEND_INDIVIDUAL_EMAIL"), dbgId, {
+        blockReason: adminCapabilityBlockReason_("CAN_SEND_INDIVIDUAL_EMAIL")
+      });
+    }
     var p = payload && typeof payload === "object" ? payload : {};
-    if (getAdminRole_(adminEmail) === "OPERATIONS") {
+    if (adminHasCapability_(adminEmail, "CAN_RUN_BATCH_COMMUNICATIONS")) {
       p.sourceSurface = "ops";
       p.sourceView = clean_(p.sourceView || "admin");
     }

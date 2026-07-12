@@ -13,7 +13,7 @@ function admin_setPaymentVerified_impl_(payload, dbgId) {
   try {
   var adminEmail = getActiveUserEmail_();
   if (!isAdmin_(adminEmail)) return err_("ACCESS_DENIED", "Access denied", dbgId);
-  try { requireSuperAdmin_(adminEmail); } catch (_superErr) { return err_("ACCESS_DENIED", "Access denied: SUPER admin required", dbgId); }
+  try { requireAdminCapability_(adminEmail, "CAN_VERIFY_PAYMENT", "Access denied: payment verification capability required"); } catch (_superErr) { return err_("ACCESS_DENIED", "Access denied: payment verification capability required", dbgId); }
 
   payload = payload || {};
   var rowNumber = Number(payload.rowNumber || 0);

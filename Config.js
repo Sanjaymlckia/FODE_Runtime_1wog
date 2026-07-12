@@ -280,7 +280,7 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
     "enquiries@kundu.ac": "VERIFIER",
     "fode_kia@kundu.ac": "VERIFIER",
     "mlc@minervacenters.com": "VERIFIER",
-    "operations@minervacenters.com": "VERIFIER",
+    "operations@minervacenters.com": "OPERATIONS",
     "mlccorporate@minervacenters.com": "VERIFIER"
   },
   SUPER_ADMIN_EMAILS: [

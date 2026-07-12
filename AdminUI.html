@@ -3122,7 +3122,7 @@
             <div class="reviewPanelNote">Preview and controlled send workflow for the selected applicant.</div>
           </div>
         </div>
-        <div class="opsSafetyNotice">Supervisory action &mdash; requires approval, preview, confirmation, and audit. Normal Admin workflow is preview only.</div>
+        <div class="opsSafetyNotice">Controlled individual-send workflow. Preview, confirmation, Communication Authority, capability, Safe Mode, and audit remain required.</div>
         <div class="commMeta">
           <div class="box"><div class="k">Applicant ID</div><div class="v" id="commApplicantId">&mdash;</div></div>
           <div class="box"><div class="k">Effective Email</div><div class="v" id="commEffectiveEmail">&mdash;</div></div>
@@ -3424,8 +3424,18 @@
     const ADMIN_ROLE = <?!= JSON.stringify(String(ADMIN_ROLE || "")) ?>;
     const IS_SUPER = <?!= JSON.stringify(!!IS_SUPER) ?>;
     const IS_OPERATIONS_ADMIN = String(ADMIN_ROLE || "").toUpperCase() === "OPERATIONS";
+    const ADMIN_CAPABILITY_CONTEXT = <?!= JSON.stringify(ADMIN_CAPABILITIES || null) ?>;
+    const ADMIN_CAPABILITY_MAP = ADMIN_CAPABILITY_CONTEXT && typeof ADMIN_CAPABILITY_CONTEXT.capabilities === "object"
+      ? ADMIN_CAPABILITY_CONTEXT.capabilities
+      : {};
     const CAN_RUN_OPERATIONS_ACTIONS = IS_SUPER === true || IS_OPERATIONS_ADMIN === true;
-    const CAN_SAVE_DOCUMENT_STATUSES = !!String(ADMIN_ROLE || "").trim();
+    const CAN_SAVE_DOCUMENT_STATUSES = ADMIN_CAPABILITY_MAP.CAN_SAVE_DOCUMENT_STATUSES === true;
+    const CAN_EDIT_APPLICANT_COMMUNICATION = ADMIN_CAPABILITY_MAP.CAN_EDIT_APPLICANT_COMMUNICATION === true;
+    const CAN_PREVIEW_APPLICANT_COMMUNICATION = ADMIN_CAPABILITY_MAP.CAN_PREVIEW_APPLICANT_COMMUNICATION === true;
+    const CAN_SEND_INDIVIDUAL_EMAIL = ADMIN_CAPABILITY_MAP.CAN_SEND_INDIVIDUAL_EMAIL === true;
+    const CAN_INSERT_PORTAL_LINK = ADMIN_CAPABILITY_MAP.CAN_INSERT_PORTAL_LINK === true;
+    const CAN_VERIFY_PAYMENT = ADMIN_CAPABILITY_MAP.CAN_VERIFY_PAYMENT === true;
+    const CAN_WRITE_ZOHO_BOOKS = ADMIN_CAPABILITY_MAP.CAN_WRITE_ZOHO_BOOKS === true;
     const SUPER_ADMIN_EMAILS = <?!= JSON.stringify((SUPER_ADMIN_EMAILS || []).map(function(v){ return String(v || ""); })) ?>;
     const ROLE_DECISION_SOURCE = <?!= JSON.stringify(String(ROLE_DECISION_SOURCE || "CONFIG.ADMIN_ROLES")) ?>;
     const CAN_OVERRIDE = <?!= JSON.stringify(!!CAN_OVERRIDE) ?>;
@@ -3773,8 +3783,8 @@
         { id:"openPaymentReview", label:"Open payment verification review", source:"Context Menu / Drawer", surface:"Admin review bridge", fn:"?view=admin&open=ApplicantID", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Opens the existing Admin review path for payment verification." },
         { id:"verifyPayment", label:"Verify selected payment", source:"Classroom / Payment", surface:"Classroom Handover", fn:"admin_setPaymentVerified", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Selected applicant only; requires row context, Super Admin, browser confirmation, and existing server-side payment/docs/freeze gates." },
         { id:"previewEmail", label:"Preview email", source:"Communications / Context Menu", surface:"Communications", fn:"admin_previewApplicantMessage", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Preview only; no send." },
-        { id:"sendReminder", label:"Send reminder", source:"Communications / Context Menu", surface:"Communications", fn:"admin_sendApplicantMessage", role:"Operations Admin/Super Admin", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Single-record only; preview, confirmation, Safe Mode, and audit required." },
-        { id:"resendPortalAccess", label:"Resend portal access", source:"Communications / Context Menu", surface:"Communications", fn:"admin_sendApplicantMessage:legacy_invite", role:"Operations Admin/Super Admin", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Single-record portal-access communication through existing send gate." },
+        { id:"sendReminder", label:"Send reminder", source:"Communications / Context Menu", surface:"Communications", fn:"admin_sendApplicantMessage", role:"Configured individual-send capability", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Single-record only; preview, confirmation, capability, Safe Mode, and audit required." },
+        { id:"resendPortalAccess", label:"Resend portal access", source:"Communications / Context Menu", surface:"Communications", fn:"admin_sendApplicantMessage:legacy_invite", role:"Configured individual-send capability", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Single-record portal-access communication through existing send gate and message-specific authority." },
         { id:"openBilling", label:"Open billing", source:"Context Menu", surface:"Billing / Zoho Books", fn:"client:scroll + admin_previewZohoBooksFodePayload", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Read-only selected-applicant Books preview/status." },
         { id:"openInvoice", label:"Open invoice", source:"Billing / Context Menu", surface:"Billing / Zoho Books", fn:"client:window.open invoice URL", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Opens existing invoice URL only." },
         { id:"refreshBooksStatus", label:"Refresh Books status", source:"Billing / Context Menu", surface:"Billing / Zoho Books", fn:"admin_previewZohoBooksFodePayload", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"Read-only status/payload preview." },
@@ -3879,7 +3889,7 @@
       var rows = [
         ["Admin-only", "Legacy review modal access and read-only document/payment review surfaces"],
         ["Ops-only", "Lifecycle cascade, selected-applicant queue routing, mode-based working shell, WhatsApp/bulk registry surfaces"],
-        ["Operations Admin / Super Admin", "Parent email correction, single-record applicant send, bounded stage batch preview/send, and WhatsApp CSV export through existing gates"],
+        ["Capability-gated operational actions", "Parent email correction, single-record applicant send, bounded stage batch preview/send, and WhatsApp CSV export through existing gates."],
         ["Shared", "Applicant review bridge, communications preview, billing preview, portal diagnostics, and classroom preview"],
         ["Super Admin / Governance", "Portal/payment/status mutation, WhatsApp CSV email, document follow-up send, Books/config writes, Safe Mode overrides, and Rules & Config"],
         ["Still using legacy Admin only", "Docs follow-up bulk UI, detailed modal edit cards, and overall override workflow"],
@@ -3896,7 +3906,7 @@
       if (!target) return;
       var items = [
         ["Duplicated action paths", "Applicant review bridge plus legacy Admin review remain intentionally paired; Ops bridges to existing backend functions instead of duplicating business logic."],
-        ["Operations actions", "Parent email correction, applicant send, WhatsApp CSV export, and stage batch preview/send use explicit Operations/Super Admin server gates."],
+        ["Operational actions", "Parent email correction, applicant send, WhatsApp CSV export, and stage batch preview/send use explicit backend capability or higher-risk role gates."],
         ["Ops-only actions", "Mode switch, lifecycle drill-down, selected-applicant queue context, operator dashboard grouping."],
         ["Shared read actions", "Applicant email preview, billing preview, open invoice, portal diagnostics, and classroom preview."],
         ["Super-only actions", "Portal reset/access mutation, document/payment verification mutation, overall override, Books/config writes, WhatsApp CSV email, document follow-up send, and classroom notify."]
@@ -5558,12 +5568,12 @@
       var ctx = opsRequireSelectedApplicant_("opsClassroomResult", "Verify Payment", true);
       if (!ctx) return;
       if (opsBlockSupervisoryAction_("opsClassroomResult", "Verify Payment", ctx.applicantId)) return;
-      if (!IS_SUPER) {
+      if (!CAN_VERIFY_PAYMENT) {
         setOpsResult_("opsClassroomResult", {
           result:"BLOCKED",
           applicantId:ctx.applicantId,
-          blockCode:"SUPER_ADMIN_REQUIRED",
-          blockReason:"Payment verification requires Super Admin mode and the existing server-side requireSuperAdmin_() gate."
+          blockCode:"PAYMENT_VERIFICATION_CAPABILITY_REQUIRED",
+          blockReason:"Payment verification capability is required."
         }, "Verify Payment");
         return;
       }
@@ -6962,6 +6972,14 @@
       if (normalized === "READY" || normalized === "BUSY" || normalized === "LOADING" || normalized === "BLOCKED" || normalized === "DISABLED") return normalized;
       return "DISABLED";
     }
+    function reviewCommunicationCapabilityReason_(capability){
+      var normalized = String(capability || "").trim().toUpperCase();
+      if (normalized === "CAN_PREVIEW_APPLICANT_COMMUNICATION") return "Applicant communication preview capability is required.";
+      if (normalized === "CAN_EDIT_APPLICANT_COMMUNICATION") return "Applicant communication edit capability is required.";
+      if (normalized === "CAN_INSERT_PORTAL_LINK") return "Portal-link insertion capability is required.";
+      if (normalized === "CAN_SEND_INDIVIDUAL_EMAIL") return "Individual applicant email capability is required before send.";
+      return "Capability is required for this action.";
+    }
     function reviewCommunicationActionDescriptor_(actionKey, state){
       var key = String(actionKey || "").trim();
       var selectedType = String(state && state.selectedType || getSelectedCommMessageType_() || "");
@@ -6974,7 +6992,6 @@
       var disableReason = String(state && state.disableReason || "").trim();
       var eligibilityText = String(state && state.eligibility && state.eligibility.text || "").trim();
       var contactReason = String(state && state.contactGate && state.contactGate.reason || "").trim();
-      var operationsReason = "Operations action authority is required before send.";
       var previewReason = "Generate preview first.";
       var hidden = false;
       var label = "";
@@ -7011,15 +7028,24 @@
       } else if (state && state.contactGate && state.contactGate.active) {
         kind = "BLOCKED";
         reason = "Contactability Gate: " + (contactReason || "No effective contact path is available.");
+      } else if ((key === "previewTop" || key === "generateEdited") && !CAN_PREVIEW_APPLICANT_COMMUNICATION) {
+        kind = "DISABLED";
+        reason = reviewCommunicationCapabilityReason_("CAN_PREVIEW_APPLICANT_COMMUNICATION");
+      } else if (key === "generateEdited" && !CAN_EDIT_APPLICANT_COMMUNICATION) {
+        kind = "DISABLED";
+        reason = reviewCommunicationCapabilityReason_("CAN_EDIT_APPLICANT_COMMUNICATION");
+      } else if (key === "insertPortalLink" && !CAN_INSERT_PORTAL_LINK) {
+        kind = "DISABLED";
+        reason = reviewCommunicationCapabilityReason_("CAN_INSERT_PORTAL_LINK");
       } else if (disableReason) {
         kind = "BLOCKED";
         reason = disableReason;
       } else if ((key === "sendTop" || key === "sendEdited") && state && state.eligibility && state.eligibility.active) {
         kind = "BLOCKED";
         reason = eligibilityText || "Cooling-off period active.";
-      } else if ((key === "sendTop" || key === "sendEdited") && !CAN_RUN_OPERATIONS_ACTIONS) {
+      } else if ((key === "sendTop" || key === "sendEdited") && !CAN_SEND_INDIVIDUAL_EMAIL) {
         kind = "DISABLED";
-        reason = operationsReason;
+        reason = reviewCommunicationCapabilityReason_("CAN_SEND_INDIVIDUAL_EMAIL");
       } else if ((key === "sendTop" || key === "sendEdited") && !previewReady) {
         kind = "DISABLED";
         reason = previewReason;
@@ -7105,11 +7131,11 @@
         reasonCode: reasonCode,
         reasonText: reasonText,
         selectorDisabled: noApplicant || busy || locked || contactGate.active,
-        previewDisabled: noApplicant || busy || locked || !!disableReason || contactGate.active || editableType,
-        generateDisabled: noApplicant || busy || locked || contactGate.active,
-        insertPortalDisabled: noApplicant || busy || locked || contactGate.active,
-        sendDisabled: noApplicant || busy || locked || !!disableReason || contactGate.active || !previewReady || !CAN_RUN_OPERATIONS_ACTIONS || editableType,
-        sendEditedDisabled: noApplicant || busy || locked || contactGate.active || !previewReady || eligibility.active || !CAN_RUN_OPERATIONS_ACTIONS
+        previewDisabled: noApplicant || busy || locked || !!disableReason || contactGate.active || editableType || !CAN_PREVIEW_APPLICANT_COMMUNICATION,
+        generateDisabled: noApplicant || busy || locked || contactGate.active || !CAN_EDIT_APPLICANT_COMMUNICATION || !CAN_PREVIEW_APPLICANT_COMMUNICATION,
+        insertPortalDisabled: noApplicant || busy || locked || contactGate.active || !CAN_INSERT_PORTAL_LINK,
+        sendDisabled: noApplicant || busy || locked || !!disableReason || contactGate.active || !previewReady || !CAN_SEND_INDIVIDUAL_EMAIL || editableType,
+        sendEditedDisabled: noApplicant || busy || locked || contactGate.active || !previewReady || eligibility.active || !CAN_SEND_INDIVIDUAL_EMAIL
       };
     }
     function applyReviewCommControlState_(el, disabled, state, opts){
@@ -7511,10 +7537,10 @@
       sendBtn.style.display = editableType ? "none" : "";
       if (warningEl) warningEl.classList.toggle("active", editableType);
       previewBtn.textContent = state.busy ? "Working..." : "Preview";
-      sendBtn.textContent = state.busy ? "Sending..." : (CAN_RUN_OPERATIONS_ACTIONS ? "Send (Operations action)" : "Send (Operations action - disabled)");
+      sendBtn.textContent = state.busy ? "Sending..." : (CAN_SEND_INDIVIDUAL_EMAIL ? "Send" : "Send (disabled)");
       noteEl.textContent = state.reasonText
         || emailIssueHint
-        || (!CAN_RUN_OPERATIONS_ACTIONS ? "Operations action \u2014 requires Operations Admin or Super Admin authority, preview, confirmation, and audit. Normal Admin workflow is preview only."
+        || (!CAN_SEND_INDIVIDUAL_EMAIL ? "Individual applicant email capability is required before send. Preview remains available where permitted."
         : ((workflowIsYes_(detail.Portal_Submitted) || workflowIsYes_(detail.Enrolled_Confirmed))
           ? "Applicant already submitted/enrolled; applicant-chasing emails are not required."
           : (previewReady ? "Preview ready. Operational confirmation is still required." : "Preview is required before send.")));
@@ -7673,19 +7699,19 @@
       var testEmailSent = !!(emailResult && emailResult.ok === true && String(emailResult.status || "") === "TEST_INVOICE_EMAIL_SENT");
       var canCreate = !!(preview && preview.safe_to_push && liveWriteEnabled && !invoiceRaised && (preview.readinessStatus === "READY" || preview.readinessStatus === "READY_WITH_FALLBACK"));
       if (createBtn) {
-        createBtn.disabled = busy || !canCreate || !IS_SUPER;
-        createBtn.textContent = invoiceRaised ? "Invoice Already Raised" : (IS_SUPER ? "Create Draft Invoice (Supervisory action)" : "Create Draft Invoice (Supervisory action - disabled)");
+        createBtn.disabled = busy || !canCreate || !CAN_WRITE_ZOHO_BOOKS;
+        createBtn.textContent = invoiceRaised ? "Invoice Already Raised" : (CAN_WRITE_ZOHO_BOOKS ? "Create Draft Invoice (Supervisory action)" : "Create Draft Invoice (Supervisory action - disabled)");
         createBtn.style.display = invoiceRaised ? "none" : "";
       }
       var canSendTestEmail = !!(preview && invoiceRaised && preview.testEmailRecipient && !testEmailSent);
       if (sendTestBtn) {
-        sendTestBtn.disabled = busy || !canSendTestEmail || !IS_SUPER;
-        sendTestBtn.textContent = IS_SUPER ? "Send Test Invoice Email (Supervisory action)" : "Send Test Invoice Email (Supervisory action - disabled)";
+        sendTestBtn.disabled = busy || !canSendTestEmail || !CAN_WRITE_ZOHO_BOOKS;
+        sendTestBtn.textContent = CAN_WRITE_ZOHO_BOOKS ? "Send Test Invoice Email (Supervisory action)" : "Send Test Invoice Email (Supervisory action - disabled)";
         sendTestBtn.style.display = invoiceRaised ? "" : "none";
       }
       if (actionHint) {
-        actionHint.textContent = !IS_SUPER
-          ? "Supervisory action \u2014 requires approval, preview, confirmation, and audit. Normal Admin workflow is billing preview/read only."
+        actionHint.textContent = !CAN_WRITE_ZOHO_BOOKS
+          ? "Zoho Books write capability is required. Normal Admin workflow is billing preview/read only."
           : (!preview ? ""
           : (!invoiceRaised
             ? "Create draft invoice before sending test email."
@@ -7951,7 +7977,7 @@
         .admin_previewZohoBooksFodePayload(payload);
     }
     function createZohoBooksDraftUi_(){
-      if (!IS_SUPER) return;
+      if (!CAN_WRITE_ZOHO_BOOKS) return;
       if (booksPreviewState.busy) return;
       var lookup = getBooksLookupValue_();
       if (!lookup) return;
@@ -7982,7 +8008,7 @@
         .admin_createZohoBooksFodeDraftInvoice(payload);
     }
     function sendZohoBooksTestInvoiceUi_(){
-      if (!IS_SUPER) return;
+      if (!CAN_WRITE_ZOHO_BOOKS) return;
       if (booksPreviewState.busy) return;
       var lookup = getBooksLookupValue_();
       if (!lookup) return;
@@ -8159,12 +8185,12 @@
       });
     }
     function sendApplicantMessageUi_(){
-      if (!CAN_RUN_OPERATIONS_ACTIONS) {
+      if (!CAN_SEND_INDIVIDUAL_EMAIL) {
         communicationsState.result = {
           ok: true,
           result: "BLOCKED",
-          blockCode: "OPERATIONS_ADMIN_REQUIRED",
-          blockReason: "Operations action \u2014 requires Operations Admin or Super Admin authority, preview, confirmation, and audit. Normal Admin workflow cannot send applicant communications."
+          blockCode: "INDIVIDUAL_EMAIL_CAPABILITY_REQUIRED",
+          blockReason: "Individual applicant email capability is required before send."
         };
         renderCommunicationsResult_(communicationsState.result);
         updateCommunicationsUi_();

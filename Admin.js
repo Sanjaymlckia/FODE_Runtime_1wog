@@ -103,6 +103,7 @@ function renderAdminApp_(e) {
   t.WEBAPP_URL = CONFIG.WEBAPP_URL_ADMIN || CONFIG.WEBAPP_URL;
   t.ADMIN_ROLE = getAdminRole_(email);
   t.IS_SUPER = getAdminRole_(email) === "SUPER";
+  t.ADMIN_CAPABILITIES = resolveAdminCapabilities_(email);
   t.SUPER_ADMIN_EMAILS = (CONFIG.SUPER_ADMIN_EMAILS || []).slice();
   t.ROLE_DECISION_SOURCE = "CONFIG.ADMIN_ROLES";
   t.CAN_OVERRIDE = canOverrideOverall_(email);
@@ -583,10 +584,7 @@ function getZohoBooksWriteAdminEmails_() {
 }
 
 function canWriteZohoBooksForAdmin_(email) {
-  var e = safeStr_(email || "").toLowerCase();
-  if (!e) return false;
-  if (getAdminRole_(e) === "SUPER") return true;
-  return getZohoBooksWriteAdminEmails_().indexOf(e) >= 0;
+  return adminHasCapability_(email, "CAN_WRITE_ZOHO_BOOKS");
 }
 
 function getZohoBooksOAuthSetupAllowedKeys_() {

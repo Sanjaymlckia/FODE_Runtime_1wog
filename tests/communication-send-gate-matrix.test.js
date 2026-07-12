@@ -260,6 +260,9 @@ vm.runInContext([
 ].join("\n\n"), context);
 assert.match(adminPreview, /authorityOverrideReason/, "Selected preview wrapper must pass authority override reason to backend authority");
 assert.match(adminSend, /authorityOverrideReason/, "Selected send wrapper must pass authority override reason to backend authority");
+assert.match(adminPreview, /adminHasCapability_\(adminEmail,\s*"CAN_PREVIEW_APPLICANT_COMMUNICATION"\)/, "Selected preview wrapper must use the shared preview capability gate");
+assert.match(adminSend, /adminHasCapability_\(adminEmail,\s*"CAN_SEND_INDIVIDUAL_EMAIL"\)/, "Selected send wrapper must use the shared individual-email capability gate");
+assert.match(adminSend, /adminCapabilityBlockCode_\("CAN_SEND_INDIVIDUAL_EMAIL"\)/, "Selected send wrapper must return an explicit capability-derived block code");
 assert.match(adminSend, /BULK_NOT_ALLOWED/, "Single-applicant Review send RPC must continue blocking bulk payloads");
 assert.doesNotMatch(stageSend, /authorityOverride/, "Stage Batch must not provide an override bypass");
 assert.match(selectedBatchPreview, /requireOperationsAdmin_\(adminEmail\)/, "Selected cohort batch preview must remain Operations/Super gated");
@@ -323,6 +326,7 @@ assert.match(dispatchApplicant, /computeEmailIdempotencyKey_/, "Delivery dispatc
 assert.match(dispatchApplicant, /wasEmailAlreadyProcessed_/, "Delivery dispatch must block idempotent replays");
 assert.match(sendApplicant, /communicationRequiresResolvedActionPlaceholders_/, "Selected send must check placeholder policy");
 assert.match(sendApplicant, /hasUnresolvedActionRequiredPlaceholder_/, "Selected send must inspect unresolved placeholders");
+assert.match(sendApplicant, /resolveApplicantMessageContext_/, "Selected send must continue through the canonical message-context authority");
 
 assert.equal(context.hasUnresolvedActionRequiredPlaceholder_("Subject", "Body"), false);
 assert.equal(context.hasUnresolvedActionRequiredPlaceholder_("Subject [ACTION REQUIRED: grade]", "Body"), true);

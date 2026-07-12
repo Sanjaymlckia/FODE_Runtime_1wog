@@ -6974,6 +6974,48 @@ function communicationGetActorInfo_(opts) {
   };
 }
 
+function communicationRequiredCapabilityForAction_(messageType, action) {
+  var normalizedType = normalizeApplicantMessageType_(messageType || "");
+  var normalizedAction = clean_(action || "").toLowerCase();
+  if (normalizedAction === "preview") return "CAN_PREVIEW_APPLICANT_COMMUNICATION";
+  if (normalizedAction !== "send") return "";
+  if (normalizedType === "application_verified_quote") return "CAN_GENERATE_STANDARD_QUOTE";
+  return "CAN_SEND_INDIVIDUAL_EMAIL";
+}
+
+function communicationActorHasCapability_(actor, capability) {
+  var key = clean_(capability || "").toUpperCase();
+  if (!key) return true;
+  if (typeof adminHasCapability_ === "function") {
+    return adminHasCapability_({
+      email: clean_(actor && actor.email || ""),
+      actorRole: clean_(actor && actor.role || "")
+    }, key);
+  }
+  var info = actor || {};
+  if (key === "CAN_PREVIEW_APPLICANT_COMMUNICATION") return info.isAdmin === true;
+  if (key === "CAN_GENERATE_STANDARD_QUOTE") return info.isAdmin === true;
+  if (key === "CAN_SEND_INDIVIDUAL_EMAIL") return info.isAdmin === true;
+  return false;
+}
+
+function communicationCapabilityBlock_(actor, messageType, action) {
+  var capability = communicationRequiredCapabilityForAction_(messageType, action);
+  if (!capability) return null;
+  if (communicationActorHasCapability_(actor, capability)) return null;
+  var blockCode = typeof adminCapabilityBlockCode_ === "function"
+    ? clean_(adminCapabilityBlockCode_(capability) || "")
+    : "ROLE_BLOCKED";
+  var blockReason = typeof adminCapabilityBlockReason_ === "function"
+    ? clean_(adminCapabilityBlockReason_(capability) || "")
+    : communicationBlockReason_("ROLE_BLOCKED", messageType);
+  return {
+    capability: capability,
+    blockCode: blockCode || "ROLE_BLOCKED",
+    blockReason: blockReason || communicationBlockReason_("ROLE_BLOCKED", messageType)
+  };
+}
+
 function communicationBlockReason_(code, messageType) {
   var map = {
     NO_EFFECTIVE_EMAIL: "No effective parent email is available.",
@@ -6995,7 +7037,17 @@ function communicationBlockReason_(code, messageType) {
     COMM_AUTHORITY_BLOCKED: "This communication is blocked by the lifecycle authority matrix.",
     COMM_OVERRIDE_DENIED: "Only Super Admin may override this protected communication gate.",
     COMM_OVERRIDE_REASON_REQUIRED: "Super Admin override requires a written justification of at least 20 characters.",
-    ACCEPTANCE_NOT_CONFIRMED: "Acceptance or enrolment authority is not confirmed for this applicant."
+    ACCEPTANCE_NOT_CONFIRMED: "Acceptance or enrolment authority is not confirmed for this applicant.",
+    APPLICANT_COMMUNICATION_PREVIEW_CAPABILITY_REQUIRED: "Applicant communication preview capability is required.",
+    INDIVIDUAL_EMAIL_CAPABILITY_REQUIRED: "Individual applicant email capability is required before send.",
+    INDIVIDUAL_WHATSAPP_CAPABILITY_REQUIRED: "Individual applicant WhatsApp capability is required before send.",
+    PORTAL_LINK_CAPABILITY_REQUIRED: "Portal-link insertion capability is required.",
+    STANDARD_QUOTE_CAPABILITY_REQUIRED: "Standard quote capability is required.",
+    STANDARD_INVOICE_CAPABILITY_REQUIRED: "Standard invoice capability is required.",
+    PAYMENT_VERIFICATION_CAPABILITY_REQUIRED: "Payment verification capability is required.",
+    BATCH_COMMUNICATION_CAPABILITY_REQUIRED: "Batch communication capability is required.",
+    COOLDOWN_OVERRIDE_CAPABILITY_REQUIRED: "Cooldown override capability is required.",
+    FINANCIAL_OVERRIDE_CAPABILITY_REQUIRED: "Financial override capability is required."
   };
   return map[clean_(code || "")] || ("Action blocked for message type: " + clean_(messageType || "unknown"));
 }
@@ -8480,6 +8532,8 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
   if (!normalizedType) return block("UNKNOWN_MESSAGE_TYPE");
   if (!actor.isAdmin) return block("ROLE_BLOCKED");
   if (clean_(options.action || "") === "planBatch" && !actor.isSuper) return block("ROLE_BLOCKED");
+  var capabilityBlock = communicationCapabilityBlock_(actor, normalizedType, clean_(options.action || "") === "send" ? "send" : "preview");
+  if (capabilityBlock) return block(capabilityBlock.blockCode, capabilityBlock.blockReason);
   if (!context.applicantId) return block("APPLICANT_NOT_FOUND");
 
   var canonicalLifecycle = typeof resolveCanonicalApplicantLifecycle_ === "function"
@@ -8599,6 +8653,8 @@ function resolveApplicantMessageContext_(applicantId, messageType, opts) {
   if (!normalizedType) return block("UNKNOWN_MESSAGE_TYPE");
   if (!actor.isAdmin) return block("ROLE_BLOCKED");
   if (clean_(options.action || "") === "planBatch" && !actor.isSuper) return block("ROLE_BLOCKED");
+  var capabilityBlock = communicationCapabilityBlock_(actor, normalizedType, clean_(options.action || "") === "send" ? "send" : "preview");
+  if (capabilityBlock) return block(capabilityBlock.blockCode, capabilityBlock.blockReason);
 
   var sheet = mustGetDataSheet_(getWorkingSpreadsheet_());
   var rowNumber = findRowByApplicantId_(sheet, applicantId);
@@ -8899,6 +8955,7 @@ function communicationOverlayStatusFromCode_(code) {
   if (normalized === "DO_NOT_CONTACT") return "DO_NOT_CONTACT";
   if (normalized === "COOLDOWN" || normalized === "COOLDOWN_ACTIVE") return "COOLDOWN";
   if (normalized === "PORTAL_SUBMITTED" || normalized === "PORTAL_ALREADY_SUBMITTED") return "PORTAL_SUBMITTED";
+  if (/_CAPABILITY_REQUIRED$/.test(normalized) || normalized === "ROLE_BLOCKED") return "ROLE_BLOCKED";
   if (normalized === "RESPONDED") return "RESPONDED";
   if (normalized === "MISSING_PORTAL_SECRET" || normalized === "NO_PORTAL_SECRET") return "NO_PORTAL_SECRET";
   return "NOT_STAGE_MESSAGE_MATCH";
@@ -9058,6 +9115,7 @@ function getApplicantStageAndEligibility_(rowObj) {
 function buildApplicantCommunicationAuthorityProjection_(rowObj, rowNumber, sheet, requestedMessageType, opts) {
   var row = rowObj || {};
   var options = opts && typeof opts === "object" ? opts : {};
+  var actor = communicationGetActorInfo_(options);
   var legacyStage = normalizeLifecycleStageKey_(deriveApplicantLifecycleStage_(row));
   var canonicalLifecycle = typeof resolveCanonicalApplicantLifecycle_ === "function"
     ? resolveCanonicalApplicantLifecycle_(row, {})
@@ -9087,20 +9145,24 @@ function buildApplicantCommunicationAuthorityProjection_(rowObj, rowNumber, shee
     action: "preview",
     skipPortalUrlBuild: true
   }));
-  var blockCode = clean_(resolved && resolved.blockCode || "");
+  var capabilityBlock = communicationCapabilityBlock_(actor, selectedType, "send");
+  var blockCode = clean_(capabilityBlock && capabilityBlock.blockCode || resolved && resolved.blockCode || "");
+  var blockReason = clean_(capabilityBlock && capabilityBlock.blockReason || resolved && resolved.blockReason || "");
+  var permitted = capabilityBlock ? false : !!(resolved && resolved.permitted === true);
+  var sendableNow = capabilityBlock ? false : !!(resolved && resolved.sendableNow === true && resolved.eligible === true);
   return {
     stage: legacyStage,
     canonicalLifecycle: canonicalLifecycle,
     recommendedMessageType: recommendedMessageType,
     requestedMessageType: requestedType,
     selectedMessageType: selectedType,
-    permitted: !!(resolved && resolved.permitted === true),
-    sendableNow: !!(resolved && resolved.sendableNow === true && resolved.eligible === true),
-    commStatus: resolved && resolved.eligible === true
+    permitted: permitted,
+    sendableNow: sendableNow,
+    commStatus: sendableNow
       ? "ACTIONABLE"
       : communicationOverlayStatusFromCode_(blockCode),
     blockCode: blockCode,
-    blockReason: clean_(resolved && resolved.blockReason || ""),
+    blockReason: blockReason,
     awaitingResponse: isLifecycleAwaitingResponseStage_(legacyStage),
     authoritySource: clean_(resolved && resolved.canonicalLifecycleAuthority && resolved.canonicalLifecycleAuthority.authoritySource || ""),
     authorityResult: resolved || null

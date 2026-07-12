@@ -55,8 +55,8 @@ const surfaces = [
     functionName: "admin_setPaymentVerified_impl_",
     mutationType: "canonical payment verification",
     protectedSurface: "Payment authority",
-    allow: [/isAdmin_\(adminEmail\)/, /requireSuperAdmin_\(adminEmail\)/],
-    deny: [/ACCESS_DENIED/, /SUPER admin required/],
+    allow: [/isAdmin_\(adminEmail\)/, /requireAdminCapability_\(adminEmail,\s*"CAN_VERIFY_PAYMENT"/],
+    deny: [/ACCESS_DENIED/, /payment verification capability required/],
     blockedWrites: [/setCell_\(sh, rowNumber, idx, "Receipt_Status", "Verified"\)/, /PAYMENT_BEFORE_DOCS_REQUIRES_OVERRIDE/]
   },
   {
@@ -75,7 +75,7 @@ const surfaces = [
     functionName: "admin_sendApplicantMessage",
     mutationType: "single applicant email send",
     protectedSurface: "Communications",
-    allow: [/isAdmin_\(adminEmail\)/, /requireOperationsAdmin_\(adminEmail\)/],
+    allow: [/isAdmin_\(adminEmail\)/, /adminHasCapability_\(adminEmail,\s*"CAN_SEND_INDIVIDUAL_EMAIL"\)/],
     deny: [/BULK_NOT_ALLOWED/, /normalizeApplicantMessageType_/],
     blockedWrites: [/sendApplicantMessage_/]
   },

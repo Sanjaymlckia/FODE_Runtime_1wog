@@ -53,7 +53,7 @@ const zohoSend = extractFunction(adminSource, "admin_sendZohoBooksTestInvoiceEma
 
 assert.match(configSource, /"enquiries@kundu\.ac":\s*"VERIFIER"/, "enquiries@kundu.ac must remain the existing VERIFIER role");
 assert.match(getAdminRole, /return "VERIFIER"/, "Unknown configured admin role fallback remains VERIFIER, not a new RBAC role");
-assert.match(isDocVerifier, /return isAdmin_\(email\)/, "Document verifier path must use the existing admin allowlist/access model");
+assert.match(isDocVerifier, /adminHasCapability_\(email,\s*"CAN_SAVE_DOCUMENT_STATUSES"\)/, "Document verifier path must use the shared capability resolver");
 assert.match(requireDocVerifier, /Access denied: document verifier required/, "Blocked document-save path must provide a clear role reason");
 
 assert.match(saveDocs, /requireDocumentVerifier_\(adminEmail\)/, "Save Document Statuses must allow the existing document verifier path");
@@ -69,14 +69,14 @@ assert.match(saveDocs, /if \(!receiptChanged && !canWritePaymentAuthority\) cont
 assert.match(manifest, /requireDocumentVerifier_\(adminEmail\)/, "Document manifest must be available to the document verifier path");
 assert.match(fileAction, /requireDocumentVerifier_\(adminEmail\)/, "Secure document file actions must be available to the document verifier path");
 
-assert.match(adminUiSource, /const CAN_SAVE_DOCUMENT_STATUSES = !!String\(ADMIN_ROLE \|\| ""\)\.trim\(\)/, "UI must expose document-save authority for existing configured roles");
+assert.match(adminUiSource, /const CAN_SAVE_DOCUMENT_STATUSES = ADMIN_CAPABILITY_MAP\.CAN_SAVE_DOCUMENT_STATUSES === true/, "UI must expose document-save authority from the shared capability map");
 assert.match(adminUiSource, /if \(!CAN_SAVE_DOCUMENT_STATUSES\)[\s\S]*configured document verifier required to save document statuses/, "UI saveDocs guard must use document-verifier authority");
 assert.doesNotMatch(extractFunction(adminUiSource, "saveDocs"), /if \(!IS_SUPER\)/, "UI saveDocs must not remain Super-only");
 assert.match(adminUiSource, /Save document verification statuses\. Audit records the signed-in operator email\./, "UI must label document save audit behavior clearly");
 
 assert.match(stagePreview, /requireOperationsAdmin_\(adminEmail\)/, "Stage Batch preview must remain Operations/Super gated");
 assert.match(stageSend, /requireOperationsAdmin_\(adminEmail\)/, "Stage Batch send must remain Operations/Super gated");
-assert.match(paymentVerify, /requireSuperAdmin_\(adminEmail\)/, "Payment verification must remain Super-only");
+assert.match(paymentVerify, /requireAdminCapability_\(adminEmail,\s*"CAN_VERIFY_PAYMENT"/, "Payment verification must remain capability-gated through the shared resolver");
 assert.match(zohoCreate, /canWriteZohoBooksForAdmin_\(adminEmail\)/, "Zoho Books live draft invoice creation must remain write-admin gated");
 assert.match(zohoSend, /canWriteZohoBooksForAdmin_\(adminEmail\)/, "Zoho Books live/test invoice email send must remain write-admin gated");
 
