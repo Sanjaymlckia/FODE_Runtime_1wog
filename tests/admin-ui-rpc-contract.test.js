@@ -7,6 +7,7 @@ function read(path) {
 }
 
 const adminUi = read("AdminUI.html");
+const operatorNextUi = read("AdminUI_OperatorNext.html");
 const serverSources = ["Code.js", "Admin.js", "Admin_WhatsAppFallback.js", "Admin_StageBatchCommunications.js", "Admin_SelectedApplicantCommunications.js", "Admin_AccessControl.js", "Admin_LifecycleAuthority.js", "Admin_PaymentAuthority.js", "Admin_ReviewQueues.js", "Admin_ReviewStatusAuthority.js", "Admin_RowFacts.js", "Admin_DocumentServices.js", "Admin_DocumentGallery.js", "Routes.js", "Utils.js", "Config.js"]
   .map(read)
   .join("\n");
@@ -31,6 +32,12 @@ scriptBlocks.forEach((block, index) => {
   assert.doesNotThrow(() => new vm.Script(sanitized, { filename: `AdminUI.script.${index}.js` }), `AdminUI script block ${index} must parse after Apps Script template placeholder substitution`);
 });
 
+const operatorNextScriptBlocks = extractScriptBlocks(operatorNextUi);
+assert.ok(operatorNextScriptBlocks.length >= 1, "Operator Next must contain a parseable script block");
+operatorNextScriptBlocks.forEach((block, index) => {
+  assert.doesNotThrow(() => new vm.Script(appsScriptTemplateSafe(block), { filename: `AdminUI_OperatorNext.script.${index}.js` }), `Operator Next script block ${index} must parse`);
+});
+
 const serverFunctions = new Set(Array.from(
   serverSources.matchAll(/\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/g),
   (match) => match[1]
@@ -51,7 +58,7 @@ function extractRpcCalls(source) {
   return { calls: Array.from(calls).sort(), dynamic };
 }
 
-const rpc = extractRpcCalls(adminUi);
+const rpc = extractRpcCalls(adminUi + "\n" + operatorNextUi);
 assert.ok(rpc.calls.length >= 30, "AdminUI RPC map should discover the main google.script.run server calls");
 assert.deepEqual(Array.from(new Set(rpc.dynamic)), ["fnName"], "Only the reviewed fnName dispatcher may use dynamic google.script.run dispatch");
 assert.match(adminUi, /function run_\([\s\S]*typeof runner\[fnName\] !== "function"/, "Generic RPC dispatcher must fail closed on unknown actions");
