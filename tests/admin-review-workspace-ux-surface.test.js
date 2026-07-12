@@ -88,9 +88,14 @@ expectMatch(/function reviewCommunicationControlState_\(/, "Review communication
 expectMatch(/function applyReviewCommControlState_\(/, "Review communication control state must be applied consistently with semantic classes and aria state");
 expectMatch(/renderCommEditablePanel_[\s\S]*reviewCommunicationControlState_\(currentDetail \|\| \{\}, selectedType\)/, "Editable communication controls must use the shared Review communication state");
 expectMatch(/updateCommunicationsUi_[\s\S]*var state = reviewCommunicationControlState_\(detail, selectedType\)/, "Top-level communication controls must use the shared Review communication state");
+expectMatch(/\.commEditablePanel \.btn\{[\s\S]*background:#fff;[\s\S]*border-color:#9fb4ca;[\s\S]*color:var\(--reviewCommText\);[\s\S]*-webkit-text-fill-color:currentColor;[\s\S]*opacity:1;/, "Editable communication buttons must define explicit readable enabled foreground/background semantics");
+expectMatch(/\.commEditablePanel \.btn\.ok:not\(:disabled\)\{[\s\S]*background:#174a8b;[\s\S]*border-color:#174a8b;[\s\S]*color:#fff;[\s\S]*-webkit-text-fill-color:currentColor;/, "Enabled Send Edited Email button must use explicit readable primary contrast");
+expectMatch(/\.commEditablePanel \.btn:disabled,[\s\S]*background:var\(--reviewCommDisabledBg\);[\s\S]*border-color:var\(--reviewCommDisabledBorder\);[\s\S]*color:var\(--reviewCommDisabledText\);[\s\S]*-webkit-text-fill-color:var\(--reviewCommDisabledText\);[\s\S]*opacity:1;/, "Disabled editable communication buttons must remain readable without washed-out inherited text");
 expectMatch(/\.reviewCommControlDisabled,[\s\S]*background:#e2eaf2;[\s\S]*color:#26384e;[\s\S]*opacity:1;/, "Review communication disabled controls must remain readable without washed-out opacity");
-expectMatch(/\.reviewCommControlBusy,[\s\S]*cursor:progress;[\s\S]*color:#173451;[\s\S]*opacity:1;/, "Review communication busy controls must remain readable");
+expectMatch(/\.reviewCommControlBusy,[\s\S]*cursor:progress;[\s\S]*color:#173451;[\s\S]*-webkit-text-fill-color:#173451;[\s\S]*opacity:1;/, "Review communication busy controls must remain readable");
 expectNoMatch(/style\.opacity\s*=/, "Runtime UI logic must not use inline opacity as control-state authority");
+assert.doesNotMatch(functionSource("applyReviewCommControlState_"), /style\.(?:color|webkitTextFillColor)\s*=/, "Review communication control-state application must not use inline text-colour authority");
+assert.doesNotMatch(functionSource("updateCommunicationsUi_"), /style\.(?:color|webkitTextFillColor)\s*=/, "Review communication UI update path must not use inline text-colour authority");
 expectMatch(/\.btn:disabled,[\s\S]*background:#e2eaf2;[\s\S]*border-color:#8da2b7;[\s\S]*color:#26384e;/, "Disabled modal buttons must remain visible globally");
 expectMatch(/id="btnCommPreview"[\s\S]*>Preview<\/button>/, "Preview button label must remain visible");
 expectMatch(/id="btnCommGenerateEditable"[\s\S]*>Generate \/ Preview Email<\/button>/, "Generate / Preview Email button label must remain visible");

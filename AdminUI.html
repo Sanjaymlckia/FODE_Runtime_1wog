@@ -937,6 +937,49 @@
       color: var(--reviewCommText);
       box-shadow:none;
     }
+    .commEditablePanel .btn{
+      background:#fff;
+      border-color:#9fb4ca;
+      color:var(--reviewCommText);
+      -webkit-text-fill-color:currentColor;
+      text-shadow:none;
+      opacity:1;
+      filter:none;
+      box-shadow:none;
+    }
+    .commEditablePanel .btn:hover:not(:disabled){
+      background:#eef6ff;
+      border-color:#7fa6d1;
+      color:#0f3f78;
+      -webkit-text-fill-color:currentColor;
+      filter:none;
+    }
+    .commEditablePanel .btn:focus-visible{
+      outline:2px solid var(--reviewCommFocus);
+      outline-offset:2px;
+    }
+    .commEditablePanel .btn.ok:not(:disabled){
+      background:#174a8b;
+      border-color:#174a8b;
+      color:#fff;
+      -webkit-text-fill-color:currentColor;
+    }
+    .commEditablePanel .btn.ok:hover:not(:disabled){
+      background:#0f3f78;
+      border-color:#0f3f78;
+      color:#fff;
+      -webkit-text-fill-color:currentColor;
+    }
+    .commEditablePanel .btn:disabled,
+    .commEditablePanel .btn[disabled]{
+      background:var(--reviewCommDisabledBg);
+      border-color:var(--reviewCommDisabledBorder);
+      color:var(--reviewCommDisabledText);
+      -webkit-text-fill-color:var(--reviewCommDisabledText);
+      opacity:1;
+      filter:none;
+      box-shadow:inset 0 0 0 1px rgba(38,56,78,.08);
+    }
     .commEditablePanelTitle{
       font-weight:800;
       margin-bottom:8px;
@@ -969,6 +1012,7 @@
       background:#dbeafe;
       border-color:#7fa6d1;
       color:#173451;
+      -webkit-text-fill-color:#173451;
       opacity:1;
       filter:none;
     }
@@ -978,6 +1022,7 @@
       background:#e2eaf2;
       border-color:#8da2b7;
       color:#26384e;
+      -webkit-text-fill-color:#26384e;
       opacity:1;
       filter:none;
       box-shadow:inset 0 0 0 1px rgba(38,56,78,.08);
