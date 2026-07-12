@@ -5,7 +5,7 @@ Status: ACP / CAP working register
 | Shim | Classification | Current responsibility | Planned fate |
 |---|---|---|---|
 | legacy lifecycle stage in Actionability | Compatibility shim | fallback when canonical recommendation is unavailable | keep until canonical lifecycle migration is complete |
-| legacy lifecycle stage in Communication Authority | Compatibility shim | fallback when canonical communication context is absent or not yet migrated | keep until canonical communication convergence is proven across all message families |
+| legacy lifecycle stage in Communication Authority | Compatibility shim | fallback when canonical communication context is absent or not yet migrated; canonical convergence is active for `docs_missing` and `payment_followup` | keep until canonical communication convergence is proven across all message families |
 | Stage Batch legacy stage selection | Compatibility shim | current candidate-selection authority | keep until dedicated Stage Batch migration pass |
 | UI fallback for bucket summaries | Compatibility shim | preserves Admin rendering if server `bucketSummaries` is absent | remove after stable release evidence |
 | selected/manual batch wrappers | Compatibility shim | preserve entry-point contracts while delegating policy to shared helpers | keep as surface-specific wrappers |

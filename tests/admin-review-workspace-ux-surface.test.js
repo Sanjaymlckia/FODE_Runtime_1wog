@@ -84,6 +84,13 @@ expectMatch(/commTemplateCard\.selected\{[^}]*border-color:#1f5aa5[^}]*box-shado
 expectMatch(/\.commTemplateCard \.btn:disabled,[\s\S]*background:#e2eaf2;[\s\S]*border-color:#8da2b7;[\s\S]*color:#26384e;/, "Disabled template preview buttons must remain visible and readable");
 expectMatch(/commTemplateSelectedBanner[\s\S]*Selected template/, "Selected communication template card must show explicit selected label");
 expectMatch(/Selected template:<\/strong>[\s\S]*previewMeta\.label/, "Communication preview must name the selected template it reflects");
+expectMatch(/function reviewCommunicationControlState_\(/, "Review communication controls must derive disabled/busy state through one modal-scoped helper");
+expectMatch(/function applyReviewCommControlState_\(/, "Review communication control state must be applied consistently with semantic classes and aria state");
+expectMatch(/renderCommEditablePanel_[\s\S]*reviewCommunicationControlState_\(currentDetail \|\| \{\}, selectedType\)/, "Editable communication controls must use the shared Review communication state");
+expectMatch(/updateCommunicationsUi_[\s\S]*var state = reviewCommunicationControlState_\(detail, selectedType\)/, "Top-level communication controls must use the shared Review communication state");
+expectMatch(/\.reviewCommControlDisabled,[\s\S]*background:#e2eaf2;[\s\S]*color:#26384e;[\s\S]*opacity:1;/, "Review communication disabled controls must remain readable without washed-out opacity");
+expectMatch(/\.reviewCommControlBusy,[\s\S]*cursor:progress;[\s\S]*color:#173451;[\s\S]*opacity:1;/, "Review communication busy controls must remain readable");
+expectNoMatch(/style\.opacity\s*=/, "Runtime UI logic must not use inline opacity as control-state authority");
 expectMatch(/\.btn:disabled,[\s\S]*background:#e2eaf2;[\s\S]*border-color:#8da2b7;[\s\S]*color:#26384e;/, "Disabled modal buttons must remain visible globally");
 expectMatch(/id="btnCommPreview"[\s\S]*>Preview<\/button>/, "Preview button label must remain visible");
 expectMatch(/id="btnCommGenerateEditable"[\s\S]*>Generate \/ Preview Email<\/button>/, "Generate / Preview Email button label must remain visible");

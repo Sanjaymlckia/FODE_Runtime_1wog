@@ -1,36 +1,45 @@
 flowchart TD
-  FD["FormDesigner intake<br/>current live source"] --> RF["Raw row facts"]
-  PORTAL["Portal/document uploads"] --> RF
+  FD["FormDesigner intake<br/>current live source"] --> RF["Authoritative row facts"]
+  PORTAL["Applicant portal<br/>uploads + submission facts"] --> RF
+  REVIEWM["Review Workspace mutations<br/>documents, payment, contact, portal"] --> RF
   GF["Google Forms replacement<br/>future"] -.-> RF
 
-  RF --> SF["Shared row facts"]
-  SF --> AUTH["Authority layer"]
+  RF --> LIFE["Canonical Lifecycle Resolver<br/>applicant-state authority"]
+  RF --> DOC["Document completeness/review<br/>document authority"]
+  RF --> PAY["Payment authority<br/>Receipt_Status truth"]
+  RF --> CONTACT["Contactability evidence<br/>email/bounce/fallback facts"]
 
-  AUTH --> LIFE["Canonical Lifecycle Resolver<br/>applicant-state authority"]
-  AUTH --> DOC["Document verification<br/>status + Docs_Verified rollup"]
-  AUTH --> PAY["Payment verification<br/>receipt/payment authority"]
-  AUTH --> COMM["Communication authority<br/>semantic registry + send gates"]
-  AUTH --> FILES["Signed document routes<br/>open/download/preview"]
-  AUTH --> ZOHO["Zoho Books<br/>protected live workflow"]
+  LIFE <--> ACTION["Actionability Resolver<br/>workload authority"]
+  DOC --> ACTION
+  PAY --> ACTION
+  CONTACT --> ACTION
 
-  FILES --> PREVIEW["Applicant-folder FODE_PREVIEW<br/>gallery + lightbox"]
+  ACTION --> COMMREC["Recommended message type<br/>recommendation only"]
+  COMMREC --> COMMAUTH["Communication Authority<br/>message-specific permit/block"]
+  RF --> COMMAUTH
+  COMMAUTH --> PREVIEW["Preview authority<br/>selected/stage/manual preview"]
+  PREVIEW --> SEND["Send gate<br/>role, cooldown, idempotency, confirmation"]
+  SEND --> RF
 
-  DOC --> LEDGER["Population Ledger<br/>exactly-once population accounting"]
-  PAY --> LEDGER
-  COMM --> LEDGER
-  LIFE --> ACTION["Operator actionability resolver<br/>workload authority"]
-  LEDGER --> ACTION
-  PREVIEW --> ACTION
+  RF --> LEDGER["Population Ledger<br/>exactly-once accounting authority"]
+  LEDGER --> OPSWS["Operations Workspace<br/>derived work surface"]
+  ACTION --> OPSWS
+  ACTION --> REVIEWD["Review Workspace display DTO<br/>authority-backed"]
+  REVIEWD --> REVIEWWS["Review Workspace<br/>mutation authority"]
 
-  LEDGER --> ADMIN["Admin Dashboard / Operations Workspace<br/>population + workload surface"]
-  ACTION --> ADMIN
-  ACTION --> REVIEW["Review Workspace display<br/>authority-backed"]
-  REVIEW --> MUTATE["Review Workspace<br/>mutation authority"]
-  ACTION --> QUEUES["Review queues<br/>compatibility workflow cohorts"]
-  ACTION --> STAGE["Stage Batch communications<br/>separate authority"]
-  ACTION --> ESC["Escalations / blockers"]
+  ACTION --> STAGE["Stage Batch<br/>compatibility cohort projection"]
+  STAGE --> PREVIEW
+  ACTION --> QUEUES["Review Queues<br/>compatibility workflow"]
+  QUEUES --> REVIEWWS
 
-  OPS["OPS<br/>frozen reference surface"] -.-> AUTH
-  DR["DR tooling + governance<br/>baseline protection"] -.-> ADMIN
+  RF --> FILES["Signed document routes<br/>open/download/preview authority"]
+  FILES --> GALLERY["Applicant-folder FODE_PREVIEW<br/>derived evidence"]
+
+  RF --> ZOHO["Zoho Books adapter<br/>invoice metadata integration"]
+  ZOHO -.-> PAY
+
+  OPS["OPS<br/>frozen reference surface"] -.-> OPSWS
+  LEGACY["Historical campaign helpers<br/>compatibility/historical"] -.-> COMMAUTH
+  DR["DR tooling + governance<br/>baseline protection"] -.-> OPSWS
   AI["AI precheck<br/>future advisory only"] -.-> DOC
-  LAP["LAP automation<br/>partial/future scaffold"] -.-> ACTION
+  CLASS["Google Classroom<br/>future teaching authority"] -.-> REVIEWWS

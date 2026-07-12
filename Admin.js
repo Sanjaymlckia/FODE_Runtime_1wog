@@ -2864,6 +2864,12 @@ function actionabilityBatchMessageTypeForRecommendation_(recommendedMessageType)
   return "";
 }
 
+function actionabilityAuthorityRecommendedMessageType_(canonicalMessageType, localMessageType) {
+  return actionabilityBatchMessageTypeForRecommendation_(
+    clean_(canonicalMessageType || "") || clean_(localMessageType || "")
+  );
+}
+
 function resolveActionabilityState_(facts) {
   var f = facts && typeof facts === "object" ? facts : {};
   var owner = clean_(f.owner || "").toUpperCase();
@@ -3064,12 +3070,16 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     canonicalRecommendedMessageType: canonicalLifecycle && canonicalLifecycle.recommendedMessageType || "",
     coolingOffUntil: row.Email_Next_Action_Date || ""
   });
+  var authoritativeRecommendedMessageType = actionabilityAuthorityRecommendedMessageType_(
+    canonicalLifecycle && canonicalLifecycle.recommendedMessageType,
+    recommendedMessageType
+  );
   var communicationProgress = actionabilityWorkloadExplanationForRow_({
     actionabilityState: actionabilityState.actionabilityState,
     reasonCode: actionabilityState.reasonCode,
     nextAction: nextAction,
     recommendedAction: actionabilityState.recommendedAction,
-    recommendedMessageType: recommendedMessageType,
+    recommendedMessageType: authoritativeRecommendedMessageType,
     lastRelevantDate: dateInfo.value,
     lastContactAgeDays: lastContactAgeDays,
     authorityState: {
@@ -3104,7 +3114,7 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     urgencyLevel: urgency.level,
     urgencyReason: urgency.reason,
     suppressor: suppressor,
-    recommendedMessageType: recommendedMessageType,
+    recommendedMessageType: authoritativeRecommendedMessageType,
     communicationProgress: communicationProgress,
     communicationProgressDetail: actionabilityState.selectable === true
       ? "Ready for batch preview; Communication Authority remains the send gate."

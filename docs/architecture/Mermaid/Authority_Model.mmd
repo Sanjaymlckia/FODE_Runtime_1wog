@@ -1,36 +1,42 @@
 flowchart TD
-  A["Shared row facts"] --> B["Canonical lifecycle resolver<br/>applicant-state authority"]
-  A --> C["Document completeness authority"]
-  A --> D["Document review authority"]
-  A --> E["Payment authority"]
-  A --> F["Communication authority<br/>send authority"]
-  A --> G["Classroom / enrolment authority<br/>partial/future"]
-  A --> I["Signed document route authority"]
-  A --> J["Preview rendition authority<br/>derived evidence only"]
-  A --> K["Zoho Books workflow<br/>protected payment-adjacent"]
-  A --> L["Contactability evidence"]
+  RF["Authoritative row facts"] --> LIFE["Canonical Lifecycle<br/>base state + overlays"]
+  RF --> DOC["Document Authority<br/>uploads + verification"]
+  RF --> PAY["Payment Authority<br/>Receipt_Status"]
+  RF --> CONTACT["Contactability Authority<br/>email/bounce/fallback facts"]
+  RF --> PORTAL["Portal Access Domain<br/>identity, availability, progress"]
 
-  B --> H["Operator actionability resolver<br/>workload authority"]
-  C --> H
-  D --> H
-  E --> H
-  L --> H
+  LIFE <--> ACTION["Actionability Resolver<br/>workload authority"]
+  DOC --> ACTION
+  PAY --> ACTION
+  CONTACT --> ACTION
+  PORTAL --> ACTION
 
-  H --> Q["Population Ledger<br/>exactly-once read-only accounting"]
-  C --> Q
-  D --> Q
-  E --> Q
-  F --> Q
-  G -.-> H
-  I --> H
-  J --> H
-  K --> E
-  L --> F
+  ACTION --> REC["Recommended Message<br/>projection, not permission"]
+  REC --> COMMAUTH["Communication Authority<br/>final permit/block"]
+  RF --> COMMAUTH
+  CONTACT --> COMMAUTH
+  PAY --> COMMAUTH
+  PORTAL --> COMMAUTH
 
-  Q --> M["Operations Workspace / Lifecycle Map<br/>accounting and workload surfaces"]
-  H --> M
-  H --> R["Review Workspace display DTO"]
-  R --> S["Review Workspace<br/>mutation authority"]
-  F --> N["Stage Batch preview/send gates"]
-  F --> O["Selected-applicant communication gates"]
-  P["OPS frozen reference"] -.-> H
+  COMMAUTH --> PREVIEW["Preview Authority<br/>recipient/template proof"]
+  PREVIEW --> SEND["Send Gate<br/>role, cooldown, idempotency, confirmation"]
+  SEND --> LOG["Communication ledger/writeback"]
+  LOG --> RF
+
+  RF --> LEDGER["Population Ledger<br/>accounting authority"]
+  LEDGER --> OPSWS["Operations Workspace<br/>derived surface"]
+  ACTION --> OPSWS
+  ACTION --> REVIEWDTO["Review Workspace Display DTO"]
+  REVIEWDTO --> REVIEW["Review Workspace<br/>mutation authority"]
+  REVIEW --> RF
+
+  ACTION --> STAGE["Stage Batch<br/>compatibility cohort projection"]
+  ACTION --> QUEUES["Review Queues<br/>compatibility workflow"]
+  STAGE --> PREVIEW
+  QUEUES --> REVIEW
+
+  RF --> ZOHO["Zoho Books Adapter<br/>external accounting metadata"]
+  ZOHO -.-> ZNOTE["Books metadata does not verify payment"]
+  ZNOTE -.-> PAY
+  OPS["OPS frozen reference"] -.-> OPSWS
+  HIST["Historical Legacy Campaign<br/>compatibility only"] -.-> COMMAUTH

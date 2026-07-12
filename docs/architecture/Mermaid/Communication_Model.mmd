@@ -1,22 +1,34 @@
 flowchart LR
-  A["Authority truth"] --> A1["Canonical lifecycle"]
-  A1 --> B["Actionability recommendation<br/>workload only"]
-  B --> C["Communication semantic registry"]
+  RF["Authoritative row facts"] --> LIFE["Canonical Lifecycle"]
+  LIFE --> ACTION["Actionability recommendation"]
+  ACTION --> REC["recommendedMessageType"]
 
-  C --> D["Selected-applicant templates"]
-  C --> E["Stage Batch mappings"]
-  C --> F["Planned/manual types<br/>inert until approved"]
+  OP["Operator request<br/>requestedMessageType"] --> SELECT["Selection adapter"]
+  REC --> SELECT
+  SELECT --> SEL["selectedMessageType<br/>authority-evaluated"]
 
-  D --> G["Preview/Edit surface"]
-  G --> H["Send authority<br/>role + caps + cooldown + confirmation"]
+  SEL --> AUTH["Communication Authority<br/>message-specific permit/block"]
+  RF --> AUTH
+  AUTH --> PERM["permitted<br/>policy/lifecycle allowed"]
+  AUTH --> SENDABLE["sendableNow<br/>contactability/cooldown/role/idempotency"]
+  AUTH --> BLOCK["blockCode + blockReason"]
 
-  E --> I["Preview cohort"]
-  I --> J["Operator confirmation"]
-  J --> H
+  PERM --> PREVIEW["Preview<br/>same authority result"]
+  SENDABLE --> PREVIEW
+  BLOCK --> PREVIEW
+  PREVIEW --> CONFIRM["Operator confirmation"]
+  CONFIRM --> SEND["Send gate<br/>same authority result rechecked"]
+  SEND --> LEDGER["Communication ledger/writeback"]
 
-  H --> K["Audit/log meaning"]
-  H --> K1["Authority source<br/>canonical or legacy fallback"]
-  L["custom_email"] --> D
-  LNOTE["selected-only<br/>not batch-safe"] -.-> L
-  M["Prospect guidance<br/>future, not applicant Stage Batch"] -.-> F
-  N["Contactability evidence<br/>warning source"] -.-> H
+  SELECT --> REVIEW["Review Workspace communication UI"]
+  AUTH --> REVIEW
+  AUTH --> OPS["Operations Workspace recommendation"]
+  AUTH --> BATCH["Selected/manual batch modal"]
+  AUTH --> STAGE["Stage Batch<br/>compatibility cohort projection"]
+
+  CUSTOM["custom_email<br/>selected-only manual"] --> SELECT
+  PORTAL["legacy_invite<br/>Portal Communication compatibility token"] --> AUTH
+  HIST["Historical Legacy Campaign helpers"] -.-> PORTAL
+  MANUAL["Protected/manual templates"] --> AUTH
+  CONTACT["Contactability evidence"] --> SENDABLE
+  COOL["Cooldown/idempotency"] --> SENDABLE

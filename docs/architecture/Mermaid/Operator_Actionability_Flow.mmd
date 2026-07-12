@@ -1,9 +1,13 @@
 flowchart TD
-  A["Authority outputs"] --> B["Operator Actionability Resolver<br/>workload authority"]
-  A --> A1["Canonical lifecycle<br/>base state + overlays"]
-  A --> A2["Document and payment state"]
-  A --> A3["Communication state / cooldown / contactability"]
-  A --> A4["Population context"]
+  RF["Authoritative row facts"] --> A1["Canonical lifecycle<br/>base state + overlays"]
+  RF --> A2["Document and payment state"]
+  RF --> A3["Communication state<br/>cooldown + contactability"]
+  RF --> A4["Population context"]
+  RF --> B["Operator Actionability Resolver<br/>workload authority"]
+  A1 <--> B
+  A2 --> B
+  A3 --> B
+  A4 --> B
 
   B --> C["actionOwner"]
   B --> D["nextAction"]
@@ -15,10 +19,12 @@ flowchart TD
   B --> H2["actionabilityState"]
   B --> H3["selectable"]
 
-  G --> I["Preview authority"]
-  I --> J["Send authority"]
+  G --> I["Communication Authority<br/>preview/send permission"]
+  I --> J["Preview + send gates"]
   H1 --> K["Operations Workspace<br/>bucket cards + current worklist"]
   H2 --> K
   H3 --> K
+  K --> L1["Review Workspace<br/>mutation surface"]
+  L1 --> RF
   L["OPS frozen reference"] -.-> B
   M["LAP automation<br/>future"] -.-> B

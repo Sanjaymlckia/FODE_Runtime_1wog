@@ -922,26 +922,65 @@
     .box .v{ color:var(--ink); font-weight:850; }
     .commEditablePanel{
       margin-top:10px;
+      --reviewCommText:#102030;
+      --reviewCommTextSecondary:#40556b;
+      --reviewCommMeta:#52677d;
+      --reviewCommFieldBg:#fff;
+      --reviewCommFieldText:#102030;
+      --reviewCommFieldBorder:#9fb4ca;
+      --reviewCommDisabledBg:#e2eaf2;
+      --reviewCommDisabledText:#26384e;
+      --reviewCommDisabledBorder:#8da2b7;
+      --reviewCommFocus:#1f5aa5;
       background: var(--surfaceCard);
       border-color: var(--line);
-      color: var(--ink);
+      color: var(--reviewCommText);
       box-shadow:none;
     }
     .commEditablePanelTitle{
       font-weight:800;
       margin-bottom:8px;
-      color:var(--ink);
+      color:var(--reviewCommText);
     }
     .commEditablePanel input,
     .commEditablePanel textarea{
-      background: var(--fieldBg);
-      color: var(--text);
-      border-color: var(--fieldBorder);
+      background: var(--reviewCommFieldBg);
+      color: var(--reviewCommFieldText);
+      border-color: var(--reviewCommFieldBorder);
+    }
+    .commEditablePanel input:focus,
+    .commEditablePanel textarea:focus{ outline:2px solid var(--reviewCommFocus); outline-offset:2px; }
+    .commEditablePanel input:disabled,
+    .commEditablePanel textarea:disabled{
+      background:var(--reviewCommDisabledBg);
+      color:var(--reviewCommDisabledText);
+      border-color:var(--reviewCommDisabledBorder);
+      opacity:1;
+      cursor:not-allowed;
     }
     .commEditablePanel input::placeholder,
     .commEditablePanel textarea::placeholder{
-      color: var(--muted);
+      color: var(--reviewCommMeta);
       opacity:1;
+    }
+    .reviewCommControlBusy,
+    .reviewCommControlBusy[disabled]{
+      cursor:progress;
+      background:#dbeafe;
+      border-color:#7fa6d1;
+      color:#173451;
+      opacity:1;
+      filter:none;
+    }
+    .reviewCommControlDisabled,
+    .reviewCommControlDisabled[disabled]{
+      cursor:not-allowed;
+      background:#e2eaf2;
+      border-color:#8da2b7;
+      color:#26384e;
+      opacity:1;
+      filter:none;
+      box-shadow:inset 0 0 0 1px rgba(38,56,78,.08);
     }
     .applicant-status-strip{
       display:grid;
@@ -6498,6 +6537,12 @@
       var el = document.getElementById("commMessageType");
       if (el) el.value = val;
     }
+    function recommendedCommSelectionForDerived_(currentType, requestedType, recommendedType){
+      var current = String(currentType || "").trim();
+      var requested = String(requestedType || "").trim();
+      var recommended = String(recommendedType || "").trim();
+      return recommended && current === requested ? recommended : current;
+    }
     function commTemplateGalleryItems_(){
       return Array.isArray(COMM_TEMPLATE_GALLERY) ? COMM_TEMPLATE_GALLERY : [];
     }
@@ -6551,17 +6596,17 @@
       }
       var authority = reviewAuthoritySnapshot_(d);
       var backendType = String(d.Comm_Recommended_Message_Type || "").trim();
-      var canSendNow = d.Comm_Can_Send_Now === true;
+      var canSendNow = d.Comm_Sendable_Now === true || d.Comm_Can_Send_Now === true;
       var blockReason = String(d.Comm_Block_Reason || d.Comm_Block_Code || (authority && authority.selectBlockReason) || "").trim();
-      if (backendType && canSendNow) {
-        return { messageType:backendType, reason:"Recommended next action from communication authority.", actionable:true };
-      }
       if (backendType) {
         return {
-          messageType:"",
-          blockedMessageType:backendType,
-          reason:blockReason || "No recommended send action is currently available.",
-          actionable:false
+          messageType:backendType,
+          blockedMessageType:canSendNow ? "" : backendType,
+          reason:canSendNow
+            ? "Recommended next action from communication authority."
+            : (blockReason || "The recommended communication is currently blocked."),
+          actionable:canSendNow,
+          recommended:true
         };
       }
       return { messageType:"", reason:blockReason || "No recommended send action.", actionable:false };
@@ -6640,7 +6685,7 @@
         return;
       }
       var recommendedMeta = getCommTemplateMeta_(recommendation.messageType) || {};
-      if (recommendation.actionable === true && recommendation.messageType) {
+      if (recommendation.messageType) {
         recEl.innerHTML = "<strong>Recommended next action:</strong> " + esc(recommendedMeta.label || recommendation.messageType)
           + "<br>" + esc(recommendation.reason || "Review applicant state before sending.")
           + " <button class='btn small' type='button' onclick='selectCommTemplateFromGallery_(" + JSON.stringify(recommendation.messageType) + ")'>Use recommended</button>";
@@ -6657,7 +6702,7 @@
       galleryEl.innerHTML = items.map(function(meta){
         var type = String(meta.messageType || "");
         var isSelected = type === selectedType;
-        var isRecommended = recommendation.actionable === true && type === recommendation.messageType;
+        var isRecommended = type === recommendation.messageType;
         var currentResult = communicationsState.result && typeof communicationsState.result === "object" ? communicationsState.result : null;
         var isBlockedSelected = isSelected
           && currentResult
@@ -6848,29 +6893,80 @@
       if (fields.subject) fields.subject.placeholder = selectedType === "custom_email" ? "Enter subject" : "Generate preview to populate default subject";
       if (fields.body) fields.body.placeholder = selectedType === "custom_email" ? "Enter custom email body" : "Generate preview to populate default body";
     }
+    function reviewCommunicationPreviewReady_(detail, selectedType){
+      var d = detail || currentDetail || {};
+      var type = String(selectedType || getSelectedCommMessageType_() || "");
+      return communicationsState.previewApplicantId === String(d.ApplicantID || "")
+        && communicationsState.previewMessageType === type
+        && communicationsState.result
+        && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
+    }
+    function reviewCommunicationControlState_(detail, selectedType, opts){
+      var d = detail || currentDetail || {};
+      var options = opts && typeof opts === "object" ? opts : {};
+      var type = String(selectedType || getSelectedCommMessageType_() || "");
+      var contactGate = commContactabilityGate_(d);
+      var disableReason = communicationsDisableReason_(d);
+      var eligibility = deriveSendEligibility(d);
+      var previewReady = reviewCommunicationPreviewReady_(d, type);
+      var editableType = isEditableCommType_(type);
+      var noApplicant = !currentRowNumber || !d || !d.ApplicantID;
+      var busy = isUiBusy || communicationsState.busy;
+      var locked = !!options.locked;
+      var reasonCode = "";
+      var reasonText = "";
+      if (noApplicant) { reasonCode = "NO_APPLICANT"; reasonText = "Select an applicant to enable communication controls."; }
+      else if (busy) { reasonCode = "BUSY"; reasonText = previewReady ? "Sending..." : "Loading preview..."; }
+      else if (locked) { reasonCode = "MODAL_LOCKED"; reasonText = "Review modal is locked while applicant details hydrate."; }
+      else if (contactGate.active) {
+        reasonCode = "CONTACTABILITY_GATE";
+        reasonText = "Contactability Gate: " + contactGate.reason + " " + contactGate.recommendedAction + " Alternative: " + contactGate.alternativePath;
+      } else if (disableReason) { reasonCode = "AUTHORITY_BLOCK"; reasonText = disableReason; }
+      else if (eligibility.active) { reasonCode = "COOLDOWN_ACTIVE"; reasonText = eligibility.text; }
+      return {
+        selectedType: type,
+        editableType: editableType,
+        previewReady: !!previewReady,
+        noApplicant: noApplicant,
+        busy: !!busy,
+        locked: locked,
+        contactGate: contactGate,
+        disableReason: disableReason,
+        eligibility: eligibility,
+        reasonCode: reasonCode,
+        reasonText: reasonText,
+        selectorDisabled: noApplicant || busy || locked || contactGate.active,
+        previewDisabled: noApplicant || busy || locked || !!disableReason || contactGate.active || editableType,
+        generateDisabled: noApplicant || busy || locked || contactGate.active,
+        insertPortalDisabled: noApplicant || busy || locked || contactGate.active,
+        sendDisabled: noApplicant || busy || locked || !!disableReason || contactGate.active || !previewReady || !CAN_RUN_OPERATIONS_ACTIONS || editableType,
+        sendEditedDisabled: noApplicant || busy || locked || contactGate.active || !previewReady || eligibility.active || !CAN_RUN_OPERATIONS_ACTIONS
+      };
+    }
+    function applyReviewCommControlState_(el, disabled, state, opts){
+      if (!el) return;
+      var options = opts && typeof opts === "object" ? opts : {};
+      var busy = !!(state && state.busy);
+      el.disabled = !!disabled;
+      el.classList.toggle("reviewCommControlBusy", busy);
+      el.classList.toggle("reviewCommControlDisabled", !!disabled && !busy);
+      if (busy) el.setAttribute("aria-busy", "true");
+      else el.removeAttribute("aria-busy");
+      if (disabled) el.setAttribute("aria-disabled", "true");
+      else el.removeAttribute("aria-disabled");
+      el.title = String(options.title || (disabled && state && state.reasonText) || "");
+    }
     function renderCommEditablePanel_(){
       var panel = document.getElementById("commEditablePanel");
       var generateBtn = document.getElementById("btnCommGenerateEditable");
       var insertBtn = document.getElementById("btnCommInsertPortalLink");
       var sendBtn = document.getElementById("btnCommSendEdited");
       var selectedType = getSelectedCommMessageType_();
-      var isEditable = isEditableCommType_(selectedType);
-      var eligibility = deriveSendEligibility(currentDetail || {});
-      var contactGate = commContactabilityGate_(currentDetail || {});
-      var previewReady = communicationsState.previewApplicantId === String((currentDetail && currentDetail.ApplicantID) || "") && communicationsState.previewMessageType === selectedType && communicationsState.result && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
-      if (panel) panel.classList.toggle("hidden", !isEditable);
-      if (generateBtn) {
-        generateBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy || contactGate.active;
-        generateBtn.title = contactGate.active ? "Contactability Gate: " + contactGate.reason : "";
-      }
-      if (insertBtn) {
-        insertBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy || contactGate.active;
-        insertBtn.title = contactGate.active ? "Contactability Gate: " + contactGate.reason : "";
-      }
-      if (sendBtn) {
-        sendBtn.disabled = !currentRowNumber || isUiBusy || communicationsState.busy || !previewReady || eligibility.active || !CAN_RUN_OPERATIONS_ACTIONS || contactGate.active;
-        sendBtn.title = contactGate.active ? "Contactability Gate: " + contactGate.reason : "";
-      }
+      var state = reviewCommunicationControlState_(currentDetail || {}, selectedType);
+      if (panel) panel.classList.toggle("hidden", !state.editableType);
+      applyReviewCommControlState_(generateBtn, state.generateDisabled, state);
+      applyReviewCommControlState_(insertBtn, state.insertPortalDisabled, state);
+      applyReviewCommControlState_(sendBtn, state.sendEditedDisabled, state);
     }
     function requestPortalLinkForComm_(onDone){
       var done = typeof onDone === "function" ? onDone : function(){};
@@ -6919,6 +7015,10 @@
       if (d.Comm_Stage) rows.push({ label: "Priority", html: renderPriorityBadge_(mapStagePriorityUi_(d.Comm_Stage)) });
       if (d.Comm_Status) rows.push({ label: "Comm Status", value: formatCommunicationDisplayStatus_(d.Comm_Status) });
       if (d.Comm_Can_Send_Now === true || d.Comm_Can_Send_Now === false) rows.push({ label: "Can Send Now", value: d.Comm_Can_Send_Now ? "YES" : "NO" });
+      if (d.Comm_Permitted === true || d.Comm_Permitted === false) rows.push({ label: "Permitted", value: d.Comm_Permitted ? "YES" : "NO" });
+      if (d.Comm_Requested_Message_Type) rows.push({ label: "Requested Message", value: d.Comm_Requested_Message_Type });
+      if (d.Comm_Selected_Message_Type) rows.push({ label: "Authority-Evaluated Message", value: d.Comm_Selected_Message_Type });
+      if (d.Comm_Authority_Source) rows.push({ label: "Authority Source", value: d.Comm_Authority_Source });
       if (d.Comm_Block_Code) rows.push({ label: "Raw Code", value: d.Comm_Block_Code });
       if (d.Comm_Block_Reason) rows.push({ label: "Reason", value: d.Comm_Block_Reason });
       if (d.Comm_Recommended_Message_Type) rows.push({ label: "Recommended Message", value: d.Comm_Recommended_Message_Type });
@@ -6946,6 +7046,7 @@
       var d = detail || currentDetail || {};
       var applicantId = String((d && d.ApplicantID) || "").trim();
       var rowNumber = Number((d && d._rowNumber) || currentRowNumber || 0) || 0;
+      var requestedMessageType = getSelectedCommMessageType_();
       if (!applicantId && !rowNumber) {
         renderCommunicationsDerived_(d);
         return;
@@ -6961,10 +7062,20 @@
           currentDetail.Comm_Stage = String(res.Comm_Stage || "");
           currentDetail.Comm_Status = String(res.Comm_Status || "");
           currentDetail.Comm_Can_Send_Now = res.Comm_Can_Send_Now === true;
+          currentDetail.Comm_Sendable_Now = res.Comm_Sendable_Now === true;
+          currentDetail.Comm_Permitted = res.Comm_Permitted === true;
           currentDetail.Comm_Block_Code = String(res.Comm_Block_Code || "");
           currentDetail.Comm_Block_Reason = String(res.Comm_Block_Reason || "");
           currentDetail.Comm_Recommended_Message_Type = String(res.Comm_Recommended_Message_Type || "");
+          currentDetail.Comm_Requested_Message_Type = String(res.Comm_Requested_Message_Type || "");
+          currentDetail.Comm_Selected_Message_Type = String(res.Comm_Selected_Message_Type || "");
+          currentDetail.Comm_Authority_Source = String(res.Comm_Authority_Source || "");
           currentDetail.Comm_Awaiting_Response = res.Comm_Awaiting_Response === true;
+          setSelectedCommMessageType_(recommendedCommSelectionForDerived_(
+            getSelectedCommMessageType_(),
+            requestedMessageType,
+            currentDetail.Comm_Recommended_Message_Type
+          ));
           if (res.Comm_Can_Send_Now !== true && !String(res.Comm_Recommended_Message_Type || "").trim()) clearCommEditableDraft_(getSelectedCommMessageType_());
           renderCommunicationsDerived_(currentDetail);
           updateCommunicationsUi_();
@@ -6973,7 +7084,7 @@
           if (reqId !== commDerivedRequestId) return;
           renderCommunicationsDerived_(d);
         })
-        .admin_getApplicantCommDerived_json({ applicantId: applicantId, rowNumber: rowNumber });
+        .admin_getApplicantCommDerived_json({ applicantId: applicantId, rowNumber: rowNumber, messageType: requestedMessageType });
     }
     function renderCommunicationsStatus_(detail){
       var d = detail || currentDetail || {};
@@ -7218,31 +7329,25 @@
       if (!previewBtn || !sendBtn || !selectEl || !noteEl) return;
       var detail = currentDetail || {};
       var selectedType = getSelectedCommMessageType_();
-      var editableType = isEditableCommType_(selectedType);
-      var contactGate = commContactabilityGate_(detail);
-      var disableReason = communicationsDisableReason_(detail);
-      var eligibility = deriveSendEligibility(detail);
-      var previewReady = communicationsState.previewApplicantId === String(detail.ApplicantID || "") && communicationsState.previewMessageType === selectedType && communicationsState.result && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
-      var controlsDisabled = !currentRowNumber || isUiBusy || communicationsState.busy || !!disableReason || contactGate.active;
+      var state = reviewCommunicationControlState_(detail, selectedType);
+      var editableType = state.editableType;
+      var previewReady = state.previewReady;
+      var disableReason = state.disableReason;
       var emailIssueHint = opsHasEmailIssue_(detail) ? (disableReason || ("Email issue detected. " + opsEmailIssueFallbackHint_(detail))) : "";
-      selectEl.disabled = !currentRowNumber || isUiBusy || communicationsState.busy || contactGate.active;
-      previewBtn.disabled = editableType ? true : controlsDisabled;
-      sendBtn.disabled = editableType ? true : (controlsDisabled || !previewReady || !CAN_RUN_OPERATIONS_ACTIONS);
+      applyReviewCommControlState_(selectEl, state.selectorDisabled, state);
+      applyReviewCommControlState_(previewBtn, state.previewDisabled, state);
+      applyReviewCommControlState_(sendBtn, state.sendDisabled, state);
       previewBtn.style.display = editableType ? "none" : "";
       sendBtn.style.display = editableType ? "none" : "";
       if (warningEl) warningEl.classList.toggle("active", editableType);
-      previewBtn.textContent = communicationsState.busy ? "Working..." : "Preview";
-      sendBtn.textContent = communicationsState.busy ? "Sending..." : (CAN_RUN_OPERATIONS_ACTIONS ? "Send (Operations action)" : "Send (Operations action - disabled)");
-      noteEl.textContent = communicationsState.busy
-        ? (previewReady ? "Sending..." : "Loading preview...")
-        : (contactGate.active
-          ? ("Contactability Gate: " + contactGate.reason + " " + contactGate.recommendedAction + " Alternative: " + contactGate.alternativePath)
-        : (emailIssueHint
-          || disableReason
-          || (!CAN_RUN_OPERATIONS_ACTIONS ? "Operations action \u2014 requires Operations Admin or Super Admin authority, preview, confirmation, and audit. Normal Admin workflow is preview only."
-          : ((workflowIsYes_(detail.Portal_Submitted) || workflowIsYes_(detail.Enrolled_Confirmed))
-            ? "Applicant already submitted/enrolled; applicant-chasing emails are not required."
-            : (editableType && eligibility.active ? eligibility.text : (previewReady ? "Preview ready. Operational confirmation is still required." : "Preview is required before send."))))));
+      previewBtn.textContent = state.busy ? "Working..." : "Preview";
+      sendBtn.textContent = state.busy ? "Sending..." : (CAN_RUN_OPERATIONS_ACTIONS ? "Send (Operations action)" : "Send (Operations action - disabled)");
+      noteEl.textContent = state.reasonText
+        || emailIssueHint
+        || (!CAN_RUN_OPERATIONS_ACTIONS ? "Operations action \u2014 requires Operations Admin or Super Admin authority, preview, confirmation, and audit. Normal Admin workflow is preview only."
+        : ((workflowIsYes_(detail.Portal_Submitted) || workflowIsYes_(detail.Enrolled_Confirmed))
+          ? "Applicant already submitted/enrolled; applicant-chasing emails are not required."
+          : (previewReady ? "Preview ready. Operational confirmation is still required." : "Preview is required before send.")));
       renderCommEditablePanel_();
       renderCommTemplateGallery_();
       renderCommunicationsApplicantSummary_(detail);
@@ -8527,7 +8632,6 @@ function renderBatchPanel(){
   if (previewBtn) {
     previewBtn.disabled = !selectedStage || batchState.busy || !stageBatchAllowed;
     previewBtn.textContent = batchState.busy && batchState.action === "preview" ? "Opening..." : "Open Batch Communication";
-    previewBtn.style.opacity = previewBtn.disabled ? "0.55" : "1";
     previewBtn.title = previewBtn.disabled ? "Choose a lifecycle stage and confirm authority before opening batch communication." : "Open the Batch Communication modal. Preview and confirmation occur inside the modal.";
   }
   if (sendBtn) {

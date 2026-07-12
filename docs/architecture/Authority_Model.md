@@ -26,8 +26,9 @@ Do not collapse separate authorities into one state. Do not let UI labels become
 | Zoho Books | Backend Zoho preview/draft/test gates | Protected payment-adjacent workflow; not lifecycle or classroom authority. |
 | Communication state | Last contact fields, email status fields, cooldown/idempotency logic | Communication truth is separate from lifecycle and workload. |
 | Communication semantics | H1-H5 semantic registry and template definitions | Message type is separate from delivery mode; planned types remain inert until approved. |
+| Communication recommendation | Canonical lifecycle + Actionability projection | Recommendation is not permission and must not erase blocked-but-recommended messages. |
 | Stage Batch preview | Preview authority/cache and candidate hash/parity | Visible preview is required before send. |
-| Send authority | `evaluateCommunicationAuthority_()` and send validation path | Final messaging authority. Validates role, preview, caps, cooldown, idempotency, confirmation, and logging. |
+| Send authority | `evaluateCommunicationAuthority_()` and send validation path | Final messaging authority. Validates message-specific lifecycle permission, role, preview, caps, cooldown, idempotency, confirmation, and logging. |
 | Enrollment/classroom | Enrollment and classroom handover fields | Partial/future authority; must not be inferred from payment alone. |
 | Contactability | Row-readable communication/failure evidence only | Contactability now routes to its own operational bucket; bounce ingestion remains partial/future until approved. |
 | LAP automation | Stage resolver and automation scaffolds | Partial/future; scheduled action authority is not broadly active. |
@@ -48,12 +49,13 @@ Do not collapse separate authorities into one state. Do not let UI labels become
 | Eligible now vs returned worklist | Full eligible population may exceed the bounded returned cohort. |
 | Review Queues vs population authority | Review Queues are compatibility/workflow queues. They do not account for the applicant population. |
 | Queue visibility vs send eligibility | Review queue rows are compatibility workflow visibility. Stage Batch Preview determines mail eligibility. |
-| Recommendation vs send authority | Actionability recommends. Preview selects. Send validates. |
+| Recommendation vs send authority | Actionability recommends. Communication Authority permits/blocks. Preview and send consume the same result. |
 | Workload vs mutation | Operations Workspace decides what work is visible. Review Workspace performs the edits. |
 | Contactability vs management | Contactability failures are operator workload/data-quality issues, not management exceptions by default. |
 | OPS vs authority | OPS must not create a separate authority system. |
 | Preview vs original document | Preview is derived evidence. Original canonical file remains the document source of truth. |
 | Zoho vs payment authority | Zoho draft/preview activity does not itself verify payment. |
+| Portal submission vs finance communication | Portal submission may block portal-dependent communications, but it is not a global block on payment follow-up. |
 | Contactability vs sent status | Sent status alone is not proof of contactability where failure evidence exists. |
 
 ## Completeness Authority

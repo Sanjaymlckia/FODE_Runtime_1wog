@@ -7319,6 +7319,11 @@ function communicationCanonicalLifecycleAllows_(messageType, canonical) {
       && (ctx.baseState === "INCOMPLETE_DOCUMENTS" || ctx.baseState === "DOCUMENT_CORRECTION_REQUIRED")
       && ctx.recommendedMessageType === "docs_missing";
   }
+  if (type === "payment_followup") {
+    return ctx.available === true
+      && ctx.baseState === "PAYMENT_PENDING"
+      && ctx.recommendedMessageType === "payment_followup";
+  }
   return false;
 }
 
@@ -8425,6 +8430,9 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
     rowObj: row,
     applicantId: clean_(communicationState.applicantId || ""),
     messageType: normalizedType || clean_(messageType || ""),
+    requestedMessageType: normalizedType || clean_(messageType || ""),
+    permitted: false,
+    sendableNow: false,
     communicationFamily: clean_(communicationState.communicationFamily || ""),
     emailStatus: clean_(baseState.emailStatus || ""),
     portalSubmittedActive: baseState.portalSubmittedActive === true,
@@ -8463,6 +8471,7 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
 
   function block(code, reason) {
     context.eligible = false;
+    context.sendableNow = false;
     context.blockCode = clean_(code || "");
     context.blockReason = clean_(reason || communicationBlockReason_(context.blockCode, context.messageType));
     return finalize("blocked");
@@ -8473,14 +8482,6 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
   if (clean_(options.action || "") === "planBatch" && !actor.isSuper) return block("ROLE_BLOCKED");
   if (!context.applicantId) return block("APPLICANT_NOT_FOUND");
 
-  var definition = getCommunicationSemanticDefinition_(normalizedType);
-  var requiresValidEmail = !(definition && definition.requiresValidEmail === false);
-  if (requiresValidEmail && !baseState.hasEffectiveEmail) return block("NO_EFFECTIVE_EMAIL");
-  if (requiresValidEmail && baseState.hasValidEffectiveEmail !== true) return block("INVALID_EMAIL", "Applicant does not have a valid email address.");
-  if (baseState.bounceFlag) return block("BOUNCED", clean_(baseState.bounceReason || "") || communicationBlockReason_("BOUNCED", normalizedType));
-  if (context.emailStatus === "DO_NOT_CONTACT") return block("DO_NOT_CONTACT");
-  if (communicationState.cooldownActive) return block("COOLDOWN_ACTIVE");
-
   var canonicalLifecycle = typeof resolveCanonicalApplicantLifecycle_ === "function"
     ? resolveCanonicalApplicantLifecycle_(row, {})
     : null;
@@ -8490,6 +8491,7 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
     authorityOverride: options.authorityOverride === true,
     authorityOverrideReason: clean_(options.authorityOverrideReason || "")
   }));
+  context.permitted = authority.ok === true;
   context.protectedCommunication = authority.protectedCommunication === true;
   context.overridePermitted = authority.overridePermitted === true;
   context.overrideApplied = authority.overrideApplied === true;
@@ -8500,6 +8502,17 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
   context.legacyLifecycleStage = clean_(authority.legacyLifecycleStage || authority.lifecycleStage || "");
   context.canonicalLifecycleAuthority = authority.canonicalLifecycleAuthority || null;
   context.applicantState = clean_(authority.applicantState || "");
+
+  var definition = getCommunicationSemanticDefinition_(normalizedType);
+  var requiresValidEmail = !(definition && definition.requiresValidEmail === false);
+  if (requiresValidEmail && !baseState.hasEffectiveEmail) return block("NO_EFFECTIVE_EMAIL");
+  if (requiresValidEmail && baseState.hasValidEffectiveEmail !== true) return block("INVALID_EMAIL", "Applicant does not have a valid email address.");
+  if (baseState.bounceFlag) return block("BOUNCED", clean_(baseState.bounceReason || "") || communicationBlockReason_("BOUNCED", normalizedType));
+  if (context.emailStatus === "DO_NOT_CONTACT") return block("DO_NOT_CONTACT");
+  if (communicationState.cooldownActive) return block("COOLDOWN_ACTIVE");
+  if ((isPortalCommunicationMessageType_(normalizedType) || normalizedType === "reminder") && context.portalSubmittedActive) {
+    return block("PORTAL_ALREADY_SUBMITTED");
+  }
   if (!authority.ok) return block(authority.blockCode, authority.blockReason);
   if (authority.overrideApplied === true) logCommunicationAuthorityOverride_(context, authority, clean_(options.action || ""));
 
@@ -8526,9 +8539,6 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
     if (!options.skipPortalUrlBuild) context.portalUrl = buildPortalCommunicationUrl_(context.applicantId, secretRes.secretPlain);
   }
 
-  if ((isPortalCommunicationMessageType_(normalizedType) || normalizedType === "reminder") && context.portalSubmittedActive) {
-    return block("PORTAL_ALREADY_SUBMITTED");
-  }
   if (normalizedType === "docs_missing" && baseState.docsMissing !== true) {
     return block("DOCS_ALREADY_COMPLETE");
   }
@@ -8547,6 +8557,7 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
   }
 
   context.eligible = true;
+  context.sendableNow = true;
   return finalize("eligible");
 }
 
@@ -9041,6 +9052,58 @@ function getApplicantStageAndEligibility_(rowObj) {
     blockReason: actionability.blockReason,
     recommendedMessageType: actionability.recommendedMessageType,
     awaitingResponse: !!actionability.awaitingResponse
+  };
+}
+
+function buildApplicantCommunicationAuthorityProjection_(rowObj, rowNumber, sheet, requestedMessageType, opts) {
+  var row = rowObj || {};
+  var options = opts && typeof opts === "object" ? opts : {};
+  var legacyStage = normalizeLifecycleStageKey_(deriveApplicantLifecycleStage_(row));
+  var canonicalLifecycle = typeof resolveCanonicalApplicantLifecycle_ === "function"
+    ? resolveCanonicalApplicantLifecycle_(row, {})
+    : null;
+  var recommendedMessageType = normalizeApplicantMessageType_(
+    clean_(canonicalLifecycle && canonicalLifecycle.recommendedMessageType || "")
+      || communicationRecommendedMessageTypeForStage_(legacyStage)
+  );
+  var requestedType = normalizeApplicantMessageType_(requestedMessageType || "");
+  var selectedType = recommendedMessageType || requestedType;
+  if (!selectedType) {
+    return {
+      stage: legacyStage,
+      canonicalLifecycle: canonicalLifecycle,
+      recommendedMessageType: "",
+      requestedMessageType: requestedType,
+      selectedMessageType: "",
+      permitted: false,
+      sendableNow: false,
+      commStatus: "NOT_STAGE_MESSAGE_MATCH",
+      blockCode: "NOT_STAGE_MESSAGE_MATCH",
+      blockReason: "No communication is recommended for the current lifecycle stage.",
+      awaitingResponse: isLifecycleAwaitingResponseStage_(legacyStage)
+    };
+  }
+  var resolved = resolveApplicantMessageContextFromRow_(row, rowNumber, sheet, selectedType, Object.assign({}, options, {
+    action: "preview",
+    skipPortalUrlBuild: true
+  }));
+  var blockCode = clean_(resolved && resolved.blockCode || "");
+  return {
+    stage: legacyStage,
+    canonicalLifecycle: canonicalLifecycle,
+    recommendedMessageType: recommendedMessageType,
+    requestedMessageType: requestedType,
+    selectedMessageType: selectedType,
+    permitted: !!(resolved && resolved.permitted === true),
+    sendableNow: !!(resolved && resolved.sendableNow === true && resolved.eligible === true),
+    commStatus: resolved && resolved.eligible === true
+      ? "ACTIONABLE"
+      : communicationOverlayStatusFromCode_(blockCode),
+    blockCode: blockCode,
+    blockReason: clean_(resolved && resolved.blockReason || ""),
+    awaitingResponse: isLifecycleAwaitingResponseStage_(legacyStage),
+    authoritySource: clean_(resolved && resolved.canonicalLifecycleAuthority && resolved.canonicalLifecycleAuthority.authoritySource || ""),
+    authorityResult: resolved || null
   };
 }
 
@@ -10221,17 +10284,26 @@ function admin_getApplicantCommDerived_json(payload) {
   if (!rowNumber && applicantId) rowNumber = findRowByApplicantId_(sheet, applicantId);
   if (!rowNumber) return { ok: false, error: "Applicant not found.", applicantId: applicantId };
   var rowObj = getRowObject_(sheet, rowNumber);
-  var derived = getApplicantStageAndEligibility_(rowObj);
+  var actorRole = adminEmail && typeof getAdminRole_ === "function" ? clean_(getAdminRole_(adminEmail) || "") : "";
+  var derived = buildApplicantCommunicationAuthorityProjection_(rowObj, rowNumber, sheet, p.messageType, {
+    actorEmail: adminEmail,
+    actorRole: actorRole
+  });
   return {
     ok: true,
     applicantId: clean_(rowObj.ApplicantID || applicantId || ""),
     Comm_Stage: clean_(derived.stage || ""),
     Comm_Status: clean_(derived.commStatus || ""),
-    Comm_Can_Send_Now: derived.canSendNow === true,
+    Comm_Recommended_Message_Type: clean_(derived.recommendedMessageType || ""),
+    Comm_Requested_Message_Type: clean_(derived.requestedMessageType || ""),
+    Comm_Selected_Message_Type: clean_(derived.selectedMessageType || ""),
+    Comm_Permitted: derived.permitted === true,
+    Comm_Sendable_Now: derived.sendableNow === true,
+    Comm_Can_Send_Now: derived.sendableNow === true,
     Comm_Block_Code: clean_(derived.blockCode || ""),
     Comm_Block_Reason: clean_(derived.blockReason || ""),
-    Comm_Recommended_Message_Type: clean_(derived.recommendedMessageType || ""),
-    Comm_Awaiting_Response: derived.awaitingResponse === true
+    Comm_Awaiting_Response: derived.awaitingResponse === true,
+    Comm_Authority_Source: clean_(derived.authoritySource || "")
   };
 }
 

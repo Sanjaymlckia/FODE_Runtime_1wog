@@ -5,15 +5,17 @@ Scope: documentation only
 
 ## Communication Principle
 
-Canonical Lifecycle describes state.
+Authoritative row facts feed Canonical Lifecycle.
 
-Actionability recommends workload.
+Canonical Lifecycle describes applicant state.
 
-Preview selects.
+Actionability recommends workload and message type.
 
-Send Authority validates.
+Communication Authority decides message-specific permission.
 
-Send Authority remains authoritative.
+Preview and send consume the same Communication Authority result.
+
+Send Authority remains the final execution gate.
 
 ## Target Flow
 
@@ -21,6 +23,8 @@ Send Authority remains authoritative.
 Authority Truth
 -> Canonical Lifecycle
 -> Actionability Recommendation
+-> Recommended Message Type
+-> Communication Authority
 -> Preview Cohort
 -> Confirmation
 -> Send Authority
@@ -34,9 +38,10 @@ Authority Truth
 | Authority Layer | Determines current truth. |
 | Canonical Lifecycle Resolver | Determines base state and overlays. |
 | Operator Actionability Resolver | Recommends whether communication is appropriate. |
-| Preview Authority | Builds visible recipient cohort. |
+| Communication Authority | Evaluates selected message type, permission, sendability, and block reason. |
+| Preview Authority | Builds visible recipient/cohort proof from the same authority result used by send. |
 | Operator Confirmation | Confirms real-world intent. |
-| Send Authority | Revalidates and sends. |
+| Send Authority | Revalidates the same authority result and sends only if still eligible. |
 | Audit Log | Records outcome. |
 
 ## Candidate Message Types
@@ -70,9 +75,12 @@ Do not bypass:
 
 ## Current Convergence Boundary
 
-Communication Authority now accepts narrow canonical lifecycle context for the missing-documents workflow.
+Communication Authority now accepts canonical lifecycle context for the currently converged live workflows:
 
-That means a row may be admitted by canonical `INCOMPLETE_DOCUMENTS -> docs_missing` even when a legacy overlay-oriented lifecycle label would otherwise have caused an unsafe block.
+- `INCOMPLETE_DOCUMENTS -> docs_missing`
+- `PAYMENT_PENDING -> payment_followup`
+
+That means a row may be admitted by canonical state even when a legacy overlay-oriented lifecycle label would otherwise have caused an incorrect block.
 
 This convergence does not change:
 
@@ -85,6 +93,19 @@ This convergence does not change:
 - Stage Batch candidate selection
 - canonical payment authority
 - Zoho Books accounting-integration boundary
+
+## Recommendation vs Permission Contract
+
+Operator-visible surfaces must keep these values separate:
+
+- `recommendedMessageType`: canonical/actionability recommendation
+- `requestedMessageType`: operator-selected request
+- `selectedMessageType`: message type evaluated by Communication Authority
+- `permitted`: lifecycle/policy permission for that message
+- `sendableNow`: immediate sendability after contactability, cooldown, role and idempotency gates
+- `blockCode` / `blockReason`: the reason surfaced when blocked
+
+Review Workspace, Operations Workspace, selected/manual batch, preview and send must agree on normalized message type and block reason for the same applicant facts.
 
 ## ACP Closure Boundary
 

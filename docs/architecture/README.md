@@ -46,14 +46,18 @@ Review Workspace remains mutation authority.
 
 ```text
 Raw Facts
--> Shared Row Facts
--> Authority Layer
--> Population Ledger
+-> Population Ledger (accounting)
 -> Canonical Lifecycle Resolver
--> Operator Actionability Resolver
+<-> Operator Actionability Resolver
 -> Communication Authority
--> Dashboard / Operations Workspace / Lifecycle Map / Review Workspace / Communications
+-> Preview / Send Gates
+-> Row fact writeback
+-> Re-resolution on next read
 ```
+
+Operations Workspace, Review Workspace and Communications consume the resulting DTOs. They do not create separate authority.
+
+The arrow between Canonical Lifecycle and Actionability represents fact mutation followed by re-resolution, not recursive implementation dependency. Review Workspace mutations change row facts; the next read resolves lifecycle, workload, communication recommendation and send authority again.
 
 ## r338 Runtime Truth
 
@@ -94,6 +98,7 @@ Closure classification:
 Meaning:
 
 - no reachable operator communication route bypasses Communication Authority
+- Review communication projection consumes canonical recommendation plus final message-specific Communication Authority
 - Review Queues are compatibility/navigation only
 - legacy Docs Follow-Up queue/search send authority is retired
 - selected and stage batch communication remain bounded by authoritative preview/send gates

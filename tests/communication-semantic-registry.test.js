@@ -257,7 +257,7 @@ assert.match(adminUiSource, /const COMM_TEMPLATE_GALLERY = <\?!= JSON\.stringify
 assert.match(adminUiSource, /commTemplateGallery/, "Selected-applicant communication template gallery must be rendered");
 assert.match(adminUiSource, /Use recommended/, "Template gallery must expose advisory recommended-template selection");
 assert.match(adminUiSource, /Recommended next action/, "Recommended template highlight must expose a clear badge/label");
-assert.match(adminUiSource, /recommendation\.actionable === true/, "Recommended highlight must be driven by backend actionability");
+assert.match(adminUiSource, /var isRecommended = type === recommendation\.messageType/, "Recommended identity must remain highlighted even when the final authority currently blocks sending");
 assert.match(adminUiSource, /Preview email/, "Template card action must make preview intent clear");
 assert.match(adminUiSource, /scrollToCommunicationPreview_/, "Template card action must jump to the preview or compose area");
 
@@ -345,8 +345,9 @@ assert.equal(JSON.stringify(recommendationContext.commTemplateOptionItems_().map
 assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A1", Comm_Recommended_Message_Type:"docs_missing", Comm_Can_Send_Now:true }).messageType, "docs_missing");
 assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A2", Comm_Recommended_Message_Type:"application_verified_quote", Comm_Can_Send_Now:true }).messageType, "application_verified_quote");
 assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A3", Comm_Recommended_Message_Type:"payment_followup", Comm_Can_Send_Now:true }).messageType, "payment_followup");
-assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A4", Comm_Recommended_Message_Type:"payment_followup", Comm_Can_Send_Now:false, Comm_Block_Reason:"Cooldown active" }).messageType, "");
+assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A4", Comm_Recommended_Message_Type:"payment_followup", Comm_Can_Send_Now:false, Comm_Block_Reason:"Cooldown active" }).messageType, "payment_followup");
 assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A4", Comm_Recommended_Message_Type:"payment_followup", Comm_Can_Send_Now:false, Comm_Block_Reason:"Cooldown active" }).blockedMessageType, "payment_followup");
+assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A4", Comm_Recommended_Message_Type:"payment_followup", Comm_Can_Send_Now:false, Comm_Block_Reason:"Cooldown active" }).actionable, false);
 assert.equal(recommendationContext.recommendCommTemplateForDetail_({ ApplicantID:"A5", facts:{ documentState:"awaiting_uploads" } }).messageType, "");
 
 const communicationUiDisplayContext = {};
