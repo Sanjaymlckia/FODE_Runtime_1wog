@@ -117,8 +117,12 @@ function renderAdminApp_(e) {
   t.INITIAL_OPEN_APPLICANT_ID = clean_((e && e.parameter && (e.parameter.open || e.parameter.applicantId)) || "");
   t.STUDENT_URL_READY = isStudentUrlConfigured_();
   t.STUDENT_URL_WARNING = getStudentUrlWarning_();
+  var requestedView = String((e && e.parameter && e.parameter.view) || "").toLowerCase();
+  var titleSuffix = requestedView === "ops"
+    ? " - Operations Cockpit"
+    : (requestedView === "operator-next" ? " - Operator Next" : " - Document Verification");
   return t.evaluate()
-    .setTitle((CONFIG.BRAND && CONFIG.BRAND.name ? CONFIG.BRAND.name : "FODE Admin") + (String((e && e.parameter && e.parameter.view) || "").toLowerCase() === "ops" ? " - Operations Cockpit" : " - Document Verification"))
+    .setTitle((CONFIG.BRAND && CONFIG.BRAND.name ? CONFIG.BRAND.name : "FODE Admin") + titleSuffix)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 

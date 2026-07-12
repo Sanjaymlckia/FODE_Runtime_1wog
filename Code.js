@@ -554,6 +554,7 @@ function resolveDoGetHandler_(view, isAdminDeployment) {
   if (route === "whoami") return doGet_whoami_;
   if (route === "file") return doGet_file_;
   if (route === "ops") return renderAdminApp_;
+  if (route === "operator-next") return renderAdminApp_;
   if (route === "admin") return renderAdminApp_;
   if (!route) return isAdminDeployment ? renderAdminApp_ : renderPortalAppFromDoGet_;
   return isAdminDeployment ? renderAdminApp_ : renderPortalAppFromDoGet_;

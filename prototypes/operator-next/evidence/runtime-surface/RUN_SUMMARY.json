@@ -1,0 +1,30 @@
+{
+  "result": "PASS",
+  "source": "AdminUI_OperatorNext.html with real AdminUI Review/Batch modal markup",
+  "network": "none",
+  "mutation": "none",
+  "operatorNextBytes": 73497,
+  "timings": {
+    "initialHydrationMs": 216,
+    "dashboardRouteMs": 52,
+    "reportsRouteMs": 35,
+    "financeRouteMs": 54,
+    "communicationsRouteMs": 48,
+    "healthRouteMs": 21
+  },
+  "screenshots": [
+    "01-wide-lifecycle-map.png",
+    "01b-wide-global-compatibility.png",
+    "01b-wide-global-view-contained.png",
+    "02-wide-operational-dashboard.png",
+    "03-wide-reports-audit.png",
+    "04-laptop-finance.png",
+    "05-laptop-review-workspace.png",
+    "06-laptop-review-communications.png",
+    "07-laptop-communications.png",
+    "08-laptop-system-health.png",
+    "09-laptop-context-menu.png",
+    "10-laptop-contactability-vcf-boundary.png",
+    "11-narrow-batch-communication.png"
+  ]
+}

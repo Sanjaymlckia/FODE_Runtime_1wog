@@ -2617,6 +2617,7 @@
       </section>
     </main>
   </div>
+<?!= HtmlService.createHtmlOutputFromFile('AdminUI_OperatorNext').getContent(); ?>
   <div class="wrap">
     <div class="topbar">
       <div class="brand">
@@ -3927,11 +3928,15 @@
       }
     }
     function updateOpsVisibility_(){
-      var opsActive = String(INITIAL_ADMIN_VIEW || "").toLowerCase() === "ops";
+      var view = String(INITIAL_ADMIN_VIEW || "").trim().toLowerCase();
+      var opsActive = view === "ops";
+      var operatorNextActive = view === "operator-next";
       var shell = document.getElementById("opsCockpitShell");
+      var operatorNextShell = document.getElementById("operatorNextShell");
       var wrap = document.querySelector(".wrap");
       if (shell) shell.classList.toggle("active", opsActive);
-      if (wrap) wrap.classList.toggle("hiddenView", opsActive);
+      if (operatorNextShell) operatorNextShell.classList.toggle("active", operatorNextActive);
+      if (wrap) wrap.classList.toggle("hiddenView", opsActive || operatorNextActive);
       if (opsActive) window.setTimeout(function(){
         applyOpsModeVisibility_();
         bindOpsNav_(true);
@@ -12153,6 +12158,10 @@ function renderStageDashboard_(items, emptyMessage){
       google.script.run
         .withSuccessHandler(function(res){
           renderActionabilityPreview_(res || {});
+          if (typeof operatorNextIsActive_ === "function" && operatorNextIsActive_()
+              && typeof operatorNextReceiveActionability_ === "function") {
+            operatorNextReceiveActionability_(res || {});
+          }
           if (typeof o.onSuccess === "function") o.onSuccess(res || {});
         })
         .withFailureHandler(function(err){
@@ -12160,6 +12169,10 @@ function renderStageDashboard_(items, emptyMessage){
           var rowsEl = document.getElementById("actionabilityPreviewRows");
           if (rowsEl) rowsEl.innerHTML = '<div class="queue-empty">Could not load Operations Workspace.</div>';
           if (metaEl) metaEl.textContent = "Operations Workspace unavailable.";
+          if (typeof operatorNextIsActive_ === "function" && operatorNextIsActive_()
+              && typeof operatorNextRenderError_ === "function") {
+            operatorNextRenderError_("Actionability", err);
+          }
           if (typeof o.onFailure === "function") o.onFailure(err);
         })
         .admin_getActionabilityPreview({ limit: 100, force: o.force ? 1 : 0 });
@@ -12819,7 +12832,7 @@ function renderStageDashboard_(items, emptyMessage){
     function initAdminOpenApplicant_(){
       var id = String(INITIAL_OPEN_APPLICANT_ID || "").trim();
       var view = String(INITIAL_ADMIN_VIEW || "").toLowerCase();
-      if (!id || view === "ops") return;
+      if (!id || view === "ops" || view === "operator-next") return;
       window.setTimeout(function(){
         var applicantInput = document.getElementById("qApplicantId");
         if (applicantInput) applicantInput.value = id;
@@ -13962,6 +13975,10 @@ function renderStageDashboard_(items, emptyMessage){
     }
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", function(){
+        if (typeof operatorNextIsActive_ === "function" && operatorNextIsActive_()) {
+          operatorNextInit_();
+          return;
+        }
         fetchRuntimeInfo_();
         fetchOperationalDashboardMetrics_();
         fetchCampaignApplicationReport_();
@@ -13984,6 +14001,9 @@ function renderStageDashboard_(items, emptyMessage){
         initAdminOpenApplicant_();
       });
     } else {
+      if (typeof operatorNextIsActive_ === "function" && operatorNextIsActive_()) {
+        operatorNextInit_();
+      } else {
       fetchRuntimeInfo_();
       fetchOperationalDashboardMetrics_();
       fetchCampaignApplicationReport_();
@@ -14004,6 +14024,7 @@ function renderStageDashboard_(items, emptyMessage){
         loadActionabilityPreview_();
         fetchOpsApplicantSummary_();
         initAdminOpenApplicant_();
+      }
     }
     setActionButtonsEnabled(false);
     var resultsBody = document.getElementById("tbody");
