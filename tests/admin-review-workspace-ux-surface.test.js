@@ -93,9 +93,9 @@ expectMatch(/renderCommEditablePanel_[\s\S]*reviewCommunicationControlState_\(cu
 expectMatch(/renderCommEditablePanel_[\s\S]*renderReviewCommunicationStatePanel_\(state\)/, "Editable communication panel must render explicit operator state communication");
 expectMatch(/updateCommunicationsUi_[\s\S]*var state = reviewCommunicationControlState_\(detail, selectedType\)/, "Top-level communication controls must use the shared Review communication state");
 expectMatch(/updateCommunicationsUi_[\s\S]*renderReviewCommunicationStatePanel_\(state\)/, "Top-level communication update must refresh explicit operator state communication");
-expectMatch(/\.commEditablePanel \.btn\{[\s\S]*background:#fff;[\s\S]*border-color:#9fb4ca;[\s\S]*color:var\(--reviewCommText\);[\s\S]*-webkit-text-fill-color:currentColor;[\s\S]*opacity:1;/, "Editable communication buttons must define explicit readable enabled foreground/background semantics");
-expectMatch(/\.commEditablePanel \.btn\.ok:not\(:disabled\)\{[\s\S]*background:#174a8b;[\s\S]*border-color:#174a8b;[\s\S]*color:#fff;[\s\S]*-webkit-text-fill-color:currentColor;/, "Enabled Send Edited Email button must use explicit readable primary contrast");
-expectMatch(/\.commEditablePanel \.btn:disabled,[\s\S]*background:var\(--reviewCommDisabledBg\);[\s\S]*border-color:var\(--reviewCommDisabledBorder\);[\s\S]*color:var\(--reviewCommDisabledText\);[\s\S]*-webkit-text-fill-color:var\(--reviewCommDisabledText\);[\s\S]*opacity:1;/, "Disabled editable communication buttons must remain readable without washed-out inherited text");
+expectNoMatch(/\.commEditablePanel \.btn\{/, "Editable communication panel must reuse the canonical Admin button component instead of a bespoke button skin");
+expectNoMatch(/\.commEditablePanel \.btn\.ok:not\(:disabled\)\{/, "Send Edited Email must not define a communication-panel-only primary button variant");
+expectNoMatch(/\.commEditablePanel \.btn:disabled,/, "Disabled Review communication buttons must inherit the canonical button component instead of a panel-specific disabled skin");
 expectMatch(/\.reviewCommStatePanel\{[\s\S]*display:grid;[\s\S]*gap:8px;/, "Review communication state panel must be present");
 expectMatch(/\.reviewCommStateBadge\.ready\{[\s\S]*background:#e7f4ec;[\s\S]*color:#145c34;/, "Ready state badge must be explicit and readable");
 expectMatch(/\.reviewCommStateBadge\.busy\{[\s\S]*background:#dbeafe;[\s\S]*color:#173451;/, "Busy state badge must be explicit and readable");
