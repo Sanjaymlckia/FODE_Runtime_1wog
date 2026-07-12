@@ -985,6 +985,59 @@
       margin-bottom:8px;
       color:var(--reviewCommText);
     }
+    .reviewCommStatePanel{
+      margin-top:10px;
+      display:grid;
+      gap:8px;
+    }
+    .reviewCommStateRow{
+      display:grid;
+      grid-template-columns:minmax(0, 180px) auto minmax(0, 1fr);
+      gap:10px;
+      align-items:start;
+      padding:9px 10px;
+      border:1px solid #dbe5ef;
+      border-radius:8px;
+      background:#f8fbff;
+      color:#102030;
+    }
+    .reviewCommStateAction{
+      font-size:12px;
+      font-weight:900;
+      color:#173451;
+      line-height:1.3;
+    }
+    .reviewCommStateBadge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:84px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid #9fb4ca;
+      background:#edf3f8;
+      color:#173451;
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.02em;
+      line-height:1.2;
+      white-space:nowrap;
+    }
+    .reviewCommStateBadge.ready{ background:#e7f4ec; border-color:#84bd98; color:#145c34; }
+    .reviewCommStateBadge.busy{ background:#dbeafe; border-color:#7fa6d1; color:#173451; }
+    .reviewCommStateBadge.loading{ background:#fff2dc; border-color:#d7a755; color:#805006; }
+    .reviewCommStateBadge.blocked{ background:#fdeaea; border-color:#d18d8d; color:#8b1f1f; }
+    .reviewCommStateBadge.disabled{ background:#e2eaf2; border-color:#8da2b7; color:#26384e; }
+    .reviewCommStateReason{
+      font-size:12px;
+      color:#40556b;
+      line-height:1.45;
+    }
+    .reviewCommStateReason strong{
+      color:#173451;
+      font-weight:900;
+    }
     .commEditablePanel input,
     .commEditablePanel textarea{
       background: var(--reviewCommFieldBg);
@@ -3184,6 +3237,7 @@
             <button id="btnCommSendEdited" class="btn small ok" type="button" onclick="sendApplicantMessageUi_()" disabled>Send Edited Email</button>
           </div>
         </div>
+        <div id="reviewCommStatePanel" class="reviewCommStatePanel" aria-live="polite"></div>
         <div id="commOverridePanel" class="commOverridePanel hidden">
           <strong>WARNING</strong>
           <div style="margin-top:6px;">This communication is outside the normal applicant lifecycle. Sending this message may imply acceptance, approval or financial authority. Continue only if exceptional circumstances apply.</div>
@@ -6946,6 +7000,113 @@
         && communicationsState.result
         && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
     }
+    function reviewCommunicationStateKind_(kind){
+      var normalized = String(kind || "").trim().toUpperCase();
+      if (normalized === "READY" || normalized === "BUSY" || normalized === "LOADING" || normalized === "BLOCKED" || normalized === "DISABLED") return normalized;
+      return "DISABLED";
+    }
+    function reviewCommunicationActionDescriptor_(actionKey, state){
+      var key = String(actionKey || "").trim();
+      var selectedType = String(state && state.selectedType || getSelectedCommMessageType_() || "");
+      var editable = !!(state && state.editableType);
+      var hasApplicantSelection = !!(state && state.hasApplicantSelection);
+      var hasHydrationContext = !!(state && state.hasHydrationContext);
+      var previewReady = !!(state && state.previewReady);
+      var reasonCode = String(state && state.reasonCode || "").trim().toUpperCase();
+      var reasonText = String(state && state.reasonText || "").trim();
+      var disableReason = String(state && state.disableReason || "").trim();
+      var eligibilityText = String(state && state.eligibility && state.eligibility.text || "").trim();
+      var contactReason = String(state && state.contactGate && state.contactGate.reason || "").trim();
+      var operationsReason = "Operations action authority is required before send.";
+      var previewReason = "Generate preview first.";
+      var hidden = false;
+      var label = "";
+      var kind = "READY";
+      var reason = "Ready.";
+      if (key === "previewTop") {
+        hidden = editable;
+        label = "Preview";
+      } else if (key === "sendTop") {
+        hidden = editable;
+        label = "Send";
+      } else if (key === "generateEdited") {
+        hidden = !editable;
+        label = "Generate / Preview Email";
+      } else if (key === "insertPortalLink") {
+        hidden = !editable;
+        label = "Insert Portal Link";
+      } else if (key === "sendEdited") {
+        hidden = !editable;
+        label = "Send Edited Email";
+      } else {
+        hidden = true;
+      }
+      if (hidden) return { hidden:true, actionKey:key, label:label };
+      if (!hasApplicantSelection) {
+        kind = "DISABLED";
+        reason = "Open an applicant in Review Workspace first.";
+      } else if (!hasHydrationContext || reasonCode === "MODAL_LOCKED") {
+        kind = "LOADING";
+        reason = "Applicant details still loading.";
+      } else if (reasonCode === "BUSY") {
+        kind = "BUSY";
+        reason = reasonText || "Working...";
+      } else if (state && state.contactGate && state.contactGate.active) {
+        kind = "BLOCKED";
+        reason = "Contactability Gate: " + (contactReason || "No effective contact path is available.");
+      } else if (disableReason) {
+        kind = "BLOCKED";
+        reason = disableReason;
+      } else if ((key === "sendTop" || key === "sendEdited") && state && state.eligibility && state.eligibility.active) {
+        kind = "BLOCKED";
+        reason = eligibilityText || "Cooling-off period active.";
+      } else if ((key === "sendTop" || key === "sendEdited") && !CAN_RUN_OPERATIONS_ACTIONS) {
+        kind = "DISABLED";
+        reason = operationsReason;
+      } else if ((key === "sendTop" || key === "sendEdited") && !previewReady) {
+        kind = "DISABLED";
+        reason = previewReason;
+      } else {
+        kind = "READY";
+        if (key === "insertPortalLink") reason = "Ready to insert portal access link.";
+        else if (key === "generateEdited" || key === "previewTop") reason = "Ready to generate preview.";
+        else if (key === "sendTop" || key === "sendEdited") reason = "Ready to send after confirmation.";
+        else reason = "Ready.";
+      }
+      return {
+        hidden:false,
+        actionKey:key,
+        label:label,
+        kind:reviewCommunicationStateKind_(kind),
+        reason:reason,
+        selectedType:selectedType
+      };
+    }
+    function renderReviewCommunicationStatePanel_(state){
+      var panel = document.getElementById("reviewCommStatePanel");
+      if (!panel) return;
+      var descriptors = [
+        reviewCommunicationActionDescriptor_("previewTop", state),
+        reviewCommunicationActionDescriptor_("sendTop", state),
+        reviewCommunicationActionDescriptor_("generateEdited", state),
+        reviewCommunicationActionDescriptor_("insertPortalLink", state),
+        reviewCommunicationActionDescriptor_("sendEdited", state)
+      ].filter(function(item){ return item && item.hidden !== true; });
+      if (!descriptors.length) {
+        panel.innerHTML = "";
+        panel.classList.add("hidden");
+        return;
+      }
+      panel.classList.remove("hidden");
+      panel.innerHTML = descriptors.map(function(item){
+        var kind = reviewCommunicationStateKind_(item.kind).toLowerCase();
+        return '<div class="reviewCommStateRow" data-action="' + esc(item.actionKey) + '" data-state="' + esc(kind) + '">'
+          + '<div class="reviewCommStateAction">' + esc(item.label) + '</div>'
+          + '<div><span class="reviewCommStateBadge ' + esc(kind) + '">' + esc(item.kind) + '</span></div>'
+          + '<div class="reviewCommStateReason"><strong>Reason:</strong> ' + esc(item.reason || "Ready.") + '</div>'
+          + '</div>';
+      }).join("");
+    }
     function reviewCommunicationControlState_(detail, selectedType, opts){
       var d = detail || currentDetail || {};
       var options = opts && typeof opts === "object" ? opts : {};
@@ -6955,14 +7116,17 @@
       var eligibility = deriveSendEligibility(d);
       var previewReady = reviewCommunicationPreviewReady_(d, type);
       var editableType = isEditableCommType_(type);
-      var noApplicant = !currentRowNumber || !d || !d.ApplicantID;
+      var hasApplicantSelection = !!currentRowNumber;
+      var hasHydrationContext = !!(d && d.ApplicantID);
+      var noApplicant = !hasApplicantSelection;
+      var hydrating = hasApplicantSelection && !hasHydrationContext;
       var busy = isUiBusy || communicationsState.busy;
       var locked = !!options.locked;
       var reasonCode = "";
       var reasonText = "";
-      if (noApplicant) { reasonCode = "NO_APPLICANT"; reasonText = "Select an applicant to enable communication controls."; }
+      if (noApplicant) { reasonCode = "NO_APPLICANT"; reasonText = "Open an applicant in Review Workspace first."; }
+      else if (hydrating || locked) { reasonCode = "MODAL_LOCKED"; reasonText = "Applicant details still loading."; }
       else if (busy) { reasonCode = "BUSY"; reasonText = previewReady ? "Sending..." : "Loading preview..."; }
-      else if (locked) { reasonCode = "MODAL_LOCKED"; reasonText = "Review modal is locked while applicant details hydrate."; }
       else if (contactGate.active) {
         reasonCode = "CONTACTABILITY_GATE";
         reasonText = "Contactability Gate: " + contactGate.reason + " " + contactGate.recommendedAction + " Alternative: " + contactGate.alternativePath;
@@ -6973,6 +7137,9 @@
         editableType: editableType,
         previewReady: !!previewReady,
         noApplicant: noApplicant,
+        hydrating: hydrating,
+        hasApplicantSelection: hasApplicantSelection,
+        hasHydrationContext: hasHydrationContext,
         busy: !!busy,
         locked: locked,
         contactGate: contactGate,
@@ -7012,6 +7179,7 @@
       applyReviewCommControlState_(generateBtn, state.generateDisabled, state);
       applyReviewCommControlState_(insertBtn, state.insertPortalDisabled, state);
       applyReviewCommControlState_(sendBtn, state.sendEditedDisabled, state);
+      renderReviewCommunicationStatePanel_(state);
     }
     function requestPortalLinkForComm_(onDone){
       var done = typeof onDone === "function" ? onDone : function(){};
@@ -7394,6 +7562,7 @@
           ? "Applicant already submitted/enrolled; applicant-chasing emails are not required."
           : (previewReady ? "Preview ready. Operational confirmation is still required." : "Preview is required before send.")));
       renderCommEditablePanel_();
+      renderReviewCommunicationStatePanel_(state);
       renderCommTemplateGallery_();
       renderCommunicationsApplicantSummary_(detail);
       renderCommunicationCooldownBanner_(detail);
