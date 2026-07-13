@@ -1,6 +1,6 @@
 # Operator Next Local Implementation Report
 
-Status: Track L local implementation; no commit, push, release, or live mutation
+Status: Live primary operator surface at Admin `@373`, runtime `r340 / 340`
 
 ## Runtime Surface
 
@@ -55,7 +55,7 @@ Line height increased to 1.38-1.4 for body, fact, and queue text. The OPS-derive
 | Runtime | `admin_getRuntimeInfo()` |
 | Safety | `admin_getOperationalSafetyStatus()` |
 
-Global lifecycle counts use `admin_getOpsLifecycleSummary()` only in a visibly labelled compatibility view. They are not presented as canonical lifecycle authority.
+Global lifecycle compatibility loading is contained. V1 exposes only the bounded Working View as authoritative operational projection; a canonical full-population summary is deferred.
 
 ## Reused Actions
 
@@ -82,4 +82,4 @@ Two other capabilities cannot be completed honestly in the original Track L pass
 1. Full-population canonical lifecycle summary. Add a read-only canonical summary DTO rather than reusing the OPS compatibility classifier.
 2. Selected VCF export. Add an exact-ID bounded adapter, explicit capability, approved contact projection, and audit event.
 
-Neither gap blocks local evaluation of the Operator Next work surface, Review handoff, selected Batch Communication, finance worklists, reports, health, roles, or context-menu ergonomics.
+Neither gap blocks V1 operation of the Operator Next work surface, Review handoff, selected Batch Communication, finance worklists, reports, health, roles, or context-menu ergonomics.

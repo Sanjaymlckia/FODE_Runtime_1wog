@@ -1,6 +1,6 @@
 # Architecture Overview
 
-Status: r338 authority convergence sync
+Status: Architecture Build V1 freeze candidate at Admin `@373`, runtime `r340 / 340`
 Scope: architecture documentation only
 
 ## Purpose
@@ -19,7 +19,9 @@ The current runtime clarifies these protected authority boundaries:
 - Payment Authority
 - Enrollment Authority
 - Shared Row Facts Layer
-- Operations Workspace / Admin surface
+- Operator Next primary work surface
+- Current Admin supported fallback
+- Capability Resolver and `Capability_Grants`
 - Review Queues compatibility surface
 - Frozen OPS Surface
 - Signed Document Routes
@@ -57,7 +59,8 @@ Intake Sources
 
 Operator surfaces include:
 
-- Operations Workspace / Admin
+- Operator Next (`?view=operator-next`), primary
+- Current Admin (`?view=admin`), supported fallback
 - Lifecycle Map
 - Review Workspace
 - Review Queues
@@ -108,10 +111,25 @@ Shared Row Facts
 | Canonical Lifecycle Resolver | base applicant state plus overlays |
 | Operator Actionability Resolver | what the operator should work now |
 | Communication Authority | whether a message may preview/send now |
-| Operations Workspace | workload surface |
+| Operator Next | primary workload projection and navigation surface |
+| Current Admin | supported fallback and host for shared mature Review/Batch components |
 | Review Workspace | mutation authority and authority-backed display |
 | Review Queues | compatibility/workflow only |
 | Zoho Books workflow | protected external integration; not payment, lifecycle, or workload authority |
+| Capability Resolver | durable role, permanent override, and active temporary-grant capability authority |
+| `Capability_Grants` | temporary capability current-state authority; never a role store |
+
+## Architecture Build V1 Live Baseline
+
+- Source feature commit: `36b2986`.
+- Release metadata commit: `50e2a63`.
+- Admin staging: Apps Script `@373`, runtime `r340 / 340`.
+- Student: Apps Script `@247`, runtime `r217 / 217`.
+- Production: untouched.
+- Operator Next: primary work surface.
+- Current Admin: supported fallback.
+- Temporary capability grants: schema live, zero grant records at closure acceptance.
+- Track H2: deferred.
 
 ## Converged Milestones
 
@@ -174,7 +192,7 @@ ACP Phase 1 reduced duplication around already-approved authority outcomes:
 
 ACP Phase 1 did not migrate Stage Batch candidate selection.
 
-## r338 Protected Live Surfaces
+## V1 Protected Live Surfaces
 
 Do not prune, archive, or refactor these surfaces without a dedicated CIS and proof:
 
@@ -190,7 +208,7 @@ Do not prune, archive, or refactor these surfaces without a dedicated CIS and pr
 
 ## OPS Boundary
 
-Admin / Operations Workspace remains the primary operational surface.
+Operator Next is the primary operational surface. Current Admin remains the supported fallback and shared mutation-component host.
 
 OPS is frozen as a secondary/reference surface:
 

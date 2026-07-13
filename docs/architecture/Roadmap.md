@@ -1,6 +1,6 @@
 # Architecture Roadmap
 
-Status: r338 authority convergence sync
+Status: Architecture Build V1 freeze candidate at Admin `@373`, runtime `r340 / 340`
 Scope: documentation only
 
 ## Implemented
@@ -22,6 +22,8 @@ Scope: documentation only
   - retired legacy Docs Follow-Up queue/search send authority
   - compatibility queue/search routing redirected to Review Workspace or authoritative Batch Communication
   - no reachable operator communication route bypasses Communication Authority
+- Operator Next is live as the primary operator work surface; Current Admin is the supported fallback.
+- Temporary capability grants H1 is live with explicit workbook binding, eight delegable capabilities, Super-only administration, and zero grant records at V1 acceptance.
 
 ## Partial / In Progress
 
@@ -33,12 +35,16 @@ Scope: documentation only
 - LAP scheduled automation and single state-machine authority.
 - bounce evidence ingestion and reconciliation.
 - Full Sheet/Drive DR backup execution schedule.
+- Operator Next canonical full-population summary remains deferred; Working View is bounded to 100 returned Actionability rows.
 
 ## Deferred / Future
 
 - Google Forms replacement for FormDesigner.
 - AI-assisted document review, advisory only.
 - broad visual redesign beyond authority/workload correction.
+- Track H2 exact-action and exact-batch approvals.
+- selected-cohort VCF/manual WhatsApp export.
+- Registry, Classroom, and REP extraction.
 
 ## Frozen
 

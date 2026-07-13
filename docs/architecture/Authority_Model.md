@@ -1,6 +1,6 @@
 # Authority Model
 
-Status: r338 authority convergence sync
+Status: Architecture Build V1 freeze candidate at Admin `@373`, runtime `r340 / 340`
 Scope: documentation only
 
 ## Principle
@@ -37,6 +37,11 @@ Do not collapse separate authorities into one state. Do not let UI labels become
 | Review Queues | Compatibility queue builders | Compatibility/workflow only; not accounting or send authority. |
 | Operator actionability | Operator Actionability Resolver | Derived/read-only workload authority. |
 | Operations Workspace bucket summaries | `admin_getActionabilityPreview()` server DTO | Derived/read-only presentation summary. UI consumes, does not own. |
+| Primary operator surface | Operator Next | Displays bounded authority DTOs and delegates mutation to shared Review/Batch components; never an authority. |
+| Supported fallback | Current Admin | Operational fallback and host for mature shared components; never a parallel domain authority. |
+| Durable role and effective capability | `resolveAdminCapabilities_()` | Sole capability resolver used by UI projections and backend action gates. |
+| Temporary capability current state | `Capability_Grants` | Bounded account capability grants only; durable role remains unchanged. |
+| Temporary capability audit evidence | `Webhook_Log` via `logAudit_()` | Immutable transition evidence; not current-state authority. |
 | Shared batch policy | shared batch policy helpers in runtime source | Shared cap/normalization/cache/hash policy for selected/manual and Stage Batch paths. |
 
 ## Important Distinctions
@@ -53,6 +58,7 @@ Do not collapse separate authorities into one state. Do not let UI labels become
 | Workload vs mutation | Operations Workspace decides what work is visible. Review Workspace performs the edits. |
 | Contactability vs management | Contactability failures are operator workload/data-quality issues, not management exceptions by default. |
 | OPS vs authority | OPS must not create a separate authority system. |
+| Operator surface vs authority | Operator Next and Current Admin display authority output and invoke gated handlers; neither may derive policy independently. |
 | Preview vs original document | Preview is derived evidence. Original canonical file remains the document source of truth. |
 | Zoho vs payment authority | Zoho draft/preview activity does not itself verify payment. |
 | Portal submission vs finance communication | Portal submission may block portal-dependent communications, but it is not a global block on payment follow-up. |

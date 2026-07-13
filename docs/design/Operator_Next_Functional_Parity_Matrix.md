@@ -1,6 +1,6 @@
 # Operator Next Functional Parity Matrix
 
-Status: binding Track L implementation contract; local runtime surface implemented, not released
+Status: V1 live acceptance matrix at Admin `@373`, runtime `r340 / 340`
 
 Classification terms:
 
@@ -66,7 +66,7 @@ Classification terms:
 | Operator Next route/action | Existing handler or DTO | Owning authority | Required capability | Status |
 | --- | --- | --- | --- | --- |
 | Lifecycle Map, Working View | `admin_getActionabilityPreview()` → `canonicalLifecycle.baseState` | Canonical Lifecycle via Actionability DTO | Configured Admin account | Implemented, bounded returned cohort |
-| Lifecycle Map, Global View | `admin_getOpsLifecycleSummary()` | Compatibility projection | Configured Admin account | Implemented, explicitly compatibility-labelled |
+| Lifecycle Map, Global View | No canonical full-population DTO yet | Deferred | Configured Admin account | Contained/disabled; Working View remains authoritative |
 | Operational Dashboard | Actionability DTO; lazy `admin_getOperationalDashboardMetrics()` | Ledger + Actionability + metrics projection | Configured Admin account | Implemented |
 | Applicant Action queue | Actionability `workloadGroupKey`, `worklistKey`, `selectable` | Actionability Resolver | Configured Admin account | Implemented |
 | Admissions Review queue | Actionability canonical/document work projections | Actionability + Document Review | `CAN_OPEN_REVIEW_WORKSPACE` | Implemented |
@@ -96,4 +96,4 @@ Classification terms:
 - Stage Batch remains a compatibility path until its cohort selection is migrated separately.
 - Review Queue compatibility should remain reachable only as reconciliation/navigation during migration.
 - Selected VCF requires a bounded backend projection, explicit capability, and audit event in a separate Track H CIS.
-- Runtime release needs Admin-staging browser acceptance for all roles and narrow/mobile widths.
+- Separate live OPERATIONS and VERIFIER credentials were unavailable at V1 closure; composed backend role-boundary tests remain the evidence source.

@@ -1,6 +1,6 @@
 # Compatibility Shim Register
 
-Status: ACP / CAP working register
+Status: Architecture Build V1 frozen register at Admin `@373`, runtime `r340 / 340`
 
 | Shim | Classification | Current responsibility | Planned fate |
 |---|---|---|---|
@@ -20,6 +20,23 @@ Status: ACP / CAP working register
 | `legacy_invite_eligible` batch filter | Compatibility shim | preserves the historical Legacy Invite planning contract while canonical Portal Communication continues to use the same preview/send authority | retire after campaign-only planning helpers are removed |
 | `buildLegacyCampaignPortalUrl_()` / `getActivePortalSecretForCampaign_()` helper naming | Compatibility shim | legacy helper names still back canonical Portal Communication URL/secret resolution | rename only after the compatibility alias is retired or explicitly decoupled |
 
+## V1 Classification
+
+| Classification | Item | Reason retained / authority status | Active caller | Removal precondition | Target phase |
+|---|---|---|---|---|---|
+| Active authority | Population Ledger, Canonical Lifecycle, Actionability, Communication Authority, Review Workspace, Capability Resolver, `Capability_Grants` | Current V1 authority model | Runtime and operator surfaces | Not a retirement target | V1 protected |
+| Primary surface | Operator Next | Work projection only; no independent authority | Configured Admin accounts | Replaced only by an approved successor | V1 protected |
+| Supported fallback | Current Admin | Mature Review/Batch host and operational rollback surface | Operator Next handoff and direct Admin route | Operator Next proves full replacement plus owner-approved retirement | Post-V1 |
+| Compatibility only | Review Queues | Navigation/reconciliation, not accounting or send authority | Current Admin | Remaining workflows move to authority-backed surfaces | Post-V1 cleanup |
+| Compatibility only | Stage Batch legacy stage selection | Cohort projection only; final Communication Authority remains mandatory | Stage Batch route | Canonical cohort migration with preview/send parity proof | Dedicated Track H |
+| Compatibility only | Contained Global View | No canonical full-population DTO exists | Disabled Operator Next control | Canonical global population summary exists | Post-V1 |
+| Compatibility only | Legacy route and semantic adapters | Preserve current RPC/message contracts without owning authority | Current Admin and historical integrations | Caller dependency proof | Incremental retirement |
+| Retired | OPS operational authority | Reference-only; no core route depends on OPS | Historical evidence only | Archive after recovery/evidence review | Post-V1 archive |
+| Retired | Legacy Docs Follow-Up send authority | Wrapper cannot send and returns retirement guidance | Compatibility endpoint only | Caller removal proof | Post-V1 cleanup |
+| Deferred | H2 exact-action/exact-batch approval | Not implemented; must not be inferred from H1 | None | Separate owner-approved Track H design | H2 |
+| Deferred | VCF/manual WhatsApp export | Exact selected-cohort adapter and audit contract absent | None | Dedicated capability and bounded adapter | Post-V1 |
+| Deferred | Registry, Classroom, REP, broader UI polish | Accepted future architecture, not V1 runtime | None | Separate programmes | Post-V1 |
+
 ## ACP Closure Note
 
-As of Admin staging `@363` / runtime `r338 / 338`, no compatibility shim above may independently send applicant communications or bypass Communication Authority.
+As of Admin staging `@373` / runtime `r340 / 340`, no compatibility shim above may independently send applicant communications or bypass Communication Authority.

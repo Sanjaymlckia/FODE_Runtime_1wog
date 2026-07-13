@@ -22,8 +22,9 @@ flowchart TD
   SEND --> RF
 
   RF --> LEDGER["Population Ledger<br/>exactly-once accounting authority"]
-  LEDGER --> OPSWS["Operations Workspace<br/>derived work surface"]
-  ACTION --> OPSWS
+  LEDGER --> ONX["Operator Next<br/>primary derived work surface"]
+  ACTION --> ONX
+  ONX --> ADMIN["Current Admin<br/>supported fallback + shared components"]
   ACTION --> REVIEWD["Review Workspace display DTO<br/>authority-backed"]
   REVIEWD --> REVIEWWS["Review Workspace<br/>mutation authority"]
 
@@ -32,14 +33,20 @@ flowchart TD
   ACTION --> QUEUES["Review Queues<br/>compatibility workflow"]
   QUEUES --> REVIEWWS
 
+  ROLE["Durable role + permanent overrides"] --> CAP["Capability Resolver<br/>effective capability authority"]
+  GRANTS["Capability_Grants<br/>temporary current-state authority"] --> CAP
+  CAP --> ONX
+  CAP --> REVIEWWS
+  GRANTS --> AUDIT["Webhook_Log<br/>immutable transition evidence"]
+
   RF --> FILES["Signed document routes<br/>open/download/preview authority"]
   FILES --> GALLERY["Applicant-folder FODE_PREVIEW<br/>derived evidence"]
 
   RF --> ZOHO["Zoho Books adapter<br/>invoice metadata integration"]
   ZOHO -.-> PAY
 
-  OPS["OPS<br/>frozen reference surface"] -.-> OPSWS
+  OPS["OPS<br/>retired reference surface"] -.-> ADMIN
   LEGACY["Historical campaign helpers<br/>compatibility/historical"] -.-> COMMAUTH
-  DR["DR tooling + governance<br/>baseline protection"] -.-> OPSWS
+  DR["DR tooling + governance<br/>baseline protection"] -.-> ONX
   AI["AI precheck<br/>future advisory only"] -.-> DOC
   CLASS["Google Classroom<br/>future teaching authority"] -.-> REVIEWWS

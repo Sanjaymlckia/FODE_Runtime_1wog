@@ -101,7 +101,7 @@ Current explicit override channels:
 
 Temporary capability grants are a separate, bounded account-specific authority. They are stored in the owner-approved `Capability_Grants` tab and resolved after permanent overrides. They never alter the durable role mapping. See [Temporary Capability Grants](Temporary_Capability_Grants.md).
 
-Until the H1 migration is explicitly executed, no live temporary grants or grant tab are assumed to exist.
+Track H1 migration is complete. The authoritative `Capability_Grants` tab has the exact 22-column schema and contained zero grant records at V1 closure acceptance.
 
 ## Individual vs Batch
 

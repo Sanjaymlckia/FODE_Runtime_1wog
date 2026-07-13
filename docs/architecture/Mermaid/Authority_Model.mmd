@@ -24,8 +24,9 @@ flowchart TD
   LOG --> RF
 
   RF --> LEDGER["Population Ledger<br/>accounting authority"]
-  LEDGER --> OPSWS["Operations Workspace<br/>derived surface"]
-  ACTION --> OPSWS
+  LEDGER --> ONX["Operator Next<br/>primary derived surface"]
+  ACTION --> ONX
+  ONX --> ADMIN["Current Admin<br/>supported fallback"]
   ACTION --> REVIEWDTO["Review Workspace Display DTO"]
   REVIEWDTO --> REVIEW["Review Workspace<br/>mutation authority"]
   REVIEW --> RF
@@ -35,8 +36,14 @@ flowchart TD
   STAGE --> PREVIEW
   QUEUES --> REVIEW
 
+  ROLE["Durable role + permanent overrides"] --> CAP["Capability Resolver"]
+  GRANTS["Capability_Grants<br/>temporary current-state authority"] --> CAP
+  CAP --> ONX
+  CAP --> REVIEW
+  GRANTS --> AUDIT["Webhook_Log<br/>transition evidence"]
+
   RF --> ZOHO["Zoho Books Adapter<br/>external accounting metadata"]
   ZOHO -.-> ZNOTE["Books metadata does not verify payment"]
   ZNOTE -.-> PAY
-  OPS["OPS frozen reference"] -.-> OPSWS
+  OPS["OPS retired reference"] -.-> ADMIN
   HIST["Historical Legacy Campaign<br/>compatibility only"] -.-> COMMAUTH

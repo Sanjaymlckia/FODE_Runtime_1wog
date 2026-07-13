@@ -1,6 +1,6 @@
 # FODE Runtime Architecture
 
-Status: r338 authority convergence sync
+Status: Architecture Build V1 freeze candidate at Admin `@373`, runtime `r340 / 340`
 Scope: documentation and governance only
 
 This folder is the consolidated architecture entrypoint for FODE Runtime.
@@ -12,6 +12,8 @@ Runtime source, Apps Script deployment, queues, communications, Sheets, and send
 | Area | Document |
 |---|---|
 | Architecture overview | [Architecture_Overview.md](Architecture_Overview.md) |
+| Architecture Build V1 closure | [Architecture_Build_V1_Closure.md](Architecture_Build_V1_Closure.md) |
+| V1 backup and recovery | [Backup_and_Recovery_V1.md](Backup_and_Recovery_V1.md) |
 | Authority model | [Authority_Model.md](Authority_Model.md) |
 | Operational bucket model | [Operational_Bucket_Model.md](Operational_Bucket_Model.md) |
 | ACP Phase 1 ADR | [ACP_Phase_1_Authority_Consolidation_ADR.md](ACP_Phase_1_Authority_Consolidation_ADR.md) |
@@ -59,11 +61,13 @@ Operations Workspace, Review Workspace and Communications consume the resulting 
 
 The arrow between Canonical Lifecycle and Actionability represents fact mutation followed by re-resolution, not recursive implementation dependency. Review Workspace mutations change row facts; the next read resolves lifecycle, workload, communication recommendation and send authority again.
 
-## r338 Runtime Truth
+## V1 Runtime Truth
 
-As of r338, Admin / Operations Workspace is the live operational authority surface. OPS is frozen as a reference/secondary surface. FormDesigner remains the current intake path, while Google Forms replacement remains future work.
+As of `r340 / 340`, Operator Next (`?view=operator-next`) is the primary work surface. Current Admin (`?view=admin`) remains the supported fallback and hosts the shared mature Review and Batch Communication components. OPS is retired as operational authority and remains reference-only. FormDesigner remains the current intake path; Google Forms replacement remains future work.
 
 Protected live surfaces include document verification, signed document routes, applicant-folder preview/gallery/lightbox, payment verification, Zoho Books, communication semantic registry, Stage Batch separation, runtime identity, release governance, and DR tooling.
+
+Capability authority is resolved by `resolveAdminCapabilities_()`. The `Capability_Grants` tab is live current-state authority for bounded temporary capabilities; `Webhook_Log` is immutable transition evidence. Track H2 exact-action approval remains deferred.
 
 Finance boundary freeze:
 
