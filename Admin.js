@@ -3574,7 +3574,7 @@ function populationLedgerBucketFromActionability_(item) {
   return { bucket: "Unknown / Unclassified", reason: "Unrecognized workload group: " + groupKey };
 }
 
-function populationLedgerClassifyRow_(rowObj, rowNumber) {
+function populationLedgerClassifyRow_(rowObj, rowNumber, authorityRow) {
   var row = rowObj || {};
   var applicantId = clean_(row.ApplicantID || "");
   var entry = {
@@ -3595,7 +3595,9 @@ function populationLedgerClassifyRow_(rowObj, rowNumber) {
   }
 
   try {
-    var item = buildActionabilityPreviewRow_(row, rowNumber);
+    var item = authorityRow && typeof authorityRow === "object"
+      ? authorityRow
+      : buildActionabilityPreviewRow_(row, rowNumber);
     var bucketInfo = populationLedgerBucketFromActionability_(item);
     entry.lifecycleState = clean_(item && item.authorityState && item.authorityState.lifecycleStage || "UNKNOWN").toUpperCase() || "UNKNOWN";
     entry.operationalBucket = bucketInfo.bucket;
@@ -3678,7 +3680,11 @@ function buildPopulationLedgerFromValues_(data, sourceSheetName, opts) {
     if (!applicantRowsById[applicantId]) applicantRowsById[applicantId] = [];
     applicantRowsById[applicantId].push(r + 1);
 
-    var entry = populationLedgerClassifyRow_(rowObj, r + 1);
+    var entry = populationLedgerClassifyRow_(
+      rowObj,
+      r + 1,
+      options.authorityRowsByRowNumber && options.authorityRowsByRowNumber[r + 1]
+    );
     if (includeEntries) out.entries.push(entry);
 
     out.lifecycleCounts[entry.lifecycleState] = Number(out.lifecycleCounts[entry.lifecycleState] || 0) + 1;
