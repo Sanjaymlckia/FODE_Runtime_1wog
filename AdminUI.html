@@ -554,6 +554,9 @@
       .batchCommGrid{ grid-template-columns:1fr; }
       .batchCommRecipient{ grid-template-columns:auto minmax(0,1fr); }
       .batchCommRecipient .status{ grid-column:2; text-align:left; }
+      .reviewWorkspaceNav{ top:78px; padding:8px 14px 0; }
+      .documentReviewActionBar{ top:126px; }
+      .reviewPortalSummaryGrid{ grid-template-columns:1fr 1fr; }
     }
     .actionabilityDetails{ grid-column:1 / -1; color:#66788c; font-size:11px; border-top:1px solid #edf2f7; padding-top:7px; }
     .actionabilityDetails summary{ cursor:pointer; font-weight:900; color:#31516f; }
@@ -799,7 +802,58 @@
     .reviewLoadingBanner.active{ display:block; }
     .reviewHeaderActions{ display:flex; align-items:flex-start; justify-content:flex-end; gap:8px; }
     .reviewHeaderClose{ background:#fff; color:#0f1f35; border-color:#dbe5ef; min-width:78px; }
+    .reviewWorkspaceNav{
+      position:sticky;
+      top:88px;
+      z-index:5;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      padding:10px 16px 0;
+      background:#f8fafc;
+    }
+    .reviewWorkspaceNav button{
+      border:1px solid #cbd8e6;
+      background:#fff;
+      color:#173451;
+      border-radius:999px;
+      padding:7px 11px;
+      font-size:13px;
+      font-weight:900;
+      cursor:pointer;
+      line-height:1.25;
+    }
+    .reviewWorkspaceNav button.active,
+    .reviewWorkspaceNav button:hover,
+    .reviewWorkspaceNav button:focus-visible{
+      background:#eef6ff;
+      color:#174a8b;
+      border-color:#7fa6d1;
+      outline:0;
+    }
     .reviewWorkspaceBody{ padding:14px 16px 16px; display:flex; flex-direction:column; gap:12px; }
+    .reviewWorkspaceSection{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      scroll-margin-top:142px;
+    }
+    .reviewSectionKicker{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color:#31516f;
+      font-size:12px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+    }
+    .reviewSectionKicker::after{
+      content:"";
+      flex:1 1 auto;
+      height:1px;
+      background:#dbe5ef;
+    }
     .modal .opsSafetyNotice{
       border:1px solid #d7a755;
       background:#fff2dc;
@@ -888,7 +942,7 @@
     }
     .documentReviewActionBar{
       position:sticky;
-      top:0;
+      top:136px;
       z-index:4;
       margin:12px 0 0;
       padding:10px;
@@ -904,6 +958,8 @@
     }
     .reviewActionGroup{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .reviewActionGroupLabel{ color:#61748a; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; }
+    .reviewPortalSummaryGrid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+    .reviewPortalSummaryGrid .box .v{ font-size:14px; line-height:1.45; }
     .documentReviewActionBar .dirtyWarn{
       margin:0;
       padding:6px 9px;
@@ -3060,7 +3116,18 @@
         </div>
       </div>
 
+      <div class="reviewWorkspaceNav" id="reviewWorkspaceNav" aria-label="Review sections">
+        <button type="button" data-review-section-link="reviewSectionOverview">Overview</button>
+        <button type="button" data-review-section-link="reviewSectionDocuments">Documents</button>
+        <button type="button" data-review-section-link="reviewSectionFinance">Finance</button>
+        <button type="button" data-review-section-link="reviewSectionCommunications">Communications</button>
+        <button type="button" data-review-section-link="reviewSectionPortal">Portal</button>
+        <button type="button" data-review-section-link="reviewSectionAudit">Audit / Technical details</button>
+      </div>
+
       <div class="reviewWorkspaceBody">
+      <section id="reviewSectionOverview" class="reviewWorkspaceSection">
+      <div class="reviewSectionKicker">Overview</div>
       <div class="kv reviewCardGrid">
         <div class="box hidden">
           <div class="k">Doc Verification (Computed)</div>
@@ -3115,7 +3182,10 @@
         </div>
       </div>
       <div id="applicantHelperNote" class="applicant-helper-note hidden"></div>
+      </section>
 
+      <section id="reviewSectionCommunications" class="reviewWorkspaceSection">
+      <div class="reviewSectionKicker">Communications</div>
       <div class="box reviewPanel" id="communicationsCard">
         <div class="reviewPanelHeader">
           <div>
@@ -3206,7 +3276,10 @@
         <div id="commResult" class="commResultBox hidden"></div>
         <div id="commDebug" class="commResultBox hidden" style="margin-top:8px;"></div>
       </div>
+      </section>
 
+      <section id="reviewSectionFinance" class="reviewWorkspaceSection">
+      <div class="reviewSectionKicker">Finance</div>
       <div id="booksDryRunCard" class="box booksDryRunPanel reviewPanel">
         <div class="reviewPanelHeader">
           <div>
@@ -3266,7 +3339,10 @@
         <div id="booksContactPayload" class="booksDryRunPayload hidden"></div>
         <div id="booksInvoicePayload" class="booksDryRunPayload hidden"></div>
       </div>
+      </section>
 
+      <section id="reviewSectionDocuments" class="reviewWorkspaceSection">
+      <div class="reviewSectionKicker">Documents</div>
       <div id="documentReviewWorkflow" class="reviewDocumentWorkflow reviewPanel">
       <div class="reviewPanelHeader">
         <div>
@@ -3338,7 +3414,28 @@
       <div id="docsRouteHint" class="muted" style="margin-top:8px;font-size:12px;"></div>
       <div class="muted" style="margin-top:6px;font-size:12px;">Copy Portal Link does not mutate data. Reset Link is Super Admin only and regenerates the portal secret after confirmation. Unlock Editing / Lock Editing are local modal controls only and do not change applicant portal access state. Actual portal access lock/unlock is a separate Super Admin server action.</div>
       </div>
+      </section>
 
+      <section id="reviewSectionPortal" class="reviewWorkspaceSection">
+      <div class="reviewSectionKicker">Portal</div>
+      <div class="reviewPanel">
+        <div class="reviewPanelHeader">
+          <div>
+            <div class="reviewPanelTitle">Portal access and return path</div>
+            <div class="reviewPanelNote">Portal state remains visible here so operators do not need to interpret technical fields or leave Review to understand access readiness.</div>
+          </div>
+        </div>
+        <div class="reviewPortalSummaryGrid">
+          <div class="box"><div class="k">Portal status</div><div class="v" id="reviewPortalStatePrimary">-</div></div>
+          <div class="box"><div class="k">Token age</div><div class="v" id="reviewPortalTokenPrimary">-</div></div>
+          <div class="box"><div class="k">Next portal action</div><div class="v" id="reviewPortalActionPrimary">-</div></div>
+          <div class="box"><div class="k">Return path</div><div class="v" id="reviewPortalReturnPrimary">Return to originating worklist</div></div>
+        </div>
+      </div>
+      </section>
+
+      <section id="reviewSectionAudit" class="reviewWorkspaceSection">
+      <div class="reviewSectionKicker">Audit / Technical details</div>
       <details id="reviewSecondaryTools" class="reviewSecondaryWorkflow reviewPanel">
       <summary style="cursor:pointer;font-weight:800;">Contact fallback / CRM / admin support details</summary>
       <details id="superEmailOverrideWrap" style="margin-top:10px;">
@@ -3381,6 +3478,7 @@
         <div id="portalLinkBox" class="muted" style="margin-top:10px;word-break:break-all;"></div>
         <div id="mMsg" class="muted" style="margin-top:10px;"></div>
       </div>
+      </section>
       </div>
     </div>
   </div>
@@ -12350,6 +12448,32 @@ function renderStageDashboard_(items, emptyMessage){
       if (back) back.scrollTop = 0;
     }
 
+    function reviewWorkspaceSections_(){
+      return ["reviewSectionOverview", "reviewSectionDocuments", "reviewSectionFinance", "reviewSectionCommunications", "reviewSectionPortal", "reviewSectionAudit"];
+    }
+
+    function setActiveReviewSection_(sectionId){
+      Array.from(document.querySelectorAll("[data-review-section-link]")).forEach(function(btn){
+        btn.classList.toggle("active", btn.getAttribute("data-review-section-link") === sectionId);
+      });
+    }
+
+    function bindReviewWorkspaceNav_(){
+      Array.from(document.querySelectorAll("[data-review-section-link]")).forEach(function(btn){
+        if (btn.getAttribute("data-review-nav-bound") === "1") return;
+        btn.setAttribute("data-review-nav-bound", "1");
+        btn.addEventListener("click", function(){
+          var targetId = btn.getAttribute("data-review-section-link");
+          var section = targetId ? document.getElementById(targetId) : null;
+          var modal = document.querySelector("#modalBack .modal");
+          setActiveReviewSection_(targetId || "reviewSectionOverview");
+          if (section && modal && typeof section.offsetTop === "number") {
+            modal.scrollTo({ top: Math.max(0, section.offsetTop - 124), behavior: "smooth" });
+          }
+        });
+      });
+    }
+
     function reviewOwnerDisplayLabel_(value){
       var raw = String(value || "").trim();
       var normalized = raw.toLowerCase().replace(/\s+/g, "_");
@@ -12416,6 +12540,8 @@ function renderStageDashboard_(items, emptyMessage){
       document.getElementById("mTitle").textContent = "Applicant Review - " + (applicantId || "Unknown");
       document.getElementById("mSub").textContent = "RowNumber: " + String(rowNumber || "");
       setReviewHeaderLoading_(true);
+      bindReviewWorkspaceNav_();
+      setActiveReviewSection_("reviewSectionOverview");
       setReviewHeaderValue_("mApplicantName", "Loading applicant details...");
       setReviewHeaderValue_("mApplicantId", applicantId || "Unknown ApplicantID");
       clearReviewHeaderFacts_();
@@ -12935,6 +13061,8 @@ function renderStageDashboard_(items, emptyMessage){
       if (routeHint) {
         routeHint.textContent = "Quote will be sent to: " + emailLabel + " (CC: fode_kia@kundu.ac; Reply-To: fode@kundu.ac)";
       }
+      bindReviewWorkspaceNav_();
+      setActiveReviewSection_("reviewSectionOverview");
       var overrideEmail = document.getElementById("overrideEmail");
       var overrideReason = document.getElementById("overrideReason");
       if (overrideEmail) overrideEmail.value = effectiveEmail || "";
@@ -12995,6 +13123,10 @@ function renderStageDashboard_(items, emptyMessage){
         else if (d.PortalTokenMaxAgeDays) tokenText += " / " + String(d.PortalTokenMaxAgeDays) + " max";
       }
       document.getElementById("mTokenAge").textContent = tokenText;
+      setReviewHeaderValue_("reviewPortalStatePrimary", facts.portalStateLabel + " | " + (d.Portal_Access_Status || "Open"));
+      setReviewHeaderValue_("reviewPortalTokenPrimary", tokenText);
+      setReviewHeaderValue_("reviewPortalActionPrimary", communicationEligibilityLabel ? "Open Review actions with current authority" : "Review diagnostic detail first");
+      setReviewHeaderValue_("reviewPortalReturnPrimary", "Return to the previous worklist and preserved scroll position");
       setReviewHeaderValue_("mHeaderTokenAge", tokenText);
       document.getElementById("mAudit").textContent = "Last: " + (d.Doc_Last_Verified_At ? String(d.Doc_Last_Verified_At) : "—")
         + " | By: " + (d.Doc_Last_Verified_By || "—");
@@ -13138,6 +13270,7 @@ function renderStageDashboard_(items, emptyMessage){
 
     function closeModal(){
       document.getElementById("modalBack").style.display = "none";
+      setActiveReviewSection_("reviewSectionOverview");
       currentRowNumber = null;
       currentDetail = null;
       currentPortalLinkInfo = null;

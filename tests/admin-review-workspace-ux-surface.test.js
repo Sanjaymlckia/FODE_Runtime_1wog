@@ -49,6 +49,11 @@ expectMatch(/id="mHeaderStage"[\s\S]*id="mHeaderOwner"[\s\S]*id="mHeaderTokenAge
 expectMatch(/Delivery Health[\s\S]*id="mHeaderDeliveryHealth"/, "Review header must expose reconciled delivery health");
 expectMatch(/id="reviewLoadingBanner"[\s\S]*Loading applicant details\.\.\./, "Review modal must show a clean loading banner");
 expectMatch(/\.reviewHeaderGrid\.loading\{ display:none; \}/, "Review loading state must hide incomplete identity facts");
+expectMatch(/id="reviewWorkspaceNav"[\s\S]*Overview[\s\S]*Documents[\s\S]*Finance[\s\S]*Communications[\s\S]*Portal[\s\S]*Audit \/ Technical details/, "Review workspace must expose readable section navigation");
+expectMatch(/function bindReviewWorkspaceNav_\(/, "Review workspace must bind section navigation through a shared helper");
+expectMatch(/function setActiveReviewSection_\(/, "Review workspace must track the active section");
+expectMatch(/id="reviewSectionOverview"[\s\S]*id="reviewSectionCommunications"[\s\S]*id="reviewSectionFinance"[\s\S]*id="reviewSectionDocuments"[\s\S]*id="reviewSectionPortal"[\s\S]*id="reviewSectionAudit"/, "Review workspace must expose dedicated overview, documents, finance, communications, portal, and audit sections");
+expectMatch(/id="reviewPortalStatePrimary"[\s\S]*id="reviewPortalTokenPrimary"[\s\S]*id="reviewPortalActionPrimary"[\s\S]*id="reviewPortalReturnPrimary"/, "Review workspace portal section must expose readable summary fields");
 expectNoMatch(/id="mHeader(?:Email|Phone|Submitted|Stage|Owner|DeliveryHealth|TokenAge)"[^>]*>-\s*<\/div>/, "Review header markup must not seed fake dash identity facts");
 expectNoMatch(/openModalLoading_[\s\S]*setReviewHeaderValue_\("mHeader(?:Email|Phone|Submitted|Stage|Owner|DeliveryHealth|TokenAge)",\s*"-"\)/, "Review loading path must not render fake dash identity facts");
 expectMatch(/class="reviewHeaderFactLabel">Email[\s\S]*class="reviewHeaderFactValue" id="mHeaderEmail"/, "Email header fact must use explicit readable classes");
@@ -73,6 +78,8 @@ expectMatch(/actionabilityOwnerLabel_\(authorityOwner\)/, "Queue bucket must not
 expectMatch(/setReviewHeaderValue_\("mHeaderOwner", ownerLabel\)/, "Loaded modal must bind mapped owner label");
 expectMatch(/setReviewHeaderValue_\("mHeaderDeliveryHealth", deliveryHealthLabel\)/, "Loaded modal must bind reconciled delivery health");
 expectMatch(/setReviewHeaderValue_\("mHeaderTokenAge", tokenText\)/, "Loaded modal must bind token age");
+expectMatch(/setReviewHeaderValue_\("reviewPortalStatePrimary", facts\.portalStateLabel \+ " \| " \+ \(d\.Portal_Access_Status \|\| "Open"\)\)/, "Loaded modal must bind the portal summary state");
+expectMatch(/setReviewHeaderValue_\("reviewPortalTokenPrimary", tokenText\)/, "Loaded modal must bind the portal summary token age");
 expectMatch(/function resetReviewModalScroll_/, "Review modal must have an explicit scroll reset helper");
 expectMatch(/openModalLoading_[\s\S]*resetReviewModalScroll_\(\)/, "Review modal open must reset scroll before hydration");
 expectMatch(/focusActionabilityReviewTarget_[\s\S]*resetReviewModalScroll_\(\)/, "Review actionability focus must not leave the modal scrolled into documents");

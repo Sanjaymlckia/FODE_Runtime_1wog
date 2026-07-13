@@ -78,6 +78,13 @@ assert.doesNotMatch(operatorNextUi, /operatorNextCompatibilityCountFor_/, "Globa
 assert.match(operatorNextUi, /Global View - canonical summary pending/, "Global View must be explicitly contained until a canonical full-population summary exists");
 assert.match(operatorNextUi, /Full-population canonical lifecycle counts are not yet available\. Working View remains authoritative\./, "Global View must explain why it is unavailable");
 assert.match(operatorNextUi, /function operatorNextContainGlobalView_/, "Global View containment must be enforced by a dedicated helper");
+assert.match(operatorNextUi, /\.onxShell\{[\s\S]*font-size:15px;[\s\S]*line-height:1\.48;/, "Operator Next shell must use the readable typography baseline");
+assert.match(operatorNextUi, /\.onxHeader h2\{font-size:30px;/, "Operator Next page titles must meet the larger heading baseline");
+assert.match(operatorNextUi, /\.onxBtn\{[\s\S]*min-height:42px;[\s\S]*font-size:14px;/, "Buttons must meet the readable control baseline");
+assert.match(operatorNextUi, /\.onxPill\{[\s\S]*font-size:13px;/, "Status badges must meet the readable badge baseline");
+assert.match(operatorNextUi, /function operatorNextHumanizeToken_/, "Operator Next must centralize human-readable label formatting");
+assert.match(operatorNextUi, /PAYMENT_TO_VERIFY:"Payment to verify"/, "Human-readable payment label mapping must exist");
+assert.match(operatorNextUi, /TEMPORARILY_ALLOWED:"Temporarily allowed"/, "Human-readable temporary capability label mapping must exist");
 assert.doesNotMatch(operatorNextUi, /admin_getOpsLifecycleSummary\(\{force:0\}\)/, "Contained Global View must not fetch OPS compatibility summary");
 assert.match(operatorNextUi, /row&&row\.selectable===true/, "Selection must consume server Actionability selectable");
 assert.match(operatorNextUi, /review\(Number\(row\.rowNumber\|\|0\)\|\|null,String\(row\.applicantId\|\|''\),null,\{actionabilityFocus:true\}\)/, "Review handoff must preserve exact row and Applicant ID");
@@ -216,8 +223,8 @@ const coolingOff = {
 context.operatorNextState_.rows = [waffi, stephanie, coolingOff];
 context.operatorNextState_.selected = { [waffi.applicantId]: true, [stephanie.applicantId]: true, [coolingOff.applicantId]: true };
 const queueHtml = context.operatorNextQueueHtml_([waffi, stephanie, coolingOff], "fixture");
-assert.match(queueHtml, /FODE-26-002959[\s\S]*Payment Follow-up[\s\S]*PAYMENT PENDING[\s\S]*SEND PAYMENT REMINDER[\s\S]*payment_followup/, "Waffi must retain payment authority projection");
-assert.match(queueHtml, /FODE-26-003230[\s\S]*Missing Documents[\s\S]*INCOMPLETE DOCUMENTS[\s\S]*UPLOAD REQUIRED DOCUMENTS[\s\S]*docs_missing/, "Stephanie must retain missing-documents authority projection");
+assert.match(queueHtml, /FODE-26-002959[\s\S]*Payment Follow-up[\s\S]*Payment pending[\s\S]*Send payment reminder[\s\S]*Payment follow-up/, "Waffi must retain payment authority projection with readable labels");
+assert.match(queueHtml, /FODE-26-003230[\s\S]*Missing Documents[\s\S]*Incomplete documents[\s\S]*Upload required documents[\s\S]*Missing documents request/, "Stephanie must retain missing-documents authority projection with readable labels");
 assert.match(queueHtml, /FODE-26-COOLING[\s\S]*disabled[\s\S]*Cooling-off active until tomorrow/, "Cooling-off rows must remain visible, explained, and unselectable");
 
 context.operatorNextOpenReview_(waffi);

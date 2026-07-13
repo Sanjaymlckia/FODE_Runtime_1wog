@@ -1,89 +1,75 @@
-# Operator Next Local Implementation Report
+# Operator Next Implementation Report
 
-Status: Live primary operator surface at Admin `@373`, runtime `r340 / 340`
+Status: Track L interface stabilisation pass only. No runtime release.
 
-## Runtime Surface
+## Scope
 
-```text
-?view=operator-next
-  -> Code.js resolveDoGetHandler_()
-  -> Admin.js renderAdminApp_()
-  -> AdminUI.html
-  -> AdminUI_OperatorNext.html
-  -> shared Review and Batch Communication modals in AdminUI.html
-```
+- Shared Operator Next typography, spacing, cards, tables, badges, buttons, and search/control rhythm were consolidated in `AdminUI_OperatorNext.html`.
+- Human-readable labels were centralized through one client formatter/mapping contract instead of route-local string substitutions.
+- Review was upgraded in `AdminUI.html` from a dense modal flow into a dedicated full-height workspace overlay with sticky section navigation and a single primary scroll container.
+- Existing backend handlers, capability gates, Review mutations, Batch Communication flow, and current Admin fallback were preserved.
 
-Fallback routes remain:
+## Files Changed
 
-- `?view=admin` - current mature Admin.
-- `?view=ops` - retired OPS reference surface.
+- `AdminUI_OperatorNext.html`
+- `AdminUI.html`
+- `tests/operator-next-runtime-surface.test.js`
+- `tests/admin-review-workspace-ux-surface.test.js`
+- `docs/design/Operator_Next_Visual_System.md`
+- `docs/design/Operator_Next_Review_Workspace.md`
+- `docs/design/Operator_Next_Visual_Acceptance_Checklist.md`
+- `docs/design/Operator_Next_Functional_Parity_Matrix.md`
+- `docs/architecture/Compatibility_Shim_Register.md`
 
-## Initial Hydration
+## CSS Conflict / Root Cause Summary
 
-Initial route loads only:
+- The prior Operator Next shell mixed compact OPS-style proportions with a dense one-off token set. Body, badge, button, table, and helper text sizes were materially below the required operational baseline.
+- Route surfaces reused the same class names but not the same visual density. Panels, status rows, worklists, and action bars all drifted in spacing and type scale.
+- Review already had the required data and handlers, but presentation still behaved like a stacked modal rather than a dedicated workspace. The result was weak section hierarchy and difficult scanning.
 
-1. `admin_getActionabilityPreview({ limit: 100 })` through the existing UI helper.
-2. `admin_getRuntimeInfo()`.
+## Shared Contracts Implemented
 
-Operational metrics load only on Dashboard, Communications, or Reports. Safety diagnostics load only on System Health. Global View is contained/disabled and does not load OPS lifecycle compatibility counts.
+### Typography
 
-## Typography Refinement
+- Base shell text: `15px`
+- Page titles: `30px`
+- Section titles: `19px`
+- Buttons: `14px` minimum with `42px` minimum height
+- Badges: `13px`
+- Table body: `14px`
+- Secondary detail text: `13px`
 
-Card dimensions remain `174px` by at least `214px`. Compared with the accepted prototype:
+### Human-readable labels
 
-| Element | Prototype | Runtime surface | Change |
-| --- | ---: | ---: | ---: |
-| Lifecycle heading | 10.5px | 11.5px | +9.5% |
-| Lifecycle body | 8.6px | 9.4px | +9.3% |
-| Lifecycle fact | 8.4px | 9.2px | +9.5% |
-| Queue row | 9px | 9.6px | +6.7% |
-| Compact button | 9px / 29px high | 9.5px / 30px high | +5.6% / +3.4% |
+- `PAYMENT_PENDING` -> `Payment pending`
+- `PAYMENT_TO_VERIFY` -> `Payment to verify`
+- `TEMPORARILY_ALLOWED` -> `Temporarily allowed`
+- `docs_missing` -> `Missing documents request`
+- Raw enums remain available secondarily through diagnostics/authority details, not as the primary operator label.
 
-Line height increased to 1.38-1.4 for body, fact, and queue text. The OPS-derived font stack and compact proportions are unchanged.
+### Review workspace
 
-## Canonical Data Sources
+- Sticky identity header remains at the top.
+- Sticky section navigation now exposes `Overview`, `Documents`, `Finance`, `Communications`, `Portal`, and `Audit / Technical details`.
+- Review content is grouped into dedicated sections with one main vertical scroll contract.
+- Portal state is summarized in a dedicated readable panel instead of being discoverable only through technical modal details.
 
-| Surface | Data source |
-| --- | --- |
-| Working lifecycle cards | `canonicalLifecycle.baseState` from Actionability rows |
-| Workload and selection | Actionability DTO and server `selectable` |
-| Population/accounting | `populationLedger` public summary |
-| Review | Existing applicant detail DTO and Review handlers |
-| Communication | Existing Review/Batch preview and send handlers |
-| Payment | `Receipt_Status` through existing canonical payment display |
-| Roles | `ADMIN_CAPABILITIES` from `resolveAdminCapabilities_()` |
-| Runtime | `admin_getRuntimeInfo()` |
-| Safety | `admin_getOperationalSafetyStatus()` |
+## Functional Preservation
 
-Global lifecycle compatibility loading is contained. V1 exposes only the bounded Working View as authoritative operational projection; a canonical full-population summary is deferred.
+- Review still opens through the existing `review(rowNumber, applicantId, ...)` path.
+- Operator Next still consumes Actionability DTOs and existing Review/Batch handlers.
+- No new Review RPCs were introduced.
+- No business-rule, authority, payment, communication, portal, or release behavior was changed.
 
-## Reused Actions
+## Validation
 
-- Exact applicant Review: existing `review(rowNumber, applicantId, ...)` path.
-- Selected Batch Communication: existing `openBatchCommunicationFromSelection_('selected')` path.
-- Post-send refresh: existing forced `loadActionabilityPreview_({ force: true })`, now reflected back into Operator Next.
-- Stage Batch: current Admin compatibility route; no Stage Batch behavior change.
-- Document, communication, finance, Books, portal, and payment mutations remain inside the shared mature Review Workspace.
+- Scoped contract tests were updated for readable labels and Review workspace navigation.
+- Browser screenshot capture was not completed in this pass.
+- No Playwright/browser acceptance evidence is recorded yet.
 
-## Safety Boundaries
+## Release Status
 
-- No lifecycle, Actionability, payment, communication, portal, or role authority is implemented in Operator Next.
-- Context-menu and three-dot actions use the same Review/selection handlers as visible controls.
-- No direct send RPC exists in `AdminUI_OperatorNext.html`.
-- Selected VCF is disabled. Current Actionability rows do not expose an approved phone number, and the existing fallback CSV is not an exact selected-cohort adapter.
-- No automated WhatsApp path is introduced.
-
-## Track H Follow-up
-
-Temporary capability grants are live as a Track H1 extension to the existing Roles & Capabilities route at Admin staging `@373`, runtime `r340 / 340`. The route displays durable role, inherited capability state, active temporary provenance, expiry, grant history, and Super-only grant/revoke actions. Backend RPCs remain authoritative. The store is explicitly bound to the main authoritative FODE workbook through `CAPABILITY_GRANTS_SPREADSHEET_CONFIG_KEY`; it does not inherit `DATA_MODE`. The owner-approved schema migration completed with zero grant records.
-
-Two other capabilities cannot be completed honestly in the original Track L pass:
-
-1. Full-population canonical lifecycle summary. Add a read-only canonical summary DTO rather than reusing the OPS compatibility classifier.
-2. Selected VCF export. Add an exact-ID bounded adapter, explicit capability, approved contact projection, and audit event.
-
-Neither gap blocks V1 operation of the Operator Next work surface, Review handoff, selected Batch Communication, finance worklists, reports, health, roles, or context-menu ergonomics.
-
-## Route Map Audit
-
-`docs/architecture/Global_Navigation_Route_Map.md` is the current V1 navigation authority map. It classifies Operator Next routes, current Admin fallback links, context-menu actions, Stage Batch compatibility, contained Global View, and retired OPS reference routes without changing runtime behaviour.
+- No deploy performed.
+- No Apps Script version created.
+- No runtime identity bump performed.
+- No commit made.

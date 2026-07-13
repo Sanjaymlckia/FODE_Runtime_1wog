@@ -19,6 +19,7 @@ Status: Architecture Build V1 frozen register at Admin `@373`, runtime `r340 / 3
 | `legacy_invite` message key | Compatibility alias | preserves the external/runtime semantic token for canonical Portal Communication while internal architecture separates it from the historical recovery campaign | keep until a dedicated semantic-rename pass proves API/test/operator compatibility |
 | `legacy_invite_eligible` batch filter | Compatibility shim | preserves the historical Legacy Invite planning contract while canonical Portal Communication continues to use the same preview/send authority | retire after campaign-only planning helpers are removed |
 | `buildLegacyCampaignPortalUrl_()` / `getActivePortalSecretForCampaign_()` helper naming | Compatibility shim | legacy helper names still back canonical Portal Communication URL/secret resolution | rename only after the compatibility alias is retired or explicitly decoupled |
+| shared Review workspace overlay | Compatibility shim | Operator Next now re-presents the existing Review modal as a dedicated readable workspace while keeping the same handlers and DOM ids | retain until Review rendering is fully separated from legacy modal host markup |
 
 ## V1 Classification
 

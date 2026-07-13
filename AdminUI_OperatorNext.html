@@ -1,31 +1,285 @@
 <style>
-  .onxShell{display:none;min-height:100vh;background:#eef3f8;color:#10243a;font-family:"Arial Narrow","Aptos Narrow","Roboto Condensed","Segoe UI",Arial,sans-serif}
-  .onxShell.active{display:grid;grid-template-columns:218px minmax(0,1fr)}
-  .onxShell *{box-sizing:border-box}.onxShell button,.onxShell input,.onxShell select{font:inherit;letter-spacing:0}
-  .onxSidebar{position:sticky;top:0;height:100vh;overflow:auto;background:linear-gradient(180deg,#0b2a49,#071f37);color:#fff;padding:15px 12px;display:flex;flex-direction:column}
-  .onxBrand{display:flex;gap:10px;align-items:center;padding:0 6px 13px}.onxLogo{width:36px;height:36px;border-radius:8px;background:#2d79ee;display:grid;place-items:center;font-weight:900;font-size:12px;border:2px solid #8ab7f5}.onxBrand h1{font-size:16px;margin:0;font-weight:900}.onxBrand p{font-size:10px;margin:2px 0 0;color:#bfd2e5}
-  .onxRuntimeNote{margin:0 4px 11px;padding:7px 8px;border-radius:7px;border:1px solid rgba(255,255,255,.17);background:rgba(255,255,255,.05);font-size:9.5px;line-height:1.4;color:#d5e3f0}
-  .onxNav{display:flex;flex-direction:column;gap:3px}.onxNav button{display:grid;grid-template-columns:21px minmax(0,1fr) auto;gap:7px;align-items:center;background:transparent;border:0;color:#dceafa;text-align:left;padding:7px 8px;border-radius:7px;font-size:10.5px;font-weight:800;cursor:pointer}.onxNav button:hover,.onxNav button.active{background:#2b74df;color:#fff}.onxNavNo{width:20px;height:20px;border:1px solid rgba(255,255,255,.23);border-radius:6px;display:grid;place-items:center;font-size:8px}.onxNavCount{font-size:8.5px;color:#bad0e4;background:rgba(255,255,255,.09);padding:2px 5px;border-radius:8px}.onxNav button.active .onxNavCount{color:#fff}
-  .onxSideFoot{margin-top:auto;border-top:1px solid rgba(255,255,255,.13);padding:10px 7px 0;font-size:9.5px;line-height:1.5;color:#c3d6e7}.onxAccount{margin-bottom:7px;padding:7px;border:1px solid rgba(255,255,255,.14);border-radius:7px;background:rgba(255,255,255,.05);overflow-wrap:anywhere}.onxSideFoot strong{color:#fff}
-  .onxMain{min-width:0;padding:11px 14px 28px}.onxRoute{display:none}.onxRoute.active{display:block}
-  .onxHeader{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:8px}.onxHeader h2{font-size:21px;line-height:1.08;margin:0;font-weight:900}.onxHeader p{font-size:10.5px;color:#597089;margin:3px 0 0;line-height:1.4}.onxToolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-  .onxBtn{min-height:30px;border:1px solid #8fa8c0;background:#fff;color:#17334f;border-radius:6px;padding:5px 9px;font-size:9.5px;font-weight:900;cursor:pointer}.onxBtn:hover{background:#f3f7fb}.onxBtn.primary{background:#2169c8;border-color:#2169c8;color:#fff}.onxBtn.action{background:#edf8f0;border-color:#b7ddc1;color:#176834}.onxBtn.danger{background:#fff8f7;border-color:#dfa5a1;color:#8f221c}.onxBtn:disabled{cursor:not-allowed;background:#e6edf4;border-color:#9badbf;color:#526579;opacity:1}.onxBtn[aria-busy="true"]{cursor:wait;background:#eaf2ff;color:#1c5ba5}
-  .onxGrantTable{width:100%;border-collapse:collapse;font-size:9px}.onxGrantTable th,.onxGrantTable td{padding:6px;border-bottom:1px solid #dce5ee;text-align:left;vertical-align:top}.onxGrantTable th{background:#f5f8fb;color:#526980;font-weight:900}.onxGrantTable td:first-child{overflow-wrap:anywhere}.onxGrantActions{display:flex;gap:5px;flex-wrap:wrap}.onxGrantDialog{width:min(560px,calc(100vw - 24px));border:1px solid #9cb1c7;border-radius:8px;padding:0;color:#10243a}.onxGrantDialog::backdrop{background:rgba(7,31,55,.58)}.onxGrantDialogHead{padding:12px 14px;border-bottom:1px solid #cbd9e7;display:flex;justify-content:space-between;align-items:center}.onxGrantDialogHead h3{margin:0;font-size:15px}.onxGrantDialogBody{padding:12px 14px}.onxGrantForm{display:grid;grid-template-columns:1fr 1fr;gap:9px}.onxGrantField{display:flex;flex-direction:column;gap:4px;font-size:9px;font-weight:900}.onxGrantField.full{grid-column:1/-1}.onxGrantField input,.onxGrantField select,.onxGrantField textarea{width:100%;border:1px solid #9fb2c5;border-radius:6px;padding:7px;background:#fff;color:#10243a}.onxGrantEffect{margin-top:10px;padding:9px;border:1px solid #bdd2ef;border-radius:7px;background:#eef5ff;font-size:9.5px;line-height:1.5}.onxGrantDialogFoot{padding:10px 14px;border-top:1px solid #cbd9e7;display:flex;justify-content:flex-end;gap:7px}
-  .onxPill{display:inline-flex;align-items:center;border-radius:999px;padding:3px 7px;border:1px solid #cbd9e7;background:#fff;font-size:8.5px;font-weight:900;line-height:1.25}.onxPill.info{color:#174e9b;background:#eef5ff;border-color:#bdd2ef}.onxPill.ready{color:#176834;background:#edf8f0;border-color:#b9ddc2}.onxPill.warn{color:#8a4b00;background:#fff7e5;border-color:#efcd8d}.onxPill.blocked{color:#9c231b;background:#fff0ef;border-color:#efb6b1}.onxPill.muted{color:#53687d;background:#f2f5f8;border-color:#d3dde7}
-  .onxCallout{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 10px;background:#fff7e5;border:1px solid #efbd58;border-radius:8px;margin-bottom:8px}.onxCalloutLabel{font-size:8.5px;color:#905000;font-weight:900;text-transform:uppercase;letter-spacing:.06em}.onxCallout strong{font-size:13.5px;display:block;margin-top:1px}.onxCallout p{margin:2px 0 0;color:#785c2c;font-size:9.5px;line-height:1.4}
-  .onxPanel{background:#fff;border:1px solid #cbd9e7;border-radius:8px;overflow:hidden}.onxPanelHead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:8px 10px;border-bottom:1px solid #cbd9e7}.onxPanelHead h3{font-size:11.5px;margin:0;font-weight:900}.onxPanelHead p{font-size:9.2px;color:#597089;margin:2px 0 0;line-height:1.4}.onxPanelBody{padding:9px 10px}
-  .onxLifecycleGrid{display:grid;grid-template-columns:repeat(auto-fill,174px);gap:8px;padding:9px;justify-content:start}.onxStage{width:174px;min-height:214px;background:#fff;border:1px solid #cbd9e7;border-radius:7px;padding:9px;text-align:left;display:flex;flex-direction:column;cursor:pointer}.onxStage:hover{border-color:#2f79e2;box-shadow:0 0 0 1px rgba(47,121,226,.14)}.onxStage.selected{border:2px solid #2f79e2;background:#f3f7ff;padding:8px}.onxStageHead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px}.onxStage h3{font-size:11.5px;line-height:1.22;margin:0;font-weight:900}.onxStageCount{font-size:18px;line-height:1;font-weight:900;color:#1f6fe5}.onxStageBody{font-size:9.4px;line-height:1.4;color:#4f667d;margin:7px 0}.onxStageFact{font-size:9.2px;line-height:1.4;color:#2e465e;margin:4px 0}.onxStageAction{margin-top:auto;padding-top:8px}.onxStageRoute{display:inline-flex;border:1px solid #bfd2ee;background:#eef5ff;color:#1852a0;border-radius:999px;padding:4px 7px;font-size:8.5px;font-weight:900}
-  .onxSelectedStage{display:none;margin:0 9px 9px;border:1px solid #bdd0e8;border-radius:7px;background:#f8fbff;padding:8px 9px}.onxSelectedStage.show{display:grid;grid-template-columns:1.4fr 1fr auto;gap:10px;align-items:center}.onxSelectedStage h3{font-size:11.5px;margin:0}.onxSelectedStage p{font-size:9.2px;color:#597089;margin:3px 0}.onxScope{border-top:1px solid #cbd9e7;background:#fbfdff;padding:7px 9px;display:flex;justify-content:space-between;align-items:center;gap:9px}.onxScopeNote{font-size:9px;color:#597089}
-  .onxMetrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:7px}.onxMetric{border:1px solid #cbd9e7;background:#fff;border-radius:7px;padding:8px 9px;min-height:78px}.onxMetric.attention{border-color:#efbd58;background:#fffaf0}.onxMetric .k{font-size:8.5px;color:#5c7086;font-weight:900;text-transform:uppercase}.onxMetric .v{font-size:18px;font-weight:900;margin-top:3px}.onxMetric .m{font-size:9.2px;color:#597089;line-height:1.4;margin-top:3px}
-  .onxGrid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.onxGrid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.onxStack{display:flex;flex-direction:column;gap:8px}.onxStatus{display:flex;flex-direction:column}.onxStatusRow{display:grid;grid-template-columns:minmax(130px,1fr) auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid #dce6ef;font-size:9.5px}.onxStatusRow:last-child{border-bottom:0}.onxStatusRow strong{display:block}.onxStatusRow small{color:#597089;line-height:1.35}
-  .onxQueueTools{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid #cbd9e7;background:#fbfdff}.onxSearch{min-width:220px;border:1px solid #a8bdd1;border-radius:6px;background:#fff;padding:6px 7px;font-size:9.5px}.onxTableWrap{overflow:auto}.onxTable{width:100%;border-collapse:collapse;min-width:920px}.onxTable th{text-align:left;padding:7px 8px;border-bottom:1px solid #cbd9e7;background:#f7faff;color:#5b7187;font-size:8.5px;text-transform:uppercase;letter-spacing:.04em}.onxTable td{padding:8px;border-bottom:1px solid #dce6ef;font-size:9.6px;vertical-align:top;line-height:1.38}.onxTable tr:hover td{background:#f8fbff}.onxTable tr.selected td{background:#f2f7ff}.onxTable tr.blocked{color:#53677b;background:#fbfcfd}.onxName{font-size:11px;font-weight:900}.onxSub{font-size:8.8px;line-height:1.38;color:#597089;margin-top:2px}.onxRowActions{display:flex;gap:4px;align-items:center}.onxMore{width:30px;padding:0;font-size:15px}
-  .onxSticky{position:sticky;bottom:0;background:#0e2d4e;color:#fff;padding:7px 8px;display:flex;justify-content:space-between;align-items:center;gap:8px}.onxSticky b{font-size:10.5px}.onxSticky span{font-size:9px;color:#d4e2ee}
-  .onxStateBox{border:1px solid #dce6ef;background:#f8fafc;border-radius:6px;padding:8px;font-size:9.4px;line-height:1.4}.onxStateBox strong{display:block;color:#40566d;margin-bottom:2px}.onxFuture{border:1px dashed #aebfd0;background:#f8fafc;border-radius:7px;padding:8px;font-size:9.3px;color:#53687d}.onxFuture strong{display:block;color:#304a66;margin-bottom:2px}
-  .onxContext{position:fixed;z-index:95;display:none;min-width:230px;background:#fff;border:1px solid #aebfd0;border-radius:7px;box-shadow:0 12px 30px rgba(7,31,55,.23);padding:5px}.onxContext.open{display:flex;flex-direction:column}.onxContext button{border:0;background:#fff;color:#17334f;text-align:left;padding:7px 8px;border-radius:5px;font-size:9.5px;font-weight:800}.onxContext button:hover{background:#eef5ff}.onxContext button:disabled{color:#7b8b9c;background:#f2f5f8;cursor:not-allowed}.onxContextReason{padding:6px 8px;font-size:8.5px;color:#7a4a00;background:#fff7e5;border-radius:5px;margin-top:3px}
-  .onxLoading{padding:20px;text-align:center;color:#597089;font-size:10px}.onxError{padding:10px;border:1px solid #efb6b1;background:#fff0ef;color:#9c231b;border-radius:7px;font-size:9.5px}
-  @media(max-width:1180px){.onxShell.active{grid-template-columns:190px minmax(0,1fr)}.onxLifecycleGrid{grid-template-columns:repeat(auto-fill,164px)}.onxStage{width:164px}.onxGrid3{grid-template-columns:1fr 1fr}.onxSelectedStage.show{grid-template-columns:1fr}}
-  @media(max-width:820px){.onxShell.active{grid-template-columns:68px minmax(0,1fr)}.onxBrand h1,.onxBrand p,.onxRuntimeNote,.onxNavLabel,.onxNavCount,.onxSideFoot{display:none}.onxSidebar{padding:12px 8px}.onxNav button{grid-template-columns:1fr;justify-items:center}.onxMain{padding:9px}.onxGrid2,.onxGrid3{grid-template-columns:1fr}.onxLifecycleGrid{grid-template-columns:repeat(auto-fill,156px)}.onxStage{width:156px}}
-  @media(max-width:560px){.onxShell.active{display:block}.onxSidebar{position:relative;height:auto}.onxBrand{display:none}.onxNav{flex-direction:row;overflow:auto}.onxNav button{min-width:48px}.onxMain{padding:8px}.onxHeader,.onxCallout,.onxScope,.onxSticky{align-items:flex-start;flex-direction:column}.onxLifecycleGrid{grid-template-columns:repeat(2,minmax(0,1fr));padding:7px}.onxStage{width:auto;min-height:205px}}
+  .onxShell{
+    --onx-font:"Aptos","Segoe UI",Arial,sans-serif;
+    --onx-bg:#edf3f8;
+    --onx-panel:#ffffff;
+    --onx-panel-strong:#f7fbff;
+    --onx-rail:#0c243d;
+    --onx-rail-2:#12385c;
+    --onx-text:#10243a;
+    --onx-muted:#31485f;
+    --onx-muted-2:#415b72;
+    --onx-border:#c8d8e6;
+    --onx-primary:#1d5fae;
+    --onx-primary-strong:#114989;
+    --onx-ready-bg:#e9f7ee;
+    --onx-ready-text:#185b35;
+    --onx-warn-bg:#fff4de;
+    --onx-warn-text:#7a4f00;
+    --onx-blocked-bg:#fdecec;
+    --onx-blocked-text:#8e2420;
+    --onx-muted-bg:#eef3f7;
+    --onx-shadow:0 16px 34px rgba(16,36,58,.08);
+    display:none;
+    min-height:100vh;
+    background:radial-gradient(circle at top right,#dcecff 0,#edf3f8 36%,#e9f0f6 100%);
+    color:var(--onx-text);
+    font-family:var(--onx-font);
+    font-size:15px;
+    line-height:1.48;
+  }
+  .onxShell.active{display:grid;grid-template-columns:248px minmax(0,1fr)}
+  .onxShell *{box-sizing:border-box}
+  .onxShell button,.onxShell input,.onxShell select,.onxShell textarea{font:inherit;letter-spacing:0}
+  .onxShell input,.onxShell select,.onxShell textarea{
+    color:#10243a;
+    background:#fff;
+    border:1px solid #8ea8c2;
+    font-size:15px;
+    font-weight:400;
+    line-height:1.45;
+    -webkit-text-fill-color:#10243a;
+    opacity:1;
+    appearance:none;
+  }
+  .onxShell input::placeholder,.onxShell textarea::placeholder{
+    color:#667e95;
+    -webkit-text-fill-color:#667e95;
+    opacity:1;
+    font-weight:400;
+  }
+  .onxShell select:invalid{color:#667e95}
+  .onxShell input:focus,.onxShell select:focus,.onxShell textarea:focus{
+    border-color:#1d5fae;
+    box-shadow:0 0 0 3px rgba(29,95,174,.18);
+    outline:0;
+    background:#fff;
+    color:#10243a;
+  }
+  .onxShell input:disabled,.onxShell select:disabled,.onxShell textarea:disabled{
+    color:#3d546a;
+    -webkit-text-fill-color:#3d546a;
+    background:#e5edf4;
+    border-color:#98acbf;
+    cursor:not-allowed;
+    opacity:1;
+  }
+  .onxSidebar{
+    position:sticky;top:0;height:100vh;overflow:auto;
+    background:linear-gradient(180deg,var(--onx-rail),#0a1c31 68%,#091728);
+    color:#fff;padding:18px 14px;display:flex;flex-direction:column;gap:12px
+  }
+  .onxBrand{display:flex;gap:12px;align-items:center;padding:0 6px 4px}
+  .onxLogo{
+    width:44px;height:44px;border-radius:12px;background:linear-gradient(180deg,#3687f0,#1d5fae);
+    display:grid;place-items:center;font-weight:900;font-size:13px;border:2px solid #9fc5ff;box-shadow:inset 0 1px 0 rgba(255,255,255,.25)
+  }
+  .onxBrand h1{font-size:20px;line-height:1.05;margin:0;font-weight:900}
+  .onxBrand p{font-size:13px;margin:4px 0 0;color:#c8dced;line-height:1.35}
+  .onxRuntimeNote{
+    margin:0 4px;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);
+    background:rgba(255,255,255,.06);font-size:13px;line-height:1.5;color:#deebf7
+  }
+  .onxNav{display:flex;flex-direction:column;gap:6px}
+  .onxNav button{
+    display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;
+    background:transparent;border:0;color:#deebf7;text-align:left;padding:11px 10px;border-radius:12px;
+    font-size:14px;font-weight:800;cursor:pointer;transition:background .15s ease,color .15s ease,transform .15s ease
+  }
+  .onxNav button:hover,.onxNav button:focus-visible,.onxNav button.active{background:#1d5fae;color:#fff;outline:0}
+  .onxNavNo{
+    width:28px;height:28px;border:1px solid rgba(255,255,255,.24);border-radius:9px;
+    display:grid;place-items:center;font-size:12px;background:rgba(255,255,255,.05)
+  }
+  .onxNavCount{
+    font-size:12.5px;color:#deebf7;background:rgba(255,255,255,.1);padding:3px 8px;border-radius:999px;font-weight:900
+  }
+  .onxNav button.active .onxNavCount{background:rgba(255,255,255,.18);color:#fff}
+  .onxSideFoot{margin-top:auto;border-top:1px solid rgba(255,255,255,.13);padding:12px 7px 0;font-size:13px;line-height:1.55;color:#c9dbeb}
+  .onxAccount{margin-bottom:8px;padding:10px;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(255,255,255,.05);overflow-wrap:anywhere}
+  .onxSideFoot strong{color:#fff}
+  .onxMain{min-width:0;padding:18px 20px 36px}
+  .onxRoute{display:none}
+  .onxRoute.active{display:block}
+  .onxHeader{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:12px}
+  .onxHeader h2{font-size:30px;line-height:1.08;margin:0;font-weight:900;letter-spacing:-.02em}
+  .onxHeader p{font-size:15px;color:var(--onx-muted);margin:6px 0 0;line-height:1.52;max-width:78ch}
+  .onxToolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .onxBtn{
+    min-height:42px;border:1px solid #95aec7;background:#fff;color:#17334f;border-radius:12px;padding:9px 14px;
+    font-size:15px;font-weight:800;cursor:pointer;line-height:1.3;box-shadow:0 1px 0 rgba(16,36,58,.02)
+  }
+  .onxBtn:hover,.onxBtn:focus-visible{background:#f2f7fc;border-color:#7fa0c3;outline:0}
+  .onxBtn.primary{background:var(--onx-primary);border-color:var(--onx-primary);color:#fff}
+  .onxBtn.primary:hover,.onxBtn.primary:focus-visible{background:var(--onx-primary-strong);border-color:var(--onx-primary-strong)}
+  .onxBtn.action{background:#eef9f2;border-color:#9ed0af;color:#175f34}
+  .onxBtn.danger{background:#fff6f5;border-color:#ddaaa5;color:#8f221c}
+  .onxBtn:disabled{cursor:not-allowed;background:#e2ebf3;border-color:#9db0c3;color:#41566a;opacity:1}
+  .onxBtn[aria-busy="true"]{cursor:wait;background:#eaf2ff;color:#1c5ba5}
+  .onxGrantTable{width:100%;border-collapse:collapse;font-size:14px}
+  .onxGrantTable th,.onxGrantTable td{padding:10px 12px;border-bottom:1px solid #dce5ee;text-align:left;vertical-align:top}
+  .onxGrantTable th{background:#f5f8fb;color:#526980;font-weight:900;font-size:13px}
+  .onxGrantTable td:first-child{overflow-wrap:anywhere}
+  .onxGrantActions{display:flex;gap:5px;flex-wrap:wrap}
+  .onxGrantDialog{width:min(680px,calc(100vw - 24px));border:1px solid #9cb1c7;border-radius:14px;padding:0;color:#10243a}
+  .onxGrantDialog::backdrop{background:rgba(7,31,55,.58)}
+  .onxGrantDialogHead{padding:16px 18px;border-bottom:1px solid #cbd9e7;display:flex;justify-content:space-between;align-items:center}
+  .onxGrantDialogHead h3{margin:0;font-size:20px}
+  .onxGrantDialogBody{padding:16px 18px}
+  .onxGrantForm{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .onxGrantField{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:900;color:#17334f}
+  .onxGrantField.full{grid-column:1/-1}
+  .onxGrantField input,.onxGrantField select,.onxGrantField textarea{
+    width:100%;border:1px solid #9fb2c5;border-radius:10px;padding:10px;background:#fff;color:#10243a;font-size:15px
+  }
+  .onxGrantEffect{margin-top:12px;padding:12px;border:1px solid #bdd2ef;border-radius:12px;background:#eef5ff;font-size:14px;line-height:1.55}
+  .onxGrantDialogFoot{padding:12px 18px;border-top:1px solid #cbd9e7;display:flex;justify-content:flex-end;gap:8px}
+  .onxPill{
+    display:inline-flex;align-items:center;border-radius:999px;padding:5px 10px;border:1px solid #cbd9e7;
+    background:#fff;font-size:13px;font-weight:800;line-height:1.3;white-space:normal;overflow-wrap:anywhere
+  }
+  .onxPill.info{color:#123f7d;background:#edf4ff;border-color:#b5cae6}
+  .onxPill.ready{color:#124a2b;background:#edf8f0;border-color:#afd2bb}
+  .onxPill.warn{color:#6d4700;background:#fff4e3;border-color:#e5c587}
+  .onxPill.blocked{color:#7c201c;background:#fceeee;border-color:#e0aeab}
+  .onxPill.muted{color:#41586e;background:#eef3f7;border-color:#cad6e2}
+  .onxCallout{
+    display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 18px;background:#fff7e5;
+    border:1px solid #efbd58;border-radius:16px;margin-bottom:12px;box-shadow:var(--onx-shadow)
+  }
+  .onxCalloutLabel{font-size:12px;color:#905000;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+  .onxCallout strong{font-size:22px;display:block;margin-top:3px;line-height:1.18}
+  .onxCallout p{margin:4px 0 0;color:#785c2c;font-size:14px;line-height:1.52}
+  .onxPanel{background:var(--onx-panel);border:1px solid var(--onx-border);border-radius:16px;overflow:hidden;box-shadow:var(--onx-shadow)}
+  .onxPanelHead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:14px 16px;border-bottom:1px solid var(--onx-border);background:var(--onx-panel-strong)}
+  .onxPanelHead h3{font-size:19px;line-height:1.25;margin:0;font-weight:900}
+  .onxPanelHead p{font-size:14px;color:var(--onx-muted);margin:4px 0 0;line-height:1.5}
+  .onxPanelBody{padding:14px 16px}
+  .onxLifecycleGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;padding:14px}
+  .onxStage{
+    min-height:244px;background:#fff;border:1px solid var(--onx-border);border-radius:14px;padding:16px;text-align:left;
+    display:flex;flex-direction:column;cursor:pointer;box-shadow:0 1px 0 rgba(16,36,58,.03)
+  }
+  .onxStage:hover,.onxStage:focus-visible{border-color:#2f79e2;box-shadow:0 0 0 1px rgba(47,121,226,.18);outline:0}
+  .onxStage.selected{border:2px solid #2f79e2;background:#f3f7ff;padding:15px}
+  .onxStageHead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
+  .onxStage h3{font-size:18px;line-height:1.24;margin:0;font-weight:900}
+  .onxStageCount{font-size:28px;line-height:1;font-weight:900;color:#1f6fe5}
+  .onxStageBody{font-size:14px;line-height:1.52;color:#4f667d;margin:10px 0 4px}
+  .onxStageFact{font-size:14px;line-height:1.48;color:#2e465e;margin:5px 0}
+  .onxStageAction{margin-top:auto;padding-top:12px}
+  .onxStageRoute{display:inline-flex;border:1px solid #bfd2ee;background:#eef5ff;color:#1852a0;border-radius:999px;padding:6px 10px;font-size:13px;font-weight:900}
+  .onxSelectedStage{display:none;margin:0 14px 14px;border:1px solid #bdd0e8;border-radius:14px;background:#f8fbff;padding:14px 16px}
+  .onxSelectedStage.show{display:grid;grid-template-columns:1.3fr 1fr auto;gap:14px;align-items:center}
+  .onxSelectedStage h3{font-size:20px;margin:0}
+  .onxSelectedStage p{font-size:14px;color:var(--onx-muted);margin:4px 0 0;line-height:1.5}
+  .onxScope{border-top:1px solid var(--onx-border);background:#fbfdff;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .onxScopeNote{font-size:13px;color:var(--onx-muted);line-height:1.5}
+  .onxMetrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+  .onxMetric{border:1px solid var(--onx-border);background:#fff;border-radius:14px;padding:14px 15px;min-height:108px;box-shadow:var(--onx-shadow)}
+  .onxMetric.attention{border-color:#efbd58;background:#fffaf0}
+  .onxMetric .k{font-size:13px;color:#30485f;font-weight:900;letter-spacing:.01em}
+  .onxMetric .v{font-size:30px;font-weight:900;margin-top:6px;line-height:1.08}
+  .onxMetric .m{font-size:14px;color:#31485f;line-height:1.5;margin-top:6px;font-weight:500}
+  .onxGrid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .onxGrid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .onxStack{display:flex;flex-direction:column;gap:12px}
+  .onxStatus{display:flex;flex-direction:column}
+  .onxStatusRow{display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid #dce6ef;font-size:14px}
+  .onxStatusRow:last-child{border-bottom:0}
+  .onxStatusRow strong{display:block;font-size:15px;color:#10243a}
+  .onxStatusRow small{color:#31485f;line-height:1.5;font-size:13px;font-weight:500}
+  .onxQueueTools{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--onx-border);background:#fbfdff}
+  .onxSearch{
+    min-width:260px;
+    border:1px solid #8ea8c2;
+    border-radius:12px;
+    background:#fff;
+    padding:10px 12px;
+    font-size:15px;
+    font-weight:400;
+    color:#10243a;
+    -webkit-text-fill-color:#10243a;
+    box-shadow:inset 0 1px 2px rgba(16,36,58,.04);
+  }
+  .onxSearch::placeholder{color:#667e95;-webkit-text-fill-color:#667e95;opacity:1}
+  .onxQueueTools select,
+  .onxToolbar select{
+    min-height:42px;
+    padding:10px 42px 10px 12px;
+    border:1px solid #8ea8c2;
+    border-radius:12px;
+    background-color:#fff;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath fill='%2331485f' d='M1.6.8 7 6.2 12.4.8 14 2.4 7 9 0 2.4z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:right 14px center;
+    background-size:14px 9px;
+    color:#10243a;
+    -webkit-text-fill-color:#10243a;
+    font-size:15px;
+    font-weight:400;
+  }
+  .onxTableWrap{overflow:auto}
+  .onxTable{width:100%;border-collapse:collapse;min-width:1080px}
+  .onxTable th{text-align:left;padding:11px 12px;border-bottom:1px solid var(--onx-border);background:#f7faff;color:#30485f;font-size:13px;text-transform:none;letter-spacing:.01em}
+  .onxTable td{padding:14px 12px;border-bottom:1px solid #dce6ef;font-size:14px;vertical-align:top;line-height:1.5}
+  .onxTable tr:hover td{background:#f8fbff}
+  .onxTable tr.selected td{background:#f2f7ff}
+  .onxTable tr.blocked td{background:#fbfcfd}
+  .onxTable tr.blocked{color:#53677b}
+  .onxName{font-size:15px;font-weight:900;line-height:1.32;color:#10243a}
+  .onxSub{font-size:13px;line-height:1.5;color:var(--onx-muted);margin-top:4px;font-weight:500}
+  .onxRowActions{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+  .onxMore{width:42px;padding:0;font-size:18px}
+  .onxSticky{
+    position:sticky;bottom:0;background:#0e2d4e;color:#fff;padding:12px 14px;display:flex;
+    justify-content:space-between;align-items:center;gap:10px;border-top:1px solid rgba(255,255,255,.08)
+  }
+  .onxSticky b{font-size:15px}
+  .onxSticky span{font-size:13px;color:#d4e2ee;line-height:1.45}
+  .onxStateBox,.onxFuture{border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.5}
+  .onxStateBox{border:1px solid #dce6ef;background:#f8fafc}
+  .onxStateBox strong{display:block;color:#284055;margin-bottom:3px}
+  .onxFuture{border:1px dashed #aebfd0;background:#f8fafc;color:#53687d}
+  .onxFuture strong{display:block;color:#304a66;margin-bottom:4px}
+  .onxContext{
+    position:fixed;z-index:95;display:none;min-width:280px;background:#fff;border:1px solid #aebfd0;border-radius:12px;
+    box-shadow:0 12px 30px rgba(7,31,55,.23);padding:6px
+  }
+  .onxContext.open{display:flex;flex-direction:column}
+  .onxContext button{border:0;background:#fff;color:#17334f;text-align:left;padding:10px 12px;border-radius:8px;font-size:14px;font-weight:800}
+  .onxContext button:hover,.onxContext button:focus-visible{background:#eef5ff;outline:0}
+  .onxContext button:disabled{color:#7b8b9c;background:#f2f5f8;cursor:not-allowed}
+  .onxContextReason{padding:8px 10px;font-size:13px;line-height:1.45;color:#7a4a00;background:#fff7e5;border-radius:8px;margin-top:4px}
+  .onxLoading{padding:28px;text-align:center;color:var(--onx-muted);font-size:15px}
+  .onxError{padding:12px 14px;border:1px solid #efb6b1;background:#fff0ef;color:#9c231b;border-radius:12px;font-size:14px;line-height:1.5}
+  @media(max-width:1280px){
+    .onxShell.active{grid-template-columns:220px minmax(0,1fr)}
+    .onxGrid3{grid-template-columns:1fr 1fr}
+    .onxSelectedStage.show{grid-template-columns:1fr}
+  }
+  @media(max-width:980px){
+    .onxShell.active{grid-template-columns:82px minmax(0,1fr)}
+    .onxBrand h1,.onxBrand p,.onxRuntimeNote,.onxNavLabel,.onxNavCount,.onxSideFoot{display:none}
+    .onxSidebar{padding:14px 8px}
+    .onxNav button{grid-template-columns:1fr;justify-items:center;padding:10px 8px}
+    .onxMain{padding:14px}
+    .onxGrid2,.onxGrid3{grid-template-columns:1fr}
+    .onxLifecycleGrid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+  }
+  @media(max-width:720px){
+    .onxShell.active{display:block}
+    .onxSidebar{position:relative;height:auto}
+    .onxBrand{display:none}
+    .onxNav{flex-direction:row;overflow:auto}
+    .onxNav button{min-width:64px}
+    .onxMain{padding:12px}
+    .onxHeader,.onxCallout,.onxScope,.onxSticky{align-items:flex-start;flex-direction:column}
+    .onxHeader h2{font-size:26px}
+    .onxLifecycleGrid{grid-template-columns:1fr}
+    .onxStage{min-height:220px}
+    .onxSearch{min-width:0;width:100%}
+  }
 </style>
 
 <div id="operatorNextShell" class="onxShell" aria-label="Operator Next">
@@ -114,7 +368,64 @@
   function operatorNextEsc_(value){ return esc(String(value == null ? "" : value)); }
   function operatorNextSetHtml_(id, html){ var el=document.getElementById(id); if(el) el.innerHTML=html; }
   function operatorNextSetText_(id, text){ var el=document.getElementById(id); if(el) el.textContent=String(text == null ? "" : text); }
-  function operatorNextPill_(text, kind){ return '<span class="onxPill '+operatorNextEsc_(kind||"info")+'">'+operatorNextEsc_(text)+'</span>'; }
+  function operatorNextTitleCaseWords_(value){ return String(value||"").split(/\s+/).filter(Boolean).map(function(word){ return word ? word.charAt(0).toUpperCase()+word.slice(1).toLowerCase() : ""; }).join(" "); }
+  var operatorNextLabelOverrides_ = {
+    PAYMENT_PENDING:"Payment pending",
+    PAYMENT_TO_VERIFY:"Payment to verify",
+    PAID_VERIFIED:"Payment verified",
+    INCOMPLETE_DOCUMENTS:"Incomplete documents",
+    DOCUMENTS_TO_VERIFY:"Documents to verify",
+    DOCUMENT_CORRECTION_REQUIRED:"Document correction required",
+    APPLICATION_RECEIVED:"Application received",
+    AWAITING_PORTAL_OR_INTAKE:"Portal access or intake",
+    ENROLMENT_READY:"Enrolment ready",
+    COMPLETE:"Complete",
+    READY:"Ready",
+    REVIEW_REQUIRED:"Review required",
+    COOLING_OFF:"Follow-up waiting period",
+    AWAITING_APPLICANT:"Waiting for applicant",
+    AWAITING_PAYMENT:"Waiting for payment evidence",
+    TEMPORARILY_ALLOWED:"Temporarily allowed",
+    INHERITED_ALLOWED:"Allowed by role",
+    INHERITED_DENIED:"Not allowed by role",
+    ACTIVE:"Active",
+    REVOKED:"Revoked",
+    EXPIRED:"Expired",
+    INVALIDATED:"Invalidated",
+    SEND_PAYMENT_REMINDER:"Send payment reminder",
+    VERIFY_PAYMENT:"Verify payment",
+    UPLOAD_REQUIRED_DOCUMENTS:"Upload required documents",
+    PAYMENT_FOLLOW_UP:"Payment follow-up",
+    PAYMENT_REVIEW:"Payment review",
+    CONTACTABILITY:"Contactability",
+    APPLICANT:"Applicant action",
+    ADMISSIONS:"Admissions review",
+    FINANCE:"Finance",
+    UNKNOWN:"Needs review",
+    payment_followup:"Payment follow-up",
+    docs_missing:"Missing documents request",
+    legacy_invite:"Portal access",
+    application_reminder:"Application reminder",
+    application_acceptance_confirmation:"Acceptance confirmation",
+    application_verified_quote:"Verified quote and fee guidance",
+    application_final_reminder:"Final reminder",
+    application_exam_fee_reminder:"National exam fee reminder",
+    prospect_general_guidance:"Prospect general guidance",
+    application_receipt_request:"Payment receipt request",
+    contact_fallback_manual:"Manual contact fallback"
+  };
+  function operatorNextHumanizeToken_(value){
+    var text=String(value==null?"":value).trim();
+    if(!text) return "";
+    if(operatorNextLabelOverrides_[text]) return operatorNextLabelOverrides_[text];
+    if(/^[A-Z0-9_]+$/.test(text)) return operatorNextTitleCaseWords_(text.replace(/_/g," ").toLowerCase());
+    if(/^[a-z0-9_]+$/.test(text) && text.indexOf("_") >= 0) return operatorNextTitleCaseWords_(text.replace(/_/g," "));
+    return text;
+  }
+  function operatorNextLabelList_(items){
+    return (items||[]).map(function(item){ return operatorNextHumanizeToken_(item); }).filter(Boolean).join(", ");
+  }
+  function operatorNextPill_(text, kind){ return '<span class="onxPill '+operatorNextEsc_(kind||"info")+'">'+operatorNextEsc_(operatorNextHumanizeToken_(text))+'</span>'; }
   function operatorNextMetric_(label, value, meta, attention){ return '<div class="onxMetric'+(attention?' attention':'')+'"><div class="k">'+operatorNextEsc_(label)+'</div><div class="v">'+operatorNextEsc_(value)+'</div><div class="m">'+operatorNextEsc_(meta)+'</div></div>'; }
   function operatorNextStatusRows_(items){ return '<div class="onxStatus">'+(items||[]).map(function(item){ return '<div class="onxStatusRow"><div><strong>'+operatorNextEsc_(item[0])+'</strong><small>'+operatorNextEsc_(item[1]||"")+'</small></div>'+operatorNextPill_(item[2],item[3])+'</div>'; }).join('')+'</div>'; }
   function operatorNextStateKind_(state){ var key=String(state||"").toUpperCase(); return key==="READY"?"ready":(key==="COOLING_OFF"||key==="AWAITING_APPLICANT"||key==="AWAITING_PAYMENT"?"warn":(key==="REVIEW_REQUIRED"||key==="UNKNOWN"?"blocked":"muted")); }
@@ -124,7 +435,7 @@
   function operatorNextRowKey_(row){ return String(row&&row.applicantId||"").trim(); }
   function operatorNextSelectedRows_(){ return operatorNextState_.rows.filter(function(row){ return !!operatorNextState_.selected[operatorNextRowKey_(row)]; }); }
   function operatorNextCanonicalBase_(row){ return String(row&&row.canonicalLifecycle&&row.canonicalLifecycle.baseState||"UNKNOWN").toUpperCase(); }
-  function operatorNextLifecycleLabel_(key){ return String(key||"UNKNOWN").replace(/_/g," "); }
+  function operatorNextLifecycleLabel_(key){ return operatorNextHumanizeToken_(String(key||"UNKNOWN").toUpperCase()); }
 
   function operatorNextActivateRoute_(route){
     var key=String(route||"lifecycle"); operatorNextState_.route=key;
@@ -259,10 +570,10 @@
     operatorNextRenderLifecycle_(false);
   }
 
-  function operatorNextSelectStage_(key){ operatorNextState_.selectedStage=String(key||''); operatorNextRenderLifecycle_(false); var def=operatorNextLifecycleDefinitions_().filter(function(item){return item.key===key;})[0]; var stageRows=operatorNextState_.rows.filter(function(row){return operatorNextCanonicalBase_(row)===key;}); var el=document.getElementById('onxSelectedStage'); if(!el||!def)return; el.className='onxSelectedStage show'; el.innerHTML='<div><h3>'+operatorNextEsc_(def.title)+'</h3><p>'+stageRows.length+' returned canonical rows.</p></div><div class="onxToolbar">'+operatorNextPill_(stageRows.filter(operatorNextSelectable_).length+' actionable','ready')+operatorNextPill_(stageRows.filter(function(row){return !operatorNextSelectable_(row);}).length+' blocked','warn')+'</div><div class="onxToolbar"><button id="onxOpenStageQueue" class="onxBtn primary" type="button">'+operatorNextEsc_(def.action)+'</button><button id="onxReviewStageFirst" class="onxBtn" type="button"'+(stageRows.length?'':' disabled')+'>Review first record</button></div>'; document.getElementById('onxOpenStageQueue').onclick=function(){operatorNextActivateRoute_(def.route);}; document.getElementById('onxReviewStageFirst').onclick=function(){operatorNextOpenReview_(stageRows[0]);}; }
+  function operatorNextSelectStage_(key){ operatorNextState_.selectedStage=String(key||''); operatorNextRenderLifecycle_(false); var def=operatorNextLifecycleDefinitions_().filter(function(item){return item.key===key;})[0]; var stageRows=operatorNextState_.rows.filter(function(row){return operatorNextCanonicalBase_(row)===key;}); var el=document.getElementById('onxSelectedStage'); if(!el||!def)return; el.className='onxSelectedStage show'; el.innerHTML='<div><h3>'+operatorNextEsc_(def.title)+'</h3><p>'+stageRows.length+' returned canonical rows in this lifecycle stage.</p></div><div class="onxToolbar">'+operatorNextPill_(stageRows.filter(operatorNextSelectable_).length+' ready','ready')+operatorNextPill_(stageRows.filter(function(row){return !operatorNextSelectable_(row);}).length+' blocked','warn')+'</div><div class="onxToolbar"><button id="onxOpenStageQueue" class="onxBtn primary" type="button">'+operatorNextEsc_(def.action)+'</button><button id="onxReviewStageFirst" class="onxBtn" type="button"'+(stageRows.length?'':' disabled')+'>Open first Review</button></div>'; document.getElementById('onxOpenStageQueue').onclick=function(){operatorNextActivateRoute_(def.route);}; document.getElementById('onxReviewStageFirst').onclick=function(){operatorNextOpenReview_(stageRows[0]);}; }
 
   function operatorNextQueueHtml_(rows,context){
-    var selectedCount=operatorNextSelectedRows_().length; return '<div class="onxQueueTools"><div class="onxToolbar"><input class="onxSearch" data-onx-search="'+operatorNextEsc_(context)+'" placeholder="Search returned applicant, ID or action"><button class="onxBtn" type="button" data-onx-select-all="'+operatorNextEsc_(context)+'">Select all returned READY</button><button class="onxBtn" type="button" data-onx-clear="1">Clear</button></div><span class="onxPill info">'+rows.length+' returned</span></div><div class="onxTableWrap"><table class="onxTable"><thead><tr><th></th><th>Applicant</th><th>Worklist / owner</th><th>Canonical state</th><th>Next action</th><th>Status / reason</th><th>Actions</th></tr></thead><tbody>'+rows.map(function(row,index){ var key=operatorNextRowKey_(row),selected=!!operatorNextState_.selected[key],selectable=operatorNextSelectable_(row); return '<tr class="'+(selected?'selected ':'')+(selectable?'':'blocked')+'" data-onx-row-index="'+index+'" data-onx-context="'+operatorNextEsc_(context)+'"><td><input class="onxSelect" type="checkbox" data-onx-id="'+operatorNextEsc_(key)+'" '+(selected?'checked ':'')+(selectable?'':'disabled')+'></td><td><div class="onxName">'+operatorNextEsc_(row.name||'Name unavailable')+'</div><div class="onxSub">'+operatorNextEsc_(key)+' · row '+operatorNextEsc_(row.rowNumber||'-')+'</div></td><td><b>'+operatorNextEsc_(row.worklistLabel||operatorNextGroup_(row))+'</b><div class="onxSub">'+operatorNextEsc_(row.worklistReason||'')+' · '+operatorNextEsc_(row.actionOwner||'UNKNOWN')+'</div></td><td><b>'+operatorNextEsc_(operatorNextLifecycleLabel_(operatorNextCanonicalBase_(row)))+'</b><div class="onxSub">'+operatorNextEsc_((row.canonicalLifecycle&&row.canonicalLifecycle.overlays||[]).join(', ')||'No overlays')+'</div></td><td><b>'+operatorNextEsc_(operatorNextLifecycleLabel_(row.nextAction||'UNKNOWN'))+'</b><div class="onxSub">'+operatorNextEsc_(row.recommendedMessageType||'No message recommendation')+'</div></td><td>'+operatorNextPill_(row.actionabilityState||'UNKNOWN',operatorNextStateKind_(row.actionabilityState))+'<div class="onxSub">'+operatorNextEsc_(row.selectBlockReason||row.communicationProgressDetail||row.communicationProgress||'Ready')+'</div></td><td><div class="onxRowActions"><button type="button" class="onxBtn" data-onx-review="'+operatorNextEsc_(key)+'">Review</button><button type="button" class="onxBtn onxMore" data-onx-more="'+operatorNextEsc_(key)+'" aria-label="More actions for '+operatorNextEsc_(key)+'">···</button></div></td></tr>'; }).join('')+'</tbody></table></div><div class="onxSticky"><div><b>'+selectedCount+' selected</b><br><span>Only server-selectable rows enter Batch Communication.</span></div><div class="onxToolbar"><button class="onxBtn" type="button" data-onx-review-selected="1" '+(selectedCount===1?'':'disabled')+'>Review selected</button><button class="onxBtn action" type="button" data-onx-batch="1" '+(selectedCount>1&&operatorNextCapability_('CAN_RUN_BATCH_COMMUNICATIONS')?'':'disabled')+'>Batch Communication</button></div></div>';
+    var selectedCount=operatorNextSelectedRows_().length; return '<div class="onxQueueTools"><div class="onxToolbar"><input class="onxSearch" data-onx-search="'+operatorNextEsc_(context)+'" placeholder="Search applicant, ID, stage or next action"><button class="onxBtn" type="button" data-onx-select-all="'+operatorNextEsc_(context)+'">Select all ready rows</button><button class="onxBtn" type="button" data-onx-clear="1">Clear</button></div><span class="onxPill info">'+rows.length+' returned</span></div><div class="onxTableWrap"><table class="onxTable"><thead><tr><th></th><th>Applicant</th><th>Worklist and owner</th><th>Current state</th><th>Next action</th><th>Status and reason</th><th>Actions</th></tr></thead><tbody>'+rows.map(function(row,index){ var key=operatorNextRowKey_(row),selected=!!operatorNextState_.selected[key],selectable=operatorNextSelectable_(row),worklistLabel=operatorNextHumanizeToken_(row.worklistLabel||operatorNextGroup_(row)),ownerLabel=operatorNextHumanizeToken_(row.actionOwner||'UNKNOWN'),stateLabel=operatorNextLifecycleLabel_(operatorNextCanonicalBase_(row)),nextActionLabel=operatorNextLifecycleLabel_(row.nextAction||'UNKNOWN'),overlayLabel=operatorNextLabelList_((row.canonicalLifecycle&&row.canonicalLifecycle.overlays)||[]),recommendation=operatorNextHumanizeToken_(row.recommendedMessageType||''); return '<tr class="'+(selected?'selected ':'')+(selectable?'':'blocked')+'" data-onx-row-index="'+index+'" data-onx-context="'+operatorNextEsc_(context)+'"><td><input class="onxSelect" type="checkbox" data-onx-id="'+operatorNextEsc_(key)+'" '+(selected?'checked ':'')+(selectable?'':'disabled')+'></td><td><div class="onxName">'+operatorNextEsc_(row.name||'Name unavailable')+'</div><div class="onxSub">Applicant ID '+operatorNextEsc_(key)+(row.rowNumber?' · row '+operatorNextEsc_(row.rowNumber):'')+'</div></td><td><b>'+operatorNextEsc_(worklistLabel)+'</b><div class="onxSub">'+operatorNextEsc_(row.worklistReason||'No additional worklist detail')+' · Authority owner: '+operatorNextEsc_(ownerLabel)+'</div></td><td><b>'+operatorNextEsc_(stateLabel)+'</b><div class="onxSub">'+operatorNextEsc_(overlayLabel||'No secondary overlays')+'</div></td><td><b>'+operatorNextEsc_(nextActionLabel)+'</b><div class="onxSub">'+operatorNextEsc_(recommendation||'No message recommendation')+'</div></td><td>'+operatorNextPill_(row.actionabilityState||'UNKNOWN',operatorNextStateKind_(row.actionabilityState))+'<div class="onxSub">'+operatorNextEsc_(row.selectBlockReason||row.communicationProgressDetail||row.communicationProgress||'Ready for operator action')+'</div></td><td><div class="onxRowActions"><button type="button" class="onxBtn" data-onx-review="'+operatorNextEsc_(key)+'">Open Review</button><button type="button" class="onxBtn onxMore" data-onx-more="'+operatorNextEsc_(key)+'" aria-label="More actions for '+operatorNextEsc_(key)+'">···</button></div></td></tr>'; }).join('')+'</tbody></table></div><div class="onxSticky"><div><b>'+selectedCount+' selected</b><br><span>Only server-selectable rows can enter Batch Communication.</span></div><div class="onxToolbar"><button class="onxBtn" type="button" data-onx-review-selected="1" '+(selectedCount===1?'':'disabled')+'>Open selected Review</button><button class="onxBtn action" type="button" data-onx-batch="1" '+(selectedCount>1&&operatorNextCapability_('CAN_RUN_BATCH_COMMUNICATIONS')?'':'disabled')+'>Batch Communication</button></div></div>';
   }
 
   function operatorNextBindQueue_(containerId,rows,context){ var root=document.getElementById(containerId); if(!root)return; root.innerHTML=operatorNextQueueHtml_(rows,context); Array.prototype.slice.call(root.querySelectorAll('.onxSelect')).forEach(function(input){ input.addEventListener('change',function(){ var id=String(input.getAttribute('data-onx-id')||''); if(input.checked)operatorNextState_.selected[id]=true;else delete operatorNextState_.selected[id]; operatorNextRenderQueuesOnly_(); }); }); Array.prototype.slice.call(root.querySelectorAll('[data-onx-review]')).forEach(function(btn){ btn.addEventListener('click',function(){ operatorNextOpenReview_(operatorNextFindRow_(btn.getAttribute('data-onx-review'))); }); }); Array.prototype.slice.call(root.querySelectorAll('[data-onx-more]')).forEach(function(btn){ btn.addEventListener('click',function(ev){ operatorNextOpenRowContext_(ev,operatorNextFindRow_(btn.getAttribute('data-onx-more'))); }); }); Array.prototype.slice.call(root.querySelectorAll('tr[data-onx-row-index]')).forEach(function(tr){ tr.addEventListener('contextmenu',function(ev){ ev.preventDefault(); operatorNextOpenRowContext_(ev,rows[Number(tr.getAttribute('data-onx-row-index'))]||null); }); }); var all=root.querySelector('[data-onx-select-all]'); if(all)all.onclick=function(){ rows.forEach(function(row){if(operatorNextSelectable_(row))operatorNextState_.selected[operatorNextRowKey_(row)]=true;});operatorNextRenderQueuesOnly_();}; var clear=root.querySelector('[data-onx-clear]'); if(clear)clear.onclick=function(){operatorNextState_.selected={};operatorNextRenderQueuesOnly_();}; var reviewSelected=root.querySelector('[data-onx-review-selected]');if(reviewSelected)reviewSelected.onclick=operatorNextOpenSelectedReview_;var batch=root.querySelector('[data-onx-batch]');if(batch)batch.onclick=operatorNextOpenBatch_;var search=root.querySelector('[data-onx-search]');if(search)search.addEventListener('input',function(){var term=String(search.value||'').toLowerCase();Array.prototype.slice.call(root.querySelectorAll('tbody tr')).forEach(function(tr){tr.style.display=!term||String(tr.textContent||'').toLowerCase().indexOf(term)>=0?'':'none';});}); }
@@ -273,7 +584,7 @@
   function operatorNextRenderApplicant_(){ var data=operatorNextState_.actionability||{},bucket=data.bucketSummaries&&data.bucketSummaries.APPLICANT||{},rows=operatorNextRowsForGroup_('APPLICANT'),hidden=data.hiddenRecords&&data.hiddenRecords.byGroup&&data.hiddenRecords.byGroup.APPLICANT||[]; operatorNextSetHtml_('onxApplicantMetrics',[operatorNextMetric_('Population',bucket.populationTotal||bucket.population||rows.length,'Applicant Action population'),operatorNextMetric_('Eligible now',bucket.eligibleNow||rows.filter(operatorNextSelectable_).length,'Full-population READY'),operatorNextMetric_('Returned',rows.length,'Bounded rows'),operatorNextMetric_('Cooling-off / contacted',bucket.coolingOff||0,'Unavailable now'),operatorNextMetric_('Hidden',bucket.hidden||hidden.length,'Outside returned cohort')].join('')); operatorNextBindQueue_('onxApplicantQueue',rows,'applicant'); operatorNextSetHtml_('onxApplicantHidden',operatorNextStatusRows_(hidden.slice(0,5).map(function(row){return [row.name||row.applicantId,row.selectBlockReason||row.communicationProgressDetail||'Hidden',row.actionabilityState||'HIDDEN',operatorNextStateKind_(row.actionabilityState)];}))); operatorNextSetHtml_('onxApplicantTraffic',operatorNextStatusRows_([['Cooling-off','Server Actionability state',String(Number(data.workloadSummary&&data.workloadSummary.COOLING_OFF||0)),'warn'],['Awaiting applicant','Server Actionability state',String(Number(data.workloadSummary&&data.workloadSummary.AWAITING_APPLICANT||0)),'info']])); operatorNextSetText_('onxNavApplicant',bucket.populationTotal||bucket.population||rows.length); }
   function operatorNextRenderAdmissions_(){ var rows=operatorNextRowsForGroup_('ADMISSIONS'),correction=operatorNextState_.rows.filter(function(row){return operatorNextCanonicalBase_(row)==='DOCUMENT_CORRECTION_REQUIRED';}),ready=operatorNextState_.rows.filter(function(row){return operatorNextCanonicalBase_(row)==='ENROLMENT_READY';}); operatorNextSetHtml_('onxDocumentReview',operatorNextCompactRows_(rows)); operatorNextSetHtml_('onxReviewExceptions',operatorNextCompactRows_(correction)); operatorNextSetHtml_('onxAdmissionsReady',operatorNextCompactRows_(ready)); operatorNextSetText_('onxNavAdmissions',rows.length+correction.length); }
   function operatorNextRenderCommunications_(){ var data=operatorNextState_.actionability||{},rows=operatorNextState_.rows,ready=rows.filter(function(row){return row.recommendedMessageType&&row.selectable;}); operatorNextSetHtml_('onxCommunicationMetrics',[operatorNextMetric_('Recommended / ready',ready.length,'Returned cohort'),operatorNextMetric_('Cooling-off',Number(data.workloadSummary&&data.workloadSummary.COOLING_OFF||0),'Server block state'),operatorNextMetric_('Contactability',operatorNextRowsForGroup_('CONTACTABILITY').length,'Manual correction'),operatorNextMetric_('Batch cap','30','Existing backend policy'),operatorNextMetric_('MTD activity',operatorNextState_.metrics?Number(operatorNextState_.metrics.emailStates&&operatorNextState_.metrics.emailStates.SENT||0):'Load route','Operational metrics')].join('')); operatorNextSetHtml_('onxCommunicationReadiness',operatorNextStatusRows_([['Individual reviewed email','Existing Review Workspace','Available','ready'],['Selected-applicant communication','Existing preview/send handlers',operatorNextSelectedRows_().length===1?'Ready':'Select one',operatorNextSelectedRows_().length===1?'ready':'warn'],['Batch Communication','Existing selected-cohort handlers',operatorNextCapability_('CAN_RUN_BATCH_COMMUNICATIONS')?'Capability available':'Capability denied',operatorNextCapability_('CAN_RUN_BATCH_COMMUNICATIONS')?'ready':'blocked'],['Stage Batch','Compatibility cohort selection; final Communication Authority','Available','warn'],['Custom email','Review Workspace manual template','Available','info']])); var metrics=operatorNextState_.metrics||{},email=metrics.emailStates||{}; operatorNextSetHtml_('onxCommunicationActivity',operatorNextStatusRows_([['SENT','Operational dashboard metric',String(Number(email.SENT||0)),'ready'],['FAILED','Status + last-result evidence',String(Number(email.FAILED||0)),'blocked'],['BOUNCED','Contactability evidence',String(Number(email.BOUNCED||0)),'warn'],['Template registry','Review Workspace gallery','Available','info'],['Communication ledger','Review history and diagnostics','Available in Review','info']])); operatorNextSetText_('onxNavCommunications',ready.length); }
-  function operatorNextFinanceStatusRows_(rows){ if(!rows||!rows.length)return '<div class="onxLoading">No rows match this server-side Finance page/filter.</div>'; return '<div class="onxStatus">'+rows.map(function(item){var id=item.identity&&item.identity.applicantId||'',name=item.identity&&item.identity.applicantName||id,auth=item.financeAuthority||{},op=item.operational||{},kind=auth.financeState==='PAYMENT_TO_VERIFY'?'warn':(auth.financeState==='PAID_VERIFIED'?'ready':'info');return '<div class="onxStatusRow"><div><strong>'+operatorNextEsc_(name)+'</strong><small>'+operatorNextEsc_(id+' · '+(auth.financeReason||'Finance state unavailable')+' · '+(op.worklistLabel||op.worklistKey||'No worklist'))+'</small></div><div class="onxToolbar">'+operatorNextPill_(auth.financeState||'UNKNOWN',kind)+'<button class="onxBtn" type="button" data-onx-finance-review="'+operatorNextEsc_(id)+'">Review</button></div></div>';}).join('')+'</div>'; }
+  function operatorNextFinanceStatusRows_(rows){ if(!rows||!rows.length)return '<div class="onxLoading">No rows match this server-side Finance page or filter.</div>'; return '<div class="onxStatus">'+rows.map(function(item){var id=item.identity&&item.identity.applicantId||'',name=item.identity&&item.identity.applicantName||id,auth=item.financeAuthority||{},op=item.operational||{},kind=auth.financeState==='PAYMENT_TO_VERIFY'?'warn':(auth.financeState==='PAID_VERIFIED'?'ready':'info');return '<div class="onxStatusRow"><div><strong>'+operatorNextEsc_(name)+'</strong><small>'+operatorNextEsc_('Applicant ID '+id+' · '+(auth.financeReason||'Finance state unavailable')+' · '+operatorNextHumanizeToken_(op.worklistLabel||op.worklistKey||'No worklist'))+'</small></div><div class="onxToolbar">'+operatorNextPill_(auth.financeState||'UNKNOWN',kind)+'<button class="onxBtn" type="button" data-onx-finance-review="'+operatorNextEsc_(id)+'">Open Review</button></div></div>';}).join('')+'</div>'; }
   function operatorNextRenderFinance_(){ var data=operatorNextState_.finance, summary=data&&data.summary||null, page=data&&data.page||null, rows=page&&Array.isArray(page.rows)?page.rows:[], pending=summary?Number(summary.paymentPending||0):'-', verify=summary?Number(summary.paymentToVerify||0):'-', paid=summary?Number(summary.paidVerified||0):'-', exceptions=summary?Number(summary.financeExceptions||0):'-', follow=summary?Number(summary.paymentFollowupRecommended||0):'-'; if(!data){operatorNextSetHtml_('onxFinanceMetrics',[operatorNextMetric_('Payment Pending','Open route','Canonical Finance'),operatorNextMetric_('Payment to Verify','Open route','Receipt_Status'),operatorNextMetric_('Paid Verified','Open route','Receipt_Status'),operatorNextMetric_('Policy buckets','Deferred','Owner decision required'),operatorNextMetric_('Payment authority','Receipt_Status','Canonical truth')].join('')); operatorNextSetText_('onxNavFinance',operatorNextRowsForGroup_('FINANCE').length); return;} operatorNextSetHtml_('onxFinanceMetrics',[operatorNextMetric_('Payment Pending',pending,'Canonical Finance'),operatorNextMetric_('Payment to Verify',verify,'Receipt evidence pending verification'),operatorNextMetric_('Paid Verified',paid,'Receipt_Status verified'),operatorNextMetric_('Payment Follow-up',follow,'Communication recommendation'),operatorNextMetric_('Finance Exceptions',exceptions,'Warnings / reconciliation')].join('')); operatorNextSetHtml_('onxFinancePageRows',operatorNextFinanceStatusRows_(rows)); operatorNextSetHtml_('onxPaymentFollowup',operatorNextFinanceStatusRows_(rows.filter(function(row){return row.operational&&row.operational.recommendedFinanceAction==='SEND_PAYMENT_REMINDER';}))); operatorNextSetHtml_('onxPaymentReview',operatorNextFinanceStatusRows_(rows.filter(function(row){return row.operational&&row.operational.recommendedFinanceAction==='VERIFY_PAYMENT';}))); operatorNextSetHtml_('onxBooksState',operatorNextStatusRows_([['Policy-dependent states','Overdue, refunds, credits, write-offs','POLICY REQUIRED','warn'],['Standard quote','Existing Review Workspace route','Capability-gated','info'],['Draft invoice / Books','External integration metadata only',operatorNextCapability_('CAN_WRITE_ZOHO_BOOKS')?'Write capable':'Preview / restricted',operatorNextCapability_('CAN_WRITE_ZOHO_BOOKS')?'warn':'muted'],['Payment verification','Review Workspace mutation handler',operatorNextCapability_('CAN_VERIFY_PAYMENT')?'Available':'Capability denied',operatorNextCapability_('CAN_VERIFY_PAYMENT')?'warn':'blocked'],['Page size','Returned '+rows.length+' of '+(page&&page.filteredCount||0),'50 is a page size, not a cap','info']])); operatorNextSetText_('onxNavFinance',String(summary&&summary.totalRows||rows.length)); operatorNextSetText_('onxFinancePageStatus','Page '+String(page.page||1)+' · '+String(rows.length)+' returned · '+String(page.filteredCount||0)+' filtered · '+String(page.totalCount||0)+' total'); var previous=document.getElementById('onxFinancePrevious'),next=document.getElementById('onxFinanceNext');if(previous){previous.disabled=!page.hasPrevious;previous.onclick=function(){operatorNextState_.financeRequest.page=Math.max(1,Number(page.page||1)-1);operatorNextLoadFinance_(true);};}if(next){next.disabled=!page.hasNext;next.onclick=function(){operatorNextState_.financeRequest.page=Number(page.page||1)+1;operatorNextLoadFinance_(true);};}var apply=document.getElementById('onxFinanceSearchApply'),clear=document.getElementById('onxFinanceSearchClear'),search=document.getElementById('onxFinanceSearch'),filter=document.getElementById('onxFinanceFilter');if(search)search.value=operatorNextState_.financeRequest.searchQuery||'';if(filter)filter.value=operatorNextState_.financeRequest.filters.worklistKey||'';if(apply)apply.onclick=function(){operatorNextState_.financeRequest.page=1;operatorNextState_.financeRequest.searchQuery=String(search&&search.value||'').trim();operatorNextState_.financeRequest.filters={worklistKey:String(filter&&filter.value||'')};operatorNextLoadFinance_(true);};if(clear)clear.onclick=function(){operatorNextState_.financeRequest={page:1,pageSize:50,searchQuery:'',filters:{}};operatorNextLoadFinance_(true);};Array.prototype.slice.call(document.querySelectorAll('[data-onx-finance-review]')).forEach(function(btn){btn.onclick=function(){var id=btn.getAttribute('data-onx-finance-review');var match=operatorNextState_.rows.filter(function(row){return row.applicantId===id;})[0];operatorNextOpenReview_(match||{applicantId:id,rowNumber:0});};}); }
   function operatorNextLoadFinance_(force){ if(operatorNextState_.loaded.finance&&!force){operatorNextRenderFinance_();return;} var started=Date.now();operatorNextState_.loaded.finance=true;operatorNextSetHtml_('onxFinanceMetrics','<div class="onxLoading">Loading canonical Finance projection...</div>');google.script.run.withSuccessHandler(function(res){if(!res||res.ok===false){operatorNextState_.loaded.finance=false;operatorNextRenderError_('Canonical Finance',res&&res.message||res&&res.error||'Finance projection unavailable.');return;}operatorNextState_.finance=res;operatorNextState_.timing.financeMs=Date.now()-started;operatorNextRenderFinance_();}).withFailureHandler(function(err){operatorNextState_.loaded.finance=false;operatorNextRenderError_('Canonical Finance',err);}).admin_getCanonicalFinanceWorklist(operatorNextState_.financeRequest); }
   function operatorNextRenderPortal_(){ var rows=operatorNextState_.rows,submitted=rows.filter(function(row){return row.authorityState&&row.authorityState.portalSubmitted;}).length; operatorNextSetHtml_('onxPortalIdentity',operatorNextStatusRows_([['Portal link','Existing Review link helper','Available in Review','ready'],['Portal token','PortalSecrets boundary','Protected','ready'],['Link insertion','Existing communication draft action',operatorNextCapability_('CAN_INSERT_PORTAL_LINK')?'Available':'Denied',operatorNextCapability_('CAN_INSERT_PORTAL_LINK')?'ready':'blocked']])); operatorNextSetHtml_('onxPortalAvailability',operatorNextStatusRows_([['Security mutation','Existing backend boundary',operatorNextCapability_('CAN_MANAGE_PORTAL_ACCESS')?'Available':'SUPER required',operatorNextCapability_('CAN_MANAGE_PORTAL_ACCESS')?'warn':'blocked'],['Diagnostics','Current Admin route','Available','info']])); operatorNextSetHtml_('onxPortalProgress',operatorNextStatusRows_([['Submitted in returned rows','Canonical row fact',String(submitted),'info'],['Not submitted in returned rows','Canonical row fact',String(Math.max(0,rows.length-submitted)),'warn']])); operatorNextSetHtml_('onxPortalReason','<strong>Mutation boundary</strong>'+operatorNextEsc_(operatorNextCapability_('CAN_MANAGE_PORTAL_ACCESS')?'Current account may open capability-gated portal controls in Review.':'Portal security mutation is unavailable: CAN_MANAGE_PORTAL_ACCESS requires SUPER.')); }
@@ -289,7 +600,7 @@
 
   function operatorNextEffectiveCapabilityContext_(){ return operatorNextState_.grantMatrix&&operatorNextState_.grantMatrix.myEffectiveCapabilities||operatorNextBootstrapContext_().capabilityContext; }
   function operatorNextCapability_(name){ var ctx=operatorNextEffectiveCapabilityContext_(); return !!(ctx&&ctx.capabilities&&ctx.capabilities[name]===true); }
-  function operatorNextRenderCapabilities_(){ var bootstrap=operatorNextBootstrapContext_(),ctx=operatorNextEffectiveCapabilityContext_(); if(!ctx||!bootstrap.role)return; var entries=[['Open Review Workspace','CAN_OPEN_REVIEW_WORKSPACE'],['Review documents','CAN_REVIEW_DOCUMENTS'],['Save document statuses','CAN_SAVE_DOCUMENT_STATUSES'],['Preview individual email','CAN_PREVIEW_APPLICANT_COMMUNICATION'],['Send individual email','CAN_SEND_INDIVIDUAL_EMAIL'],['Insert portal link','CAN_INSERT_PORTAL_LINK'],['Standard quote','CAN_GENERATE_STANDARD_QUOTE'],['Standard invoice','CAN_GENERATE_STANDARD_INVOICE'],['Batch communication','CAN_RUN_BATCH_COMMUNICATIONS'],['Verify payment','CAN_VERIFY_PAYMENT'],['Override cooldown','CAN_OVERRIDE_COOLDOWN'],['Manage portal access','CAN_MANAGE_PORTAL_ACCESS'],['Write Zoho Books','CAN_WRITE_ZOHO_BOOKS'],['Administer runtime','CAN_ADMINISTER_RUNTIME'],['Deploy runtime','CAN_DEPLOY_RUNTIME']]; operatorNextSetText_('onxResolvedRole',bootstrap.role); operatorNextSetHtml_('onxCapabilityRows',operatorNextStatusRows_(entries.map(function(entry){var allowed=operatorNextCapability_(entry[1]),detail=ctx.capabilityDetails&&ctx.capabilityDetails[entry[1]]||{},temporary=detail.source==='TEMPORARY_GRANT';return [entry[0],temporary?('Temporary until '+operatorNextDateLabel_(detail.temporaryGrantExpiresAt)+' · '+detail.temporaryGrantReason):entry[1],allowed?(temporary?'TEMPORARILY ALLOWED':'INHERITED ALLOWED'):'INHERITED DENIED',allowed?'ready':'muted'];}))); operatorNextSetHtml_('onxCapabilityReasons',operatorNextStatusRows_(entries.filter(function(entry){return !operatorNextCapability_(entry[1]);}).map(function(entry){return [entry[0],entry[1]+' is not granted to '+bootstrap.role,'Blocked','blocked'];}).concat([['Backend RPC','Re-resolves effective capabilities server-side','Final boundary','ready'],['Durable role',bootstrap.role+' is unchanged by temporary grants','Stable','info']]))); }
+  function operatorNextRenderCapabilities_(){ var bootstrap=operatorNextBootstrapContext_(),ctx=operatorNextEffectiveCapabilityContext_(); if(!ctx||!bootstrap.role)return; var entries=[['Open Review Workspace','CAN_OPEN_REVIEW_WORKSPACE'],['Review documents','CAN_REVIEW_DOCUMENTS'],['Save document statuses','CAN_SAVE_DOCUMENT_STATUSES'],['Preview individual email','CAN_PREVIEW_APPLICANT_COMMUNICATION'],['Send individual email','CAN_SEND_INDIVIDUAL_EMAIL'],['Insert portal link','CAN_INSERT_PORTAL_LINK'],['Standard quote','CAN_GENERATE_STANDARD_QUOTE'],['Standard invoice','CAN_GENERATE_STANDARD_INVOICE'],['Batch communication','CAN_RUN_BATCH_COMMUNICATIONS'],['Verify payment','CAN_VERIFY_PAYMENT'],['Override cooldown','CAN_OVERRIDE_COOLDOWN'],['Manage portal access','CAN_MANAGE_PORTAL_ACCESS'],['Write Zoho Books','CAN_WRITE_ZOHO_BOOKS'],['Administer runtime','CAN_ADMINISTER_RUNTIME'],['Deploy runtime','CAN_DEPLOY_RUNTIME']]; operatorNextSetText_('onxResolvedRole',bootstrap.role); operatorNextSetHtml_('onxCapabilityRows',operatorNextStatusRows_(entries.map(function(entry){var allowed=operatorNextCapability_(entry[1]),detail=ctx.capabilityDetails&&ctx.capabilityDetails[entry[1]]||{},temporary=detail.source==='TEMPORARY_GRANT';return [entry[0],temporary?('Temporary until '+operatorNextDateLabel_(detail.temporaryGrantExpiresAt)+' · '+detail.temporaryGrantReason):('Authority key: '+entry[1]),allowed?(temporary?'TEMPORARILY_ALLOWED':'INHERITED_ALLOWED'):'INHERITED_DENIED',allowed?'ready':'muted'];}))); operatorNextSetHtml_('onxCapabilityReasons',operatorNextStatusRows_(entries.filter(function(entry){return !operatorNextCapability_(entry[1]);}).map(function(entry){return [entry[0],'Authority key '+entry[1]+' is not granted to '+bootstrap.role,'Blocked','blocked'];}).concat([['Backend RPC','Server re-resolves effective capabilities before any mutation','Final boundary','ready'],['Durable role',bootstrap.role+' remains unchanged by temporary grants','Stable','info']]))); }
 
   function operatorNextDateLabel_(value){ var date=value?new Date(value):null; return date&&!isNaN(date.getTime())?date.toLocaleString():'-'; }
   function operatorNextLoadCapabilityGrants_(force){ if(operatorNextState_.loaded.capabilityGrants&&!force){operatorNextRenderCapabilityGrantMatrix_();return;} operatorNextState_.loaded.capabilityGrants=true; operatorNextSetHtml_('onxAccountCapabilityMatrix','<div class="onxLoading">Loading server-authoritative grant matrix...</div>'); google.script.run.withSuccessHandler(function(res){if(!res||res.ok===false){operatorNextState_.loaded.capabilityGrants=false;operatorNextSetHtml_('onxAccountCapabilityMatrix','<div class="onxError">'+operatorNextEsc_(res&&res.message||res&&res.error||'Capability grant matrix unavailable.')+'</div>');return;}operatorNextState_.grantMatrix=res;operatorNextRenderCapabilities_();operatorNextRenderCapabilityGrantMatrix_();}).withFailureHandler(function(err){operatorNextState_.loaded.capabilityGrants=false;operatorNextSetHtml_('onxAccountCapabilityMatrix','<div class="onxError">'+operatorNextEsc_(err&&err.message||err||'Capability grant matrix unavailable.')+'</div>');}).admin_getCapabilityGrantMatrix({}); }
@@ -302,7 +613,7 @@
   function operatorNextCreateGrant_(){var account=document.getElementById('onxGrantAccount'),capability=document.getElementById('onxGrantCapability'),reason=document.getElementById('onxGrantReason'),expiry=operatorNextGrantExpiry_(),button=document.getElementById('onxGrantConfirm'),error=document.getElementById('onxGrantDialogError');error.style.display='none';if(!expiry||isNaN(expiry.getTime())){error.textContent='Select a valid expiry.';error.style.display='block';return;}button.disabled=true;button.setAttribute('aria-busy','true');google.script.run.withSuccessHandler(function(res){button.disabled=false;button.removeAttribute('aria-busy');if(!res||res.ok===false){error.textContent=String(res&&res.message||res&&res.error||'Grant creation failed.');error.style.display='block';return;}operatorNextState_.grantMatrix=res.matrix;operatorNextCloseGrantDialog_();operatorNextRenderCapabilities_();operatorNextRenderCapabilityGrantMatrix_();}).withFailureHandler(function(err){button.disabled=false;button.removeAttribute('aria-busy');error.textContent=String(err&&err.message||err||'Grant creation failed.');error.style.display='block';}).admin_createTemporaryCapabilityGrant({accountEmail:account.value,capabilityKey:capability.value,expiresAt:expiry.toISOString(),reason:reason.value});}
   function operatorNextRevokeGrant_(grantId,recordVersion){var reason=window.prompt('Reason for immediate revocation:','Operational access no longer required.');if(reason===null)return;if(String(reason||'').trim().length<8){operatorNextRenderError_('Temporary grant','A specific revocation reason is required.');return;}google.script.run.withSuccessHandler(function(res){if(!res||res.ok===false){operatorNextRenderError_('Temporary grant',res&&res.message||res&&res.error||'Revocation failed.');return;}operatorNextState_.grantMatrix=res.matrix;operatorNextRenderCapabilities_();operatorNextRenderCapabilityGrantMatrix_();}).withFailureHandler(function(err){operatorNextRenderError_('Temporary grant',err);}).admin_revokeTemporaryCapabilityGrant({grantId:grantId,recordVersion:recordVersion,reason:reason});}
 
-  function operatorNextCompactRows_(rows){ if(!rows||!rows.length)return '<div class="onxLoading">No returned rows in this bounded cohort.</div>'; return operatorNextStatusRows_(rows.slice(0,6).map(function(row){return [row.name||row.applicantId,(row.worklistLabel||operatorNextLifecycleLabel_(row.nextAction))+' · '+row.applicantId,row.actionabilityState||'UNKNOWN',operatorNextStateKind_(row.actionabilityState)];}))+'<div class="onxToolbar" style="margin-top:7px"><button class="onxBtn" type="button" data-onx-compact-review="'+operatorNextEsc_(operatorNextRowKey_(rows[0]))+'">Review first returned</button></div>'; }
+  function operatorNextCompactRows_(rows){ if(!rows||!rows.length)return '<div class="onxLoading">No returned rows in this bounded cohort.</div>'; return operatorNextStatusRows_(rows.slice(0,6).map(function(row){return [row.name||row.applicantId,operatorNextHumanizeToken_(row.worklistLabel||operatorNextLifecycleLabel_(row.nextAction))+' · Applicant ID '+row.applicantId,row.actionabilityState||'UNKNOWN',operatorNextStateKind_(row.actionabilityState)];}))+'<div class="onxToolbar" style="margin-top:8px"><button class="onxBtn" type="button" data-onx-compact-review="'+operatorNextEsc_(operatorNextRowKey_(rows[0]))+'">Open first Review</button></div>'; }
   function operatorNextBindCompactReviews_(){ Array.prototype.slice.call(document.querySelectorAll('[data-onx-compact-review]')).forEach(function(btn){ if(btn.getAttribute('data-onx-bound')==='1')return; btn.setAttribute('data-onx-bound','1'); btn.addEventListener('click',function(){operatorNextOpenReview_(operatorNextFindRow_(btn.getAttribute('data-onx-compact-review')));}); }); }
   function operatorNextOpenReview_(row){ if(!row||!row.applicantId)return; if(!operatorNextCapability_('CAN_OPEN_REVIEW_WORKSPACE')){operatorNextRenderError_('Review Workspace','CAN_OPEN_REVIEW_WORKSPACE is required.');return;} review(Number(row.rowNumber||0)||null,String(row.applicantId||''),null,{actionabilityFocus:true}); }
   function operatorNextOpenSelectedReview_(){ var rows=operatorNextSelectedRows_(); if(rows.length!==1){operatorNextRenderError_('Review selection',rows.length?'Select exactly one applicant.':'Select one applicant first.');return;} operatorNextOpenReview_(rows[0]); }
