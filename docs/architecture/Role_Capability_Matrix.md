@@ -99,7 +99,9 @@ Current explicit override channels:
 - `SUPER_ADMIN_EMAILS` - identifies Super Admin accounts.
 - `ZOHO_BOOKS_WRITE_ADMINS` script property - grants `CAN_WRITE_ZOHO_BOOKS` without changing base role.
 
-No other account-specific capability overrides are currently active in repo config.
+Temporary capability grants are a separate, bounded account-specific authority. They are stored in the owner-approved `Capability_Grants` tab and resolved after permanent overrides. They never alter the durable role mapping. See [Temporary Capability Grants](Temporary_Capability_Grants.md).
+
+Until the H1 migration is explicitly executed, no live temporary grants or grant tab are assumed to exist.
 
 ## Individual vs Batch
 
@@ -147,6 +149,8 @@ Capability-sensitive actions must preserve:
 - outcome
 - timestamp
 - explicit block code/reason where denied
+
+Temporary grant create, revoke, expiry, and rejection transitions additionally record the grant ID, target account, exact capability, bounded interval, reason, status transition, and runtime identity. `Webhook_Log` is evidence; `Capability_Grants` remains current-state authority.
 
 ## Future Role Addition Procedure
 

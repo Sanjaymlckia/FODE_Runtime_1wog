@@ -7,15 +7,16 @@
  */
 var CONFIG = {
   // Versioning (change control)
-  VERSION: "r339",
+  VERSION: "r340",
 CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alignment",
-  DEPLOY_VERSION_NUMBER: 339,
+  DEPLOY_VERSION_NUMBER: 340,
 BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
 
   // STAGING/PROD data mode routing (working sheet)
   DATA_MODE: "PROD", // "STAGING" | "PROD"
   SPREADSHEET_ID_STAGING: "1YFgLtUExz__fzQ4zTNoIyGTu-nrnasS7dIaShNPl7Cs",
   SPREADSHEET_ID_PROD: "1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4SalU",
+  CAPABILITY_GRANTS_SPREADSHEET_CONFIG_KEY: "SPREADSHEET_ID_PROD",
   SHEET_ID_STAGING: "1YFgLtUExz__fzQ4zTNoIyGTu-nrnasS7dIaShNPl7Cs",
   SHEET_ID_PROD: "1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4SalU",
   SHEET_NAME_WORKING: "FODE_Data",

@@ -8,7 +8,7 @@ function read(path) {
 
 const adminUi = read("AdminUI.html");
 const operatorNextUi = read("AdminUI_OperatorNext.html");
-const serverSources = ["Code.js", "Admin.js", "Admin_WhatsAppFallback.js", "Admin_StageBatchCommunications.js", "Admin_SelectedApplicantCommunications.js", "Admin_AccessControl.js", "Admin_LifecycleAuthority.js", "Admin_PaymentAuthority.js", "Admin_ReviewQueues.js", "Admin_ReviewStatusAuthority.js", "Admin_RowFacts.js", "Admin_DocumentServices.js", "Admin_DocumentGallery.js", "Routes.js", "Utils.js", "Config.js"]
+const serverSources = ["Code.js", "Admin.js", "Admin_WhatsAppFallback.js", "Admin_StageBatchCommunications.js", "Admin_SelectedApplicantCommunications.js", "Admin_AccessControl.js", "Admin_CapabilityGrants.js", "Admin_LifecycleAuthority.js", "Admin_PaymentAuthority.js", "Admin_ReviewQueues.js", "Admin_ReviewStatusAuthority.js", "Admin_RowFacts.js", "Admin_DocumentServices.js", "Admin_DocumentGallery.js", "Routes.js", "Utils.js", "Config.js"]
   .map(read)
   .join("\n");
 
@@ -82,6 +82,9 @@ const protectedRpcs = [
   "admin_sendStageBatch",
   "admin_previewSelectedApplicantBatch",
   "admin_sendSelectedApplicantBatch",
+  "admin_getCapabilityGrantMatrix",
+  "admin_createTemporaryCapabilityGrant",
+  "admin_revokeTemporaryCapabilityGrant",
   "admin_setPaymentVerified",
   "admin_previewZohoBooksFodePayload",
   "admin_createZohoBooksFodeDraftInvoice"

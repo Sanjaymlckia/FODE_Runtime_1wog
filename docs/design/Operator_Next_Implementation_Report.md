@@ -75,7 +75,9 @@ Global lifecycle counts use `admin_getOpsLifecycleSummary()` only in a visibly l
 
 ## Track H Follow-up
 
-Two capabilities cannot be completed honestly in this Track L pass:
+Temporary capability grants are implemented locally as a Track H1 extension to the existing Roles & Capabilities route. The route displays durable role, inherited capability state, active temporary provenance, expiry, grant history, and Super-only grant/revoke actions. Backend RPCs remain authoritative. The store is explicitly bound to the main authoritative FODE workbook through `CAPABILITY_GRANTS_SPREADSHEET_CONFIG_KEY`; it does not inherit `DATA_MODE`. Live use remains blocked until the owner-approved `Capability_Grants` migration and Track H release are completed.
+
+Two other capabilities cannot be completed honestly in the original Track L pass:
 
 1. Full-population canonical lifecycle summary. Add a read-only canonical summary DTO rather than reusing the OPS compatibility classifier.
 2. Selected VCF export. Add an exact-ID bounded adapter, explicit capability, approved contact projection, and audit event.

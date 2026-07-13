@@ -186,20 +186,54 @@ function resolveAdminCapabilities_(actor) {
   var normalizedRole = allowlisted ? (configuredRole || "VERIFIER") : "";
   var capabilities = adminCapabilityRoleDefaults_(normalizedRole);
   var evidence = {};
+  var capabilityDetails = {};
   adminCapabilityCatalog_().forEach(function (key) {
     evidence[key] = capabilities[key] === true ? ("role:" + normalizedRole) : "not_assigned";
+    capabilityDetails[key] = {
+      source: capabilities[key] === true ? "ROLE_DEFAULT" : "NOT_ASSIGNED",
+      temporaryGrantId: "",
+      temporaryGrantExpiresAt: "",
+      temporaryGrantReason: ""
+    };
   });
   if (capabilities.CAN_WRITE_ZOHO_BOOKS !== true && email && typeof getZohoBooksWriteAdminEmails_ === "function") {
     if (getZohoBooksWriteAdminEmails_().indexOf(email) >= 0) {
       capabilities.CAN_WRITE_ZOHO_BOOKS = true;
       evidence.CAN_WRITE_ZOHO_BOOKS = "script_property:ZOHO_BOOKS_WRITE_ADMINS";
+      capabilityDetails.CAN_WRITE_ZOHO_BOOKS.source = "PERMANENT_OVERRIDE";
     }
+  }
+  var temporaryGrants = [];
+  var temporaryGrantResolution = "NOT_CONFIGURED";
+  if (allowlisted && email && typeof loadActiveTemporaryCapabilityGrantsForAccount_ === "function") {
+    try {
+      temporaryGrants = loadActiveTemporaryCapabilityGrantsForAccount_(email, input.temporaryGrantOptions || {}).filter(function (grant) {
+        return grant && grant.isActive === true && adminCapabilityCatalog_().indexOf(grant.capabilityKey) >= 0 && temporaryDelegableAdminCapabilities_().indexOf(grant.capabilityKey) >= 0;
+      });
+      temporaryGrantResolution = temporaryGrants.length ? "ACTIVE_GRANTS_APPLIED" : "NO_ACTIVE_GRANTS";
+    } catch (_temporaryGrantError) {
+      temporaryGrants = [];
+      temporaryGrantResolution = "TEMPORARY_GRANTS_UNAVAILABLE_FAIL_CLOSED";
+    }
+    temporaryGrants.forEach(function (grant) {
+      capabilities[grant.capabilityKey] = true;
+      evidence[grant.capabilityKey] = "temporary_grant:" + grant.grantId;
+      capabilityDetails[grant.capabilityKey] = {
+        source: "TEMPORARY_GRANT",
+        temporaryGrantId: grant.grantId,
+        temporaryGrantExpiresAt: grant.expiresAt,
+        temporaryGrantReason: grant.reason
+      };
+    });
   }
   if (!allowlisted) {
     adminCapabilityCatalog_().forEach(function (key) {
       capabilities[key] = false;
       evidence[key] = "not_allowlisted";
+      capabilityDetails[key] = { source: "NOT_ALLOWLISTED", temporaryGrantId: "", temporaryGrantExpiresAt: "", temporaryGrantReason: "" };
     });
+    temporaryGrants = [];
+    temporaryGrantResolution = "NOT_ALLOWLISTED";
   }
   return {
     email: email,
@@ -209,7 +243,18 @@ function resolveAdminCapabilities_(actor) {
     isSuperAdmin: normalizedRole === "SUPER",
     capabilitySource: "CONFIG.ADMIN_ROLES",
     capabilities: capabilities,
-    capabilityEvidence: evidence
+    capabilityEvidence: evidence,
+    capabilityDetails: capabilityDetails,
+    temporaryGrantResolution: temporaryGrantResolution,
+    temporaryGrants: temporaryGrants.map(function (grant) {
+      return {
+        grantId: grant.grantId,
+        capabilityKey: grant.capabilityKey,
+        expiresAt: grant.expiresAt,
+        reason: grant.reason,
+        status: grant.status
+      };
+    })
   };
 }
 
