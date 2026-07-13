@@ -31,7 +31,17 @@
           "whoamiUrl": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami",
           "expectedRuntime": "r344",
           "expectedDeploy": 344,
-          "expectedAppsScriptVersion": 376
+          "expectedAppsScriptVersion": 377,
+          "lastRelease": {
+            "runtimeIdentity": "r344 / 344",
+            "appsScriptVersion": 377,
+            "deploymentPin": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @377",
+            "description": "Operator interface manual visual acceptance release to Admin staging",
+            "commitRefs": [
+              "73d9711",
+              "0d85f1a"
+            ]
+          }
         },
         "studentStaging": {
           "deploymentId": "AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv",
