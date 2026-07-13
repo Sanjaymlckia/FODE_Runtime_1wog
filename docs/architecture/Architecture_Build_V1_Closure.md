@@ -62,10 +62,39 @@ V1 defers H2 exact-action approvals, canonical Global Population Summary, select
 
 ## Backup and Rollback
 
-Backup procedure and restoration gates are defined in [Backup_and_Recovery_V1.md](Backup_and_Recovery_V1.md). Exact closure backup IDs, local manifest path, bundle commit, and verification outcome are recorded after the documentation source checkpoint is created.
+Backup procedure and restoration gates are defined in [Backup_and_Recovery_V1.md](Backup_and_Recovery_V1.md).
+
+Closure source checkpoint: `e92652ce86a1353c19802b0888a63aba0fb2c749`.
+
+Private server backup:
+
+- folder: `FODE_Runtime_H1_Backup_20260713022819` (`1_HDkgUNM6UdlcaIHoHS9j3374LhHVtfL`);
+- workbook copy: `1x3_J8pwsQIz7DhI3bGKNxSVA9gTUTMU9KynqYu3yHwM`;
+- secured Script Properties export: `1vo8cB-sSOdulvDszRTn-L9bVlgGGIiXd`;
+- sanitized server manifest: `1Oxb_FT4tmuRYWrE-P_bacYkXC2xLt35w`;
+- five workbook tabs enumerated, including `Capability_Grants` and `Webhook_Log`;
+- 19 Script Property keys parsed; values remain private;
+- server result: `BACKUP_VERIFIED`.
+
+Local recovery set:
+
+`F:\FODE_DR_Backup\architecture_v1\20260713123045_e92652ce86a1353c19802b0888a63aba0fb2c749`
+
+The local manifest records SHA-256 hashes for 47 artifacts. The Git bundle verifies and contains the source checkpoint. The Apps Script source set contains 26 files and independently contains `r340 / 340`. The source archive, acceptance evidence, runtime metadata, and closure documentation are readable. No secret-bearing artifact is tracked by Git.
 
 Rollback prefers repinning Admin staging to Apps Script `@373` and confirming `r340 / 340`. Student and Production must not be changed.
 
+## Bounded Findings
+
+- Operator Next returns a bounded 100-row work window; Waffi and Stephanie were outside it during acceptance and required exact-ID Review fallback.
+- Separate OPERATIONS and VERIFIER live credentials were unavailable; composed backend tests provide role-boundary proof.
+- Mermaid CLI was unavailable; eight Mermaid sources were reviewed but rendering validation was skipped.
+- Legacy-versus-canonical lifecycle drift remains visible as a passive diagnostic and does not own runtime decisions.
+
+No P0/P1 authority, mutation, startup, handoff, communication, capability, fallback, runtime-identity, or backup defect remains.
+
 ## Closure Classification
 
-Pending final verified backup and pushed closure evidence checkpoint. No P0/P1 authority or operational defect remains from static audit, live acceptance, or regression validation.
+`PASS_WITH_FINDINGS — ARCHITECTURE BUILD V1 CLOSED WITH BOUNDED FINDINGS`
+
+The findings above are non-authoritative, non-destructive, documented, and explicitly deferred. They do not block normal operation or rollback.
