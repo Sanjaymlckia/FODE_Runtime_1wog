@@ -6,6 +6,15 @@ All later modules consume `CANONICAL_POPULATION_V1` and `buildCanonicalCohort_()
 
 ## M2 Finance Mature Operations
 
+M2 local foundation introduces `CANONICAL_FINANCE_V1`, read-only Finance summary/worklist/applicant/reconciliation APIs, and an Operator Next Finance route backed by server-side Finance DTOs. It does not enable payment, quote, invoice, Books, refund, credit, waiver, write-off, applicant, Sheet, email, or external-system mutation.
+
+Implemented locally:
+
+- canonical Finance resolver composed from M1 canonical population and current payment authority helpers
+- read-only Finance summary, worklist, applicant detail, object history, reconciliation, exceptions, and policy-status APIs
+- explicit unresolved and policy-dependent amount/state representation
+- Operator Next Finance workspace projection from `admin_getCanonicalFinanceWorklist({ page: 1, pageSize: 50 })`
+
 ### State model
 
 | State | Meaning | Runtime authority |
@@ -128,4 +137,3 @@ M6 does not start until M2-M5 consumers prove they use the M1 foundation without
 5. Build M3 Registry resolver and import preview before any import mutation.
 6. Build M5 H2 only after canonical cohort production use is stable.
 7. Execute M6 compatibility retirement last.
-

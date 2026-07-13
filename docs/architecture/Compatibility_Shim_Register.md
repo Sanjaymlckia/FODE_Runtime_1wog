@@ -47,6 +47,16 @@ The local M1 foundation introduces `CANONICAL_POPULATION_V1` and a shared read-o
 - OPS handlers and DTOs are prohibited from the M1 foundation.
 - Global View remains disabled until a separate M4 release consumes and accepts the canonical summary.
 
+## Mature Operations M2 Finance Boundary
+
+The local M2 foundation introduces `CANONICAL_FINANCE_V1`. It preserves all existing Finance compatibility boundaries:
+
+- `Receipt_Status` remains canonical payment authority.
+- `Payment_Verified` remains compatibility-only.
+- `Books_*`, `CRM_Invoice_Triggered`, `Invoice_Sent_At`, and `FODE_Billing_Reference` remain integration/compatibility metadata.
+- Review Workspace remains the Finance mutation surface.
+- Operator Next Finance is read-only and does not create direct payment verification, quote, invoice, Books, refund, credit, waiver, or write-off mutation paths.
+
 ## ACP Closure Note
 
 As of Admin staging `@373` / runtime `r340 / 340`, no compatibility shim above may independently send applicant communications or bypass Communication Authority.

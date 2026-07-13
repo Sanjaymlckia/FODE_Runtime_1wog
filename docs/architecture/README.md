@@ -24,6 +24,12 @@ Runtime source, Apps Script deployment, queues, communications, Sheets, and send
 | Operational model | [Operational_Model.md](Operational_Model.md) |
 | Population Ledger model | [Population_Ledger_Model.md](Population_Ledger_Model.md) |
 | Canonical population and cohort foundation | [Canonical_Population_and_Cohort_Foundation.md](Canonical_Population_and_Cohort_Foundation.md) |
+| Canonical finance authority | [Canonical_Finance_Authority.md](Canonical_Finance_Authority.md) |
+| Finance state model | [Finance_State_Model.md](Finance_State_Model.md) |
+| Finance reconciliation contract | [Finance_Reconciliation_Contract.md](Finance_Reconciliation_Contract.md) |
+| Finance reporting boundary | [Finance_Reporting_Boundary.md](Finance_Reporting_Boundary.md) |
+| Finance mutation boundary | [Finance_Mutation_Boundary.md](Finance_Mutation_Boundary.md) |
+| Books integration authority | [Books_Integration_Authority.md](Books_Integration_Authority.md) |
 | Mature Operations M1-M6 roadmap | [Mature_Operations_Release_Roadmap.md](Mature_Operations_Release_Roadmap.md) |
 | Operator Actionability Resolver | [Operator_Actionability_Resolver.md](Operator_Actionability_Resolver.md) |
 | Communication model | [Communication_Model.md](Communication_Model.md) |
