@@ -29,8 +29,8 @@
           "deploymentId": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ",
           "url": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec",
           "whoamiUrl": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami",
-          "expectedRuntime": "r340",
-          "expectedDeploy": 340,
+          "expectedRuntime": "r341",
+          "expectedDeploy": 341,
           "expectedAppsScriptVersion": 373
         },
         "studentStaging": {
