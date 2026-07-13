@@ -1,6 +1,6 @@
 # Temporary Capability Grants
 
-Status: Track H1 implemented locally; live persistence migration not executed.
+Status: Track H1 live on Admin staging Apps Script `@373`, runtime `r340 / 340`. Schema migration completed on 2026-07-13 with zero grant records.
 
 ## Authority Boundary
 
@@ -28,7 +28,7 @@ Resolution order:
 
 The workbook binding is explicit and independent of global `DATA_MODE`: `CONFIG.CAPABILITY_GRANTS_SPREADSHEET_CONFIG_KEY` points to the existing authoritative `CONFIG.SPREADSHEET_ID_PROD` value. `getCapabilityGrantsSpreadsheet_()` opens that ID directly. The grant module never calls `getWorkingSpreadsheet_()` and cannot accept a workbook ID from the browser.
 
-The resolver fails closed for temporary grants if the tab is absent, inaccessible, or has invalid headers. Durable role capabilities remain available.
+The resolver fails closed for temporary grants if the tab is absent, inaccessible, or has invalid headers. Durable role capabilities remain available. The live `Capability_Grants` tab currently contains the exact schema header row and no grant records.
 
 ## Stable Schema
 

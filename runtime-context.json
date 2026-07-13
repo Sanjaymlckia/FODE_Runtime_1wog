@@ -31,7 +31,7 @@
           "whoamiUrl": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami",
           "expectedRuntime": "r340",
           "expectedDeploy": 340,
-          "expectedAppsScriptVersion": 372
+          "expectedAppsScriptVersion": 373
         },
         "studentStaging": {
           "deploymentId": "AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv",
@@ -172,6 +172,17 @@
         "sheetMutationAllowedByDefault": false,
         "driveMutationAllowedByDefault": false,
         "productionMutationAllowedByDefault": false
+      },
+      "capabilityGrants": {
+        "status": "ACTIVE_EMPTY",
+        "spreadsheetConfigKey": "SPREADSHEET_ID_PROD",
+        "sheetName": "Capability_Grants",
+        "schemaVersion": 1,
+        "migrationCompletedAt": "2026-07-13T01:45:55.000Z",
+        "appsScriptVersion": 373,
+        "runtimeIdentity": "r340 / 340",
+        "backupReference": "FODE_Runtime_H1_Backup_20260713014329",
+        "zeroGrantRowsVerified": true
       }
     }
   },

@@ -85,7 +85,7 @@ Classification terms:
 | Exceptions/Hidden | Actionability hidden/unknown/management DTOs | Ledger + Actionability | Configured Admin account | Implemented |
 | Reports & Audit | Existing Actionability, metrics, and drift summaries | Declared source per metric | Configured Admin account | Implemented summary routes |
 | System Health | `admin_getRuntimeInfo()`; lazy `admin_getOperationalSafetyStatus()` | Live runtime + safety diagnostics | Configured Admin account | Implemented read-only |
-| Roles & Capabilities | Template bootstrap plus `admin_getCapabilityGrantMatrix()` refresh from `resolveAdminCapabilities_()` | Capability resolver + `Capability_Grants` current-state authority | Configured Admin account; grant/revoke controls require `SUPER` | H1 implemented locally; live grant actions require approved schema migration and Track H release |
+| Roles & Capabilities | Template bootstrap plus `admin_getCapabilityGrantMatrix()` refresh from `resolveAdminCapabilities_()` | Capability resolver + `Capability_Grants` current-state authority | Configured Admin account; grant/revoke controls require `SUPER` | H1 live at Admin `@373`, `r340 / 340`; schema ready with zero grants |
 | Right-click / three-dot Review | `operatorNextOpenReview_()` | Same shared Review path | Same Review capability | Implemented parity |
 | Right-click selection | Server `selectable` only | Actionability Resolver | Batch capability enforced at Batch entry | Implemented parity |
 
