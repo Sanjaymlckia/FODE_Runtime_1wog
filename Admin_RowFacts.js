@@ -8,9 +8,15 @@ function adminRowDocsReviewVerified_(rowObj) {
   return adminDocumentReviewVerifiedForPaymentGate_(rowObj);
 }
 
+function adminPaymentEvidenceFileFields_() {
+  return ["Fee_Receipt_File"];
+}
+
 function adminRowPaymentEvidencePresent_(rowObj) {
   var row = rowObj || {};
-  return hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File");
+  return adminPaymentEvidenceFileFields_().some(function (fieldName) {
+    return hasUploadEvidence_(row[fieldName], fieldName);
+  });
 }
 
 function adminRowPaymentCompatibilityRawVerified_(rowObj) {

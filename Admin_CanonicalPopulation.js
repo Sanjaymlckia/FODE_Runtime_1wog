@@ -53,31 +53,32 @@ function canonicalPopulationCommunicationProjection_(rowObj, authorityRow, messa
   return out;
 }
 
-function canonicalPopulationFinanceProjection_(rowObj, authorityRow) {
+function canonicalPopulationFinanceProjection_(rowObj, authorityRow, rowNumber, sourceSheetName, lifecycleProjection, actionabilityProjection, communicationProjection) {
   var row = rowObj || {};
   var authority = authorityRow && authorityRow.authorityState || {};
-  var facts = typeof adminRowPaymentAuthorityFacts_ === "function"
-    ? adminRowPaymentAuthorityFacts_(row)
-    : {};
-  var evidencePresent = authority.paymentEvidencePresent === true || facts.paymentEvidencePresent === true;
-  var verified = authority.paymentVerified === true || facts.paymentVerified === true;
-  var state = verified ? "PAID_VERIFIED" : (evidencePresent ? "PAYMENT_TO_VERIFY" : "PAYMENT_PENDING");
-  return {
-    state: state,
-    receiptStatus: clean_(row.Receipt_Status || ""),
-    paymentBadge: clean_(facts.paymentBadge || (typeof canonicalPaymentBadge_ === "function" ? canonicalPaymentBadge_(row) : "")),
-    paymentEvidencePresent: evidencePresent,
-    paymentVerified: verified,
-    books: {
-      contactId: clean_(row.Books_Contact_ID || ""),
-      invoiceId: clean_(row.Books_Invoice_ID || ""),
-      invoiceNumber: clean_(row.Books_Invoice_Number || ""),
-      invoiceStatus: clean_(row.Books_Invoice_Status || ""),
-      pushStatus: clean_(row.Books_Push_Status || "")
+  var lifecycle = lifecycleProjection || {};
+  var actionability = actionabilityProjection || {};
+  var communication = communicationProjection || {};
+  var finance = resolveCanonicalFinance_(row, {
+    identity: {
+      applicantId: clean_(authorityRow && authorityRow.applicantId || row.ApplicantID || ""),
+      rowNumber: Number(rowNumber || authorityRow && authorityRow.rowNumber || 0),
+      sourceSheetName: clean_(sourceSheetName || ""),
+      applicantName: clean_(authorityRow && authorityRow.name || "")
     },
-    authority: "Receipt_Status / canonical payment helpers",
-    booksAuthority: "EXTERNAL_INTEGRATION_METADATA"
-  };
+    applicant: {
+      name: clean_(authorityRow && authorityRow.name || "")
+    },
+    lifecycle: lifecycle,
+    actionability: actionability,
+    communication: communication,
+    finance: {}
+  }, {
+    rowNumber: rowNumber,
+    sourceSheetName: sourceSheetName
+  });
+  finance.state = clean_(finance.financeAuthority && finance.financeAuthority.financeState || "UNKNOWN");
+  return finance;
 }
 
 function buildCanonicalPopulationRow_(rowObj, rowNumber, opts) {
@@ -88,6 +89,29 @@ function buildCanonicalPopulationRow_(rowObj, rowNumber, opts) {
   var lifecycle = authorityRow.canonicalLifecycle || {};
   var authorityState = authorityRow.authorityState || {};
   var communication = canonicalPopulationCommunicationProjection_(row, authorityRow, options.messageType, options);
+  var actionability = {
+    state: clean_(authorityRow.actionabilityState || "UNKNOWN").toUpperCase(),
+    workloadGroupKey: clean_(authorityRow.workloadGroupKey || "UNKNOWN").toUpperCase(),
+    worklistKey: clean_(authorityRow.worklistKey || ""),
+    worklistLabel: clean_(authorityRow.worklistLabel || ""),
+    worklistReason: clean_(authorityRow.worklistReason || ""),
+    nextAction: clean_(authorityRow.nextAction || ""),
+    recommendedAction: clean_(authorityRow.recommendedAction || ""),
+    selectable: authorityRow.selectable === true,
+    selectBlockReason: clean_(authorityRow.selectBlockReason || ""),
+    reasonCode: clean_(authorityRow.reasonCode || ""),
+    coolingOffUntil: clean_(authorityRow.coolingOffUntil || ""),
+    suppressor: clean_(authorityRow.suppressor || "")
+  };
+  var finance = canonicalPopulationFinanceProjection_(row, authorityRow, rowNumber, options.sourceSheetName, {
+    baseState: clean_(lifecycle.baseState || "UNKNOWN").toUpperCase(),
+    lifecycleStage: clean_(lifecycle.lifecycleStage || lifecycle.baseState || "UNKNOWN").toUpperCase(),
+    overlays: Array.isArray(lifecycle.overlays) ? lifecycle.overlays.slice() : [],
+    recommendedNextAction: clean_(lifecycle.recommendedNextAction || ""),
+    recommendedMessageType: clean_(lifecycle.recommendedMessageType || ""),
+    actionOwner: clean_(lifecycle.actionOwner || ""),
+    reason: clean_(lifecycle.reason || "")
+  }, actionability, communication);
   return {
     schemaVersion: CANONICAL_POPULATION_SCHEMA_VERSION,
     identity: {
@@ -109,22 +133,9 @@ function buildCanonicalPopulationRow_(rowObj, rowNumber, opts) {
       actionOwner: clean_(lifecycle.actionOwner || ""),
       reason: clean_(lifecycle.reason || "")
     },
-    actionability: {
-      state: clean_(authorityRow.actionabilityState || "UNKNOWN").toUpperCase(),
-      workloadGroupKey: clean_(authorityRow.workloadGroupKey || "UNKNOWN").toUpperCase(),
-      worklistKey: clean_(authorityRow.worklistKey || ""),
-      worklistLabel: clean_(authorityRow.worklistLabel || ""),
-      worklistReason: clean_(authorityRow.worklistReason || ""),
-      nextAction: clean_(authorityRow.nextAction || ""),
-      recommendedAction: clean_(authorityRow.recommendedAction || ""),
-      selectable: authorityRow.selectable === true,
-      selectBlockReason: clean_(authorityRow.selectBlockReason || ""),
-      reasonCode: clean_(authorityRow.reasonCode || ""),
-      coolingOffUntil: clean_(authorityRow.coolingOffUntil || ""),
-      suppressor: clean_(authorityRow.suppressor || "")
-    },
+    actionability: actionability,
     communication: communication,
-    finance: canonicalPopulationFinanceProjection_(row, authorityRow),
+    finance: finance,
     documents: {
       state: clean_(authorityState.documentState || "UNKNOWN"),
       requiredComplete: authorityState.requiredDocumentUploadComplete === true,

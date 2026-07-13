@@ -56,6 +56,7 @@ The local M2 foundation introduces `CANONICAL_FINANCE_V1`. It preserves all exis
 - `Books_*`, `CRM_Invoice_Triggered`, `Invoice_Sent_At`, and `FODE_Billing_Reference` remain integration/compatibility metadata.
 - Review Workspace remains the Finance mutation surface.
 - Operator Next Finance is read-only and does not create direct payment verification, quote, invoice, Books, refund, credit, waiver, or write-off mutation paths.
+- The former simplified Finance derivation inside `canonicalPopulationFinanceProjection_()` is retired. The function remains only as a composition adapter to `resolveCanonicalFinance_()`.
 
 ## ACP Closure Note
 

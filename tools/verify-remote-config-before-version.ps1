@@ -57,6 +57,13 @@ function Convert-DeployablePathToAppsScriptName {
   return [System.IO.Path]::GetFileNameWithoutExtension($name)
 }
 
+function Get-NormalizedSetHash {
+  param([string[]]$Values)
+  $normalized = (@($Values) | Sort-Object -Unique) -join "`n"
+  $bytes = [System.Text.Encoding]::UTF8.GetBytes($normalized)
+  return [System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash($bytes)).Replace("-", "").ToLowerInvariant()
+}
+
 function Assert-Markers {
   param([string]$Source, [string[]]$Markers, [string]$Label)
   $normalized = Normalize-MarkerList -Values $Markers
@@ -145,6 +152,10 @@ try {
   $remoteNames = @($remoteByName.Keys | Sort-Object -Unique)
   $missingRemote = @($expectedNames | Where-Object { $remoteNames -notcontains $_ })
   $extraRemote = @($remoteNames | Where-Object { $expectedNames -notcontains $_ })
+  Write-Host "DEPLOYABLE FILE CONTRACT"
+  foreach ($name in $expectedNames) { Write-Host ("  " + $name) }
+  Write-Host "EXPECTED SET SHA256: $(Get-NormalizedSetHash -Values $expectedNames)"
+  Write-Host "REMOTE SET SHA256: $(Get-NormalizedSetHash -Values $remoteNames)"
   if ($missingRemote.Count -gt 0 -or $extraRemote.Count -gt 0) {
     if ($missingRemote.Count -gt 0) { Write-Host "Missing remote files: $($missingRemote -join ', ')" -ForegroundColor Red }
     if ($extraRemote.Count -gt 0) { Write-Host "Extra remote files: $($extraRemote -join ', ')" -ForegroundColor Red }

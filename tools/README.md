@@ -229,8 +229,15 @@ It:
 - verifies remote Config identity matches local Config identity;
 - optionally verifies required `Code.js`, `Admin.js`, `AdminUI.html`, and `Admin_LifecycleAuthority.js` markers;
 - prints `SAFE TO RUN clasp version` only after all checks pass.
+- prints the normalized expected/remote filename sets and SHA-256 set hashes, so equal file counts cannot conceal one missing and one unexpected file.
 
 It does not run `clasp push`, create a version, or repin.
+
+### `fode-readonly-browser-rpc.js`
+
+Authenticated release/diagnostic bridge for the fixed Canonical Finance read-only allowlist. It supports only the seven named Finance summary/worklist/applicant/reconciliation/exception/object-history/policy RPCs, validates bounded inputs, caps pages at 100, and writes evidence only under `.release-proof`.
+
+It is not an arbitrary Apps Script RPC passthrough and contains no mutation functions. `clasp run` is unsuitable for this operator-authenticated Admin path because the deployed execution identity/permissions are not the same as the authenticated Admin browser contract. A future public/external Finance API remains deferred.
 
 ### `verify-runtime.ps1`
 

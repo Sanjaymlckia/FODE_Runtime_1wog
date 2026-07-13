@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const vm = require("node:vm");
 
 const source = fs.readFileSync("Admin_CanonicalPopulation.js", "utf8");
+const financeSource = fs.readFileSync("Admin_CanonicalFinance.js", "utf8");
 
 assert.doesNotMatch(source, /admin_getOpsLifecycleSummary|legacy_admin_getReviewQueues|\?view=ops/, "Canonical population foundation must not depend on OPS DTOs or routes");
 assert.doesNotMatch(source, /admin_send|sendApplicantMessage_|GmailApp|MailApp|setValue\(|setValues\(|appendRow\(/, "Canonical population foundation must contain no mutation or send path");
@@ -115,8 +116,12 @@ const context = {
   stageAggregationEffectiveEmail_(row) {
     return row.Parent_Email || "";
   },
+  adminRowPaymentEvidencePresent_(row) {
+    const receiptFile = String(row.Fee_Receipt_File || "").trim();
+    return !!receiptFile && receiptFile !== "[]" && receiptFile !== "{}";
+  },
   adminRowPaymentAuthorityFacts_(row) {
-    const evidence = !!row.Fee_Receipt_File;
+    const evidence = context.adminRowPaymentEvidencePresent_(row);
     const verified = String(row.Receipt_Status || "").toLowerCase() === "verified";
     return { paymentEvidencePresent: evidence, paymentVerified: verified, paymentBadge: verified ? "Verified" : "Pending" };
   },
@@ -160,6 +165,7 @@ const context = {
 };
 
 vm.createContext(context);
+vm.runInContext(financeSource, context);
 vm.runInContext(source, context);
 
 const snapshot = context.buildCanonicalPopulationFromValues_(values, "FODE_Data", { workingViewLimit: 2, nowMs: 1 });
@@ -177,6 +183,15 @@ assert.equal(snapshot.summary.lifecycle.PAYMENT_PENDING, 1);
 assert.equal(snapshot.summary.lifecycle.PAYMENT_TO_VERIFY, 1);
 assert.equal(snapshot.summary.finance.PAYMENT_PENDING, 2);
 assert.equal(snapshot.summary.finance.PAYMENT_TO_VERIFY, 1);
+const financeGroupsFromCanonicalDtos = snapshot.rows.reduce((counts, row) => {
+  const state = row.finance.financeAuthority.financeState;
+  counts[state] = (counts[state] || 0) + 1;
+  return counts;
+}, {});
+assert.deepEqual(financeGroupsFromCanonicalDtos, JSON.parse(JSON.stringify(snapshot.summary.finance)), "Canonical Population Finance groups must equal CANONICAL_FINANCE_V1 row groups");
+assert.equal(snapshot.rows[2].finance.schemaVersion, "CANONICAL_FINANCE_V1", "Canonical Population must carry the canonical Finance DTO, not a duplicate simplified projection");
+assert.equal(snapshot.rows[2].finance.operational.recommendedFinanceAction, "VERIFY_PAYMENT");
+assert.equal(snapshot.rows[2].finance.operational.paymentFollowupRecommended, false);
 assert.equal(snapshot.rows[0].extensions.registry.status, "NOT_RESOLVED");
 assert.equal(snapshot.rows[0].extensions.classroom.status, "NOT_RESOLVED");
 assert.equal(snapshot.rows[0].extensions.approval.status, "NOT_IMPLEMENTED");

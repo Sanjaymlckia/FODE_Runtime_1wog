@@ -5,6 +5,9 @@ const vm = require("node:vm");
 const codeSource = fs.readFileSync("Code.js", "utf8");
 const adminSource = fs.readFileSync("Admin.js", "utf8");
 const uiSource = fs.readFileSync("AdminUI.html", "utf8");
+
+assert.match(codeSource, /function communicationPaymentEvidencePresent_\([\s\S]*adminRowPaymentEvidencePresent_\(row\)/, "Communication Authority must consume the shared payment-evidence contract");
+assert.doesNotMatch(codeSource, /hasUploadEvidence_\(row\.Receipt_File|hasUploadEvidence_\(row\.Payment_Receipt_File/, "Non-schema compatibility fields must not become payment-proof authority");
 const lifecycleSource = fs.readFileSync("Admin_LifecycleAuthority.js", "utf8");
 
 function extractFunction(source, name) {
@@ -62,7 +65,7 @@ const context = {
     };
   },
   adminRowPaymentAuthorityFacts_: (row) => ({
-    paymentEvidencePresent: !!clean(row.Fee_Receipt_File),
+    paymentEvidencePresent: !!clean(row.Fee_Receipt_File) && clean(row.Fee_Receipt_File) !== "[]",
     paymentVerified: /^verified$/i.test(clean(row.Receipt_Status))
   }),
   adminRowPortalSubmitted_: (row) => /^yes$/i.test(clean(row.Portal_Submitted)),
@@ -76,8 +79,8 @@ const context = {
   deriveApplicantLifecycleStage_: (row) => /^yes$/i.test(clean(row.Portal_Submitted)) ? "PROCESSING" : "INVITE_PENDING",
   communicationGetActorInfo_: () => ({ isAdmin: true, isSuper: false, role: "ADMIN", email: "operator@example.test" }),
   communicationApplicantAuthorityState_: () => "ACTIVE",
-  communicationPaymentEvidencePresent_: (row) => !!clean(row.Fee_Receipt_File),
-  communicationPaymentEvidenceMissing_: (row) => !clean(row.Fee_Receipt_File),
+  communicationPaymentEvidencePresent_: (row) => !!clean(row.Fee_Receipt_File) && clean(row.Fee_Receipt_File) !== "[]",
+  communicationPaymentEvidenceMissing_: (row) => !clean(row.Fee_Receipt_File) || clean(row.Fee_Receipt_File) === "[]",
   communicationQuoteEligible_: () => false,
   communicationAcceptanceConfirmed_: () => false,
   communicationBlockReason_: (code) => clean(code),
@@ -183,6 +186,7 @@ const waffi = {
   Report_Status: "Verified",
   Photo_Status: "Verified",
   Docs_Verified: "Yes",
+  Fee_Receipt_File: "[]",
   Receipt_Status: "Pending"
 };
 
@@ -271,6 +275,13 @@ assert.equal(portalInvite.blockCode, "PORTAL_ALREADY_SUBMITTED");
 
 const paymentComplete = context.resolveApplicantMessageContextFromRow_({ ...waffi, Receipt_Status: "Verified" }, 2959, {}, "payment_followup", { action: "preview", skipPortalUrlBuild: true });
 assert.equal(paymentComplete.eligible, false);
+
+const paymentEvidencePending = { ...waffi, Fee_Receipt_File: "https://receipt.example.test/evidence.pdf", Receipt_Status: "Pending" };
+const paymentEvidenceLifecycle = context.resolveCanonicalApplicantLifecycle_(paymentEvidencePending, {});
+assert.equal(paymentEvidenceLifecycle.baseState, "PAYMENT_TO_VERIFY");
+assert.equal(paymentEvidenceLifecycle.recommendedMessageType, "");
+const paymentEvidenceFollowup = context.resolveApplicantMessageContextFromRow_(paymentEvidencePending, 2959, {}, "payment_followup", { action: "preview", skipPortalUrlBuild: true });
+assert.equal(paymentEvidenceFollowup.eligible, false, "Receipt evidence awaiting verification must not remain eligible for payment follow-up");
 
 const coolingOff = context.resolveApplicantMessageContextFromRow_({ ...waffi, CooldownActive: true }, 2959, {}, "payment_followup", { action: "preview", skipPortalUrlBuild: true });
 assert.equal(coolingOff.eligible, false);

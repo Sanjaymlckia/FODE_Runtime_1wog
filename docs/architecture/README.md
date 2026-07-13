@@ -25,6 +25,7 @@ Runtime source, Apps Script deployment, queues, communications, Sheets, and send
 | Population Ledger model | [Population_Ledger_Model.md](Population_Ledger_Model.md) |
 | Canonical population and cohort foundation | [Canonical_Population_and_Cohort_Foundation.md](Canonical_Population_and_Cohort_Foundation.md) |
 | Canonical finance authority | [Canonical_Finance_Authority.md](Canonical_Finance_Authority.md) |
+| Apps Script deployable contract | [Apps_Script_Deployable_Contract.md](Apps_Script_Deployable_Contract.md) |
 | Finance state model | [Finance_State_Model.md](Finance_State_Model.md) |
 | Finance reconciliation contract | [Finance_Reconciliation_Contract.md](Finance_Reconciliation_Contract.md) |
 | Finance reporting boundary | [Finance_Reporting_Boundary.md](Finance_Reporting_Boundary.md) |

@@ -31,3 +31,21 @@ Reconciliation returns:
 - `ownerPolicyRequired`
 
 Mutation routes are labels only. They do not execute from reconciliation.
+
+## Convergence Invariant
+
+For payment work, Canonical Lifecycle and Actionability consume the same `resolveCanonicalFinanceState_()` result:
+
+| Canonical Finance | Lifecycle / Actionability | Communication recommendation |
+| --- | --- | --- |
+| `PAYMENT_PENDING` | `SEND_PAYMENT_REMINDER` / Payment Follow-up | `payment_followup` where other gates permit |
+| `PAYMENT_TO_VERIFY` | `VERIFY_PAYMENT` / Payment Review | none |
+| `PAID_VERIFIED` | no payment follow-up or verification work | none |
+
+Amount incompleteness remains a separate reconciliation finding and cannot fabricate payment evidence, verification, or zero values.
+
+The evidence contract accepts only a real upload reference in the approved `Fee_Receipt_File` field. Empty upload payloads such as `[]`, unrelated applicant documents, portal/application submission, communication history, quote/invoice state, and Books metadata do not move an applicant to `PAYMENT_TO_VERIFY`.
+
+`PAYMENT_PENDING` describes Finance truth. A prior payment follow-up and future `Email_Next_Action_Date` describe operational waiting: the semantic recommendation remains `payment_followup`, while Actionability may return `COOLING_OFF` or `AWAITING_APPLICANT` with `selectable=false`.
+
+Payment verification clears only the Finance gate. Canonical Lifecycle must still evaluate all admission/enrolment prerequisites, and Classroom readiness remains a separate downstream authority.

@@ -13,7 +13,10 @@ Implemented locally:
 - canonical Finance resolver composed from M1 canonical population and current payment authority helpers
 - read-only Finance summary, worklist, applicant detail, object history, reconciliation, exceptions, and policy-status APIs
 - explicit unresolved and policy-dependent amount/state representation
-- Operator Next Finance workspace projection from `admin_getCanonicalFinanceWorklist({ page: 1, pageSize: 50 })`
+- Operator Next Finance workspace projection from a persisted request contract passed to `admin_getCanonicalFinanceWorklist()`
+- server-side search and filtering across the full canonical Finance population
+- deterministic Previous/Next traversal with default page size 50 and maximum 100
+- exact Applicant ID Review handoff from any returned page
 
 ### State model
 
@@ -39,6 +42,8 @@ Implemented locally:
 ### Workspace and reporting
 
 Finance consumes canonical cohorts for Payment Follow-up, Payment Review, overdue, exceptions, and reconciliation. Initial reports are read-only and show runtime state beside Books state without silently reconciling differences.
+
+The routine Finance worklist uses narrow row DTOs. Full applicant Finance detail remains on demand. A 50-row response is a navigation page, not a visibility or authority cap.
 
 ### Owner decisions before implementation
 

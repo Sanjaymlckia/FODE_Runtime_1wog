@@ -7220,9 +7220,8 @@ function getCommunicationAuthorityRule_(messageType) {
 
 function communicationPaymentEvidencePresent_(rowObj) {
   var row = rowObj || {};
-  return hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File")
-    || hasUploadEvidence_(row.Receipt_File, "Receipt_File")
-    || hasUploadEvidence_(row.Payment_Receipt_File, "Payment_Receipt_File");
+  if (typeof adminRowPaymentEvidencePresent_ === "function") return adminRowPaymentEvidencePresent_(row);
+  return hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File");
 }
 
 function communicationAcceptanceConfirmed_(rowObj) {
@@ -7906,7 +7905,7 @@ function communicationDocsVerifiedForPayment_(rowObj, baseState) {
 
 function communicationPaymentEvidenceMissing_(rowObj) {
   var row = rowObj || {};
-  return !isCanonicalPaymentVerified_(row) && !hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File");
+  return !isCanonicalPaymentVerified_(row) && !communicationPaymentEvidencePresent_(row);
 }
 
 function communicationQuoteEligible_(rowObj) {

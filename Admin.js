@@ -2992,14 +2992,19 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
   var docsVerified = adminDocumentReviewVerifiedForAutomation_(row);
   var portalSubmitted = adminRowPortalSubmitted_(row);
   var paymentFacts = adminRowPaymentAuthorityFacts_(row);
-  var paymentEvidencePresent = paymentFacts.paymentEvidencePresent;
+  var canonicalFinanceState = resolveCanonicalFinanceState_(row, paymentFacts);
+  var paymentEvidencePresent = canonicalFinanceState.paymentEvidencePresent;
   var paymentBadge = paymentFacts.paymentBadge;
-  var paymentVerified = paymentFacts.paymentVerified;
+  var paymentVerified = canonicalFinanceState.paymentVerified;
   var enrolled = isYes_(row.Registration_Complete) || isYes_(row.Enrolled_Confirmed) || !!clean_(row.Enrolled_At || "");
   var lifecycleStage = clean_(deriveApplicantLifecycleStage_(row) || deriveOperationalPipelineStage_(row) || "UNKNOWN").toUpperCase();
   var canonicalLifecycle = resolveCanonicalApplicantLifecycle_(row, {
     uploadSummary: uploadSummary,
-    paymentFacts: paymentFacts,
+    paymentFacts: {
+      paymentEvidencePresent: paymentEvidencePresent,
+      paymentVerified: paymentVerified,
+      paymentBadge: paymentBadge
+    },
     portalSubmitted: portalSubmitted,
     docsVerified: docsVerified
   });
@@ -3041,17 +3046,17 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     nextAction = "REVIEW_DOCUMENTS";
     suppressor = suppressor || "OFFICER_ACTION_PENDING";
     explanation = "Mandatory uploads are present, but document review authority is not verified.";
-  } else if (!paymentEvidencePresent && !paymentVerified) {
+  } else if (canonicalFinanceState.financeState === "PAYMENT_PENDING") {
     owner = "APPLICANT";
     nextAction = "SEND_PAYMENT_REMINDER";
     recommendedMessageType = suppressor ? "" : (Number(lastContactAgeDays || 0) >= 14 ? "payment_escalation" : "payment_reminder");
     explanation = "Document review is verified, but payment evidence is not present.";
-  } else if (paymentEvidencePresent && !paymentVerified) {
+  } else if (canonicalFinanceState.financeState === "PAYMENT_TO_VERIFY") {
     owner = "FINANCE";
     nextAction = "VERIFY_PAYMENT";
     suppressor = suppressor || "FINANCE_ACTION_PENDING";
     explanation = "Payment evidence is present, but payment authority has not verified it.";
-  } else if (docsVerified && paymentVerified) {
+  } else if (docsVerified && canonicalFinanceState.financeState === "PAID_VERIFIED") {
     owner = "ADMIN";
     nextAction = "ENROLL";
     suppressor = suppressor || "ADMIN_ACTION_PENDING";
@@ -3146,7 +3151,7 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
       "Document Completeness: adminOpsRequiredDocumentUploadSummary_",
       "Document Review: computeDocVerificationStatus_",
       "Lifecycle: deriveApplicantLifecycleStage_",
-      "Payment: Receipt_Status/Fee_Receipt_File canonical row facts",
+      "Payment: resolveCanonicalFinanceState_ / Receipt_Status canonical authority",
       "Communication: Last_Contact_* / Email_* row facts"
     ],
     authorityState: {
@@ -3160,6 +3165,7 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
       portalSubmitted: !!portalSubmitted,
       paymentEvidencePresent: !!paymentEvidencePresent,
       paymentVerified: !!paymentVerified,
+      canonicalFinanceState: clean_(canonicalFinanceState.financeState || "UNKNOWN"),
       hasValidEmail: !!hasValidEmail,
       hasPhoneFallback: !!hasPhoneFallback,
       contactabilityState: isUncontactable ? "UNCONTACTABLE" : (hasValidEmail ? "EMAIL_AVAILABLE" : "PHONE_FALLBACK_AVAILABLE")

@@ -8,6 +8,12 @@ function canonicalFinanceUpper_(value) {
   return canonicalFinanceClean_(value).toUpperCase();
 }
 
+function canonicalFinanceBoundedPositiveInt_(value, fallback, maximum) {
+  var parsed = Math.floor(Number(value));
+  if (!isFinite(parsed) || parsed < 1) parsed = fallback;
+  return Math.min(maximum, parsed);
+}
+
 function canonicalFinanceNowIso_() {
   return new Date().toISOString();
 }
@@ -66,6 +72,95 @@ function canonicalFinanceObjectFields_(row) {
   };
 }
 
+function canonicalFinanceDisplayEmail_(row) {
+  if (typeof stageAggregationEffectiveEmail_ === "function") return canonicalFinanceClean_(stageAggregationEffectiveEmail_(row || {}));
+  var source = row || {};
+  return canonicalFinanceClean_(source.Effective_Email || source.Parent_Email_Corrected || source.Parent_Email || "");
+}
+
+function canonicalFinanceDisplayPhone_(row) {
+  var source = row || {};
+  if (typeof getWhatsAppFallbackPhoneRaw_ === "function") return canonicalFinanceClean_(getWhatsAppFallbackPhoneRaw_(source));
+  return canonicalFinanceClean_(source.Phone || source.Phone_Number || source.WhatsApp_Number || "");
+}
+
+function resolveCanonicalFinanceState_(rowObj, paymentFacts) {
+  var row = rowObj || {};
+  var facts = paymentFacts && typeof paymentFacts === "object" ? paymentFacts : {};
+  var paymentEvidencePresent = typeof adminRowPaymentEvidencePresent_ === "function"
+    ? adminRowPaymentEvidencePresent_(row) === true
+    : facts.paymentEvidencePresent === true;
+  var paymentVerified = typeof isCanonicalPaymentVerified_ === "function"
+    ? isCanonicalPaymentVerified_(row) === true
+    : canonicalFinanceUpper_(row.Receipt_Status || "") === "VERIFIED";
+  return {
+    financeState: paymentVerified ? "PAID_VERIFIED" : (paymentEvidencePresent ? "PAYMENT_TO_VERIFY" : "PAYMENT_PENDING"),
+    paymentEvidencePresent: paymentEvidencePresent,
+    paymentVerified: paymentVerified
+  };
+}
+
+function canonicalFinanceOperationalProjection_(financeState, lifecycle, actionability, communication) {
+  var lifecycleProjection = lifecycle || {};
+  var actionabilityProjection = actionability || {};
+  var communicationProjection = communication || {};
+  if (financeState === "PAYMENT_TO_VERIFY") {
+    return {
+      financeActionOwner: "FINANCE",
+      recommendedFinanceAction: "VERIFY_PAYMENT",
+      financeActionability: "REVIEW_REQUIRED",
+      workloadGroupKey: "FINANCE",
+      worklistKey: "PAYMENT_REVIEW",
+      worklistLabel: "Payment Review",
+      worklistReason: "Receipt pending verification",
+      paymentFollowupRecommended: false,
+      paymentVerificationRequired: true,
+      mutationCapabilityRequired: "CAN_VERIFY_PAYMENT"
+    };
+  }
+  if (financeState === "PAYMENT_PENDING") {
+    var financeRecommendedMessageType = canonicalFinanceClean_(communicationProjection.recommendedMessageType || lifecycleProjection.recommendedMessageType || "");
+    return {
+      financeActionOwner: "APPLICANT",
+      recommendedFinanceAction: "SEND_PAYMENT_REMINDER",
+      financeActionability: canonicalFinanceUpper_(actionabilityProjection.state || "READY") || "READY",
+      workloadGroupKey: "FINANCE",
+      worklistKey: "PAYMENT_FOLLOW_UP",
+      worklistLabel: "Payment Follow-up",
+      worklistReason: "Awaiting payment evidence",
+      paymentFollowupRecommended: financeRecommendedMessageType === "payment_followup",
+      paymentVerificationRequired: false,
+      mutationCapabilityRequired: ""
+    };
+  }
+  if (financeState === "PAID_VERIFIED") {
+    return {
+      financeActionOwner: canonicalFinanceClean_(lifecycleProjection.actionOwner || "ADMIN"),
+      recommendedFinanceAction: "NO_PAYMENT_ACTION",
+      financeActionability: canonicalFinanceUpper_(actionabilityProjection.state || "COMPLETE") || "COMPLETE",
+      workloadGroupKey: canonicalFinanceClean_(actionabilityProjection.workloadGroupKey || ""),
+      worklistKey: "NO_PAYMENT_ACTION",
+      worklistLabel: "No payment action",
+      worklistReason: "Receipt_Status verifies payment.",
+      paymentFollowupRecommended: false,
+      paymentVerificationRequired: false,
+      mutationCapabilityRequired: ""
+    };
+  }
+  return {
+    financeActionOwner: canonicalFinanceClean_(lifecycleProjection.actionOwner || actionabilityProjection.actionOwner || "ADMIN"),
+    recommendedFinanceAction: "NO_PAYMENT_ACTION",
+    financeActionability: canonicalFinanceUpper_(actionabilityProjection.state || "COMPLETE") || "COMPLETE",
+    workloadGroupKey: canonicalFinanceClean_(actionabilityProjection.workloadGroupKey || ""),
+    worklistKey: canonicalFinanceClean_(actionabilityProjection.worklistKey || "NO_ACTION"),
+    worklistLabel: canonicalFinanceClean_(actionabilityProjection.worklistLabel || "No payment action"),
+    worklistReason: canonicalFinanceClean_(actionabilityProjection.worklistReason || "Payment authority is already satisfied."),
+    paymentFollowupRecommended: false,
+    paymentVerificationRequired: false,
+    mutationCapabilityRequired: ""
+  };
+}
+
 function resolveCanonicalFinance_(rowObj, canonicalPopulationRow, opts) {
   var row = rowObj || {};
   var canonical = canonicalPopulationRow || {};
@@ -76,10 +171,14 @@ function resolveCanonicalFinance_(rowObj, canonicalPopulationRow, opts) {
   var options = opts && typeof opts === "object" ? opts : {};
   var receiptStatus = canonicalFinanceClean_(row.Receipt_Status || finance.receiptStatus || "");
   var receiptStatusKey = receiptStatus.toLowerCase();
-  var receiptEvidencePresent = finance.paymentEvidencePresent === true || canonicalFinanceClean_(row.Fee_Receipt_File || "") !== "";
-  var paymentVerified = finance.paymentVerified === true || (typeof isCanonicalPaymentVerified_ === "function" && isCanonicalPaymentVerified_(row) === true);
+  var financeStateProjection = resolveCanonicalFinanceState_(row, {
+    paymentEvidencePresent: finance.paymentEvidencePresent === true,
+    paymentVerified: finance.paymentVerified === true
+  });
+  var receiptEvidencePresent = financeStateProjection.paymentEvidencePresent;
+  var paymentVerified = financeStateProjection.paymentVerified;
   var rawPaymentVerified = canonicalFinanceClean_(row.Payment_Verified || "");
-  var financeState = paymentVerified ? "PAID_VERIFIED" : (receiptEvidencePresent ? "PAYMENT_TO_VERIFY" : "PAYMENT_PENDING");
+  var financeState = financeStateProjection.financeState;
   var reasonCode = paymentVerified ? "RECEIPT_STATUS_VERIFIED" : (receiptEvidencePresent ? "RECEIPT_EVIDENCE_PENDING_VERIFICATION" : "PAYMENT_EVIDENCE_MISSING");
   var reason = paymentVerified ? "Receipt_Status verifies payment." : (receiptEvidencePresent ? "Receipt evidence exists and requires verification." : "No verified payment evidence is present.");
   var warnings = [];
@@ -103,6 +202,11 @@ function resolveCanonicalFinance_(rowObj, canonicalPopulationRow, opts) {
     return item.state === "INVALID" || item.state === "UNRESOLVED";
   }) ? "INCOMPLETE" : "SOURCE_LIMITED";
 
+  var operational = canonicalFinanceOperationalProjection_(financeState, lifecycle, actionability, communication);
+  var reconciliationSearchCodes = [financeState + "_CONSISTENT"];
+  if (amountCompleteness !== "SOURCE_LIMITED") reconciliationSearchCodes.push("AMOUNT_DATA_INCOMPLETE");
+  if (warnings.length) reconciliationSearchCodes.push("FINANCE_WARNING");
+
   return {
     schemaVersion: CANONICAL_FINANCE_SCHEMA_VERSION,
     readOnly: true,
@@ -111,6 +215,10 @@ function resolveCanonicalFinance_(rowObj, canonicalPopulationRow, opts) {
       rowNumber: Number(canonical.identity && canonical.identity.rowNumber || options.rowNumber || 0),
       sourceSheetName: canonicalFinanceClean_(canonical.identity && canonical.identity.sourceSheetName || options.sourceSheetName || ""),
       applicantName: canonicalFinanceClean_(canonical.applicant && canonical.applicant.name || row.Student_Name || row.Applicant_Name || "")
+    },
+    contact: {
+      effectiveEmail: canonicalFinanceDisplayEmail_(row),
+      phone: canonicalFinanceDisplayPhone_(row)
     },
     financeAuthority: {
       financeState: financeState,
@@ -165,23 +273,25 @@ function resolveCanonicalFinance_(rowObj, canonicalPopulationRow, opts) {
       reconciliationState: "NOT_EVALUATED",
       missingRequiredFinanceData: []
     },
-    operational: {
-      financeActionOwner: canonicalFinanceClean_(lifecycle.actionOwner || canonical.owner || ""),
-      recommendedFinanceAction: financeState === "PAYMENT_TO_VERIFY" ? "VERIFY_PAYMENT" : (financeState === "PAYMENT_PENDING" ? "SEND_PAYMENT_REMINDER" : "NO_PAYMENT_ACTION"),
-      financeActionability: canonicalFinanceClean_(actionability.state || ""),
-      workloadGroupKey: canonicalFinanceClean_(actionability.workloadGroupKey || ""),
-      worklistKey: canonicalFinanceClean_(actionability.worklistKey || ""),
-      worklistLabel: canonicalFinanceClean_(actionability.worklistLabel || ""),
-      paymentFollowupRecommended: canonicalFinanceClean_(communication.recommendedMessageType || lifecycle.recommendedMessageType || "") === "payment_followup",
-      paymentVerificationRequired: financeState === "PAYMENT_TO_VERIFY",
-      mutationCapabilityRequired: financeState === "PAYMENT_TO_VERIFY" ? "CAN_VERIFY_PAYMENT" : ""
-    },
+    operational: operational,
     audit: {
       resolvedAt: canonicalFinanceNowIso_(),
       resolverVersion: CANONICAL_FINANCE_SCHEMA_VERSION,
       sourceFields: ["Receipt_Status", "Fee_Receipt_File", "Payment_Verified", "Fee_Total_Kina", "Total_Fee_Kina", "Books_*", "FODE_Billing_Reference"],
       warnings: warnings,
-      unresolvedPolicyDependencies: canonicalFinancePolicyDependencies_()
+      unresolvedPolicyDependencies: canonicalFinancePolicyDependencies_(),
+      searchIndex: canonicalFinanceClean_([
+        canonicalFinanceClean_(canonical.identity && canonical.identity.applicantId || row.ApplicantID || ""),
+        canonicalFinanceClean_(canonical.applicant && canonical.applicant.name || row.Student_Name || row.Applicant_Name || ""),
+        canonicalFinanceDisplayEmail_(row),
+        canonicalFinanceDisplayPhone_(row),
+        receiptStatus,
+        financeState,
+        operational.worklistKey,
+        operational.worklistLabel,
+        reasonCode,
+        reconciliationSearchCodes.join(" ")
+      ].join(" ").toLowerCase())
     }
   };
 }
@@ -219,6 +329,16 @@ function canonicalFinanceReconciliationForRow_(financeDto, canonicalRow) {
     codes.push("AMOUNT_DATA_INCOMPLETE");
     if (severity === "INFO") severity = "WARN";
   }
+  var operational = dto.operational || {};
+  var expectedAction = state === "PAYMENT_PENDING" ? "SEND_PAYMENT_REMINDER" : (state === "PAYMENT_TO_VERIFY" ? "VERIFY_PAYMENT" : "NO_PAYMENT_ACTION");
+  if (canonicalFinanceUpper_(operational.recommendedFinanceAction || "") !== expectedAction) {
+    codes.push("ACTIONABILITY_FINANCE_MISMATCH");
+    severity = "WARN";
+  }
+  if (state !== "PAYMENT_PENDING" && operational.paymentFollowupRecommended === true) {
+    codes.push("COMMUNICATION_FINANCE_MISMATCH");
+    severity = "WARN";
+  }
   if (canonicalRow && canonicalRow.lifecycle && canonicalRow.lifecycle.baseState === "PAYMENT_PENDING" && state === "PAID_VERIFIED") {
     codes.push("LIFECYCLE_FINANCE_MISMATCH");
     severity = "WARN";
@@ -249,15 +369,7 @@ function canonicalFinanceReconciliationForRow_(financeDto, canonicalRow) {
 
 function canonicalFinanceSnapshot_(request) {
   var snapshot = canonicalPopulationSnapshot_();
-  var sourceRows = snapshot._internalSourceRowsByRowNumber || {};
-  var financeRows = [];
-  (snapshot.rows || []).forEach(function (row) {
-    var sourceRow = sourceRows[row.identity.rowNumber] || {};
-    financeRows.push(resolveCanonicalFinance_(sourceRow, row, {
-      rowNumber: row.identity.rowNumber,
-      sourceSheetName: row.identity.sourceSheetName
-    }));
-  });
+  var financeRows = (snapshot.rows || []).map(function (row) { return row.finance; });
   return {
     ok: true,
     readOnly: true,
@@ -310,6 +422,7 @@ function canonicalFinancePublicRow_(row) {
   return {
     schemaVersion: row.schemaVersion,
     identity: row.identity,
+    contact: row.contact,
     financeAuthority: row.financeAuthority,
     amounts: row.amounts,
     objects: row.objects,
@@ -320,31 +433,87 @@ function canonicalFinancePublicRow_(row) {
   };
 }
 
+function canonicalFinanceWorklistRow_(row) {
+  var source = row || {};
+  return {
+    schemaVersion: source.schemaVersion,
+    identity: source.identity,
+    contact: source.contact,
+    financeAuthority: source.financeAuthority,
+    amounts: {
+      currency: source.amounts && source.amounts.currency || "PGK",
+      quotedAmount: source.amounts && source.amounts.quotedAmount || null,
+      totalFee: source.amounts && source.amounts.totalFee || null,
+      outstandingBalance: source.amounts && source.amounts.outstandingBalance || null,
+      calculationCompleteness: source.amounts && source.amounts.calculationCompleteness || "INCOMPLETE"
+    },
+    objects: {
+      quoteId: source.objects && source.objects.quoteId || "",
+      quoteStatus: source.objects && source.objects.quoteStatus || "",
+      invoiceId: source.objects && source.objects.invoiceId || "",
+      invoiceNumber: source.objects && source.objects.invoiceNumber || "",
+      invoiceStatus: source.objects && source.objects.invoiceStatus || "",
+      books: source.objects && source.objects.books || {}
+    },
+    exceptions: source.exceptions,
+    operational: source.operational,
+    audit: {
+      resolvedAt: source.audit && source.audit.resolvedAt || "",
+      warnings: source.audit && source.audit.warnings || []
+    }
+  };
+}
+
 function canonicalFinanceRowMatches_(row, filters) {
   var f = filters || {};
   if (f.financeState && canonicalFinanceUpper_(row.financeAuthority.financeState) !== canonicalFinanceUpper_(f.financeState)) return false;
+  if (f.receiptStatus && canonicalFinanceUpper_(row.financeAuthority.receiptStatus) !== canonicalFinanceUpper_(f.receiptStatus)) return false;
   if (f.worklistKey && canonicalFinanceUpper_(row.operational.worklistKey) !== canonicalFinanceUpper_(f.worklistKey)) return false;
   if (f.recommendedFinanceAction && canonicalFinanceUpper_(row.operational.recommendedFinanceAction) !== canonicalFinanceUpper_(f.recommendedFinanceAction)) return false;
+  if (f.exceptionCode && canonicalFinanceUpper_(row.exceptions.financeExceptionCode) !== canonicalFinanceUpper_(f.exceptionCode)) return false;
   if (f.paymentFollowupRecommended === true && row.operational.paymentFollowupRecommended !== true) return false;
   if (f.paymentVerificationRequired === true && row.operational.paymentVerificationRequired !== true) return false;
   if (f.exceptionOnly === true && !row.exceptions.financeExceptionCode && !(row.audit.warnings || []).length) return false;
+  var searchQuery = canonicalFinanceClean_(f.searchQuery || f.search || "").toLowerCase();
+  if (searchQuery) {
+    var searchIndex = canonicalFinanceClean_(row.audit && row.audit.searchIndex || "").toLowerCase();
+    if (searchIndex.indexOf(searchQuery) < 0) return false;
+  }
   return true;
 }
 
 function canonicalFinancePaged_(rows, request) {
   var p = request || {};
-  var pageSize = Math.max(1, Math.min(100, Number(p.pageSize || p.limit || 25)));
-  var page = Math.max(1, Number(p.page || 1));
-  var start = (page - 1) * pageSize;
+  var pageSize = canonicalFinanceBoundedPositiveInt_(p.pageSize || p.limit, 50, 100);
+  var page = canonicalFinanceBoundedPositiveInt_(p.page, 1, Number.MAX_SAFE_INTEGER || 9007199254740991);
   var filtered = (rows || []).filter(function (row) { return canonicalFinanceRowMatches_(row, p.filters || p); });
   filtered.sort(function (a, b) {
     return canonicalFinanceClean_(a.identity.applicantId).localeCompare(canonicalFinanceClean_(b.identity.applicantId)) || Number(a.identity.rowNumber || 0) - Number(b.identity.rowNumber || 0);
   });
+  var filteredCount = filtered.length;
+  var totalCount = (rows || []).length;
+  var maxPage = Math.max(1, Math.ceil(filteredCount / pageSize));
+  if (page > maxPage) page = maxPage;
+  var start = (page - 1) * pageSize;
   return {
+    totalCount: totalCount,
+    filteredCount: filteredCount,
     page: page,
     pageSize: pageSize,
-    total: filtered.length,
-    rows: filtered.slice(start, start + pageSize).map(canonicalFinancePublicRow_)
+    total: filteredCount,
+    hasNext: start + pageSize < filteredCount,
+    hasPrevious: page > 1,
+    sortKey: "APPLICANT_ID_ASC",
+    appliedFilters: {
+      financeState: canonicalFinanceClean_(p.filters && p.filters.financeState || p.financeState || ""),
+      receiptStatus: canonicalFinanceClean_(p.filters && p.filters.receiptStatus || p.receiptStatus || ""),
+      worklistKey: canonicalFinanceClean_(p.filters && p.filters.worklistKey || p.worklistKey || ""),
+      recommendedFinanceAction: canonicalFinanceClean_(p.filters && p.filters.recommendedFinanceAction || p.recommendedFinanceAction || ""),
+      exceptionCode: canonicalFinanceClean_(p.filters && p.filters.exceptionCode || p.exceptionCode || ""),
+      exceptionOnly: (p.filters && p.filters.exceptionOnly) === true || p.exceptionOnly === true
+    },
+    searchQuery: canonicalFinanceClean_(p.searchQuery || p.search || ""),
+    rows: filtered.slice(start, start + pageSize).map(canonicalFinanceWorklistRow_)
   };
 }
 

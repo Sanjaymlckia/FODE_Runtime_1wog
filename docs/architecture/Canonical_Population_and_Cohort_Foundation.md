@@ -1,6 +1,6 @@
 # Canonical Population and Cohort Foundation
 
-Status: M1 local implementation; not released
+Status: M1 live foundation with M2 local Finance convergence pending review
 Release track: Track H when later approved for deployment
 
 ## Decision
@@ -30,7 +30,7 @@ Schema: `CANONICAL_POPULATION_V1`
 | `lifecycle` | base state, overlays, recommendation, owner, reason | Canonical Lifecycle Resolver |
 | `actionability` | state, workload group, worklist, action, selectable, blockers, cooldown | Actionability Resolver |
 | `communication` | recommended/requested type, authority result/source, block | Communication Authority matrix |
-| `finance` | canonical payment projection plus Books metadata | `Receipt_Status` and payment helpers; Books remains external metadata |
+| `finance` | full `CANONICAL_FINANCE_V1` read-only projection plus compatibility `state` alias | `resolveCanonicalFinance_()`; `Receipt_Status` remains verification authority and Books remains external metadata |
 | `documents` | completeness, missing documents, verification | existing document helpers |
 | `contactability` | email/phone readiness and state | existing contactability facts |
 | `owner` | current action owner | Actionability / Canonical Lifecycle output |
@@ -90,6 +90,8 @@ The snapshot reports, without forcing agreement:
 
 Population Ledger reuses already-resolved Actionability rows when called by M1. Existing callers retain the original fallback and behavior.
 
+M2 convergence removes the former simplified Finance derivation from `canonicalPopulationFinanceProjection_()`. The population composer delegates to `resolveCanonicalFinance_()`, and Finance APIs reuse the resulting DTO rather than resolving every population row a second time.
+
 ## Duplicate Paths Found
 
 | Path | Current classification | M1 treatment |
@@ -104,4 +106,3 @@ Population Ledger reuses already-resolved Actionability rows when called by M1. 
 ## Safety Boundary
 
 M1 has no send, mutation, approval, Global View activation, Finance execution, Registry execution, Classroom execution, Stage Batch retirement, or OPS dependency.
-

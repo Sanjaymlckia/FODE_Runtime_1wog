@@ -3,6 +3,7 @@ const fs = require("fs");
 const vm = require("vm");
 
 const financeSource = fs.readFileSync("Admin_CanonicalFinance.js", "utf8");
+const rowFactsSource = fs.readFileSync("Admin_RowFacts.js", "utf8");
 const populationSource = fs.readFileSync("Admin_CanonicalPopulation.js", "utf8");
 const operatorNextSource = fs.readFileSync("AdminUI_OperatorNext.html", "utf8");
 const claspIgnore = fs.readFileSync(".claspignore", "utf8");
@@ -11,6 +12,8 @@ assert.match(financeSource, /CANONICAL_FINANCE_V1/, "Canonical Finance schema ma
 assert.match(claspIgnore, /!Admin_CanonicalFinance\.js/, "Canonical Finance module must be deployable later");
 assert.match(financeSource, /function resolveCanonicalFinance_/, "Canonical Finance resolver must exist");
 assert.match(financeSource, /Receipt_Status \/ canonical payment helpers/, "Receipt_Status must remain Finance authority");
+assert.match(rowFactsSource, /return \["Fee_Receipt_File"\]/, "Payment proof must use an explicit payment-field allowlist");
+assert.doesNotMatch(financeSource, /canonicalFinanceClean_\(row\.Fee_Receipt_File[^\n]+!==/, "Canonical Finance must not treat raw non-empty upload placeholders as payment proof");
 assert.match(financeSource, /compatibilityPaymentVerifiedRaw/, "Payment_Verified must be exposed only as compatibility evidence");
 assert.match(financeSource, /Books_Invoice_ID/, "Books metadata must be projected");
 assert.match(financeSource, /EXTERNAL_INTEGRATION_METADATA|Zoho Books external integration metadata/, "Books fields must remain integration metadata");
@@ -41,8 +44,14 @@ assert.match(financeSource, /WORKFLOW_PENDING/, "Future finance workflows must r
 assert.match(financeSource, /canonicalPopulationSnapshot_\(\)/, "Finance must compose the M1 canonical population snapshot");
 assert.doesNotMatch(financeSource, /getDataRange\(\)\.getValues\(\)/, "Finance module must not add a second independent full-sheet scanner");
 assert.match(populationSource, /canonicalPopulationFinanceProjection_/, "M1 finance projection remains available");
+assert.match(populationSource, /resolveCanonicalFinance_\(/, "Canonical Population must delegate Finance resolution to CANONICAL_FINANCE_V1");
+assert.doesNotMatch(populationSource, /var state = verified \? "PAID_VERIFIED"/, "Canonical Population must not retain an independent simplified Finance state resolver");
 
-assert.match(operatorNextSource, /admin_getCanonicalFinanceWorklist\(\{page:1,pageSize:50\}\)/, "Operator Next Finance route must call the read-only Finance worklist API");
+assert.match(operatorNextSource, /admin_getCanonicalFinanceWorklist\(operatorNextState_\.financeRequest\)/, "Operator Next Finance route must pass the server-side paging/search request");
+assert.match(operatorNextSource, /50 is the page size, not a worklist cap/, "Operator Next must distinguish the normal page size from total Finance visibility");
+assert.match(operatorNextSource, /onxFinancePrevious[\s\S]*onxFinanceNext/, "Operator Next Finance must expose Previous and Next navigation");
+assert.match(operatorNextSource, /searchQuery[\s\S]*filters:\{\}/, "Operator Next Finance must hold an explicit server request contract");
+assert.match(operatorNextSource, /onxFinancePageRows[\s\S]*operatorNextFinanceStatusRows_\(rows\)/, "Every returned Finance state must remain visible and reviewable, including paid/verified rows");
 assert.match(operatorNextSource, /operatorNextLoadFinance_/, "Finance route must lazy-load canonical Finance data");
 assert.match(operatorNextSource, /POLICY REQUIRED/, "Operator Next Finance route must label policy-dependent buckets");
 assert.match(operatorNextSource, /Receipt_Status/, "Operator Next Finance route must name Receipt_Status as canonical payment authority");
@@ -57,6 +66,11 @@ const context = {
   },
   isCanonicalPaymentVerified_(row) {
     return String(row && row.Receipt_Status || "").trim().toLowerCase() === "verified";
+  },
+  adminRowPaymentEvidencePresent_(row) {
+    const raw = String(row && row.Fee_Receipt_File || "").trim();
+    if (!raw || /^(?:\[\]|\{\}|null|undefined|none|n\/a|notuploaded|nofile)$/i.test(raw.replace(/\s+/g, ""))) return false;
+    return /^https?:\/\//i.test(raw) || /^[\w-]{20,}$/.test(raw);
   }
 };
 vm.createContext(context);
@@ -77,10 +91,18 @@ const pending = finance({ ApplicantID: "FODE-PENDING", Receipt_Status: "", Payme
 assert.equal(pending.financeAuthority.financeState, "PAYMENT_PENDING");
 assert.equal(pending.financeAuthority.financeReasonCode, "PAYMENT_EVIDENCE_MISSING");
 
+const emptyUploadPlaceholder = finance({ ApplicantID: "FODE-PLACEHOLDER", Receipt_Status: "Pending", Fee_Receipt_File: "[]" });
+assert.equal(emptyUploadPlaceholder.financeAuthority.financeState, "PAYMENT_PENDING");
+assert.equal(emptyUploadPlaceholder.financeAuthority.paymentEvidencePresent, false);
+
+const unrelatedEvidence = finance({ ApplicantID: "FODE-UNRELATED", Portal_Submitted: "Yes", Birth_ID_Passport_File: "https://drive.google.com/file/d/document/view", Books_Invoice_ID: "invoice-1", Receipt_Status: "", Fee_Receipt_File: "[]" });
+assert.equal(unrelatedEvidence.financeAuthority.financeState, "PAYMENT_PENDING", "Portal, ordinary document, and Books metadata must not become payment proof");
+
 const toVerify = finance({ ApplicantID: "FODE-VERIFY", Receipt_Status: "Pending", Payment_Verified: "", Fee_Receipt_File: "https://receipt" });
 assert.equal(toVerify.financeAuthority.financeState, "PAYMENT_TO_VERIFY");
 assert.equal(toVerify.operational.recommendedFinanceAction, "VERIFY_PAYMENT");
 assert.equal(toVerify.operational.mutationCapabilityRequired, "CAN_VERIFY_PAYMENT");
+assert.equal(toVerify.operational.paymentFollowupRecommended, false);
 
 const verified = finance({ ApplicantID: "FODE-PAID", Receipt_Status: "Verified", Payment_Verified: "", Fee_Receipt_File: "https://receipt" });
 assert.equal(verified.financeAuthority.financeState, "PAID_VERIFIED");
