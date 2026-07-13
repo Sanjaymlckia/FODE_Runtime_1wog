@@ -40,3 +40,7 @@ Status: Architecture Build V1 frozen register at Admin `@373`, runtime `r340 / 3
 ## ACP Closure Note
 
 As of Admin staging `@373` / runtime `r340 / 340`, no compatibility shim above may independently send applicant communications or bypass Communication Authority.
+
+## Navigation Audit Note
+
+`docs/architecture/Global_Navigation_Route_Map.md` records the V1 route audit. It confirms that Operator Next does not call `admin_getOpsLifecycleSummary`, Global View is contained/disabled, Stage Batch remains compatibility only, and OPS remains retired/reference only.

@@ -25,7 +25,7 @@ Initial route loads only:
 1. `admin_getActionabilityPreview({ limit: 100 })` through the existing UI helper.
 2. `admin_getRuntimeInfo()`.
 
-Operational metrics load only on Dashboard, Communications, or Reports. Safety diagnostics load only on System Health. Global lifecycle compatibility counts load only when the operator explicitly selects Global View.
+Operational metrics load only on Dashboard, Communications, or Reports. Safety diagnostics load only on System Health. Global View is contained/disabled and does not load OPS lifecycle compatibility counts.
 
 ## Typography Refinement
 
@@ -83,3 +83,7 @@ Two other capabilities cannot be completed honestly in the original Track L pass
 2. Selected VCF export. Add an exact-ID bounded adapter, explicit capability, approved contact projection, and audit event.
 
 Neither gap blocks V1 operation of the Operator Next work surface, Review handoff, selected Batch Communication, finance worklists, reports, health, roles, or context-menu ergonomics.
+
+## Route Map Audit
+
+`docs/architecture/Global_Navigation_Route_Map.md` is the current V1 navigation authority map. It classifies Operator Next routes, current Admin fallback links, context-menu actions, Stage Batch compatibility, contained Global View, and retired OPS reference routes without changing runtime behaviour.

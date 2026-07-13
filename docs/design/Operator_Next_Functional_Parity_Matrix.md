@@ -97,3 +97,7 @@ Classification terms:
 - Review Queue compatibility should remain reachable only as reconciliation/navigation during migration.
 - Selected VCF requires a bounded backend projection, explicit capability, and audit event in a separate Track H CIS.
 - Separate live OPERATIONS and VERIFIER credentials were unavailable at V1 closure; composed backend role-boundary tests remain the evidence source.
+
+## Route Audit Cross-Reference
+
+The authoritative V1 navigation classification is maintained in `docs/architecture/Global_Navigation_Route_Map.md`. That map records every Operator Next sidebar route, current Admin fallback route, context action, compatibility route, and disabled/deferred route with the owning authority and OPS dependency status.
