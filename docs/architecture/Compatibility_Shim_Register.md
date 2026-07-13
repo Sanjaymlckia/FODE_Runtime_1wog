@@ -37,6 +37,16 @@ Status: Architecture Build V1 frozen register at Admin `@373`, runtime `r340 / 3
 | Deferred | VCF/manual WhatsApp export | Exact selected-cohort adapter and audit contract absent | None | Dedicated capability and bounded adapter | Post-V1 |
 | Deferred | Registry, Classroom, REP, broader UI polish | Accepted future architecture, not V1 runtime | None | Separate programmes | Post-V1 |
 
+## Mature Operations M1 Boundary
+
+The local M1 foundation introduces `CANONICAL_POPULATION_V1` and a shared read-only cohort builder. It does not retire compatibility paths.
+
+- Stage Batch remains compatibility cohort selection and is labelled as drift rather than forced into canonical totals.
+- Review Queues remain compatibility navigation only.
+- selected/manual batch wrappers remain unchanged and do not yet consume M1.
+- OPS handlers and DTOs are prohibited from the M1 foundation.
+- Global View remains disabled until a separate M4 release consumes and accepts the canonical summary.
+
 ## ACP Closure Note
 
 As of Admin staging `@373` / runtime `r340 / 340`, no compatibility shim above may independently send applicant communications or bypass Communication Authority.

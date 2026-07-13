@@ -23,6 +23,8 @@ Runtime source, Apps Script deployment, queues, communications, Sheets, and send
 | Compatibility shim register | [Compatibility_Shim_Register.md](Compatibility_Shim_Register.md) |
 | Operational model | [Operational_Model.md](Operational_Model.md) |
 | Population Ledger model | [Population_Ledger_Model.md](Population_Ledger_Model.md) |
+| Canonical population and cohort foundation | [Canonical_Population_and_Cohort_Foundation.md](Canonical_Population_and_Cohort_Foundation.md) |
+| Mature Operations M1-M6 roadmap | [Mature_Operations_Release_Roadmap.md](Mature_Operations_Release_Roadmap.md) |
 | Operator Actionability Resolver | [Operator_Actionability_Resolver.md](Operator_Actionability_Resolver.md) |
 | Communication model | [Communication_Model.md](Communication_Model.md) |
 | Queue model | [Queue_Model.md](Queue_Model.md) |

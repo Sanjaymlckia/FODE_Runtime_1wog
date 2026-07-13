@@ -27,6 +27,7 @@ Scope: documentation only
 
 ## Partial / In Progress
 
+- Mature Operations M1 canonical population/cohort foundation is implemented locally and awaiting review; it is not released or connected to Global View.
 - Stage Batch candidate-selection migration off legacy lifecycle stage inputs.
 - broader Population Ledger canonical lifecycle reporting.
 - legacy lifecycle retirement after consumer migration.
@@ -39,6 +40,7 @@ Scope: documentation only
 
 ## Deferred / Future
 
+- Mature Operations M2 Finance, M3 Registry/Classroom, M4 Global View, M5 H2 approvals, and M6 consolidation follow the contracts in `Mature_Operations_Release_Roadmap.md`.
 - Google Forms replacement for FormDesigner.
 - AI-assisted document review, advisory only.
 - broad visual redesign beyond authority/workload correction.
