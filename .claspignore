@@ -2,6 +2,7 @@
 !Admin.js
 !Admin_AccessControl.js
 !Admin_CapabilityGrants.js
+!Admin_CanonicalPopulation.js
 !Admin_DocumentGallery.js
 !Admin_DocumentServices.js
 !Admin_LifecycleAuthority.js
