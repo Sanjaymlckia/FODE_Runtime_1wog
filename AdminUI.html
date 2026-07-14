@@ -478,6 +478,7 @@
     .actionabilitySelectBox strong{ min-width:0; }
     .actionabilityGuidance{ display:block; color:#263f58; font-size:14px; font-weight:800; margin-top:4px; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; line-height:1.42; }
     .actionabilityHiddenPanel, .actionabilityBatchPanel{ border-top:1px solid #e5ebf2; background:#fbfdff; padding:9px 10px; color:#173451; }
+    .actionabilityBucketCard > .actionabilityHiddenPanel{ grid-column:1 / -1; border-top:1px solid #dbe5ef; margin:0 12px 12px; border-radius:8px; }
     .actionabilityHiddenPanel summary{ cursor:pointer; font-weight:900; color:#174a8b; }
     .actionabilityHiddenList{ display:grid; gap:6px; margin-top:8px; }
     .actionabilityHiddenRecord{ display:grid; grid-template-columns:minmax(230px,1.1fr) minmax(230px,1fr) minmax(260px,1.2fr) minmax(180px,.8fr); gap:12px; align-items:start; padding:12px; border:1px solid #cbd8e6; border-radius:8px; background:#fff; font-size:14px; }
@@ -10786,7 +10787,6 @@ function renderStageDashboard_(items, emptyMessage){
         + '<div><div class="actionabilityBucketTitle">' + esc(actionabilityGroupLabel_(key)) + '</div><div class="actionabilityBucketDescription">' + esc(actionabilityBucketDescription_(key)) + '</div></div>'
         + '<div class="actionabilityBucketActions">'
         + '<button class="actionabilityBucketReviewBtn operatorControl operatorControlSecondary" type="button" onclick="filterActionabilityBucketForReview_(\'' + esc(key) + '\', this)" ' + (visibleCount ? "" : "disabled") + ' title="Show this bucket worklist. Use row Review to open an exact applicant.">Show Worklist</button>'
-        + actionabilityHiddenPanel_(key, populationCount, visibleCount)
         + '</div></div>'
         + '<div class="actionabilityBucketMain">'
         + '<div class="actionabilityBucketMetricGrid">'
@@ -10809,6 +10809,7 @@ function renderStageDashboard_(items, emptyMessage){
         + '<div class="actionabilityBucketStatusBlock"><strong>Status</strong><span>' + esc(stateBadge) + '</span><em>' + esc(statusReason) + '</em></div>'
         + '<div class="actionabilityBucketStatusBlock"><strong>Hidden Summary</strong><span>' + esc(hiddenSummary) + '</span><em>' + esc(hiddenBreakdown) + '</em></div>'
         + '</div>'
+        + actionabilityHiddenPanel_(key, populationCount, visibleCount)
         + '</div>';
     }
 
