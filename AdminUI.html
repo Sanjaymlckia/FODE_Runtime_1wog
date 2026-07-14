@@ -3104,6 +3104,177 @@
     </div>
   </div>
 
+  <style>
+    #reviewV2Root{
+      --reviewV2-ink:#0b1f35;
+      --reviewV2-text:#173451;
+      --reviewV2-soft:#40556b;
+      --reviewV2-line:#9fb4ca;
+      --reviewV2-panel:#ffffff;
+      --reviewV2-wash:#f4f8fc;
+      --reviewV2-blue:#174f88;
+      --reviewV2-blueDark:#0b2f55;
+      --reviewV2-warn:#805006;
+      --reviewV2-danger:#8b1f1f;
+      display:none;
+      position:fixed;
+      inset:0;
+      z-index:10050;
+      background:rgba(6,22,38,.62);
+      align-items:center;
+      justify-content:center;
+      padding:22px;
+      color:var(--reviewV2-text);
+      font-size:15px;
+      line-height:1.45;
+    }
+    #reviewV2Root.reviewV2-open{ display:flex; }
+    #reviewV2Root .reviewV2-dialog{
+      width:min(1480px, calc(100vw - 44px));
+      max-height:calc(100vh - 44px);
+      display:grid;
+      grid-template-rows:auto 1fr auto;
+      overflow:hidden;
+      background:var(--reviewV2-panel);
+      border:2px solid #7f9bb7;
+      border-radius:16px;
+      box-shadow:0 24px 70px rgba(3,18,32,.36);
+    }
+    #reviewV2Root .reviewV2-header{
+      background:linear-gradient(135deg,#071b31 0%,#0d3761 58%,#174f88 100%);
+      color:#ffffff;
+      padding:18px 22px;
+      border-bottom:2px solid #7fb3e4;
+    }
+    #reviewV2Root .reviewV2-titleRow{ display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
+    #reviewV2Root .reviewV2-kicker{ color:#d8ebff; font-size:13px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; }
+    #reviewV2Root .reviewV2-title{ margin-top:4px; color:#ffffff; font-size:27px; font-weight:900; line-height:1.15; overflow-wrap:anywhere; }
+    #reviewV2Root .reviewV2-subtitle{ margin-top:5px; color:#eef7ff; font-size:15px; font-weight:700; overflow-wrap:anywhere; }
+    #reviewV2Root .reviewV2-headerGrid{ margin-top:16px; display:grid; grid-template-columns:repeat(6,minmax(150px,1fr)); gap:10px; }
+    #reviewV2Root .reviewV2-headerFact{ background:rgba(255,255,255,.11); border:1px solid rgba(216,235,255,.55); border-radius:10px; padding:9px 10px; min-width:0; }
+    #reviewV2Root .reviewV2-label{ display:block; color:#d8ebff; font-size:13px; font-weight:850; letter-spacing:.03em; text-transform:uppercase; }
+    #reviewV2Root .reviewV2-value{ display:block; margin-top:3px; color:#ffffff; font-size:15px; font-weight:800; overflow-wrap:anywhere; }
+    #reviewV2Root .reviewV2-close{
+      min-height:40px;
+      padding:8px 14px;
+      border:1px solid #c8e1ff;
+      border-radius:10px;
+      background:#ffffff;
+      color:#0b2f55;
+      font-size:14px;
+      font-weight:850;
+      cursor:pointer;
+    }
+    #reviewV2Root .reviewV2-close:focus-visible,
+    #reviewV2Root .reviewV2-tab:focus-visible,
+    #reviewV2Root .reviewV2-action:focus-visible{ outline:3px solid #ffbf47; outline-offset:2px; }
+    #reviewV2Root .reviewV2-main{ overflow:auto; background:var(--reviewV2-wash); }
+    #reviewV2Root .reviewV2-status{ margin:14px 18px 0; padding:11px 13px; border:1px solid #9fb4ca; border-radius:10px; background:#ffffff; color:#173451; font-weight:800; }
+    #reviewV2Root .reviewV2-status.reviewV2-error{ border-color:#d99b9b; background:#fdeaea; color:var(--reviewV2-danger); }
+    #reviewV2Root .reviewV2-summary{ display:grid; grid-template-columns:repeat(5,minmax(170px,1fr)); gap:12px; padding:14px 18px; }
+    #reviewV2Root .reviewV2-field{ background:#ffffff; border:1px solid #b4c6d8; border-radius:12px; padding:11px 12px; min-width:0; }
+    #reviewV2Root .reviewV2-field .reviewV2-label{ color:#40556b; }
+    #reviewV2Root .reviewV2-field .reviewV2-value{ color:#0b1f35; font-weight:850; }
+    #reviewV2Root .reviewV2-tabs{ display:flex; flex-wrap:wrap; gap:8px; padding:0 18px 12px; border-bottom:1px solid #c9d7e5; }
+    #reviewV2Root .reviewV2-tab{
+      min-height:40px;
+      padding:8px 13px;
+      border:1px solid #9fb4ca;
+      border-radius:999px;
+      background:#ffffff;
+      color:#173451;
+      font-size:14px;
+      font-weight:850;
+      cursor:pointer;
+    }
+    #reviewV2Root .reviewV2-tab[aria-selected="true"]{ background:#0f4e85; border-color:#0f4e85; color:#ffffff; box-shadow:inset 0 -3px 0 #ffbf47; }
+    #reviewV2Root .reviewV2-panels{ padding:16px 18px 18px; }
+    #reviewV2Root .reviewV2-section{ display:none; }
+    #reviewV2Root .reviewV2-section.reviewV2-active{ display:block; }
+    #reviewV2Root .reviewV2-sectionTitle{ color:#0b1f35; font-size:21px; font-weight:900; margin:0 0 10px; }
+    #reviewV2Root .reviewV2-grid{ display:grid; grid-template-columns:repeat(3,minmax(220px,1fr)); gap:12px; }
+    #reviewV2Root .reviewV2-card{ background:#ffffff; border:1px solid #b4c6d8; border-radius:12px; padding:13px; color:#173451; min-width:0; }
+    #reviewV2Root .reviewV2-cardTitle{ color:#0b1f35; font-size:15px; font-weight:900; margin-bottom:6px; }
+    #reviewV2Root .reviewV2-cardText{ color:#173451; font-size:14px; font-weight:650; overflow-wrap:anywhere; }
+    #reviewV2Root .reviewV2-list{ display:grid; gap:10px; }
+    #reviewV2Root .reviewV2-document{ display:grid; grid-template-columns:minmax(220px,1.2fr) minmax(170px,.8fr) minmax(230px,1fr) minmax(190px,.8fr); gap:10px; align-items:start; }
+    #reviewV2Root .reviewV2-pill{ display:inline-flex; align-items:center; min-height:28px; padding:4px 10px; border-radius:999px; border:1px solid #9fb4ca; background:#eef6ff; color:#0f4e85; font-size:13px; font-weight:900; }
+    #reviewV2Root .reviewV2-actions{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    #reviewV2Root .reviewV2-action{
+      min-height:40px;
+      padding:8px 12px;
+      border:1px solid #8da2b7;
+      border-radius:10px;
+      background:#ffffff;
+      color:#0b2f55;
+      font-size:14px;
+      font-weight:850;
+      cursor:pointer;
+    }
+    #reviewV2Root .reviewV2-action.reviewV2-primary{ background:#0f4e85; color:#ffffff; border-color:#0f4e85; }
+    #reviewV2Root .reviewV2-action[disabled]{ background:#e2eaf2; color:#26384e; border-color:#8da2b7; cursor:not-allowed; opacity:1; }
+    #reviewV2Root .reviewV2-footer{ display:flex; justify-content:space-between; gap:12px; padding:12px 18px; background:#ffffff; border-top:1px solid #c9d7e5; color:#173451; }
+    #reviewV2Root .reviewV2-footerNote{ font-size:13px; font-weight:750; color:#40556b; }
+    @media (max-width: 1100px){
+      #reviewV2Root{ padding:12px; }
+      #reviewV2Root .reviewV2-dialog{ width:calc(100vw - 24px); max-height:calc(100vh - 24px); }
+      #reviewV2Root .reviewV2-headerGrid{ grid-template-columns:repeat(3,minmax(140px,1fr)); }
+      #reviewV2Root .reviewV2-summary{ grid-template-columns:repeat(2,minmax(180px,1fr)); }
+      #reviewV2Root .reviewV2-grid{ grid-template-columns:1fr; }
+      #reviewV2Root .reviewV2-document{ grid-template-columns:1fr; }
+    }
+  </style>
+
+  <div id="reviewV2Root" aria-hidden="true">
+    <div class="reviewV2-dialog" role="dialog" aria-modal="true" aria-labelledby="reviewV2Title" tabindex="-1">
+      <div class="reviewV2-header">
+        <div class="reviewV2-titleRow">
+          <div>
+            <div class="reviewV2-kicker">Review Workspace V2</div>
+            <div class="reviewV2-title" id="reviewV2Title">Applicant Review</div>
+            <div class="reviewV2-subtitle" id="reviewV2Subtitle">Exact applicant identity loading</div>
+          </div>
+          <button type="button" class="reviewV2-close" id="reviewV2CloseButton" onclick="closeReviewWorkspaceV2()">Close</button>
+        </div>
+        <div class="reviewV2-headerGrid" aria-label="Authoritative applicant facts">
+          <div class="reviewV2-headerFact"><span class="reviewV2-label">ApplicantID</span><span class="reviewV2-value" id="reviewV2ApplicantId">Loading</span></div>
+          <div class="reviewV2-headerFact"><span class="reviewV2-label">Row</span><span class="reviewV2-value" id="reviewV2RowNumber">Loading</span></div>
+          <div class="reviewV2-headerFact"><span class="reviewV2-label">Primary Route</span><span class="reviewV2-value" id="reviewV2PrimaryRoute">Loading</span></div>
+          <div class="reviewV2-headerFact"><span class="reviewV2-label">Lifecycle</span><span class="reviewV2-value" id="reviewV2Lifecycle">Loading</span></div>
+          <div class="reviewV2-headerFact"><span class="reviewV2-label">Owner</span><span class="reviewV2-value" id="reviewV2Owner">Loading</span></div>
+          <div class="reviewV2-headerFact"><span class="reviewV2-label">Finance</span><span class="reviewV2-value" id="reviewV2FinanceState">Loading</span></div>
+        </div>
+      </div>
+      <div class="reviewV2-main" id="reviewV2Main">
+        <div class="reviewV2-status" id="reviewV2Status" role="status" aria-live="polite">Loading applicant details...</div>
+        <div class="reviewV2-summary" id="reviewV2AuthoritySummary"></div>
+        <div class="reviewV2-tabs" role="tablist" aria-label="Review Workspace V2 sections">
+          <button type="button" class="reviewV2-tab" role="tab" id="reviewV2Tab-overview" aria-controls="reviewV2Panel-overview" aria-selected="true" data-review-v2-tab="overview">Overview</button>
+          <button type="button" class="reviewV2-tab" role="tab" id="reviewV2Tab-documents" aria-controls="reviewV2Panel-documents" aria-selected="false" data-review-v2-tab="documents">Documents</button>
+          <button type="button" class="reviewV2-tab" role="tab" id="reviewV2Tab-finance" aria-controls="reviewV2Panel-finance" aria-selected="false" data-review-v2-tab="finance">Finance</button>
+          <button type="button" class="reviewV2-tab" role="tab" id="reviewV2Tab-communications" aria-controls="reviewV2Panel-communications" aria-selected="false" data-review-v2-tab="communications">Communications</button>
+          <button type="button" class="reviewV2-tab" role="tab" id="reviewV2Tab-portal" aria-controls="reviewV2Panel-portal" aria-selected="false" data-review-v2-tab="portal">Portal</button>
+          <button type="button" class="reviewV2-tab" role="tab" id="reviewV2Tab-audit" aria-controls="reviewV2Panel-audit" aria-selected="false" data-review-v2-tab="audit">Audit</button>
+        </div>
+        <div class="reviewV2-panels">
+          <section class="reviewV2-section reviewV2-active" role="tabpanel" id="reviewV2Panel-overview" aria-labelledby="reviewV2Tab-overview"></section>
+          <section class="reviewV2-section" role="tabpanel" id="reviewV2Panel-documents" aria-labelledby="reviewV2Tab-documents"></section>
+          <section class="reviewV2-section" role="tabpanel" id="reviewV2Panel-finance" aria-labelledby="reviewV2Tab-finance"></section>
+          <section class="reviewV2-section" role="tabpanel" id="reviewV2Panel-communications" aria-labelledby="reviewV2Tab-communications"></section>
+          <section class="reviewV2-section" role="tabpanel" id="reviewV2Panel-portal" aria-labelledby="reviewV2Tab-portal"></section>
+          <section class="reviewV2-section" role="tabpanel" id="reviewV2Panel-audit" aria-labelledby="reviewV2Tab-audit"></section>
+        </div>
+      </div>
+      <div class="reviewV2-footer">
+        <div class="reviewV2-footerNote" id="reviewV2FooterNote">Legacy Review remains available as an explicit fallback for this acceptance pass.</div>
+        <div class="reviewV2-actions">
+          <button type="button" class="reviewV2-action" id="reviewV2LegacyFallback" onclick="openReviewWorkspaceV2LegacyFallback_()">Open legacy fallback for this applicant</button>
+          <button type="button" class="reviewV2-action reviewV2-primary" onclick="closeReviewWorkspaceV2()">Close Review Workspace</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal -->
   <div id="modalBack" class="modalBack">
     <div class="modal">
@@ -12646,6 +12817,436 @@ function renderStageDashboard_(items, emptyMessage){
       return String((facts && facts.blockReason) || "").trim();
     }
 
+    var reviewWorkspaceV2State = {
+      open: false,
+      requestedApplicantId: "",
+      requestedRowNumber: null,
+      originSurface: "",
+      originRoute: "",
+      originFilter: null,
+      returnContext: null,
+      trigger: null,
+      activeTab: "overview",
+      legacyFallbackUsed: false
+    };
+
+    function isReviewWorkspaceV2Available_(){
+      return !!document.getElementById("reviewV2Root");
+    }
+
+    function reviewWorkspaceV2Text_(value, fallback){
+      var text = String(value === null || value === undefined ? "" : value).trim();
+      return text || (fallback || "-");
+    }
+
+    function reviewWorkspaceV2Humanize_(value){
+      var raw = String(value || "").trim();
+      if (!raw) return "-";
+      var map = {
+        PAYMENT_PENDING: "Payment pending",
+        PAYMENT_TO_VERIFY: "Payment to verify",
+        PAID_VERIFIED: "Payment verified",
+        SEND_PAYMENT_REMINDER: "Send payment reminder",
+        SEND_DOCS_REMINDER: "Send documents reminder",
+        COOLING_OFF_ACTIVE: "Cooling-off active",
+        OTHER_AUTHORITY: "Owned by another authority path",
+        APPLICANT: "Applicant",
+        FINANCE: "Finance",
+        COMMUNICATIONS: "Communications",
+        DOCUMENTS: "Documents",
+        PORTAL: "Portal",
+        CONTACTABILITY: "Contactability",
+        ENROLMENT_READY: "Enrolment ready",
+        INCOMPLETE_DOCUMENTS: "Incomplete documents",
+        DOCUMENTS_TO_VERIFY: "Documents to verify",
+        APPLICATION_RECEIVED: "Application received"
+      };
+      var upper = raw.toUpperCase();
+      if (map[upper]) return map[upper];
+      return raw.replace(/_/g, " ").replace(/\w\S*/g, function(word){
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      });
+    }
+
+    function reviewWorkspaceV2SetText_(id, value){
+      var el = document.getElementById(id);
+      if (el) el.textContent = reviewWorkspaceV2Text_(value);
+    }
+
+    function reviewWorkspaceV2SetHtml_(id, html){
+      var el = document.getElementById(id);
+      if (el) el.innerHTML = html || "";
+    }
+
+    function reviewWorkspaceV2FieldHtml_(label, value){
+      return '<div class="reviewV2-field"><span class="reviewV2-label">' + esc(label) + '</span><span class="reviewV2-value">' + esc(reviewWorkspaceV2Text_(value)) + '</span></div>';
+    }
+
+    function reviewWorkspaceV2CardHtml_(title, text, extraHtml){
+      return '<div class="reviewV2-card"><div class="reviewV2-cardTitle">' + esc(title) + '</div><div class="reviewV2-cardText">' + esc(reviewWorkspaceV2Text_(text)) + '</div>' + (extraHtml || '') + '</div>';
+    }
+
+    function reviewWorkspaceV2ActionHtml_(label, handlerName, disabled, primary){
+      return '<button type="button" class="reviewV2-action' + (primary ? ' reviewV2-primary' : '') + '" onclick="' + handlerName + '()"'
+        + (disabled ? ' disabled aria-disabled="true"' : '') + '>' + esc(label) + '</button>';
+    }
+
+    function buildReviewWorkspaceV2Context_(rowNumber, applicantId, triggerBtn, opts){
+      var o = (opts && typeof opts === "object") ? opts : {};
+      var operatorNextActive = (typeof operatorNextIsActive_ === "function") && operatorNextIsActive_();
+      return {
+        applicantId: String(applicantId || "").trim(),
+        rowNumber: Number.isFinite(Number(rowNumber)) && Number(rowNumber) >= 2 ? Number(rowNumber) : null,
+        originSurface: String(o.originSurface || (operatorNextActive ? "Operator Next" : "Current Admin")),
+        originRoute: String(o.originRoute || o.target || (pendingActionabilityReviewContext && pendingActionabilityReviewContext.originRoute) || ""),
+        originFilter: o.originFilter || (pendingActionabilityReviewContext && pendingActionabilityReviewContext.financeFilters) || null,
+        returnContext: o.returnContext || null,
+        trigger: triggerBtn || null
+      };
+    }
+
+    function openReviewWorkspaceV2(context){
+      if (!isReviewWorkspaceV2Available_()) return false;
+      var ctx = context || {};
+      reviewWorkspaceV2State.open = true;
+      reviewWorkspaceV2State.requestedApplicantId = String(ctx.applicantId || "").trim();
+      reviewWorkspaceV2State.requestedRowNumber = Number(ctx.rowNumber || 0) >= 2 ? Number(ctx.rowNumber) : null;
+      reviewWorkspaceV2State.originSurface = String(ctx.originSurface || "Current Admin");
+      reviewWorkspaceV2State.originRoute = String(ctx.originRoute || "");
+      reviewWorkspaceV2State.originFilter = ctx.originFilter || null;
+      reviewWorkspaceV2State.returnContext = ctx.returnContext || null;
+      reviewWorkspaceV2State.trigger = ctx.trigger || null;
+      reviewWorkspaceV2State.activeTab = "overview";
+      reviewWorkspaceV2State.legacyFallbackUsed = false;
+
+      var root = document.getElementById("reviewV2Root");
+      if (!root) return false;
+      var legacyBack = document.getElementById("modalBack");
+      if (legacyBack) legacyBack.style.display = "none";
+      root.classList.add("reviewV2-open");
+      root.setAttribute("aria-hidden", "false");
+      reviewWorkspaceV2SetText_("reviewV2Title", "Loading applicant details");
+      reviewWorkspaceV2SetText_("reviewV2Subtitle", "Requested ApplicantID " + (reviewWorkspaceV2State.requestedApplicantId || "-"));
+      reviewWorkspaceV2SetText_("reviewV2ApplicantId", reviewWorkspaceV2State.requestedApplicantId || "Requested by row");
+      reviewWorkspaceV2SetText_("reviewV2RowNumber", reviewWorkspaceV2State.requestedRowNumber ? String(reviewWorkspaceV2State.requestedRowNumber) : "-");
+      reviewWorkspaceV2SetText_("reviewV2PrimaryRoute", "Loading");
+      reviewWorkspaceV2SetText_("reviewV2Lifecycle", "Loading");
+      reviewWorkspaceV2SetText_("reviewV2Owner", "Loading");
+      reviewWorkspaceV2SetText_("reviewV2FinanceState", "Loading");
+      reviewWorkspaceV2SetText_("reviewV2Status", "Loading applicant details...");
+      var statusEl = document.getElementById("reviewV2Status");
+      if (statusEl) statusEl.classList.remove("reviewV2-error");
+      reviewWorkspaceV2SetHtml_("reviewV2AuthoritySummary", "");
+      ["overview", "documents", "finance", "communications", "portal", "audit"].forEach(function(tab){
+        reviewWorkspaceV2SetHtml_("reviewV2Panel-" + tab, tab === "overview" ? '<h3 class="reviewV2-sectionTitle">Loading</h3><div class="reviewV2-card"><div class="reviewV2-cardText">Applicant detail request is in progress.</div></div>' : "");
+      });
+      bindReviewWorkspaceV2Tabs_();
+      setActiveReviewWorkspaceV2Tab_("overview");
+      window.setTimeout(function(){
+        var dialog = document.querySelector("#reviewV2Root .reviewV2-dialog");
+        if (dialog && typeof dialog.focus === "function") dialog.focus();
+      }, 0);
+      return true;
+    }
+
+    function renderReviewWorkspaceV2Error_(message){
+      if (!isReviewWorkspaceV2Available_()) return;
+      var root = document.getElementById("reviewV2Root");
+      if (root && !root.classList.contains("reviewV2-open")) {
+        root.classList.add("reviewV2-open");
+        root.setAttribute("aria-hidden", "false");
+      }
+      var status = document.getElementById("reviewV2Status");
+      if (status) {
+        status.textContent = reviewWorkspaceV2Text_(message, "Review Workspace V2 could not load this applicant.");
+        status.classList.add("reviewV2-error");
+      }
+      reviewWorkspaceV2SetHtml_("reviewV2Panel-overview",
+        '<h3 class="reviewV2-sectionTitle">Unable to open exact applicant</h3>'
+        + reviewWorkspaceV2CardHtml_("Blocked", message || "Detail request failed. No fallback applicant was opened.", ""));
+    }
+
+    function validateReviewWorkspaceV2Identity_(detail){
+      var requestedId = String(reviewWorkspaceV2State.requestedApplicantId || "").trim();
+      var loadedId = String((detail && detail.ApplicantID) || "").trim();
+      if (requestedId && loadedId && requestedId !== loadedId) {
+        return "Applicant identity mismatch. Requested " + requestedId + " but server returned " + loadedId + ".";
+      }
+      var requestedRow = Number(reviewWorkspaceV2State.requestedRowNumber || 0);
+      var loadedRow = Number((detail && detail._rowNumber) || 0);
+      if (Number.isFinite(requestedRow) && requestedRow >= 2 && Number.isFinite(loadedRow) && loadedRow >= 2 && requestedRow !== loadedRow) {
+        return "Applicant row mismatch. Requested row " + requestedRow + " but server returned row " + loadedRow + ".";
+      }
+      if (!loadedId) return "Applicant detail response did not include ApplicantID.";
+      return "";
+    }
+
+    function reviewWorkspaceV2Facts_(detail){
+      var d = detail || {};
+      var facts = opsPortalDiagnosticsFacts_(d);
+      var proof = facts && facts.resolverProof ? facts.resolverProof : {};
+      var authority = reviewAuthoritySnapshot_(d) || {};
+      var authorityState = authority.authorityState || {};
+      var fullName = ((d.First_Name || "") + " " + (d.Last_Name || "")).trim() || opsDetailName_(d) || "Unnamed Applicant";
+      var lifecycleBase = String(authority && authority.canonicalLifecycle && authority.canonicalLifecycle.baseState || "").trim();
+      var primaryRoute = reviewWorkspaceV2Text_(authority.primaryRoute || authority.actionOwner || proof.currentQueueBucket || facts.nextActionLabel || "Review Workspace");
+      var nextAction = reviewWorkspaceV2Humanize_(authority.nextAction || facts.nextActionLabel || d.Next_Action || d.Recommended_Next_Action || "");
+      var blocker = reviewWorkspaceV2Text_(authority.selectBlockReason || facts.blockReason || d.Blocker || d.Current_Blocker || "No active blocker returned");
+      var nextActionAt = reviewWorkspaceV2Text_(authority.nextActionAt || d.Next_Action_At || d.Comm_Next_Action_Date || d.Next_Eligible_Send || "");
+      var recommendedCommunication = reviewWorkspaceV2Humanize_(d.Comm_Recommended_Message_Type || authority.recommendedMessageType || d.Recommended_Message_Type || "");
+      var financeApplicability = reviewWorkspaceV2Text_(d.Finance_Applicability || d.Payment_Applicability || "");
+      if (financeApplicability === "-") {
+        var financeRoute = String(authority.primaryRoute || authority.actionOwner || "").trim().toUpperCase();
+        var financeLifecycle = String(authority && authority.canonicalLifecycle && authority.canonicalLifecycle.baseState || "").trim().toUpperCase();
+        financeApplicability = (
+          financeRoute === "FINANCE"
+          || financeLifecycle.indexOf("PAYMENT") >= 0
+          || authorityState.paymentVerified === true
+          || authorityState.paymentEvidencePresent === true
+        ) ? "Finance authority returned in applicant detail" : "Not returned by applicant detail";
+      }
+      return {
+        name: fullName,
+        applicantId: reviewWorkspaceV2Text_(d.ApplicantID),
+        rowNumber: Number(d._rowNumber || currentRowNumber || 0) || "",
+        email: reviewWorkspaceV2Text_(d.Effective_Email || d.Parent_Email_Corrected || d.Parent_Email),
+        phone: reviewWorkspaceV2Text_(facts.phone || d.Parent_Phone || d.Parent_Mobile || d.Phone_Number || d.Mobile || d.Phone),
+        programme: reviewWorkspaceV2Text_(d.Programme || d.Program || d.Grade || d.Grade_Level || d.Subjects),
+        primaryRoute: reviewWorkspaceV2Humanize_(primaryRoute),
+        lifecycle: reviewDisplayStageFromAuthority_(d, facts) || reviewWorkspaceV2Humanize_(lifecycleBase),
+        actionability: reviewWorkspaceV2Humanize_(authority.actionabilityState || facts.actionabilityState || d.Actionability_State || ""),
+        owner: reviewOwnerLabelFromAuthority_(d, facts, proof),
+        blocker: blocker,
+        nextAction: nextAction,
+        nextActionAt: nextActionAt,
+        contactability: reviewWorkspaceV2Text_(facts.contactabilityLabel || d.Contactability_Status || d.Email_Status || d.Delivery_Health || "No contactability status returned"),
+        financeState: reviewPaymentLabelFromAuthority_(d, facts),
+        financeApplicability: financeApplicability,
+        communicationRecommendation: recommendedCommunication,
+        portalState: reviewWorkspaceV2Text_(facts.portalStateLabel + " | " + (d.Portal_Access_Status || "Open")),
+        tokenAge: reviewWorkspaceV2Text_(d.PortalTokenAgeDays === null || d.PortalTokenAgeDays === undefined || d.PortalTokenAgeDays === "" ? "Not issued" : String(d.PortalTokenAgeDays) + " day(s)"),
+        docsState: reviewWorkspaceV2Text_(facts.documentStateLabel || d.Doc_Verification_Status_Computed || d.Doc_Verification_Status),
+        audit: reviewWorkspaceV2Text_("Last: " + (d.Doc_Last_Verified_At || "-") + " | By: " + (d.Doc_Last_Verified_By || "-")),
+        authority: authority,
+        authorityState: authorityState
+      };
+    }
+
+    function renderReviewWorkspaceV2_(detail){
+      if (!isReviewWorkspaceV2Available_()) return false;
+      var identityError = validateReviewWorkspaceV2Identity_(detail);
+      if (identityError) {
+        renderReviewWorkspaceV2Error_(identityError);
+        return false;
+      }
+      var f = reviewWorkspaceV2Facts_(detail);
+      reviewWorkspaceV2SetText_("reviewV2Title", f.name);
+      reviewWorkspaceV2SetText_("reviewV2Subtitle", f.email + " | " + f.phone);
+      reviewWorkspaceV2SetText_("reviewV2ApplicantId", f.applicantId);
+      reviewWorkspaceV2SetText_("reviewV2RowNumber", f.rowNumber ? String(f.rowNumber) : "-");
+      reviewWorkspaceV2SetText_("reviewV2PrimaryRoute", f.primaryRoute);
+      reviewWorkspaceV2SetText_("reviewV2Lifecycle", f.lifecycle);
+      reviewWorkspaceV2SetText_("reviewV2Owner", f.owner);
+      reviewWorkspaceV2SetText_("reviewV2FinanceState", f.financeState);
+      var status = document.getElementById("reviewV2Status");
+      if (status) {
+        status.textContent = "Loaded exact applicant " + f.applicantId + ". Mutation actions remain delegated to existing Review handlers.";
+        status.classList.remove("reviewV2-error");
+      }
+      reviewWorkspaceV2SetHtml_("reviewV2AuthoritySummary", [
+        reviewWorkspaceV2FieldHtml_("Primary route", f.primaryRoute),
+        reviewWorkspaceV2FieldHtml_("Lifecycle", f.lifecycle),
+        reviewWorkspaceV2FieldHtml_("Current operational state", f.actionability),
+        reviewWorkspaceV2FieldHtml_("Current owner", f.owner),
+        reviewWorkspaceV2FieldHtml_("Operator action now", f.nextAction),
+        reviewWorkspaceV2FieldHtml_("Why action is blocked", f.blocker),
+        reviewWorkspaceV2FieldHtml_("Next action available", f.nextActionAt),
+        reviewWorkspaceV2FieldHtml_("Recommended communication", f.communicationRecommendation),
+        reviewWorkspaceV2FieldHtml_("Finance applicability", f.financeApplicability),
+        reviewWorkspaceV2FieldHtml_("Contactability", f.contactability)
+      ].join(""));
+      renderReviewWorkspaceV2Overview_(detail, f);
+      renderReviewWorkspaceV2Documents_(detail, f);
+      renderReviewWorkspaceV2Finance_(detail, f);
+      renderReviewWorkspaceV2Communications_(detail, f);
+      renderReviewWorkspaceV2Portal_(detail, f);
+      renderReviewWorkspaceV2Audit_(detail, f);
+      bindReviewWorkspaceV2Tabs_();
+      setActiveReviewWorkspaceV2Tab_(reviewWorkspaceV2State.activeTab || "overview");
+      return true;
+    }
+
+    function renderReviewWorkspaceV2Overview_(detail, f){
+      reviewWorkspaceV2SetHtml_("reviewV2Panel-overview",
+        '<h3 class="reviewV2-sectionTitle">Overview</h3><div class="reviewV2-grid">'
+        + reviewWorkspaceV2CardHtml_("Applicant identity", f.name + " | " + f.applicantId + " | Row " + (f.rowNumber || "-"), "")
+        + reviewWorkspaceV2CardHtml_("Programme / grade", f.programme, "")
+        + reviewWorkspaceV2CardHtml_("Route and ownership", f.primaryRoute + " | " + f.owner, "")
+        + reviewWorkspaceV2CardHtml_("Document progress", f.docsState, "")
+        + reviewWorkspaceV2CardHtml_("Finance progress", f.financeState + " | " + f.financeApplicability, "")
+        + reviewWorkspaceV2CardHtml_("Contactability", f.contactability, "")
+        + reviewWorkspaceV2CardHtml_("Communication status", f.communicationRecommendation, "")
+        + reviewWorkspaceV2CardHtml_("Next action", f.nextAction + " | " + f.nextActionAt, "")
+        + reviewWorkspaceV2CardHtml_("Important exceptions", f.blocker, "")
+        + '</div>');
+    }
+
+    function renderReviewWorkspaceV2Documents_(detail, f){
+      var docs = Array.isArray(detail && detail._docs) ? detail._docs : [];
+      var rows = docs.length ? docs.map(function(doc, idx){
+        return '<div class="reviewV2-card reviewV2-document">'
+          + '<div><div class="reviewV2-cardTitle">' + esc(doc.label || ("Document " + String(idx + 1))) + '</div><div class="reviewV2-cardText">' + esc(doc.hasFile ? "File evidence present" : "No uploaded file") + '</div></div>'
+          + '<div><span class="reviewV2-label">Review state</span><span class="reviewV2-pill">' + esc(reviewWorkspaceV2Humanize_(doc.status || "Pending")) + '</span></div>'
+          + '<div><span class="reviewV2-label">Reviewer note</span><div class="reviewV2-cardText">' + esc(doc.comment || "No note returned") + '</div></div>'
+          + '<div><span class="reviewV2-label">Authority</span><div class="reviewV2-cardText">' + esc(doc.hasFile ? "Existing verification controls available" : "Verification blocked until upload exists") + '</div></div>'
+          + '</div>';
+      }).join("") : reviewWorkspaceV2CardHtml_("Documents", "No document DTOs were returned for this applicant.", "");
+      reviewWorkspaceV2SetHtml_("reviewV2Panel-documents",
+        '<h3 class="reviewV2-sectionTitle">Documents</h3>'
+        + '<div class="reviewV2-card"><div class="reviewV2-cardText">Document saves remain authority-gated and use the existing saveDocs handler. Heavy previews are not rendered until the operator explicitly opens the legacy gallery/fallback.</div>'
+        + '<div class="reviewV2-actions">' + reviewWorkspaceV2ActionHtml_("Open legacy document controls", "openReviewWorkspaceV2LegacyFallback_", false, true) + reviewWorkspaceV2ActionHtml_("Save document statuses", "saveDocs", !CAN_SAVE_DOCUMENT_STATUSES, false) + '</div></div>'
+        + '<div class="reviewV2-list" style="margin-top:12px;">' + rows + '</div>');
+    }
+
+    function renderReviewWorkspaceV2Finance_(detail, f){
+      reviewWorkspaceV2SetHtml_("reviewV2Panel-finance",
+        '<h3 class="reviewV2-sectionTitle">Finance</h3><div class="reviewV2-grid">'
+        + reviewWorkspaceV2CardHtml_("Payment applicability", f.financeApplicability, "")
+        + reviewWorkspaceV2CardHtml_("Receipt evidence state", reviewWorkspaceV2Text_(detail.Receipt_Status || detail.Payment_Receipt_Status || f.financeState), "")
+        + reviewWorkspaceV2CardHtml_("Payment verification", f.financeState, "")
+        + reviewWorkspaceV2CardHtml_("Current Finance action", f.nextAction, "")
+        + reviewWorkspaceV2CardHtml_("Finance blocker", f.blocker, "")
+        + reviewWorkspaceV2CardHtml_("Audit information", f.audit, "")
+        + '</div><div class="reviewV2-actions">'
+        + reviewWorkspaceV2ActionHtml_("Preflight Books payload", "preflightZohoBooksUi_", false, false)
+        + reviewWorkspaceV2ActionHtml_("Preview Books payload", "previewZohoBooksPayloadUi_", false, true)
+        + reviewWorkspaceV2ActionHtml_("Create draft invoice", "createZohoBooksDraftUi_", !CAN_WRITE_ZOHO_BOOKS, false)
+        + '</div>');
+    }
+
+    function renderReviewWorkspaceV2Communications_(detail, f){
+      var cooling = reviewWorkspaceV2Text_(detail.Cooling_Off_Status || detail.Comm_Cooling_Off_Status || f.blocker);
+      reviewWorkspaceV2SetHtml_("reviewV2Panel-communications",
+        '<h3 class="reviewV2-sectionTitle">Communications</h3><div class="reviewV2-grid">'
+        + reviewWorkspaceV2CardHtml_("Recommended message type", f.communicationRecommendation, "")
+        + reviewWorkspaceV2CardHtml_("Latest communication", reviewWorkspaceV2Text_(detail.Last_Contacted_At || detail.Last_Contact_Type || detail.Last_Contact_Result), "")
+        + reviewWorkspaceV2CardHtml_("Cooling-off status", cooling, "")
+        + reviewWorkspaceV2CardHtml_("Next communication date", f.nextActionAt, "")
+        + reviewWorkspaceV2CardHtml_("Send eligibility", reviewCommunicationEligibilityLabelFromAuthority_(detail, opsPortalDiagnosticsFacts_(detail)) || "Review required", "")
+        + reviewWorkspaceV2CardHtml_("Block reason", f.blocker, "")
+        + '</div><div class="reviewV2-actions">'
+        + reviewWorkspaceV2ActionHtml_("Preview communication", "reviewWorkspaceV2PreviewCommunication_", !CAN_PREVIEW_APPLICANT_COMMUNICATION, true)
+        + reviewWorkspaceV2ActionHtml_("Send communication", "sendApplicantMessageUi_", !CAN_SEND_INDIVIDUAL_EMAIL, false)
+        + reviewWorkspaceV2ActionHtml_("Open legacy communication controls", "openReviewWorkspaceV2LegacyFallback_", false, false)
+        + '</div>');
+    }
+
+    function renderReviewWorkspaceV2Portal_(detail, f){
+      reviewWorkspaceV2SetHtml_("reviewV2Panel-portal",
+        '<h3 class="reviewV2-sectionTitle">Portal</h3><div class="reviewV2-grid">'
+        + reviewWorkspaceV2CardHtml_("Portal-access state", f.portalState, "")
+        + reviewWorkspaceV2CardHtml_("Capability requirement", "Portal reset and access changes remain Super Admin-gated.", "")
+        + reviewWorkspaceV2CardHtml_("Current blocker", f.blocker, "")
+        + reviewWorkspaceV2CardHtml_("Token age", f.tokenAge, "")
+        + reviewWorkspaceV2CardHtml_("Audit context", f.audit, "")
+        + '</div><div class="reviewV2-actions">'
+        + reviewWorkspaceV2ActionHtml_("Copy portal link", "copyPortalLink", false, true)
+        + reviewWorkspaceV2ActionHtml_("Reset portal link", "resetPortalLink", !IS_SUPER, false)
+        + '</div>');
+    }
+
+    function renderReviewWorkspaceV2Audit_(detail, f){
+      var authority = f.authority || {};
+      var diagnostics = [
+        ["ApplicantID", f.applicantId],
+        ["Row", f.rowNumber || "-"],
+        ["Origin surface", reviewWorkspaceV2State.originSurface || "-"],
+        ["Origin route", reviewWorkspaceV2State.originRoute || "-"],
+        ["Authority reason", authority.selectBlockReason || authority.reason || f.blocker],
+        ["Raw diagnostics", "Raw enums intentionally limited to this Audit tab."]
+      ];
+      reviewWorkspaceV2SetHtml_("reviewV2Panel-audit",
+        '<h3 class="reviewV2-sectionTitle">Audit</h3><div class="reviewV2-list">'
+        + diagnostics.map(function(item){ return reviewWorkspaceV2CardHtml_(item[0], item[1], ""); }).join("")
+        + '</div>');
+    }
+
+    function reviewWorkspaceV2PreviewCommunication_(){
+      previewApplicantMessageUi_("review_v2_preview");
+    }
+
+    function bindReviewWorkspaceV2Tabs_(){
+      Array.from(document.querySelectorAll("#reviewV2Root [data-review-v2-tab]")).forEach(function(btn){
+        if (btn.getAttribute("data-review-v2-bound") === "1") return;
+        btn.setAttribute("data-review-v2-bound", "1");
+        btn.addEventListener("click", function(){
+          setActiveReviewWorkspaceV2Tab_(btn.getAttribute("data-review-v2-tab") || "overview");
+        });
+        btn.addEventListener("keydown", function(ev){
+          var tabs = Array.from(document.querySelectorAll("#reviewV2Root [data-review-v2-tab]"));
+          var index = tabs.indexOf(btn);
+          if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
+          ev.preventDefault();
+          var next = ev.key === "ArrowRight" ? index + 1 : index - 1;
+          if (next < 0) next = tabs.length - 1;
+          if (next >= tabs.length) next = 0;
+          tabs[next].focus();
+          setActiveReviewWorkspaceV2Tab_(tabs[next].getAttribute("data-review-v2-tab") || "overview");
+        });
+      });
+      var root = document.getElementById("reviewV2Root");
+      if (root && root.getAttribute("data-review-v2-escape-bound") !== "1") {
+        root.setAttribute("data-review-v2-escape-bound", "1");
+        root.addEventListener("keydown", function(ev){
+          if (ev.key === "Escape" && !isUiBusy) {
+            ev.preventDefault();
+            closeReviewWorkspaceV2();
+          }
+        });
+      }
+    }
+
+    function setActiveReviewWorkspaceV2Tab_(tab){
+      var active = String(tab || "overview");
+      reviewWorkspaceV2State.activeTab = active;
+      Array.from(document.querySelectorAll("#reviewV2Root [data-review-v2-tab]")).forEach(function(btn){
+        var selected = btn.getAttribute("data-review-v2-tab") === active;
+        btn.setAttribute("aria-selected", selected ? "true" : "false");
+      });
+      Array.from(document.querySelectorAll("#reviewV2Root .reviewV2-section")).forEach(function(panel){
+        panel.classList.toggle("reviewV2-active", panel.id === "reviewV2Panel-" + active);
+      });
+    }
+
+    function openReviewWorkspaceV2LegacyFallback_(){
+      if (!currentDetail) {
+        renderReviewWorkspaceV2Error_("Legacy fallback unavailable until exact applicant details are loaded.");
+        return;
+      }
+      var root = document.getElementById("reviewV2Root");
+      if (root) {
+        root.classList.remove("reviewV2-open");
+        root.setAttribute("aria-hidden", "true");
+      }
+      reviewWorkspaceV2State.open = false;
+      reviewWorkspaceV2State.legacyFallbackUsed = true;
+      openModal(currentDetail);
+    }
+
+    function closeReviewWorkspaceV2(){
+      var root = document.getElementById("reviewV2Root");
+      if (root) {
+        root.classList.remove("reviewV2-open");
+        root.setAttribute("aria-hidden", "true");
+      }
+      reviewWorkspaceV2State.open = false;
+      closeModal();
+      var trigger = reviewWorkspaceV2State.trigger;
+      if (trigger && typeof trigger.focus === "function") {
+        window.setTimeout(function(){ try { trigger.focus(); } catch (_e) {} }, 0);
+      }
+    }
+
     function openModalLoading_(applicantId, rowNumber){
       document.getElementById("mTitle").textContent = "Applicant Review - " + (applicantId || "Unknown");
       document.getElementById("mSub").textContent = "RowNumber: " + String(rowNumber || "");
@@ -12906,6 +13507,8 @@ function renderStageDashboard_(items, emptyMessage){
       const rowNum = Number(rowNumber);
       const id = String(applicantId || "").trim();
       const reviewOpts = (opts && typeof opts === "object") ? opts : {};
+      var reviewV2Context = buildReviewWorkspaceV2Context_(rowNum, id, triggerBtn, reviewOpts);
+      var useReviewV2 = isReviewWorkspaceV2Available_();
       console.log("[AdminUI] REVIEW_CLICK rowNumber=%s applicantId=%s reqId=%s", rowNumber, id || "", reqId);
       if (!id && (!Number.isFinite(rowNum) || rowNum < 2)) {
         clearPendingActionabilityReviewContext_();
@@ -12938,7 +13541,11 @@ function renderStageDashboard_(items, emptyMessage){
       document.getElementById("portalLinkBox").textContent = "";
       setLinkBusy(false);
       setReviewButtonLoading_(triggerBtn, true);
-      openModalLoading_(id || "", currentRowNumber || "");
+      if (useReviewV2) {
+        openReviewWorkspaceV2(reviewV2Context);
+      } else {
+        openModalLoading_(id || "", currentRowNumber || "");
+      }
       setMsg("mMsg","Loading...");
       var detailPayload = {};
       if (id) detailPayload.applicantId = id;
@@ -12971,6 +13578,7 @@ function renderStageDashboard_(items, emptyMessage){
             clearPendingActionabilityReviewContext_(reqId);
             setReviewHeaderLoading_(false);
             clearDocsLoading_("Detail request failed");
+            if (useReviewV2) renderReviewWorkspaceV2Error_("Detail request failed. No applicant was opened.");
             setActionButtonsEnabled(false);
             setReviewButtonLoading_(triggerBtn, false);
             setLinkBusy(false);
@@ -12990,7 +13598,37 @@ function renderStageDashboard_(items, emptyMessage){
             setMsg("mMsg", invalidMsg);
             setMsg("msg", invalidMsg);
             clearDocsLoading_("Invalid detail response");
+            if (useReviewV2) renderReviewWorkspaceV2Error_(invalidMsg);
             console.error("Unexpected detail response shape:", res);
+            setActionButtonsEnabled(false);
+            setReviewButtonLoading_(triggerBtn, false);
+            setLinkBusy(false);
+            return;
+          }
+
+          var loadedApplicantId = String((detail && detail.ApplicantID) || "").trim();
+          var loadedRowNumber = Number((detail && detail._rowNumber) || 0);
+          if (id && loadedApplicantId && loadedApplicantId !== id) {
+            var mismatchMsg = "Cannot open Review: requested ApplicantID " + id + " but server returned " + loadedApplicantId + ".";
+            clearPendingActionabilityReviewContext_(reqId);
+            setReviewHeaderLoading_(false);
+            setMsg("mMsg", mismatchMsg);
+            setMsg("msg", mismatchMsg);
+            clearDocsLoading_(mismatchMsg);
+            if (useReviewV2) renderReviewWorkspaceV2Error_(mismatchMsg);
+            setActionButtonsEnabled(false);
+            setReviewButtonLoading_(triggerBtn, false);
+            setLinkBusy(false);
+            return;
+          }
+          if (Number.isFinite(rowNum) && rowNum >= 2 && Number.isFinite(loadedRowNumber) && loadedRowNumber >= 2 && loadedRowNumber !== rowNum) {
+            var rowMismatchMsg = "Cannot open Review: requested row " + rowNum + " but server returned row " + loadedRowNumber + ".";
+            clearPendingActionabilityReviewContext_(reqId);
+            setReviewHeaderLoading_(false);
+            setMsg("mMsg", rowMismatchMsg);
+            setMsg("msg", rowMismatchMsg);
+            clearDocsLoading_(rowMismatchMsg);
+            if (useReviewV2) renderReviewWorkspaceV2Error_(rowMismatchMsg);
             setActionButtonsEnabled(false);
             setReviewButtonLoading_(triggerBtn, false);
             setLinkBusy(false);
@@ -13003,7 +13641,12 @@ function renderStageDashboard_(items, emptyMessage){
           if (detail && detail.ApplicantID) {
             opsSelectApplicantContext_(detail.ApplicantID, opsDetailName_(detail) || detail.ApplicantID);
           }
-          openModal(currentDetail);
+          if (useReviewV2) {
+            openModal(currentDetail, { populateOnly: true });
+            renderReviewWorkspaceV2_(currentDetail);
+          } else {
+            openModal(currentDetail);
+          }
           setActionButtonsEnabled(!!currentRowNumber);
           setMsg("mMsg", "");
           setMsg("msg", "");
@@ -13024,6 +13667,7 @@ function renderStageDashboard_(items, emptyMessage){
           setModalMsg_(failMsg);
           setMsg_(failMsg);
           clearDocsLoading_(failMsg);
+          if (useReviewV2) renderReviewWorkspaceV2Error_(failMsg);
           setReviewButtonLoading_(triggerBtn, false);
           setLinkBusy(false);
           setActionButtonsEnabled(false);
@@ -13148,7 +13792,9 @@ function renderStageDashboard_(items, emptyMessage){
       document.getElementById("mAudit").textContent = "Last: " + now + " | By: " + (ADMIN_EMAIL || "admin");
     }
 
-    function openModal(d){
+    function openModal(d, opts){
+      var openOpts = (opts && typeof opts === "object") ? opts : {};
+      var populateOnly = openOpts.populateOnly === true;
       resetDocumentGalleryState_();
       setRoleUi();
       resetModalState_();
@@ -13280,11 +13926,13 @@ function renderStageDashboard_(items, emptyMessage){
         renderDocCards_(docsWithProxy);
       });
 
-      document.getElementById("modalBack").style.display = "flex";
-      resetReviewModalScroll_();
+      if (!populateOnly) {
+        document.getElementById("modalBack").style.display = "flex";
+        resetReviewModalScroll_();
+      }
       syncDocumentGalleryUi_();
       syncModalEditControls_();
-      focusActionabilityReviewTarget_(d);
+      if (!populateOnly) focusActionabilityReviewTarget_(d);
     }
 
     function renderDocCards_(docs){

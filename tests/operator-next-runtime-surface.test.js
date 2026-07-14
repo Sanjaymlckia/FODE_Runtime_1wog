@@ -102,7 +102,8 @@ assert.doesNotMatch(operatorNextUi, /Open first Review|Review first returned rec
 assert.doesNotMatch(operatorNextUi, /Continue to queue/i, "Operator Next must not require a Continue-to-queue step");
 assert.doesNotMatch(operatorNextUi, /admin_getOpsLifecycleSummary\(\{force:0\}\)/, "Contained Global View must not fetch OPS compatibility summary");
 assert.match(operatorNextUi, /row&&row\.selectable===true/, "Selection must consume server Actionability selectable");
-assert.match(operatorNextUi, /review\(Number\(row\.rowNumber\|\|0\)\|\|null,String\(row\.applicantId\|\|''\),null,\{actionabilityFocus:true\}\)/, "Review handoff must preserve exact row and Applicant ID");
+assert.match(operatorNextUi, /review\(Number\(row\.rowNumber\|\|0\)\|\|null,String\(row\.applicantId\|\|''\),null,\{actionabilityFocus:true,originSurface:'Operator Next'/, "Review handoff must preserve exact row and Applicant ID with V2 origin context");
+assert.match(operatorNextUi, /returnContext:\{route:String\(operatorNextState_\.route\|\|''\),selected:Object\.keys\(operatorNextState_\.selected\|\|\{\}\)\}/, "Review handoff must preserve Operator Next return context");
 assert.match(operatorNextUi, /openBatchCommunicationFromSelection_\('selected'\)/, "Batch action must reuse the existing selected-cohort modal path");
 assert.match(operatorNextUi, /operatorNextHandleContext_[\s\S]*operatorNextOpenReview_\(row\)/, "Context actions must converge on the visible Review handler");
 assert.match(operatorNextUi, /data-onx-more=/, "Every worklist row must expose a non-right-click action alternative");
