@@ -31,15 +31,17 @@
           "whoamiUrl": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami",
           "expectedRuntime": "r347",
           "expectedDeploy": 347,
-          "expectedAppsScriptVersion": 379,
+          "expectedAppsScriptVersion": 381,
           "lastRelease": {
-            "runtimeIdentity": "r346 / 346",
-            "appsScriptVersion": 379,
-            "deploymentPin": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @379",
-            "description": "Finance cohort reconciliation and direct review routing acceptance release to Admin staging",
+            "runtimeIdentity": "r347 / 347",
+            "appsScriptVersion": 381,
+            "deploymentPin": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @381",
+            "description": "Current Admin readability, authority transparency, Operator Next parallel readability, and hidden-preview overlap correction",
             "commitRefs": [
-              "a4ce7c9",
-              "c59e7da"
+              "fc210d1",
+              "7aa2fa4",
+              "86da669",
+              "c690df3"
             ]
           }
         },
