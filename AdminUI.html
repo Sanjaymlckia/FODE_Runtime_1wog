@@ -156,7 +156,11 @@
       background: var(--fieldBg);
       color: var(--text);
       outline:none;
+      font-size:15px;
+      line-height:1.35;
+      font-weight:400;
     }
+    input::placeholder, textarea::placeholder{ color:#52677d; opacity:1; }
     input:focus, textarea:focus, select:focus{
       border-color: var(--mlcBlue);
       box-shadow: 0 0 0 2px rgba(79,156,255,.18);
@@ -365,7 +369,7 @@
     .actionabilityBucketCard[data-actionability-kpi="UNKNOWN"]:before{ background:#805006; }
     .actionabilityBucketLead{ padding:12px 12px 12px 17px; min-width:0; display:flex; flex-direction:column; gap:9px; }
     .actionabilityBucketTitle{ color:#0f1f35; font-size:18px; font-weight:900; line-height:1.12; }
-    .actionabilityBucketDescription{ color:#40556b; font-size:12px; line-height:1.35; font-weight:700; }
+    .actionabilityBucketDescription{ color:#31485f; font-size:14px; line-height:1.45; font-weight:700; }
     .actionabilityBucketActions{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:auto; }
     .actionabilityBucketReviewBtn{ border:1px solid #174a8b; border-radius:5px; background:#123f78; color:#fff; padding:7px 12px; font-size:12px; font-weight:900; cursor:pointer; line-height:1.2; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; min-height:32px; }
     .actionabilityBucketReviewBtn:hover{ background:#174a8b; }
@@ -376,7 +380,7 @@
     .actionabilityBucketMain{ padding:12px 4px; min-width:0; display:grid; gap:8px; align-content:start; }
     .actionabilityBucketMetricGrid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; padding:0 10px; }
     .actionabilityBucketMetric{ min-width:0; padding:0; }
-    .actionabilityBucketMetric .k{ color:#61748a; font-size:10px; text-transform:uppercase; font-weight:900; line-height:1.1; margin-top:4px; }
+    .actionabilityBucketMetric .k{ color:#40556b; font-size:12px; text-transform:uppercase; font-weight:900; line-height:1.25; margin-top:4px; letter-spacing:.02em; }
     .actionabilityBucketMetric .v{ color:#0f1f35; font-size:26px; line-height:1; font-weight:800; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; }
     .actionabilityBucketMetric.primary .v{ color:#174a8b; font-size:30px; }
     .actionabilityWorkloadBar{ display:flex; height:8px; margin:2px 10px 0; overflow:hidden; border-radius:999px; background:#edf2f7; }
@@ -385,19 +389,19 @@
     .actionabilityWorkloadSeg.cooling{ background:#9fb4ca; }
     .actionabilityWorkloadSeg.hidden{ background:#d7a755; }
     .actionabilityWorkloadSeg.completed{ background:#27744b; }
-    .actionabilityWorkloadLegend{ display:flex; gap:8px; flex-wrap:wrap; padding:0 10px; color:#40556b; font-size:10px; font-weight:850; }
+    .actionabilityWorkloadLegend{ display:flex; gap:10px; flex-wrap:wrap; padding:0 10px; color:#31485f; font-size:13px; font-weight:850; line-height:1.35; }
     .actionabilityWorkloadLegend span:before{ content:""; display:inline-block; width:7px; height:7px; border-radius:999px; margin-right:4px; vertical-align:middle; background:#8aa0b6; }
     .actionabilityWorkloadLegend .needs:before{ background:#1f70ea; }
     .actionabilityWorkloadLegend .cooling:before{ background:#9fb4ca; }
     .actionabilityWorkloadLegend .hidden:before{ background:#d7a755; }
     .actionabilityWorkloadLegend .completed:before{ background:#27744b; }
-    .actionabilityBucketNext{ padding:0 10px; color:#0f1f35; font-size:12px; font-weight:850; line-height:1.35; }
-    .actionabilityBucketNext strong{ display:block; color:#61748a; font-size:9px; text-transform:uppercase; font-weight:900; margin-bottom:2px; }
+    .actionabilityBucketNext{ padding:0 10px; color:#0f1f35; font-size:14px; font-weight:850; line-height:1.45; }
+    .actionabilityBucketNext strong{ display:block; color:#40556b; font-size:12px; text-transform:uppercase; font-weight:900; margin-bottom:3px; letter-spacing:.02em; }
     .actionabilityBucketState{ padding:12px 12px 12px 4px; min-width:0; display:grid; gap:8px; align-content:start; }
     .actionabilityBucketStatusBlock{ min-width:0; }
-    .actionabilityBucketStatusBlock strong{ display:block; color:#61748a; font-size:10px; font-weight:900; text-transform:uppercase; line-height:1.1; margin-bottom:3px; }
-    .actionabilityBucketStatusBlock span{ display:block; color:#173451; font-size:12px; font-weight:850; line-height:1.25; overflow-wrap:anywhere; }
-    .actionabilityBucketStatusBlock em{ display:block; color:#40556b; font-style:normal; font-size:11px; font-weight:700; line-height:1.3; margin-top:2px; }
+    .actionabilityBucketStatusBlock strong{ display:block; color:#40556b; font-size:12px; font-weight:900; text-transform:uppercase; line-height:1.25; margin-bottom:4px; letter-spacing:.02em; }
+    .actionabilityBucketStatusBlock span{ display:block; color:#173451; font-size:14px; font-weight:850; line-height:1.4; overflow-wrap:anywhere; }
+    .actionabilityBucketStatusBlock em{ display:block; color:#31485f; font-style:normal; font-size:13px; font-weight:700; line-height:1.42; margin-top:3px; }
     .actionabilityTraffic{ margin:8px 0 10px; border:1px solid var(--lineSoft); border-radius:var(--panelRadius); background:var(--surfaceSecondary); overflow:hidden; }
     .actionabilityTrafficTitle{ display:flex; justify-content:space-between; gap:8px; padding:7px 9px; border-bottom:1px solid #e5ebf2; color:#31516f; font-size:12px; font-weight:900; }
     .actionabilityTrafficGrid{ display:grid; grid-template-columns:repeat(8, minmax(0,1fr)); gap:0; }
@@ -407,49 +411,49 @@
     .actionabilityTrafficItem .v{ color:#0f1f35; font-size:13px; font-weight:850; margin-top:3px; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; line-height:1.25; }
     .actionabilityRows{ display:grid; gap:8px; margin-top:9px; }
     .actionabilityWorklist{ border:1px solid var(--line); border-radius:var(--panelRadius); background:#fff; overflow:hidden; box-shadow:none; }
-    .actionabilityWorklistTitle{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-bottom:1px solid #e5ebf2; color:#0f1f35; font-size:13px; font-weight:900; }
+    .actionabilityWorklistTitle{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; border-bottom:1px solid #dbe5ef; color:#0f1f35; font-size:16px; font-weight:900; }
     .actionabilityWorklistTable{ width:100%; }
-    .actionabilityWorklistHeader, .actionabilityWorklistRow{ display:grid; grid-template-columns:minmax(230px, 1.35fr) minmax(180px, .9fr) minmax(230px, 1.05fr) minmax(170px, .8fr) 96px; align-items:stretch; }
-    .actionabilityWorklistHeader{ min-height:38px; background:#f8fafc; border-bottom:1px solid #dbe5ef; color:#31516f; font-size:10px; font-weight:850; text-transform:uppercase; }
-    .actionabilityWorklistRow{ min-height:70px; border-bottom:1px solid #edf2f7; color:#0f172a; font-size:11px; }
+    .actionabilityWorklistHeader, .actionabilityWorklistRow{ display:grid; grid-template-columns:minmax(220px,1.15fr) minmax(180px,.8fr) minmax(220px,1fr) minmax(180px,.8fr) minmax(132px,.55fr); align-items:stretch; }
+    .actionabilityWorklistHeader{ min-height:48px; background:#f8fafc; border-bottom:1px solid #dbe5ef; color:#244766; font-size:12px; font-weight:900; text-transform:uppercase; }
+    .actionabilityWorklistRow{ min-height:116px; border-bottom:1px solid #dbe5ef; color:#0f172a; font-size:14px; background:#fff; }
     .actionabilityWorklistRow:last-child{ border-bottom:0; }
-    .actionabilityWorklistCell{ min-width:0; padding:7px 9px; overflow:visible; text-overflow:clip; }
-    .actionabilityWorklistCell strong{ display:block; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; line-height:1.25; }
-    .actionabilityWorklistCell span{ display:block; color:#2f4458; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; line-height:1.25; }
+    .actionabilityWorklistCell{ min-width:0; padding:12px 13px; overflow:visible; text-overflow:clip; }
+    .actionabilityWorklistCell strong{ display:block; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; line-height:1.35; }
+    .actionabilityWorklistCell span{ display:block; color:#263f58; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; line-height:1.42; }
     .actionabilityClusterHeader{ display:flex; flex-direction:column; justify-content:center; gap:3px; }
     .actionabilityClusterLabel{ color:#0f1f35; font-size:11px; line-height:1; }
     .actionabilityClusterSorts{ display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-top:2px; }
-    .actionabilitySortBtn{ display:inline-flex; align-items:center; border:1px solid #9fb4ca; border-radius:4px; background:#fff; color:#173451; font:inherit; font-size:10px; font-weight:850; text-transform:none; padding:3px 6px; cursor:pointer; text-align:left; line-height:1.2; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; min-height:26px; }
+    .actionabilitySortBtn{ display:inline-flex; align-items:center; border:1px solid #9fb4ca; border-radius:5px; background:#fff; color:#173451; font:inherit; font-size:12px; font-weight:850; text-transform:none; padding:5px 7px; cursor:pointer; text-align:left; line-height:1.25; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; min-height:30px; }
     .actionabilitySortBtn:hover{ color:#1f5aa5; border-color:#9fc0e4; background:#f5f9ff; text-decoration:none; }
     .actionabilitySortBtn.active{ border-color:#1f5aa5; background:#eef6ff; color:#0f3f78; box-shadow:inset 0 -2px 0 #1f5aa5; }
     .actionabilityPager{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-bottom:1px solid #e5ebf2; background:#fff; color:#31516f; font-size:12px; font-weight:850; flex-wrap:wrap; }
     .actionabilityPagerControls{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
     .actionabilityPagerControls .btn:disabled{ background:#e2eaf2; color:#26384e; border-color:#8da2b7; opacity:1; cursor:not-allowed; }
     .actionabilityWorklistDetails{ grid-column:1 / -1; border-top:1px solid #edf2f7; padding:6px 7px; background:#fbfcfe; }
-    .actionabilityFactGrid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:4px 8px; font-size:11px; line-height:1.28; }
+    .actionabilityFactGrid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px 12px; font-size:13px; line-height:1.4; }
     .actionabilityFact{ min-width:0; }
-    .actionabilityFact strong{ display:block; color:#40556b; font-size:9px; font-weight:900; text-transform:uppercase; }
+    .actionabilityFact strong{ display:block; color:#40556b; font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.02em; }
     .actionabilityFact span{ color:#0f172a; }
     .actionabilityStatusChips{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
-    .actionabilityMiniChip{ border:1px solid #9fb4ca; border-radius:999px; padding:2px 6px; background:#fff; color:#173451; font-size:10px; font-weight:850; line-height:1.25; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; min-height:22px; }
+    .actionabilityMiniChip{ border:1px solid #9fb4ca; border-radius:7px; padding:5px 8px; background:#fff; color:#173451; font-size:13px; font-weight:850; line-height:1.3; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; min-height:30px; }
     .actionabilityMiniChip.ok{ color:#145c34; border-color:#84bd98; background:#e7f4ec; }
     .actionabilityMiniChip.warn{ color:#805006; border-color:#d7a755; background:#fff2dc; }
     .actionabilityMiniChip.blocked{ color:#8b1f1f; border-color:#d18d8d; background:#fdeaea; }
-    .actionabilityApplicantCell strong{ color:#0f1f35; font-size:12px; font-weight:850; }
-    .actionabilityApplicantId{ color:#31516f; font-weight:800; }
+    .actionabilityApplicantCell strong{ color:#0f1f35; font-size:16px; font-weight:900; }
+    .actionabilityApplicantId{ color:#173451; font-weight:850; font-size:14px; }
     .actionabilityNextAction{ margin-top:4px; color:#0f172a; font-weight:850; }
-    .actionabilityOwnerCell strong{ color:#0f1f35; font-weight:800; }
+    .actionabilityOwnerCell strong{ color:#0f1f35; font-weight:850; font-size:15px; }
     .actionabilityOwnerCell .opsStatusPill{ display:inline-flex; margin-top:5px; width:auto; }
     .actionabilityProgressCell{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; align-content:center; }
     .actionabilityBlocker{ color:#8a1f1f; font-weight:850; }
     .actionabilityAuthority{ color:#244766; font-weight:850; }
-    .actionabilityDueBlock{ font-size:11px; color:#40556b; font-weight:800; }
+    .actionabilityDueBlock{ font-size:14px; color:#31485f; font-weight:800; }
     .actionabilityDueBlock span{ display:block; color:#0f172a; margin-top:2px; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; }
     .actionabilityUrgencyReason{ color:#244766 !important; font-weight:800; }
-    .actionabilityReviewCell{ display:flex; align-items:center; justify-content:center; }
-    .actionabilityReviewBtn{ width:100%; padding:9px 10px; border-radius:6px; background:#1f5aa5; border-color:#174a8b; color:#fff; font-size:12px; font-weight:850; }
+    .actionabilityReviewCell{ display:flex; align-items:flex-start; justify-content:center; }
+    .actionabilityReviewBtn{ width:100%; min-width:126px; min-height:42px; padding:10px 12px; border-radius:7px; background:#1f5aa5; border-color:#174a8b; color:#fff; font-size:14px; font-weight:900; line-height:1.25; }
     .actionabilityReviewBtn:hover{ background:#174a8b; }
-    .operatorControl{ border:1px solid #9fb4ca; border-radius:6px; color:#173451; background:#fff; box-shadow:none; font-weight:900; cursor:pointer; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.2; }
+    .operatorControl{ border:1px solid #9fb4ca; border-radius:7px; color:#173451; background:#fff; box-shadow:none; font-weight:900; cursor:pointer; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.25; min-height:38px; font-size:14px; }
     .operatorControlPrimary{ background:#1f5aa5; border-color:#174a8b; color:#fff; }
     .operatorControlPrimary:hover:not(:disabled){ background:#174a8b; color:#fff; filter:none; }
     .operatorControlSecondary{ background:#fff; border-color:#9fb4ca; color:#173451; }
@@ -465,22 +469,28 @@
     .actionabilityReviewBtn.operatorControlPrimary:hover:not(:disabled){ background:#174a8b; color:#fff; }
     .actionabilityBucketReviewBtn.operatorControlSecondary{ background:#fff; border-color:#7fa6d1; color:#174a8b; }
     .actionabilityBucketReviewBtn.operatorControlSecondary:hover:not(:disabled){ background:#eef6ff; color:#0f3f78; }
-    .actionabilityFilterNote{ color:#1f5aa5; font-size:12px; font-weight:900; margin:4px 0 8px; }
-    .actionabilitySelectionBar{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 10px; border-bottom:1px solid #e5ebf2; background:#fbfdff; color:#24445f; font-size:12px; font-weight:800; flex-wrap:wrap; }
+    .actionabilityFilterNote{ color:#174a8b; font-size:14px; font-weight:900; margin:8px 0 10px; line-height:1.45; }
+    .actionabilitySelectionBar{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:12px 14px; border-bottom:1px solid #dbe5ef; background:#fbfdff; color:#24445f; font-size:14px; font-weight:800; flex-wrap:wrap; }
     .actionabilitySelectionActions{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-    .actionabilitySelectionStatus{ color:#31516f; font-size:11px; font-weight:850; }
+    .actionabilitySelectionStatus{ color:#31485f; font-size:14px; font-weight:850; margin-top:3px; }
     .actionabilitySelectBox{ display:inline-flex; align-items:center; gap:6px; max-width:100%; cursor:pointer; }
     .actionabilitySelectBox input{ width:15px; height:15px; accent-color:#1f5aa5; flex:0 0 auto; }
     .actionabilitySelectBox strong{ min-width:0; }
-    .actionabilityGuidance{ display:block; color:#2f4458; font-size:11px; font-weight:800; margin-top:2px; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; line-height:1.3; }
+    .actionabilityGuidance{ display:block; color:#263f58; font-size:14px; font-weight:800; margin-top:4px; overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; line-height:1.42; }
     .actionabilityHiddenPanel, .actionabilityBatchPanel{ border-top:1px solid #e5ebf2; background:#fbfdff; padding:9px 10px; color:#173451; }
     .actionabilityHiddenPanel summary{ cursor:pointer; font-weight:900; color:#174a8b; }
     .actionabilityHiddenList{ display:grid; gap:6px; margin-top:8px; }
-    .actionabilityHiddenRecord{ display:grid; grid-template-columns:minmax(170px,1.2fr) minmax(120px,.75fr) minmax(210px,1.05fr) minmax(210px,1.05fr) auto; gap:8px; align-items:start; padding:7px 8px; border:1px solid #dbe5ef; border-radius:6px; background:#fff; font-size:11px; }
-    .actionabilityHiddenRecord strong{ display:block; color:#0f1f35; font-size:12px; }
-    .actionabilityHiddenRecord span{ display:block; color:#52677d; margin-top:2px; white-space:normal; overflow:visible; text-overflow:clip; line-height:1.35; }
-    .actionabilityHiddenCount{ margin-top:6px; font-size:12px; color:#173451; font-weight:900; }
-    .actionabilityHiddenNote{ margin-top:4px; font-size:11px; color:#40556b; line-height:1.4; }
+    .actionabilityHiddenRecord{ display:grid; grid-template-columns:minmax(230px,1.1fr) minmax(230px,1fr) minmax(260px,1.2fr) minmax(180px,.8fr); gap:12px; align-items:start; padding:12px; border:1px solid #cbd8e6; border-radius:8px; background:#fff; font-size:14px; }
+    .actionabilityHiddenRecord strong{ display:block; color:#0f1f35; font-size:15px; line-height:1.35; overflow-wrap:anywhere; }
+    .actionabilityHiddenRecord span{ display:block; color:#31485f; margin-top:3px; white-space:normal; overflow:visible; text-overflow:clip; line-height:1.42; overflow-wrap:anywhere; }
+    .actionabilityHiddenActions{ display:flex; flex-direction:column; gap:8px; align-items:stretch; }
+    .actionabilityAuthorityFields{ display:grid; grid-template-columns:1fr; gap:7px; }
+    .actionabilityField{ min-width:0; }
+    .actionabilityFieldLabel{ display:block; color:#40556b; font-size:12px; line-height:1.25; font-weight:900; text-transform:uppercase; letter-spacing:.02em; }
+    .actionabilityFieldValue{ display:block; color:#102030; font-size:14px; line-height:1.42; font-weight:800; margin-top:2px; overflow-wrap:anywhere; }
+    .actionabilityFieldValue.secondary{ color:#31485f; font-weight:700; }
+    .actionabilityHiddenCount{ margin-top:8px; font-size:14px; color:#173451; font-weight:900; }
+    .actionabilityHiddenNote{ margin-top:5px; font-size:13px; color:#31485f; line-height:1.45; }
     .actionabilityBatchPanel{ border-bottom:1px solid #e5ebf2; }
     .actionabilityBatchPanel h4{ margin:0 0 7px; color:#0f1f35; font-size:13px; }
     .actionabilityBatchGrid{ display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:6px; margin-bottom:8px; }
@@ -558,9 +568,9 @@
       .documentReviewActionBar{ top:126px; }
       .reviewPortalSummaryGrid{ grid-template-columns:1fr 1fr; }
     }
-    .actionabilityDetails{ grid-column:1 / -1; color:#66788c; font-size:11px; border-top:1px solid #edf2f7; padding-top:7px; }
+    .actionabilityDetails{ grid-column:1 / -1; color:#31485f; font-size:13px; line-height:1.45; border-top:1px solid #dbe5ef; padding:10px 13px; background:#fbfdff; }
     .actionabilityDetails summary{ cursor:pointer; font-weight:900; color:#31516f; }
-    .actionabilityEmpty{ border:1px dashed #d5e2ee; border-radius:8px; padding:16px; color:#66788c; background:#fff; }
+    .actionabilityEmpty{ border:1px dashed #cbd8e6; border-radius:8px; padding:16px; color:#31485f; background:#fff; font-size:14px; line-height:1.45; }
     @media (max-width: 1120px){
       .actionabilityKpiStrip{ grid-template-columns:repeat(4, minmax(0, 1fr)); }
       .actionabilityBucketCard{ grid-template-columns:minmax(190px,.85fr) minmax(0,1.35fr); }
@@ -569,9 +579,12 @@
       .actionabilityHiddenRecord{ grid-template-columns:1fr; }
       .actionabilityBatchGrid{ grid-template-columns:repeat(3,minmax(0,1fr)); }
       .actionabilityBatchDetails{ grid-template-columns:1fr; }
+      .actionabilityWorklistHeader{ display:none; }
+      .actionabilityWorklistRow{ grid-template-columns:1fr 1fr; }
+      .actionabilityReviewCell{ justify-content:flex-start; }
     }
     @media (max-width: 980px){
-      .actionabilityWorklistHeader, .actionabilityWorklistRow{ grid-template-columns:minmax(170px, 1.2fr) minmax(135px, .8fr) minmax(160px, .95fr) minmax(130px, .75fr) 82px; }
+      .actionabilityWorklistRow{ grid-template-columns:1fr; }
       .actionabilityDetails{ grid-column:1 / -1; }
     }
     @media (max-width: 680px){
@@ -9961,6 +9974,84 @@ function renderStageDashboard_(items, emptyMessage){
       return "";
     }
 
+    function actionabilityHumanizeToken_(value){
+      var text = String(value || "").trim();
+      if (!text) return "";
+      return text.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, function(ch){ return ch.toUpperCase(); });
+    }
+
+    function actionabilityOwnerLabel_(value){
+      var owner = String(value || "").trim().toUpperCase();
+      if (owner === "APPLICANT") return "Applicant";
+      if (owner === "OFFICER") return "Admissions Review";
+      if (owner === "ADMIN") return "Admin";
+      if (owner === "SUPER_ADMIN") return "Super Admin";
+      if (owner === "FINANCE") return "Finance";
+      if (owner === "NONE") return "No current owner";
+      return owner ? actionabilityHumanizeToken_(owner) : "Owner unavailable";
+    }
+
+    function actionabilityStateLabel_(value){
+      var state = String(value || "").trim().toUpperCase();
+      if (state === "READY") return "Ready for operator action";
+      if (state === "COOLING_OFF") return "Cooling-off active";
+      if (state === "AWAITING_APPLICANT") return "Waiting for applicant";
+      if (state === "AWAITING_PAYMENT") return "Waiting for payment evidence";
+      if (state === "REVIEW_REQUIRED") return "Review required";
+      if (state === "COMPLETE") return "Complete / no action";
+      return state ? actionabilityHumanizeToken_(state) : "State unavailable";
+    }
+
+    function actionabilityPrimaryRouteKey_(row){
+      var explicit = String(row && (row.currentBucket || row.workloadGroupKey) || "").trim().toUpperCase();
+      if (explicit) return explicit;
+      return actionabilityGroupKey_(row);
+    }
+
+    function actionabilityPrimaryRouteLabel_(row){
+      return actionabilityGroupLabel_(actionabilityPrimaryRouteKey_(row));
+    }
+
+    function actionabilityBlockerText_(row){
+      var r = row || {};
+      return String(r.selectBlockReason || r.communicationProgressDetail || r.communicationProgress || actionabilityWorklistReason_(r) || actionabilityHiddenReasonLabel_(r.hiddenReason) || "No blocker returned by authority data.").trim();
+    }
+
+    function actionabilityCoolingOffText_(row){
+      var until = String(row && row.coolingOffUntil || "").trim();
+      if (until) return "Active until " + until;
+      if (String(row && row.suppressor || "").trim().toUpperCase() === "COOLDOWN_ACTIVE") return "Active; next-action date unavailable";
+      return "Not active";
+    }
+
+    function actionabilityNextActionDateText_(row){
+      var until = String(row && row.coolingOffUntil || "").trim();
+      return until || "No next-action date returned";
+    }
+
+    function actionabilityOutsideCurrentQueueText_(row, selectedGroup){
+      var route = actionabilityPrimaryRouteLabel_(row);
+      var current = selectedGroup ? actionabilityGroupLabel_(selectedGroup) : "All work";
+      if (!selectedGroup) return "Visible in the all-work view.";
+      if (String(actionabilityPrimaryRouteKey_(row)).toUpperCase() === String(selectedGroup || "").toUpperCase()) return "Inside the selected " + current + " queue.";
+      return "Outside this queue because the selected workspace is " + current + " and the primary route is " + route + ".";
+    }
+
+    function actionabilityFieldHtml_(label, value, secondary){
+      return '<div class="actionabilityField"><span class="actionabilityFieldLabel">' + esc(label) + '</span><span class="actionabilityFieldValue' + (secondary ? ' secondary' : '') + '">' + esc(value || "-") + '</span></div>';
+    }
+
+    function openActionabilityPrimaryRoute_(groupKey, worklistKey){
+      var group = String(groupKey || "").trim().toUpperCase();
+      if (!group) return;
+      actionabilityActiveGroup = group;
+      actionabilityActiveWorklistKey = group === "FINANCE" ? String(worklistKey || "").trim().toUpperCase() : "";
+      actionabilityPageState.page = 0;
+      renderActionabilityPreview_({ preserveRows: true });
+      var el = document.querySelector(".actionabilityWorklist");
+      if (el && el.scrollIntoView) el.scrollIntoView({ block: "start" });
+    }
+
     function actionabilityPopulationBucketForGroup_(key){
       var normalized = String(key || "").trim().toUpperCase();
       if (normalized === "APPLICANT") return "Applicant Action";
@@ -10629,12 +10720,30 @@ function renderStageDashboard_(items, emptyMessage){
         html += '<div class="actionabilityHiddenList"><div class="actionabilityHiddenRecord"><div><strong>Explain Only</strong><span>No bounded applicant identity was returned for this bucket. Use Population Ledger reconciliation before action.</span></div></div></div>';
       } else {
         html += '<div class="actionabilityHiddenList">' + records.map(function(row, index){
+          var routeKey = actionabilityPrimaryRouteKey_(row);
+          var worklistKey = actionabilityWorklistKey_(row);
           return '<div class="actionabilityHiddenRecord">'
-            + '<div><strong>' + esc(row.applicantId || "Applicant ID unavailable") + '</strong><span>' + esc(row.name || "Name unavailable") + '</span></div>'
-            + '<div><strong>Stage</strong><span>' + esc(String(row.currentStage || "Unknown").replace(/_/g, " ")) + '</span></div>'
-            + '<div><strong>Reason</strong><span>' + esc(actionabilityHiddenReasonLabel_(row.hiddenReason)) + ' | Owner: ' + esc(row.actionOwner || "Unknown") + ' | Next: ' + esc(actionabilityNextActionLabel_(row.nextAction || "NO_ACTION")) + '</span></div>'
-            + '<div><strong>Suggested Action</strong><span>' + esc(row.suggestedAction || "Explain Only") + ' | Urgency: ' + esc(row.urgencyLevel || "Unknown") + '</span></div>'
-            + '<div><button class="btn small" type="button" onclick="reviewActionabilityHiddenRecord_(\'' + esc(key) + '\',' + String(index) + ', this)">Open Applicant</button></div>'
+            + '<div class="actionabilityAuthorityFields">'
+            + '<div><strong>' + esc(row.name || "Name unavailable") + '</strong><span>Applicant ID ' + esc(row.applicantId || "unavailable") + '</span></div>'
+            + actionabilityFieldHtml_("Primary route", actionabilityPrimaryRouteLabel_(row))
+            + actionabilityFieldHtml_("Lifecycle stage", actionabilityHumanizeToken_(row.currentStage || "Unknown"), true)
+            + '</div>'
+            + '<div class="actionabilityAuthorityFields">'
+            + actionabilityFieldHtml_("Current status", actionabilityStateLabel_(row.actionabilityState))
+            + actionabilityFieldHtml_("Current owner", actionabilityOwnerLabel_(row.actionOwner))
+            + actionabilityFieldHtml_("Next action", actionabilityNextActionLabel_(row.nextAction || "NO_ACTION"), true)
+            + '</div>'
+            + '<div class="actionabilityAuthorityFields">'
+            + actionabilityFieldHtml_("Outside current queue", actionabilityOutsideCurrentQueueText_(row, key))
+            + actionabilityFieldHtml_("Blocked because", actionabilityBlockerText_(row))
+            + actionabilityFieldHtml_("Cooling-off", actionabilityCoolingOffText_(row), true)
+            + actionabilityFieldHtml_("Next action available", actionabilityNextActionDateText_(row), true)
+            + actionabilityFieldHtml_("Recommended communication", actionabilityCommsLabel_(row.recommendedMessageType), true)
+            + '</div>'
+            + '<div class="actionabilityHiddenActions">'
+            + '<button class="btn small operatorControl operatorControlPrimary" type="button" onclick="reviewActionabilityHiddenRecord_(\'' + esc(key) + '\',' + String(index) + ', this)">Open Review</button>'
+            + (routeKey ? '<button class="btn small operatorControl operatorControlSecondary" type="button" onclick="openActionabilityPrimaryRoute_(\'' + esc(routeKey) + '\', \'' + esc(worklistKey) + '\')">Open ' + esc(actionabilityPrimaryRouteLabel_(row)) + ' Queue</button>' : '')
+            + '</div>'
             + '</div>';
         }).join("") + '</div>';
       }
@@ -12101,11 +12210,11 @@ function renderStageDashboard_(items, emptyMessage){
         var selected = selectable && !!actionabilitySelectedKeys[rowKey];
         if (!selectable && rowKey && actionabilitySelectedKeys[rowKey]) delete actionabilitySelectedKeys[rowKey];
         html += '<div class="actionabilityWorklistRow" role="row" data-actionability-row="' + esc(String(index)) + '" data-actionability-state="' + esc(r.actionabilityState || "UNKNOWN") + '" oncontextmenu="return openActionabilityContextMenu_(event, ' + String(index) + ')">';
-        html += '<div class="actionabilityWorklistCell actionabilityApplicantCell" role="cell"><label class="actionabilitySelectBox"><input type="checkbox" aria-label="Select applicant ' + esc(r.applicantId || "") + '" onchange="toggleActionabilitySelection_(' + String(index) + ', this.checked)" ' + (selected ? "checked" : "") + (selectable ? "" : " disabled") + ' title="' + esc(selectable ? "Eligible for batch preview." : actionabilitySelectionGuidance_(r)) + '"><strong>' + esc(r.name || "Name not shown") + '</strong></label><span class="actionabilityApplicantId">' + esc(r.applicantId || "") + '</span><span class="actionabilityNextAction">' + esc(nextAction) + '</span><span class="actionabilityBlocker">' + esc(blocker) + '</span><span class="actionabilityGuidance">' + esc(actionabilitySelectionGuidance_(r)) + '</span></div>';
-        html += '<div class="actionabilityWorklistCell actionabilityOwnerCell" role="cell"><strong>' + esc(actionabilityGroupKey_(r) === "FINANCE" ? ("Finance / " + worklistLabel) : actionabilityBucketDisplayLabel_(r)) + '</strong><span class="actionabilityAuthority">' + esc(authority) + (worklistReason ? (' | ' + worklistReason) : '') + '</span><span class="opsStatusPill ' + priorityClass + '" title="' + esc(r.urgencyReason || priority) + '">' + esc(priority) + '</span></div>';
-        html += '<div class="actionabilityWorklistCell actionabilityStatusChips actionabilityProgressCell" role="cell"><span class="actionabilityMiniChip ' + (state.portalSubmitted ? "ok" : "warn") + '">' + esc(portalLabel) + '</span><span class="actionabilityMiniChip ' + docsClass + '">' + esc(docsLabel) + '</span><span class="actionabilityMiniChip ' + paymentClass + '">' + esc(paymentLabel) + '</span><span class="actionabilityMiniChip ' + contactClass + '">' + esc(contactLabel) + '</span></div>';
-        html += '<div class="actionabilityWorklistCell actionabilityDueBlock" role="cell"><strong>' + esc(due) + '</strong><span class="actionabilityUrgencyReason">Urgency: ' + esc(actionabilityUrgencyProvenance_(r)) + '</span><span>Age ' + esc(r.ageDays === "" || r.ageDays === undefined ? "-" : String(r.ageDays) + "d") + ' | Last ' + esc(r.lastContactAgeDays === "" ? "none" : String(r.lastContactAgeDays) + "d") + '</span><span>' + esc(commProgress || commNext) + '</span><span>' + esc(commNext) + '</span></div>';
-        html += '<div class="actionabilityWorklistCell actionabilityReviewCell" role="cell"><button class="btn actionabilityReviewBtn operatorControl operatorControlPrimary" type="button" onclick="reviewActionabilityRow_(' + String(index) + ', this)">Review</button></div>';
+        html += '<div class="actionabilityWorklistCell actionabilityApplicantCell" role="cell"><label class="actionabilitySelectBox"><input type="checkbox" aria-label="Select applicant ' + esc(r.applicantId || "") + '" onchange="toggleActionabilitySelection_(' + String(index) + ', this.checked)" ' + (selected ? "checked" : "") + (selectable ? "" : " disabled") + ' title="' + esc(selectable ? "Eligible for batch preview." : actionabilitySelectionGuidance_(r)) + '"><strong>' + esc(r.name || "Name not shown") + '</strong></label>' + actionabilityFieldHtml_("Applicant ID", r.applicantId || "Unavailable") + actionabilityFieldHtml_("Next action", nextAction, true) + actionabilityFieldHtml_("Blocker", blocker, true) + '<span class="actionabilityGuidance">' + esc(actionabilitySelectionGuidance_(r)) + '</span></div>';
+        html += '<div class="actionabilityWorklistCell actionabilityOwnerCell" role="cell">' + actionabilityFieldHtml_("Primary route", actionabilityGroupKey_(r) === "FINANCE" ? ("Finance / " + worklistLabel) : actionabilityBucketDisplayLabel_(r)) + actionabilityFieldHtml_("Owner", authority, true) + (worklistReason ? actionabilityFieldHtml_("Route reason", worklistReason, true) : '') + '<span class="opsStatusPill ' + priorityClass + '" title="' + esc(r.urgencyReason || priority) + '">' + esc(priority) + '</span></div>';
+        html += '<div class="actionabilityWorklistCell actionabilityStatusChips actionabilityProgressCell" role="cell"><span class="actionabilityMiniChip ' + (state.portalSubmitted ? "ok" : "warn") + '">' + esc(portalLabel) + '</span><span class="actionabilityMiniChip ' + docsClass + '">' + esc(docsLabel) + '</span><span class="actionabilityMiniChip ' + paymentClass + '">' + esc(paymentLabel) + '</span><span class="actionabilityMiniChip ' + contactClass + '">' + esc(contactLabel) + '</span><div class="actionabilityAuthorityFields">' + actionabilityFieldHtml_("Status", actionabilityStateLabel_(r.actionabilityState), true) + actionabilityFieldHtml_("Reason", actionabilityBlockerText_(r), true) + '</div></div>';
+        html += '<div class="actionabilityWorklistCell actionabilityDueBlock" role="cell">' + actionabilityFieldHtml_("Urgency / timeline", due) + '<span class="actionabilityUrgencyReason">Urgency: ' + esc(actionabilityUrgencyProvenance_(r)) + '</span><span>Age ' + esc(r.ageDays === "" || r.ageDays === undefined ? "-" : String(r.ageDays) + "d") + ' | Last ' + esc(r.lastContactAgeDays === "" ? "none" : String(r.lastContactAgeDays) + "d") + '</span><span>' + esc(commProgress || commNext) + '</span><span>Recommended communication: ' + esc(commNext) + '</span>' + actionabilityFieldHtml_("Next action available", actionabilityNextActionDateText_(r), true) + '</div>';
+        html += '<div class="actionabilityWorklistCell actionabilityReviewCell" role="cell"><button class="btn actionabilityReviewBtn operatorControl operatorControlPrimary" type="button" onclick="reviewActionabilityRow_(' + String(index) + ', this)">Open Review</button></div>';
         html += '<details class="actionabilityDetails actionabilityWorklistDetails"><summary>Details</summary>'
           + '<div class="actionabilityFactGrid" style="margin-top:8px;">'
           + '<div class="actionabilityFact"><strong>Priority:</strong> <span>' + esc(r.urgencyReason || priority) + '</span></div>'
