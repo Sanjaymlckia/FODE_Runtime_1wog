@@ -1,18 +1,18 @@
 # Admin Surface Data Cohesion Audit 2026-07
 
-- Classification: `PASS_WITH_FINDINGS`
-- Runtime: `r345 / 345`
-- Apps Script version: `378`
-- Admin deployment pin: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @378`
-- Feature commit: `47fb171`
-- Runtime bump commit: `5731e9d`
-- Live audit evidence: `.release-proof/r345-live-acceptance/live-audit.json`
+- Classification: `PASS`
+- Runtime: `r346 / 346`
+- Apps Script version: `379`
+- Admin deployment pin: `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @379`
+- Feature commit: `a4ce7c9`
+- Runtime bump commit: `c59e7da`
+- Live audit evidence: `.release-proof/r346-finance-routing-live/live-proof.json`
 - Live screenshots:
-  - `.release-proof/r345-live-acceptance/01-global-search-waffi.png`
-  - `.release-proof/r345-live-acceptance/02-review-waffi.png`
-  - `.release-proof/r345-live-acceptance/03-finance-search-waffi.png`
-  - `.release-proof/r345-live-acceptance/04-finance-search-id.png`
-  - `.release-proof/r345-live-acceptance/05-current-admin-fallback.png`
+  - `.release-proof/r346-finance-routing-live/01-payment-pending-direct.png`
+  - `.release-proof/r346-finance-routing-live/02-payment-to-verify-direct.png`
+  - `.release-proof/r346-finance-routing-live/03-non-first-row-review.png`
+  - `.release-proof/r346-finance-routing-live/04-waffi-search-review.png`
+  - `.release-proof/r346-finance-routing-live/05-current-admin-fallback.png`
 
 ## Scope
 
@@ -24,22 +24,21 @@ No Sheet, applicant, email, WhatsApp, Books, Student, Production, or portal muta
 
 ## Root Cause
 
-Current Admin and Operator Next had drifted into parallel interpretations of the same rows:
+The r345 release restored shared authority, but three bounded acceptance gaps remained:
 
-- Current Admin Finance followed actionability ownership and showed a small active Finance cohort.
-- Operator Next Canonical Finance treated nearly all missing payment evidence as `PAYMENT_PENDING`.
-- Finance search accepted a term in the UI but could ignore top-level `searchQuery` when `filters` was present.
-- Review queues and route cards could require extra navigation instead of opening the exact working queue directly.
+- `activeFinanceWork` still over-counted rows that had Finance facts but no current Finance action.
+- Lifecycle payment helpers did not open the exact Finance cohort directly.
+- Generic `Open first Review` affordances still allowed implicit row selection instead of exact row-level review.
 
-The repair moved both shells onto shared canonical population, finance, search, and operational-route authorities.
+This follow-up tightened both shells onto the same authority semantics: Finance facts remain visible for reporting, but active Finance work now means a current Finance-owned action, and payment helpers open the exact shared Finance cohort directly.
 
 ## Authoritative Sheet Identity
 
 - Spreadsheet ID: `1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4SalU`
 - Primary tab: `FODE_Data`
-- Population ledger timestamp: `2026-07-14T01:39:46.637Z`
-- Operational route timestamp: `2026-07-14T01:39:47.365Z`
-- Finance timestamp: `2026-07-14T01:39:45.705Z`
+- Population ledger timestamp: `2026-07-14T02:36:23.598Z`
+- Operational route timestamp: `2026-07-14T02:36:23.598Z`
+- Finance timestamp: `2026-07-14T02:36:20.634Z`
 
 ## Population Reconciliation
 
@@ -116,10 +115,23 @@ Applicability separation:
 - No evidence and payment applicable now: `2`
 - Genuine evidence requiring verification: `3`
 - Paid verified: `2`
-- Active Finance work total: `5`
+- Active Finance work total: `2`
 - Finance exceptions: `1`
 
-This confirms the repaired contract: missing evidence no longer defaults the whole population into active Finance work.
+Active-work reconciliation:
+
+- Primary Finance route population: `3`
+  - `FODE-26-002959`
+  - `FODE-26-TEST-002`
+  - `FODE-26-TEST-003`
+- Active Finance work population: `2`
+  - `FODE-26-TEST-002`
+  - `FODE-26-TEST-003`
+- Removed from active Finance work:
+  - `FODE-26-002959` remains a Finance primary-route row, but cooling-off means no current operator Finance action.
+  - `FODE-26-002964` and `FODE-26-002985` remain `PAYMENT_TO_VERIFY` Finance facts, but Actionability still owns them as Admissions document review, so they are not active Finance work.
+
+This confirms the repaired contract: Finance facts can remain visible for reporting, but active Finance work is limited to rows where the operator can presently perform the Finance action.
 
 ## Document, Contactability, and Communication Cohesion
 
@@ -159,17 +171,15 @@ Communication recommendation distribution:
 
 Verified live:
 
-- Current Admin active Finance cohort: `5`
-- Canonical active Finance cohort: `5`
-- Active Finance ApplicantID membership parity: `PASS`
-- Current Admin Admissions queue count: `7`
-- Canonical Admissions route count: `7`
-- Current Admin paid-approved count: `2`
-- Canonical paid-verified count: `2`
+- Current Admin payment follow-up cohort: `1`
+- Operator Next active payment follow-up cohort: `1`
+- Payment follow-up ApplicantID parity: `PASS`
+- Current Admin payment verification cohort: `1`
+- Operator Next active payment verification cohort: `1`
+- Payment verification ApplicantID parity: `PASS`
+- Canonical primary Finance route count: `3`
 - Shared search by name: `1`
 - Shared search by ApplicantID: `1`
-- Legacy search by name: `1`
-- Legacy search by ApplicantID: `1`
 - Review target parity for approved case `FODE-26-002959`: `PASS`
 
 Waffi ordinary-case proof:
@@ -186,28 +196,27 @@ PASS:
 
 - Operator Next loaded without console errors.
 - Current Admin fallback loaded without console errors.
+- `PAYMENT_PENDING` helper opened Finance `PAYMENT_FOLLOW_UP` directly with no intermediate step.
+- `PAYMENT_TO_VERIFY` helper opened Finance `PAYMENT_REVIEW` directly with no intermediate step.
+- No `Continue to queue` control appeared on the affected helper flow.
+- No `Open first Review` control remained.
+- Non-first-row Finance review opened the exact ApplicantID `FODE-26-002985`.
+- Closing Review returned to the exact Finance `ALL_APPLICANTS / PAYMENT_REVIEW` cohort.
 - Global search found Waffi by name and ApplicantID.
-- Finance search found Waffi by name and ApplicantID.
 - Review handoff opened the exact approved ApplicantID.
-- No `Continue to queue` control was present.
-
-Finding:
-
-- The lifecycle stage helper for `PAYMENT_PENDING` still did not switch from Lifecycle to the Finance route during live browser interaction.
-- The same helper still exposes a generic `Open first Review` secondary control.
+- Waffi search and exact review handoff still passed.
 
 ## Confidence and Limitations
 
-Confidence: `PASS_WITH_FINDINGS`
+Confidence: `PASS`
 
 Reasons:
 
-- Sheet population, lifecycle, actionability, route totals, and Finance applicability reconcile.
-- Current Admin and Operator Next now share the same server authorities for route projection and search.
-- Live parity passed for Finance active membership, Admissions count, paid-verified history, search, and review target identity.
-- A bounded route-handoff issue remains on the Lifecycle helper for `PAYMENT_PENDING`.
+- Sheet population, lifecycle, route totals, and Finance applicability reconcile.
+- Current Admin and Operator Next match on the affected live Finance cohorts and ApplicantID membership.
+- Direct helper routing, exact row review, return context, and Waffi regression all passed on live Admin staging `r346 / 346`.
 
 Limitations:
 
 - Committed evidence excludes row-level PII beyond approved ApplicantID `FODE-26-002959`.
-- Live aggregate RPCs do not expose raw empty-upload placeholder subtype counts for document and receipt fields; those subtype rules are covered by focused regression tests.
+- Evidence is sufficient for operator manual inspection, but owner visual acceptance remains a separate manual decision.

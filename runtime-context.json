@@ -31,15 +31,15 @@
           "whoamiUrl": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami",
           "expectedRuntime": "r346",
           "expectedDeploy": 346,
-          "expectedAppsScriptVersion": 378,
+          "expectedAppsScriptVersion": 379,
           "lastRelease": {
-            "runtimeIdentity": "r345 / 345",
-            "appsScriptVersion": 378,
-            "deploymentPin": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @378",
-            "description": "Shared operational route authority and finance applicability acceptance release to Admin staging",
+            "runtimeIdentity": "r346 / 346",
+            "appsScriptVersion": 379,
+            "deploymentPin": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @379",
+            "description": "Finance cohort reconciliation and direct review routing acceptance release to Admin staging",
             "commitRefs": [
-              "47fb171",
-              "5731e9d"
+              "a4ce7c9",
+              "c59e7da"
             ]
           }
         },

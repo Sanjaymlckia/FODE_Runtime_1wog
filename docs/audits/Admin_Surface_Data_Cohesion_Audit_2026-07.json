@@ -1,20 +1,20 @@
 {
-  "classification": "PASS_WITH_FINDINGS",
-  "runtimeIdentity": "r345 / 345",
-  "appsScriptVersion": 378,
-  "adminDeploymentPin": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @378",
+  "classification": "PASS",
+  "runtimeIdentity": "r346 / 346",
+  "appsScriptVersion": 379,
+  "adminDeploymentPin": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @379",
   "commitRefs": {
-    "feature": "47fb171",
-    "runtimeBump": "5731e9d"
+    "feature": "a4ce7c9",
+    "runtimeBump": "c59e7da"
   },
   "authoritativeSheet": {
     "spreadsheetId": "1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4SalU",
     "primaryTab": "FODE_Data"
   },
   "timestamps": {
-    "populationLedger": "2026-07-14T01:39:46.637Z",
-    "operationalRoutes": "2026-07-14T01:39:47.365Z",
-    "finance": "2026-07-14T01:39:45.705Z"
+    "populationLedger": "2026-07-14T02:36:23.598Z",
+    "operationalRoutes": "2026-07-14T02:36:23.598Z",
+    "finance": "2026-07-14T02:36:20.634Z"
   },
   "population": {
     "physicalDataRows": 329,
@@ -51,7 +51,7 @@
     "Finance": 3
   },
   "financeApplicability": {
-    "activeFinanceWork": 5,
+    "activeFinanceWork": 2,
     "paymentPending": 2,
     "paymentToVerify": 3,
     "paidVerified": 2,
@@ -81,21 +81,16 @@
     "payment_followup": 2
   },
   "currentAdminParity": {
-    "financeActiveLegacyCount": 5,
-    "financeActiveCanonicalCount": 5,
-    "financeActiveMembershipParity": true,
-    "admissionsLegacyCount": 7,
-    "admissionsCanonicalCount": 7,
-    "paidApprovedLegacyCount": 2,
-    "paidVerifiedCanonicalCount": 2
+    "financePendingLegacyCount": 1,
+    "financePendingCanonicalCount": 1,
+    "financePendingMembershipParity": true,
+    "financeVerifyLegacyCount": 1,
+    "financeVerifyCanonicalCount": 1,
+    "financeVerifyMembershipParity": true
   },
   "searchAcceptance": {
     "sharedSearchByNameCount": 1,
     "sharedSearchByIdCount": 1,
-    "legacySearchByNameCount": 1,
-    "legacySearchByIdCount": 1,
-    "financeSearchByNameCount": 1,
-    "financeSearchByIdCount": 1,
     "reviewTargetParity": true
   },
   "approvedCase": {
@@ -109,11 +104,41 @@
     "operatorConsoleErrors": 0,
     "adminConsoleErrors": 0,
     "currentAdminFallbackLoaded": true,
-    "directRoutePaymentPendingToFinance": false,
-    "openFirstReviewStillPresent": true
+    "directRoutePaymentPendingToFinance": true,
+    "directRoutePaymentToVerifyToFinance": true,
+    "continueToQueuePresent": false,
+    "openFirstReviewStillPresent": false,
+    "returnContextPreserved": true,
+    "waffiReviewParity": true
+  },
+  "financeReconciliation": {
+    "primaryFinanceRouteCount": 3,
+    "primaryFinanceApplicantIds": [
+      "FODE-26-002959",
+      "FODE-26-TEST-002",
+      "FODE-26-TEST-003"
+    ],
+    "activeFinanceApplicantIds": [
+      "FODE-26-TEST-002",
+      "FODE-26-TEST-003"
+    ],
+    "removedFromActiveFinanceWork": [
+      {
+        "applicantId": "FODE-26-002959",
+        "reason": "Finance primary-route row remains in cooling-off, so no current Finance operator action exists."
+      },
+      {
+        "applicantId": "FODE-26-002964",
+        "reason": "Finance verification fact exists, but Actionability still owns the row as Admissions document review."
+      },
+      {
+        "applicantId": "FODE-26-002985",
+        "reason": "Finance verification fact exists, but Actionability still owns the row as Admissions document review."
+      }
+    ]
   },
   "limitations": [
     "Committed evidence excludes row-level PII beyond approved ApplicantID FODE-26-002959.",
-    "Live aggregate RPCs do not expose raw empty-upload placeholder subtype counts for document and receipt fields; those subtype rules are covered by focused regression tests."
+    "Evidence is sufficient for operator manual inspection, but owner visual acceptance remains a separate manual decision."
   ]
 }
