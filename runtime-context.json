@@ -29,17 +29,17 @@
           "deploymentId": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ",
           "url": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec",
           "whoamiUrl": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami",
-          "expectedRuntime": "r344",
-          "expectedDeploy": 344,
-          "expectedAppsScriptVersion": 377,
+          "expectedRuntime": "r345",
+          "expectedDeploy": 345,
+          "expectedAppsScriptVersion": 378,
           "lastRelease": {
-            "runtimeIdentity": "r344 / 344",
-            "appsScriptVersion": 377,
-            "deploymentPin": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @377",
-            "description": "Operator interface manual visual acceptance release to Admin staging",
+            "runtimeIdentity": "r345 / 345",
+            "appsScriptVersion": 378,
+            "deploymentPin": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @378",
+            "description": "Shared operational route authority and finance applicability acceptance release to Admin staging",
             "commitRefs": [
-              "73d9711",
-              "0d85f1a"
+              "47fb171",
+              "5731e9d"
             ]
           }
         },

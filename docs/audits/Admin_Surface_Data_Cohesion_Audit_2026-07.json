@@ -1,0 +1,119 @@
+{
+  "classification": "PASS_WITH_FINDINGS",
+  "runtimeIdentity": "r345 / 345",
+  "appsScriptVersion": 378,
+  "adminDeploymentPin": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @378",
+  "commitRefs": {
+    "feature": "47fb171",
+    "runtimeBump": "5731e9d"
+  },
+  "authoritativeSheet": {
+    "spreadsheetId": "1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4SalU",
+    "primaryTab": "FODE_Data"
+  },
+  "timestamps": {
+    "populationLedger": "2026-07-14T01:39:46.637Z",
+    "operationalRoutes": "2026-07-14T01:39:47.365Z",
+    "finance": "2026-07-14T01:39:45.705Z"
+  },
+  "population": {
+    "physicalDataRows": 329,
+    "applicantIdRows": 329,
+    "blankApplicantIdRows": 0,
+    "duplicateApplicantIdCount": 0,
+    "canonicalPopulationCount": 329,
+    "routeSummaryTotal": 329,
+    "integrityStatus": "PASS"
+  },
+  "lifecycleDistribution": {
+    "APPLICATION_RECEIVED": 8,
+    "COMPLETE": 1,
+    "DOCUMENT_CORRECTION_REQUIRED": 1,
+    "DOCUMENTS_TO_VERIFY": 7,
+    "ENROLMENT_READY": 1,
+    "INCOMPLETE_DOCUMENTS": 308,
+    "PAYMENT_PENDING": 2,
+    "PAYMENT_TO_VERIFY": 1
+  },
+  "actionabilityDistribution": {
+    "COMPLETE": 1,
+    "COOLING_OFF": 133,
+    "READY": 122,
+    "REVIEW_REQUIRED": 73
+  },
+  "primaryRouteDistribution": {
+    "Academic Administration": 1,
+    "Admissions Review": 7,
+    "Applicant Action": 249,
+    "Completed / No Action": 1,
+    "Contactability Exceptions": 66,
+    "Dormant": 2,
+    "Finance": 3
+  },
+  "financeApplicability": {
+    "activeFinanceWork": 5,
+    "paymentPending": 2,
+    "paymentToVerify": 3,
+    "paidVerified": 2,
+    "notYetPaymentApplicable": 322,
+    "financeExceptions": 1
+  },
+  "contactabilityDistribution": {
+    "EMAIL_AVAILABLE": 267,
+    "PHONE_FALLBACK_AVAILABLE": 58,
+    "UNCONTACTABLE": 4
+  },
+  "communicationProgressDistribution": {
+    "Awaiting admin completion": 1,
+    "Awaiting finance review": 1,
+    "Contactability exception": 66,
+    "Cooling-off": 133,
+    "Escalation due": 3,
+    "Other": 1,
+    "Payment reminder sent today": 1,
+    "Ready for academic review": 5,
+    "Ready for reminder": 118
+  },
+  "communicationRecommendationDistribution": {
+    "UNKNOWN": 10,
+    "docs_missing": 309,
+    "legacy_invite": 8,
+    "payment_followup": 2
+  },
+  "currentAdminParity": {
+    "financeActiveLegacyCount": 5,
+    "financeActiveCanonicalCount": 5,
+    "financeActiveMembershipParity": true,
+    "admissionsLegacyCount": 7,
+    "admissionsCanonicalCount": 7,
+    "paidApprovedLegacyCount": 2,
+    "paidVerifiedCanonicalCount": 2
+  },
+  "searchAcceptance": {
+    "sharedSearchByNameCount": 1,
+    "sharedSearchByIdCount": 1,
+    "legacySearchByNameCount": 1,
+    "legacySearchByIdCount": 1,
+    "financeSearchByNameCount": 1,
+    "financeSearchByIdCount": 1,
+    "reviewTargetParity": true
+  },
+  "approvedCase": {
+    "applicantId": "FODE-26-002959",
+    "sharedSearchRowNumber": 50,
+    "legacySearchRowNumber": 50,
+    "financeRowNumber": 50,
+    "financeState": "PAYMENT_PENDING"
+  },
+  "browserAcceptance": {
+    "operatorConsoleErrors": 0,
+    "adminConsoleErrors": 0,
+    "currentAdminFallbackLoaded": true,
+    "directRoutePaymentPendingToFinance": false,
+    "openFirstReviewStillPresent": true
+  },
+  "limitations": [
+    "Committed evidence excludes row-level PII beyond approved ApplicantID FODE-26-002959.",
+    "Live aggregate RPCs do not expose raw empty-upload placeholder subtype counts for document and receipt fields; those subtype rules are covered by focused regression tests."
+  ]
+}
