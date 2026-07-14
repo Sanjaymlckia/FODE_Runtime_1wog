@@ -92,7 +92,14 @@ assert.match(operatorNextUi, /financeScope:'ACTIVE_FINANCE',financeWorklistKey:'
 assert.match(operatorNextUi, /document\.getElementById\('onxOpenStageQueue'\)\.onclick=function\(\)\{operatorNextOpenRouteHelper_\(def\);\};/, "Selected stage helper must open the exact shared route contract");
 assert.match(operatorNextUi, /data-onx-finance-route=\\"ACTIVE_FINANCE\\" data-onx-finance-worklist=\\"PAYMENT_FOLLOW_UP\\"/, "Finance payment-pending metric must bind the direct follow-up cohort");
 assert.match(operatorNextUi, /data-onx-finance-route=\\"ACTIVE_FINANCE\\" data-onx-finance-worklist=\\"PAYMENT_REVIEW\\"/, "Finance payment-to-verify metric must bind the direct verification cohort");
+assert.match(operatorNextUi, /\.onxQueueSummary[\s\S]*\.onxSummaryBlock[\s\S]*\.onxSummaryLabel[\s\S]*\.onxSummaryValue/, "Queue summaries must use explicit label/value structure");
+assert.match(operatorNextUi, /\.onxWorkList[\s\S]*\.onxWorkRow[\s\S]*\.onxWorkLabel[\s\S]*\.onxWorkValue[\s\S]*\.onxWorkDetail/, "Operational worklists must render readable row sections instead of compressed table cells");
+assert.match(operatorNextUi, /<span class="onxSummaryLabel">Showing<\/span><strong class="onxSummaryValue">/, "Returned-row count must not be merged with toolbar controls");
+assert.match(operatorNextUi, /<span class="onxSummaryLabel">Selection<\/span><strong class="onxSummaryValue">/, "Selection status must have a separate label/value block");
+assert.match(operatorNextUi, /<span class="onxSummaryLabel">Finance page<\/span><strong id="onxFinancePageStatus" class="onxSummaryValue">/, "Finance page count/filter status must not be a tiny chip label");
+assert.match(operatorNextUi, /<article class="onxWorkRow [^"]*" data-onx-row-index=/, "Each actionable worklist row must remain a separate operational row");
 assert.doesNotMatch(operatorNextUi, /Open first Review|Review first returned record/, "Generic first-review affordances must be removed from Operator Next");
+assert.doesNotMatch(operatorNextUi, /Continue to queue/i, "Operator Next must not require a Continue-to-queue step");
 assert.doesNotMatch(operatorNextUi, /admin_getOpsLifecycleSummary\(\{force:0\}\)/, "Contained Global View must not fetch OPS compatibility summary");
 assert.match(operatorNextUi, /row&&row\.selectable===true/, "Selection must consume server Actionability selectable");
 assert.match(operatorNextUi, /review\(Number\(row\.rowNumber\|\|0\)\|\|null,String\(row\.applicantId\|\|''\),null,\{actionabilityFocus:true\}\)/, "Review handoff must preserve exact row and Applicant ID");
