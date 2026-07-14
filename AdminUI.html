@@ -3133,7 +3133,7 @@
       width:min(1480px, calc(100vw - 44px));
       max-height:calc(100vh - 44px);
       display:grid;
-      grid-template-rows:auto 1fr auto;
+      grid-template-rows:auto 1fr;
       overflow:hidden;
       background:var(--reviewV2-panel);
       border:2px solid #7f9bb7;
@@ -3143,15 +3143,15 @@
     #reviewV2Root .reviewV2-header{
       background:linear-gradient(135deg,#071b31 0%,#0d3761 58%,#174f88 100%);
       color:#ffffff;
-      padding:18px 22px;
+      padding:14px 18px 0;
       border-bottom:2px solid #7fb3e4;
     }
     #reviewV2Root .reviewV2-titleRow{ display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
     #reviewV2Root .reviewV2-kicker{ color:#d8ebff; font-size:13px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; }
     #reviewV2Root .reviewV2-title{ margin-top:4px; color:#ffffff; font-size:27px; font-weight:900; line-height:1.15; overflow-wrap:anywhere; }
     #reviewV2Root .reviewV2-subtitle{ margin-top:5px; color:#eef7ff; font-size:15px; font-weight:700; overflow-wrap:anywhere; }
-    #reviewV2Root .reviewV2-headerGrid{ margin-top:16px; display:grid; grid-template-columns:repeat(6,minmax(150px,1fr)); gap:10px; }
-    #reviewV2Root .reviewV2-headerFact{ background:rgba(255,255,255,.11); border:1px solid rgba(216,235,255,.55); border-radius:10px; padding:9px 10px; min-width:0; }
+    #reviewV2Root .reviewV2-headerGrid{ margin-top:12px; display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); gap:10px; }
+    #reviewV2Root .reviewV2-headerFact{ background:rgba(255,255,255,.11); border:1px solid rgba(216,235,255,.55); border-radius:10px; padding:8px 10px; min-width:0; }
     #reviewV2Root .reviewV2-label{ display:block; color:#d8ebff; font-size:13px; font-weight:850; letter-spacing:.03em; text-transform:uppercase; }
     #reviewV2Root .reviewV2-value{ display:block; margin-top:3px; color:#ffffff; font-size:15px; font-weight:800; overflow-wrap:anywhere; }
     #reviewV2Root .reviewV2-close{
@@ -3169,13 +3169,13 @@
     #reviewV2Root .reviewV2-tab:focus-visible,
     #reviewV2Root .reviewV2-action:focus-visible{ outline:3px solid #ffbf47; outline-offset:2px; }
     #reviewV2Root .reviewV2-main{ overflow:auto; background:var(--reviewV2-wash); }
-    #reviewV2Root .reviewV2-status{ margin:14px 18px 0; padding:11px 13px; border:1px solid #9fb4ca; border-radius:10px; background:#ffffff; color:#173451; font-weight:800; }
+    #reviewV2Root .reviewV2-status{ margin:12px 18px 0; padding:9px 12px; border:1px solid #9fb4ca; border-radius:10px; background:#ffffff; color:#173451; font-weight:800; }
     #reviewV2Root .reviewV2-status.reviewV2-error{ border-color:#d99b9b; background:#fdeaea; color:var(--reviewV2-danger); }
-    #reviewV2Root .reviewV2-summary{ display:grid; grid-template-columns:repeat(5,minmax(170px,1fr)); gap:12px; padding:14px 18px; }
+    #reviewV2Root .reviewV2-summary{ display:grid; grid-template-columns:repeat(4,minmax(170px,1fr)); gap:10px; padding:12px 18px; }
     #reviewV2Root .reviewV2-field{ background:#ffffff; border:1px solid #b4c6d8; border-radius:12px; padding:11px 12px; min-width:0; }
     #reviewV2Root .reviewV2-field .reviewV2-label{ color:#40556b; }
     #reviewV2Root .reviewV2-field .reviewV2-value{ color:#0b1f35; font-weight:850; }
-    #reviewV2Root .reviewV2-tabs{ display:flex; flex-wrap:wrap; gap:8px; padding:0 18px 12px; border-bottom:1px solid #c9d7e5; }
+    #reviewV2Root .reviewV2-tabs{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; padding:0 0 12px; border-bottom:1px solid rgba(216,235,255,.55); }
     #reviewV2Root .reviewV2-tab{
       min-height:40px;
       padding:8px 13px;
@@ -3213,12 +3213,10 @@
     }
     #reviewV2Root .reviewV2-action.reviewV2-primary{ background:#0f4e85; color:#ffffff; border-color:#0f4e85; }
     #reviewV2Root .reviewV2-action[disabled]{ background:#e2eaf2; color:#26384e; border-color:#8da2b7; cursor:not-allowed; opacity:1; }
-    #reviewV2Root .reviewV2-footer{ display:flex; justify-content:space-between; gap:12px; padding:12px 18px; background:#ffffff; border-top:1px solid #c9d7e5; color:#173451; }
-    #reviewV2Root .reviewV2-footerNote{ font-size:13px; font-weight:750; color:#40556b; }
     @media (max-width: 1100px){
       #reviewV2Root{ padding:12px; }
       #reviewV2Root .reviewV2-dialog{ width:calc(100vw - 24px); max-height:calc(100vh - 24px); }
-      #reviewV2Root .reviewV2-headerGrid{ grid-template-columns:repeat(3,minmax(140px,1fr)); }
+      #reviewV2Root .reviewV2-headerGrid{ grid-template-columns:repeat(2,minmax(140px,1fr)); }
       #reviewV2Root .reviewV2-summary{ grid-template-columns:repeat(2,minmax(180px,1fr)); }
       #reviewV2Root .reviewV2-grid{ grid-template-columns:1fr; }
       #reviewV2Root .reviewV2-document{ grid-template-columns:1fr; }
@@ -3238,16 +3236,10 @@
         </div>
         <div class="reviewV2-headerGrid" aria-label="Authoritative applicant facts">
           <div class="reviewV2-headerFact"><span class="reviewV2-label">ApplicantID</span><span class="reviewV2-value" id="reviewV2ApplicantId">Loading</span></div>
-          <div class="reviewV2-headerFact"><span class="reviewV2-label">Row</span><span class="reviewV2-value" id="reviewV2RowNumber">Loading</span></div>
           <div class="reviewV2-headerFact"><span class="reviewV2-label">Primary Route</span><span class="reviewV2-value" id="reviewV2PrimaryRoute">Loading</span></div>
           <div class="reviewV2-headerFact"><span class="reviewV2-label">Lifecycle</span><span class="reviewV2-value" id="reviewV2Lifecycle">Loading</span></div>
-          <div class="reviewV2-headerFact"><span class="reviewV2-label">Owner</span><span class="reviewV2-value" id="reviewV2Owner">Loading</span></div>
-          <div class="reviewV2-headerFact"><span class="reviewV2-label">Finance</span><span class="reviewV2-value" id="reviewV2FinanceState">Loading</span></div>
+          <div class="reviewV2-headerFact"><span class="reviewV2-label">Current Status</span><span class="reviewV2-value" id="reviewV2CurrentStatus">Loading</span></div>
         </div>
-      </div>
-      <div class="reviewV2-main" id="reviewV2Main">
-        <div class="reviewV2-status" id="reviewV2Status" role="status" aria-live="polite">Loading applicant details...</div>
-        <div class="reviewV2-summary" id="reviewV2AuthoritySummary"></div>
         <div class="reviewV2-tabs" role="tablist" aria-label="Review Workspace V2 sections">
           <button type="button" class="reviewV2-tab" role="tab" id="reviewV2Tab-overview" aria-controls="reviewV2Panel-overview" aria-selected="true" data-review-v2-tab="overview">Overview</button>
           <button type="button" class="reviewV2-tab" role="tab" id="reviewV2Tab-documents" aria-controls="reviewV2Panel-documents" aria-selected="false" data-review-v2-tab="documents">Documents</button>
@@ -3256,6 +3248,10 @@
           <button type="button" class="reviewV2-tab" role="tab" id="reviewV2Tab-portal" aria-controls="reviewV2Panel-portal" aria-selected="false" data-review-v2-tab="portal">Portal</button>
           <button type="button" class="reviewV2-tab" role="tab" id="reviewV2Tab-audit" aria-controls="reviewV2Panel-audit" aria-selected="false" data-review-v2-tab="audit">Audit</button>
         </div>
+      </div>
+      <div class="reviewV2-main" id="reviewV2Main">
+        <div class="reviewV2-status" id="reviewV2Status" role="status" aria-live="polite">Loading applicant details...</div>
+        <div class="reviewV2-summary" id="reviewV2AuthoritySummary"></div>
         <div class="reviewV2-panels">
           <section class="reviewV2-section reviewV2-active" role="tabpanel" id="reviewV2Panel-overview" aria-labelledby="reviewV2Tab-overview"></section>
           <section class="reviewV2-section" role="tabpanel" id="reviewV2Panel-documents" aria-labelledby="reviewV2Tab-documents"></section>
@@ -3263,13 +3259,6 @@
           <section class="reviewV2-section" role="tabpanel" id="reviewV2Panel-communications" aria-labelledby="reviewV2Tab-communications"></section>
           <section class="reviewV2-section" role="tabpanel" id="reviewV2Panel-portal" aria-labelledby="reviewV2Tab-portal"></section>
           <section class="reviewV2-section" role="tabpanel" id="reviewV2Panel-audit" aria-labelledby="reviewV2Tab-audit"></section>
-        </div>
-      </div>
-      <div class="reviewV2-footer">
-        <div class="reviewV2-footerNote" id="reviewV2FooterNote">Legacy Review remains available as an explicit fallback for this acceptance pass.</div>
-        <div class="reviewV2-actions">
-          <button type="button" class="reviewV2-action" id="reviewV2LegacyFallback" onclick="openReviewWorkspaceV2LegacyFallback_()">Open legacy fallback for this applicant</button>
-          <button type="button" class="reviewV2-action reviewV2-primary" onclick="closeReviewWorkspaceV2()">Close Review Workspace</button>
         </div>
       </div>
     </div>
@@ -10209,6 +10198,11 @@ function renderStageDashboard_(items, emptyMessage){
       return "Outside this queue because the selected workspace is " + current + " and the primary route is " + route + ".";
     }
 
+    function actionabilityCurrentQueueLabel_(row, selectedGroup){
+      if (selectedGroup && String(actionabilityPrimaryRouteKey_(row)).toUpperCase() === String(selectedGroup || "").toUpperCase()) return "Queue position";
+      return "Outside current queue";
+    }
+
     function actionabilityFieldHtml_(label, value, secondary){
       return '<div class="actionabilityField"><span class="actionabilityFieldLabel">' + esc(label) + '</span><span class="actionabilityFieldValue' + (secondary ? ' secondary' : '') + '">' + esc(value || "-") + '</span></div>';
     }
@@ -10906,7 +10900,7 @@ function renderStageDashboard_(items, emptyMessage){
             + actionabilityFieldHtml_("Next action", actionabilityNextActionLabel_(row.nextAction || "NO_ACTION"), true)
             + '</div>'
             + '<div class="actionabilityAuthorityFields">'
-            + actionabilityFieldHtml_("Outside current queue", actionabilityOutsideCurrentQueueText_(row, key))
+            + actionabilityFieldHtml_(actionabilityCurrentQueueLabel_(row, key), actionabilityOutsideCurrentQueueText_(row, key))
             + actionabilityFieldHtml_("Blocked because", actionabilityBlockerText_(row))
             + actionabilityFieldHtml_("Cooling-off", actionabilityCoolingOffText_(row), true)
             + actionabilityFieldHtml_("Next action available", actionabilityNextActionDateText_(row), true)
@@ -12847,8 +12841,16 @@ function renderStageDashboard_(items, emptyMessage){
         PAYMENT_TO_VERIFY: "Payment to verify",
         PAID_VERIFIED: "Payment verified",
         SEND_PAYMENT_REMINDER: "Send payment reminder",
+        PAYMENT_REMINDER: "Payment Reminder",
         SEND_DOCS_REMINDER: "Send documents reminder",
         COOLING_OFF_ACTIVE: "Cooling-off active",
+        COOLDOWN_ACTIVE: "Cooling-off active",
+        READY: "Ready",
+        REVIEW_REQUIRED: "Review required",
+        COMPLETE: "Complete",
+        EMAIL_AVAILABLE: "Email available",
+        PHONE_FALLBACK_AVAILABLE: "Phone fallback available",
+        UNCONTACTABLE: "Uncontactable",
         OTHER_AUTHORITY: "Owned by another authority path",
         APPLICANT: "Applicant",
         FINANCE: "Finance",
@@ -12866,6 +12868,97 @@ function renderStageDashboard_(items, emptyMessage){
       return raw.replace(/_/g, " ").replace(/\w\S*/g, function(word){
         return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
       });
+    }
+
+    function reviewWorkspaceV2PngTime_(value){
+      var raw = String(value || "").trim();
+      if (!raw) return "No next-action date returned";
+      var date = new Date(raw);
+      if (!date || isNaN(date.getTime())) return raw;
+      try {
+        return new Intl.DateTimeFormat("en-GB", {
+          timeZone: "Pacific/Port_Moresby",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true
+        }).format(date).replace(",", "") + " PNG time";
+      } catch (_e) {
+        return raw;
+      }
+    }
+
+    function reviewWorkspaceV2Projection_(detail){
+      var projection = detail && detail._authorityProjection && typeof detail._authorityProjection === "object"
+        ? detail._authorityProjection
+        : null;
+      if (projection) return projection;
+      var authority = reviewAuthoritySnapshot_(detail) || {};
+      return {
+        rowNumber: Number((detail && detail._rowNumber) || currentRowNumber || 0) || 0,
+        applicantId: String((detail && detail.ApplicantID) || "").trim(),
+        actionOwner: String(authority.actionOwner || "").trim(),
+        workloadGroupKey: String(authority.workloadGroupKey || "").trim(),
+        worklistKey: String(authority.worklistKey || "").trim(),
+        worklistLabel: String(authority.worklistLabel || "").trim(),
+        worklistReason: String(authority.worklistReason || "").trim(),
+        nextAction: String(authority.nextAction || "").trim(),
+        actionabilityState: String(authority.actionabilityState || "").trim(),
+        selectBlockReason: String(authority.selectBlockReason || "").trim(),
+        coolingOffUntil: String(authority.coolingOffUntil || "").trim(),
+        recommendedMessageType: String(authority.recommendedMessageType || "").trim(),
+        communicationProgress: String(authority.communicationProgress || "").trim(),
+        communicationProgressDetail: String(authority.communicationProgressDetail || "").trim(),
+        canonicalLifecycle: authority.canonicalLifecycle || null,
+        authorityState: authority.authorityState || {}
+      };
+    }
+
+    function reviewWorkspaceV2FinanceState_(projection){
+      var state = projection && projection.authorityState ? projection.authorityState : {};
+      var raw = String(state.canonicalFinanceState || "").trim().toUpperCase();
+      if (raw === "PAYMENT_PENDING") return "Payment pending";
+      if (raw === "PAYMENT_TO_VERIFY") return "Payment to verify";
+      if (raw === "PAID_VERIFIED") return "Payment verified";
+      if (state.paymentVerified === true) return "Payment verified";
+      if (state.paymentEvidencePresent === true) return "Payment to verify";
+      return raw ? reviewWorkspaceV2Humanize_(raw) : "Not yet payment applicable";
+    }
+
+    function reviewWorkspaceV2Contactability_(projection){
+      var state = projection && projection.authorityState ? projection.authorityState : {};
+      var raw = String(state.contactabilityState || "").trim().toUpperCase();
+      if (raw) return reviewWorkspaceV2Humanize_(raw);
+      if (state.hasValidEmail === true) return "Email available";
+      if (state.hasPhoneFallback === true) return "Phone fallback available";
+      return "Contactability unavailable";
+    }
+
+    function reviewWorkspaceV2Owner_(projection){
+      var group = actionabilityGroupKey_(projection);
+      if (group === "ACADEMIC" || group === "ADMISSIONS" || group === "CONTACTABILITY" || group === "MANAGEMENT" || group === "DORMANT") {
+        return actionabilityAuthorityLabel_(projection);
+      }
+      return actionabilityOwnerLabel_(projection && projection.actionOwner);
+    }
+
+    function reviewWorkspaceV2Status_(projection){
+      var raw = String(projection && projection.actionabilityState || "").trim().toUpperCase();
+      if (raw === "READY") return "Ready";
+      if (raw === "COOLING_OFF") return "Cooling-off active";
+      if (raw === "REVIEW_REQUIRED") return "Review required";
+      if (raw === "COMPLETE") return "Complete";
+      return actionabilityStateLabel_(raw);
+    }
+
+    function reviewWorkspaceV2Blocker_(projection){
+      var raw = actionabilityBlockerText_(projection);
+      var until = String(projection && projection.coolingOffUntil || "").trim();
+      if (until && /cool/i.test(raw)) return "Cooling-off active until " + reviewWorkspaceV2PngTime_(until);
+      if (/No blocker returned by authority data/i.test(raw)) return "No blocker returned";
+      return raw || "No blocker returned";
     }
 
     function reviewWorkspaceV2SetText_(id, value){
@@ -12928,11 +13021,9 @@ function renderStageDashboard_(items, emptyMessage){
       reviewWorkspaceV2SetText_("reviewV2Title", "Loading applicant details");
       reviewWorkspaceV2SetText_("reviewV2Subtitle", "Requested ApplicantID " + (reviewWorkspaceV2State.requestedApplicantId || "-"));
       reviewWorkspaceV2SetText_("reviewV2ApplicantId", reviewWorkspaceV2State.requestedApplicantId || "Requested by row");
-      reviewWorkspaceV2SetText_("reviewV2RowNumber", reviewWorkspaceV2State.requestedRowNumber ? String(reviewWorkspaceV2State.requestedRowNumber) : "-");
       reviewWorkspaceV2SetText_("reviewV2PrimaryRoute", "Loading");
       reviewWorkspaceV2SetText_("reviewV2Lifecycle", "Loading");
-      reviewWorkspaceV2SetText_("reviewV2Owner", "Loading");
-      reviewWorkspaceV2SetText_("reviewV2FinanceState", "Loading");
+      reviewWorkspaceV2SetText_("reviewV2CurrentStatus", "Loading");
       reviewWorkspaceV2SetText_("reviewV2Status", "Loading applicant details...");
       var statusEl = document.getElementById("reviewV2Status");
       if (statusEl) statusEl.classList.remove("reviewV2-error");
@@ -12983,51 +13074,49 @@ function renderStageDashboard_(items, emptyMessage){
 
     function reviewWorkspaceV2Facts_(detail){
       var d = detail || {};
-      var facts = opsPortalDiagnosticsFacts_(d);
-      var proof = facts && facts.resolverProof ? facts.resolverProof : {};
-      var authority = reviewAuthoritySnapshot_(d) || {};
-      var authorityState = authority.authorityState || {};
+      var projection = reviewWorkspaceV2Projection_(d);
+      var authorityState = projection.authorityState || {};
       var fullName = ((d.First_Name || "") + " " + (d.Last_Name || "")).trim() || opsDetailName_(d) || "Unnamed Applicant";
-      var lifecycleBase = String(authority && authority.canonicalLifecycle && authority.canonicalLifecycle.baseState || "").trim();
-      var primaryRoute = reviewWorkspaceV2Text_(authority.primaryRoute || authority.actionOwner || proof.currentQueueBucket || facts.nextActionLabel || "Review Workspace");
-      var nextAction = reviewWorkspaceV2Humanize_(authority.nextAction || facts.nextActionLabel || d.Next_Action || d.Recommended_Next_Action || "");
-      var blocker = reviewWorkspaceV2Text_(authority.selectBlockReason || facts.blockReason || d.Blocker || d.Current_Blocker || "No active blocker returned");
-      var nextActionAt = reviewWorkspaceV2Text_(authority.nextActionAt || d.Next_Action_At || d.Comm_Next_Action_Date || d.Next_Eligible_Send || "");
-      var recommendedCommunication = reviewWorkspaceV2Humanize_(d.Comm_Recommended_Message_Type || authority.recommendedMessageType || d.Recommended_Message_Type || "");
-      var financeApplicability = reviewWorkspaceV2Text_(d.Finance_Applicability || d.Payment_Applicability || "");
-      if (financeApplicability === "-") {
-        var financeRoute = String(authority.primaryRoute || authority.actionOwner || "").trim().toUpperCase();
-        var financeLifecycle = String(authority && authority.canonicalLifecycle && authority.canonicalLifecycle.baseState || "").trim().toUpperCase();
-        financeApplicability = (
-          financeRoute === "FINANCE"
-          || financeLifecycle.indexOf("PAYMENT") >= 0
-          || authorityState.paymentVerified === true
-          || authorityState.paymentEvidencePresent === true
-        ) ? "Finance authority returned in applicant detail" : "Not returned by applicant detail";
-      }
+      var lifecycleRaw = String(authorityState.lifecycleStage || (projection.canonicalLifecycle && (projection.canonicalLifecycle.lifecycleStage || projection.canonicalLifecycle.baseState)) || "").trim();
+      var primaryRoute = actionabilityPrimaryRouteLabel_(projection);
+      var nextAction = actionabilityNextActionLabel_(projection.nextAction);
+      var blocker = reviewWorkspaceV2Blocker_(projection);
+      var reason = String(projection.worklistReason || projection.communicationProgressDetail || projection.communicationProgress || projection.explanation || "").trim();
+      var nextActionRaw = String(projection.coolingOffUntil || "").trim();
+      var nextActionAt = nextActionRaw ? reviewWorkspaceV2PngTime_(nextActionRaw) : "No next-action date returned";
+      var recommendedCommunication = actionabilityCommsLabel_(projection.recommendedMessageType);
+      var financeState = reviewWorkspaceV2FinanceState_(projection);
+      var financeApplicability = String(actionabilityPrimaryRouteKey_(projection)).toUpperCase() === "FINANCE"
+        || authorityState.paymentVerified === true
+        || authorityState.paymentEvidencePresent === true
+        || String(authorityState.canonicalFinanceState || "").trim()
+        ? "Payment applicable"
+        : "Not yet payment applicable";
       return {
         name: fullName,
         applicantId: reviewWorkspaceV2Text_(d.ApplicantID),
-        rowNumber: Number(d._rowNumber || currentRowNumber || 0) || "",
+        rowNumber: Number(projection.rowNumber || d._rowNumber || currentRowNumber || 0) || "",
         email: reviewWorkspaceV2Text_(d.Effective_Email || d.Parent_Email_Corrected || d.Parent_Email),
-        phone: reviewWorkspaceV2Text_(facts.phone || d.Parent_Phone || d.Parent_Mobile || d.Phone_Number || d.Mobile || d.Phone),
+        phone: reviewWorkspaceV2Text_(d.Parent_Phone || d.Parent_Mobile || d.Phone_Number || d.Mobile || d.Phone),
         programme: reviewWorkspaceV2Text_(d.Programme || d.Program || d.Grade || d.Grade_Level || d.Subjects),
-        primaryRoute: reviewWorkspaceV2Humanize_(primaryRoute),
-        lifecycle: reviewDisplayStageFromAuthority_(d, facts) || reviewWorkspaceV2Humanize_(lifecycleBase),
-        actionability: reviewWorkspaceV2Humanize_(authority.actionabilityState || facts.actionabilityState || d.Actionability_State || ""),
-        owner: reviewOwnerLabelFromAuthority_(d, facts, proof),
-        blocker: blocker,
+        primaryRoute: primaryRoute,
+        lifecycle: reviewWorkspaceV2Humanize_(lifecycleRaw),
+        actionability: reviewWorkspaceV2Status_(projection),
+        owner: reviewWorkspaceV2Owner_(projection),
+        blocker: blocker || "No blocker returned",
+        reason: reason || "No route reason returned",
         nextAction: nextAction,
         nextActionAt: nextActionAt,
-        contactability: reviewWorkspaceV2Text_(facts.contactabilityLabel || d.Contactability_Status || d.Email_Status || d.Delivery_Health || "No contactability status returned"),
-        financeState: reviewPaymentLabelFromAuthority_(d, facts),
+        nextActionRaw: nextActionRaw,
+        contactability: reviewWorkspaceV2Contactability_(projection),
+        financeState: financeState,
         financeApplicability: financeApplicability,
         communicationRecommendation: recommendedCommunication,
-        portalState: reviewWorkspaceV2Text_(facts.portalStateLabel + " | " + (d.Portal_Access_Status || "Open")),
+        portalState: reviewWorkspaceV2Text_((authorityState.portalSubmitted === true ? "Portal submitted" : "Portal pending") + " | " + (d.Portal_Access_Status || "Open")),
         tokenAge: reviewWorkspaceV2Text_(d.PortalTokenAgeDays === null || d.PortalTokenAgeDays === undefined || d.PortalTokenAgeDays === "" ? "Not issued" : String(d.PortalTokenAgeDays) + " day(s)"),
-        docsState: reviewWorkspaceV2Text_(facts.documentStateLabel || d.Doc_Verification_Status_Computed || d.Doc_Verification_Status),
-        audit: reviewWorkspaceV2Text_("Last: " + (d.Doc_Last_Verified_At || "-") + " | By: " + (d.Doc_Last_Verified_By || "-")),
-        authority: authority,
+        docsState: reviewWorkspaceV2Humanize_(authorityState.documentState || d.Doc_Verification_Status_Computed || d.Doc_Verification_Status),
+        audit: reviewWorkspaceV2Text_("Last: " + (d.Doc_Last_Verified_At ? reviewWorkspaceV2PngTime_(d.Doc_Last_Verified_At) : "-") + " | By: " + (d.Doc_Last_Verified_By || "-")),
+        authority: projection,
         authorityState: authorityState
       };
     }
@@ -13043,26 +13132,22 @@ function renderStageDashboard_(items, emptyMessage){
       reviewWorkspaceV2SetText_("reviewV2Title", f.name);
       reviewWorkspaceV2SetText_("reviewV2Subtitle", f.email + " | " + f.phone);
       reviewWorkspaceV2SetText_("reviewV2ApplicantId", f.applicantId);
-      reviewWorkspaceV2SetText_("reviewV2RowNumber", f.rowNumber ? String(f.rowNumber) : "-");
       reviewWorkspaceV2SetText_("reviewV2PrimaryRoute", f.primaryRoute);
       reviewWorkspaceV2SetText_("reviewV2Lifecycle", f.lifecycle);
-      reviewWorkspaceV2SetText_("reviewV2Owner", f.owner);
-      reviewWorkspaceV2SetText_("reviewV2FinanceState", f.financeState);
+      reviewWorkspaceV2SetText_("reviewV2CurrentStatus", f.actionability);
       var status = document.getElementById("reviewV2Status");
       if (status) {
-        status.textContent = "Loaded exact applicant " + f.applicantId + ". Mutation actions remain delegated to existing Review handlers.";
+        status.textContent = "Authority summary loaded for " + f.applicantId + ".";
         status.classList.remove("reviewV2-error");
       }
       reviewWorkspaceV2SetHtml_("reviewV2AuthoritySummary", [
-        reviewWorkspaceV2FieldHtml_("Primary route", f.primaryRoute),
-        reviewWorkspaceV2FieldHtml_("Lifecycle", f.lifecycle),
-        reviewWorkspaceV2FieldHtml_("Current operational state", f.actionability),
         reviewWorkspaceV2FieldHtml_("Current owner", f.owner),
         reviewWorkspaceV2FieldHtml_("Operator action now", f.nextAction),
         reviewWorkspaceV2FieldHtml_("Why action is blocked", f.blocker),
+        reviewWorkspaceV2FieldHtml_("Route reason", f.reason),
         reviewWorkspaceV2FieldHtml_("Next action available", f.nextActionAt),
         reviewWorkspaceV2FieldHtml_("Recommended communication", f.communicationRecommendation),
-        reviewWorkspaceV2FieldHtml_("Finance applicability", f.financeApplicability),
+        reviewWorkspaceV2FieldHtml_("Finance status", f.financeState),
         reviewWorkspaceV2FieldHtml_("Contactability", f.contactability)
       ].join(""));
       renderReviewWorkspaceV2Overview_(detail, f);
@@ -13081,13 +13166,13 @@ function renderStageDashboard_(items, emptyMessage){
         '<h3 class="reviewV2-sectionTitle">Overview</h3><div class="reviewV2-grid">'
         + reviewWorkspaceV2CardHtml_("Applicant identity", f.name + " | " + f.applicantId + " | Row " + (f.rowNumber || "-"), "")
         + reviewWorkspaceV2CardHtml_("Programme / grade", f.programme, "")
-        + reviewWorkspaceV2CardHtml_("Route and ownership", f.primaryRoute + " | " + f.owner, "")
+        + reviewWorkspaceV2CardHtml_("Current owner", f.owner, "")
         + reviewWorkspaceV2CardHtml_("Document progress", f.docsState, "")
-        + reviewWorkspaceV2CardHtml_("Finance progress", f.financeState + " | " + f.financeApplicability, "")
+        + reviewWorkspaceV2CardHtml_("Finance status", f.financeState, "")
         + reviewWorkspaceV2CardHtml_("Contactability", f.contactability, "")
-        + reviewWorkspaceV2CardHtml_("Communication status", f.communicationRecommendation, "")
+        + reviewWorkspaceV2CardHtml_("Recommended communication", f.communicationRecommendation, "")
         + reviewWorkspaceV2CardHtml_("Next action", f.nextAction + " | " + f.nextActionAt, "")
-        + reviewWorkspaceV2CardHtml_("Important exceptions", f.blocker, "")
+        + reviewWorkspaceV2CardHtml_("Blocked because", f.blocker, "")
         + '</div>');
     }
 
@@ -13125,14 +13210,14 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function renderReviewWorkspaceV2Communications_(detail, f){
-      var cooling = reviewWorkspaceV2Text_(detail.Cooling_Off_Status || detail.Comm_Cooling_Off_Status || f.blocker);
+      var cooling = f.nextActionRaw ? ("Cooling-off active until " + f.nextActionAt) : reviewWorkspaceV2Text_(detail.Cooling_Off_Status || detail.Comm_Cooling_Off_Status || f.blocker);
       reviewWorkspaceV2SetHtml_("reviewV2Panel-communications",
         '<h3 class="reviewV2-sectionTitle">Communications</h3><div class="reviewV2-grid">'
         + reviewWorkspaceV2CardHtml_("Recommended message type", f.communicationRecommendation, "")
         + reviewWorkspaceV2CardHtml_("Latest communication", reviewWorkspaceV2Text_(detail.Last_Contacted_At || detail.Last_Contact_Type || detail.Last_Contact_Result), "")
         + reviewWorkspaceV2CardHtml_("Cooling-off status", cooling, "")
         + reviewWorkspaceV2CardHtml_("Next communication date", f.nextActionAt, "")
-        + reviewWorkspaceV2CardHtml_("Send eligibility", reviewCommunicationEligibilityLabelFromAuthority_(detail, opsPortalDiagnosticsFacts_(detail)) || "Review required", "")
+        + reviewWorkspaceV2CardHtml_("Send eligibility", f.actionability, "")
         + reviewWorkspaceV2CardHtml_("Block reason", f.blocker, "")
         + '</div><div class="reviewV2-actions">'
         + reviewWorkspaceV2ActionHtml_("Preview communication", "reviewWorkspaceV2PreviewCommunication_", !CAN_PREVIEW_APPLICANT_COMMUNICATION, true)
@@ -13162,13 +13247,16 @@ function renderStageDashboard_(items, emptyMessage){
         ["Row", f.rowNumber || "-"],
         ["Origin surface", reviewWorkspaceV2State.originSurface || "-"],
         ["Origin route", reviewWorkspaceV2State.originRoute || "-"],
+        ["Raw next-action timestamp", f.nextActionRaw || "No timestamp returned"],
         ["Authority reason", authority.selectBlockReason || authority.reason || f.blocker],
         ["Raw diagnostics", "Raw enums intentionally limited to this Audit tab."]
       ];
       reviewWorkspaceV2SetHtml_("reviewV2Panel-audit",
         '<h3 class="reviewV2-sectionTitle">Audit</h3><div class="reviewV2-list">'
         + diagnostics.map(function(item){ return reviewWorkspaceV2CardHtml_(item[0], item[1], ""); }).join("")
-        + '</div>');
+        + '</div><div class="reviewV2-card" style="margin-top:12px;"><div class="reviewV2-cardTitle">Support fallback</div><div class="reviewV2-cardText">Use only if V2 cannot complete the required review task for this exact applicant.</div><div class="reviewV2-actions">'
+        + reviewWorkspaceV2ActionHtml_("Open Legacy Review", "openReviewWorkspaceV2LegacyFallback_", false, false)
+        + '</div></div>');
     }
 
     function reviewWorkspaceV2PreviewCommunication_(){

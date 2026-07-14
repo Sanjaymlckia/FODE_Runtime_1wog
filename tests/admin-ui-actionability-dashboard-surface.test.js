@@ -444,10 +444,12 @@ assert.match(adminUi, /function actionabilityHiddenPanel_/, "Bucket table must r
 assert.match(adminUi, /function actionabilityOwnerLabel_/, "Current Admin must humanize authority owners for operator-readable decisions");
 assert.match(adminUi, /function actionabilityStateLabel_/, "Current Admin must humanize actionability states for operator-readable decisions");
 assert.match(adminUi, /function actionabilityOutsideCurrentQueueText_/, "Current Admin must explain why hidden rows are outside the selected queue");
+assert.match(adminUi, /function actionabilityCurrentQueueLabel_/, "Current Admin must avoid labelling in-queue rows as outside the current queue");
+assert.match(functionSource("actionabilityCurrentQueueLabel_"), /return "Queue position"/, "Current Admin must label rows inside the selected primary route as queue position");
 assert.match(adminUi, /function actionabilityCoolingOffText_/, "Current Admin must display cooling-off status from existing authority data");
 assert.match(adminUi, /function actionabilityNextActionDateText_/, "Current Admin must display next-action date when the DTO provides it");
 assert.match(adminUi, /function openActionabilityPrimaryRoute_/, "Current Admin hidden rows must expose a direct route action without changing membership");
-assert.match(adminUi, /Primary route[\s\S]*Lifecycle stage[\s\S]*Current status[\s\S]*Current owner[\s\S]*Outside current queue[\s\S]*Blocked because[\s\S]*Cooling-off[\s\S]*Next action available[\s\S]*Recommended communication/, "Hidden preview rows must present structured authority-transparency fields");
+assert.match(adminUi, /Primary route[\s\S]*Lifecycle stage[\s\S]*Current status[\s\S]*Current owner[\s\S]*actionabilityCurrentQueueLabel_\(row, key\)[\s\S]*Blocked because[\s\S]*Cooling-off[\s\S]*Next action available[\s\S]*Recommended communication/, "Hidden preview rows must present structured authority-transparency fields without false outside-queue labels");
 assert.match(adminUi, /Open ' \+ esc\(actionabilityPrimaryRouteLabel_\(row\)\) \+ ' Queue/, "Hidden preview rows must expose direct route queue actions");
 assert.match(adminUi, /actionabilityFieldHtml_\("Applicant ID"[\s\S]*actionabilityFieldHtml_\("Primary route"[\s\S]*actionabilityFieldHtml_\("Status"[\s\S]*actionabilityFieldHtml_\("Next action available"/, "Current Worklist rows must render label/value blocks for critical authority fields");
 assert.doesNotMatch(cssRule(".actionabilityWorklistRow"), /font-size:11px/, "Current Worklist rows must not use diagnostic 11px text");
