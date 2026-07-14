@@ -85,6 +85,14 @@ assert.match(operatorNextUi, /\.onxPill\{[\s\S]*font-size:13px;/, "Status badges
 assert.match(operatorNextUi, /function operatorNextHumanizeToken_/, "Operator Next must centralize human-readable label formatting");
 assert.match(operatorNextUi, /PAYMENT_TO_VERIFY:"Payment to verify"/, "Human-readable payment label mapping must exist");
 assert.match(operatorNextUi, /TEMPORARILY_ALLOWED:"Temporarily allowed"/, "Human-readable temporary capability label mapping must exist");
+assert.match(operatorNextUi, /function operatorNextOpenFinanceCohort_/, "Operator Next must expose a shared finance cohort opener");
+assert.match(operatorNextUi, /function operatorNextOpenRouteHelper_/, "Operator Next must route lifecycle finance helpers through the shared route helper");
+assert.match(operatorNextUi, /financeScope:'ACTIVE_FINANCE',financeWorklistKey:'PAYMENT_FOLLOW_UP'/, "Payment pending lifecycle helper must target the payment follow-up cohort");
+assert.match(operatorNextUi, /financeScope:'ACTIVE_FINANCE',financeWorklistKey:'PAYMENT_REVIEW'/, "Payment to verify lifecycle helper must target the payment verification cohort");
+assert.match(operatorNextUi, /document\.getElementById\('onxOpenStageQueue'\)\.onclick=function\(\)\{operatorNextOpenRouteHelper_\(def\);\};/, "Selected stage helper must open the exact shared route contract");
+assert.match(operatorNextUi, /data-onx-finance-route=\\"ACTIVE_FINANCE\\" data-onx-finance-worklist=\\"PAYMENT_FOLLOW_UP\\"/, "Finance payment-pending metric must bind the direct follow-up cohort");
+assert.match(operatorNextUi, /data-onx-finance-route=\\"ACTIVE_FINANCE\\" data-onx-finance-worklist=\\"PAYMENT_REVIEW\\"/, "Finance payment-to-verify metric must bind the direct verification cohort");
+assert.doesNotMatch(operatorNextUi, /Open first Review|Review first returned record/, "Generic first-review affordances must be removed from Operator Next");
 assert.doesNotMatch(operatorNextUi, /admin_getOpsLifecycleSummary\(\{force:0\}\)/, "Contained Global View must not fetch OPS compatibility summary");
 assert.match(operatorNextUi, /row&&row\.selectable===true/, "Selection must consume server Actionability selectable");
 assert.match(operatorNextUi, /review\(Number\(row\.rowNumber\|\|0\)\|\|null,String\(row\.applicantId\|\|''\),null,\{actionabilityFocus:true\}\)/, "Review handoff must preserve exact row and Applicant ID");
@@ -155,7 +163,8 @@ const context = {
   actionabilityPreviewRows: [],
   actionabilityCurrentCohortRows: [],
   actionabilityRenderedRows: [],
-  actionabilitySelectionSource: ""
+  actionabilitySelectionSource: "",
+  pendingActionabilityReviewContext: null
 };
 vm.createContext(context);
 vm.runInContext(script, context, { filename: "AdminUI_OperatorNext.script.js" });
@@ -230,6 +239,17 @@ assert.match(queueHtml, /FODE-26-COOLING[\s\S]*disabled[\s\S]*Cooling-off active
 context.operatorNextOpenReview_(waffi);
 const reviewCall = calls.find((entry) => entry && entry.review);
 assert.deepEqual(reviewCall.review.slice(0, 2), [2959, "FODE-26-002959"], "Review must open the exact Waffi row and Applicant ID");
+assert.deepEqual(JSON.parse(JSON.stringify(context.pendingActionabilityReviewContext)), {
+  applicantId: "FODE-26-002959",
+  rowNumber: 2959,
+  requestId: null,
+  target: "summary",
+  originRoute: "health",
+  financeFilters: {
+    financeScope: "ACTIVE_FINANCE",
+    worklistKey: ""
+  }
+}, "Review handoff must preserve row identity and return context");
 
 context.operatorNextOpenBatch_();
 const batchCall = calls.find((entry) => entry && entry.batch);

@@ -233,6 +233,14 @@ function resolveCanonicalFinance_(rowObj, canonicalPopulationRow, opts) {
       : (applicability.paymentApplicable
         ? "Payment is applicable and no genuine payment evidence is present."
         : applicability.reason));
+  var actionabilityGroup = canonicalFinanceUpper_(actionability.workloadGroupKey || "");
+  var actionabilityState = canonicalFinanceUpper_(actionability.state || "");
+  var activeFinanceWork = false;
+  if (financeState === "PAYMENT_TO_VERIFY") {
+    activeFinanceWork = actionabilityGroup === "FINANCE";
+  } else if (financeState === "PAYMENT_PENDING") {
+    activeFinanceWork = actionabilityGroup === "FINANCE" && actionabilityState === "READY";
+  }
   var warnings = [];
   if (rawPaymentVerified && rawPaymentVerified.toLowerCase() === "yes" && !paymentVerified) warnings.push("Payment_Verified is compatibility-only and contradicts canonical Receipt_Status.");
   if (receiptStatusKey === "verified" && !paymentVerified) warnings.push("Receipt_Status text is present but canonical payment helper did not verify payment.");
@@ -283,7 +291,7 @@ function resolveCanonicalFinance_(rowObj, canonicalPopulationRow, opts) {
       paymentVerified: paymentVerified,
       paymentEvidencePresent: receiptEvidencePresent,
       paymentApplicable: applicability.paymentApplicable,
-      activeFinanceWork: financeState === "PAYMENT_PENDING" || financeState === "PAYMENT_TO_VERIFY",
+      activeFinanceWork: activeFinanceWork,
       applicabilityReasonCode: applicability.reasonCode,
       applicabilityReason: applicability.reason,
       applicabilitySource: applicability.source,

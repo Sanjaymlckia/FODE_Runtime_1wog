@@ -46,7 +46,7 @@ assert.match(docsReviewVerifiedHelper, /adminDocumentReviewVerifiedForPaymentGat
 assert.match(reviewQueues, /buildOperationalRouteSnapshot_\(canonicalPopulationSnapshot_\(\), \{\}\)/, "Review queue compatibility surface must consume the shared operational route projection");
 assert.match(reviewQueues, /docs:\s*\(operational\.routeRows && operational\.routeRows\.ADMISSIONS_REVIEW \|\| \[\]\)\.map\(buildReviewQueueRow_\)/, "Documents to Verify compatibility queue must be sourced from the shared Admissions cohort");
 assert.match(reviewQueues, /awaitingPayment:[\s\S]*row\.financeState[\s\S]*PAYMENT_PENDING[\s\S]*row\.activeFinanceWork === true/, "Awaiting Payment compatibility queue must come from shared active finance pending rows");
-assert.match(reviewQueues, /payments:[\s\S]*row\.financeState[\s\S]*PAYMENT_TO_VERIFY/, "Payments to Verify compatibility queue must come from shared receipt-verification rows");
+assert.match(reviewQueues, /payments:[\s\S]*row\.financeState[\s\S]*PAYMENT_TO_VERIFY[\s\S]*row\.activeFinanceWork === true/, "Payments to Verify compatibility queue must come from shared active receipt-verification rows");
 assert.match(reviewQueues, /paidApproved:[\s\S]*row\.financeState[\s\S]*PAID_VERIFIED/, "Payment Verified compatibility queue must come from shared verified-payment rows");
 assert.match(reviewQueues, /anomalies:[\s\S]*row\.financeExceptionCode[\s\S]*MANAGEMENT_EXCEPTIONS[\s\S]*UNKNOWN_UNCLASSIFIED/, "Anomalies compatibility queue must be sourced from explicit shared exception cohorts");
 

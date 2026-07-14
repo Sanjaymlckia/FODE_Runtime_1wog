@@ -223,7 +223,7 @@ function admin_getReviewQueues(payload) {
       return clean_(row.financeState || "").toUpperCase() === "PAYMENT_PENDING" && row.activeFinanceWork === true;
     }).map(buildReviewQueueRow_),
     payments: allRows.filter(function (row) {
-      return clean_(row.financeState || "").toUpperCase() === "PAYMENT_TO_VERIFY";
+      return clean_(row.financeState || "").toUpperCase() === "PAYMENT_TO_VERIFY" && row.activeFinanceWork === true;
     }).map(buildReviewQueueRow_),
     anomalies: allRows.filter(function (row) {
       var routeKey = clean_(row.routeKey || "").toUpperCase();
