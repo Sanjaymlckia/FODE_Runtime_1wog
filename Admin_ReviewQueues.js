@@ -166,460 +166,99 @@ function admin_getReviewQueues(payload) {
   payload = payload || {};
   var offset = Math.max(0, Number(payload.offset || 0));
   var limit = Math.max(1, Number(payload.limit || 20));
-  var force = payload && (payload.force === 1 || payload.force === true);
-  var cache = CacheService.getUserCache();
-  var cacheKey = getDashboardCacheKey_(adminEmail);
-  var fullData = null;
-  Logger.log("R232_QUEUE_CANARY ENTRY " + JSON.stringify({
-    force: force,
-    offset: offset,
-    limit: limit
-  }));
-  if (!force) {
-    try {
-      var cached = cache.get(cacheKey);
-      if (cached) fullData = JSON.parse(cached);
-    } catch (_cacheReadErr) {}
-  }
+  var operational = buildOperationalRouteSnapshot_(canonicalPopulationSnapshot_(), {});
+  var allRows = operational.rows || [];
 
-  if (!fullData || typeof fullData !== "object") {
-    var sheet = openDataSheet_();
-    var data = sheet.getDataRange().getValues();
-    if (!data || data.length < 2) {
-      fullData = {
-        fdReceived: [],
-        docs: [],
-        awaitingPayment: [],
-        payments: [],
-        anomalies: [],
-        paidApproved: [],
-        postPaymentIssues: [],
-        counts: { fdReceived: 0, payments: 0, docs: 0, awaitingPayment: 0, anomalies: 0, paidApproved: 0, postPaymentIssues: 0 }
-      };
-    } else {
-      var headers = data[0];
-      var idx = headerIndex_(headers);
-      var payments = [];
-      var fdReceived = [];
-      var docs = [];
-      var awaitingPayment = [];
-      var anomalies = [];
-      var paidApproved = [];
-      var postPaymentIssues = [];
-      var debugRows = [];
-      var scannedCount = 0;
-      var skippedCount = 0;
-      var candidateCount = 0;
-      function pushQueueItem_(target, item) {
-        var rowNum = Number(item && item.rowNumber || 0);
-        if (!Number.isFinite(rowNum) || rowNum < 2) return;
-        target.push(item);
-      }
-
-      Logger.log("QUEUE_SCAN_START " + JSON.stringify({
-        user: Session.getEffectiveUser().getEmail(),
-        force: force
-      }));
-
-      for (var r = 1; r < data.length; r++) {
-        var row = data[r] || [];
-        var rowObj = {};
-        for (var c = 0; c < headers.length; c++) {
-          var h = clean_(headers[c]);
-          if (!h) continue;
-          rowObj[h] = row[c];
-        }
-
-        scannedCount++;
-        if (!isQueueCandidateRow_(rowObj)) {
-          skippedCount++;
-          continue;
-        }
-        candidateCount++;
-
-        var applicantId = clean_(rowObj.ApplicantID || "");
-        var firstName = clean_(rowObj.First_Name || "");
-        var lastName = clean_(rowObj.Last_Name || "");
-        var name = (firstName + " " + lastName).trim();
-        var parentEmail = clean_(rowObj.Parent_Email || "");
-        var correctedEmail = clean_(rowObj.Parent_Email_Corrected || "");
-        var effectiveEmail = correctedEmail || parentEmail;
-        var parentPhone = clean_(rowObj.Parent_Phone || rowObj.Mobile || rowObj.WhatsApp || rowObj.Contact_Number || rowObj.Phone || rowObj.Phone_Number || "");
-
-        var paymentFacts = adminRowPaymentAuthorityFacts_(rowObj);
-        var paymentVerifiedRaw = paymentFacts.paymentVerifiedRaw;
-        var paymentBadge = paymentFacts.paymentBadge;
-        var receiptUrl = clean_(rowObj.Fee_Receipt_File || "");
-        var mandatoryDocIssue = hasMandatoryDocIssue_(rowObj, idx);
-
-        var docsFollowupSentAt = getDocsFollowupSentAt_(rowObj);
-        var authorityProjection = typeof compatibilityCommunicationAuthorityProjection_ === "function"
-          ? compatibilityCommunicationAuthorityProjection_(rowObj, r + 1)
-          : null;
-        var receivedInfo = pickQueueReceivedInfo_(rowObj);
-        var qItem = {
-          rowNumber: r + 1,
-          applicantId: applicantId,
-          name: name,
-          ApplicantID: applicantId,
-          parentEmail: parentEmail,
-          correctedEmail: correctedEmail,
-          effectiveEmail: effectiveEmail,
-          Parent_Phone: parentPhone,
-          portalLastUpdateAt: rowObj.PortalLastUpdateAt || "",
-          portalTokenIssuedAt: rowObj.PortalTokenIssuedAt || "",
-          receivedAt: receivedInfo.receivedAt,
-          receivedDisplay: receivedInfo.receivedDisplay,
-          receivedSource: receivedInfo.source,
-          ageDays: receivedInfo.ageDays,
-          ageLabel: receivedInfo.ageLabel,
-          ageBand: receivedInfo.ageBand,
-          Handled_By: clean_(rowObj.Handled_By || ""),
-          Handled_At: clean_(rowObj.Handled_At || ""),
-          Last_Contacted_At: clean_(rowObj.Last_Contacted_At || ""),
-          Email_Last_Sent_At: clean_(rowObj.Email_Last_Sent_At || ""),
-          Ack_Email_Sent_At: clean_(rowObj.Ack_Email_Sent_At || ""),
-          Payment_Verified_At: clean_(rowObj.Payment_Verified_At || rowObj.Payment_Verified_Date || ""),
-          Classroom_Handover_At: clean_(rowObj.Classroom_Handover_At || rowObj.Classroom_Notified_At || ""),
-          Enrolled_By: clean_(rowObj.Enrolled_By || ""),
-          Enrolled_At: clean_(rowObj.Enrolled_At || ""),
-          docsFollowupSentAt: safeStr_(docsFollowupSentAt || "")
-        };
-        if (authorityProjection && typeof authorityProjection === "object") {
-          for (var authorityKey in authorityProjection) {
-            if (Object.prototype.hasOwnProperty.call(authorityProjection, authorityKey)) qItem[authorityKey] = authorityProjection[authorityKey];
-          }
-        }
-
-        var hasActivity = hasStudentActivity_(rowObj);
-        var portalSubmitted = adminRowPortalSubmitted_(rowObj);
-        var docsReviewVerified = adminRowDocsReviewVerified_(rowObj);
-        var paymentEvidencePresent = paymentFacts.paymentEvidencePresent;
-        var paymentReceived = paymentEvidencePresent;
-        var paymentVerified = paymentFacts.paymentVerified;
-        var enrolledConfirmed = paymentVerified;
-        var opsRequiredDocsSummary = adminOpsRequiredDocumentUploadSummary_(rowObj);
-        var opsDocumentState = adminOpsDocumentStateFromRow_(rowObj);
-        var opsLifecycleStageKey = adminOpsLifecycleStageKeyFromRow_(rowObj);
-        var requiredDocumentUploadComplete = !!(opsRequiredDocsSummary && opsRequiredDocsSummary.requiredDocumentUploadComplete);
-        // r22xB.1: Documents to Verify is officer review-ready only:
-        // portalSubmitted && requiredDocumentUploadComplete && !docsVerified.
-        var docsQueueMatch = portalSubmitted && requiredDocumentUploadComplete && !docsReviewVerified;
-        var awaitingPaymentQueueMatch = docsReviewVerified && !paymentVerified && !paymentEvidencePresent;
-        var paymentsQueueMatch = docsReviewVerified && !paymentVerified && paymentEvidencePresent;
-        var anomaliesQueueMatch = paymentVerified && !docsReviewVerified;
-        var paidApprovedQueueMatch = paymentVerified;
-        var fdReceivedQueueMatch = isExternalFdIntakeRow_(rowObj) && !portalSubmitted && !docsReviewVerified && !paymentVerified;
-
-        qItem.Portal_Submitted = portalSubmitted ? "Yes" : "No";
-        qItem.Docs_Verified = docsReviewVerified ? "Yes" : "No";
-        qItem.Payment_Received = paymentReceived ? "Yes" : "No";
-        qItem.Payment_Verified = paymentVerified ? "Yes" : "No";
-        qItem.Payment_Verified_Raw = paymentVerifiedRaw ? "Yes" : "No";
-        qItem.Payment_Badge = paymentBadge;
-        qItem.Enrolled_Confirmed = enrolledConfirmed ? "Yes" : "No";
-        qItem.Fee_Receipt_File = receiptUrl;
-        qItem.opsDocumentState = opsDocumentState;
-        qItem.opsLifecycleStageKey = opsLifecycleStageKey;
-        qItem.hasDocumentUploadEvidence = adminOpsHasUploadEvidence_(rowObj);
-        qItem.requiredDocumentUploadComplete = !!opsRequiredDocsSummary.requiredDocumentUploadComplete;
-        qItem.uploadedRequiredDocumentCount = Number(opsRequiredDocsSummary.uploadedRequiredCount || 0);
-        qItem.requiredDocumentCount = Number(opsRequiredDocsSummary.requiredCount || 0);
-        qItem.missingRequiredDocuments = (opsRequiredDocsSummary.missingRequiredDocuments || []).join(", ");
-        qItem.Registration_Complete = clean_(rowObj.Registration_Complete || "") === "Yes" ? "Yes" : "No";
-        qItem.Books_Invoice_ID = clean_(rowObj.Books_Invoice_ID || "");
-        qItem.Books_Invoice_Number = clean_(rowObj.Books_Invoice_Number || "");
-        qItem.Books_Invoice_Status = clean_(rowObj.Books_Invoice_Status || "");
-        qItem.Books_Push_Status = clean_(rowObj.Books_Push_Status || "");
-        qItem.Books_Push_At = clean_(rowObj.Books_Push_At || rowObj.Books_Last_Push_At || "");
-        qItem.Books_Push_By = clean_(rowObj.Books_Push_By || "");
-        qItem.Books_Last_Error = clean_(rowObj.Books_Last_Error || "");
-        qItem.Invoice_Email_Status = "UNKNOWN";
-        qItem.invoiceRaised = !!qItem.Books_Invoice_ID;
-        qItem.FD_FormID = clean_(rowObj.FD_FormID || "");
-        qItem.FormID = clean_(rowObj.FormID || "");
-        qItem.correlation_id = clean_(rowObj.correlation_id || rowObj.Correlation_ID || "");
-        qItem.__reqId = clean_(rowObj.__reqId || "");
-        qItem.adapter_forwarded = clean_(rowObj.adapter_forwarded || rowObj.Adapter_Forwarded || "");
-        qItem.adapter_source = clean_(rowObj.adapter_source || rowObj.Adapter_Source || "");
-        qItem.adapter_version = clean_(rowObj.adapter_version || "");
-        qItem.adapter_mode = clean_(rowObj.adapter_mode || "");
-        qItem.adapter_crm_result = clean_(rowObj.adapter_crm_result || "");
-        qItem.adapter_timestamp = clean_(rowObj.adapter_timestamp || rowObj.adapterTimestamp || "");
-        qItem.CRM_Response = clean_(rowObj.CRM_Response || "");
-        qItem.Contact_ID = clean_(rowObj.Contact_ID || "");
-        qItem.Deal_ID = clean_(rowObj.Deal_ID || "");
-        qItem.Email_Status = clean_(rowObj.Email_Status || "");
-        qItem.Email_Verification_Status = clean_(rowObj.Email_Verification_Status || "");
-        qItem.Email_Bounce_Flag = clean_(rowObj.Email_Bounce_Flag || "");
-        qItem.Email_Bounce_Reason = clean_(rowObj.Email_Bounce_Reason || "");
-        qItem.Last_Email_Error = clean_(rowObj.Last_Email_Error || "");
-        qItem.Last_Email_To = clean_(rowObj.Last_Email_To || "");
-        qItem.Parent_Email = clean_(rowObj.Parent_Email || "");
-        qItem.Parent_Email_Corrected = clean_(rowObj.Parent_Email_Corrected || "");
-        qItem.Ack_Email_Status = clean_(rowObj.Ack_Email_Status || "");
-        qItem.Last_Contact_Type = clean_(rowObj.Last_Contact_Type || "");
-        qItem.Last_Contact_Result = clean_(rowObj.Last_Contact_Result || "");
-        qItem.Last_Contact_DebugId = clean_(rowObj.Last_Contact_DebugId || "");
-        qItem.PortalURL = clean_(rowObj.PortalURL || "");
-        qItem.Pipeline_Stage = clean_(rowObj.Pipeline_Stage || "");
-        qItem.Operational_Stage = clean_(rowObj.Operational_Stage || "");
-        qItem.CRM_Stage = clean_(rowObj.CRM_Stage || "");
-        qItem.Stage = clean_(rowObj.Stage || "");
-        if (Object.prototype.hasOwnProperty.call(rowObj, "Overall_Status")) {
-          qItem.Overall_Status = clean_(rowObj.Overall_Status || "");
-        }
-
-        debugRows.push({
-          id: clean_(rowObj.ApplicantID || rowObj.ID || rowObj["Applicant ID"] || "unknown"),
-          activity: hasActivity,
-          portalSubmitted: portalSubmitted,
-          docsVerified: docsReviewVerified,
-          paymentVerified: paymentVerified,
-          paymentEvidencePresent: paymentEvidencePresent,
-          receipt: paymentEvidencePresent,
-          opsDocumentState: opsDocumentState,
-          opsLifecycleStageKey: opsLifecycleStageKey,
-          uploadedRequiredDocumentCount: opsRequiredDocsSummary.uploadedRequiredCount,
-          missingRequiredDocuments: opsRequiredDocsSummary.missingRequiredDocuments,
-          portalTs: clean_(rowObj.PortalLastUpdateAt || ""),
-          docsQueue: docsQueueMatch,
-          awaitingPaymentQueue: awaitingPaymentQueueMatch,
-          paymentsQueue: paymentsQueueMatch,
-          anomaliesQueue: anomaliesQueueMatch,
-          paidApprovedQueue: paidApprovedQueueMatch,
-          fdReceivedQueue: fdReceivedQueueMatch
-        });
-        Logger.log("QUEUE_CLASSIFY " + JSON.stringify({
-          applicantId: rowObj.ApplicantID,
-          portalSubmitted: portalSubmitted,
-          docsVerifiedRaw: rowObj.Docs_Verified,
-          docsVerified: docsReviewVerified,
-          paymentVerifiedRaw: rowObj.Payment_Verified,
-          paymentVerified: paymentVerified,
-          opsDocumentState: opsDocumentState,
-          opsLifecycleStageKey: opsLifecycleStageKey,
-          paymentEvidencePresent: paymentEvidencePresent,
-          awaitingPaymentQueue: awaitingPaymentQueueMatch,
-          hasActivity: hasActivity
-        }));
-        if (applicantId.indexOf("FODE-26-TEST-") === 0 || applicantId === "FODE-26-000084" || applicantId === "FODE-26-000007") {
-          Logger.log("R232_QUEUE_CANARY ROW " + JSON.stringify({
-            applicantId: applicantId,
-            portalSubmitted: portalSubmitted,
-            docsVerified: docsReviewVerified,
-            paymentEvidencePresent: paymentEvidencePresent,
-            paymentVerified: paymentVerified,
-            opsDocumentState: opsDocumentState,
-            opsLifecycleStageKey: opsLifecycleStageKey,
-            docsQueue: docsQueueMatch,
-            awaitingPaymentQueue: awaitingPaymentQueueMatch,
-            paymentsQueue: paymentsQueueMatch,
-            anomaliesQueue: anomaliesQueueMatch,
-            paidApprovedQueue: paidApprovedQueueMatch
-          }));
-        }
-
-        if (paidApprovedQueueMatch) {
-          pushQueueItem_(paidApproved, qItem);
-        } else if (paymentsQueueMatch) {
-          pushQueueItem_(payments, qItem);
-        } else if (awaitingPaymentQueueMatch) {
-          pushQueueItem_(awaitingPayment, qItem);
-        } else if (docsQueueMatch) {
-          pushQueueItem_(docs, qItem);
-        } else if (fdReceivedQueueMatch) {
-          qItem.queueBucket = "fdReceived";
-          pushQueueItem_(fdReceived, qItem);
-        }
-
-        if (anomaliesQueueMatch) {
-          pushQueueItem_(anomalies, qItem);
-        }
-        if (paymentVerified && mandatoryDocIssue) {
-          pushQueueItem_(postPaymentIssues, qItem);
-        }
-      }
-      fdReceived.sort(compareFdReceivedQueueItems_);
-      docs.sort(compareQueueItems_);
-      awaitingPayment.sort(compareQueueItems_);
-      payments.sort(compareQueueItems_);
-      anomalies.sort(compareQueueItems_);
-      paidApproved.sort(compareQueueItems_);
-      postPaymentIssues.sort(compareQueueItems_);
-
-      function stripQueue_(items) {
-        return (items || []).map(function (it) {
-          var row = buildQueueRow_(it.rowNumber, it.applicantId, it.name, {
-            ApplicantID: clean_(it.ApplicantID || it.applicantId || ""),
-            parentEmail: clean_(it.parentEmail || ""),
-            correctedEmail: clean_(it.correctedEmail || ""),
-            effectiveEmail: clean_(it.effectiveEmail || ""),
-            Parent_Phone: clean_(it.Parent_Phone || ""),
-            receivedAt: clean_(it.receivedAt || ""),
-            receivedDisplay: clean_(it.receivedDisplay || ""),
-            receivedSource: clean_(it.receivedSource || ""),
-            ageDays: (it.ageDays === null || it.ageDays === undefined || it.ageDays === "") ? "" : Number(it.ageDays),
-            ageLabel: clean_(it.ageLabel || ""),
-            ageBand: clean_(it.ageBand || ""),
-            Handled_By: clean_(it.Handled_By || ""),
-            Handled_At: clean_(it.Handled_At || ""),
-            Last_Contacted_At: clean_(it.Last_Contacted_At || ""),
-            Email_Last_Sent_At: clean_(it.Email_Last_Sent_At || ""),
-            Ack_Email_Sent_At: clean_(it.Ack_Email_Sent_At || ""),
-            Payment_Verified_At: clean_(it.Payment_Verified_At || ""),
-            Classroom_Handover_At: clean_(it.Classroom_Handover_At || ""),
-            Enrolled_By: clean_(it.Enrolled_By || ""),
-            Enrolled_At: clean_(it.Enrolled_At || ""),
-            docsFollowupSentAt: safeStr_(it.docsFollowupSentAt || ""),
-            Portal_Submitted: clean_(it.Portal_Submitted || ""),
-            Docs_Verified: clean_(it.Docs_Verified || ""),
-            opsDocumentState: clean_(it.opsDocumentState || ""),
-            opsLifecycleStageKey: clean_(it.opsLifecycleStageKey || ""),
-            hasDocumentUploadEvidence: !!it.hasDocumentUploadEvidence,
-            requiredDocumentUploadComplete: !!it.requiredDocumentUploadComplete,
-            uploadedRequiredDocumentCount: Number(it.uploadedRequiredDocumentCount || 0),
-            requiredDocumentCount: Number(it.requiredDocumentCount || 0),
-            missingRequiredDocuments: clean_(it.missingRequiredDocuments || ""),
-            Payment_Received: clean_(it.Payment_Received || ""),
-            Payment_Verified: clean_(it.Payment_Verified || ""),
-            Enrolled_Confirmed: clean_(it.Enrolled_Confirmed || ""),
-            Fee_Receipt_File: clean_(it.Fee_Receipt_File || ""),
-            Registration_Complete: clean_(it.Registration_Complete || ""),
-            Books_Invoice_ID: clean_(it.Books_Invoice_ID || ""),
-            Books_Invoice_Number: clean_(it.Books_Invoice_Number || ""),
-            Books_Invoice_Status: clean_(it.Books_Invoice_Status || ""),
-            Books_Push_Status: clean_(it.Books_Push_Status || ""),
-            Books_Push_At: clean_(it.Books_Push_At || ""),
-            Books_Push_By: clean_(it.Books_Push_By || ""),
-            Books_Last_Error: clean_(it.Books_Last_Error || ""),
-            Invoice_Email_Status: clean_(it.Invoice_Email_Status || "UNKNOWN"),
-            invoiceRaised: !!it.invoiceRaised,
-            FD_FormID: clean_(it.FD_FormID || ""),
-            FormID: clean_(it.FormID || ""),
-            correlation_id: clean_(it.correlation_id || ""),
-            __reqId: clean_(it.__reqId || ""),
-            adapter_forwarded: clean_(it.adapter_forwarded || ""),
-            adapter_source: clean_(it.adapter_source || ""),
-            adapter_version: clean_(it.adapter_version || ""),
-            adapter_mode: clean_(it.adapter_mode || ""),
-            adapter_crm_result: clean_(it.adapter_crm_result || ""),
-            adapter_timestamp: clean_(it.adapter_timestamp || ""),
-            queueBucket: clean_(it.queueBucket || ""),
-            CRM_Response: clean_(it.CRM_Response || ""),
-            Contact_ID: clean_(it.Contact_ID || ""),
-            Deal_ID: clean_(it.Deal_ID || ""),
-            Email_Status: clean_(it.Email_Status || ""),
-            Ack_Email_Status: clean_(it.Ack_Email_Status || ""),
-            Last_Contact_Type: clean_(it.Last_Contact_Type || ""),
-            Last_Contact_Result: clean_(it.Last_Contact_Result || ""),
-            Last_Contact_DebugId: clean_(it.Last_Contact_DebugId || ""),
-            PortalURL: clean_(it.PortalURL || ""),
-            Pipeline_Stage: clean_(it.Pipeline_Stage || ""),
-            Operational_Stage: clean_(it.Operational_Stage || ""),
-            CRM_Stage: clean_(it.CRM_Stage || ""),
-            Stage: clean_(it.Stage || ""),
-            Overall_Status: Object.prototype.hasOwnProperty.call(it, "Overall_Status") ? clean_(it.Overall_Status || "") : ""
-          });
-          if (!Object.prototype.hasOwnProperty.call(it, "Overall_Status")) delete row.Overall_Status;
-          return row;
-        });
-      }
-      fullData = {
-        fdReceived: stripQueue_(fdReceived),
-        docs: stripQueue_(docs),
-        awaitingPayment: stripQueue_(awaitingPayment),
-        payments: stripQueue_(payments),
-        anomalies: stripQueue_(anomalies),
-        paidApproved: stripQueue_(paidApproved),
-        postPaymentIssues: stripQueue_(postPaymentIssues),
-        counts: {
-          fdReceived: fdReceived.length,
-          payments: payments.length,
-          docs: docs.length,
-          awaitingPayment: awaitingPayment.length,
-          anomalies: anomalies.length,
-          paidApproved: paidApproved.length,
-          postPaymentIssues: postPaymentIssues.length
-        }
-      };
-      debugRows.forEach(function (d) {
-        if (d.id === "FODE-26-000084" || d.id === "FODE-26-000007") {
-          Logger.log("CIS-r231 QUEUE DEBUG for %s: %s", d.id, JSON.stringify(d));
-        }
-      });
-      Logger.log("QUEUE_SUMMARY " + JSON.stringify({
-        fdReceived: fdReceived.length,
-        docs: docs.length,
-        awaitingPayment: awaitingPayment.length,
-        payments: payments.length,
-        anomalies: anomalies.length,
-        paidApproved: paidApproved.length
-      }));
-      Logger.log("R232_QUEUE_CANARY SUMMARY " + JSON.stringify({
-        fdReceived: fdReceived.length,
-        docs: docs.length,
-        awaitingPayment: awaitingPayment.length,
-        payments: payments.length,
-        anomalies: anomalies.length,
-        paidApproved: paidApproved.length
-      }));
-      Logger.log("QUEUE_PREFILTER_SUMMARY " + JSON.stringify({
-        scanned: scannedCount,
-        skipped: skippedCount,
-        candidates: candidateCount,
-        fdReceived: fdReceived.length,
-        docs: docs.length,
-        awaitingPayment: awaitingPayment.length,
-        payments: payments.length,
-        anomalies: anomalies.length,
-        paidApproved: paidApproved.length
-      }));
-    }
-    try {
-      cache.put(cacheKey, JSON.stringify(fullData), 60);
-    } catch (_cacheWriteErr) {}
-  }
-
-  fullData = normalizeReviewQueueData_(fullData);
-  fullData.docs = filterDocumentsToVerifyQueue_(fullData.docs);
-  fullData.counts.docs = fullData.docs.length;
-  var pageMeta = mergeQueuePageMeta_(fullData, offset, limit);
-  function refreshDocsFollowupRuntime_(rows) {
-    var list = Array.isArray(rows) ? rows : [];
-    return list.map(function (row) {
-      var out = {};
-      var src = row && typeof row === "object" ? row : {};
-      for (var k in src) {
-        if (Object.prototype.hasOwnProperty.call(src, k)) out[k] = src[k];
-      }
-      var applicantId = clean_(out.ApplicantID || out.applicantId || "");
-      out.ApplicantID = clean_(out.ApplicantID || applicantId || "");
-      out.applicantId = clean_(out.applicantId || applicantId || "");
-      out.name = clean_(out.name || "");
-      out.rowNumber = Number(out.rowNumber || 0);
-      var sentAt = "";
-      if (applicantId) {
-        try {
-          var key = buildDocsFollowupKey_(CONFIG.DATA_MODE, applicantId);
-          sentAt = safeStr_(PropertiesService.getScriptProperties().getProperty(key) || "");
-        } catch (_propErr) {}
-      }
-      out.docsFollowupSentAt = sentAt;
-      return out;
+  function buildReviewQueueRow_(row) {
+    var item = row || {};
+    var financeState = clean_(item.financeState || "").toUpperCase();
+    return buildQueueRow_(item.rowNumber, item.applicantId, item.name, {
+      ApplicantID: clean_(item.applicantId || ""),
+      applicantId: clean_(item.applicantId || ""),
+      effectiveEmail: clean_(item.effectiveEmail || ""),
+      parentEmail: clean_(item.effectiveEmail || ""),
+      correctedEmail: "",
+      Parent_Phone: clean_(item.phone || ""),
+      receivedAt: clean_(item.lastRelevantDate || ""),
+      receivedDisplay: formatQueueTimestampDisplay_(item.lastRelevantDate || ""),
+      receivedSource: clean_(item.lastRelevantDateSource || ""),
+      ageDays: item.ageDays === "" ? "" : Number(item.ageDays || 0),
+      ageLabel: item.ageDays === "" ? "" : String(Number(item.ageDays || 0)) + " day(s)",
+      ageBand: getQueueSlaBand_(item.ageDays),
+      actionabilityState: clean_(item.actionabilityState || ""),
+      selectable: item.selectable === true,
+      selectBlockReason: clean_(item.selectBlockReason || ""),
+      recommendedMessageType: clean_(item.recommendedMessageType || ""),
+      actionOwner: clean_(item.actionOwner || ""),
+      canonicalLifecycle: {
+        baseState: clean_(item.lifecycleBaseState || ""),
+        lifecycleStage: clean_(item.lifecycleStage || ""),
+        overlays: []
+      },
+      Portal_Submitted: clean_(item.lifecycleBaseState || "").toUpperCase() === "APPLICATION_RECEIVED" ? "No" : "Yes",
+      Docs_Verified: clean_(item.lifecycleBaseState || "").toUpperCase() === "DOCUMENTS_TO_VERIFY" ? "No" : "Yes",
+      Payment_Received: item.paymentEvidencePresent === true ? "Yes" : "No",
+      Payment_Verified: item.paymentVerified === true ? "Yes" : "No",
+      Payment_Badge: financeState === "PAID_VERIFIED" ? "Verified" : (financeState === "PAYMENT_TO_VERIFY" ? "Pending" : "Pending"),
+      opsDocumentState: clean_(item.lifecycleBaseState || ""),
+      opsLifecycleStageKey: clean_(item.lifecycleStage || item.lifecycleBaseState || ""),
+      requiredDocumentUploadComplete: clean_(item.lifecycleBaseState || "").toUpperCase() !== "INCOMPLETE_DOCUMENTS",
+      uploadedRequiredDocumentCount: 0,
+      requiredDocumentCount: 0,
+      missingRequiredDocuments: "",
+      Books_Invoice_ID: "",
+      Books_Invoice_Number: "",
+      Books_Invoice_Status: "",
+      docsFollowupSentAt: ""
     });
   }
 
+  var fullData = normalizeReviewQueueData_({
+    fdReceived: allRows.filter(function (row) {
+      var base = clean_(row.lifecycleBaseState || "").toUpperCase();
+      return base === "APPLICATION_RECEIVED" || base === "AWAITING_PORTAL_OR_INTAKE";
+    }).map(buildReviewQueueRow_),
+    docs: (operational.routeRows && operational.routeRows.ADMISSIONS_REVIEW || []).map(buildReviewQueueRow_),
+    awaitingPayment: allRows.filter(function (row) {
+      return clean_(row.financeState || "").toUpperCase() === "PAYMENT_PENDING" && row.activeFinanceWork === true;
+    }).map(buildReviewQueueRow_),
+    payments: allRows.filter(function (row) {
+      return clean_(row.financeState || "").toUpperCase() === "PAYMENT_TO_VERIFY";
+    }).map(buildReviewQueueRow_),
+    anomalies: allRows.filter(function (row) {
+      var routeKey = clean_(row.routeKey || "").toUpperCase();
+      return !!clean_(row.financeExceptionCode || "") || routeKey === "MANAGEMENT_EXCEPTIONS" || routeKey === "UNKNOWN_UNCLASSIFIED";
+    }).map(buildReviewQueueRow_),
+    paidApproved: allRows.filter(function (row) {
+      return clean_(row.financeState || "").toUpperCase() === "PAID_VERIFIED";
+    }).map(buildReviewQueueRow_),
+    postPaymentIssues: allRows.filter(function (row) {
+      return clean_(row.financeState || "").toUpperCase() === "PAID_VERIFIED" && !!clean_(row.financeExceptionCode || "");
+    }).map(buildReviewQueueRow_),
+    counts: {}
+  });
+
+  fullData.counts = {
+    fdReceived: fullData.fdReceived.length,
+    docs: fullData.docs.length,
+    awaitingPayment: fullData.awaitingPayment.length,
+    payments: fullData.payments.length,
+    anomalies: fullData.anomalies.length,
+    paidApproved: fullData.paidApproved.length,
+    postPaymentIssues: fullData.postPaymentIssues.length
+  };
+
+  var pageMeta = mergeQueuePageMeta_(fullData, offset, limit);
   return {
     ok: true,
-    fdReceived: refreshDocsFollowupRuntime_(sliceQueueByOffset_(fullData.fdReceived, offset, limit)),
-    docs: refreshDocsFollowupRuntime_(sliceQueueByOffset_(fullData.docs, offset, limit)),
-    awaitingPayment: refreshDocsFollowupRuntime_(sliceQueueByOffset_(fullData.awaitingPayment, offset, limit)),
-    payments: refreshDocsFollowupRuntime_(sliceQueueByOffset_(fullData.payments, offset, limit)),
-    anomalies: refreshDocsFollowupRuntime_(sliceQueueByOffset_(fullData.anomalies, offset, limit)),
-    paidApproved: refreshDocsFollowupRuntime_(sliceQueueByOffset_(fullData.paidApproved, offset, limit)),
-    postPaymentIssues: refreshDocsFollowupRuntime_(sliceQueueByOffset_(fullData.postPaymentIssues, offset, limit)),
-    counts: fullData.counts || { fdReceived: 0, payments: 0, docs: 0, awaitingPayment: 0, anomalies: 0, paidApproved: 0, postPaymentIssues: 0 },
+    fdReceived: sliceQueueByOffset_(fullData.fdReceived, offset, limit),
+    docs: sliceQueueByOffset_(fullData.docs, offset, limit),
+    awaitingPayment: sliceQueueByOffset_(fullData.awaitingPayment, offset, limit),
+    payments: sliceQueueByOffset_(fullData.payments, offset, limit),
+    anomalies: sliceQueueByOffset_(fullData.anomalies, offset, limit),
+    paidApproved: sliceQueueByOffset_(fullData.paidApproved, offset, limit),
+    postPaymentIssues: sliceQueueByOffset_(fullData.postPaymentIssues, offset, limit),
+    counts: fullData.counts,
     offset: offset,
     limit: limit,
     hasMore: pageMeta.hasMore,

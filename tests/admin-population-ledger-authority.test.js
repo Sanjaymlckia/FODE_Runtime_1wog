@@ -37,8 +37,8 @@ assert.doesNotMatch(ledgerBuilder, /admin_getReviewQueues|isQueueCandidateRow_/,
   ["Lifecycle Map", stageAggregation],
   ["Global Dashboard", dashboardMetrics]
 ].forEach(([label, source]) => {
-  assert.match(source, /buildPopulationLedgerFromValues_/, `${label} must build a Population Ledger summary`);
-  assert.match(source, /populationLedgerPublicSummary_\(ledger\)/, `${label} must expose Population Ledger summary`);
+  assert.match(source, /canonicalPopulationSnapshot_\(\)|buildPopulationLedgerFromValues_/, `${label} must derive its accounting summary from canonical population or the ledger builder`);
+  assert.match(source, /populationLedgerPublicSummary_\(ledger\)|populationLedger:/, `${label} must expose Population Ledger summary`);
 });
 
 assert.match(adminUi, /actionabilityPopulationCountForGroup_/, "Operations Workspace must resolve KPI counts from ledger population totals");

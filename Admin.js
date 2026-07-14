@@ -155,74 +155,56 @@ function admin_searchApplicants(payload) {
 
   if (!applicantId && !email && !nameQuery && !phoneQuery && !stageFilter) return { ok: true, rows: [] };
 
-  var sh = openDataSheet_();
-  var values = sh.getDataRange().getValues();
-  if (values.length < 2) return { ok: true, rows: [] };
-
-  var headers = values[0];
-  var idx = headerIndex_(headers);
-  requireHeaders_(idx, [
-    "ApplicantID", "First_Name", "Last_Name",
-    "Doc_Verification_Status", "Receipt_Status", "Portal_Access_Status"
-  ]);
-  var hasParentEmail = !!idx.Parent_Email;
-  var hasParentEmailCorrected = !!idx.Parent_Email_Corrected;
-  var hasParentPhone = !!idx.Parent_Phone;
-
-  var out = [];
-  for (var r = 1; r < values.length; r++) {
-    var row = values[r];
-    var rowObj = {};
-    for (var c = 0; c < headers.length; c++) {
-      var hk = clean_(headers[c]);
-      if (hk) rowObj[hk] = row[c];
-    }
-    var rid = clean_(row[idx.ApplicantID - 1]);
-    var firstName = clean_(row[idx.First_Name - 1]);
-    var lastName = clean_(row[idx.Last_Name - 1]);
-    var fullName = (firstName + " " + lastName).trim();
-    var parentEmail = hasParentEmail ? clean_(row[idx.Parent_Email - 1]).toLowerCase() : "";
-    var correctedEmail = hasParentEmailCorrected ? clean_(row[idx.Parent_Email_Corrected - 1]).toLowerCase() : "";
-    var effectiveEmail = correctedEmail || parentEmail;
-    var parentPhone = hasParentPhone ? clean_(row[idx.Parent_Phone - 1]) : "";
+  var snapshot = canonicalPopulationSnapshot_();
+  var rows = (snapshot.rows || []).filter(function (row) {
+    var canonical = row || {};
+    var id = clean_(canonical.identity && canonical.identity.applicantId || "");
+    var fullName = clean_(canonical.applicant && canonical.applicant.name || "").toLowerCase();
+    var effectiveEmail = clean_(canonical.applicant && canonical.applicant.effectiveEmail || "").toLowerCase();
+    var phone = clean_(canonical.applicant && canonical.applicant.phone || "").toLowerCase();
     var textMatch = (!applicantId && !email && !nameQuery && !phoneQuery)
-      || (applicantId && rid.toUpperCase().indexOf(applicantId.toUpperCase()) >= 0)
+      || (applicantId && id.toUpperCase().indexOf(applicantId.toUpperCase()) >= 0)
       || (email && effectiveEmail.indexOf(email) >= 0)
-      || (nameQuery && fullName.toLowerCase().indexOf(nameQuery) >= 0)
-      || (phoneQuery && parentPhone.toLowerCase().indexOf(phoneQuery) >= 0);
-    if (!textMatch) continue;
-    var stageInfo = null;
-    if (stageFilter) {
-      stageInfo = getApplicantStageAndEligibility_(rowObj);
-      if (clean_(stageInfo.stage || "").toUpperCase() !== stageFilter) continue;
-    }
-    var statusRow = {
-      Birth_ID_Status: idx.Birth_ID_Status ? clean_(row[idx.Birth_ID_Status - 1]) : "",
-      Birth_Status: idx.Birth_Status ? clean_(row[idx.Birth_Status - 1]) : "",
-      Report_Status: idx.Report_Status ? clean_(row[idx.Report_Status - 1]) : "",
-      Photo_Status: idx.Photo_Status ? clean_(row[idx.Photo_Status - 1]) : "",
-      Transfer_Status: idx.Transfer_Status ? clean_(row[idx.Transfer_Status - 1]) : "",
-      Receipt_Status: idx.Receipt_Status ? clean_(row[idx.Receipt_Status - 1]) : ""
+      || (nameQuery && fullName.indexOf(nameQuery) >= 0)
+      || (phoneQuery && phone.indexOf(phoneQuery) >= 0);
+    if (!textMatch) return false;
+    if (stageFilter && clean_(canonical.lifecycle && canonical.lifecycle.baseState || "").toUpperCase() !== stageFilter) return false;
+    return true;
+  }).map(function (row) {
+    var financeAuthority = row.finance && row.finance.financeAuthority || {};
+    var documentState = clean_(row.documents && row.documents.state || "");
+    return {
+      rowNumber: Number(row.identity && row.identity.rowNumber || 0),
+      applicantId: clean_(row.identity && row.identity.applicantId || ""),
+      name: clean_(row.applicant && row.applicant.name || ""),
+      email: clean_(row.applicant && row.applicant.effectiveEmail || ""),
+      phone: clean_(row.applicant && row.applicant.phone || ""),
+      docStatus: documentState || "UNKNOWN",
+      paymentVerified: financeAuthority.financeState === "PAID_VERIFIED"
+        ? "Payment Verified"
+        : (financeAuthority.financeState === "PAYMENT_TO_VERIFY" ? "Payment to Verify" : (financeAuthority.financeState === "NOT_YET_PAYMENT_APPLICABLE" ? "Not yet payment applicable" : "Payment Pending")),
+      portalAccess: row.contactability && row.contactability.hasValidEmail === true ? "Open" : "Review",
+      docsFollowupSentAt: "",
+      stage: clean_(row.lifecycle && row.lifecycle.baseState || ""),
+      priority: clean_(row.actionability && row.actionability.urgencyLevel || ""),
+      actionabilityState: clean_(row.actionability && row.actionability.state || ""),
+      selectable: row.actionability && row.actionability.selectable === true,
+      selectBlockReason: clean_(row.actionability && row.actionability.selectBlockReason || ""),
+      recommendedAction: clean_(row.actionability && row.actionability.recommendedAction || ""),
+      recommendedMessageType: clean_(row.actionability && row.actionability.recommendedMessageType || ""),
+      actionOwner: clean_(row.actionability && row.actionability.actionOwner || row.owner || ""),
+      canonicalLifecycle: {
+        baseState: clean_(row.lifecycle && row.lifecycle.baseState || ""),
+        lifecycleStage: clean_(row.lifecycle && row.lifecycle.lifecycleStage || ""),
+        overlays: Array.isArray(row.lifecycle && row.lifecycle.overlays) ? row.lifecycle.overlays.slice() : [],
+        recommendedNextAction: clean_(row.lifecycle && row.lifecycle.recommendedNextAction || ""),
+        recommendedMessageType: clean_(row.lifecycle && row.lifecycle.recommendedMessageType || ""),
+        actionOwner: clean_(row.lifecycle && row.lifecycle.actionOwner || ""),
+        reason: clean_(row.lifecycle && row.lifecycle.reason || "")
+      }
     };
-    var paymentBadge = canonicalPaymentBadge_(statusRow);
-    var docStage = computeDocVerificationStatus_(statusRow);
-    var authorityProjection = compatibilityCommunicationAuthorityProjection_(rowObj, r + 1);
-    out.push(Object.assign({
-      rowNumber: r + 1,
-      applicantId: rid,
-      name: fullName,
-      email: effectiveEmail,
-      phone: parentPhone,
-      docStatus: docStage,
-      paymentVerified: paymentBadge === "Verified" ? "Payment Verified" : (paymentBadge === "Rejected" ? "Payment Rejected" : "Payment Pending"),
-      portalAccess: clean_(row[idx.Portal_Access_Status - 1]) || "Open",
-      docsFollowupSentAt: getDocsFollowupSentAt_(rowObj),
-      stage: stageInfo ? clean_(stageInfo.stage || "") : "",
-      priority: stageInfo ? mapStagePriority_(stageInfo.stage || "") : ""
-    }, authorityProjection || {}));
-  }
-
-  return { ok: true, rows: out };
+  });
+  return { ok: true, rows: rows };
 }
 
 function compatibilityCommunicationAuthorityProjection_(rowObj, rowNumber) {
@@ -3473,16 +3455,15 @@ function admin_getActionabilityPreview(payload) {
   if (!isAdmin_(adminEmail)) throw new Error("Access denied");
   var p = payload && typeof payload === "object" ? payload : {};
   var limit = Math.max(1, Math.min(100, Number(p.limit || 40)));
-  var sheet = openDataSheet_();
-  var data = sheet.getDataRange().getValues();
-  var ledger = buildPopulationLedgerFromValues_(data, sheet && typeof sheet.getName === "function" ? sheet.getName() : "", { includeEntries: false });
+  var snapshot = canonicalPopulationSnapshot_();
+  var ledger = snapshot.populationLedger || { applicantIdRows: 0, integrityStatus: "FAIL", lifecycleCounts: {}, operationalBucketCounts: {} };
   var out = {
     ok: true,
     readOnly: true,
-    experimental: true,
-    generatedAt: new Date().toISOString(),
+    experimental: false,
+    generatedAt: snapshot.generatedAt || new Date().toISOString(),
     limit: limit,
-    scannedRows: Math.max(0, (data || []).length - 1),
+    scannedRows: Number(ledger.scannedRows || snapshot.totalRows || 0),
     includedRows: 0,
     countsByOwner: { APPLICANT: 0, OFFICER: 0, FINANCE: 0, ADMIN: 0, SYSTEM: 0, NONE: 0 },
     workloadSummary: { READY: 0, COOLING_OFF: 0, AWAITING_APPLICANT: 0, AWAITING_PAYMENT: 0, REVIEW_REQUIRED: 0, COMPLETE: 0, UNKNOWN: 0 },
@@ -3494,18 +3475,66 @@ function admin_getActionabilityPreview(payload) {
     rows: [],
     hiddenRecords: { perBucketLimit: 5, byGroup: {}, totalByGroup: {} }
   };
-  if (!data || data.length < 2) return out;
-  var headers = data[0] || [];
   var rows = [];
-  for (var r = 1; r < data.length; r++) {
-    var rowValues = data[r] || [];
-    var rowObj = {};
-    for (var c = 0; c < headers.length; c++) {
-      var h = clean_(headers[c]);
-      if (h) rowObj[h] = rowValues[c];
-    }
-    if (!clean_(rowObj.ApplicantID || "")) continue;
-    var item = buildActionabilityPreviewRow_(rowObj, r + 1);
+  (snapshot.rows || []).forEach(function (canonical) {
+    var financeAuthority = canonical.finance && canonical.finance.financeAuthority || {};
+    var actionability = canonical.actionability || {};
+    var item = {
+      rowNumber: Number(canonical.identity && canonical.identity.rowNumber || 0),
+      applicantId: clean_(canonical.identity && canonical.identity.applicantId || ""),
+      name: clean_(canonical.applicant && canonical.applicant.name || ""),
+      actionOwner: clean_(actionability.actionOwner || canonical.owner || canonical.lifecycle && canonical.lifecycle.actionOwner || "NONE"),
+      workloadGroupKey: clean_(actionability.workloadGroupKey || "UNKNOWN").toUpperCase(),
+      worklistKey: clean_(actionability.worklistKey || ""),
+      worklistLabel: clean_(actionability.worklistLabel || ""),
+      worklistReason: clean_(actionability.worklistReason || ""),
+      nextAction: clean_(actionability.nextAction || ""),
+      actionabilityState: clean_(actionability.state || "UNKNOWN").toUpperCase(),
+      selectable: actionability.selectable === true,
+      selectBlockReason: clean_(actionability.selectBlockReason || ""),
+      coolingOffUntil: clean_(actionability.coolingOffUntil || ""),
+      recommendedAction: clean_(actionability.recommendedAction || ""),
+      reasonCode: clean_(actionability.reasonCode || ""),
+      urgencyLevel: clean_(actionability.urgencyLevel || ""),
+      urgencyReason: clean_(actionability.urgencyReason || ""),
+      suppressor: clean_(actionability.suppressor || ""),
+      recommendedMessageType: clean_(actionability.recommendedMessageType || ""),
+      communicationProgress: clean_(actionability.communicationProgress || ""),
+      communicationProgressDetail: clean_(actionability.communicationProgressDetail || ""),
+      canonicalLifecycle: {
+        baseState: clean_(canonical.lifecycle && canonical.lifecycle.baseState || "UNKNOWN").toUpperCase(),
+        lifecycleStage: clean_(canonical.lifecycle && canonical.lifecycle.lifecycleStage || canonical.lifecycle && canonical.lifecycle.baseState || "UNKNOWN").toUpperCase(),
+        overlays: Array.isArray(canonical.lifecycle && canonical.lifecycle.overlays) ? canonical.lifecycle.overlays.slice() : [],
+        recommendedNextAction: clean_(canonical.lifecycle && canonical.lifecycle.recommendedNextAction || ""),
+        recommendedMessageType: clean_(canonical.lifecycle && canonical.lifecycle.recommendedMessageType || ""),
+        actionOwner: clean_(canonical.lifecycle && canonical.lifecycle.actionOwner || ""),
+        reason: clean_(canonical.lifecycle && canonical.lifecycle.reason || "")
+      },
+      lifecycleMismatch: canonical.diagnostics && canonical.diagnostics.lifecycleMismatch ? canonical.diagnostics.lifecycleMismatch : { hasLifecycleMismatch: false, legacyLifecycle: "", canonicalBaseState: "", canonicalOverlays: [], mismatchReason: "" },
+      explanation: clean_(financeAuthority.financeReason || canonical.lifecycle && canonical.lifecycle.reason || ""),
+      lastRelevantDate: clean_(actionability.lastRelevantDate || ""),
+      lastRelevantDateSource: clean_(actionability.lastRelevantDateSource || ""),
+      ageDays: actionability.ageDays === "" ? "" : Number(actionability.ageDays || 0),
+      lastContactAgeDays: actionability.lastContactAgeDays === "" ? "" : Number(actionability.lastContactAgeDays || 0),
+      sourceAuthorities: Array.isArray(canonical.diagnostics && canonical.diagnostics.sourceAuthorities) ? canonical.diagnostics.sourceAuthorities.slice() : [],
+      authorityState: {
+        lifecycleStage: clean_(canonical.diagnostics && canonical.diagnostics.legacyLifecycleStage || canonical.lifecycle && canonical.lifecycle.lifecycleStage || ""),
+        documentState: clean_(canonical.documents && canonical.documents.state || "UNKNOWN"),
+        requiredDocumentUploadComplete: canonical.documents && canonical.documents.requiredComplete === true,
+        uploadedRequiredDocumentCount: Number(canonical.documents && canonical.documents.uploadedRequiredCount || 0),
+        requiredDocumentCount: Number(canonical.documents && canonical.documents.requiredCount || 0),
+        missingRequiredDocuments: Array.isArray(canonical.documents && canonical.documents.missingRequiredDocuments) ? canonical.documents.missingRequiredDocuments.slice() : [],
+        docsVerified: canonical.documents && canonical.documents.verified === true,
+        portalSubmitted: clean_(canonical.lifecycle && canonical.lifecycle.baseState || "") !== "APPLICATION_RECEIVED",
+        paymentEvidencePresent: financeAuthority.paymentEvidencePresent === true,
+        paymentVerified: financeAuthority.paymentVerified === true,
+        paymentApplicable: financeAuthority.paymentApplicable === true,
+        canonicalFinanceState: clean_(financeAuthority.financeState || "UNKNOWN"),
+        hasValidEmail: canonical.contactability && canonical.contactability.hasValidEmail === true,
+        hasPhoneFallback: canonical.contactability && canonical.contactability.hasPhoneFallback === true,
+        contactabilityState: clean_(canonical.contactability && canonical.contactability.state || "UNKNOWN")
+      }
+    };
     var owner = clean_(item.actionOwner || "NONE").toUpperCase() || "NONE";
     if (!Object.prototype.hasOwnProperty.call(out.countsByOwner, owner)) out.countsByOwner[owner] = 0;
     out.countsByOwner[owner]++;
@@ -3515,7 +3544,7 @@ function admin_getActionabilityPreview(payload) {
     out.workloadExplanation = incrementActionabilityWorkloadExplanation_(out.workloadExplanation, item.communicationProgress);
     out.lifecycleDriftSummary = lifecycleDriftRecord_(out.lifecycleDriftSummary, item.lifecycleMismatch);
     rows.push(item);
-  }
+  });
   rows.sort(compareActionabilityPreviewRows_);
   out.includedRows = rows.length;
   out.rows = rows.slice(0, limit);

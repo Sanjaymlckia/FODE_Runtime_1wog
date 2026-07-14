@@ -43,13 +43,13 @@ assert.match(resolveStatusCols, /docsCompat:\s*getCol_\(idx,\s*\["Docs_Verified"
 
 assert.match(docPaymentGateHelper, /clean_\(row\.Docs_Verified \|\| ""\) === "Yes" \|\| computeDocVerificationStatus_\(row\) === "Verified"/, "Document review payment-gate helper must derive verified state from raw or computed status");
 assert.match(docsReviewVerifiedHelper, /adminDocumentReviewVerifiedForPaymentGate_\(rowObj\)/, "Document review helper must delegate to the shared payment-gate helper");
-assert.match(reviewQueues, /docsReviewVerified = adminRowDocsReviewVerified_\(rowObj\)/, "Queue classifier must use the shared document-review authority helper");
-assert.match(reviewQueues, /var docsQueueMatch = portalSubmitted && requiredDocumentUploadComplete && !docsReviewVerified;/, "Documents to Verify must continue excluding computed-verified rows");
-assert.match(reviewQueues, /var awaitingPaymentQueueMatch = docsReviewVerified && !paymentVerified && !paymentEvidencePresent;/, "Awaiting Payment must include computed-verified docs even if Docs_Verified was stale");
-assert.match(reviewQueues, /var paymentsQueueMatch = docsReviewVerified && !paymentVerified && paymentEvidencePresent;/, "Payments to Verify must include computed-verified docs with receipt evidence");
-assert.match(reviewQueues, /var paidApprovedQueueMatch = paymentVerified;/, "Payment Verified queue must still depend on payment verification only");
-assert.match(reviewQueues, /var anomaliesQueueMatch = paymentVerified && !docsReviewVerified;/, "Payment-first anomalies must still depend on payment verified before docs");
+assert.match(reviewQueues, /buildOperationalRouteSnapshot_\(canonicalPopulationSnapshot_\(\), \{\}\)/, "Review queue compatibility surface must consume the shared operational route projection");
+assert.match(reviewQueues, /docs:\s*\(operational\.routeRows && operational\.routeRows\.ADMISSIONS_REVIEW \|\| \[\]\)\.map\(buildReviewQueueRow_\)/, "Documents to Verify compatibility queue must be sourced from the shared Admissions cohort");
+assert.match(reviewQueues, /awaitingPayment:[\s\S]*row\.financeState[\s\S]*PAYMENT_PENDING[\s\S]*row\.activeFinanceWork === true/, "Awaiting Payment compatibility queue must come from shared active finance pending rows");
+assert.match(reviewQueues, /payments:[\s\S]*row\.financeState[\s\S]*PAYMENT_TO_VERIFY/, "Payments to Verify compatibility queue must come from shared receipt-verification rows");
+assert.match(reviewQueues, /paidApproved:[\s\S]*row\.financeState[\s\S]*PAID_VERIFIED/, "Payment Verified compatibility queue must come from shared verified-payment rows");
+assert.match(reviewQueues, /anomalies:[\s\S]*row\.financeExceptionCode[\s\S]*MANAGEMENT_EXCEPTIONS[\s\S]*UNKNOWN_UNCLASSIFIED/, "Anomalies compatibility queue must be sourced from explicit shared exception cohorts");
 
-console.log("PASS review queues tolerate computed document verification for payment-stage routing");
-console.log("PASS document queue still excludes computed-verified applicants");
-console.log("PASS payment verified queue remains payment-authority driven");
+console.log("PASS review queues now consume the shared operational route projection");
+console.log("PASS finance compatibility queues are derived from shared finance authority states");
+console.log("PASS document verification compatibility helper remains preserved");

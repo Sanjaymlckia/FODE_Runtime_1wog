@@ -38,6 +38,7 @@ assert.match(financeSource, /state:\s*"UNRESOLVED"/, "Unresolved derived balance
 assert.match(financeSource, /PAYMENT_PENDING/, "Payment pending state must be implemented");
 assert.match(financeSource, /PAYMENT_TO_VERIFY/, "Payment to verify state must be implemented");
 assert.match(financeSource, /PAID_VERIFIED/, "Paid verified state must be implemented");
+assert.match(financeSource, /NOT_YET_PAYMENT_APPLICABLE/, "Finance must expose applicants who are not yet payment applicable");
 assert.match(financeSource, /POLICY_REQUIRED/, "Policy-dependent states must remain explicit");
 assert.match(financeSource, /WORKFLOW_PENDING/, "Future finance workflows must remain explicit");
 
@@ -50,7 +51,7 @@ assert.doesNotMatch(populationSource, /var state = verified \? "PAID_VERIFIED"/,
 assert.match(operatorNextSource, /admin_getCanonicalFinanceWorklist\(operatorNextState_\.financeRequest\)/, "Operator Next Finance route must pass the server-side paging/search request");
 assert.match(operatorNextSource, /50 is the page size, not a worklist cap/, "Operator Next must distinguish the normal page size from total Finance visibility");
 assert.match(operatorNextSource, /onxFinancePrevious[\s\S]*onxFinanceNext/, "Operator Next Finance must expose Previous and Next navigation");
-assert.match(operatorNextSource, /searchQuery[\s\S]*filters:\{\}/, "Operator Next Finance must hold an explicit server request contract");
+assert.match(operatorNextSource, /searchQuery[\s\S]*filters:\{[\s\S]*financeScope:[\s\S]*worklistKey:/, "Operator Next Finance must hold an explicit server request contract");
 assert.match(operatorNextSource, /onxFinancePageRows[\s\S]*operatorNextFinanceStatusRows_\(rows\)/, "Every returned Finance state must remain visible and reviewable, including paid/verified rows");
 assert.match(operatorNextSource, /operatorNextLoadFinance_/, "Finance route must lazy-load canonical Finance data");
 assert.match(operatorNextSource, /POLICY REQUIRED/, "Operator Next Finance route must label policy-dependent buckets");
@@ -80,6 +81,7 @@ function finance(row, canonical) {
   return context.resolveCanonicalFinance_(row, Object.assign({
     identity: { applicantId: row.ApplicantID || "FODE-X", rowNumber: 2, sourceSheetName: "FODE_Data" },
     applicant: { name: row.Student_Name || "Fixture" },
+    documents: { verified: false, requiredComplete: false, state: "PENDING" },
     finance: {},
     lifecycle: {},
     actionability: {},
@@ -87,16 +89,24 @@ function finance(row, canonical) {
   }, canonical || {}));
 }
 
-const pending = finance({ ApplicantID: "FODE-PENDING", Receipt_Status: "", Payment_Verified: "", Fee_Receipt_File: "" });
+const pending = finance(
+  { ApplicantID: "FODE-PENDING", Receipt_Status: "", Payment_Verified: "", Fee_Receipt_File: "" },
+  { documents: { verified: true, requiredComplete: true, state: "VERIFIED" }, lifecycle: { baseState: "PAYMENT_PENDING" }, actionability: { state: "READY", worklistLabel: "Payment Follow-up" } }
+);
 assert.equal(pending.financeAuthority.financeState, "PAYMENT_PENDING");
 assert.equal(pending.financeAuthority.financeReasonCode, "PAYMENT_EVIDENCE_MISSING");
+assert.equal(pending.financeAuthority.paymentApplicable, true);
 
 const emptyUploadPlaceholder = finance({ ApplicantID: "FODE-PLACEHOLDER", Receipt_Status: "Pending", Fee_Receipt_File: "[]" });
-assert.equal(emptyUploadPlaceholder.financeAuthority.financeState, "PAYMENT_PENDING");
+assert.equal(emptyUploadPlaceholder.financeAuthority.financeState, "NOT_YET_PAYMENT_APPLICABLE");
 assert.equal(emptyUploadPlaceholder.financeAuthority.paymentEvidencePresent, false);
 
+const whitespaceUploadPlaceholder = finance({ ApplicantID: "FODE-WHITESPACE", Receipt_Status: "Pending", Fee_Receipt_File: "   " });
+assert.equal(whitespaceUploadPlaceholder.financeAuthority.financeState, "NOT_YET_PAYMENT_APPLICABLE");
+assert.equal(whitespaceUploadPlaceholder.financeAuthority.paymentEvidencePresent, false);
+
 const unrelatedEvidence = finance({ ApplicantID: "FODE-UNRELATED", Portal_Submitted: "Yes", Birth_ID_Passport_File: "https://drive.google.com/file/d/document/view", Books_Invoice_ID: "invoice-1", Receipt_Status: "", Fee_Receipt_File: "[]" });
-assert.equal(unrelatedEvidence.financeAuthority.financeState, "PAYMENT_PENDING", "Portal, ordinary document, and Books metadata must not become payment proof");
+assert.equal(unrelatedEvidence.financeAuthority.financeState, "NOT_YET_PAYMENT_APPLICABLE", "Portal, ordinary document, and Books metadata must not become payment proof");
 
 const toVerify = finance({ ApplicantID: "FODE-VERIFY", Receipt_Status: "Pending", Payment_Verified: "", Fee_Receipt_File: "https://receipt" });
 assert.equal(toVerify.financeAuthority.financeState, "PAYMENT_TO_VERIFY");
@@ -109,7 +119,7 @@ assert.equal(verified.financeAuthority.financeState, "PAID_VERIFIED");
 assert.equal(verified.financeAuthority.paymentVerified, true);
 
 const drift = finance({ ApplicantID: "FODE-DRIFT", Receipt_Status: "", Payment_Verified: "Yes", Fee_Receipt_File: "" });
-assert.equal(drift.financeAuthority.financeState, "PAYMENT_PENDING");
+assert.equal(drift.financeAuthority.financeState, "NOT_YET_PAYMENT_APPLICABLE");
 assert.ok(drift.audit.warnings.some((item) => /compatibility-only/.test(item)));
 
 const amounts = finance({ ApplicantID: "FODE-AMOUNT", Receipt_Status: "", Fee_Total_Kina: "", Amount_Paid: "" });

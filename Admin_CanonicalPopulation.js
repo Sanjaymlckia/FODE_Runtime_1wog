@@ -53,6 +53,12 @@ function canonicalPopulationCommunicationProjection_(rowObj, authorityRow, messa
   return out;
 }
 
+function canonicalPopulationDisplayPhone_(rowObj) {
+  var row = rowObj || {};
+  if (typeof getWhatsAppFallbackPhoneRaw_ === "function") return clean_(getWhatsAppFallbackPhoneRaw_(row));
+  return clean_(row.Phone || row.Phone_Number || row.WhatsApp_Number || "");
+}
+
 function canonicalPopulationFinanceProjection_(rowObj, authorityRow, rowNumber, sourceSheetName, lifecycleProjection, actionabilityProjection, communicationProjection) {
   var row = rowObj || {};
   var authority = authorityRow && authorityRow.authorityState || {};
@@ -68,6 +74,11 @@ function canonicalPopulationFinanceProjection_(rowObj, authorityRow, rowNumber, 
     },
     applicant: {
       name: clean_(authorityRow && authorityRow.name || "")
+    },
+    documents: {
+      state: clean_(authority.documentState || ""),
+      verified: authority.docsVerified === true,
+      requiredComplete: authority.requiredDocumentUploadComplete === true
     },
     lifecycle: lifecycle,
     actionability: actionability,
@@ -95,13 +106,23 @@ function buildCanonicalPopulationRow_(rowObj, rowNumber, opts) {
     worklistKey: clean_(authorityRow.worklistKey || ""),
     worklistLabel: clean_(authorityRow.worklistLabel || ""),
     worklistReason: clean_(authorityRow.worklistReason || ""),
+    actionOwner: clean_(authorityRow.actionOwner || lifecycle.actionOwner || ""),
     nextAction: clean_(authorityRow.nextAction || ""),
     recommendedAction: clean_(authorityRow.recommendedAction || ""),
+    recommendedMessageType: clean_(authorityRow.recommendedMessageType || ""),
     selectable: authorityRow.selectable === true,
     selectBlockReason: clean_(authorityRow.selectBlockReason || ""),
     reasonCode: clean_(authorityRow.reasonCode || ""),
     coolingOffUntil: clean_(authorityRow.coolingOffUntil || ""),
-    suppressor: clean_(authorityRow.suppressor || "")
+    suppressor: clean_(authorityRow.suppressor || ""),
+    urgencyLevel: clean_(authorityRow.urgencyLevel || ""),
+    urgencyReason: clean_(authorityRow.urgencyReason || ""),
+    communicationProgress: clean_(authorityRow.communicationProgress || ""),
+    communicationProgressDetail: clean_(authorityRow.communicationProgressDetail || ""),
+    lastRelevantDate: clean_(authorityRow.lastRelevantDate || ""),
+    lastRelevantDateSource: clean_(authorityRow.lastRelevantDateSource || ""),
+    ageDays: authorityRow.ageDays === "" ? "" : Number(authorityRow.ageDays || 0),
+    lastContactAgeDays: authorityRow.lastContactAgeDays === "" ? "" : Number(authorityRow.lastContactAgeDays || 0)
   };
   var finance = canonicalPopulationFinanceProjection_(row, authorityRow, rowNumber, options.sourceSheetName, {
     baseState: clean_(lifecycle.baseState || "UNKNOWN").toUpperCase(),
@@ -122,7 +143,8 @@ function buildCanonicalPopulationRow_(rowObj, rowNumber, opts) {
     },
     applicant: {
       name: clean_(authorityRow.name || ""),
-      effectiveEmail: clean_(typeof stageAggregationEffectiveEmail_ === "function" ? stageAggregationEffectiveEmail_(row) : (row.Parent_Email_Corrected || row.Parent_Email || ""))
+      effectiveEmail: clean_(typeof stageAggregationEffectiveEmail_ === "function" ? stageAggregationEffectiveEmail_(row) : (row.Parent_Email_Corrected || row.Parent_Email || "")),
+      phone: canonicalPopulationDisplayPhone_(row)
     },
     lifecycle: {
       baseState: clean_(lifecycle.baseState || "UNKNOWN").toUpperCase(),
@@ -409,6 +431,222 @@ function canonicalPopulationPublicSnapshot_(snapshot, includeRows) {
   return out;
 }
 
+function canonicalPopulationSearchIndex_(row) {
+  var item = row || {};
+  return clean_([
+    item.identity && item.identity.applicantId || "",
+    item.applicant && item.applicant.name || "",
+    item.applicant && item.applicant.effectiveEmail || "",
+    item.applicant && item.applicant.phone || "",
+    item.lifecycle && item.lifecycle.baseState || "",
+    item.actionability && item.actionability.state || "",
+    item.actionability && item.actionability.worklistLabel || "",
+    item.finance && item.finance.financeAuthority && item.finance.financeAuthority.financeState || ""
+  ].join(" ").toLowerCase());
+}
+
+function canonicalPopulationSearchResultRow_(row) {
+  var item = row || {};
+  return {
+    applicantId: clean_(item.identity && item.identity.applicantId || ""),
+    rowNumber: Number(item.identity && item.identity.rowNumber || 0),
+    name: clean_(item.applicant && item.applicant.name || ""),
+    effectiveEmail: clean_(item.applicant && item.applicant.effectiveEmail || ""),
+    phone: clean_(item.applicant && item.applicant.phone || ""),
+    lifecycleBaseState: clean_(item.lifecycle && item.lifecycle.baseState || "UNKNOWN"),
+    actionabilityState: clean_(item.actionability && item.actionability.state || "UNKNOWN"),
+    worklistLabel: clean_(item.actionability && item.actionability.worklistLabel || ""),
+    financeState: clean_(item.finance && item.finance.financeAuthority && item.finance.financeAuthority.financeState || "UNKNOWN"),
+    selectable: item.actionability && item.actionability.selectable === true,
+    recommendation: clean_(item.actionability && item.actionability.recommendedMessageType || item.actionability && item.actionability.nextAction || ""),
+    reviewTarget: {
+      applicantId: clean_(item.identity && item.identity.applicantId || ""),
+      rowNumber: Number(item.identity && item.identity.rowNumber || 0)
+    }
+  };
+}
+
+function operationalRouteKeyFromCanonicalRow_(row) {
+  var item = row || {};
+  var groupKey = clean_(item.actionability && item.actionability.workloadGroupKey || "").toUpperCase();
+  if (groupKey === "APPLICANT") return "APPLICANT_ACTION";
+  if (groupKey === "ADMISSIONS") return "ADMISSIONS_REVIEW";
+  if (groupKey === "FINANCE") return "FINANCE";
+  if (groupKey === "ACADEMIC") return "ACADEMIC_ADMIN";
+  if (groupKey === "CONTACTABILITY") return "CONTACTABILITY_EXCEPTIONS";
+  if (groupKey === "MANAGEMENT") return "MANAGEMENT_EXCEPTIONS";
+  if (groupKey === "DORMANT") return "DORMANT";
+  if (groupKey === "COMPLETE") return "COMPLETED_NO_ACTION";
+  return "UNKNOWN_UNCLASSIFIED";
+}
+
+function operationalRouteLabel_(routeKey) {
+  var key = clean_(routeKey || "").toUpperCase();
+  if (key === "APPLICANT_ACTION") return "Applicant Action";
+  if (key === "ADMISSIONS_REVIEW") return "Admissions Review";
+  if (key === "FINANCE") return "Finance";
+  if (key === "ACADEMIC_ADMIN") return "Academic Administration";
+  if (key === "CONTACTABILITY_EXCEPTIONS") return "Contactability Exceptions";
+  if (key === "MANAGEMENT_EXCEPTIONS") return "Management Exceptions";
+  if (key === "DORMANT") return "Dormant";
+  if (key === "COMPLETED_NO_ACTION") return "Completed / No Action";
+  return "Unknown / Unclassified";
+}
+
+function operationalRouteSearchIndex_(row) {
+  var item = row || {};
+  return clean_([
+    item.applicantId || "",
+    item.name || "",
+    item.effectiveEmail || "",
+    item.phone || "",
+    item.routeKey || "",
+    item.routeLabel || "",
+    item.lifecycleBaseState || "",
+    item.actionabilityState || "",
+    item.worklistKey || "",
+    item.worklistLabel || "",
+    item.financeState || "",
+    item.recommendedMessageType || "",
+    item.selectBlockReason || ""
+  ].join(" ").toLowerCase());
+}
+
+function operationalRouteRowFromCanonical_(row) {
+  var item = row || {};
+  var actionability = item.actionability || {};
+  var lifecycle = item.lifecycle || {};
+  var finance = item.finance && item.finance.financeAuthority || {};
+  var routeKey = operationalRouteKeyFromCanonicalRow_(item);
+  return {
+    routeKey: routeKey,
+    routeLabel: operationalRouteLabel_(routeKey),
+    applicantId: clean_(item.identity && item.identity.applicantId || ""),
+    rowNumber: Number(item.identity && item.identity.rowNumber || 0),
+    name: clean_(item.applicant && item.applicant.name || ""),
+    effectiveEmail: clean_(item.applicant && item.applicant.effectiveEmail || ""),
+    phone: clean_(item.applicant && item.applicant.phone || ""),
+    lifecycleBaseState: clean_(lifecycle.baseState || "UNKNOWN"),
+    lifecycleStage: clean_(lifecycle.lifecycleStage || lifecycle.baseState || "UNKNOWN"),
+    lifecycleReason: clean_(lifecycle.reason || ""),
+    actionOwner: clean_(actionability.actionOwner || item.owner || lifecycle.actionOwner || ""),
+    actionabilityState: clean_(actionability.state || "UNKNOWN"),
+    selectable: actionability.selectable === true,
+    selectBlockReason: clean_(actionability.selectBlockReason || ""),
+    worklistKey: clean_(actionability.worklistKey || ""),
+    worklistLabel: clean_(actionability.worklistLabel || ""),
+    worklistReason: clean_(actionability.worklistReason || ""),
+    nextAction: clean_(actionability.nextAction || ""),
+    recommendedAction: clean_(actionability.recommendedAction || ""),
+    recommendedMessageType: clean_(actionability.recommendedMessageType || ""),
+    coolingOffUntil: clean_(actionability.coolingOffUntil || ""),
+    urgencyLevel: clean_(actionability.urgencyLevel || ""),
+    urgencyReason: clean_(actionability.urgencyReason || ""),
+    communicationProgress: clean_(actionability.communicationProgress || ""),
+    communicationProgressDetail: clean_(actionability.communicationProgressDetail || ""),
+    lastRelevantDate: clean_(actionability.lastRelevantDate || ""),
+    lastRelevantDateSource: clean_(actionability.lastRelevantDateSource || ""),
+    ageDays: actionability.ageDays === "" ? "" : Number(actionability.ageDays || 0),
+    lastContactAgeDays: actionability.lastContactAgeDays === "" ? "" : Number(actionability.lastContactAgeDays || 0),
+    financeState: clean_(finance.financeState || "UNKNOWN"),
+    financeApplicable: finance.paymentApplicable === true,
+    activeFinanceWork: finance.activeFinanceWork === true,
+    financeReasonCode: clean_(finance.financeReasonCode || ""),
+    financeReason: clean_(finance.financeReason || ""),
+    paymentEvidencePresent: finance.paymentEvidencePresent === true,
+    paymentVerified: finance.paymentVerified === true,
+    financeExceptionCode: clean_(item.finance && item.finance.exceptions && item.finance.exceptions.financeExceptionCode || ""),
+    contactabilityState: clean_(item.contactability && item.contactability.state || "UNKNOWN"),
+    reviewTarget: {
+      applicantId: clean_(item.identity && item.identity.applicantId || ""),
+      rowNumber: Number(item.identity && item.identity.rowNumber || 0),
+      originRoute: routeKey,
+      returnRoute: routeKey
+    },
+    diagnostics: {
+      lifecycleMismatch: canonicalPopulationClone_(item.diagnostics && item.diagnostics.lifecycleMismatch || {})
+    },
+    searchIndex: operationalRouteSearchIndex_({
+      applicantId: item.identity && item.identity.applicantId || "",
+      name: item.applicant && item.applicant.name || "",
+      effectiveEmail: item.applicant && item.applicant.effectiveEmail || "",
+      phone: item.applicant && item.applicant.phone || "",
+      routeKey: routeKey,
+      routeLabel: operationalRouteLabel_(routeKey),
+      lifecycleBaseState: lifecycle.baseState || "",
+      actionabilityState: actionability.state || "",
+      worklistKey: actionability.worklistKey || "",
+      worklistLabel: actionability.worklistLabel || "",
+      financeState: finance.financeState || "",
+      recommendedMessageType: actionability.recommendedMessageType || "",
+      selectBlockReason: actionability.selectBlockReason || ""
+    })
+  };
+}
+
+function operationalRouteSummarySkeleton_(routeKey) {
+  return {
+    routeKey: routeKey,
+    routeLabel: operationalRouteLabel_(routeKey),
+    populationTotal: 0,
+    eligibleNow: 0,
+    coolingOff: 0,
+    hidden: 0,
+    visible: 0,
+    financePending: 0,
+    financeToVerify: 0,
+    financeVerified: 0,
+    notYetPaymentApplicable: 0,
+    exceptions: 0,
+    oldestActionableAgeDays: ""
+  };
+}
+
+function buildOperationalRouteSnapshot_(snapshot, payload) {
+  var source = snapshot && typeof snapshot === "object" ? snapshot : { rows: [] };
+  var p = payload && typeof payload === "object" ? payload : {};
+  var routeRows = (source.rows || []).map(operationalRouteRowFromCanonical_);
+  var byRoute = {};
+  var summaries = {};
+  routeRows.forEach(function (row) {
+    var routeKey = clean_(row.routeKey || "UNKNOWN_UNCLASSIFIED").toUpperCase();
+    if (!byRoute[routeKey]) byRoute[routeKey] = [];
+    if (!summaries[routeKey]) summaries[routeKey] = operationalRouteSummarySkeleton_(routeKey);
+    byRoute[routeKey].push(row);
+    summaries[routeKey].populationTotal++;
+    summaries[routeKey].visible++;
+    if (row.selectable === true && clean_(row.actionabilityState || "").toUpperCase() === "READY") summaries[routeKey].eligibleNow++;
+    if (clean_(row.actionabilityState || "").toUpperCase() === "COOLING_OFF") summaries[routeKey].coolingOff++;
+    if (row.financeState === "PAYMENT_PENDING") summaries[routeKey].financePending++;
+    if (row.financeState === "PAYMENT_TO_VERIFY") summaries[routeKey].financeToVerify++;
+    if (row.financeState === "PAID_VERIFIED") summaries[routeKey].financeVerified++;
+    if (row.financeState === "NOT_YET_PAYMENT_APPLICABLE") summaries[routeKey].notYetPaymentApplicable++;
+    if (row.financeExceptionCode) summaries[routeKey].exceptions++;
+    if (row.ageDays !== "" && row.selectable === true) {
+      if (summaries[routeKey].oldestActionableAgeDays === "" || Number(row.ageDays || 0) > Number(summaries[routeKey].oldestActionableAgeDays || 0)) {
+        summaries[routeKey].oldestActionableAgeDays = Number(row.ageDays || 0);
+      }
+    }
+  });
+  Object.keys(byRoute).forEach(function (routeKey) {
+    byRoute[routeKey].sort(function (a, b) {
+      return clean_(a.applicantId).localeCompare(clean_(b.applicantId))
+        || Number(a.rowNumber || 0) - Number(b.rowNumber || 0);
+    });
+  });
+  return {
+    ok: true,
+    readOnly: true,
+    schemaVersion: CANONICAL_POPULATION_SCHEMA_VERSION,
+    generatedAt: source.generatedAt || new Date().toISOString(),
+    canonicalPopulationCount: Number(source.totalRows || routeRows.length),
+    routeSummaries: summaries,
+    routeRows: byRoute,
+    rows: routeRows,
+    reconciliation: canonicalPopulationClone_(source.reconciliation || {})
+  };
+}
+
 function admin_getCanonicalPopulationSummary(payload) {
   var p = payload && typeof payload === "object" ? payload : {};
   return canonicalPopulationPublicSnapshot_(canonicalPopulationSnapshot_(), p.includeRows === true);
@@ -462,7 +700,34 @@ function admin_getCanonicalApplicant(payload) {
   return { ok: matches.length === 1, readOnly: true, code: matches.length > 1 ? "DUPLICATE_APPLICANT_ID" : (matches.length ? "" : "APPLICANT_NOT_FOUND"), applicant: matches.length ? canonicalPopulationClone_(matches[0]) : null };
 }
 
+function admin_searchCanonicalPopulation(payload) {
+  var p = payload && typeof payload === "object" ? payload : {};
+  var query = clean_(p.query || p.searchQuery || p.search || "");
+  var limit = Math.max(1, Math.min(50, Number(p.limit || 12)));
+  if (!query) return { ok: true, readOnly: true, query: "", totalMatches: 0, matches: [] };
+  var needle = query.toLowerCase();
+  var snapshot = canonicalPopulationSnapshot_();
+  var matches = snapshot.rows.filter(function (row) {
+    return canonicalPopulationSearchIndex_(row).indexOf(needle) >= 0;
+  });
+  matches.sort(function (a, b) {
+    return clean_(a.identity && a.identity.applicantId || "").localeCompare(clean_(b.identity && b.identity.applicantId || ""))
+      || Number(a.identity && a.identity.rowNumber || 0) - Number(b.identity && b.identity.rowNumber || 0);
+  });
+  return {
+    ok: true,
+    readOnly: true,
+    query: query,
+    totalMatches: matches.length,
+    matches: matches.slice(0, limit).map(canonicalPopulationSearchResultRow_)
+  };
+}
+
 function admin_getCanonicalPopulationReconciliation() {
   var snapshot = canonicalPopulationSnapshot_();
   return { ok: snapshot.reconciliation.status === "PASS", readOnly: true, schemaVersion: snapshot.schemaVersion, reconciliation: canonicalPopulationClone_(snapshot.reconciliation) };
+}
+
+function admin_getOperationalRouteSnapshot(payload) {
+  return buildOperationalRouteSnapshot_(canonicalPopulationSnapshot_(), payload || {});
 }

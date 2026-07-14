@@ -181,7 +181,8 @@ assert.equal(snapshot.reconciliation.workingView.returnedRows, 2);
 assert.equal(snapshot.summary.lifecycle.INCOMPLETE_DOCUMENTS, 1);
 assert.equal(snapshot.summary.lifecycle.PAYMENT_PENDING, 1);
 assert.equal(snapshot.summary.lifecycle.PAYMENT_TO_VERIFY, 1);
-assert.equal(snapshot.summary.finance.PAYMENT_PENDING, 2);
+assert.equal(snapshot.summary.finance.NOT_YET_PAYMENT_APPLICABLE, 1);
+assert.equal(snapshot.summary.finance.PAYMENT_PENDING, 1);
 assert.equal(snapshot.summary.finance.PAYMENT_TO_VERIFY, 1);
 const financeGroupsFromCanonicalDtos = snapshot.rows.reduce((counts, row) => {
   const state = row.finance.financeAuthority.financeState;
@@ -192,6 +193,8 @@ assert.deepEqual(financeGroupsFromCanonicalDtos, JSON.parse(JSON.stringify(snaps
 assert.equal(snapshot.rows[2].finance.schemaVersion, "CANONICAL_FINANCE_V1", "Canonical Population must carry the canonical Finance DTO, not a duplicate simplified projection");
 assert.equal(snapshot.rows[2].finance.operational.recommendedFinanceAction, "VERIFY_PAYMENT");
 assert.equal(snapshot.rows[2].finance.operational.paymentFollowupRecommended, false);
+assert.equal(snapshot.rows[0].actionability.recommendedMessageType, "docs_missing");
+assert.equal(snapshot.rows[1].actionability.recommendedMessageType, "payment_followup");
 assert.equal(snapshot.rows[0].extensions.registry.status, "NOT_RESOLVED");
 assert.equal(snapshot.rows[0].extensions.classroom.status, "NOT_RESOLVED");
 assert.equal(snapshot.rows[0].extensions.approval.status, "NOT_IMPLEMENTED");
