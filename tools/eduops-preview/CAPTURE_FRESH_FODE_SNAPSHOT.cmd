@@ -10,4 +10,5 @@ echo Capturing Fresh FODE Snapshot from authorised Admin staging read-only EduOp
 echo This command is explicit and separate from normal Preview Lab startup.
 echo It must not be used against Student, Production or OPS.
 node server\capture-fresh-snapshot.js %*
+if errorlevel 1 exit /b %errorlevel%
 endlocal

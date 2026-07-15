@@ -55,6 +55,20 @@ async function rpc(page, name, payload) {
   }), { name, payload: payload || {} });
 }
 
+async function findEduOpsFrame(page) {
+  var deadline = Date.now() + 60000;
+  while (Date.now() < deadline) {
+    for (const frame of page.frames()) {
+      try {
+        const ok = await frame.evaluate(() => !!(document.querySelector("#eduopsApp") && window.google && google.script && google.script.run));
+        if (ok) return frame;
+      } catch (_err) {}
+    }
+    await page.waitForTimeout(500);
+  }
+  fail("EduOps Apps Script frame with google.script.run was not found.");
+}
+
 function clone(value) {
   return JSON.parse(JSON.stringify(value == null ? null : value));
 }
@@ -128,34 +142,42 @@ function validateSnapshot(snapshot) {
 }
 
 async function capture() {
-  if (/student|prod|production|ops/i.test(captureUrl)) fail("Capture URL appears to target a prohibited surface.");
+  var captureTarget = new URL(captureUrl);
+  var lowerHostPath = (captureTarget.hostname + captureTarget.pathname).toLowerCase();
+  var view = String(captureTarget.searchParams.get("view") || "").toLowerCase();
+  if (/student|prod|production/.test(lowerHostPath) || view === "ops") {
+    fail("Capture URL appears to target a prohibited surface.");
+  }
+  if (view && view !== "eduops") {
+    fail("Capture URL must target the EduOps Admin staging view.");
+  }
   const browser = await chromium.launch({ headless: true });
   const contextOptions = fs.existsSync(storageState) ? { storageState } : {};
   const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
   await page.goto(captureUrl, { waitUntil: "domcontentloaded", timeout: 60000 });
-  await page.waitForFunction(() => !!(window.google && google.script && google.script.run), null, { timeout: 60000 });
+  const eduopsFrame = await findEduOpsFrame(page);
 
-  const access = await rpc(page, "eduops_getAccessProjection", {});
+  const access = await rpc(eduopsFrame, "eduops_getAccessProjection", {});
   if (!access || access.ok !== true) fail("Access projection failed.");
   if (!access.runtime || access.runtime.version !== expectedRuntime || Number(access.runtime.deployVersion) !== expectedDeploy) {
     fail(`Unexpected runtime identity. Expected ${expectedRuntime} / ${expectedDeploy}; got ${access.runtime && access.runtime.version} / ${access.runtime && access.runtime.deployVersion}`);
   }
-  const profile = await rpc(page, "eduops_getProfile", {});
+  const profile = await rpc(eduopsFrame, "eduops_getProfile", {});
   if (!profile || profile.contractVersion !== CONTRACT_VERSION) fail(`Incompatible contract version: ${profile && profile.contractVersion}`);
 
-  const first = await rpc(page, "eduops_queryOperationalWorkload", { actionabilityState: "READY", workScope: "ALL_AUTHORISED", page: 1, pageSize: 50 });
+  const first = await rpc(eduopsFrame, "eduops_queryOperationalWorkload", { actionabilityState: "READY", workScope: "ALL_AUTHORISED", page: 1, pageSize: 50 });
   if (!first || first.ok !== true) fail("Initial workload capture failed.");
   if (first.reliabilityState !== "AUTHORITATIVE") fail(`Unsafe source reliability: ${first.reliabilityState}`);
   const states = Object.keys(first.actionabilityCounts || {});
   const rowsById = {};
   for (const state of states) {
-    const p1 = await rpc(page, "eduops_queryOperationalWorkload", { actionabilityState: state, workScope: "ALL_AUTHORISED", page: 1, pageSize: 50, expectedSnapshotId: first.snapshotId });
+    const p1 = await rpc(eduopsFrame, "eduops_queryOperationalWorkload", { actionabilityState: state, workScope: "ALL_AUTHORISED", page: 1, pageSize: 50, expectedSnapshotId: first.snapshotId });
     if (!p1 || p1.ok !== true) fail(`Workload capture failed for ${state}`);
     const totalPages = Number(p1.totalPages || 1);
     for (const row of p1.rows || []) rowsById[row.applicantId] = row;
     for (let pageNumber = 2; pageNumber <= totalPages; pageNumber += 1) {
-      const pageRes = await rpc(page, "eduops_queryOperationalWorkload", { actionabilityState: state, workScope: "ALL_AUTHORISED", page: pageNumber, pageSize: 50, expectedSnapshotId: first.snapshotId });
+      const pageRes = await rpc(eduopsFrame, "eduops_queryOperationalWorkload", { actionabilityState: state, workScope: "ALL_AUTHORISED", page: pageNumber, pageSize: 50, expectedSnapshotId: first.snapshotId });
       if (!pageRes || pageRes.ok !== true) fail(`Workload capture failed for ${state} page ${pageNumber}`);
       for (const row of pageRes.rows || []) rowsById[row.applicantId] = row;
     }
@@ -171,18 +193,18 @@ async function capture() {
   };
   const exactApplicants = {};
   for (const fixture of FIXTURES) {
-    const search = await rpc(page, "eduops_searchApplicants", { query: fixture.applicantId, limit: 5, expectedSnapshotId: first.snapshotId });
+    const search = await rpc(eduopsFrame, "eduops_searchApplicants", { query: fixture.applicantId, limit: 5, expectedSnapshotId: first.snapshotId });
     if (!search || search.ok !== true || !String(JSON.stringify(search)).includes(fixture.applicantId)) fail(`Exact fixture search failed: ${fixture.applicantId}`);
-    const workbench = await rpc(page, "eduops_getApplicantWorkbench", { applicantId: fixture.applicantId, expectedSnapshotId: first.snapshotId, returnContext: { actionabilityState: "READY", workScope: "ALL_AUTHORISED", page: 1, pageSize: 50 } });
+    const workbench = await rpc(eduopsFrame, "eduops_getApplicantWorkbench", { applicantId: fixture.applicantId, expectedSnapshotId: first.snapshotId, returnContext: { actionabilityState: "READY", workScope: "ALL_AUTHORISED", page: 1, pageSize: 50 } });
     if (!workbench || workbench.ok !== true || workbench.identity.applicantId !== fixture.applicantId) fail(`Exact Workbench failed: ${fixture.applicantId}`);
-    const manifest = await rpc(page, "eduops_getDocumentManifest", { applicantId: fixture.applicantId, rowNumber: workbench.identity.rowNumber, expectedSnapshotId: first.snapshotId });
+    const manifest = await rpc(eduopsFrame, "eduops_getDocumentManifest", { applicantId: fixture.applicantId, rowNumber: workbench.identity.rowNumber, expectedSnapshotId: first.snapshotId });
     const sanitisedManifest = redactUrls(clone(manifest), report);
     const renditions = {};
     const files = manifest && manifest.files || [];
     for (const file of files.slice(0, 1)) {
       if (!file || !file.documentKey) continue;
       if (process.env.EDUOPS_CAPTURE_DOCUMENT_PNG === "true" && file.renditionEligible) {
-        const rendition = await rpc(page, "eduops_getDocumentRendition", { applicantId: fixture.applicantId, rowNumber: workbench.identity.rowNumber, sourceField: file.sourceField, itemIndex: file.itemIndex, documentKey: file.documentKey, expectedSnapshotId: first.snapshotId });
+        const rendition = await rpc(eduopsFrame, "eduops_getDocumentRendition", { applicantId: fixture.applicantId, rowNumber: workbench.identity.rowNumber, sourceField: file.sourceField, itemIndex: file.itemIndex, documentKey: file.documentKey, expectedSnapshotId: first.snapshotId });
         renditions[file.documentKey] = redactUrls(clone(rendition), report);
         report.capturedDocumentRenditionCount += 1;
       } else {
@@ -198,8 +220,8 @@ async function capture() {
     };
   }
 
-  const reconciliation = await rpc(page, "eduops_getReconciliation", { actionabilityState: "READY", workScope: "ALL_AUTHORISED", page: 1, pageSize: 50, expectedSnapshotId: first.snapshotId });
-  const paritySummary = await rpc(page, "eduops_getParityDiagnostics", { limit: 50, expectedSnapshotId: first.snapshotId });
+  const reconciliation = await rpc(eduopsFrame, "eduops_getReconciliation", { actionabilityState: "READY", workScope: "ALL_AUTHORISED", page: 1, pageSize: 50, expectedSnapshotId: first.snapshotId });
+  const paritySummary = await rpc(eduopsFrame, "eduops_getParityDiagnostics", { limit: 50, expectedSnapshotId: first.snapshotId });
   if (!paritySummary || paritySummary.ok !== true) fail("Parity diagnostics did not pass.");
 
   const sourceCommit = require("node:child_process").execSync("git rev-parse HEAD", { cwd: repoRoot, encoding: "utf8" }).trim();
