@@ -1,0 +1,38 @@
+{
+  "contractVersion": "EDUOPS_SHADOW_V1",
+  "defaultScenario": "normal-authoritative",
+  "scenarios": [
+    "normal-authoritative",
+    "slow-6s",
+    "timeout-10s",
+    "stale-snapshot",
+    "conflicting-authority",
+    "source-unavailable",
+    "empty-escalated-scope",
+    "pinned-ownership-scope",
+    "unpinned-ownership-scope",
+    "rapid-supersession",
+    "document-png-available",
+    "document-preview-unavailable",
+    "invalid-cross-applicant-document",
+    "contactability-failure",
+    "large-workload"
+  ],
+  "exactFixtures": [
+    {
+      "applicantId": "FODE-26-002985",
+      "displayName": "Jackson Numa",
+      "purpose": "Exact applicant search and Workbench fixture"
+    },
+    {
+      "applicantId": "FODE-26-002959",
+      "displayName": "Keziah Waffi",
+      "purpose": "Exact Workbench and document PNG fixture"
+    },
+    {
+      "applicantId": "FODE-26-TEST-004",
+      "displayName": "TEST_COMM_D Payment Verified",
+      "purpose": "Payment verified fixture"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "eduops-preview-lab",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Local interactive EduOps Preview Lab using shared runtime client source and deterministic preview transport.",
+  "scripts": {
+    "start": "node server/server.js",
+    "test": "node tests/preview-contract.test.js && node tests/preview-lab.browser.test.js",
+    "test:contract": "node tests/preview-contract.test.js",
+    "test:browser": "node tests/preview-lab.browser.test.js",
+    "capture": "node capture-evidence.js"
+  }
+}

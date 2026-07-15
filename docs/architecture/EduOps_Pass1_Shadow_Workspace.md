@@ -23,10 +23,31 @@ Only FODE is connected in Pass 1. KIA and MLC remain future product adapters.
 
 - `EduOps.html` is the isolated template.
 - `EduOps_Styles.html` contains scoped `.eduops-*` styles.
-- `EduOps_Client.html` contains the browser shell and closed RPC map.
+- `EduOps_Client.html` contains the browser shell, closed RPC map and transport boundary.
 - `EduOps_Contracts.js` defines versioned contracts, configuration and access helpers.
 - `EduOps_FODE_Adapter.js` translates canonical FODE authority output into EduOps DTOs.
 - `EduOps_Workload.js` exposes read-only EduOps RPCs and route rendering.
+
+## Preview-First Owner Acceptance
+
+EduOps UI and interaction changes must be reviewed locally through `tools/eduops-preview/` before another Admin staging release where practical.
+
+The Preview Lab renders `EduOps.html`, `EduOps_Styles.html` and `EduOps_Client.html` from runtime source and swaps only the transport/backend boundary:
+
+```text
+shared EduOps client
+  -> Apps Script transport for staging/runtime
+  -> Preview transport for deterministic local scenarios
+```
+
+The Preview Lab has two explicit data modes:
+
+- Deterministic Scenario Mode: fixed reproducible fixtures labelled `DETERMINISTIC SCENARIO DATA / NOT CURRENT FODE DATA / NO LIVE OPERATIONS`.
+- Fresh FODE Snapshot Mode: local immutable DTO snapshot captured by an explicit developer command from authorised Admin staging read-only EduOps RPCs and labelled `CURRENT AS OF CAPTURE TIME`.
+
+Normal Preview Lab startup never contacts Admin staging. Fresh snapshots are stored under `tools/eduops-preview/local-snapshots/`, are ignored by Git, and must pass contract compatibility, sanitisation and reconciliation checks before loading.
+
+Staging is reserved for live authority, integration, access-control and performance acceptance. The Preview Lab is the owner-facing UI/UX acceptance gate and has no automatic live data dependency.
 
 ## Public RPC Allowlist
 
@@ -83,12 +104,11 @@ Only one workload RPC is started at a time. Duplicate requests reuse the in-flig
 
 Changing top-level Actionability resets ownership scope to `ALL_AUTHORISED` unless the operator explicitly selects **Pin scope across Actionability**. When pinned scope produces no rows beneath a non-zero Actionability total, the workload reports both the All Authorised total and the scoped matched count.
 
-## Owner-Review Follow-Ups
+## Navigation And Diagnostics
 
-- Actionability navigation is duplicated in the rail and horizontal KPI row. The smallest later correction is to keep one interactive navigation set and make the other a non-interactive count summary.
-- Raw parity diagnostics is too prominent in the normal operator rail. The smallest later correction is to move it under a secondary Diagnostics disclosure without changing the parity RPC or authority contract.
+Actionability navigation has one primary control set in the left rail. The horizontal Actionability row is a non-interactive count summary.
 
-These are bounded navigation/prominence findings, not part of the workload reliability repair and not a Pass 2 expansion.
+Raw parity diagnostics remains available but is moved out of normal operator navigation and placed behind a technical authority diagnostics disclosure. The parity RPC and authority contract are unchanged.
 
 ## Document Review Rule
 

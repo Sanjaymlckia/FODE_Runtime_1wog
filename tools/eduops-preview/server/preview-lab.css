@@ -1,0 +1,89 @@
+.eduops-preview-lab{
+  font-family:"Aptos","Segoe UI",Arial,sans-serif;
+  color:#102033;
+  background:#fff7df;
+  border-bottom:3px solid #8a5700;
+  padding:10px 14px;
+  display:grid;
+  gap:8px;
+}
+.eduops-preview-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.eduops-preview-title strong{
+  font-size:15px;
+  letter-spacing:.03em;
+}
+.eduops-preview-title span{
+  color:#6b4200;
+  font-weight:800;
+  font-size:13px;
+}
+.eduops-preview-mode-banner{
+  border:1px solid #b88a20;
+  border-radius:7px;
+  background:#fffdf5;
+  color:#4b3200;
+  padding:8px 10px;
+  font-weight:900;
+}
+.eduops-preview-mode-banner[data-mode="snapshot"]{
+  background:#eef8ff;
+  border-color:#6f9fc5;
+  color:#123b58;
+}
+.eduops-preview-controls{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.eduops-preview-controls label{
+  display:grid;
+  gap:4px;
+  font-size:12px;
+  font-weight:800;
+}
+.eduops-preview-controls select,
+.eduops-preview-controls textarea,
+.eduops-preview-controls button{
+  min-height:36px;
+  border:1px solid #8b7246;
+  border-radius:7px;
+  background:#fff;
+  color:#102033;
+  padding:7px 9px;
+  font:inherit;
+}
+.eduops-preview-controls button{
+  font-weight:900;
+  cursor:pointer;
+}
+.eduops-preview-controls details{
+  border:1px solid #cfb77f;
+  border-radius:7px;
+  background:#fffdf5;
+  padding:8px;
+  max-width:min(640px,100%);
+}
+.eduops-preview-controls summary{
+  cursor:pointer;
+  font-weight:900;
+}
+.eduops-preview-controls pre{
+  max-width:min(900px,92vw);
+  max-height:260px;
+  overflow:auto;
+  white-space:pre-wrap;
+  background:#0e2435;
+  color:#f5fbff;
+  border-radius:6px;
+  padding:10px;
+}
+.eduops-preview-controls textarea{
+  width:min(560px,90vw);
+}
