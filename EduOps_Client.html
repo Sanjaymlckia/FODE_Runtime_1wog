@@ -45,8 +45,21 @@
     });
   }
 
+  function activeTransport_() {
+    return window.EDUOPS_TRANSPORT || window.EduOpsTransport || null;
+  }
+
   function callRpc(name, payload) {
     if (!rpcAllowlist[name]) return Promise.reject(new Error("EduOps RPC not allowlisted: " + name));
+    var transport = activeTransport_();
+    if (transport) {
+      if (typeof transport.call === "function") return transport.call(name, payload || {});
+      if (typeof transport[name] === "function") return transport[name](payload || {});
+      return Promise.reject(new Error("EduOps transport does not implement: " + name));
+    }
+    if (!window.google || !google.script || !google.script.run) {
+      return Promise.reject(new Error("EduOps Apps Script transport is unavailable"));
+    }
     return new Promise(function (resolve, reject) {
       google.script.run
         .withSuccessHandler(resolve)
@@ -291,7 +304,7 @@
 
   function renderKpis(counts) {
     dom.kpis.innerHTML = stateKeys(counts).map(function (key) {
-      return '<button type="button" data-state="' + esc(key) + '" class="' + (key === state.actionabilityState ? "active" : "") + '"><span>' + esc(labelState(key)) + '</span> <strong>' + esc(counts[key] || 0) + '</strong></button>';
+      return '<span class="eduops-kpi-summary ' + (key === state.actionabilityState ? "active" : "") + '"><span>' + esc(labelState(key)) + '</span> <strong>' + esc(counts[key] || 0) + '</strong></span>';
     }).join("");
   }
 
@@ -407,7 +420,7 @@
       card("Authority", ["Actionability: " + value(wb.exactAuthorityProjection, "actionabilityLabel"), "Worklist: " + value(wb.exactAuthorityProjection, "worklistLabel"), "Next action: " + value(wb.exactAuthorityProjection, "nextAction")]),
       card("Read-only controls", (wb.capabilities && wb.capabilities.pass2Actions || []).map(function (a) { return '<span class="eduops-disabled-action">' + esc(a.label) + ' / ' + esc(a.reason) + '</span>'; }))
     ]);
-    if (tab === "documents") return detailGrid([card("Document summary", summaryLines(wb.documents)), card("PNG rendition rule", ["Server-derived PNG preview where available.", "Open Original remains separate and signed.", "No document status mutation exists in Pass 1."])]);
+    if (tab === "documents") return renderDocumentTab(wb);
     if (tab === "finance") return detailGrid([card("Finance", summaryLines(wb.finance))]);
     if (tab === "communications") return detailGrid([card("Communications", summaryLines(wb.communications))]);
     if (tab === "portal") return detailGrid([card("Portal", summaryLines(wb.portal))]);
@@ -435,6 +448,85 @@
     return '<section class="eduops-detail-card"><h4>' + esc(title) + '</h4>' + (lines || []).map(function (line) {
       return String(line).indexOf("<span") === 0 ? line : '<p>' + esc(line) + '</p>';
     }).join("") + '</section>';
+  }
+
+  function renderDocumentTab(wb) {
+    var identity = wb && wb.identity || {};
+    return detailGrid([
+      card("Document summary", summaryLines(wb.documents)),
+      '<section class="eduops-detail-card eduops-document-gallery" data-document-gallery="' + esc(identity.applicantId || "") + '">'
+        + '<h4>Document gallery</h4>'
+        + '<p>Server-derived PNG preview where available. Open Original remains separate and signed.</p>'
+        + '<button type="button" data-load-document-manifest="' + esc(identity.applicantId || "") + '">Load document manifest</button>'
+        + '<div class="eduops-document-output" data-document-output></div>'
+      + '</section>'
+    ]);
+  }
+
+  function loadDocumentManifest(applicantId) {
+    if (!state.workbench || !applicantId) return;
+    var output = document.querySelector("[data-document-output]");
+    if (output) output.innerHTML = '<p>Loading document manifest for ' + esc(applicantId) + '...</p>';
+    callRpc("eduops_getDocumentManifest", {
+      applicantId: applicantId,
+      rowNumber: state.workbench.identity && state.workbench.identity.rowNumber,
+      expectedSnapshotId: state.snapshotId
+    }).then(function (res) {
+      if (!res || res.ok === false) throw new Error(res && (res.error || res.code) || "Document manifest unavailable");
+      renderDocumentManifest(res);
+    }).catch(function (err) {
+      if (output) output.innerHTML = '<p class="eduops-document-error">Document manifest unavailable: ' + esc(err && err.message || err) + '</p>';
+    });
+  }
+
+  function renderDocumentManifest(res) {
+    var output = document.querySelector("[data-document-output]");
+    if (!output) return;
+    var files = res.files || [];
+    output.innerHTML = '<p><strong>' + esc(files.length) + ' document candidate(s)</strong> / ' + esc(res.renditionRule || "PNG rendition rule active") + '</p>'
+      + (files.length ? files.map(function (file) {
+        return '<article class="eduops-document-file">'
+          + '<div><strong>' + esc(file.label || file.sourceField || "Document") + '</strong><br><span class="eduops-code">' + esc(file.fileName || "") + '</span><br>' + esc(file.renditionEligible ? "PNG rendition available" : "PNG preview unavailable") + '</div>'
+          + '<div class="eduops-document-actions">'
+            + '<button type="button" data-document-rendition="' + esc(file.documentKey || "") + '" data-source-field="' + esc(file.sourceField || "") + '" data-item-index="' + esc(file.itemIndex == null ? "" : file.itemIndex) + '">Preview PNG</button>'
+            + '<button type="button" data-document-open="' + esc(file.documentKey || "") + '" data-source-field="' + esc(file.sourceField || "") + '" data-item-index="' + esc(file.itemIndex == null ? "" : file.itemIndex) + '">Open Original</button>'
+          + '</div>'
+        + '</article>';
+      }).join("") : '<p>No document files were returned for this applicant.</p>')
+      + '<div class="eduops-document-preview" data-document-preview></div>';
+  }
+
+  function documentPayloadFromButton(button) {
+    var identity = state.workbench && state.workbench.identity || {};
+    return {
+      applicantId: identity.applicantId,
+      rowNumber: identity.rowNumber,
+      sourceField: button.getAttribute("data-source-field") || "",
+      itemIndex: Number(button.getAttribute("data-item-index") || 0),
+      documentKey: button.getAttribute("data-document-rendition") || button.getAttribute("data-document-open") || "",
+      expectedSnapshotId: state.snapshotId
+    };
+  }
+
+  function loadDocumentRendition(button) {
+    var preview = document.querySelector("[data-document-preview]");
+    if (preview) preview.innerHTML = '<p>Loading PNG rendition...</p>';
+    callRpc("eduops_getDocumentRendition", documentPayloadFromButton(button)).then(function (res) {
+      if (!res || res.ok === false) throw new Error(res && (res.error || res.code) || "PNG rendition unavailable");
+      if (preview) preview.innerHTML = '<figure class="eduops-png-preview"><img src="' + esc(res.dataUrl || "") + '" alt="' + esc(res.label || "Document PNG preview") + '"><figcaption>' + esc(res.fileName || res.label || "Derived PNG rendition") + ' / canonical original remains separate.</figcaption></figure>';
+    }).catch(function (err) {
+      if (preview) preview.innerHTML = '<p class="eduops-document-error">PNG preview unavailable: ' + esc(err && err.message || err) + '</p>';
+    });
+  }
+
+  function loadDocumentFileAction(button) {
+    var preview = document.querySelector("[data-document-preview]");
+    callRpc("eduops_getDocumentFileAction", documentPayloadFromButton(button)).then(function (res) {
+      if (!res || res.ok === false) throw new Error(res && (res.error || res.code) || "Open Original unavailable");
+      if (preview) preview.innerHTML = '<p><strong>Open Original action prepared.</strong> <a href="' + esc(res.openUrl || "#") + '" target="_blank" rel="noopener">Open simulated signed original</a><br><span class="eduops-code">Expires: ' + esc(res.expiresAt || "") + '</span></p>';
+    }).catch(function (err) {
+      if (preview) preview.innerHTML = '<p class="eduops-document-error">Open Original unavailable: ' + esc(err && err.message || err) + '</p>';
+    });
   }
 
   function closeWorkbench() {
@@ -530,6 +622,21 @@
         renderWorkbench();
         return;
       }
+      var manifestBtn = event.target.closest("[data-load-document-manifest]");
+      if (manifestBtn) {
+        loadDocumentManifest(manifestBtn.getAttribute("data-load-document-manifest"));
+        return;
+      }
+      var renditionBtn = event.target.closest("[data-document-rendition]");
+      if (renditionBtn) {
+        loadDocumentRendition(renditionBtn);
+        return;
+      }
+      var openOriginalBtn = event.target.closest("[data-document-open]");
+      if (openOriginalBtn) {
+        loadDocumentFileAction(openOriginalBtn);
+        return;
+      }
       var lensBtn = event.target.closest("[data-lens]");
       if (lensBtn) renderLens(lensBtn.getAttribute("data-lens"));
     });
@@ -545,6 +652,13 @@
     dom.openParity.addEventListener("click", openParity);
     window.addEventListener("popstate", function () {
       if (!dom.workbench.hidden) closeWorkbench();
+    });
+    window.addEventListener("eduops:preview-reload", function () {
+      state.snapshotId = "";
+      state.workload = null;
+      state.workbench = null;
+      dom.workbench.hidden = true;
+      loadWorkload({ resetPage: true });
     });
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape") {
@@ -565,6 +679,12 @@
   document.addEventListener("DOMContentLoaded", function () {
     cacheDom();
     bindEvents();
+    window.__EDUOPS_APP__ = {
+      callRpc: callRpc,
+      loadWorkload: loadWorkload,
+      state: state,
+      requestDiagnostics: window.__EDUOPS_REQUEST_DIAGNOSTICS__
+    };
     callRpc("eduops_getAccessProjection", {}).then(function () {
       return loadWorkload({ resetPage: true });
     }).catch(function (err) {

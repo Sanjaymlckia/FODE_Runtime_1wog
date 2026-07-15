@@ -25,7 +25,6 @@
         <span><?= USER_EMAIL ?></span>
       </div>
       <nav id="eduopsStateNav" class="eduops-nav" aria-label="Actionability states"></nav>
-      <button id="eduopsOpenParity" class="eduops-rail-button" type="button">Parity diagnostics</button>
     </aside>
 
     <main class="eduops-main">
@@ -64,6 +63,11 @@
       <section id="eduopsGlobalResults" class="eduops-search-results" hidden></section>
 
       <section class="eduops-kpis" id="eduopsKpis" aria-label="Actionability counts"></section>
+      <details class="eduops-diagnostics-disclosure">
+        <summary>Technical authority diagnostics</summary>
+        <p>Read-only parity checks are for administrator verification and are not part of normal operator navigation.</p>
+        <button id="eduopsOpenParity" class="eduops-secondary" type="button">Open parity diagnostics</button>
+      </details>
       <section class="eduops-worklists" id="eduopsWorklists" aria-label="Worklist keys"></section>
       <section class="eduops-scopes" id="eduopsScopes" aria-label="Work ownership scopes">
         <button type="button" data-scope="ALL_AUTHORISED" class="active">All Authorised</button>

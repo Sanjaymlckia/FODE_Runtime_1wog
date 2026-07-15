@@ -73,7 +73,7 @@
   }
   .eduops-nav button.active{background:#dff1e8;color:#0b2a3d;border-color:#a6d2bd}
   .eduops-main{min-width:0;padding:22px;display:grid;gap:14px}
-  .eduops-hero,.eduops-panel,.eduops-reliability,.eduops-toolbar,.eduops-search-results,.eduops-kpis,.eduops-worklists,.eduops-scopes,.eduops-lenses{
+  .eduops-hero,.eduops-panel,.eduops-reliability,.eduops-toolbar,.eduops-search-results,.eduops-kpis,.eduops-worklists,.eduops-scopes,.eduops-lenses,.eduops-diagnostics-disclosure{
     border:1px solid var(--eduops-line);
     background:rgba(255,255,255,.92);
     border-radius:16px;
@@ -91,6 +91,12 @@
   .eduops-kpis,.eduops-worklists,.eduops-scopes,.eduops-lenses{padding:10px;display:flex;gap:8px;flex-wrap:wrap}
   .eduops-kpis button,.eduops-worklists button,.eduops-scopes button,.eduops-lenses button{background:#f8fbff}
   .eduops-kpis button.active,.eduops-worklists button.active,.eduops-scopes button.active,.eduops-lenses button.active{background:#dcecff;border-color:#5791c8;color:#0d477d}
+  .eduops-kpi-summary{display:inline-flex;align-items:center;gap:7px;border:1px solid #c3d1df;border-radius:10px;background:#f8fbff;color:#17344d;padding:8px 10px;font-weight:800}
+  .eduops-kpi-summary.active{background:#dcecff;border-color:#5791c8;color:#0d477d}
+  .eduops-kpi-summary strong{font-size:16px}
+  .eduops-diagnostics-disclosure{padding:10px 12px;color:#243f58}
+  .eduops-diagnostics-disclosure summary{cursor:pointer;font-weight:900;color:#17344d}
+  .eduops-diagnostics-disclosure p{margin:8px 0;color:#334b63}
   .eduops-scope-pin{display:flex;align-items:center;gap:7px;margin-left:auto;padding:8px 10px;border:1px solid #9fb3c5;border-radius:7px;background:#fff;color:#17344d;font-size:14px;font-weight:700}
   .eduops-scope-pin input{width:17px;height:17px;margin:0}
   .eduops-request-status{margin-top:5px;color:#294761;font-size:13px;font-weight:650}
@@ -130,6 +136,14 @@
   .eduops-detail-card h4{margin:0 0 8px;font-size:16px}
   .eduops-detail-card p{margin:4px 0;color:#263f56}
   .eduops-disabled-action{display:block;margin-top:8px;padding:8px;border:1px dashed #b6c5d4;border-radius:10px;background:#f6f8fa;color:#334b63;font-weight:800}
+  .eduops-document-output{margin-top:10px}
+  .eduops-document-file{display:flex;justify-content:space-between;gap:12px;border:1px solid #d2deea;border-radius:12px;padding:10px;margin-top:8px;background:#f8fbff}
+  .eduops-document-actions{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;justify-content:flex-end}
+  .eduops-document-preview{margin-top:10px;border-top:1px solid #d2deea;padding-top:10px}
+  .eduops-document-error{color:#8b1e1e;font-weight:800}
+  .eduops-png-preview{margin:0}
+  .eduops-png-preview img{display:block;max-width:100%;max-height:420px;border:1px solid #9bb3c8;border-radius:10px;background:#fff}
+  .eduops-png-preview figcaption{margin-top:6px;color:#334b63;font-size:13px;font-weight:700}
   @media (max-width:900px){
     .eduops-app{grid-template-columns:1fr}
     .eduops-rail{position:relative;height:auto}
