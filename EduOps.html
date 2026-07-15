@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <?!= HtmlService.createHtmlOutputFromFile("EduOps_Styles").getContent(); ?>
+</head>
+<body>
+  <div id="eduopsApp" class="eduops-app" data-runtime="<?= BUILD_VERSION ?>" data-product="FODE">
+    <aside class="eduops-rail">
+      <div class="eduops-brand">
+        <div class="eduops-logo">EO</div>
+        <div>
+          <h1>EduOps</h1>
+          <p>Read-only shadow workspace</p>
+        </div>
+      </div>
+      <div class="eduops-runtime">
+        <strong>FODE shadow</strong>
+        <span>Runtime <?= BUILD_VERSION ?> / read-only</span>
+        <span><?= USER_EMAIL ?></span>
+      </div>
+      <nav id="eduopsStateNav" class="eduops-nav" aria-label="Actionability states"></nav>
+      <button id="eduopsOpenParity" class="eduops-rail-button" type="button">Parity diagnostics</button>
+    </aside>
+
+    <main class="eduops-main">
+      <header class="eduops-hero">
+        <div>
+          <p class="eduops-kicker">Pass 1 / staging-only implementation</p>
+          <h2>FODE Operational Shadow Workspace</h2>
+          <p>Server-authored Actionability, search, reconciliation and read-only Workbench over existing FODE authorities.</p>
+        </div>
+        <div class="eduops-readonly-badge">No EduOps mutations enabled</div>
+      </header>
+
+      <section id="eduopsReliability" class="eduops-reliability" aria-live="polite">
+        Loading source reliability...
+      </section>
+
+      <section class="eduops-toolbar" aria-label="Workload controls">
+        <label>
+          Search current workload
+          <input id="eduopsFilterSearch" type="search" placeholder="ApplicantID, name, email or phone">
+        </label>
+        <label>
+          Page size
+          <select id="eduopsPageSize">
+            <option value="25">25</option>
+            <option value="10">10</option>
+            <option value="50">50</option>
+          </select>
+        </label>
+        <label>
+          Global applicant search
+          <input id="eduopsGlobalSearch" type="search" placeholder="Search all FODE applicants">
+        </label>
+      </section>
+
+      <section id="eduopsGlobalResults" class="eduops-search-results" hidden></section>
+
+      <section class="eduops-kpis" id="eduopsKpis" aria-label="Actionability counts"></section>
+      <section class="eduops-worklists" id="eduopsWorklists" aria-label="Worklist keys"></section>
+      <section class="eduops-scopes" id="eduopsScopes" aria-label="Work ownership scopes">
+        <button type="button" data-scope="ALL_AUTHORISED" class="active">All Authorised</button>
+        <button type="button" data-scope="MY">My Work</button>
+        <button type="button" data-scope="TEAM">Team</button>
+        <button type="button" data-scope="UNASSIGNED">Unassigned</button>
+        <button type="button" data-scope="ESCALATED">Escalated</button>
+      </section>
+
+      <section class="eduops-panel">
+        <header class="eduops-panel-head">
+          <div>
+            <h3 id="eduopsWorkloadTitle">Workload</h3>
+            <p id="eduopsWorkloadMeta">Waiting for server workload...</p>
+          </div>
+          <button id="eduopsOpenReconciliation" class="eduops-secondary" type="button">Reconciliation</button>
+        </header>
+        <div class="eduops-table-wrap">
+          <table class="eduops-table">
+            <thead>
+              <tr>
+                <th>Applicant</th>
+                <th>Actionability</th>
+                <th>Worklist / owner</th>
+                <th>Next action</th>
+                <th>Domains</th>
+                <th>Reliability</th>
+                <th>Open</th>
+              </tr>
+            </thead>
+            <tbody id="eduopsRows"></tbody>
+          </table>
+        </div>
+        <footer class="eduops-pagination">
+          <button id="eduopsPrevPage" type="button">Previous</button>
+          <span id="eduopsPageMeta">Page 1</span>
+          <button id="eduopsNextPage" type="button">Next</button>
+        </footer>
+      </section>
+
+      <section class="eduops-lenses" aria-label="Read-only domain lenses">
+        <button type="button" data-lens="finance">Finance</button>
+        <button type="button" data-lens="communications">Communications</button>
+        <button type="button" data-lens="portal">Portal</button>
+        <button type="button" data-lens="contactability">Contactability</button>
+      </section>
+      <section id="eduopsLensPanel" class="eduops-panel eduops-lens-panel" hidden></section>
+    </main>
+
+    <section id="eduopsWorkbench" class="eduops-workbench" hidden aria-modal="true" role="dialog" aria-label="Read-only applicant Workbench">
+      <div class="eduops-workbench-card">
+        <header>
+          <div>
+            <p class="eduops-kicker">Read-only Workbench</p>
+            <h2 id="eduopsWorkbenchTitle">Applicant</h2>
+            <p id="eduopsWorkbenchMeta"></p>
+          </div>
+          <button id="eduopsCloseWorkbench" type="button">Close</button>
+        </header>
+        <nav id="eduopsWorkbenchTabs" class="eduops-tabs" aria-label="Workbench tabs"></nav>
+        <div id="eduopsWorkbenchBody" class="eduops-workbench-body"></div>
+      </div>
+    </section>
+
+    <section id="eduopsDrawer" class="eduops-drawer" hidden aria-modal="true" role="dialog" aria-label="EduOps diagnostics">
+      <div class="eduops-drawer-card">
+        <header>
+          <h2 id="eduopsDrawerTitle">Diagnostics</h2>
+          <button id="eduopsCloseDrawer" type="button">Close</button>
+        </header>
+        <div id="eduopsDrawerBody"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    window.EDUOPS_BOOTSTRAP = {
+      runtime: "<?= BUILD_VERSION ?>",
+      renderedAt: "<?= BUILD_RENDERED_AT ?>",
+      product: "FODE",
+      userEmail: "<?= USER_EMAIL ?>",
+      role: "<?= ADMIN_ROLE ?>"
+    };
+  </script>
+  <?!= HtmlService.createHtmlOutputFromFile("EduOps_Client").getContent(); ?>
+</body>
+</html>

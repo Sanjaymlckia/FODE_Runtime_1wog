@@ -1,0 +1,420 @@
+<script>
+(function () {
+  "use strict";
+
+  var state = {
+    actionabilityState: "READY",
+    worklistKey: "",
+    workScope: "ALL_AUTHORISED",
+    page: 1,
+    pageSize: 25,
+    filters: {},
+    sort: { key: "urgency", direction: "asc" },
+    snapshotId: "",
+    workload: null,
+    searchQuery: "",
+    searchResults: [],
+    workbench: null,
+    activeTab: "overview",
+    scrollY: 0,
+    focusSelector: ""
+  };
+  var dom = {};
+  var requestSeq = 0;
+  var rpcAllowlist = {
+    eduops_getAccessProjection: true,
+    eduops_getProfile: true,
+    eduops_queryOperationalWorkload: true,
+    eduops_searchApplicants: true,
+    eduops_getApplicantWorkbench: true,
+    eduops_getDocumentManifest: true,
+    eduops_getDocumentRendition: true,
+    eduops_getDocumentFileAction: true,
+    eduops_getReconciliation: true,
+    eduops_getParityDiagnostics: true
+  };
+
+  function esc(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, function (ch) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch];
+    });
+  }
+
+  function callRpc(name, payload) {
+    if (!rpcAllowlist[name]) return Promise.reject(new Error("EduOps RPC not allowlisted: " + name));
+    return new Promise(function (resolve, reject) {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)[name](payload || {});
+    });
+  }
+
+  function cacheDom() {
+    dom.stateNav = document.getElementById("eduopsStateNav");
+    dom.kpis = document.getElementById("eduopsKpis");
+    dom.worklists = document.getElementById("eduopsWorklists");
+    dom.scopes = document.getElementById("eduopsScopes");
+    dom.reliability = document.getElementById("eduopsReliability");
+    dom.rows = document.getElementById("eduopsRows");
+    dom.title = document.getElementById("eduopsWorkloadTitle");
+    dom.meta = document.getElementById("eduopsWorkloadMeta");
+    dom.pageMeta = document.getElementById("eduopsPageMeta");
+    dom.prev = document.getElementById("eduopsPrevPage");
+    dom.next = document.getElementById("eduopsNextPage");
+    dom.pageSize = document.getElementById("eduopsPageSize");
+    dom.filterSearch = document.getElementById("eduopsFilterSearch");
+    dom.globalSearch = document.getElementById("eduopsGlobalSearch");
+    dom.globalResults = document.getElementById("eduopsGlobalResults");
+    dom.workbench = document.getElementById("eduopsWorkbench");
+    dom.workbenchTitle = document.getElementById("eduopsWorkbenchTitle");
+    dom.workbenchMeta = document.getElementById("eduopsWorkbenchMeta");
+    dom.workbenchTabs = document.getElementById("eduopsWorkbenchTabs");
+    dom.workbenchBody = document.getElementById("eduopsWorkbenchBody");
+    dom.closeWorkbench = document.getElementById("eduopsCloseWorkbench");
+    dom.drawer = document.getElementById("eduopsDrawer");
+    dom.drawerTitle = document.getElementById("eduopsDrawerTitle");
+    dom.drawerBody = document.getElementById("eduopsDrawerBody");
+    dom.closeDrawer = document.getElementById("eduopsCloseDrawer");
+    dom.openReconciliation = document.getElementById("eduopsOpenReconciliation");
+    dom.openParity = document.getElementById("eduopsOpenParity");
+    dom.lensPanel = document.getElementById("eduopsLensPanel");
+  }
+
+  function buildPayload() {
+    return {
+      product: "FODE",
+      actionabilityState: state.actionabilityState,
+      worklistKey: state.worklistKey,
+      workScope: state.workScope,
+      filters: state.filters,
+      sort: state.sort,
+      page: state.page,
+      pageSize: state.pageSize,
+      expectedSnapshotId: state.snapshotId || ""
+    };
+  }
+
+  function loadWorkload(opts) {
+    var o = opts || {};
+    if (o.resetPage) state.page = 1;
+    var seq = ++requestSeq;
+    dom.rows.innerHTML = '<tr><td colspan="7">Loading server-authored workload...</td></tr>';
+    return callRpc("eduops_queryOperationalWorkload", buildPayload()).then(function (res) {
+      if (seq !== requestSeq) return;
+      state.workload = res;
+      if (res && res.snapshotId) state.snapshotId = res.snapshotId;
+      renderWorkload(res || {});
+      updateRoute();
+    }).catch(function (err) {
+      dom.rows.innerHTML = '<tr><td colspan="7">EduOps workload failed: ' + esc(err && err.message || err) + '</td></tr>';
+    });
+  }
+
+  function renderWorkload(res) {
+    renderStates(res.actionabilityCounts || {});
+    renderKpis(res.actionabilityCounts || {});
+    renderWorklists(res.worklistKeyCounts || {});
+    renderScopes();
+    renderReliability(res);
+    renderRows(res.rows || []);
+    dom.title.textContent = (labelState(state.actionabilityState) || "Workload") + (state.worklistKey ? " / " + state.worklistKey.replace(/_/g, " ") : "");
+    dom.meta.textContent = "Page " + res.page + " of " + res.totalPages + " / " + res.totalMatched + " matched / snapshot " + (res.snapshotId || "-");
+    dom.pageMeta.textContent = "Page " + res.page + " / " + res.totalPages;
+    dom.prev.disabled = Number(res.page || 1) <= 1;
+    dom.next.disabled = Number(res.page || 1) >= Number(res.totalPages || 1);
+  }
+
+  function labelState(stateKey) {
+    return ({
+      READY: "Ready Now",
+      COOLING_OFF: "Cooling Off",
+      AWAITING_APPLICANT: "Awaiting Applicant",
+      AWAITING_PAYMENT: "Awaiting Payment",
+      REVIEW_REQUIRED: "Review Required",
+      BLOCKED: "Blocked",
+      UNKNOWN: "Unknown",
+      COMPLETE: "Complete"
+    })[stateKey] || stateKey;
+  }
+
+  function stateKeys(counts) {
+    var fixed = ["READY", "COOLING_OFF", "AWAITING_APPLICANT", "AWAITING_PAYMENT", "REVIEW_REQUIRED", "BLOCKED", "UNKNOWN", "COMPLETE"];
+    Object.keys(counts || {}).forEach(function (key) { if (fixed.indexOf(key) < 0) fixed.push(key); });
+    return fixed;
+  }
+
+  function renderStates(counts) {
+    dom.stateNav.innerHTML = stateKeys(counts).map(function (key) {
+      return '<button type="button" data-state="' + esc(key) + '" class="' + (key === state.actionabilityState ? "active" : "") + '">' + esc(labelState(key)) + ' <strong>' + esc(counts[key] || 0) + '</strong></button>';
+    }).join("");
+  }
+
+  function renderKpis(counts) {
+    dom.kpis.innerHTML = stateKeys(counts).map(function (key) {
+      return '<button type="button" data-state="' + esc(key) + '" class="' + (key === state.actionabilityState ? "active" : "") + '"><span>' + esc(labelState(key)) + '</span> <strong>' + esc(counts[key] || 0) + '</strong></button>';
+    }).join("");
+  }
+
+  function renderWorklists(counts) {
+    var keys = Object.keys(counts || {}).sort();
+    dom.worklists.innerHTML = '<button type="button" data-worklist="" class="' + (!state.worklistKey ? "active" : "") + '">All worklists</button>' + keys.map(function (key) {
+      return '<button type="button" data-worklist="' + esc(key) + '" class="' + (key === state.worklistKey ? "active" : "") + '">' + esc(key.replace(/_/g, " ")) + ' <strong>' + esc(counts[key]) + '</strong></button>';
+    }).join("");
+  }
+
+  function renderScopes() {
+    dom.scopes.querySelectorAll("[data-scope]").forEach(function (btn) {
+      btn.classList.toggle("active", btn.getAttribute("data-scope") === state.workScope);
+    });
+  }
+
+  function renderReliability(res) {
+    var current = res || {};
+    var stateName = current.reliabilityState || "UNKNOWN";
+    dom.reliability.setAttribute("data-state", stateName);
+    dom.reliability.textContent = stateName + ": " + ((current.reliabilityReasons || [])[0] || "Source reliability not available.");
+  }
+
+  function pillClass(stateName) {
+    if (stateName === "READY" || stateName === "AUTHORITATIVE") return "ready";
+    if (stateName === "BLOCKED" || stateName === "UNKNOWN" || stateName === "CONFLICTING") return "block";
+    return "warn";
+  }
+
+  function renderRows(rows) {
+    if (!rows.length) {
+      dom.rows.innerHTML = '<tr><td colspan="7">No applicants matched this server workload.</td></tr>';
+      return;
+    }
+    dom.rows.innerHTML = rows.map(function (row) {
+      return '<tr>'
+        + '<td><strong>' + esc(row.displayName || "Unnamed") + '</strong><br><span class="eduops-code">' + esc(row.applicantId) + '</span><br>' + esc(row.email || row.phone || "") + '</td>'
+        + '<td><span class="eduops-pill ' + pillClass(row.actionabilityState) + '">' + esc(row.actionabilityLabel || row.actionabilityState) + '</span><br>' + esc(row.urgencyLevel || "") + '</td>'
+        + '<td><strong>' + esc(row.worklistLabel || row.worklistKey || "Unknown") + '</strong><br>' + esc(row.actionOwner || "") + ' / ' + esc(row.workOwnership && row.workOwnership.scope || "") + '</td>'
+        + '<td>' + esc(row.nextAction || "") + '<br><span class="eduops-code">' + esc(row.coolingOffUntil || "") + '</span></td>'
+        + '<td>Finance: ' + esc(row.canonicalFinanceState || "") + '<br>Docs: ' + esc(row.documentState || "") + '<br>Portal: ' + esc(row.portalState || "") + '</td>'
+        + '<td><span class="eduops-pill ' + pillClass(row.sourceReliability && row.sourceReliability.state) + '">' + esc(row.sourceReliability && row.sourceReliability.state || "UNKNOWN") + '</span><br>' + esc(row.blockerReason || row.selectBlockReason || "") + '</td>'
+        + '<td><button type="button" data-open-applicant="' + esc(row.applicantId) + '">Open</button></td>'
+        + '</tr>';
+    }).join("");
+  }
+
+  function runSearch() {
+    var query = dom.globalSearch.value.trim();
+    state.searchQuery = query;
+    if (!query) {
+      state.searchResults = [];
+      dom.globalResults.hidden = true;
+      dom.globalResults.innerHTML = "";
+      return;
+    }
+    callRpc("eduops_searchApplicants", { query: query, limit: 12 }).then(function (res) {
+      state.searchResults = res.matches || [];
+      renderSearchResults(res);
+    });
+  }
+
+  function renderSearchResults(res) {
+    dom.globalResults.hidden = false;
+    var matches = res.matches || [];
+    dom.globalResults.innerHTML = '<strong>Global FODE search: ' + esc(res.totalMatches || 0) + ' match(es)</strong>'
+      + (matches.length ? matches.map(function (row) {
+        return '<div class="eduops-search-item"><div><strong>' + esc(row.displayName) + '</strong><br><span class="eduops-code">' + esc(row.applicantId) + '</span><br>' + esc(row.actionabilityLabel) + ' / ' + esc(row.worklistLabel || "") + ' / ' + esc(row.primaryRoute || "") + '</div><div><button type="button" data-open-applicant="' + esc(row.applicantId) + '">Open exact</button><button type="button" data-copy-applicant="' + esc(row.applicantId) + '">Copy ID</button></div></div>';
+      }).join("") : '<p>No matches.</p>');
+  }
+
+  function openApplicant(applicantId) {
+    state.scrollY = window.scrollY || 0;
+    state.focusSelector = '[data-open-applicant="' + applicantId + '"]';
+    callRpc("eduops_getApplicantWorkbench", {
+      applicantId: applicantId,
+      expectedSnapshotId: state.snapshotId,
+      returnContext: buildPayload()
+    }).then(function (res) {
+      if (!res || res.ok === false) throw new Error(res && (res.message || res.code) || "Applicant unavailable");
+      state.workbench = res;
+      state.activeTab = "overview";
+      renderWorkbench();
+      dom.workbench.hidden = false;
+      history.pushState({ eduopsWorkbench: applicantId }, "", "#workbench=" + encodeURIComponent(applicantId));
+      dom.closeWorkbench.focus();
+    }).catch(function (err) {
+      alert("EduOps Workbench failed: " + (err && err.message || err));
+    });
+  }
+
+  function renderWorkbench() {
+    var wb = state.workbench || {};
+    var identity = wb.identity || {};
+    dom.workbenchTitle.textContent = (identity.displayName || "Applicant") + " / " + (identity.applicantId || "");
+    dom.workbenchMeta.textContent = "Snapshot " + (wb.snapshotId || "-") + " / " + ((wb.sourceReliability && wb.sourceReliability.state) || "UNKNOWN");
+    var tabs = ["overview", "documents", "finance", "communications", "portal", "contactability", "audit"];
+    dom.workbenchTabs.innerHTML = tabs.map(function (tab) {
+      return '<button type="button" data-tab="' + tab + '" class="' + (tab === state.activeTab ? "active" : "") + '">' + esc(tab.replace(/\b\w/g, function (c) { return c.toUpperCase(); })) + '</button>';
+    }).join("");
+    dom.workbenchBody.innerHTML = renderWorkbenchTab(state.activeTab, wb);
+  }
+
+  function renderWorkbenchTab(tab, wb) {
+    if (tab === "overview") return detailGrid([
+      card("Authority", ["Actionability: " + value(wb.exactAuthorityProjection, "actionabilityLabel"), "Worklist: " + value(wb.exactAuthorityProjection, "worklistLabel"), "Next action: " + value(wb.exactAuthorityProjection, "nextAction")]),
+      card("Read-only controls", (wb.capabilities && wb.capabilities.pass2Actions || []).map(function (a) { return '<span class="eduops-disabled-action">' + esc(a.label) + ' / ' + esc(a.reason) + '</span>'; }))
+    ]);
+    if (tab === "documents") return detailGrid([card("Document summary", summaryLines(wb.documents)), card("PNG rendition rule", ["Server-derived PNG preview where available.", "Open Original remains separate and signed.", "No document status mutation exists in Pass 1."])]);
+    if (tab === "finance") return detailGrid([card("Finance", summaryLines(wb.finance))]);
+    if (tab === "communications") return detailGrid([card("Communications", summaryLines(wb.communications))]);
+    if (tab === "portal") return detailGrid([card("Portal", summaryLines(wb.portal))]);
+    if (tab === "contactability") return detailGrid([card("Contactability", summaryLines(wb.contactability))]);
+    return '<pre>' + esc(JSON.stringify(wb.auditSummary || {}, null, 2)) + '</pre>';
+  }
+
+  function value(obj, key) {
+    return obj && obj[key] != null ? obj[key] : "";
+  }
+
+  function summaryLines(obj) {
+    return Object.keys(obj || {}).filter(function (key) { return key !== "actions"; }).map(function (key) {
+      return key + ": " + (typeof obj[key] === "object" ? JSON.stringify(obj[key]) : obj[key]);
+    }).concat((obj && obj.actions || []).map(function (action) {
+      return '<span class="eduops-disabled-action">' + esc(action.label) + ' / ' + esc(action.reason) + '</span>';
+    }));
+  }
+
+  function detailGrid(cards) {
+    return '<div class="eduops-detail-grid">' + cards.join("") + '</div>';
+  }
+
+  function card(title, lines) {
+    return '<section class="eduops-detail-card"><h4>' + esc(title) + '</h4>' + (lines || []).map(function (line) {
+      return String(line).indexOf("<span") === 0 ? line : '<p>' + esc(line) + '</p>';
+    }).join("") + '</section>';
+  }
+
+  function closeWorkbench() {
+    dom.workbench.hidden = true;
+    state.workbench = null;
+    if (location.hash.indexOf("workbench=") >= 0) history.pushState({}, "", location.pathname + location.search + "#workload");
+    setTimeout(function () {
+      window.scrollTo(0, state.scrollY || 0);
+      var focus = state.focusSelector ? document.querySelector(state.focusSelector) : null;
+      if (focus) focus.focus();
+    }, 0);
+  }
+
+  function openReconciliation() {
+    callRpc("eduops_getReconciliation", buildPayload()).then(function (res) {
+      dom.drawerTitle.textContent = "Workload reconciliation";
+      dom.drawerBody.innerHTML = '<pre>' + esc(JSON.stringify(res.reconciliation || {}, null, 2)) + '</pre>';
+      dom.drawer.hidden = false;
+      dom.closeDrawer.focus();
+    });
+  }
+
+  function openParity() {
+    callRpc("eduops_getParityDiagnostics", { limit: 50 }).then(function (res) {
+      dom.drawerTitle.textContent = "Authority parity diagnostics";
+      dom.drawerBody.innerHTML = '<pre>' + esc(JSON.stringify(res, null, 2)) + '</pre>';
+      dom.drawer.hidden = false;
+      dom.closeDrawer.focus();
+    });
+  }
+
+  function renderLens(lens) {
+    var rows = (state.workload && state.workload.rows || []).slice(0, 8);
+    dom.lensPanel.hidden = false;
+    dom.lensPanel.innerHTML = '<header class="eduops-panel-head"><div><h3>' + esc(lens.replace(/\b\w/g, function (c) { return c.toUpperCase(); })) + ' Lens</h3><p>Read-only projection over the current server workload. No domain queue authority is created.</p></div></header>'
+      + '<div class="eduops-detail-grid">' + rows.map(function (row) {
+        return card(row.displayName + " / " + row.applicantId, [
+          "Actionability: " + row.actionabilityLabel,
+          "Finance: " + row.canonicalFinanceState,
+          "Communication: " + row.recommendedMessageType,
+          "Portal: " + row.portalState,
+          "Contactability: " + row.contactabilityState
+        ]);
+      }).join("") + '</div>';
+  }
+
+  function updateRoute() {
+    var hash = "#state=" + encodeURIComponent(state.actionabilityState)
+      + "&worklist=" + encodeURIComponent(state.worklistKey)
+      + "&scope=" + encodeURIComponent(state.workScope)
+      + "&page=" + encodeURIComponent(state.page);
+    if (location.hash !== hash && !state.workbench) history.replaceState({}, "", hash);
+  }
+
+  function bindEvents() {
+    document.addEventListener("click", function (event) {
+      var stateBtn = event.target.closest("[data-state]");
+      if (stateBtn) {
+        state.actionabilityState = stateBtn.getAttribute("data-state");
+        state.worklistKey = "";
+        loadWorkload({ resetPage: true });
+        return;
+      }
+      var worklistBtn = event.target.closest("[data-worklist]");
+      if (worklistBtn) {
+        state.worklistKey = worklistBtn.getAttribute("data-worklist");
+        loadWorkload({ resetPage: true });
+        return;
+      }
+      var scopeBtn = event.target.closest("[data-scope]");
+      if (scopeBtn) {
+        state.workScope = scopeBtn.getAttribute("data-scope");
+        loadWorkload({ resetPage: true });
+        return;
+      }
+      var openBtn = event.target.closest("[data-open-applicant]");
+      if (openBtn) {
+        openApplicant(openBtn.getAttribute("data-open-applicant"));
+        return;
+      }
+      var copyBtn = event.target.closest("[data-copy-applicant]");
+      if (copyBtn && navigator.clipboard) navigator.clipboard.writeText(copyBtn.getAttribute("data-copy-applicant"));
+      var tabBtn = event.target.closest("[data-tab]");
+      if (tabBtn) {
+        state.activeTab = tabBtn.getAttribute("data-tab");
+        renderWorkbench();
+        return;
+      }
+      var lensBtn = event.target.closest("[data-lens]");
+      if (lensBtn) renderLens(lensBtn.getAttribute("data-lens"));
+    });
+    dom.prev.addEventListener("click", function () { state.page = Math.max(1, state.page - 1); loadWorkload(); });
+    dom.next.addEventListener("click", function () { state.page += 1; loadWorkload(); });
+    dom.pageSize.addEventListener("change", function () { state.pageSize = Number(dom.pageSize.value || 25); loadWorkload({ resetPage: true }); });
+    dom.filterSearch.addEventListener("input", debounce(function () { state.filters.search = dom.filterSearch.value.trim(); loadWorkload({ resetPage: true }); }, 250));
+    dom.globalSearch.addEventListener("input", debounce(runSearch, 250));
+    dom.closeWorkbench.addEventListener("click", closeWorkbench);
+    dom.closeDrawer.addEventListener("click", function () { dom.drawer.hidden = true; });
+    dom.openReconciliation.addEventListener("click", openReconciliation);
+    dom.openParity.addEventListener("click", openParity);
+    window.addEventListener("popstate", function () {
+      if (!dom.workbench.hidden) closeWorkbench();
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") {
+        if (!dom.drawer.hidden) dom.drawer.hidden = true;
+        else if (!dom.workbench.hidden) closeWorkbench();
+      }
+    });
+  }
+
+  function debounce(fn, ms) {
+    var timer = 0;
+    return function () {
+      clearTimeout(timer);
+      timer = setTimeout(fn, ms);
+    };
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    cacheDom();
+    bindEvents();
+    callRpc("eduops_getAccessProjection", {}).then(function () {
+      return loadWorkload({ resetPage: true });
+    }).catch(function (err) {
+      dom.rows.innerHTML = '<tr><td colspan="7">EduOps access failed: ' + esc(err && err.message || err) + '</td></tr>';
+    });
+  });
+})();
+</script>

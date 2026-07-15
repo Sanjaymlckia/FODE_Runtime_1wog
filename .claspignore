@@ -23,6 +23,12 @@
 !appsscript.json
 !Code.js
 !Config.js
+!EduOps.html
+!EduOps_Client.html
+!EduOps_Contracts.js
+!EduOps_FODE_Adapter.js
+!EduOps_Styles.html
+!EduOps_Workload.js
 !Routes.js
 !Utils.js
 !whoami_admin.html

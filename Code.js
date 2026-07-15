@@ -553,6 +553,7 @@ function resolveDoGetHandler_(view, isAdminDeployment) {
   if (route === "diag") return respondDiag_;
   if (route === "whoami") return doGet_whoami_;
   if (route === "file") return doGet_file_;
+  if (route === "eduops") return renderEduOpsApp_;
   if (route === "ops") return renderAdminApp_;
   if (route === "operator-next") return renderAdminApp_;
   if (route === "admin") return renderAdminApp_;
