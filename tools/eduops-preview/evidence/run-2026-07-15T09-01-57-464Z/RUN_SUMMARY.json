@@ -1,0 +1,2992 @@
+{
+  "runId": "run-2026-07-15T09-01-57-464Z",
+  "createdAt": "2026-07-15T09:01:57.465Z",
+  "viewports": [
+    {
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "width": 1366,
+      "height": 768
+    }
+  ],
+  "screenshots": [
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\01-normal-ready-workload.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\02-deterministic-mode-labelling.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\03-ownership-reset-unpinned.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\04-pinned-empty-escalated-scope.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\05-six-second-loading-state.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\06-timeout-retry-state.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\07-superseded-request-latest-rendered.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\08-search-jackson.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\09-exact-waffi-workbench.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\10-browser-back-workload-return.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\11-document-png-rendition.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\12-document-preview-unavailable.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\13-conflicting-authority.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\14-finance-lens.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\15-communications-lens.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\16-portal-lens.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\17-contactability-lens.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\18-relocated-parity-diagnostics.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\19-fresh-snapshot-mode-metadata.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\20-corrected-actionability-navigation.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\21-normal-ready-workload.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\22-deterministic-mode-labelling.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\23-ownership-reset-unpinned.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\24-pinned-empty-escalated-scope.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\25-six-second-loading-state.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\26-timeout-retry-state.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\27-superseded-request-latest-rendered.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\28-search-jackson.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\29-exact-waffi-workbench.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\30-browser-back-workload-return.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\31-document-png-rendition.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\32-document-preview-unavailable.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\33-conflicting-authority.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\34-finance-lens.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\35-communications-lens.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\36-portal-lens.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\37-contactability-lens.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\38-relocated-parity-diagnostics.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\39-fresh-snapshot-mode-metadata.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\40-corrected-actionability-navigation.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\41-normal-ready-workload.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\42-deterministic-mode-labelling.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\43-ownership-reset-unpinned.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\44-pinned-empty-escalated-scope.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\45-six-second-loading-state.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\46-timeout-retry-state.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\47-superseded-request-latest-rendered.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\48-search-jackson.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\49-exact-waffi-workbench.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\50-browser-back-workload-return.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\51-document-png-rendition.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\52-document-preview-unavailable.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\53-conflicting-authority.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\54-finance-lens.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\55-communications-lens.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\56-portal-lens.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\57-contactability-lens.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\58-relocated-parity-diagnostics.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\59-fresh-snapshot-mode-metadata.png",
+    "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\60-corrected-actionability-navigation.png"
+  ],
+  "consoleErrors": [],
+  "pageErrors": [],
+  "overflow": [
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "overflow": false
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "overflow": false
+    },
+    {
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "overflow": false
+    }
+  ],
+  "timings": [
+    {
+      "clientDiagnostics": [
+        {
+          "requestId": 1,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 25,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:01:58.273Z",
+          "clientRequestEndedAt": "2026-07-15T09:01:58.540Z",
+          "clientRequestMs": 267,
+          "clientRenderMs": 1.099999999627471,
+          "responseBytes": 59792,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 59792
+          },
+          "error": ""
+        },
+        {
+          "requestId": 2,
+          "context": "Ready Now / Escalated / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ESCALATED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 25,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:01:59.354Z",
+          "clientRequestEndedAt": "2026-07-15T09:01:59.617Z",
+          "clientRequestMs": 263,
+          "clientRenderMs": 0.2000000011175871,
+          "responseBytes": 15967,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 15967
+          },
+          "error": ""
+        },
+        {
+          "requestId": 3,
+          "context": "Cooling Off / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "COOLING_OFF",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 25,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:01:59.670Z",
+          "clientRequestEndedAt": "2026-07-15T09:01:59.933Z",
+          "clientRequestMs": 263,
+          "clientRenderMs": 0.900000000372529,
+          "responseBytes": 60333,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 60333
+          },
+          "error": ""
+        },
+        {
+          "requestId": 4,
+          "context": "Cooling Off / Escalated / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "COOLING_OFF",
+            "worklistKey": "",
+            "workScope": "ESCALATED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 25,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:00.386Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:00.644Z",
+          "clientRequestMs": 258,
+          "clientRenderMs": 0.2999999988824129,
+          "responseBytes": 14065,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 14065
+          },
+          "error": ""
+        },
+        {
+          "requestId": 5,
+          "context": "Cooling Off / Escalated / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "COOLING_OFF",
+            "worklistKey": "",
+            "workScope": "ESCALATED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 25,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:00.686Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:00.943Z",
+          "clientRequestMs": 257,
+          "clientRenderMs": 0.30000000074505806,
+          "responseBytes": 14065,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 14065
+          },
+          "error": ""
+        },
+        {
+          "requestId": 6,
+          "context": "Cooling Off / Escalated / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "COOLING_OFF",
+            "worklistKey": "",
+            "workScope": "ESCALATED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:01.125Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:01.383Z",
+          "clientRequestMs": 258,
+          "clientRenderMs": 0.30000000074505806,
+          "responseBytes": 14065,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 14065
+          },
+          "error": ""
+        },
+        {
+          "requestId": 7,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:01.437Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:01.700Z",
+          "clientRequestMs": 263,
+          "clientRenderMs": 0.30000000074505806,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 8,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:01.727Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:07.743Z",
+          "clientRequestMs": 6016,
+          "clientRenderMs": 0.40000000037252903,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 6000,
+            "canonicalSnapshotResolutionMs": 120,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 180,
+            "sortingPagingMs": 80,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 9,
+          "context": "Ready Now / All Authorised / page 2",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 2,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "DISCARDED_SUPERSEDED",
+          "clientRequestStartedAt": "2026-07-15T09:02:07.785Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:13.801Z",
+          "clientRequestMs": 6016,
+          "clientRenderMs": 0,
+          "responseBytes": 32390,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 6000,
+            "canonicalSnapshotResolutionMs": 120,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 180,
+            "sortingPagingMs": 80,
+            "responseBytes": 32390
+          },
+          "error": ""
+        },
+        {
+          "requestId": 10,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:13.801Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:13.818Z",
+          "clientRequestMs": 17,
+          "clientRenderMs": 0.6000000014901161,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 12,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "DEDUPED_ACTIVE",
+          "clientRequestStartedAt": "",
+          "clientRequestEndedAt": "",
+          "clientRequestMs": 0,
+          "clientRenderMs": 0,
+          "responseBytes": 0,
+          "serverTimings": null,
+          "error": ""
+        },
+        {
+          "requestId": 11,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "TIMEOUT",
+          "clientRequestStartedAt": "2026-07-15T09:02:13.845Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:20.846Z",
+          "clientRequestMs": 7001,
+          "clientRenderMs": 0,
+          "responseBytes": 0,
+          "serverTimings": null,
+          "error": "Workload request timed out after 7 seconds."
+        },
+        {
+          "requestId": 13,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:21.017Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:21.032Z",
+          "clientRequestMs": 15,
+          "clientRenderMs": 0.30000000074505806,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 14,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:21.058Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:21.817Z",
+          "clientRequestMs": 759,
+          "clientRenderMs": 0.3999999985098839,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 750,
+            "canonicalSnapshotResolutionMs": 75,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 150,
+            "sortingPagingMs": 38,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 16,
+          "context": "Complete / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "COMPLETE",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "DISCARDED_SUPERSEDED",
+          "clientRequestStartedAt": "",
+          "clientRequestEndedAt": "",
+          "clientRequestMs": 0,
+          "clientRenderMs": 0,
+          "responseBytes": 0,
+          "serverTimings": null,
+          "error": ""
+        },
+        {
+          "requestId": 15,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "DISCARDED_SUPERSEDED",
+          "clientRequestStartedAt": "2026-07-15T09:02:21.868Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:22.631Z",
+          "clientRequestMs": 763,
+          "clientRenderMs": 0,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 750,
+            "canonicalSnapshotResolutionMs": 75,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 150,
+            "sortingPagingMs": 38,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 17,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:22.631Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:23.390Z",
+          "clientRequestMs": 759,
+          "clientRenderMs": 0.2999999988824129,
+          "responseBytes": 32661,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 750,
+            "canonicalSnapshotResolutionMs": 75,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 150,
+            "sortingPagingMs": 38,
+            "responseBytes": 32661
+          },
+          "error": ""
+        },
+        {
+          "requestId": 18,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:23.644Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:23.651Z",
+          "clientRequestMs": 7,
+          "clientRenderMs": 0.30000000074505806,
+          "responseBytes": 32661,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32661
+          },
+          "error": ""
+        },
+        {
+          "requestId": 11,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "DISCARDED_LATE_RESPONSE",
+          "clientRequestStartedAt": "2026-07-15T09:02:13.845Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:25.062Z",
+          "clientRequestMs": 11217,
+          "clientRenderMs": 0,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 11200,
+            "canonicalSnapshotResolutionMs": 120,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 180,
+            "sortingPagingMs": 80,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 19,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:25.624Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:25.634Z",
+          "clientRequestMs": 10,
+          "clientRenderMs": 0.5,
+          "responseBytes": 32661,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32661
+          },
+          "error": ""
+        },
+        {
+          "requestId": 20,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:26.210Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:26.218Z",
+          "clientRequestMs": 8,
+          "clientRenderMs": 0.5,
+          "responseBytes": 33262,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 33262
+          },
+          "error": ""
+        },
+        {
+          "requestId": 21,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:26.509Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:26.519Z",
+          "clientRequestMs": 10,
+          "clientRenderMs": 0.5,
+          "responseBytes": 32661,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32661
+          },
+          "error": ""
+        },
+        {
+          "requestId": 22,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:28.445Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:28.453Z",
+          "clientRequestMs": 8,
+          "clientRenderMs": 0.40000000037252903,
+          "responseBytes": 2895,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 2895
+          },
+          "error": ""
+        },
+        {
+          "requestId": 23,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:28.721Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:28.727Z",
+          "clientRequestMs": 6,
+          "clientRenderMs": 0.5,
+          "responseBytes": 32661,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32661
+          },
+          "error": ""
+        }
+      ],
+      "previewText": "{\n  \"transport\": [\n    {\n      \"requestId\": 24,\n      \"requestName\": \"eduops_searchApplicants\",\n      \"scenario\": \"normal-authoritative\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:02:25.348Z\",\n      \"simulatedServerDurationMs\": 3,\n      \"clientTransportMs\": 3,\n      \"responseSize\": 2026,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 25,\n      \"requestName\": \"eduops_queryOperationalWorkload\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"REVIEW_REQUIRED\",\n      \"worklist\": \"\",\n      \"scope\": \"ALL_AUTHORISED\",\n      \"page\": 1,\n      \"startTime\": \"2026-07-15T09:02:25.623Z\",\n      \"simulatedServerDurationMs\": 9,\n      \"clientTransportMs\": 9,\n      \"responseSize\": 32895,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 26,\n      \"requestName\": \"eduops_getApplicantWorkbench\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:02:25.702Z\",\n      \"simulatedServerDurationMs\": 15,\n      \"clientTransportMs\": 15,\n      \"responseSize\": 4944,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 27,\n      \"requestName\": \"eduops_getDocumentManifest\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:02:25.802Z\",\n      \"simulatedServerDurationMs\": 13,\n      \"clientTransportMs\": 13,\n      \"responseSize\": 1238,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 28,\n      \"requestName\": \"eduops_getDocumentRendition\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:02:25.868Z\",\n      \"simulatedServerDurationMs\": 13,\n      \"clientTransportMs\": 13,\n      \"responseSize\": 115,\n      \"status\": \"REJECTED\"\n    },\n    {\n      \"requestId\": 28,\n      \"requestName\": \"eduops_getDocumentRendition\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"startTime\": \"2026-07-15T09:02:25.883Z\",\n      \"simulatedServerDurationMs\": 0,\n      \"clientTransportMs\": 14,\n      \"responseSize\": 0,\n      \"status\": \"ERROR\",\n      \"error\": \"PNG preview is unavailable for this document.\"\n    },\n    {\n      \"requestId\": 29,\n      \"requestName\": \"eduops_searchApplicants\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:02:25.909Z\",\n      \"simulatedServerDurationMs\": 8,\n      \"clientTransportMs\": 8,\n      \"responseSize\": 2026,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 30,\n      \"requestName\": \"eduops_queryOperationalWorkload\",\n      \"scenario\": \"conflicting-authority\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"REVIEW_REQUIRED\",\n      \"worklist\": \"\",\n      \"scope\": \"ALL_AUTHORISED\",\n      \"page\": 1,\n      \"startTime\": \"2026-07-15T09:02:26.210Z\",\n      \"simulatedServerDurationMs\": 7,\n      \"clientTransportMs\": 7,\n      \"responseSize\": 33496,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 31,\n      \"requestName\": \"eduops_queryOperationalWorkload\",\n      \"scenario\": \"normal-authoritative\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"REVIEW_REQUIRED\",\n      \"worklist\": \"\",\n      \"scope\": \"ALL_AUTHORISED\",\n      \"page\": 1,\n      \"startTime\": \"2026-07-15T09:02:26.509Z\",\n      \"simulatedServerDurationMs\": 8,\n      \"clientTransportMs\": 8,\n      \"responseSize\": 32895,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 32,\n      \"requestName\": \"eduops_getParityDiagnostics\",\n      \"scenario\": \"normal-authoritative\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:02:28.086Z\",\n      \"simulatedServerDurationMs\": 12,\n      \"clientTransportMs\": 12,\n      \"responseSize\": 470,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 33,\n      \"requestName\": \"eduops_queryOperationalWorkload\",\n      \"scenario\": \"normal-authoritative\",\n      \"dataMode\": \"snapshot\",\n      \"snapshotId\": \"evidence-snapshot\",\n      \"requestedActionability\": \"REVIEW_REQUIRED\",\n      \"worklist\": \"\",\n      \"scope\": \"ALL_AUTHORISED\",\n      \"page\": 1,\n      \"startTime\": \"2026-07-15T09:02:28.445Z\",\n      \"simulatedServerDurationMs\": 7,\n      \"clientTransportMs\": 7,\n      \"responseSize\": 3128,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 34,\n      \"requestName\": \"eduops_queryOperationalWorkload\",\n      \"scenario\": \"normal-authoritative\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"evidence-snapshot\",\n      \"requestedActionability\": \"REVIEW_REQUIRED\",\n      \"worklist\": \"\",\n      \"scope\": \"ALL_AUTHORISED\",\n      \"page\": 1,\n      \"startTime\": \"2026-07-15T09:02:28.721Z\",\n      \"simulatedServerDurationMs\": 5,\n      \"clientTransportMs\": 5,\n      \"responseSize\": 32895,\n      \"status\": \"OK\"\n    }\n  ],\n  \"client\": [\n    {\n      \"requestId\": 11,\n      \"context\": \"Ready Now / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"READY\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"TIMEOUT\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:13.845Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:20.846Z\",\n      \"clientRequestMs\": 7001,\n      \"clientRenderMs\": 0,\n      \"responseBytes\": 0,\n      \"serverTimings\": null,\n      \"error\": \"Workload request timed out after 7 seconds.\"\n    },\n    {\n      \"requestId\": 13,\n      \"context\": \"Ready Now / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"READY\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:21.017Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:21.032Z\",\n      \"clientRequestMs\": 15,\n      \"clientRenderMs\": 0.30000000074505806,\n      \"responseBytes\": 32397,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 32397\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 14,\n      \"context\": \"Ready Now / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"READY\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:21.058Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:21.817Z\",\n      \"clientRequestMs\": 759,\n      \"clientRenderMs\": 0.3999999985098839,\n      \"responseBytes\": 32397,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 750,\n        \"canonicalSnapshotResolutionMs\": 75,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 150,\n        \"sortingPagingMs\": 38,\n        \"responseBytes\": 32397\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 16,\n      \"context\": \"Complete / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"COMPLETE\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"FODE-PREVIEW-SNAPSHOT-001\"\n      },\n      \"outcome\": \"DISCARDED_SUPERSEDED\",\n      \"clientRequestStartedAt\": \"\",\n      \"clientRequestEndedAt\": \"\",\n      \"clientRequestMs\": 0,\n      \"clientRenderMs\": 0,\n      \"responseBytes\": 0,\n      \"serverTimings\": null,\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 15,\n      \"context\": \"Ready Now / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"READY\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"FODE-PREVIEW-SNAPSHOT-001\"\n      },\n      \"outcome\": \"DISCARDED_SUPERSEDED\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:21.868Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:22.631Z\",\n      \"clientRequestMs\": 763,\n      \"clientRenderMs\": 0,\n      \"responseBytes\": 32397,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 750,\n        \"canonicalSnapshotResolutionMs\": 75,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 150,\n        \"sortingPagingMs\": 38,\n        \"responseBytes\": 32397\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 17,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"FODE-PREVIEW-SNAPSHOT-001\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:22.631Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:23.390Z\",\n      \"clientRequestMs\": 759,\n      \"clientRenderMs\": 0.2999999988824129,\n      \"responseBytes\": 32661,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 750,\n        \"canonicalSnapshotResolutionMs\": 75,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 150,\n        \"sortingPagingMs\": 38,\n        \"responseBytes\": 32661\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 18,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:23.644Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:23.651Z\",\n      \"clientRequestMs\": 7,\n      \"clientRenderMs\": 0.30000000074505806,\n      \"responseBytes\": 32661,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 32661\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 11,\n      \"context\": \"Ready Now / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"READY\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"DISCARDED_LATE_RESPONSE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:13.845Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:25.062Z\",\n      \"clientRequestMs\": 11217,\n      \"clientRenderMs\": 0,\n      \"responseBytes\": 32397,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 11200,\n        \"canonicalSnapshotResolutionMs\": 120,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 180,\n        \"sortingPagingMs\": 80,\n        \"responseBytes\": 32397\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 19,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:25.624Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:25.634Z\",\n      \"clientRequestMs\": 10,\n      \"clientRenderMs\": 0.5,\n      \"responseBytes\": 32661,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 32661\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 20,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:26.210Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:26.218Z\",\n      \"clientRequestMs\": 8,\n      \"clientRenderMs\": 0.5,\n      \"responseBytes\": 33262,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 33262\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 21,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:26.509Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:26.519Z\",\n      \"clientRequestMs\": 10,\n      \"clientRenderMs\": 0.5,\n      \"responseBytes\": 32661,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 32661\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 22,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:28.445Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:28.453Z\",\n      \"clientRequestMs\": 8,\n      \"clientRenderMs\": 0.40000000037252903,\n      \"responseBytes\": 2895,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 2895\n      },\n      \"error\": \"\"\n    }\n  ]\n}"
+    },
+    {
+      "clientDiagnostics": [
+        {
+          "requestId": 1,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 25,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:29.756Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:30.011Z",
+          "clientRequestMs": 255,
+          "clientRenderMs": 0.900000000372529,
+          "responseBytes": 59792,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 59792
+          },
+          "error": ""
+        },
+        {
+          "requestId": 2,
+          "context": "Ready Now / Escalated / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ESCALATED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 25,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:30.869Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:31.129Z",
+          "clientRequestMs": 260,
+          "clientRenderMs": 0.19999999925494194,
+          "responseBytes": 15967,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 15967
+          },
+          "error": ""
+        },
+        {
+          "requestId": 3,
+          "context": "Cooling Off / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "COOLING_OFF",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 25,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:31.166Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:31.430Z",
+          "clientRequestMs": 264,
+          "clientRenderMs": 0.599999999627471,
+          "responseBytes": 60333,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 60333
+          },
+          "error": ""
+        },
+        {
+          "requestId": 4,
+          "context": "Cooling Off / Escalated / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "COOLING_OFF",
+            "worklistKey": "",
+            "workScope": "ESCALATED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 25,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:31.900Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:32.154Z",
+          "clientRequestMs": 254,
+          "clientRenderMs": 0.2000000011175871,
+          "responseBytes": 14065,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 14065
+          },
+          "error": ""
+        },
+        {
+          "requestId": 5,
+          "context": "Cooling Off / Escalated / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "COOLING_OFF",
+            "worklistKey": "",
+            "workScope": "ESCALATED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 25,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:32.202Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:32.457Z",
+          "clientRequestMs": 255,
+          "clientRenderMs": 0.2999999988824129,
+          "responseBytes": 14065,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 14065
+          },
+          "error": ""
+        },
+        {
+          "requestId": 6,
+          "context": "Cooling Off / Escalated / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "COOLING_OFF",
+            "worklistKey": "",
+            "workScope": "ESCALATED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:32.646Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:32.900Z",
+          "clientRequestMs": 254,
+          "clientRenderMs": 0.19999999925494194,
+          "responseBytes": 14065,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 14065
+          },
+          "error": ""
+        },
+        {
+          "requestId": 7,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:32.954Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:33.214Z",
+          "clientRequestMs": 260,
+          "clientRenderMs": 0.40000000037252903,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 8,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:33.227Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:39.243Z",
+          "clientRequestMs": 6016,
+          "clientRenderMs": 0.40000000037252903,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 6000,
+            "canonicalSnapshotResolutionMs": 120,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 180,
+            "sortingPagingMs": 80,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 9,
+          "context": "Ready Now / All Authorised / page 2",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 2,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "DISCARDED_SUPERSEDED",
+          "clientRequestStartedAt": "2026-07-15T09:02:39.283Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:45.295Z",
+          "clientRequestMs": 6012,
+          "clientRenderMs": 0,
+          "responseBytes": 32390,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 6000,
+            "canonicalSnapshotResolutionMs": 120,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 180,
+            "sortingPagingMs": 80,
+            "responseBytes": 32390
+          },
+          "error": ""
+        },
+        {
+          "requestId": 10,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:45.295Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:45.311Z",
+          "clientRequestMs": 16,
+          "clientRenderMs": 0.40000000037252903,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 12,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "DEDUPED_ACTIVE",
+          "clientRequestStartedAt": "",
+          "clientRequestEndedAt": "",
+          "clientRequestMs": 0,
+          "clientRenderMs": 0,
+          "responseBytes": 0,
+          "serverTimings": null,
+          "error": ""
+        },
+        {
+          "requestId": 11,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "TIMEOUT",
+          "clientRequestStartedAt": "2026-07-15T09:02:45.330Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:52.332Z",
+          "clientRequestMs": 7002,
+          "clientRenderMs": 0,
+          "responseBytes": 0,
+          "serverTimings": null,
+          "error": "Workload request timed out after 7 seconds."
+        },
+        {
+          "requestId": 13,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:52.500Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:52.514Z",
+          "clientRequestMs": 14,
+          "clientRenderMs": 0.2999999988824129,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 14,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:52.539Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:53.310Z",
+          "clientRequestMs": 771,
+          "clientRenderMs": 0.40000000037252903,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 750,
+            "canonicalSnapshotResolutionMs": 75,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 150,
+            "sortingPagingMs": 38,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 16,
+          "context": "Complete / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "COMPLETE",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "DISCARDED_SUPERSEDED",
+          "clientRequestStartedAt": "",
+          "clientRequestEndedAt": "",
+          "clientRequestMs": 0,
+          "clientRenderMs": 0,
+          "responseBytes": 0,
+          "serverTimings": null,
+          "error": ""
+        },
+        {
+          "requestId": 15,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "DISCARDED_SUPERSEDED",
+          "clientRequestStartedAt": "2026-07-15T09:02:53.349Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:54.107Z",
+          "clientRequestMs": 758,
+          "clientRenderMs": 0,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 750,
+            "canonicalSnapshotResolutionMs": 75,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 150,
+            "sortingPagingMs": 38,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 17,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:54.107Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:54.876Z",
+          "clientRequestMs": 769,
+          "clientRenderMs": 0.3999999985098839,
+          "responseBytes": 32661,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 750,
+            "canonicalSnapshotResolutionMs": 75,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 150,
+            "sortingPagingMs": 38,
+            "responseBytes": 32661
+          },
+          "error": ""
+        },
+        {
+          "requestId": 18,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:55.131Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:55.137Z",
+          "clientRequestMs": 6,
+          "clientRenderMs": 0.40000000037252903,
+          "responseBytes": 32661,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32661
+          },
+          "error": ""
+        },
+        {
+          "requestId": 11,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "DISCARDED_LATE_RESPONSE",
+          "clientRequestStartedAt": "2026-07-15T09:02:45.330Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:56.540Z",
+          "clientRequestMs": 11210,
+          "clientRenderMs": 0,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 11200,
+            "canonicalSnapshotResolutionMs": 120,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 180,
+            "sortingPagingMs": 80,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 19,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:57.108Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:57.118Z",
+          "clientRequestMs": 10,
+          "clientRenderMs": 0.40000000037252903,
+          "responseBytes": 32661,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32661
+          },
+          "error": ""
+        },
+        {
+          "requestId": 20,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:57.665Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:57.671Z",
+          "clientRequestMs": 6,
+          "clientRenderMs": 0.599999999627471,
+          "responseBytes": 33262,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 33262
+          },
+          "error": ""
+        },
+        {
+          "requestId": 21,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:57.963Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:57.970Z",
+          "clientRequestMs": 7,
+          "clientRenderMs": 0.7999999988824129,
+          "responseBytes": 32661,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32661
+          },
+          "error": ""
+        },
+        {
+          "requestId": 22,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:02:59.860Z",
+          "clientRequestEndedAt": "2026-07-15T09:02:59.866Z",
+          "clientRequestMs": 6,
+          "clientRenderMs": 0.2999999988824129,
+          "responseBytes": 2895,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 2895
+          },
+          "error": ""
+        },
+        {
+          "requestId": 23,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:00.111Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:00.116Z",
+          "clientRequestMs": 5,
+          "clientRenderMs": 0.40000000037252903,
+          "responseBytes": 32661,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32661
+          },
+          "error": ""
+        }
+      ],
+      "previewText": "{\n  \"transport\": [\n    {\n      \"requestId\": 24,\n      \"requestName\": \"eduops_searchApplicants\",\n      \"scenario\": \"normal-authoritative\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:02:56.828Z\",\n      \"simulatedServerDurationMs\": 3,\n      \"clientTransportMs\": 3,\n      \"responseSize\": 2026,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 25,\n      \"requestName\": \"eduops_queryOperationalWorkload\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"REVIEW_REQUIRED\",\n      \"worklist\": \"\",\n      \"scope\": \"ALL_AUTHORISED\",\n      \"page\": 1,\n      \"startTime\": \"2026-07-15T09:02:57.107Z\",\n      \"simulatedServerDurationMs\": 9,\n      \"clientTransportMs\": 9,\n      \"responseSize\": 32895,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 26,\n      \"requestName\": \"eduops_getApplicantWorkbench\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:02:57.165Z\",\n      \"simulatedServerDurationMs\": 15,\n      \"clientTransportMs\": 15,\n      \"responseSize\": 4944,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 27,\n      \"requestName\": \"eduops_getDocumentManifest\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:02:57.267Z\",\n      \"simulatedServerDurationMs\": 13,\n      \"clientTransportMs\": 13,\n      \"responseSize\": 1238,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 28,\n      \"requestName\": \"eduops_getDocumentRendition\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:02:57.333Z\",\n      \"simulatedServerDurationMs\": 15,\n      \"clientTransportMs\": 15,\n      \"responseSize\": 115,\n      \"status\": \"REJECTED\"\n    },\n    {\n      \"requestId\": 28,\n      \"requestName\": \"eduops_getDocumentRendition\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"startTime\": \"2026-07-15T09:02:57.349Z\",\n      \"simulatedServerDurationMs\": 0,\n      \"clientTransportMs\": 16,\n      \"responseSize\": 0,\n      \"status\": \"ERROR\",\n      \"error\": \"PNG preview is unavailable for this document.\"\n    },\n    {\n      \"requestId\": 29,\n      \"requestName\": \"eduops_searchApplicants\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:02:57.389Z\",\n      \"simulatedServerDurationMs\": 19,\n      \"clientTransportMs\": 19,\n      \"responseSize\": 2026,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 30,\n      \"requestName\": \"eduops_queryOperationalWorkload\",\n      \"scenario\": \"conflicting-authority\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"REVIEW_REQUIRED\",\n      \"worklist\": \"\",\n      \"scope\": \"ALL_AUTHORISED\",\n      \"page\": 1,\n      \"startTime\": \"2026-07-15T09:02:57.664Z\",\n      \"simulatedServerDurationMs\": 5,\n      \"clientTransportMs\": 5,\n      \"responseSize\": 33496,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 31,\n      \"requestName\": \"eduops_queryOperationalWorkload\",\n      \"scenario\": \"normal-authoritative\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"REVIEW_REQUIRED\",\n      \"worklist\": \"\",\n      \"scope\": \"ALL_AUTHORISED\",\n      \"page\": 1,\n      \"startTime\": \"2026-07-15T09:02:57.963Z\",\n      \"simulatedServerDurationMs\": 5,\n      \"clientTransportMs\": 5,\n      \"responseSize\": 32895,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 32,\n      \"requestName\": \"eduops_getParityDiagnostics\",\n      \"scenario\": \"normal-authoritative\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:02:59.499Z\",\n      \"simulatedServerDurationMs\": 15,\n      \"clientTransportMs\": 15,\n      \"responseSize\": 470,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 33,\n      \"requestName\": \"eduops_queryOperationalWorkload\",\n      \"scenario\": \"normal-authoritative\",\n      \"dataMode\": \"snapshot\",\n      \"snapshotId\": \"evidence-snapshot\",\n      \"requestedActionability\": \"REVIEW_REQUIRED\",\n      \"worklist\": \"\",\n      \"scope\": \"ALL_AUTHORISED\",\n      \"page\": 1,\n      \"startTime\": \"2026-07-15T09:02:59.860Z\",\n      \"simulatedServerDurationMs\": 5,\n      \"clientTransportMs\": 5,\n      \"responseSize\": 3128,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 34,\n      \"requestName\": \"eduops_queryOperationalWorkload\",\n      \"scenario\": \"normal-authoritative\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"evidence-snapshot\",\n      \"requestedActionability\": \"REVIEW_REQUIRED\",\n      \"worklist\": \"\",\n      \"scope\": \"ALL_AUTHORISED\",\n      \"page\": 1,\n      \"startTime\": \"2026-07-15T09:03:00.110Z\",\n      \"simulatedServerDurationMs\": 4,\n      \"clientTransportMs\": 4,\n      \"responseSize\": 32895,\n      \"status\": \"OK\"\n    }\n  ],\n  \"client\": [\n    {\n      \"requestId\": 11,\n      \"context\": \"Ready Now / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"READY\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"TIMEOUT\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:45.330Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:52.332Z\",\n      \"clientRequestMs\": 7002,\n      \"clientRenderMs\": 0,\n      \"responseBytes\": 0,\n      \"serverTimings\": null,\n      \"error\": \"Workload request timed out after 7 seconds.\"\n    },\n    {\n      \"requestId\": 13,\n      \"context\": \"Ready Now / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"READY\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:52.500Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:52.514Z\",\n      \"clientRequestMs\": 14,\n      \"clientRenderMs\": 0.2999999988824129,\n      \"responseBytes\": 32397,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 32397\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 14,\n      \"context\": \"Ready Now / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"READY\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:52.539Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:53.310Z\",\n      \"clientRequestMs\": 771,\n      \"clientRenderMs\": 0.40000000037252903,\n      \"responseBytes\": 32397,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 750,\n        \"canonicalSnapshotResolutionMs\": 75,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 150,\n        \"sortingPagingMs\": 38,\n        \"responseBytes\": 32397\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 16,\n      \"context\": \"Complete / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"COMPLETE\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"FODE-PREVIEW-SNAPSHOT-001\"\n      },\n      \"outcome\": \"DISCARDED_SUPERSEDED\",\n      \"clientRequestStartedAt\": \"\",\n      \"clientRequestEndedAt\": \"\",\n      \"clientRequestMs\": 0,\n      \"clientRenderMs\": 0,\n      \"responseBytes\": 0,\n      \"serverTimings\": null,\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 15,\n      \"context\": \"Ready Now / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"READY\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"FODE-PREVIEW-SNAPSHOT-001\"\n      },\n      \"outcome\": \"DISCARDED_SUPERSEDED\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:53.349Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:54.107Z\",\n      \"clientRequestMs\": 758,\n      \"clientRenderMs\": 0,\n      \"responseBytes\": 32397,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 750,\n        \"canonicalSnapshotResolutionMs\": 75,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 150,\n        \"sortingPagingMs\": 38,\n        \"responseBytes\": 32397\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 17,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"FODE-PREVIEW-SNAPSHOT-001\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:54.107Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:54.876Z\",\n      \"clientRequestMs\": 769,\n      \"clientRenderMs\": 0.3999999985098839,\n      \"responseBytes\": 32661,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 750,\n        \"canonicalSnapshotResolutionMs\": 75,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 150,\n        \"sortingPagingMs\": 38,\n        \"responseBytes\": 32661\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 18,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:55.131Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:55.137Z\",\n      \"clientRequestMs\": 6,\n      \"clientRenderMs\": 0.40000000037252903,\n      \"responseBytes\": 32661,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 32661\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 11,\n      \"context\": \"Ready Now / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"READY\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"DISCARDED_LATE_RESPONSE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:45.330Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:56.540Z\",\n      \"clientRequestMs\": 11210,\n      \"clientRenderMs\": 0,\n      \"responseBytes\": 32397,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 11200,\n        \"canonicalSnapshotResolutionMs\": 120,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 180,\n        \"sortingPagingMs\": 80,\n        \"responseBytes\": 32397\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 19,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:57.108Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:57.118Z\",\n      \"clientRequestMs\": 10,\n      \"clientRenderMs\": 0.40000000037252903,\n      \"responseBytes\": 32661,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 32661\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 20,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:57.665Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:57.671Z\",\n      \"clientRequestMs\": 6,\n      \"clientRenderMs\": 0.599999999627471,\n      \"responseBytes\": 33262,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 33262\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 21,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:57.963Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:57.970Z\",\n      \"clientRequestMs\": 7,\n      \"clientRenderMs\": 0.7999999988824129,\n      \"responseBytes\": 32661,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 32661\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 22,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:02:59.860Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:02:59.866Z\",\n      \"clientRequestMs\": 6,\n      \"clientRenderMs\": 0.2999999988824129,\n      \"responseBytes\": 2895,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 2895\n      },\n      \"error\": \"\"\n    }\n  ]\n}"
+    },
+    {
+      "clientDiagnostics": [
+        {
+          "requestId": 1,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 25,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:01.110Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:01.380Z",
+          "clientRequestMs": 270,
+          "clientRenderMs": 0.900000000372529,
+          "responseBytes": 59792,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 59792
+          },
+          "error": ""
+        },
+        {
+          "requestId": 2,
+          "context": "Ready Now / Escalated / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ESCALATED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 25,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:02.219Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:02.481Z",
+          "clientRequestMs": 262,
+          "clientRenderMs": 0.19999999925494194,
+          "responseBytes": 15967,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 15967
+          },
+          "error": ""
+        },
+        {
+          "requestId": 3,
+          "context": "Cooling Off / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "COOLING_OFF",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 25,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:02.533Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:02.800Z",
+          "clientRequestMs": 267,
+          "clientRenderMs": 0.7000000011175871,
+          "responseBytes": 60333,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 60333
+          },
+          "error": ""
+        },
+        {
+          "requestId": 4,
+          "context": "Cooling Off / Escalated / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "COOLING_OFF",
+            "worklistKey": "",
+            "workScope": "ESCALATED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 25,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:03.300Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:03.569Z",
+          "clientRequestMs": 269,
+          "clientRenderMs": 0.19999999925494194,
+          "responseBytes": 14065,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 14065
+          },
+          "error": ""
+        },
+        {
+          "requestId": 5,
+          "context": "Cooling Off / Escalated / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "COOLING_OFF",
+            "worklistKey": "",
+            "workScope": "ESCALATED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 25,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:03.615Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:03.872Z",
+          "clientRequestMs": 257,
+          "clientRenderMs": 0.30000000074505806,
+          "responseBytes": 14065,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 14065
+          },
+          "error": ""
+        },
+        {
+          "requestId": 6,
+          "context": "Cooling Off / Escalated / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "COOLING_OFF",
+            "worklistKey": "",
+            "workScope": "ESCALATED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:04.074Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:04.331Z",
+          "clientRequestMs": 257,
+          "clientRenderMs": 0.19999999925494194,
+          "responseBytes": 14065,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 14065
+          },
+          "error": ""
+        },
+        {
+          "requestId": 7,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:04.384Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:04.644Z",
+          "clientRequestMs": 260,
+          "clientRenderMs": 0.2999999988824129,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 250,
+            "canonicalSnapshotResolutionMs": 25,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 50,
+            "sortingPagingMs": 13,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 8,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:04.661Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:10.681Z",
+          "clientRequestMs": 6020,
+          "clientRenderMs": 0.40000000037252903,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 6000,
+            "canonicalSnapshotResolutionMs": 120,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 180,
+            "sortingPagingMs": 80,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 9,
+          "context": "Ready Now / All Authorised / page 2",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 2,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "DISCARDED_SUPERSEDED",
+          "clientRequestStartedAt": "2026-07-15T09:03:10.732Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:16.745Z",
+          "clientRequestMs": 6013,
+          "clientRenderMs": 0,
+          "responseBytes": 32390,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 6000,
+            "canonicalSnapshotResolutionMs": 120,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 180,
+            "sortingPagingMs": 80,
+            "responseBytes": 32390
+          },
+          "error": ""
+        },
+        {
+          "requestId": 10,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:16.745Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:16.762Z",
+          "clientRequestMs": 17,
+          "clientRenderMs": 0.6999999992549419,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 12,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "DEDUPED_ACTIVE",
+          "clientRequestStartedAt": "",
+          "clientRequestEndedAt": "",
+          "clientRequestMs": 0,
+          "clientRenderMs": 0,
+          "responseBytes": 0,
+          "serverTimings": null,
+          "error": ""
+        },
+        {
+          "requestId": 11,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "TIMEOUT",
+          "clientRequestStartedAt": "2026-07-15T09:03:16.777Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:23.779Z",
+          "clientRequestMs": 7002,
+          "clientRenderMs": 0,
+          "responseBytes": 0,
+          "serverTimings": null,
+          "error": "Workload request timed out after 7 seconds."
+        },
+        {
+          "requestId": 13,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:23.949Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:23.965Z",
+          "clientRequestMs": 16,
+          "clientRenderMs": 0.30000000074505806,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 14,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:23.988Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:24.743Z",
+          "clientRequestMs": 755,
+          "clientRenderMs": 0.19999999925494194,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 750,
+            "canonicalSnapshotResolutionMs": 75,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 150,
+            "sortingPagingMs": 38,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 16,
+          "context": "Complete / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "COMPLETE",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "DISCARDED_SUPERSEDED",
+          "clientRequestStartedAt": "",
+          "clientRequestEndedAt": "",
+          "clientRequestMs": 0,
+          "clientRenderMs": 0,
+          "responseBytes": 0,
+          "serverTimings": null,
+          "error": ""
+        },
+        {
+          "requestId": 15,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "DISCARDED_SUPERSEDED",
+          "clientRequestStartedAt": "2026-07-15T09:03:24.781Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:25.535Z",
+          "clientRequestMs": 754,
+          "clientRenderMs": 0,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 750,
+            "canonicalSnapshotResolutionMs": 75,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 150,
+            "sortingPagingMs": 38,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 17,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": "FODE-PREVIEW-SNAPSHOT-001"
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:25.535Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:26.295Z",
+          "clientRequestMs": 760,
+          "clientRenderMs": 0.3999999985098839,
+          "responseBytes": 32661,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 750,
+            "canonicalSnapshotResolutionMs": 75,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 150,
+            "sortingPagingMs": 38,
+            "responseBytes": 32661
+          },
+          "error": ""
+        },
+        {
+          "requestId": 18,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:26.543Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:26.550Z",
+          "clientRequestMs": 7,
+          "clientRenderMs": 0.40000000037252903,
+          "responseBytes": 32661,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32661
+          },
+          "error": ""
+        },
+        {
+          "requestId": 11,
+          "context": "Ready Now / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "READY",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "DISCARDED_LATE_RESPONSE",
+          "clientRequestStartedAt": "2026-07-15T09:03:16.777Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:27.982Z",
+          "clientRequestMs": 11205,
+          "clientRenderMs": 0,
+          "responseBytes": 32397,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 11200,
+            "canonicalSnapshotResolutionMs": 120,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 180,
+            "sortingPagingMs": 80,
+            "responseBytes": 32397
+          },
+          "error": ""
+        },
+        {
+          "requestId": 19,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:28.523Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:28.531Z",
+          "clientRequestMs": 8,
+          "clientRenderMs": 0.3999999985098839,
+          "responseBytes": 32661,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32661
+          },
+          "error": ""
+        },
+        {
+          "requestId": 20,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:29.134Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:29.143Z",
+          "clientRequestMs": 9,
+          "clientRenderMs": 0.7999999988824129,
+          "responseBytes": 33262,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 33262
+          },
+          "error": ""
+        },
+        {
+          "requestId": 21,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:29.420Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:29.424Z",
+          "clientRequestMs": 4,
+          "clientRenderMs": 0.40000000037252903,
+          "responseBytes": 32661,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32661
+          },
+          "error": ""
+        },
+        {
+          "requestId": 22,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:31.253Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:31.258Z",
+          "clientRequestMs": 5,
+          "clientRenderMs": 0.19999999925494194,
+          "responseBytes": 2895,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 2895
+          },
+          "error": ""
+        },
+        {
+          "requestId": 23,
+          "context": "Review Required / All Authorised / page 1",
+          "payload": {
+            "product": "FODE",
+            "actionabilityState": "REVIEW_REQUIRED",
+            "worklistKey": "",
+            "workScope": "ALL_AUTHORISED",
+            "filters": {},
+            "sort": {
+              "key": "urgency",
+              "direction": "asc"
+            },
+            "page": 1,
+            "pageSize": 10,
+            "expectedSnapshotId": ""
+          },
+          "outcome": "COMPLETE",
+          "clientRequestStartedAt": "2026-07-15T09:03:31.506Z",
+          "clientRequestEndedAt": "2026-07-15T09:03:31.512Z",
+          "clientRequestMs": 6,
+          "clientRenderMs": 0.40000000037252903,
+          "responseBytes": 32661,
+          "serverTimings": {
+            "accessMs": 1,
+            "serverRpcMs": 0,
+            "canonicalSnapshotResolutionMs": 2,
+            "sourceVersionMs": 1,
+            "cacheReadMs": 1,
+            "canonicalBuildMs": 0,
+            "projectionMs": 2,
+            "cacheWriteMs": 0,
+            "workloadCompositionMs": 3,
+            "sortingPagingMs": 1,
+            "responseBytes": 32661
+          },
+          "error": ""
+        }
+      ],
+      "previewText": "{\n  \"transport\": [\n    {\n      \"requestId\": 24,\n      \"requestName\": \"eduops_searchApplicants\",\n      \"scenario\": \"normal-authoritative\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:03:28.236Z\",\n      \"simulatedServerDurationMs\": 15,\n      \"clientTransportMs\": 15,\n      \"responseSize\": 2026,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 25,\n      \"requestName\": \"eduops_queryOperationalWorkload\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"REVIEW_REQUIRED\",\n      \"worklist\": \"\",\n      \"scope\": \"ALL_AUTHORISED\",\n      \"page\": 1,\n      \"startTime\": \"2026-07-15T09:03:28.523Z\",\n      \"simulatedServerDurationMs\": 7,\n      \"clientTransportMs\": 7,\n      \"responseSize\": 32895,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 26,\n      \"requestName\": \"eduops_getApplicantWorkbench\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:03:28.582Z\",\n      \"simulatedServerDurationMs\": 14,\n      \"clientTransportMs\": 14,\n      \"responseSize\": 4944,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 27,\n      \"requestName\": \"eduops_getDocumentManifest\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:03:28.681Z\",\n      \"simulatedServerDurationMs\": 17,\n      \"clientTransportMs\": 17,\n      \"responseSize\": 1238,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 28,\n      \"requestName\": \"eduops_getDocumentRendition\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:03:28.751Z\",\n      \"simulatedServerDurationMs\": 11,\n      \"clientTransportMs\": 11,\n      \"responseSize\": 115,\n      \"status\": \"REJECTED\"\n    },\n    {\n      \"requestId\": 28,\n      \"requestName\": \"eduops_getDocumentRendition\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"startTime\": \"2026-07-15T09:03:28.763Z\",\n      \"simulatedServerDurationMs\": 0,\n      \"clientTransportMs\": 12,\n      \"responseSize\": 0,\n      \"status\": \"ERROR\",\n      \"error\": \"PNG preview is unavailable for this document.\"\n    },\n    {\n      \"requestId\": 29,\n      \"requestName\": \"eduops_searchApplicants\",\n      \"scenario\": \"document-preview-unavailable\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:03:28.806Z\",\n      \"simulatedServerDurationMs\": 19,\n      \"clientTransportMs\": 19,\n      \"responseSize\": 2026,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 30,\n      \"requestName\": \"eduops_queryOperationalWorkload\",\n      \"scenario\": \"conflicting-authority\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"REVIEW_REQUIRED\",\n      \"worklist\": \"\",\n      \"scope\": \"ALL_AUTHORISED\",\n      \"page\": 1,\n      \"startTime\": \"2026-07-15T09:03:29.134Z\",\n      \"simulatedServerDurationMs\": 7,\n      \"clientTransportMs\": 7,\n      \"responseSize\": 33496,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 31,\n      \"requestName\": \"eduops_queryOperationalWorkload\",\n      \"scenario\": \"normal-authoritative\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"REVIEW_REQUIRED\",\n      \"worklist\": \"\",\n      \"scope\": \"ALL_AUTHORISED\",\n      \"page\": 1,\n      \"startTime\": \"2026-07-15T09:03:29.420Z\",\n      \"simulatedServerDurationMs\": 4,\n      \"clientTransportMs\": 4,\n      \"responseSize\": 32895,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 32,\n      \"requestName\": \"eduops_getParityDiagnostics\",\n      \"scenario\": \"normal-authoritative\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"\",\n      \"requestedActionability\": \"\",\n      \"worklist\": \"\",\n      \"scope\": \"\",\n      \"page\": \"\",\n      \"startTime\": \"2026-07-15T09:03:30.868Z\",\n      \"simulatedServerDurationMs\": 12,\n      \"clientTransportMs\": 12,\n      \"responseSize\": 470,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 33,\n      \"requestName\": \"eduops_queryOperationalWorkload\",\n      \"scenario\": \"normal-authoritative\",\n      \"dataMode\": \"snapshot\",\n      \"snapshotId\": \"evidence-snapshot\",\n      \"requestedActionability\": \"REVIEW_REQUIRED\",\n      \"worklist\": \"\",\n      \"scope\": \"ALL_AUTHORISED\",\n      \"page\": 1,\n      \"startTime\": \"2026-07-15T09:03:31.252Z\",\n      \"simulatedServerDurationMs\": 4,\n      \"clientTransportMs\": 4,\n      \"responseSize\": 3128,\n      \"status\": \"OK\"\n    },\n    {\n      \"requestId\": 34,\n      \"requestName\": \"eduops_queryOperationalWorkload\",\n      \"scenario\": \"normal-authoritative\",\n      \"dataMode\": \"deterministic\",\n      \"snapshotId\": \"evidence-snapshot\",\n      \"requestedActionability\": \"REVIEW_REQUIRED\",\n      \"worklist\": \"\",\n      \"scope\": \"ALL_AUTHORISED\",\n      \"page\": 1,\n      \"startTime\": \"2026-07-15T09:03:31.505Z\",\n      \"simulatedServerDurationMs\": 5,\n      \"clientTransportMs\": 5,\n      \"responseSize\": 32895,\n      \"status\": \"OK\"\n    }\n  ],\n  \"client\": [\n    {\n      \"requestId\": 11,\n      \"context\": \"Ready Now / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"READY\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"TIMEOUT\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:03:16.777Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:03:23.779Z\",\n      \"clientRequestMs\": 7002,\n      \"clientRenderMs\": 0,\n      \"responseBytes\": 0,\n      \"serverTimings\": null,\n      \"error\": \"Workload request timed out after 7 seconds.\"\n    },\n    {\n      \"requestId\": 13,\n      \"context\": \"Ready Now / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"READY\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:03:23.949Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:03:23.965Z\",\n      \"clientRequestMs\": 16,\n      \"clientRenderMs\": 0.30000000074505806,\n      \"responseBytes\": 32397,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 32397\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 14,\n      \"context\": \"Ready Now / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"READY\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:03:23.988Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:03:24.743Z\",\n      \"clientRequestMs\": 755,\n      \"clientRenderMs\": 0.19999999925494194,\n      \"responseBytes\": 32397,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 750,\n        \"canonicalSnapshotResolutionMs\": 75,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 150,\n        \"sortingPagingMs\": 38,\n        \"responseBytes\": 32397\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 16,\n      \"context\": \"Complete / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"COMPLETE\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"FODE-PREVIEW-SNAPSHOT-001\"\n      },\n      \"outcome\": \"DISCARDED_SUPERSEDED\",\n      \"clientRequestStartedAt\": \"\",\n      \"clientRequestEndedAt\": \"\",\n      \"clientRequestMs\": 0,\n      \"clientRenderMs\": 0,\n      \"responseBytes\": 0,\n      \"serverTimings\": null,\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 15,\n      \"context\": \"Ready Now / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"READY\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"FODE-PREVIEW-SNAPSHOT-001\"\n      },\n      \"outcome\": \"DISCARDED_SUPERSEDED\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:03:24.781Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:03:25.535Z\",\n      \"clientRequestMs\": 754,\n      \"clientRenderMs\": 0,\n      \"responseBytes\": 32397,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 750,\n        \"canonicalSnapshotResolutionMs\": 75,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 150,\n        \"sortingPagingMs\": 38,\n        \"responseBytes\": 32397\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 17,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"FODE-PREVIEW-SNAPSHOT-001\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:03:25.535Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:03:26.295Z\",\n      \"clientRequestMs\": 760,\n      \"clientRenderMs\": 0.3999999985098839,\n      \"responseBytes\": 32661,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 750,\n        \"canonicalSnapshotResolutionMs\": 75,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 150,\n        \"sortingPagingMs\": 38,\n        \"responseBytes\": 32661\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 18,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:03:26.543Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:03:26.550Z\",\n      \"clientRequestMs\": 7,\n      \"clientRenderMs\": 0.40000000037252903,\n      \"responseBytes\": 32661,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 32661\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 11,\n      \"context\": \"Ready Now / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"READY\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"DISCARDED_LATE_RESPONSE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:03:16.777Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:03:27.982Z\",\n      \"clientRequestMs\": 11205,\n      \"clientRenderMs\": 0,\n      \"responseBytes\": 32397,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 11200,\n        \"canonicalSnapshotResolutionMs\": 120,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 180,\n        \"sortingPagingMs\": 80,\n        \"responseBytes\": 32397\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 19,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:03:28.523Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:03:28.531Z\",\n      \"clientRequestMs\": 8,\n      \"clientRenderMs\": 0.3999999985098839,\n      \"responseBytes\": 32661,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 32661\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 20,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:03:29.134Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:03:29.143Z\",\n      \"clientRequestMs\": 9,\n      \"clientRenderMs\": 0.7999999988824129,\n      \"responseBytes\": 33262,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 33262\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 21,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:03:29.420Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:03:29.424Z\",\n      \"clientRequestMs\": 4,\n      \"clientRenderMs\": 0.40000000037252903,\n      \"responseBytes\": 32661,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 32661\n      },\n      \"error\": \"\"\n    },\n    {\n      \"requestId\": 22,\n      \"context\": \"Review Required / All Authorised / page 1\",\n      \"payload\": {\n        \"product\": \"FODE\",\n        \"actionabilityState\": \"REVIEW_REQUIRED\",\n        \"worklistKey\": \"\",\n        \"workScope\": \"ALL_AUTHORISED\",\n        \"filters\": {},\n        \"sort\": {\n          \"key\": \"urgency\",\n          \"direction\": \"asc\"\n        },\n        \"page\": 1,\n        \"pageSize\": 10,\n        \"expectedSnapshotId\": \"\"\n      },\n      \"outcome\": \"COMPLETE\",\n      \"clientRequestStartedAt\": \"2026-07-15T09:03:31.253Z\",\n      \"clientRequestEndedAt\": \"2026-07-15T09:03:31.258Z\",\n      \"clientRequestMs\": 5,\n      \"clientRenderMs\": 0.19999999925494194,\n      \"responseBytes\": 2895,\n      \"serverTimings\": {\n        \"accessMs\": 1,\n        \"serverRpcMs\": 0,\n        \"canonicalSnapshotResolutionMs\": 2,\n        \"sourceVersionMs\": 1,\n        \"cacheReadMs\": 1,\n        \"canonicalBuildMs\": 0,\n        \"projectionMs\": 2,\n        \"cacheWriteMs\": 0,\n        \"workloadCompositionMs\": 3,\n        \"sortingPagingMs\": 1,\n        \"responseBytes\": 2895\n      },\n      \"error\": \"\"\n    }\n  ]\n}"
+    }
+  ],
+  "pngIntegrity": [
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\01-normal-ready-workload.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\02-deterministic-mode-labelling.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\03-ownership-reset-unpinned.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\04-pinned-empty-escalated-scope.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\05-six-second-loading-state.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\06-timeout-retry-state.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\07-superseded-request-latest-rendered.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\08-search-jackson.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\09-exact-waffi-workbench.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\10-browser-back-workload-return.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\11-document-png-rendition.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\12-document-preview-unavailable.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\13-conflicting-authority.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\14-finance-lens.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\15-communications-lens.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\16-portal-lens.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\17-contactability-lens.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\18-relocated-parity-diagnostics.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\19-fresh-snapshot-mode-metadata.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1920x1080\\20-corrected-actionability-navigation.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\21-normal-ready-workload.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\22-deterministic-mode-labelling.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\23-ownership-reset-unpinned.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\24-pinned-empty-escalated-scope.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\25-six-second-loading-state.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\26-timeout-retry-state.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\27-superseded-request-latest-rendered.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\28-search-jackson.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\29-exact-waffi-workbench.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\30-browser-back-workload-return.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\31-document-png-rendition.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\32-document-preview-unavailable.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\33-conflicting-authority.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\34-finance-lens.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\35-communications-lens.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\36-portal-lens.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\37-contactability-lens.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\38-relocated-parity-diagnostics.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\39-fresh-snapshot-mode-metadata.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1440x900\\40-corrected-actionability-navigation.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\41-normal-ready-workload.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\42-deterministic-mode-labelling.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\43-ownership-reset-unpinned.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\44-pinned-empty-escalated-scope.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\45-six-second-loading-state.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\46-timeout-retry-state.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\47-superseded-request-latest-rendered.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\48-search-jackson.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\49-exact-waffi-workbench.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\50-browser-back-workload-return.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\51-document-png-rendition.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\52-document-preview-unavailable.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\53-conflicting-authority.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\54-finance-lens.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\55-communications-lens.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\56-portal-lens.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\57-contactability-lens.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\58-relocated-parity-diagnostics.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\59-fresh-snapshot-mode-metadata.png",
+      "ok": true
+    },
+    {
+      "file": "D:\\Repos\\FODE_Runtime_1wog\\tools\\eduops-preview\\evidence\\run-2026-07-15T09-01-57-464Z\\1366x768\\60-corrected-actionability-navigation.png",
+      "ok": true
+    }
+  ]
+}
