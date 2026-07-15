@@ -73,6 +73,23 @@ Workload responses include:
 
 If `expectedSnapshotId` differs from the current FODE snapshot, the response is marked `STALE`. The Workbench rejects stale exact-open requests.
 
+The compact EduOps projection is cached for a bounded 120-second TTL by FODE source version and authorised access scope. The source version uses the authoritative spreadsheet identity, sheet dimensions and Drive last-updated value. Cache loss rehydrates from Canonical Population and reproduces the same content-derived `snapshotId`; an unavailable source-version signal disables caching rather than silently reusing a potentially stale projection.
+
+Workload timing telemetry separates access, source-version resolution, cache read, canonical build, projection, workload composition, sorting/paging, total server RPC duration, response bytes and client render duration.
+
+## Request And Scope Integrity
+
+Only one workload RPC is started at a time. Duplicate requests reuse the in-flight promise; a newer context replaces any queued context; superseded responses are discarded; and a 10-second client timeout replaces permanent loading with a retry state. Loading, queued and error states identify the requested Actionability state, ownership scope and page.
+
+Changing top-level Actionability resets ownership scope to `ALL_AUTHORISED` unless the operator explicitly selects **Pin scope across Actionability**. When pinned scope produces no rows beneath a non-zero Actionability total, the workload reports both the All Authorised total and the scoped matched count.
+
+## Owner-Review Follow-Ups
+
+- Actionability navigation is duplicated in the rail and horizontal KPI row. The smallest later correction is to keep one interactive navigation set and make the other a non-interactive count summary.
+- Raw parity diagnostics is too prominent in the normal operator rail. The smallest later correction is to move it under a secondary Diagnostics disclosure without changing the parity RPC or authority contract.
+
+These are bounded navigation/prominence findings, not part of the workload reliability repair and not a Pass 2 expansion.
+
 ## Document Review Rule
 
 The canonical original remains authoritative.

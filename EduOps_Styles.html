@@ -91,6 +91,12 @@
   .eduops-kpis,.eduops-worklists,.eduops-scopes,.eduops-lenses{padding:10px;display:flex;gap:8px;flex-wrap:wrap}
   .eduops-kpis button,.eduops-worklists button,.eduops-scopes button,.eduops-lenses button{background:#f8fbff}
   .eduops-kpis button.active,.eduops-worklists button.active,.eduops-scopes button.active,.eduops-lenses button.active{background:#dcecff;border-color:#5791c8;color:#0d477d}
+  .eduops-scope-pin{display:flex;align-items:center;gap:7px;margin-left:auto;padding:8px 10px;border:1px solid #9fb3c5;border-radius:7px;background:#fff;color:#17344d;font-size:14px;font-weight:700}
+  .eduops-scope-pin input{width:17px;height:17px;margin:0}
+  .eduops-request-status{margin-top:5px;color:#294761;font-size:13px;font-weight:650}
+  .eduops-request-status[data-state="LOADING"],.eduops-request-status[data-state="QUEUED"]{color:#875600}
+  .eduops-request-status[data-state="ERROR"]{color:#a4251b}
+  .eduops-request-status[data-state="COMPLETE"]{color:#17633b}
   .eduops-panel{overflow:hidden}
   .eduops-panel-head{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:14px;border-bottom:1px solid var(--eduops-line);background:var(--eduops-panel-2)}
   .eduops-panel-head h3{margin:0;font-size:20px}

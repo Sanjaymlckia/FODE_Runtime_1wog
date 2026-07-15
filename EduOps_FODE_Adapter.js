@@ -2,6 +2,147 @@ function eduopsFodeCanonicalSnapshot_() {
   return canonicalPopulationSnapshot_();
 }
 
+var EDUOPS_FODE_SNAPSHOT_CACHE_TTL_SECONDS = 120;
+var EDUOPS_FODE_SNAPSHOT_CACHE_CHUNK_CHARS = 75000;
+
+function eduopsFodeSourceVersion_() {
+  var started = Date.now();
+  var sheet = openDataSheet_();
+  var spreadsheet = sheet && typeof sheet.getParent === "function" ? sheet.getParent() : null;
+  var spreadsheetId = spreadsheet && typeof spreadsheet.getId === "function" ? spreadsheet.getId() : "";
+  var updatedMs = 0;
+  try {
+    updatedMs = spreadsheetId ? DriveApp.getFileById(spreadsheetId).getLastUpdated().getTime() : 0;
+  } catch (_driveErr) {
+    updatedMs = 0;
+  }
+  var source = {
+    product: "FODE",
+    spreadsheetId: eduopsClean_(spreadsheetId),
+    sheetName: sheet && typeof sheet.getName === "function" ? eduopsClean_(sheet.getName()) : "",
+    lastRow: sheet && typeof sheet.getLastRow === "function" ? Number(sheet.getLastRow() || 0) : 0,
+    lastColumn: sheet && typeof sheet.getLastColumn === "function" ? Number(sheet.getLastColumn() || 0) : 0,
+    updatedMs: Number(updatedMs || 0)
+  };
+  source.cacheable = !!(source.spreadsheetId && source.sheetName && source.updatedMs);
+  source.key = [source.product, source.spreadsheetId, source.sheetName, source.lastRow, source.lastColumn, source.updatedMs].join("|");
+  source.durationMs = Date.now() - started;
+  return source;
+}
+
+function eduopsFodeSnapshotCacheBaseKey_(sourceVersion, access) {
+  var scope = [
+    "EDUOPS_PASS1_FODE",
+    sourceVersion && sourceVersion.key || "UNCACHEABLE",
+    access && access.email || "",
+    access && access.role || ""
+  ].join("|");
+  var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, scope, Utilities.Charset.UTF_8);
+  return "eduops:fode:" + Utilities.base64EncodeWebSafe(digest).replace(/=+$/g, "").slice(0, 28);
+}
+
+function eduopsFodeSnapshotCacheRead_(cache, baseKey) {
+  var manifestRaw = cache && cache.get(baseKey + ":manifest");
+  if (!manifestRaw) return null;
+  var manifest = JSON.parse(manifestRaw);
+  var chunkCount = Number(manifest.chunkCount || 0);
+  if (!chunkCount || chunkCount > 100) return null;
+  var keys = [];
+  for (var i = 0; i < chunkCount; i++) keys.push(baseKey + ":" + i);
+  var chunks = cache.getAll(keys);
+  var json = keys.map(function (key) { return chunks[key] || ""; }).join("");
+  if (!json || json.length !== Number(manifest.payloadChars || 0)) return null;
+  return JSON.parse(json);
+}
+
+function eduopsFodeSnapshotCacheWrite_(cache, baseKey, record) {
+  if (!cache) return;
+  var json = JSON.stringify(record);
+  var values = {};
+  var chunkCount = Math.ceil(json.length / EDUOPS_FODE_SNAPSHOT_CACHE_CHUNK_CHARS);
+  for (var i = 0; i < chunkCount; i++) {
+    values[baseKey + ":" + i] = json.slice(i * EDUOPS_FODE_SNAPSHOT_CACHE_CHUNK_CHARS, (i + 1) * EDUOPS_FODE_SNAPSHOT_CACHE_CHUNK_CHARS);
+  }
+  cache.putAll(values, EDUOPS_FODE_SNAPSHOT_CACHE_TTL_SECONDS);
+  cache.put(baseKey + ":manifest", JSON.stringify({ chunkCount: chunkCount, payloadChars: json.length }), EDUOPS_FODE_SNAPSHOT_CACHE_TTL_SECONDS);
+}
+
+function eduopsFodeCacheableRows_(snapshot) {
+  return eduopsFodeRowsForSnapshot_(snapshot).map(function (row) {
+    var compact = eduopsClone_(row);
+    delete compact.canonical;
+    return compact;
+  });
+}
+
+function eduopsResolveFodeSnapshot_(access) {
+  var started = Date.now();
+  var sourceVersion = eduopsFodeSourceVersion_();
+  var sourceVersionMs = Date.now() - started;
+  var cache = sourceVersion.cacheable ? CacheService.getScriptCache() : null;
+  var baseKey = sourceVersion.cacheable ? eduopsFodeSnapshotCacheBaseKey_(sourceVersion, access) : "";
+  var cacheReadStarted = Date.now();
+  var cached = null;
+  if (cache) {
+    try { cached = eduopsFodeSnapshotCacheRead_(cache, baseKey); } catch (_cacheReadErr) { cached = null; }
+  }
+  var cacheReadMs = Date.now() - cacheReadStarted;
+  if (cached && cached.snapshotId && Array.isArray(cached.rows)) {
+    return {
+      snapshotId: cached.snapshotId,
+      snapshotAsOf: cached.snapshotAsOf,
+      sourceSheetName: cached.sourceSheetName,
+      totalRows: Number(cached.totalRows || cached.rows.length),
+      rows: cached.rows,
+      sourceVersion: sourceVersion,
+      cacheState: "HIT",
+      timings: {
+        canonicalSnapshotResolutionMs: Date.now() - started,
+        sourceVersionMs: sourceVersionMs,
+        cacheReadMs: cacheReadMs,
+        canonicalBuildMs: 0,
+        projectionMs: 0,
+        cacheWriteMs: 0
+      }
+    };
+  }
+
+  var canonicalStarted = Date.now();
+  var snapshot = eduopsFodeCanonicalSnapshot_();
+  var canonicalBuildMs = Date.now() - canonicalStarted;
+  var projectionStarted = Date.now();
+  var record = {
+    snapshotId: eduopsRuntimeSnapshotId_(snapshot),
+    snapshotAsOf: eduopsClean_(snapshot.generatedAt || ""),
+    sourceSheetName: eduopsClean_(snapshot.sourceSheetName || sourceVersion.sheetName || ""),
+    totalRows: Number(snapshot.totalRows || 0),
+    rows: eduopsFodeCacheableRows_(snapshot)
+  };
+  var projectionMs = Date.now() - projectionStarted;
+  var cacheWriteStarted = Date.now();
+  if (cache) {
+    try { eduopsFodeSnapshotCacheWrite_(cache, baseKey, record); } catch (_cacheWriteErr) { /* Cache loss is recoverable from canonical authority. */ }
+  }
+  var cacheWriteMs = Date.now() - cacheWriteStarted;
+  return {
+    snapshotId: record.snapshotId,
+    snapshotAsOf: record.snapshotAsOf,
+    sourceSheetName: record.sourceSheetName,
+    totalRows: record.totalRows || record.rows.length,
+    rows: record.rows,
+    sourceVersion: sourceVersion,
+    cacheState: sourceVersion.cacheable ? "MISS_REHYDRATED" : "UNCACHEABLE_REHYDRATED",
+    timings: {
+      canonicalSnapshotResolutionMs: Date.now() - started,
+      sourceVersionMs: sourceVersionMs,
+      cacheReadMs: cacheReadMs,
+      canonicalBuildMs: canonicalBuildMs,
+      projectionMs: projectionMs,
+      cacheWriteMs: cacheWriteMs
+    }
+  };
+}
+
 function eduopsFodeActionabilityRowFromCanonical_(canonical) {
   var row = canonical || {};
   var identity = row.identity || {};

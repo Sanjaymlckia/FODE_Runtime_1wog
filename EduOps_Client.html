@@ -6,6 +6,7 @@
     actionabilityState: "READY",
     worklistKey: "",
     workScope: "ALL_AUTHORISED",
+    workScopePinned: false,
     page: 1,
     pageSize: 25,
     filters: {},
@@ -21,6 +22,10 @@
   };
   var dom = {};
   var requestSeq = 0;
+  var activeWorkloadRequest = null;
+  var queuedWorkloadRequest = null;
+  var workloadTimeoutMs = Math.max(100, Number(window.EDUOPS_REQUEST_TIMEOUT_MS || 10000));
+  window.__EDUOPS_REQUEST_DIAGNOSTICS__ = window.__EDUOPS_REQUEST_DIAGNOSTICS__ || [];
   var rpcAllowlist = {
     eduops_getAccessProjection: true,
     eduops_getProfile: true,
@@ -54,10 +59,12 @@
     dom.kpis = document.getElementById("eduopsKpis");
     dom.worklists = document.getElementById("eduopsWorklists");
     dom.scopes = document.getElementById("eduopsScopes");
+    dom.pinScope = document.getElementById("eduopsPinScope");
     dom.reliability = document.getElementById("eduopsReliability");
     dom.rows = document.getElementById("eduopsRows");
     dom.title = document.getElementById("eduopsWorkloadTitle");
     dom.meta = document.getElementById("eduopsWorkloadMeta");
+    dom.requestStatus = document.getElementById("eduopsRequestStatus");
     dom.pageMeta = document.getElementById("eduopsPageMeta");
     dom.prev = document.getElementById("eduopsPrevPage");
     dom.next = document.getElementById("eduopsNextPage");
@@ -97,17 +104,146 @@
   function loadWorkload(opts) {
     var o = opts || {};
     if (o.resetPage) state.page = 1;
-    var seq = ++requestSeq;
-    dom.rows.innerHTML = '<tr><td colspan="7">Loading server-authored workload...</td></tr>';
-    return callRpc("eduops_queryOperationalWorkload", buildPayload()).then(function (res) {
-      if (seq !== requestSeq) return;
-      state.workload = res;
-      if (res && res.snapshotId) state.snapshotId = res.snapshotId;
-      renderWorkload(res || {});
-      updateRoute();
+    var request = createWorkloadRequest_(buildPayload());
+    if (activeWorkloadRequest) {
+      if (activeWorkloadRequest.fingerprint === request.fingerprint) {
+        recordRequestDiagnostic_(request, "DEDUPED_ACTIVE");
+        return activeWorkloadRequest.promise;
+      }
+      if (queuedWorkloadRequest && queuedWorkloadRequest.fingerprint === request.fingerprint) {
+        recordRequestDiagnostic_(request, "DEDUPED_QUEUED");
+        return queuedWorkloadRequest.promise;
+      }
+      activeWorkloadRequest.superseded = true;
+      if (queuedWorkloadRequest) {
+        recordRequestDiagnostic_(queuedWorkloadRequest, "DISCARDED_SUPERSEDED");
+        queuedWorkloadRequest.resolve({ discarded: true, reason: "SUPERSEDED_BEFORE_START" });
+      }
+      queuedWorkloadRequest = request;
+      renderPendingWorkload_(request, "QUEUED");
+      return request.promise;
+    }
+    startWorkloadRequest_(request);
+    return request.promise;
+  }
+
+  function createWorkloadRequest_(payload) {
+    var resolveRequest;
+    var promise = new Promise(function (resolve) { resolveRequest = resolve; });
+    return {
+      id: ++requestSeq,
+      payload: payload,
+      fingerprint: JSON.stringify(payload),
+      createdAt: Date.now(),
+      startedAt: 0,
+      superseded: false,
+      settled: false,
+      resolve: resolveRequest,
+      promise: promise
+    };
+  }
+
+  function startWorkloadRequest_(request) {
+    activeWorkloadRequest = request;
+    request.startedAt = Date.now();
+    renderPendingWorkload_(request, "LOADING");
+    var timeout = setTimeout(function () {
+      finishWorkloadRequest_(request, null, new Error("Workload request timed out after " + Math.round(workloadTimeoutMs / 1000) + " seconds."), "TIMEOUT");
+    }, workloadTimeoutMs);
+    callRpc("eduops_queryOperationalWorkload", request.payload).then(function (res) {
+      clearTimeout(timeout);
+      finishWorkloadRequest_(request, res || {}, null, "COMPLETE");
     }).catch(function (err) {
-      dom.rows.innerHTML = '<tr><td colspan="7">EduOps workload failed: ' + esc(err && err.message || err) + '</td></tr>';
+      clearTimeout(timeout);
+      finishWorkloadRequest_(request, null, err, "ERROR");
     });
+  }
+
+  function finishWorkloadRequest_(request, response, error, outcome) {
+    if (request.settled) {
+      recordRequestDiagnostic_(request, "DISCARDED_LATE_RESPONSE", response);
+      return;
+    }
+    request.settled = true;
+    var renderMs = 0;
+    var finalOutcome = outcome;
+    if (request.superseded || queuedWorkloadRequest) {
+      finalOutcome = "DISCARDED_SUPERSEDED";
+    } else if (error) {
+      renderWorkloadError_(request, error, outcome);
+    } else {
+      state.workload = response;
+      if (response.snapshotId) state.snapshotId = response.snapshotId;
+      if (response.page) state.page = Number(response.page);
+      var renderStarted = performance.now();
+      renderWorkload(response);
+      renderMs = performance.now() - renderStarted;
+      updateRoute();
+      dom.requestStatus.setAttribute("data-state", "COMPLETE");
+      dom.requestStatus.textContent = requestContextLabel_(request.payload) + " completed in " + (Date.now() - request.startedAt) + " ms; render " + renderMs.toFixed(1) + " ms.";
+    }
+    recordRequestDiagnostic_(request, finalOutcome, response, renderMs, error);
+    request.resolve({ response: response, error: error, outcome: finalOutcome });
+    if (activeWorkloadRequest === request) activeWorkloadRequest = null;
+    if (queuedWorkloadRequest) {
+      var next = queuedWorkloadRequest;
+      queuedWorkloadRequest = null;
+      startWorkloadRequest_(next);
+    }
+  }
+
+  function recordRequestDiagnostic_(request, outcome, response, renderMs, error) {
+    var item = {
+      requestId: request.id,
+      context: requestContextLabel_(request.payload),
+      payload: request.payload,
+      outcome: outcome,
+      clientRequestStartedAt: request.startedAt ? new Date(request.startedAt).toISOString() : "",
+      clientRequestEndedAt: request.startedAt ? new Date().toISOString() : "",
+      clientRequestMs: request.startedAt ? Date.now() - request.startedAt : 0,
+      clientRenderMs: Number(renderMs || 0),
+      responseBytes: response && response.timings ? Number(response.timings.responseBytes || 0) : 0,
+      serverTimings: response && response.timings || null,
+      error: error ? String(error.message || error) : ""
+    };
+    window.__EDUOPS_REQUEST_DIAGNOSTICS__.push(item);
+    if (window.__EDUOPS_REQUEST_DIAGNOSTICS__.length > 50) window.__EDUOPS_REQUEST_DIAGNOSTICS__.shift();
+  }
+
+  function renderPendingWorkload_(request, phase) {
+    var context = requestContextLabel_(request.payload);
+    renderScopes();
+    if (state.workload) {
+      renderStates(state.workload.actionabilityCounts || {});
+      renderKpis(state.workload.actionabilityCounts || {});
+    }
+    dom.title.textContent = (phase === "QUEUED" ? "Queued: " : "Loading: ") + context;
+    dom.meta.textContent = (phase === "QUEUED" ? "Queued" : "Requesting") + " page " + request.payload.page + " at snapshot " + (request.payload.expectedSnapshotId || "current") + ".";
+    dom.pageMeta.textContent = (phase === "QUEUED" ? "Queued page " : "Loading page ") + request.payload.page;
+    dom.prev.disabled = true;
+    dom.next.disabled = true;
+    dom.rows.innerHTML = '<tr><td colspan="7">' + esc(phase === "QUEUED" ? "Queued server workload: " : "Loading server-authored workload: ") + esc(context) + '.</td></tr>';
+    dom.requestStatus.setAttribute("data-state", phase);
+    dom.requestStatus.textContent = context + (phase === "QUEUED" ? " is queued behind one in-flight read-only request; the superseded response will not be applied." : " started at " + new Date(request.startedAt).toISOString() + ".");
+  }
+
+  function renderWorkloadError_(request, error, outcome) {
+    var context = requestContextLabel_(request.payload);
+    dom.title.textContent = "Workload unavailable: " + context;
+    dom.meta.textContent = outcome === "TIMEOUT" ? "The bounded 10-second request window expired." : "The server request failed.";
+    dom.pageMeta.textContent = "Requested page " + request.payload.page;
+    dom.rows.innerHTML = '<tr><td colspan="7">EduOps workload failed for ' + esc(context) + ': ' + esc(error && error.message || error) + ' <button type="button" data-retry-workload>Retry</button></td></tr>';
+    dom.requestStatus.setAttribute("data-state", "ERROR");
+    dom.requestStatus.textContent = context + " did not complete. Retry is available; no stale response was applied.";
+  }
+
+  function requestContextLabel_(payload) {
+    var p = payload || {};
+    return labelState(p.actionabilityState) + " / " + scopeLabel_(p.workScope) + " / page " + p.page;
+  }
+
+  function scopeLabel_(scope) {
+    return ({ ALL_AUTHORISED: "All Authorised", MY: "My Work", TEAM: "Team", UNASSIGNED: "Unassigned", ESCALATED: "Escalated" })[scope] || scope;
   }
 
   function renderWorkload(res) {
@@ -116,9 +252,13 @@
     renderWorklists(res.worklistKeyCounts || {});
     renderScopes();
     renderReliability(res);
-    renderRows(res.rows || []);
+    renderRows(res.rows || [], res);
     dom.title.textContent = (labelState(state.actionabilityState) || "Workload") + (state.worklistKey ? " / " + state.worklistKey.replace(/_/g, " ") : "");
-    dom.meta.textContent = "Page " + res.page + " of " + res.totalPages + " / " + res.totalMatched + " matched / snapshot " + (res.snapshotId || "-");
+    var stateTotal = Number((res.actionabilityCounts || {})[state.actionabilityState] || 0);
+    var scopeSummary = state.workScope === "ALL_AUTHORISED"
+      ? res.totalMatched + " matched"
+      : labelState(state.actionabilityState) + ": " + stateTotal + " total / " + scopeLabel_(state.workScope) + ": " + res.totalMatched + " matched";
+    dom.meta.textContent = "Page " + res.page + " of " + res.totalPages + " / " + scopeSummary + " / snapshot " + (res.snapshotId || "-");
     dom.pageMeta.textContent = "Page " + res.page + " / " + res.totalPages;
     dom.prev.disabled = Number(res.page || 1) <= 1;
     dom.next.disabled = Number(res.page || 1) >= Number(res.totalPages || 1);
@@ -166,6 +306,7 @@
     dom.scopes.querySelectorAll("[data-scope]").forEach(function (btn) {
       btn.classList.toggle("active", btn.getAttribute("data-scope") === state.workScope);
     });
+    dom.pinScope.checked = state.workScopePinned;
   }
 
   function renderReliability(res) {
@@ -181,9 +322,11 @@
     return "warn";
   }
 
-  function renderRows(rows) {
+  function renderRows(rows, response) {
     if (!rows.length) {
-      dom.rows.innerHTML = '<tr><td colspan="7">No applicants matched this server workload.</td></tr>';
+      var total = Number((response && response.actionabilityCounts || {})[state.actionabilityState] || 0);
+      var detail = state.workScope === "ALL_AUTHORISED" ? "" : " " + total + " total across All Authorised; 0 matched " + scopeLabel_(state.workScope) + ".";
+      dom.rows.innerHTML = '<tr><td colspan="7">No applicants matched this server workload.' + esc(detail) + '</td></tr>';
       return;
     }
     dom.rows.innerHTML = rows.map(function (row) {
@@ -208,9 +351,13 @@
       dom.globalResults.innerHTML = "";
       return;
     }
-    callRpc("eduops_searchApplicants", { query: query, limit: 12 }).then(function (res) {
+    callRpc("eduops_searchApplicants", { query: query, limit: 12, expectedSnapshotId: state.snapshotId }).then(function (res) {
+      if (!res || res.ok === false) throw new Error(res && (res.code || res.message) || "Search unavailable");
       state.searchResults = res.matches || [];
       renderSearchResults(res);
+    }).catch(function (err) {
+      dom.globalResults.hidden = false;
+      dom.globalResults.innerHTML = '<strong>Global search unavailable:</strong> ' + esc(err && err.message || err);
     });
   }
 
@@ -311,7 +458,8 @@
   }
 
   function openParity() {
-    callRpc("eduops_getParityDiagnostics", { limit: 50 }).then(function (res) {
+    callRpc("eduops_getParityDiagnostics", { limit: 50, expectedSnapshotId: state.snapshotId }).then(function (res) {
+      if (!res || res.ok === false && res.code) throw new Error(res && (res.code || res.message) || "Parity diagnostics unavailable");
       dom.drawerTitle.textContent = "Authority parity diagnostics";
       dom.drawerBody.innerHTML = '<pre>' + esc(JSON.stringify(res, null, 2)) + '</pre>';
       dom.drawer.hidden = false;
@@ -348,6 +496,7 @@
       if (stateBtn) {
         state.actionabilityState = stateBtn.getAttribute("data-state");
         state.worklistKey = "";
+        if (!state.workScopePinned) state.workScope = "ALL_AUTHORISED";
         loadWorkload({ resetPage: true });
         return;
       }
@@ -370,6 +519,11 @@
       }
       var copyBtn = event.target.closest("[data-copy-applicant]");
       if (copyBtn && navigator.clipboard) navigator.clipboard.writeText(copyBtn.getAttribute("data-copy-applicant"));
+      var retryBtn = event.target.closest("[data-retry-workload]");
+      if (retryBtn) {
+        loadWorkload();
+        return;
+      }
       var tabBtn = event.target.closest("[data-tab]");
       if (tabBtn) {
         state.activeTab = tabBtn.getAttribute("data-tab");
@@ -382,6 +536,7 @@
     dom.prev.addEventListener("click", function () { state.page = Math.max(1, state.page - 1); loadWorkload(); });
     dom.next.addEventListener("click", function () { state.page += 1; loadWorkload(); });
     dom.pageSize.addEventListener("change", function () { state.pageSize = Number(dom.pageSize.value || 25); loadWorkload({ resetPage: true }); });
+    dom.pinScope.addEventListener("change", function () { state.workScopePinned = dom.pinScope.checked === true; });
     dom.filterSearch.addEventListener("input", debounce(function () { state.filters.search = dom.filterSearch.value.trim(); loadWorkload({ resetPage: true }); }, 250));
     dom.globalSearch.addEventListener("input", debounce(runSearch, 250));
     dom.closeWorkbench.addEventListener("click", closeWorkbench);

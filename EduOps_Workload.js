@@ -53,17 +53,21 @@ function eduops_getProfile() {
 }
 
 function eduops_queryOperationalWorkload(payload) {
-  eduopsRequireAccess_();
   var started = Date.now();
+  var access = eduopsRequireAccess_();
+  var accessMs = Date.now() - started;
   var query = eduopsNormalizeWorkloadQuery_(payload);
-  var snapshot = eduopsFodeCanonicalSnapshot_();
-  var snapshotId = eduopsRuntimeSnapshotId_(snapshot);
+  var resolved = eduopsResolveFodeSnapshot_(access);
+  var snapshotId = resolved.snapshotId;
   var reliability = eduopsSourceReliability_("AUTHORITATIVE", "FODE canonical snapshot resolved for EduOps shadow workload.", "FODE workload");
   if (query.expectedSnapshotId && query.expectedSnapshotId !== snapshotId) {
     reliability = eduopsSourceReliability_("STALE", "The requested workload snapshot no longer matches the current FODE authority snapshot.", "FODE workload");
   }
-  var allRows = eduopsFodeRowsForSnapshot_(snapshot);
+  var compositionStarted = Date.now();
+  var allRows = resolved.rows;
   var filtered = eduopsFilterRows_(allRows, query, reliability);
+  var filterMs = Date.now() - compositionStarted;
+  var sortingStarted = Date.now();
   filtered.sort(function (a, b) { return eduopsCompareRows_(a, b, query.sort); });
   var totalMatched = filtered.length;
   var totalPages = Math.max(1, Math.ceil(totalMatched / query.pageSize));
@@ -73,14 +77,25 @@ function eduops_queryOperationalWorkload(payload) {
   var rows = pageRows.map(function (row) {
     return eduopsFodeRowDto_(row, query, snapshotId, reliability);
   });
-  return {
+  var sortingPagingMs = Date.now() - sortingStarted;
+  var composeRemainderStarted = Date.now();
+  var actionabilityCounts = eduopsActionabilityCounts_(allRows);
+  var worklistKeyCounts = eduopsWorklistCounts_(allRows, query);
+  var metricCounts = eduopsMetricCounts_(filtered);
+  var reconciliation = eduopsReconciliationForRows_(allRows, filtered, pageRows, query, snapshotId, {
+    totalRows: resolved.totalRows,
+    generatedAt: resolved.snapshotAsOf
+  });
+  var workloadCompositionMs = filterMs + (Date.now() - composeRemainderStarted);
+  var response = {
     ok: true,
     readOnly: true,
     contractVersion: EDUOPS_CONTRACT_VERSION,
     product: "FODE",
     profileVersion: EDUOPS_PROFILE_VERSION,
     snapshotId: snapshotId,
-    snapshotAsOf: eduopsClean_(snapshot.generatedAt || ""),
+    snapshotAsOf: resolved.snapshotAsOf,
+    snapshotCacheState: resolved.cacheState,
     authorityStatus: reliability.authorityStatus,
     sourceStatus: reliability.sourceStatus,
     reliabilityState: reliability.state,
@@ -94,28 +109,46 @@ function eduops_queryOperationalWorkload(payload) {
     pageSize: query.pageSize,
     totalMatched: totalMatched,
     totalPages: totalPages,
-    actionabilityCounts: eduopsActionabilityCounts_(allRows),
-    worklistKeyCounts: eduopsWorklistCounts_(allRows, query),
-    metricCounts: eduopsMetricCounts_(filtered),
-    reconciliation: eduopsReconciliationForRows_(allRows, filtered, pageRows, query, snapshotId, snapshot),
-    rows: rows,
-    timings: { workloadMs: Date.now() - started }
+    actionabilityCounts: actionabilityCounts,
+    worklistKeyCounts: worklistKeyCounts,
+    metricCounts: metricCounts,
+    reconciliation: reconciliation,
+    rows: rows
   };
+  response.timings = {
+    accessMs: accessMs,
+    serverRpcMs: 0,
+    canonicalSnapshotResolutionMs: resolved.timings.canonicalSnapshotResolutionMs,
+    sourceVersionMs: resolved.timings.sourceVersionMs,
+    cacheReadMs: resolved.timings.cacheReadMs,
+    canonicalBuildMs: resolved.timings.canonicalBuildMs,
+    projectionMs: resolved.timings.projectionMs,
+    cacheWriteMs: resolved.timings.cacheWriteMs,
+    workloadCompositionMs: workloadCompositionMs,
+    sortingPagingMs: sortingPagingMs,
+    responseBytes: 0
+  };
+  response.timings.responseBytes = eduopsResponseByteSize_(response);
+  response.timings.serverRpcMs = Date.now() - started;
+  return response;
 }
 
 function eduops_searchApplicants(payload) {
-  eduopsRequireAccess_();
   var started = Date.now();
+  var access = eduopsRequireAccess_();
   var p = payload && typeof payload === "object" ? payload : {};
   var queryText = eduopsClean_(p.query || p.search || "");
   var limit = Math.max(1, Math.min(25, Number(p.limit || 12)));
-  var snapshot = eduopsFodeCanonicalSnapshot_();
-  var snapshotId = eduopsRuntimeSnapshotId_(snapshot);
+  var resolved = eduopsResolveFodeSnapshot_(access);
+  var snapshotId = resolved.snapshotId;
+  if (p.expectedSnapshotId && p.expectedSnapshotId !== snapshotId) {
+    return { ok: false, readOnly: true, code: "STALE_SNAPSHOT", snapshotId: snapshotId, expectedSnapshotId: eduopsClean_(p.expectedSnapshotId || "") };
+  }
   if (!queryText) {
     return { ok: true, readOnly: true, product: "FODE", query: "", totalMatches: 0, matches: [], snapshotId: snapshotId, timings: { searchMs: Date.now() - started } };
   }
   var needle = queryText.toLowerCase();
-  var rows = eduopsFodeRowsForSnapshot_(snapshot).filter(function (row) {
+  var rows = resolved.rows.filter(function (row) {
     return [
       row.applicantId,
       row.name,
@@ -143,13 +176,13 @@ function eduops_searchApplicants(payload) {
 }
 
 function eduops_getApplicantWorkbench(payload) {
-  eduopsRequireAccess_();
   var started = Date.now();
+  var access = eduopsRequireAccess_();
   var p = payload && typeof payload === "object" ? payload : {};
   var applicantId = eduopsClean_(p.applicantId || "");
   if (!applicantId) return { ok: false, readOnly: true, code: "APPLICANT_ID_REQUIRED" };
-  var snapshot = eduopsFodeCanonicalSnapshot_();
-  var snapshotId = eduopsRuntimeSnapshotId_(snapshot);
+  var resolved = eduopsResolveFodeSnapshot_(access);
+  var snapshotId = resolved.snapshotId;
   if (p.expectedSnapshotId && p.expectedSnapshotId !== snapshotId) {
     return {
       ok: false,
@@ -274,13 +307,16 @@ function eduops_getReconciliation(payload) {
 }
 
 function eduops_getParityDiagnostics(payload) {
-  eduopsRequireAccess_();
   var started = Date.now();
+  var access = eduopsRequireAccess_();
   var p = payload && typeof payload === "object" ? payload : {};
-  var snapshot = eduopsFodeCanonicalSnapshot_();
-  var snapshotId = eduopsRuntimeSnapshotId_(snapshot);
+  var resolved = eduopsResolveFodeSnapshot_(access);
+  var snapshotId = resolved.snapshotId;
+  if (p.expectedSnapshotId && p.expectedSnapshotId !== snapshotId) {
+    return { ok: false, readOnly: true, code: "STALE_SNAPSHOT", snapshotId: snapshotId, expectedSnapshotId: eduopsClean_(p.expectedSnapshotId || "") };
+  }
   var adminPreview = admin_getActionabilityPreview({ limit: 100, hiddenLimit: 10 });
-  var eduopsRows = eduopsFodeRowsForSnapshot_(snapshot);
+  var eduopsRows = resolved.rows;
   var adminById = {};
   (adminPreview.rows || []).forEach(function (row) {
     if (row && row.applicantId) adminById[row.applicantId] = row;
@@ -312,9 +348,9 @@ function eduops_getParityDiagnostics(payload) {
     readOnly: true,
     product: "FODE",
     snapshotId: snapshotId,
-    snapshotAsOf: eduopsClean_(snapshot.generatedAt || ""),
+    snapshotAsOf: resolved.snapshotAsOf,
     compared: Math.min(eduopsRows.length, Object.keys(adminById).length),
-    canonicalPopulationTotal: Number(snapshot.totalRows || eduopsRows.length),
+    canonicalPopulationTotal: Number(resolved.totalRows || eduopsRows.length),
     currentAdminBoundedRows: (adminPreview.rows || []).length,
     exactMatches: Math.max(0, Math.min(eduopsRows.length, Object.keys(adminById).length) - mismatches.length),
     mismatchesByField: eduopsMismatchCounts_(mismatches),
@@ -326,6 +362,11 @@ function eduops_getParityDiagnostics(payload) {
     note: "Current Admin actionability preview is bounded; complete-population parity uses the same canonical snapshot and reports bounded-preview absences separately.",
     timings: { parityMs: Date.now() - started }
   };
+}
+
+function eduopsResponseByteSize_(value) {
+  var json = JSON.stringify(value == null ? null : value);
+  try { return Utilities.newBlob(json).getBytes().length; } catch (_blobErr) { return json.length; }
 }
 
 function eduopsNormalizeWorkloadQuery_(payload) {

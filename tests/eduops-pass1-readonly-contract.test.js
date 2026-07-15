@@ -104,5 +104,10 @@ assert.match(files.workload, /expectedSnapshotId[\s\S]*STALE/, "Workload/Workben
 assert.match(files.workload, /eduopsUrgencyRank_/, "Workload must use deterministic server sorting");
 assert.match(files.workload, /applicantId/, "Exact ApplicantID must be part of server DTOs");
 assert.match(files.workload, /eduops_getParityDiagnostics/, "Pass 1 must include parity diagnostics");
+assert.match(files.adapter, /eduopsResolveFodeSnapshot_/, "Pass 1 must resolve a bounded, source-versioned snapshot projection");
+assert.match(files.workload, /canonicalSnapshotResolutionMs[\s\S]*workloadCompositionMs[\s\S]*sortingPagingMs[\s\S]*responseBytes/, "Workload must report segmented server timings and response size");
+assert.match(files.client, /workloadTimeoutMs[\s\S]*DISCARDED_SUPERSEDED[\s\S]*data-retry-workload/, "Client workload requests must be bounded, supersedable and retryable");
+assert.match(files.client, /workScopePinned[\s\S]*ALL_AUTHORISED/, "Actionability navigation must reset unpinned ownership scope");
+assert.match(files.html, /eduopsPinScope[\s\S]*Pin scope across Actionability/, "Pinned scope preservation must be explicit");
 
 console.log(`PASS EduOps Pass 1 read-only architecture contract publicRpcs=${publicEduopsFunctions.length}`);

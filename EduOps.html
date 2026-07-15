@@ -71,6 +71,7 @@
         <button type="button" data-scope="TEAM">Team</button>
         <button type="button" data-scope="UNASSIGNED">Unassigned</button>
         <button type="button" data-scope="ESCALATED">Escalated</button>
+        <label class="eduops-scope-pin"><input id="eduopsPinScope" type="checkbox"> Pin scope across Actionability</label>
       </section>
 
       <section class="eduops-panel">
@@ -78,6 +79,7 @@
           <div>
             <h3 id="eduopsWorkloadTitle">Workload</h3>
             <p id="eduopsWorkloadMeta">Waiting for server workload...</p>
+            <p id="eduopsRequestStatus" class="eduops-request-status" aria-live="polite">No workload request pending.</p>
           </div>
           <button id="eduopsOpenReconciliation" class="eduops-secondary" type="button">Reconciliation</button>
         </header>
