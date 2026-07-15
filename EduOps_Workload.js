@@ -170,9 +170,26 @@ function eduops_getApplicantWorkbench(payload) {
 function eduops_getDocumentManifest(payload) {
   eduopsRequireAccess_();
   var started = Date.now();
-  var result = admin_getApplicantDocumentManifest(payload || {});
+  var exact = eduopsHydrateDocumentPayload_(payload || {}, false);
+  if (exact.ok !== true) return exact;
+  var result = admin_getApplicantDocumentManifest(exact.payload);
   result.readOnly = true;
+  result.rowNumber = exact.payload.rowNumber;
   result.renditionRule = "canonical original -> server-derived PNG rendition -> separate signed Open Original action";
+  if (Array.isArray(result.files)) {
+    result.files = result.files.map(function (file) {
+      var item = file && typeof file === "object" ? file : {};
+      item.applicantId = result.applicantId;
+      item.rowNumber = exact.payload.rowNumber;
+      item.documentKey = [
+        result.applicantId,
+        String(exact.payload.rowNumber),
+        eduopsClean_(item.sourceField || ""),
+        String(item.itemIndex === null || item.itemIndex === undefined ? "" : item.itemIndex)
+      ].join("|");
+      return item;
+    });
+  }
   result.timings = { documentManifestMs: Date.now() - started };
   return result;
 }
@@ -180,7 +197,9 @@ function eduops_getDocumentManifest(payload) {
 function eduops_getDocumentRendition(payload) {
   eduopsRequireAccess_();
   var started = Date.now();
-  var result = admin_getApplicantDocumentImageRendition(payload || {});
+  var exact = eduopsHydrateDocumentPayload_(payload || {}, true);
+  if (exact.ok !== true) return exact;
+  var result = admin_getApplicantDocumentImageRendition(exact.payload);
   result.readOnly = true;
   result.canonicalOriginal = false;
   result.renditionOnly = true;
@@ -190,10 +209,56 @@ function eduops_getDocumentRendition(payload) {
 
 function eduops_getDocumentFileAction(payload) {
   eduopsRequireAccess_();
-  var result = admin_getApplicantDocumentFileAction(payload || {});
+  var exact = eduopsHydrateDocumentPayload_(payload || {}, true);
+  if (exact.ok !== true) return exact;
+  var result = admin_getApplicantDocumentFileAction(exact.payload);
   result.readOnly = true;
   result.canonicalOriginal = true;
   return result;
+}
+
+function eduopsHydrateDocumentPayload_(payload, requireDocumentIdentity) {
+  var p = payload && typeof payload === "object" ? payload : {};
+  var applicantId = eduopsClean_(p.applicantId || p.ApplicantID || "");
+  if (!applicantId) {
+    return { ok: false, readOnly: true, code: "APPLICANT_ID_REQUIRED", error: "ApplicantID is required" };
+  }
+  var rowNumber = Number(p.rowNumber);
+  if (!isFinite(rowNumber) || rowNumber < 2 || Math.floor(rowNumber) !== rowNumber) {
+    var canonical = admin_getCanonicalApplicant({ applicantId: applicantId });
+    if (!canonical || canonical.ok !== true || !canonical.applicant) {
+      return { ok: false, readOnly: true, code: canonical && canonical.code || "APPLICANT_NOT_FOUND", error: "Applicant context could not be resolved" };
+    }
+    rowNumber = Number(canonical.applicant.identity && canonical.applicant.identity.rowNumber || 0);
+  }
+  if (!isFinite(rowNumber) || rowNumber < 2 || Math.floor(rowNumber) !== rowNumber) {
+    return { ok: false, readOnly: true, code: "INVALID_APPLICANT_CONTEXT", error: "Applicant context is invalid" };
+  }
+  var hydrated = {
+    applicantId: applicantId,
+    rowNumber: rowNumber
+  };
+  if (requireDocumentIdentity === true) {
+    hydrated.sourceField = eduopsClean_(p.sourceField || "");
+    hydrated.itemIndex = Number(p.itemIndex);
+    if (!hydrated.sourceField) {
+      return { ok: false, readOnly: true, code: "SOURCE_FIELD_REQUIRED", error: "Document source field is required" };
+    }
+    if (!isFinite(hydrated.itemIndex) || hydrated.itemIndex < 0 || Math.floor(hydrated.itemIndex) !== hydrated.itemIndex) {
+      return { ok: false, readOnly: true, code: "INVALID_ITEM_INDEX", error: "Document item index is invalid" };
+    }
+    var expectedKey = [
+      applicantId,
+      String(rowNumber),
+      hydrated.sourceField,
+      String(hydrated.itemIndex)
+    ].join("|");
+    var providedKey = eduopsClean_(p.documentKey || "");
+    if (providedKey && providedKey !== expectedKey) {
+      return { ok: false, readOnly: true, code: "DOCUMENT_CONTEXT_MISMATCH", error: "Document context does not match the applicant manifest" };
+    }
+  }
+  return { ok: true, readOnly: true, payload: hydrated };
 }
 
 function eduops_getReconciliation(payload) {

@@ -73,18 +73,64 @@ function eduopsSourceReliability_(state, reason, domain) {
 }
 
 function eduopsRuntimeSnapshotId_(snapshot) {
-  var source = [
-    EDUOPS_CONTRACT_VERSION,
-    eduopsClean_(snapshot && snapshot.schemaVersion || ""),
-    eduopsClean_(snapshot && snapshot.generatedAt || ""),
-    Number(snapshot && snapshot.totalRows || 0)
-  ].join("|");
+  var source = eduopsStableSnapshotSource_(snapshot);
   try {
     var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, source, Utilities.Charset.UTF_8);
     return "FODE-" + Utilities.base64EncodeWebSafe(digest).slice(0, 16);
   } catch (_err) {
     return "FODE-" + source.replace(/[^A-Za-z0-9]+/g, "-").slice(0, 48);
   }
+}
+
+function eduopsStableSnapshotSource_(snapshot) {
+  var s = snapshot && typeof snapshot === "object" ? snapshot : {};
+  var rows = Array.isArray(s.rows) ? s.rows.slice() : [];
+  rows.sort(function (a, b) {
+    var aId = eduopsClean_(a && a.identity && a.identity.applicantId || "");
+    var bId = eduopsClean_(b && b.identity && b.identity.applicantId || "");
+    return aId.localeCompare(bId)
+      || Number(a && a.identity && a.identity.rowNumber || 0) - Number(b && b.identity && b.identity.rowNumber || 0);
+  });
+  var stableRows = rows.map(function (row) {
+    var identity = row.identity || {};
+    var applicant = row.applicant || {};
+    var lifecycle = row.lifecycle || {};
+    var actionability = row.actionability || {};
+    var financeAuthority = row.finance && row.finance.financeAuthority || {};
+    var documents = row.documents || {};
+    var contactability = row.contactability || {};
+    return [
+      eduopsClean_(identity.applicantId || ""),
+      String(Number(identity.rowNumber || 0)),
+      eduopsClean_(applicant.name || ""),
+      eduopsClean_(applicant.effectiveEmail || ""),
+      eduopsClean_(applicant.phone || ""),
+      eduopsClean_(lifecycle.baseState || ""),
+      (Array.isArray(lifecycle.overlays) ? lifecycle.overlays.map(eduopsClean_).sort().join(",") : ""),
+      eduopsClean_(lifecycle.recommendedMessageType || ""),
+      eduopsClean_(actionability.state || ""),
+      eduopsClean_(actionability.workloadGroupKey || ""),
+      eduopsClean_(actionability.worklistKey || ""),
+      eduopsClean_(actionability.nextAction || ""),
+      actionability.selectable === true ? "1" : "0",
+      eduopsClean_(actionability.reasonCode || ""),
+      eduopsClean_(actionability.coolingOffUntil || ""),
+      eduopsClean_(financeAuthority.financeState || row.finance && row.finance.state || ""),
+      financeAuthority.paymentEvidencePresent === true ? "1" : "0",
+      financeAuthority.paymentVerified === true ? "1" : "0",
+      eduopsClean_(documents.state || ""),
+      documents.verified === true ? "1" : "0",
+      documents.requiredComplete === true ? "1" : "0",
+      eduopsClean_(contactability.state || "")
+    ].join("~");
+  });
+  return [
+    EDUOPS_CONTRACT_VERSION,
+    eduopsClean_(s.schemaVersion || ""),
+    eduopsClean_(s.sourceSheetName || ""),
+    String(Number(s.totalRows || rows.length || 0)),
+    stableRows.join("^")
+  ].join("|");
 }
 
 function eduopsNormalizePageSize_(value) {
