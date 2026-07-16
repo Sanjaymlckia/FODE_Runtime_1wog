@@ -17,11 +17,15 @@ function fixtureHtml() {
     window.__makeWorkload = function (payload) {
       var allCounts = ${JSON.stringify(counts)};
       var total = payload.workScope === "ALL_AUTHORISED" ? Number(allCounts[payload.actionabilityState] || 0) : 0;
-      var totalPages = Math.max(1, Math.ceil(total / payload.pageSize));
+      var allRows = Array.from({ length: total }, function (_unused, index) { var id = "FODE-TEST-" + payload.actionabilityState + "-" + index; return { product: "FODE", rowKey: id, applicantId: id, displayName: "Fixture Applicant " + index, email: "fixture@example.test", actionabilityState: payload.actionabilityState, urgencyLevel: index === 0 ? "CRITICAL" : "NORMAL", worklistKey: "FIXTURE", worklistLabel: "Fixture", actionOwner: "OFFICER", workOwnership: { scope: "MY" }, nextAction: "Review fixture", canonicalFinanceState: "PAYMENT_PENDING", documentState: "REVIEW_REQUIRED", portalState: "SUBMITTED", contactabilityState: "EMAIL_AVAILABLE", selectable: true, sourceReliability: { state: "AUTHORITATIVE" } }; });
+      var search = String(payload.filters && payload.filters.search || "").trim().toLowerCase();
+      var matchedRows = search ? allRows.filter(function (row) { return row.applicantId.toLowerCase().indexOf(search) >= 0 || row.displayName.toLowerCase().indexOf(search) >= 0; }) : allRows;
+      var matched = matchedRows.length;
+      var totalPages = Math.max(1, Math.ceil(matched / payload.pageSize));
       var page = Math.min(payload.page, totalPages);
-      var count = Math.min(payload.pageSize, Math.max(0, total - ((page - 1) * payload.pageSize)));
-      var rows = Array.from({ length: count }, function (_unused, index) { var id = "FODE-TEST-" + payload.actionabilityState + "-" + (index + ((page - 1) * payload.pageSize)); return { product: "FODE", rowKey: id, applicantId: id, displayName: "Fixture Applicant " + index, email: "fixture@example.test", actionabilityState: payload.actionabilityState, urgencyLevel: index === 0 ? "CRITICAL" : "NORMAL", worklistKey: "FIXTURE", worklistLabel: "Fixture", actionOwner: "OFFICER", workOwnership: { scope: "MY" }, nextAction: "Review fixture", canonicalFinanceState: "PAYMENT_PENDING", documentState: "REVIEW_REQUIRED", portalState: "SUBMITTED", contactabilityState: "EMAIL_AVAILABLE", selectable: true, sourceReliability: { state: "AUTHORITATIVE" } }; });
-      return { ok: true, product: "FODE", snapshotId: "FODE-TEST-SNAPSHOT", snapshotAsOf: "2026-07-15T00:00:00.000Z", reliabilityState: "AUTHORITATIVE", reliabilityReasons: ["Fixture authority"], actionabilityCounts: allCounts, worklistKeyCounts: { FIXTURE: total }, metricCounts: { eligibleNow: total }, reconciliation: { canonicalPopulation: 200, totalMatched: total, hiddenFromCurrentView: 200 - total, eligibleOutsideCurrentWindow: Math.max(0, total - count) }, page: page, pageSize: payload.pageSize, totalMatched: total, totalPages: totalPages, rows: rows, timings: { serverRpcMs: 7, canonicalSnapshotResolutionMs: 2, workloadCompositionMs: 1, sortingPagingMs: 1, responseBytes: 2048 } };
+      var offset = (page - 1) * payload.pageSize;
+      var rows = matchedRows.slice(offset, offset + payload.pageSize);
+      return { ok: true, product: "FODE", snapshotId: "FODE-TEST-SNAPSHOT", snapshotAsOf: "2026-07-15T00:00:00.000Z", reliabilityState: "AUTHORITATIVE", reliabilityReasons: ["Fixture authority"], actionabilityCounts: allCounts, worklistKeyCounts: { FIXTURE: matched }, metricCounts: { eligibleNow: matched }, reconciliation: { canonicalPopulation: 200, totalMatched: matched, hiddenFromCurrentView: 200 - matched, eligibleOutsideCurrentWindow: Math.max(0, matched - rows.length) }, page: page, pageSize: payload.pageSize, totalMatched: matched, totalPages: totalPages, rows: rows, timings: { serverRpcMs: 7, canonicalSnapshotResolutionMs: 2, workloadCompositionMs: 1, sortingPagingMs: 1, responseBytes: 2048 } };
     };
     window.EDUOPS_TRANSPORT = { call: function (name, payload) { return new Promise(function (resolve) { setTimeout(function () { if (name === "eduops_getAccessProjection") return resolve({ ok: true, runtime: { version: "rTEST", deployVersion: 0 }, user: { email: "operator@example.test", role: "ADMIN", capabilities: {} } }); if (name === "eduops_getProfile") return resolve({ ok: true, featureFlags: {} }); if (name === "eduops_queryOperationalWorkload") { window.__workloadCalls.push(JSON.parse(JSON.stringify(payload || {}))); return resolve(window.__makeWorkload(payload || {})); } resolve({ ok: true, matches: [], receipts: [] }); }, name === "eduops_queryOperationalWorkload" ? window.__rpcDelayMs : 0); }); } };
   </script>`;
@@ -77,6 +81,28 @@ async function settled(page) {
     await page.evaluate(() => { window.__rpcDelayMs = 5; });
     await page.locator("[data-retry-workload]").click();
     await settled(page);
+
+    await page.locator("#eduopsWorklistRows [data-select-applicant]").first().check();
+    assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /1 selected on this page/);
+    await page.locator("#eduopsSearch").fill("no-match");
+    await page.waitForFunction(() => !/1 selected on this page/.test(document.querySelector("#eduopsSelectionSummary")?.textContent || ""), null, { timeout: 3000 });
+    assert.doesNotMatch(await page.locator("#eduopsSelectionSummary").innerText(), /1 selected on this page/);
+    assert.equal(await page.locator("#eduopsOpenBatch").isDisabled(), true);
+    await settled(page);
+    assert.match(await page.locator("#eduopsVisibleRange").innerText(), /Showing 0-0 of 0/);
+    assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /0 selected on this page/);
+
+    await page.locator("#eduopsSearch").fill("");
+    await page.waitForFunction(() => document.querySelectorAll("#eduopsWorklistRows [data-select-applicant]").length > 0 && !/Loading|Queued/.test(document.querySelector("#eduopsVisibleRange")?.textContent || ""), null, { timeout: 3000 });
+    await page.locator("#eduopsPageSize").selectOption("10");
+    await settled(page);
+    await page.locator("#eduopsWorklistRows [data-select-applicant]").first().check();
+    await page.locator("#eduopsNextPage").click();
+    await page.waitForFunction(() => /Loading page 2|Queued page 2/.test(document.querySelector("#eduopsVisibleRange")?.textContent || ""), null, { timeout: 3000 });
+    assert.doesNotMatch(await page.locator("#eduopsSelectionSummary").innerText(), /1 selected on this page/);
+    assert.equal(await page.locator("#eduopsOpenBatch").isDisabled(), true);
+    await page.waitForFunction(() => /Showing 11-20/.test(document.querySelector("#eduopsVisibleRange")?.textContent || ""));
+    assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /0 selected on this page/);
     await page.close();
 
     for (const viewport of [{ width: 1920, height: 1080 }, { width: 1440, height: 900 }, { width: 1366, height: 768 }]) {

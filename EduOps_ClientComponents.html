@@ -159,13 +159,28 @@
   }
 
   app.renderPendingWorkload = function (request, phase) {
+    dom.eduopsApp.setAttribute("aria-busy", "true");
     dom.eduopsWorklistReason.textContent = (phase === "QUEUED" ? "Queued " : "Loading ") + app.contextLabel(request.payload) + ". Previous results will not be presented as the requested page.";
     dom.eduopsVisibleRange.textContent = (phase === "QUEUED" ? "Queued" : "Loading") + " page " + request.payload.page;
+    dom.eduopsSelectionSummary.textContent = request.selectionCleared ? "Selection cleared while the requested workload is being reconciled." : "Loading requested workload. Selection will be shown only after the returned page is reconciled.";
+    dom.eduopsOpenBatch.disabled = true;
+    dom.eduopsBatchReason.textContent = "Unavailable until the active workload is fully reconciled.";
+    dom.eduopsPreviousPage.disabled = true;
+    dom.eduopsNextPage.disabled = true;
+    dom.eduopsPageNumbers.innerHTML = "";
     dom.eduopsWorklistRows.innerHTML = '<tr><td colspan="8"><div class="eduops-loading-state"><strong>' + app.esc(app.contextLabel(request.payload)) + '</strong><span>Request started ' + app.esc(app.nowIso()) + '. A bounded timeout and retry path are active.</span></div></td></tr>';
   };
 
   app.renderWorkloadError = function (request, error, outcome) {
+    dom.eduopsApp.setAttribute("aria-busy", "false");
     dom.eduopsWorklistReason.textContent = app.contextLabel(request.payload) + " did not complete. No stale response was applied.";
+    dom.eduopsVisibleRange.textContent = "Workload unavailable";
+    dom.eduopsSelectionSummary.textContent = "Workload unavailable. No selection is retained for this request.";
+    dom.eduopsOpenBatch.disabled = true;
+    dom.eduopsBatchReason.textContent = "Unavailable until the active workload is fully reconciled.";
+    dom.eduopsPreviousPage.disabled = true;
+    dom.eduopsNextPage.disabled = true;
+    dom.eduopsPageNumbers.innerHTML = "";
     dom.eduopsWorklistRows.innerHTML = '<tr><td colspan="8"><div class="eduops-error-state"><strong>' + app.esc(outcome === "TIMEOUT" ? "The request exceeded the 10-second limit." : "The workload request failed.") + '</strong><span>' + app.esc(error && error.message || error) + '</span><button type="button" class="eduops-button eduops-button-primary" data-retry-workload>Retry requested context</button></div></td></tr>';
   };
 

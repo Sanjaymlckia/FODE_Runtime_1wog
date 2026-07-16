@@ -78,6 +78,7 @@
     workload: null,
     selected: {},
     selectionMode: "EXPLICIT",
+    selectionFingerprint: "",
     searchResults: [],
     workbench: null,
     activeTab: "overview",
@@ -259,6 +260,27 @@
     return JSON.stringify({ product: p.product, actionabilityState: p.actionabilityState, worklistKey: p.worklistKey, workScope: p.workScope, filters: p.filters, sort: p.sort, pageSize: p.pageSize });
   };
 
+  app.selectionFingerprint = function (payload, snapshotId) {
+    var p = payload || app.queryPayload();
+    return JSON.stringify({
+      product: p.product,
+      actionabilityState: p.actionabilityState,
+      worklistKey: p.worklistKey,
+      workScope: p.workScope,
+      filters: p.filters,
+      sort: p.sort,
+      page: p.page,
+      pageSize: p.pageSize,
+      snapshotId: snapshotId || p.expectedSnapshotId || app.state.snapshotId || ""
+    });
+  };
+
+  app.clearSelection = function () {
+    app.state.selected = {};
+    app.state.selectionMode = "EXPLICIT";
+    app.state.selectionFingerprint = "";
+  };
+
   app.contextLabel = function (payload) {
     return app.humanize(payload.actionabilityState) + " / " + (payload.worklistKey ? app.humanize(payload.worklistKey) : "All work types") + " / " + app.humanize(payload.workScope) + " / page " + payload.page;
   };
@@ -286,8 +308,7 @@
     app.state.page = Number(saved.page || 1);
     app.state.pageSize = Number(saved.pageSize || 25);
     app.state.snapshotId = saved.snapshotId || "";
-    app.state.selected = {};
-    app.state.selectionMode = "EXPLICIT";
+    app.clearSelection();
   };
 
   app.requestWorkload = function (options) {
@@ -299,10 +320,16 @@
       id: ++requestSequence,
       payload: payload,
       fingerprint: JSON.stringify(payload),
+      selectionFingerprint: app.selectionFingerprint(payload, payload.expectedSnapshotId || app.state.snapshotId || ""),
       startedAt: 0,
       settled: false,
-      superseded: false
+      superseded: false,
+      selectionCleared: false
     };
+    if (app.state.selectionFingerprint && Object.keys(app.state.selected).some(function (key) { return app.state.selected[key] === true; }) && app.state.selectionFingerprint !== request.selectionFingerprint) {
+      app.clearSelection();
+      request.selectionCleared = true;
+    }
     request.promise = new Promise(function (resolve) { request.resolve = resolve; });
     if (activeRequest) {
       if (activeRequest.fingerprint === request.fingerprint) {
@@ -351,12 +378,19 @@
     if (!superseded && error && app.renderWorkloadError) app.renderWorkloadError(request, error, outcome);
     if (!superseded && !error) {
       if (response.ok === false) {
+        app.state.workload = null;
+        app.clearSelection();
         if (app.renderWorkloadError) app.renderWorkloadError(request, new Error(response.message || response.code || "Workload rejected"), response.code || "REJECTED");
       } else {
         if (response.snapshotId) app.state.snapshotId = response.snapshotId;
         app.state.workload = response;
+        app.state.selectionFingerprint = app.selectionFingerprint(request.payload, response.snapshotId || request.payload.expectedSnapshotId || app.state.snapshotId || "");
         if (app.renderWorkload) app.renderWorkload(response, Date.now() - request.startedAt);
       }
+    }
+    if (!superseded && error) {
+      app.state.workload = null;
+      app.clearSelection();
     }
     recordRequestDiagnostic(request, finalOutcome, response, error);
     if (!superseded) {
