@@ -29,8 +29,8 @@
           "deploymentId": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ",
           "url": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec",
           "whoamiUrl": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami",
-          "expectedRuntime": "r352",
-          "expectedDeploy": 352,
+          "expectedRuntime": "r353",
+          "expectedDeploy": 353,
           "expectedAppsScriptVersion": 381,
           "lastRelease": {
             "runtimeIdentity": "r347 / 347",
