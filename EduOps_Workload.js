@@ -10,7 +10,7 @@ function renderEduOpsApp_(e) {
   t.BUILD_SCRIPT_ID = ScriptApp.getScriptId();
   t.EDUOPS_CONFIG = eduopsConfig_();
   return t.evaluate()
-    .setTitle((CONFIG.BRAND && CONFIG.BRAND.name ? CONFIG.BRAND.name : "FODE") + " - EduOps Shadow")
+    .setTitle((CONFIG.BRAND && CONFIG.BRAND.name ? CONFIG.BRAND.name : "FODE") + " - EduOps Operations Workspace")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
@@ -32,7 +32,11 @@ function eduops_getAccessProjection() {
       role: access.role,
       capabilities: access.capabilities
     },
-    rpcAllowlist: eduopsReadOnlyRpcAllowlist_()
+    rpcAllowlist: {
+      read: eduopsReadOnlyRpcAllowlist_(),
+      write: eduopsWriteRpcAllowlist_()
+    },
+    featureFlags: eduopsFeatureFlags_()
   };
 }
 
@@ -44,11 +48,14 @@ function eduops_getProfile() {
     readOnly: true,
     product: "FODE",
     label: "FODE",
-    description: "Read-only shadow workspace over the existing FODE authoritative runtime.",
+    description: "Actionability-first operations workspace over existing FODE authoritative services.",
     contractVersion: cfg.contractVersion,
     profileVersion: cfg.profileVersion,
     actionabilityStates: ["READY", "COOLING_OFF", "AWAITING_APPLICANT", "AWAITING_PAYMENT", "REVIEW_REQUIRED", "BLOCKED", "UNKNOWN", "COMPLETE"],
-    workScopes: ["MY", "TEAM", "UNASSIGNED", "ESCALATED", "ALL_AUTHORISED"]
+    workScopes: ["MY", "TEAM", "UNASSIGNED", "ESCALATED", "ALL_AUTHORISED"],
+    featureFlags: eduopsFeatureFlags_(),
+    commandContractVersion: "EDUOPS_COMMAND_PREVIEW_V1",
+    receiptContractVersion: "EDUOPS_RECEIPT_V1"
   };
 }
 
@@ -196,6 +203,7 @@ function eduops_getApplicantWorkbench(payload) {
   }
   var result = eduopsFodeApplicantRead_(applicantId, p.returnContext || {}, snapshotId);
   result.capabilities = eduopsCapabilityProjection_();
+  result.featureFlags = eduopsFeatureFlags_();
   result.timings = { applicantMs: Date.now() - started };
   return result;
 }
@@ -396,10 +404,21 @@ function eduopsFilterRows_(rows, query, reliability) {
     });
   }
   return list.filter(function (row) {
-    if (query.actionabilityState && eduopsUpper_(row.actionabilityState || "") !== query.actionabilityState) return false;
+    if (query.actionabilityState !== "ALL" && eduopsUpper_(row.actionabilityState || "") !== query.actionabilityState) return false;
     if (query.worklistKey && eduopsClean_(row.worklistKey || "") !== query.worklistKey) return false;
     if (query.workScope && query.workScope !== "ALL_AUTHORISED" && eduopsWorkScope_(row) !== query.workScope) return false;
-    var search = eduopsClean_(query.filters && query.filters.search || "");
+    var filters = query.filters || {};
+    if (filters.owner && eduopsClean_(row.actionOwner || "") !== eduopsClean_(filters.owner)) return false;
+    if (filters.urgency && eduopsUpper_(row.urgencyLevel || "") !== eduopsUpper_(filters.urgency)) return false;
+    if (filters.primaryRoute && eduopsClean_(row.primaryRoute || "") !== eduopsClean_(filters.primaryRoute)) return false;
+    if (filters.documentState && eduopsUpper_(row.documentState || "") !== eduopsUpper_(filters.documentState)) return false;
+    if (filters.financeState && eduopsUpper_(row.canonicalFinanceState || "") !== eduopsUpper_(filters.financeState)) return false;
+    if (filters.contactabilityState && eduopsUpper_(row.contactabilityState || "") !== eduopsUpper_(filters.contactabilityState)) return false;
+    if (filters.communicationState && eduopsClean_(row.recommendedMessageType || "") !== eduopsClean_(filters.communicationState)) return false;
+    if (filters.blockKind && eduopsClean_(row.blockerCode || "") !== eduopsClean_(filters.blockKind)) return false;
+    if (filters.cooling === "ACTIVE" && !eduopsClean_(row.coolingOffUntil || "")) return false;
+    if (filters.cooling === "NONE" && eduopsClean_(row.coolingOffUntil || "")) return false;
+    var search = eduopsClean_(filters.search || "");
     if (search) {
       var hay = [row.applicantId, row.name, row.email, row.phone, row.worklistLabel].join(" ").toLowerCase();
       if (hay.indexOf(search.toLowerCase()) < 0) return false;
@@ -438,7 +457,7 @@ function eduopsActionabilityCounts_(rows) {
 function eduopsWorklistCounts_(rows, query) {
   var out = {};
   (Array.isArray(rows) ? rows : []).forEach(function (row) {
-    if (query.actionabilityState && eduopsUpper_(row.actionabilityState || "") !== query.actionabilityState) return;
+    if (query.actionabilityState !== "ALL" && eduopsUpper_(row.actionabilityState || "") !== query.actionabilityState) return;
     var key = eduopsClean_(row.worklistKey || "UNKNOWN") || "UNKNOWN";
     out[key] = Number(out[key] || 0) + 1;
   });
@@ -505,7 +524,7 @@ function eduopsReconciliationForRows_(allRows, matchedRows, pageRows, query, sna
 }
 
 function eduopsHiddenReasonCode_(row, query) {
-  if (query.actionabilityState && eduopsUpper_(row.actionabilityState || "") !== query.actionabilityState) return eduopsUpper_(row.actionabilityState || "OTHER_ACTIONABILITY");
+  if (query.actionabilityState !== "ALL" && eduopsUpper_(row.actionabilityState || "") !== query.actionabilityState) return eduopsUpper_(row.actionabilityState || "OTHER_ACTIONABILITY");
   if (query.worklistKey && eduopsClean_(row.worklistKey || "") !== query.worklistKey) return "ANOTHER_WORKLIST_KEY";
   if (query.workScope && query.workScope !== "ALL_AUTHORISED" && eduopsWorkScope_(row) !== query.workScope) return "ANOTHER_WORK_SCOPE";
   if (row.selectable !== true) return eduopsClean_(row.reasonCode || "NOT_SELECTABLE");

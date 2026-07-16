@@ -1,11 +1,12 @@
 (function () {
   "use strict";
 
+  var previewStorage = window.sessionStorage;
   var state = {
-    dataMode: localStorage.getItem("eduopsPreviewDataMode") || "deterministic",
-    scenario: localStorage.getItem("eduopsPreviewScenario") || "normal-authoritative",
-    snapshotId: localStorage.getItem("eduopsPreviewSnapshotId") || "",
-    latencyMs: Number(localStorage.getItem("eduopsPreviewLatencyMs") || -1),
+    dataMode: previewStorage.getItem("eduopsPreviewDataMode") || "deterministic",
+    scenario: previewStorage.getItem("eduopsPreviewScenario") || "normal-authoritative",
+    snapshotId: previewStorage.getItem("eduopsPreviewSnapshotId") || "",
+    latencyMs: Number(previewStorage.getItem("eduopsPreviewLatencyMs") || -1),
     simulatedError: "",
     requestSeq: 0,
     log: [],
@@ -86,13 +87,14 @@
   function installPanel() {
     var app = document.getElementById("eduopsApp");
     if (!app || document.getElementById("eduopsPreviewLab")) return;
-    var panel = document.createElement("section");
+    var panel = document.createElement("aside");
     panel.id = "eduopsPreviewLab";
     panel.className = "eduops-preview-lab";
     panel.innerHTML = ''
-      + '<div class="eduops-preview-title"><strong>PREVIEW LAB - SIMULATED DATA - NO LIVE OPERATIONS</strong><span>NO LIVE DATA / NO LIVE MUTATIONS / SIMULATED EDUOPS CONTRACTS</span></div>'
-      + '<div id="eduopsPreviewModeBanner" class="eduops-preview-mode-banner"></div>'
-      + '<div class="eduops-preview-controls">'
+      + '<div class="eduops-preview-title"><div><strong>Preview Lab controls</strong><span>Simulated data / no live operations</span></div><button type="button" id="eduopsPreviewToggle" aria-expanded="false" aria-controls="eduopsPreviewTechnicalBody">Open controls</button></div>'
+      + '<div id="eduopsPreviewTechnicalBody" class="eduops-preview-technical-body" hidden>'
+        + '<div id="eduopsPreviewModeBanner" class="eduops-preview-mode-banner"></div>'
+        + '<div class="eduops-preview-controls">'
         + '<label>Data mode <select id="eduopsPreviewDataMode"><option value="deterministic">Deterministic Scenario Mode</option><option value="snapshot">Fresh FODE Snapshot Mode</option></select></label>'
         + '<label id="eduopsPreviewSnapshotLabel">Fresh snapshot <select id="eduopsPreviewSnapshot"><option value="">No local snapshot selected</option></select></label>'
         + '<label>Scenario <select id="eduopsPreviewScenario"></select></label>'
@@ -104,22 +106,32 @@
         + '<button type="button" data-preview-viewport="1440x900">1440x900</button>'
         + '<button type="button" data-preview-viewport="1366x768">1366x768</button>'
         + '<details><summary>Scenario notes</summary><div id="eduopsPreviewScenarioNotes"></div></details>'
-        + '<details><summary>Developer diagnostics</summary><pre id="eduopsPreviewDiagnostics">No preview requests yet.</pre><button type="button" id="eduopsPreviewExportLog">Export session log</button></details>'
+        + '<details><summary>Developer diagnostics</summary><pre id="eduopsPreviewBuildDiagnostics"></pre><pre id="eduopsPreviewDiagnostics">No preview requests yet.</pre><button type="button" id="eduopsPreviewExportLog">Export session log</button></details>'
         + '<details><summary>Owner review notes</summary><label>Finding note<textarea id="eduopsPreviewNote" rows="3" placeholder="Record local owner finding"></textarea></label><button type="button" id="eduopsPreviewSaveNote">Save local note</button><span id="eduopsPreviewNoteStatus"></span></details>'
+        + '</div>'
       + '</div>';
-    document.body.insertBefore(panel, app);
+    var railFooter = app.querySelector(".eduops-rail-footer");
+    (railFooter || document.body).appendChild(panel);
+    renderBuildDiagnostics();
+    document.getElementById("eduopsPreviewToggle").addEventListener("click", function () {
+      var body = document.getElementById("eduopsPreviewTechnicalBody");
+      var open = body.hidden;
+      body.hidden = !open;
+      this.setAttribute("aria-expanded", open ? "true" : "false");
+      this.textContent = open ? "Close controls" : "Open controls";
+    });
     var mode = document.getElementById("eduopsPreviewDataMode");
     mode.value = state.dataMode;
     mode.addEventListener("change", function () {
       state.dataMode = mode.value;
-      localStorage.setItem("eduopsPreviewDataMode", state.dataMode);
+      previewStorage.setItem("eduopsPreviewDataMode", state.dataMode);
       refreshModeBanner();
       reloadEduOps();
     });
     var snapshotSelect = document.getElementById("eduopsPreviewSnapshot");
     snapshotSelect.addEventListener("change", function () {
       state.snapshotId = snapshotSelect.value;
-      localStorage.setItem("eduopsPreviewSnapshotId", state.snapshotId);
+      previewStorage.setItem("eduopsPreviewSnapshotId", state.snapshotId);
       refreshModeBanner();
       if (state.dataMode === "snapshot") reloadEduOps();
     });
@@ -140,7 +152,7 @@
       renderScenarioNotes(items);
       select.addEventListener("change", function () {
         state.scenario = select.value;
-        localStorage.setItem("eduopsPreviewScenario", state.scenario);
+        previewStorage.setItem("eduopsPreviewScenario", state.scenario);
         renderScenarioNotes(items);
         reloadEduOps();
       });
@@ -149,7 +161,7 @@
     latency.value = String(state.latencyMs);
     latency.addEventListener("change", function () {
       state.latencyMs = Number(latency.value);
-      localStorage.setItem("eduopsPreviewLatencyMs", String(state.latencyMs));
+      previewStorage.setItem("eduopsPreviewLatencyMs", String(state.latencyMs));
       renderDiagnostics();
     });
     document.getElementById("eduopsPreviewError").addEventListener("change", function (event) {
@@ -160,8 +172,8 @@
       state.scenario = "normal-authoritative";
       state.latencyMs = -1;
       state.simulatedError = "";
-      localStorage.setItem("eduopsPreviewScenario", state.scenario);
-      localStorage.setItem("eduopsPreviewLatencyMs", "-1");
+      previewStorage.setItem("eduopsPreviewScenario", state.scenario);
+      previewStorage.setItem("eduopsPreviewLatencyMs", "-1");
       location.reload();
     });
     document.getElementById("eduopsPreviewReload").addEventListener("click", reloadEduOps);
@@ -220,6 +232,26 @@
     if (!target) return;
     var client = window.__EDUOPS_REQUEST_DIAGNOSTICS__ || [];
     target.textContent = JSON.stringify({ transport: state.log.slice(-12), client: client.slice(-12) }, null, 2);
+    renderBuildDiagnostics();
+  }
+
+  function renderBuildDiagnostics() {
+    var target = document.getElementById("eduopsPreviewBuildDiagnostics");
+    if (!target) return;
+    var build = window.EDUOPS_PREVIEW_BUILD || {};
+    var bootstrap = window.EduOpsApp && window.EduOpsApp.bootstrapMachine || {};
+    target.textContent = JSON.stringify({
+      serverBuildTimestamp: build.serverBuildTimestamp || "unknown",
+      runtimeClientInputHash: build.runtimeClientInputHash || "unknown",
+      servedClientBundleHash: build.servedClientBundleHash || "unknown",
+      transportVersion: build.transportVersion || "unknown",
+      scenarioVersion: build.scenarioVersion || "unknown",
+      requestStateVersion: build.requestStateVersion || "unknown",
+      snapshotVersion: state.snapshotId || "deterministic-default",
+      bootstrapState: bootstrap.state || "BOOT_START",
+      bootstrapEvents: bootstrap.events || [],
+      outstandingRequestState: window.EduOpsApp && window.EduOpsApp.bootstrapRequestState ? window.EduOpsApp.bootstrapRequestState() : {}
+    }, null, 2);
   }
 
   function exportLog() {
@@ -263,4 +295,5 @@
   }
 
   document.addEventListener("DOMContentLoaded", installPanel);
+  window.addEventListener("eduops:bootstrap-state", renderBuildDiagnostics);
 })();

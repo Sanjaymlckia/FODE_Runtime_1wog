@@ -13,7 +13,7 @@ const files = {
   workload: read("EduOps_Workload.js"),
   html: read("EduOps.html"),
   styles: read("EduOps_Styles.html"),
-  client: read("EduOps_Client.html"),
+  client: ["EduOps_ClientCore.html", "EduOps_ClientComponents.html", "EduOps_ClientWorkbench.html", "EduOps_ClientBatch.html", "EduOps_Client.html"].map(read).join("\n"),
   adminUi: read("AdminUI.html"),
   operatorNext: read("AdminUI_OperatorNext.html"),
   claspignore: read(".claspignore")
@@ -45,6 +45,10 @@ assert.doesNotMatch(files.operatorNext, /eduops_queryOperationalWorkload|EduOps 
 for (const name of [
   "EduOps.html",
   "EduOps_Client.html",
+  "EduOps_ClientBatch.html",
+  "EduOps_ClientComponents.html",
+  "EduOps_ClientCore.html",
+  "EduOps_ClientWorkbench.html",
   "EduOps_Contracts.js",
   "EduOps_FODE_Adapter.js",
   "EduOps_Styles.html",
@@ -95,7 +99,7 @@ assert.match(files.workload, /admin_getApplicantDocumentManifest/, "Document man
 assert.match(files.workload, /admin_getApplicantDocumentImageRendition/, "Document PNG rendition wrapper must reuse existing gallery authority");
 assert.match(files.workload, /admin_getApplicantDocumentFileAction/, "Open Original wrapper must reuse signed file-action authority");
 assert.match(files.workload, /eduopsRequireAccess_\(\)/g, "EduOps RPCs must perform server-side access checks");
-assert.match(files.client, /rpcAllowlist/, "EduOps client must use a closed RPC allowlist");
+assert.match(files.client, /readRpcAllowlist[\s\S]*writeRpcAllowlist/, "EduOps client must use closed read and write RPC allowlists");
 assert.doesNotMatch(files.client, /google\.script\.run\[[^\]]+\]/, "EduOps client must not use dynamic google.script.run dispatch");
 assert.doesNotMatch(files.client, /admin_[A-Za-z0-9_]+\(/, "EduOps client must not call legacy Admin RPCs directly");
 assert.doesNotMatch(files.adapter + files.workload, /prototypes\/eduops|mock-authority|eduops-next/i, "Runtime EduOps must not import prototype mock authority");
@@ -108,6 +112,6 @@ assert.match(files.adapter, /eduopsResolveFodeSnapshot_/, "Pass 1 must resolve a
 assert.match(files.workload, /canonicalSnapshotResolutionMs[\s\S]*workloadCompositionMs[\s\S]*sortingPagingMs[\s\S]*responseBytes/, "Workload must report segmented server timings and response size");
 assert.match(files.client, /workloadTimeoutMs[\s\S]*DISCARDED_SUPERSEDED[\s\S]*data-retry-workload/, "Client workload requests must be bounded, supersedable and retryable");
 assert.match(files.client, /workScopePinned[\s\S]*ALL_AUTHORISED/, "Actionability navigation must reset unpinned ownership scope");
-assert.match(files.html, /eduopsPinScope[\s\S]*Pin scope across Actionability/, "Pinned scope preservation must be explicit");
+assert.match(files.client, /if \(!app\.state\.workScopePinned\) app\.state\.workScope = "ALL_AUTHORISED"/, "Actionability changes must reset an unpinned ownership scope");
 
 console.log(`PASS EduOps Pass 1 read-only architecture contract publicRpcs=${publicEduopsFunctions.length}`);

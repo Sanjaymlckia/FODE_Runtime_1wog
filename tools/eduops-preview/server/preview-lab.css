@@ -1,27 +1,63 @@
 .eduops-preview-lab{
+  position:static;
+  width:100%;
+  margin-top:10px;
   font-family:"Aptos","Segoe UI",Arial,sans-serif;
   color:#102033;
   background:#fff7df;
-  border-bottom:3px solid #8a5700;
-  padding:10px 14px;
+  border:1px solid #8a5700;
+  border-left:4px solid #8a5700;
+  border-radius:6px;
+  box-shadow:0 10px 28px rgba(7,27,44,.2);
+  padding:8px 10px;
   display:grid;
   gap:8px;
 }
 .eduops-preview-title{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
+  display:grid;
+  gap:7px;
+}
+.eduops-preview-title>div{
+  min-width:0;
 }
 .eduops-preview-title strong{
+  display:block;
   font-size:15px;
-  letter-spacing:.03em;
+  font-weight:650;
 }
 .eduops-preview-title span{
+  display:block;
+  margin-top:2px;
   color:#6b4200;
-  font-weight:800;
+  font-weight:500;
   font-size:13px;
+}
+.eduops-preview-title button{
+  width:100%;
+  min-height:34px;
+  padding:6px 10px;
+  color:#4b3200;
+  background:#fff;
+  border:1px solid #9d7b35;
+  border-radius:5px;
+  font:inherit;
+  font-weight:600;
+  cursor:pointer;
+}
+.eduops-preview-technical-body{
+  position:fixed;
+  z-index:700;
+  top:76px;
+  right:12px;
+  width:min(520px,calc(100vw - 24px));
+  max-height:min(70vh,620px);
+  overflow:auto;
+  padding:12px;
+  background:#fff7df;
+  border:1px solid #8a5700;
+  border-left:4px solid #8a5700;
+  border-radius:6px;
+  box-shadow:0 10px 28px rgba(7,27,44,.2);
 }
 .eduops-preview-mode-banner{
   border:1px solid #b88a20;
@@ -29,7 +65,7 @@
   background:#fffdf5;
   color:#4b3200;
   padding:8px 10px;
-  font-weight:900;
+  font-weight:600;
 }
 .eduops-preview-mode-banner[data-mode="snapshot"]{
   background:#eef8ff;
@@ -46,7 +82,7 @@
   display:grid;
   gap:4px;
   font-size:12px;
-  font-weight:800;
+  font-weight:600;
 }
 .eduops-preview-controls select,
 .eduops-preview-controls textarea,
@@ -60,7 +96,7 @@
   font:inherit;
 }
 .eduops-preview-controls button{
-  font-weight:900;
+  font-weight:600;
   cursor:pointer;
 }
 .eduops-preview-controls details{
@@ -72,7 +108,7 @@
 }
 .eduops-preview-controls summary{
   cursor:pointer;
-  font-weight:900;
+  font-weight:600;
 }
 .eduops-preview-controls pre{
   max-width:min(900px,92vw);

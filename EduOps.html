@@ -1,150 +1,323 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <base target="_top">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231559a6'/%3E%3Cpath d='M7 8h9v6H7zm0 10h18v6H7zm13-10h5v6h-5z' fill='white'/%3E%3C/svg%3E">
+  <title>EduOps Operations Workspace Prototype</title>
   <?!= HtmlService.createHtmlOutputFromFile("EduOps_Styles").getContent(); ?>
 </head>
-<body>
-  <div id="eduopsApp" class="eduops-app" data-runtime="<?= BUILD_VERSION ?>" data-product="FODE">
-    <aside class="eduops-rail">
-      <div class="eduops-brand">
-        <div class="eduops-logo">EO</div>
-        <div>
-          <h1>EduOps</h1>
-          <p>Read-only shadow workspace</p>
-        </div>
+<body class="eduops-body">
+  <a class="eduops-skip-link" href="#eduopsWorklist">Skip to worklist</a>
+
+  <div id="eduopsApp" class="eduops-app" data-product="FODE" aria-busy="true">
+    <header class="eduops-topbar">
+      <div class="eduops-brand" aria-label="EduOps Operations Workspace">
+        <span class="eduops-brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 40 40" role="img">
+            <path d="M7 9h13v7H7zM7 20h20v7H7zM24 9h9v18h-9zM7 31h26v3H7z"></path>
+          </svg>
+        </span>
+        <span>
+          <strong>EduOps</strong>
+          <small>Operations Workspace</small>
+        </span>
       </div>
-      <div class="eduops-runtime">
-        <strong>FODE shadow</strong>
-        <span>Runtime <?= BUILD_VERSION ?> / read-only</span>
-        <span><?= USER_EMAIL ?></span>
+
+      <div class="eduops-topbar-context" aria-live="polite">
+        <span class="eduops-context-label">Current work</span>
+        <strong id="eduopsTopContext">Ready Now / All work types</strong>
       </div>
-      <nav id="eduopsStateNav" class="eduops-nav" aria-label="Actionability states"></nav>
-    </aside>
 
-    <main class="eduops-main">
-      <header class="eduops-hero">
-        <div>
-          <p class="eduops-kicker">Pass 1 / staging-only implementation</p>
-          <h2>FODE Operational Shadow Workspace</h2>
-          <p>Server-authored Actionability, search, reconciliation and read-only Workbench over existing FODE authorities.</p>
+      <div class="eduops-topbar-tools">
+        <div class="eduops-snapshot" title="Mock authoritative workload snapshot">
+          <span class="eduops-status-dot" aria-hidden="true"></span>
+          <span><strong id="eduopsSnapshotShort">Snapshot loading</strong><small id="eduopsSnapshotTime">Local simulation</small></span>
         </div>
-        <div class="eduops-readonly-badge">No EduOps mutations enabled</div>
-      </header>
-
-      <section id="eduopsReliability" class="eduops-reliability" aria-live="polite">
-        Loading source reliability...
-      </section>
-
-      <section class="eduops-toolbar" aria-label="Workload controls">
-        <label>
-          Search current workload
-          <input id="eduopsFilterSearch" type="search" placeholder="ApplicantID, name, email or phone">
-        </label>
-        <label>
-          Page size
-          <select id="eduopsPageSize">
-            <option value="25">25</option>
-            <option value="10">10</option>
-            <option value="50">50</option>
+        <label class="eduops-profile-control" for="eduopsProductSwitcher">
+          <span>Product profile</span>
+          <select id="eduopsProductSwitcher" aria-describedby="eduopsProfileHelp">
+            <option value="FODE">FODE</option>
+            <option value="KIA" data-preview-only="true">KIA (Preview only)</option>
+            <option value="MLC" data-preview-only="true">MLC (Preview only)</option>
           </select>
         </label>
-        <label>
-          Global applicant search
-          <input id="eduopsGlobalSearch" type="search" placeholder="Search all FODE applicants">
-        </label>
-      </section>
+        <span id="eduopsProfileHelp" class="eduops-visually-hidden">FODE is live. KIA and MLC are available only in Preview Lab.</span>
+        <span class="eduops-prototype-badge">Pass 2 / guarded operations</span>
+      </div>
+    </header>
 
-      <section id="eduopsGlobalResults" class="eduops-search-results" hidden></section>
-
-      <section class="eduops-kpis" id="eduopsKpis" aria-label="Actionability counts"></section>
-      <details class="eduops-diagnostics-disclosure">
-        <summary>Technical authority diagnostics</summary>
-        <p>Read-only parity checks are for administrator verification and are not part of normal operator navigation.</p>
-        <button id="eduopsOpenParity" class="eduops-secondary" type="button">Open parity diagnostics</button>
-      </details>
-      <section class="eduops-worklists" id="eduopsWorklists" aria-label="Worklist keys"></section>
-      <section class="eduops-scopes" id="eduopsScopes" aria-label="Work ownership scopes">
-        <button type="button" data-scope="ALL_AUTHORISED" class="active">All Authorised</button>
-        <button type="button" data-scope="MY">My Work</button>
-        <button type="button" data-scope="TEAM">Team</button>
-        <button type="button" data-scope="UNASSIGNED">Unassigned</button>
-        <button type="button" data-scope="ESCALATED">Escalated</button>
-        <label class="eduops-scope-pin"><input id="eduopsPinScope" type="checkbox"> Pin scope across Actionability</label>
-      </section>
-
-      <section class="eduops-panel">
-        <header class="eduops-panel-head">
-          <div>
-            <h3 id="eduopsWorkloadTitle">Workload</h3>
-            <p id="eduopsWorkloadMeta">Waiting for server workload...</p>
-            <p id="eduopsRequestStatus" class="eduops-request-status" aria-live="polite">No workload request pending.</p>
-          </div>
-          <button id="eduopsOpenReconciliation" class="eduops-secondary" type="button">Reconciliation</button>
-        </header>
-        <div class="eduops-table-wrap">
-          <table class="eduops-table">
-            <thead>
-              <tr>
-                <th>Applicant</th>
-                <th>Actionability</th>
-                <th>Worklist / owner</th>
-                <th>Next action</th>
-                <th>Domains</th>
-                <th>Reliability</th>
-                <th>Open</th>
-              </tr>
-            </thead>
-            <tbody id="eduopsRows"></tbody>
-          </table>
+    <div class="eduops-shell">
+      <aside class="eduops-rail" aria-label="Operations navigation">
+        <div class="eduops-rail-heading">
+          <span>Actionability</span>
+          <button id="eduopsRailCollapse" class="eduops-icon-button" type="button" aria-label="Collapse navigation" aria-expanded="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15.5 5-7 7 7 7"></path></svg>
+          </button>
         </div>
-        <footer class="eduops-pagination">
-          <button id="eduopsPrevPage" type="button">Previous</button>
-          <span id="eduopsPageMeta">Page 1</span>
-          <button id="eduopsNextPage" type="button">Next</button>
-        </footer>
-      </section>
+        <nav id="eduopsActionNav" class="eduops-action-nav" aria-label="Actionability states"></nav>
 
-      <section class="eduops-lenses" aria-label="Read-only domain lenses">
-        <button type="button" data-lens="finance">Finance</button>
-        <button type="button" data-lens="communications">Communications</button>
-        <button type="button" data-lens="portal">Portal</button>
-        <button type="button" data-lens="contactability">Contactability</button>
-      </section>
-      <section id="eduopsLensPanel" class="eduops-panel eduops-lens-panel" hidden></section>
-    </main>
+        <div class="eduops-rail-section">
+          <span class="eduops-rail-label">History</span>
+          <nav id="eduopsHistoryNav" class="eduops-secondary-nav" aria-label="History views"></nav>
+        </div>
 
-    <section id="eduopsWorkbench" class="eduops-workbench" hidden aria-modal="true" role="dialog" aria-label="Read-only applicant Workbench">
-      <div class="eduops-workbench-card">
-        <header>
-          <div>
-            <p class="eduops-kicker">Read-only Workbench</p>
-            <h2 id="eduopsWorkbenchTitle">Applicant</h2>
-            <p id="eduopsWorkbenchMeta"></p>
+        <div class="eduops-rail-section eduops-rail-section-support">
+          <span class="eduops-rail-label">Domain lenses</span>
+          <nav class="eduops-secondary-nav" aria-label="Domain lenses">
+            <button type="button" data-report="finance"><span>Finance Operations</span><small>Read only</small></button>
+            <button type="button" data-report="communications"><span>Communications</span><small>Read only</small></button>
+            <button type="button" data-report="portal"><span>Portal</span><small>Read only</small></button>
+            <button type="button" data-report="contactability"><span>Contactability</span><small>Read only</small></button>
+          </nav>
+        </div>
+
+        <div class="eduops-rail-section eduops-rail-section-support">
+          <span class="eduops-rail-label">Insights and support</span>
+          <nav id="eduopsSupportNav" class="eduops-secondary-nav" aria-label="Insight and support views">
+            <button type="button" data-report="lifecycle"><span>Global Lifecycle</span><small>Read only</small></button>
+            <button type="button" data-report="hidden"><span>Hidden / Other Routes</span><small id="eduopsHiddenRailCount">0</small></button>
+            <button type="button" data-report="summary"><span>Management Summary</span><small>Read only</small></button>
+            <button type="button" data-report="reports"><span>Reports</span><small>Read only</small></button>
+            <button type="button" data-report="audit-system"><span>Audit</span><small>Read only</small></button>
+            <button type="button" data-report="roles"><span>Roles &amp; Capabilities</span><small>Structural</small></button>
+            <button type="button" data-report="approvals"><span>Assignments &amp; Approvals</span><small>Structural</small></button>
+            <button type="button" data-report="data-quality"><span>Data Quality</span><small>Structural</small></button>
+            <button type="button" data-report="health"><span>System Health</span><small>Read only</small></button>
+          </nav>
+        </div>
+
+        <div class="eduops-rail-footer">
+          <strong>Authority projection</strong>
+          <span>EduOps Pass 2</span>
+          <span>FODE authority adapter</span>
+        </div>
+      </aside>
+
+      <main class="eduops-main" id="eduopsMain">
+        <div class="eduops-safety-banner" role="note">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.8 20h18.4L12 3Zm0 5.4v5.8m0 2.8v.2"></path></svg>
+          <div><strong>Authority-controlled workspace.</strong> No write executes unless feature flag, capability, preview, confirmation, lock and idempotency checks pass.</div>
+          <button id="eduopsSafetyDetails" type="button">View authority controls</button>
+        </div>
+
+        <section class="eduops-next-command" aria-label="Authority reliability and global search">
+          <div id="eduopsReliabilityBanner" class="eduops-reliability-banner" data-reliability="AUTHORITATIVE">
+            <strong>Authority source loading</strong>
+            <span>Product adapter status is being resolved.</span>
+            <div>
+              <button id="eduopsRefreshAuthority" class="eduops-button eduops-button-primary" type="button">Refresh source</button>
+            </div>
           </div>
-          <button id="eduopsCloseWorkbench" type="button">Close</button>
-        </header>
-        <nav id="eduopsWorkbenchTabs" class="eduops-tabs" aria-label="Workbench tabs"></nav>
-        <div id="eduopsWorkbenchBody" class="eduops-workbench-body"></div>
-      </div>
+          <div class="eduops-global-search">
+            <label for="eduopsGlobalSearch"><span>Global applicant search</span><input id="eduopsGlobalSearch" type="search" placeholder="ApplicantID, name, email or phone"></label>
+            <div id="eduopsGlobalSearchResults" class="eduops-global-search-results" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <section class="eduops-overview" aria-labelledby="eduopsPageTitle">
+          <div class="eduops-page-heading">
+            <div>
+              <span class="eduops-eyebrow">Actionability-first workload</span>
+              <h1 id="eduopsPageTitle">What can be acted on now?</h1>
+              <p id="eduopsPageIntro">Choose an authoritative work state, then a coherent worklist. Lifecycle and route remain context.</p>
+            </div>
+            <div class="eduops-heading-actions">
+              <button id="eduopsRefreshSnapshot" class="eduops-button eduops-button-secondary" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6.1 8.2A7 7 0 0 1 18.7 7M17.9 15.8A7 7 0 0 1 5.3 17"></path></svg>
+                Refresh workload
+              </button>
+              <button id="eduopsStartSession" class="eduops-button eduops-button-quiet" type="button">Start Work Session</button>
+            </div>
+          </div>
+
+          <div id="eduopsKpis" class="eduops-kpi-grid" role="list" aria-label="Actionability workload buckets"></div>
+          <div id="eduopsMetrics" class="eduops-metric-strip" aria-label="Informational workload metrics"></div>
+        </section>
+
+        <section id="eduopsWorklist" class="eduops-workspace" aria-labelledby="eduopsWorklistTitle" tabindex="-1">
+          <header class="eduops-workspace-header">
+            <div>
+              <span class="eduops-eyebrow">Current workload</span>
+              <h2 id="eduopsWorklistTitle"><span id="eduopsSelectedStateLabel">Ready Now</span><span aria-hidden="true"> / </span><span id="eduopsSelectedWorklistLabel">All work types</span></h2>
+              <p id="eduopsWorklistReason">Authoritative mock results for the selected Actionability state.</p>
+            </div>
+            <div class="eduops-workspace-actions">
+              <button id="eduopsOpenBatch" class="eduops-button eduops-button-primary" type="button" disabled aria-describedby="eduopsBatchReason">Open Batch Operations</button>
+              <span id="eduopsBatchReason" class="eduops-action-reason">Select an eligible cohort to enable a governed batch preview.</span>
+            </div>
+          </header>
+
+          <div class="eduops-worklist-key-band">
+            <span class="eduops-band-label">Worklist type</span>
+            <div id="eduopsWorklistKeys" class="eduops-worklist-keys" role="tablist" aria-label="Worklist types"></div>
+          </div>
+
+          <div class="eduops-work-scope-band">
+            <span class="eduops-band-label">Work scope</span>
+            <div class="eduops-scope-controls" role="group" aria-label="Work ownership scope">
+              <button type="button" data-work-scope="MY">My Work</button>
+              <button type="button" data-work-scope="TEAM">Team Work</button>
+              <button type="button" data-work-scope="UNASSIGNED">Unassigned</button>
+              <button type="button" data-work-scope="ESCALATED">Escalated</button>
+              <button type="button" data-work-scope="ALL_AUTHORISED">All Authorised Work</button>
+            </div>
+            <button id="eduopsOpenReconciliation" class="eduops-button eduops-button-secondary" type="button">Open reconciliation</button>
+          </div>
+
+          <div class="eduops-filter-toolbar" aria-label="Workload filters">
+            <label class="eduops-search" for="eduopsSearch">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+              <span class="eduops-visually-hidden">Search applicants</span>
+              <input id="eduopsSearch" type="search" placeholder="Search name, ApplicantID, email or phone" autocomplete="off">
+            </label>
+            <label class="eduops-inline-control" for="eduopsOwnerFilter"><span>Owner</span><select id="eduopsOwnerFilter"><option value="">All owners</option></select></label>
+            <label class="eduops-inline-control" for="eduopsUrgencyFilter"><span>Urgency</span><select id="eduopsUrgencyFilter"><option value="">All urgency</option></select></label>
+            <label class="eduops-inline-control eduops-sort-control" for="eduopsSort"><span>Sort</span><select id="eduopsSort"></select></label>
+            <button id="eduopsToggleFilters" class="eduops-button eduops-button-secondary eduops-filter-button" type="button" aria-expanded="false" aria-controls="eduopsAdvancedFilters">More filters <span id="eduopsFilterCount">0</span></button>
+          </div>
+
+          <div id="eduopsAdvancedFilters" class="eduops-advanced-filters" hidden>
+            <label>Primary route<select id="eduopsRouteFilter"><option value="">All routes</option></select></label>
+            <label>Document state<select id="eduopsDocumentFilter"><option value="">All document states</option></select></label>
+            <label>Finance state<select id="eduopsFinanceFilter"><option value="">All Finance states</option></select></label>
+            <label>Contactability<select id="eduopsContactFilter"><option value="">All contactability</option></select></label>
+            <label>Communication eligibility<select id="eduopsCommunicationFilter"><option value="">All communication states</option></select></label>
+            <label>Cooling-off<select id="eduopsCoolingFilter"><option value="">All</option><option value="ACTIVE">Cooling-off active</option><option value="NONE">No cooling-off</option></select></label>
+            <label>Blocked kind<select id="eduopsBlockKindFilter"><option value="">All blocker types</option></select></label>
+            <button id="eduopsClearFilters" class="eduops-button eduops-button-quiet" type="button">Clear all filters</button>
+          </div>
+
+          <div id="eduopsFilterChips" class="eduops-filter-chips" aria-live="polite"></div>
+
+          <div class="eduops-selection-bar" aria-label="Cohort selection controls">
+            <div class="eduops-selection-actions">
+              <button id="eduopsSelectVisible" class="eduops-button eduops-button-secondary" type="button">Select visible</button>
+              <button id="eduopsSelectAllReturned" class="eduops-button eduops-button-secondary" type="button">Select eligible page</button>
+              <button id="eduopsClearSelection" class="eduops-button eduops-button-quiet" type="button">Clear selection</button>
+            </div>
+            <div id="eduopsSelectionSummary" class="eduops-selection-summary" aria-live="polite">No applicants selected.</div>
+          </div>
+
+          <div class="eduops-table-shell">
+            <div id="eduopsTableScroller" class="eduops-table-scroller">
+              <table class="eduops-work-table">
+                <caption class="eduops-visually-hidden">Applicants in the selected Actionability workload</caption>
+                <thead>
+                  <tr>
+                    <th class="eduops-col-select" scope="col"><span class="eduops-visually-hidden">Select</span></th>
+                    <th class="eduops-col-applicant" scope="col">Applicant</th>
+                    <th class="eduops-col-action" scope="col">Work and next action</th>
+                    <th class="eduops-col-owner" scope="col">Owner</th>
+                    <th class="eduops-col-route" scope="col">Primary route</th>
+                    <th class="eduops-col-urgency" scope="col">Urgency</th>
+                    <th class="eduops-col-authority" scope="col">Authority result</th>
+                    <th class="eduops-col-open" scope="col"><span class="eduops-visually-hidden">Open</span></th>
+                  </tr>
+                </thead>
+                <tbody id="eduopsWorklistRows"></tbody>
+              </table>
+              <div id="eduopsEmptyState" class="eduops-empty-state" hidden>
+                <strong>No applicants match this workload.</strong>
+                <span>Adjust filters or choose another Actionability state.</span>
+              </div>
+            </div>
+
+            <footer class="eduops-pagination" aria-label="Worklist pagination">
+              <div id="eduopsVisibleRange">Showing 0 of 0</div>
+              <div class="eduops-page-controls">
+                <button id="eduopsPreviousPage" class="eduops-icon-button eduops-page-arrow" type="button" aria-label="Previous page">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"></path></svg>
+                </button>
+                <div id="eduopsPageNumbers" class="eduops-page-numbers"></div>
+                <button id="eduopsNextPage" class="eduops-icon-button eduops-page-arrow" type="button" aria-label="Next page">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"></path></svg>
+                </button>
+              </div>
+              <label class="eduops-page-size">Rows per page<select id="eduopsPageSize"><option value="10">10</option><option value="25" selected>25</option><option value="50">50</option></select></label>
+            </footer>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <aside id="eduopsQuickDrawer" class="eduops-quick-drawer" aria-labelledby="eduopsDrawerTitle" aria-hidden="true">
+      <header>
+        <div><span class="eduops-eyebrow">Quick view / read only</span><h2 id="eduopsDrawerTitle">Applicant details</h2></div>
+        <button id="eduopsCloseDrawer" class="eduops-icon-button" type="button" aria-label="Close quick view">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg>
+        </button>
+      </header>
+      <div id="eduopsDrawerContent" class="eduops-drawer-content"></div>
+      <footer id="eduopsDrawerActions" class="eduops-drawer-actions"></footer>
+    </aside>
+    <button id="eduopsDrawerScrim" class="eduops-drawer-scrim" type="button" aria-label="Close quick view" hidden></button>
+
+    <section id="eduopsWorkbench" class="eduops-route-overlay eduops-workbench" aria-labelledby="eduopsWorkbenchTitle" aria-hidden="true" hidden>
+      <header class="eduops-overlay-topbar">
+        <button id="eduopsCloseWorkbench" class="eduops-back-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"></path></svg>
+          Return to workload
+        </button>
+        <div class="eduops-overlay-identity">
+          <span class="eduops-eyebrow" id="eduopsWorkbenchContext">Individual Workbench</span>
+          <h1 id="eduopsWorkbenchTitle">Applicant</h1>
+          <p id="eduopsWorkbenchSubtitle">ApplicantID</p>
+        </div>
+        <div class="eduops-overlay-status">
+          <span class="eduops-prototype-badge">Individual Workbench</span>
+          <button id="eduopsWorkbenchPrevious" class="eduops-button eduops-button-secondary" type="button">Previous applicant</button>
+          <button id="eduopsWorkbenchNext" class="eduops-button eduops-button-secondary" type="button">Next applicant</button>
+          <button id="eduopsWorkbenchMore" class="eduops-button eduops-button-secondary" type="button">Audit context</button>
+        </div>
+      </header>
+      <div id="eduopsWorkbenchAuthority" class="eduops-authority-header"></div>
+      <nav id="eduopsWorkbenchTabs" class="eduops-workbench-tabs" aria-label="Applicant workbench sections" role="tablist"></nav>
+      <div id="eduopsWorkbenchPanel" class="eduops-workbench-panel" role="tabpanel" tabindex="0"></div>
+      <footer id="eduopsSessionBar" class="eduops-session-bar" hidden></footer>
     </section>
 
-    <section id="eduopsDrawer" class="eduops-drawer" hidden aria-modal="true" role="dialog" aria-label="EduOps diagnostics">
-      <div class="eduops-drawer-card">
-        <header>
-          <h2 id="eduopsDrawerTitle">Diagnostics</h2>
-          <button id="eduopsCloseDrawer" type="button">Close</button>
-        </header>
-        <div id="eduopsDrawerBody"></div>
-      </div>
+    <section id="eduopsBatchWorkspace" class="eduops-route-overlay eduops-batch" aria-labelledby="eduopsBatchTitle" aria-hidden="true" hidden>
+      <header class="eduops-overlay-topbar eduops-batch-topbar">
+        <button id="eduopsCloseBatch" class="eduops-back-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"></path></svg>
+          Return to cohort
+        </button>
+        <div class="eduops-overlay-identity">
+          <span class="eduops-eyebrow">Governed Batch Operations</span>
+          <h1 id="eduopsBatchTitle">Batch Operations</h1>
+          <p id="eduopsBatchSubtitle">Define, revalidate, preview, confirm and receive results.</p>
+        </div>
+        <div class="eduops-overlay-status">
+          <span id="eduopsBatchOperationStatus" class="eduops-operation-status">Operation status: awaiting cohort</span>
+          <span class="eduops-prototype-badge">Guarded execution</span>
+        </div>
+      </header>
+      <div id="eduopsBatchCohort" class="eduops-batch-cohort"></div>
+      <nav id="eduopsBatchSteps" class="eduops-batch-steps" aria-label="Batch operation progress"></nav>
+      <div id="eduopsBatchPanel" class="eduops-batch-panel" tabindex="0"></div>
+      <footer id="eduopsBatchFooter" class="eduops-batch-footer"></footer>
     </section>
+
+    <section id="eduopsReportPanel" class="eduops-report-panel" aria-labelledby="eduopsReportTitle" aria-hidden="true" hidden>
+      <header><div><span id="eduopsReportType" class="eduops-eyebrow">Read-only supporting view</span><h2 id="eduopsReportTitle">Report</h2></div><button id="eduopsCloseReport" class="eduops-icon-button" type="button" aria-label="Close report"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"></path></svg></button></header>
+      <div id="eduopsReportContent"></div>
+    </section>
+
+    <div id="eduopsConfirmLayer" class="eduops-confirm-layer" aria-hidden="true" hidden>
+      <div class="eduops-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="eduopsConfirmTitle" aria-describedby="eduopsConfirmText">
+        <span class="eduops-eyebrow">Explicit operation confirmation</span>
+        <h2 id="eduopsConfirmTitle">Confirm operation</h2>
+        <div id="eduopsConfirmText"></div>
+        <div class="eduops-confirm-actions"><button id="eduopsConfirmCancel" class="eduops-button eduops-button-secondary" type="button">Cancel</button><button id="eduopsConfirmProceed" class="eduops-button eduops-button-primary" type="button">Confirm guarded operation</button></div>
+      </div>
+    </div>
+
+    <div id="eduopsToast" class="eduops-toast" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div id="eduopsInteractionStatus" class="eduops-interaction-status" role="status" aria-live="polite" aria-atomic="true" data-state="IDLE">Workspace ready.</div>
+    <div id="eduopsBootstrapHelp" class="eduops-visually-hidden">Workspace controls become available after the source and first workload are ready.</div>
   </div>
-
   <script>
     window.EDUOPS_BOOTSTRAP = {
       runtime: "<?= BUILD_VERSION ?>",
@@ -154,6 +327,10 @@
       role: "<?= ADMIN_ROLE ?>"
     };
   </script>
+  <?!= HtmlService.createHtmlOutputFromFile("EduOps_ClientCore").getContent(); ?>
+  <?!= HtmlService.createHtmlOutputFromFile("EduOps_ClientComponents").getContent(); ?>
+  <?!= HtmlService.createHtmlOutputFromFile("EduOps_ClientWorkbench").getContent(); ?>
+  <?!= HtmlService.createHtmlOutputFromFile("EduOps_ClientBatch").getContent(); ?>
   <?!= HtmlService.createHtmlOutputFromFile("EduOps_Client").getContent(); ?>
 </body>
 </html>

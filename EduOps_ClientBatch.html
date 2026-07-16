@@ -1,0 +1,176 @@
+<script>
+(function () {
+  "use strict";
+
+  var app = window.EduOpsApp;
+  var dom = {};
+  var steps = ["cohort", "partitions", "preview", "confirm", "receipt"];
+
+  function byId(id) { return document.getElementById(id); }
+  function ensureDom() {
+    if (dom.root) return;
+    dom.root = byId("eduopsBatchWorkspace");
+    dom.title = byId("eduopsBatchTitle");
+    dom.subtitle = byId("eduopsBatchSubtitle");
+    dom.status = byId("eduopsBatchOperationStatus");
+    dom.cohort = byId("eduopsBatchCohort");
+    dom.steps = byId("eduopsBatchSteps");
+    dom.panel = byId("eduopsBatchPanel");
+    dom.footer = byId("eduopsBatchFooter");
+    dom.session = byId("eduopsSessionBar");
+  }
+  function selectedRows() {
+    var rows = app.state.workload && app.state.workload.rows || [];
+    return rows.filter(function (row) { return app.state.selected[row.applicantId] === true && row.selectable === true; });
+  }
+  function binding() {
+    return { product: app.state.product, snapshotId: app.state.snapshotId, queryFingerprint: app.queryFingerprint(), selectionMode: app.state.selectionMode, selectedApplicantIds: selectedRows().map(function (row) { return row.applicantId; }), excludedApplicantIds: [] };
+  }
+  function cohortHeader() {
+    var batch = app.state.batch;
+    var count = batch.binding.selectedApplicantIds.length;
+    dom.cohort.innerHTML = [["Product", batch.binding.product], ["Snapshot", batch.binding.snapshotId], ["Selected cohort", count], ["Worklist", app.state.worklistKey ? app.humanize(app.state.worklistKey) : "All work types"], ["Query binding", batch.binding.queryFingerprint.slice(0, 56) + "..."]].map(function (item) { return '<div class="eduops-cohort-item"><span>' + app.esc(item[0]) + '</span><strong>' + app.esc(item[1]) + '</strong></div>'; }).join("");
+  }
+  function renderSteps() {
+    var index = steps.indexOf(app.state.batch.step);
+    dom.steps.innerHTML = steps.map(function (step, stepIndex) { var status = stepIndex < index ? "complete" : stepIndex === index ? "current" : "pending"; return '<button type="button" class="eduops-batch-step" data-batch-step="' + step + '" data-status="' + status + '"' + (stepIndex <= index ? "" : " disabled") + '><span class="eduops-batch-step-number">' + (status === "complete" ? "OK" : stepIndex + 1) + '</span>' + app.esc(app.humanize(step)) + '</button>'; }).join("");
+  }
+  function rowsTable(rows, outcome) {
+    return '<div class="eduops-table-scroller"><table class="eduops-work-table"><thead><tr><th>Applicant</th><th>Actionability</th><th>Worklist</th><th>Outcome</th><th>Handoff</th></tr></thead><tbody>' + rows.map(function (row) { var item = outcome && outcome[row.applicantId]; return '<tr><td><strong>' + app.esc(row.displayName) + '</strong><span>' + app.esc(row.applicantId) + '</span></td><td>' + app.esc(app.humanize(row.actionabilityState)) + '</td><td>' + app.esc(app.humanize(row.worklistKey || row.worklistLabel)) + '</td><td>' + app.esc(item ? item.outcome + (item.reason ? " - " + item.reason : "") : "Pending preview") + '</td><td><button type="button" class="eduops-row-open" data-batch-open="' + app.esc(row.applicantId) + '">Open</button></td></tr>'; }).join("") + '</tbody></table></div>';
+  }
+  function operationOptions() {
+    return [
+      ["BATCH_COMMUNICATION", "Batch communication", "The only proven batch-safe authority in this pass. Template, recipient and cooling-off are revalidated server-side."]
+    ].map(function (item) { return '<label class="eduops-operation-option"><input type="radio" name="eduopsBatchOperation" value="' + item[0] + '"' + (app.state.batch.operation === item[0] ? " checked" : "") + '><span><strong>' + item[1] + '</strong><small>' + item[2] + '</small></span></label>'; }).join("");
+  }
+  function renderCohort() {
+    var batch = app.state.batch;
+    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-12"><header><div><span class="eduops-eyebrow">Snapshot-bound selection</span><h2>Defined eligible cohort</h2><p>The server will revalidate every member before creating operation partitions.</p></div><span class="eduops-capability-state" data-state="' + (batch.binding.selectedApplicantIds.length ? "READY" : "BLOCKED") + '">' + (batch.binding.selectedApplicantIds.length ? "Ready to revalidate" : "No eligible selection") + '</span></header>' + rowsTable(batch.rows) + '</section><section class="eduops-panel-card eduops-span-12"><header><div><h2>Choose one homogeneous operation</h2><p>Document, payment and Portal reset actions are never batch-safe.</p></div></header><div class="eduops-operation-options">' + operationOptions() + '</div></section></div>';
+  }
+  function renderPartitions() {
+    var preview = app.state.batch.preview || {};
+    var partitions = preview.partitions || [];
+    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-8"><header><div><h2>Server-authored partitions</h2><p>Capability, operation compatibility and current authority are revalidated.</p></div></header>' + (partitions.length ? partitions.map(function (part) { return '<article class="eduops-partition-card"><strong>' + app.esc(part.label || app.humanize(part.partitionKey)) + '</strong><span>' + Number(part.memberCount || 0) + ' members / cap ' + Number(part.executionCap || 0) + '</span><small>' + app.esc(part.requiredCapability || "Capability not returned") + '</small></article>'; }).join("") : '<div class="eduops-error-state"><strong>No executable partition returned</strong><span>' + app.esc(preview.message || "The cohort is blocked or incompatible.") + '</span></div>') + '</section><section class="eduops-panel-card eduops-span-4"><header><div><h2>Revalidation result</h2></div></header><dl class="eduops-definition-list"><div><dt>Eligible</dt><dd>' + Number(preview.eligibleCount || 0) + '</dd></div><div><dt>Blocked</dt><dd>' + Number(preview.blockedCount || 0) + '</dd></div><div><dt>Excluded</dt><dd>' + Number(preview.excludedCount || 0) + '</dd></div><div><dt>Preview state</dt><dd>' + app.esc(app.humanize(preview.state || "UNKNOWN")) + '</dd></div></dl></section></div>';
+  }
+  function renderPreview() {
+    var preview = app.state.batch.preview || {};
+    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-12"><header><div><span class="eduops-eyebrow">Authoritative operation preview</span><h2>' + app.esc(preview.summary || app.humanize(app.state.batch.operation)) + '</h2><p>Nothing has executed. Review exact scope, capability and expiry.</p></div><span class="eduops-capability-state" data-state="' + (preview.state === "READY" ? "READY" : "BLOCKED") + '">' + app.esc(preview.state || "BLOCKED") + '</span></header><dl class="eduops-definition-list"><div><dt>Preview ID</dt><dd>' + app.esc(preview.previewId) + '</dd></div><div><dt>Snapshot</dt><dd>' + app.esc(preview.snapshotId) + '</dd></div><div><dt>Query fingerprint</dt><dd>' + app.esc(preview.queryFingerprint) + '</dd></div><div><dt>Required capability</dt><dd>' + app.esc(preview.requiredCapability) + '</dd></div><div><dt>Idempotency key</dt><dd>' + app.esc(preview.idempotencyKey) + '</dd></div><div><dt>Expires</dt><dd>' + app.esc(preview.expiresAt) + '</dd></div></dl>' + rowsTable(app.state.batch.rows) + '</section></div>';
+  }
+  function renderReceipt() {
+    var receipt = app.state.batch.receipt || {};
+    var outcomes = {};
+    (receipt.applicantOutcomes || []).forEach(function (item) { outcomes[item.applicantId] = item; });
+    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-12"><header><div><span class="eduops-eyebrow">Versioned authoritative receipt</span><h2>' + app.esc(receipt.outcome || "Receipt returned") + '</h2><p>' + app.esc(receipt.receiptId || "No receipt ID") + '</p></div><span class="eduops-capability-state" data-state="' + (receipt.outcome === "COMPLETE" ? "READY" : "BLOCKED") + '">' + app.esc(receipt.outcome || "UNKNOWN") + '</span></header>' + rowsTable(app.state.batch.rows, outcomes) + '</section></div>';
+  }
+  function render() {
+    ensureDom();
+    var batch = app.state.batch;
+    cohortHeader();
+    renderSteps();
+    dom.status.textContent = "Operation status: " + app.humanize(batch.preview && batch.preview.state || (batch.binding.selectedApplicantIds.length ? "READY" : "BLOCKED"));
+    dom.status.setAttribute("data-state", batch.preview && batch.preview.state === "READY" ? "READY" : batch.binding.selectedApplicantIds.length ? "READY" : "BLOCKED");
+    if (batch.step === "cohort") dom.panel.innerHTML = renderCohort();
+    else if (batch.step === "partitions") dom.panel.innerHTML = renderPartitions();
+    else if (batch.step === "preview" || batch.step === "confirm") dom.panel.innerHTML = renderPreview();
+    else dom.panel.innerHTML = renderReceipt();
+    var footer = "";
+    if (batch.step === "cohort") footer = '<button class="eduops-button eduops-button-primary" type="button" data-batch-preview' + (!batch.operation || !batch.binding.selectedApplicantIds.length ? " disabled" : "") + '>Revalidate and create preview</button>';
+    if (batch.step === "partitions") footer = '<button class="eduops-button eduops-button-secondary" type="button" data-batch-back>Back to cohort</button><button class="eduops-button eduops-button-primary" type="button" data-batch-continue' + (batch.preview && batch.preview.state === "READY" ? "" : " disabled") + '>Review authoritative preview</button>';
+    if (batch.step === "preview") footer = '<button class="eduops-button eduops-button-secondary" type="button" data-batch-back>Back</button><button class="eduops-button eduops-button-primary" type="button" data-batch-confirm' + (batch.preview && batch.preview.state === "READY" ? "" : " disabled") + '>Continue to confirmation</button>';
+    if (batch.step === "confirm") footer = '<button class="eduops-button eduops-button-secondary" type="button" data-batch-back>Back</button><button class="eduops-button eduops-button-primary" type="button" data-batch-execute>Confirm guarded batch</button>';
+    if (batch.step === "receipt") footer = '<button class="eduops-button eduops-button-secondary" type="button" data-batch-close>Return to updated workload</button>';
+    dom.footer.innerHTML = footer;
+  }
+
+  app.openBatch = function (source) {
+    if (app.state.workbench && app.state.dirty) return app.requestWorkbenchLeave(function () { app.openBatch(source); }, source);
+    ensureDom();
+    var rows = selectedRows();
+    app.state.returnContext = app.snapshotReturnContext();
+    app.state.batch = { step: "cohort", binding: binding(), rows: rows, operation: "", preview: null, receipt: null, source: source };
+    dom.root.hidden = false;
+    dom.root.setAttribute("aria-hidden", "false");
+    dom.title.textContent = "Batch Operations";
+    dom.subtitle.textContent = rows.length + " selected applicant(s) / " + app.state.snapshotId;
+    app.pushRoute("batch");
+    render();
+    byId("eduopsCloseBatch").focus();
+  };
+  app.closeBatch = function (fromHistory) {
+    ensureDom();
+    dom.root.hidden = true;
+    dom.root.setAttribute("aria-hidden", "true");
+    app.state.batch = null;
+    if (!fromHistory) app.replaceRoute("workload");
+    return app.restoreReturnContext();
+  };
+  function createPreview() {
+    var batch = app.state.batch;
+    var source = dom.footer.querySelector("[data-batch-preview]");
+    var token = app.beginControlAction(source, "Revalidating...", "Revalidating the selected cohort and creating an authoritative preview.");
+    var key = app.idempotencyKey(batch.operation, "COHORT");
+    var first = batch.rows && batch.rows[0] || {};
+    app.call("eduops_previewCommand", { operation: batch.operation, product: batch.binding.product, snapshotId: batch.binding.snapshotId, queryFingerprint: batch.binding.queryFingerprint, selection: batch.binding, idempotencyKey: key, draft: { messageType: first.recommendedMessageType || "docs_missing" } }).then(function (preview) { app.finishControlAction(token, "SUCCESS", "Batch preview created. Review server-authored partitions."); batch.preview = preview; batch.preview.idempotencyKey = preview.idempotencyKey || key; batch.step = "partitions"; render(); }).catch(function (error) { app.finishControlAction(token, "BLOCKED", "Batch preview blocked: " + (error.message || error)); batch.preview = { state: "BLOCKED", message: String(error.message || error), partitions: [] }; batch.step = "partitions"; render(); });
+  }
+  function execute() {
+    var batch = app.state.batch;
+    app.openConfirm({ title: "Confirm guarded batch operation", html: '<p><strong>' + app.esc(batch.preview.summary || app.humanize(batch.operation)) + '</strong></p><p>' + batch.binding.selectedApplicantIds.length + ' applicant(s), snapshot ' + app.esc(batch.binding.snapshotId) + '.</p><p>The server will revalidate capability, preview expiry, lock and idempotency before execution.</p>', proceedLabel: "Execute approved batch", cancelLabel: "Return to preview", source: dom.footer.querySelector("[data-batch-execute]"), onProceed: function () { var executeToken = app.beginControlAction(byId("eduopsConfirmProceed"), "Executing...", "Executing the confirmed batch once."); app.call("eduops_executeCommand", { previewId: batch.preview.previewId, idempotencyKey: batch.preview.idempotencyKey, confirmation: true }).then(function (receipt) { app.finishControlAction(executeToken, "SUCCESS", "Batch receipt " + receipt.receiptId + " returned: " + receipt.outcome + "."); app.closeConfirm(false); batch.receipt = receipt; batch.step = "receipt"; app.state.selected = {}; render(); }).catch(function (error) { app.finishControlAction(executeToken, "BLOCKED", "Batch blocked: " + (error.message || error)); app.closeConfirm(false); app.toast("Batch blocked: " + (error.message || error)); }); } });
+  }
+  function openWorkSession() {
+    var rows = (app.state.workload && app.state.workload.rows || []).slice();
+    if (!rows.length) { app.setInteractionState("BLOCKED", "Work Session cannot start because the current workload has no visible applicants."); return; }
+    app.state.workSession = { applicantIds: rows.map(function (row) { return row.applicantId; }), index: 0, completed: [], skipped: [], exceptions: [] };
+    app.openWorkbench(rows[0].applicantId, byId("eduopsStartSession"));
+    app.setInteractionState("SUCCESS", "Work Session started with " + rows.length + " applicants.");
+    renderSession();
+  }
+  function renderSession() {
+    ensureDom();
+    var session = app.state.workSession;
+    if (!session || !app.state.workbench) { dom.session.hidden = true; return; }
+    var current = session.applicantIds[session.index];
+    dom.session.hidden = false;
+    dom.session.innerHTML = '<div><strong>Work Session</strong><span>' + (session.index + 1) + ' of ' + session.applicantIds.length + ' / ' + app.esc(current) + '</span></div><div class="eduops-action-row"><button class="eduops-button eduops-button-secondary" type="button" data-session-skip>Skip</button><button class="eduops-button eduops-button-primary" type="button" data-session-next>Complete and next</button><button class="eduops-button eduops-button-secondary" type="button" data-session-exit>Return to workload</button></div>';
+  }
+  function advanceSession(outcome) {
+    var session = app.state.workSession;
+    if (!session) return;
+    var current = session.applicantIds[session.index];
+    session[outcome].push(current);
+    app.setInteractionState("SUCCESS", current + " marked " + (outcome === "completed" ? "complete" : "skipped") + " in this Preview Work Session.");
+    if (session.index >= session.applicantIds.length - 1) { app.state.workSession = null; app.closeWorkbench(); return; }
+    session.index++;
+    app.state.dirty = false;
+    app.openWorkbench(session.applicantIds[session.index], dom.session);
+    setTimeout(renderSession, 0);
+  }
+
+  app.bindBatch = function () {
+    ensureDom();
+    byId("eduopsCloseBatch").addEventListener("click", function () { app.closeBatch(); });
+    byId("eduopsOpenBatch").addEventListener("click", function () { app.openBatch(this); });
+    var sessionButton = byId("eduopsStartSession");
+    if (sessionButton) sessionButton.addEventListener("click", openWorkSession);
+    dom.root.addEventListener("change", function (event) { if (event.target.name === "eduopsBatchOperation") { app.state.batch.operation = event.target.value; app.state.batch.preview = null; render(); } });
+    dom.root.addEventListener("click", function (event) {
+      var requestedStep = event.target.closest("[data-batch-step]");
+      if (requestedStep && !requestedStep.disabled) { app.state.batch.step = requestedStep.getAttribute("data-batch-step"); render(); app.setInteractionState("SUCCESS", app.humanize(app.state.batch.step) + " batch step opened."); return; }
+      if (event.target.closest("[data-batch-preview]")) return createPreview();
+      if (event.target.closest("[data-batch-continue]")) { app.state.batch.step = "preview"; render(); return; }
+      if (event.target.closest("[data-batch-confirm]")) { app.state.batch.step = "confirm"; render(); return; }
+      if (event.target.closest("[data-batch-execute]")) return execute();
+      if (event.target.closest("[data-batch-close]")) return app.closeBatch();
+      var back = event.target.closest("[data-batch-back]");
+      if (back) { var index = Math.max(0, steps.indexOf(app.state.batch.step) - 1); app.state.batch.step = steps[index]; render(); return; }
+      var applicant = event.target.closest("[data-batch-open]");
+      if (applicant) { var id = applicant.getAttribute("data-batch-open"); app.closeBatch(true); app.openWorkbench(id, applicant); }
+    });
+    document.addEventListener("click", function (event) {
+      if (event.target.closest("[data-session-skip]")) advanceSession("skipped");
+      if (event.target.closest("[data-session-next]")) advanceSession("completed");
+      if (event.target.closest("[data-session-exit]")) { app.state.workSession = null; app.setInteractionState("SUCCESS", "Work Session ended. Returning to the exact workload context."); app.closeWorkbench(); }
+    });
+  };
+  app.renderWorkSession = renderSession;
+})();
+</script>

@@ -4,246 +4,148 @@ const { start } = require("./server/server");
 
 const playwrightModule = process.env.FODE_PLAYWRIGHT_MODULE || "F:/Playwright/fode-secure-link-diagnostic/node_modules/playwright";
 const { chromium } = require(playwrightModule);
-
-const viewports = [
-  { width: 1920, height: 1080 },
-  { width: 1440, height: 900 },
-  { width: 1366, height: 768 }
-];
-
+const viewports = [{ width: 1920, height: 1080 }, { width: 1440, height: 900 }, { width: 1366, height: 768 }];
 const runId = `run-${new Date().toISOString().replace(/[:.]/g, "-")}`;
 const evidenceRoot = path.join(__dirname, "evidence", runId);
-const summary = {
-  runId,
-  createdAt: new Date().toISOString(),
-  viewports,
-  screenshots: [],
-  consoleErrors: [],
-  pageErrors: [],
-  overflow: [],
-  timings: [],
-  pngIntegrity: []
-};
+const summary = { runId, createdAt: new Date().toISOString(), viewports, behaviouralStates: [], screenshots: [], consoleErrors: [], pageErrors: [], overflow: [], timings: [], pngIntegrity: [] };
 
-function createEvidenceSnapshot() {
-  const previewData = require("./server/preview-data");
-  const dir = path.join(__dirname, "local-snapshots", "evidence-snapshot");
-  fs.mkdirSync(dir, { recursive: true });
-  const repoRoot = path.resolve(__dirname, "..", "..");
-  const ready = previewData.handleRpc("eduops_queryOperationalWorkload", { scenarioId: "normal-authoritative", serverDurationMs: 0 }, { actionabilityState: "READY", page: 1, pageSize: 50 }, repoRoot);
-  const review = previewData.handleRpc("eduops_queryOperationalWorkload", { scenarioId: "normal-authoritative", serverDurationMs: 0 }, { actionabilityState: "REVIEW_REQUIRED", page: 1, pageSize: 50 }, repoRoot);
-  const complete = previewData.handleRpc("eduops_queryOperationalWorkload", { scenarioId: "normal-authoritative", serverDurationMs: 0 }, { actionabilityState: "COMPLETE", page: 1, pageSize: 50 }, repoRoot);
-  const rows = [
-    ready.rows.find((row) => row.applicantId === "FODE-26-002985"),
-    review.rows.find((row) => row.applicantId === "FODE-26-002959"),
-    complete.rows.find((row) => row.applicantId === "FODE-26-TEST-004")
-  ].filter(Boolean);
-  const exactApplicants = {};
-  for (const row of rows) {
-    const wb = previewData.handleRpc("eduops_getApplicantWorkbench", { scenarioId: "normal-authoritative", serverDurationMs: 0 }, { applicantId: row.applicantId, expectedSnapshotId: previewData.SNAPSHOT_ID }, repoRoot);
-    const manifest = previewData.handleRpc("eduops_getDocumentManifest", { scenarioId: "normal-authoritative", serverDurationMs: 0 }, { applicantId: row.applicantId, rowNumber: wb.identity.rowNumber }, repoRoot);
-    exactApplicants[row.applicantId] = { workbench: wb, documentManifest: manifest, documentRenditions: {} };
-  }
-  const counts = rows.reduce((out, row) => {
-    out[row.actionabilityState] = Number(out[row.actionabilityState] || 0) + 1;
-    return out;
-  }, {});
-  fs.writeFileSync(path.join(dir, "snapshot.json"), JSON.stringify({
-    metadata: {
-      snapshotFormatVersion: previewData.SNAPSHOT_FORMAT_VERSION,
-      contractVersion: previewData.CONTRACT_VERSION,
-      profileVersion: previewData.PROFILE_VERSION,
-      runtimeIdentity: "r352 / 352",
-      sourceCommit: "evidence",
-      sourceDeploymentVersion: "preview",
-      capturedAt: "2026-07-13T08:00:00.000Z",
-      sourceAsOf: "2026-07-13T08:00:00.000Z",
-      sourceReliability: "AUTHORITATIVE",
-      sanitisationVersion: previewData.SANITISATION_VERSION,
-      snapshotId: "FODE-EVIDENCE-SNAPSHOT",
-      populationCount: rows.length
-    },
-    counts: { actionabilityCounts: counts, worklistKeyCounts: { DOCUMENT_REVIEW: 2, PAYMENT_VERIFIED: 1 } },
-    workloads: { default: { rows, actionabilityCounts: counts } },
-    exactApplicants,
-    reconciliation: { integrityState: "PASS", canonicalPopulation: rows.length, hiddenReasons: [], snapshotId: "FODE-EVIDENCE-SNAPSHOT" },
-    paritySummary: { ok: true, readOnly: true, product: "FODE", snapshotId: "FODE-EVIDENCE-SNAPSHOT", reliabilityState: "AUTHORITATIVE" }
-  }, null, 2));
-}
-
-function ensureDir(dir) {
-  fs.mkdirSync(dir, { recursive: true });
-}
-
-async function waitComplete(page) {
-  await page.waitForFunction(() => document.querySelector("#eduopsRequestStatus")?.getAttribute("data-state") === "COMPLETE", null, { timeout: 9000 });
-}
-
-async function setScenario(page, scenario, latency = "0") {
-  await page.selectOption("#eduopsPreviewLatency", latency);
-  await page.selectOption("#eduopsPreviewScenario", scenario);
-  await waitComplete(page);
-}
-
-async function screenshot(page, viewportDir, name) {
-  const file = path.join(viewportDir, `${String(summary.screenshots.length + 1).padStart(2, "0")}-${name}.png`);
-  await page.screenshot({ path: file, fullPage: true });
+function ensureDir(dir) { fs.mkdirSync(dir, { recursive: true }); }
+function validatePng(file) { return fs.readFileSync(file).subarray(0, 8).toString("hex") === "89504e470d0a1a0a"; }
+async function waitWorkload(page) { await page.waitForFunction(() => document.querySelector("#eduopsApp")?.getAttribute("aria-busy") === "false" && !/Loading|Queued/.test(document.querySelector("#eduopsVisibleRange")?.textContent || ""), null, { timeout: 14000 }); }
+async function shot(page, directory, name) {
+  await page.waitForTimeout(600);
+  const file = path.join(directory, `${String(summary.screenshots.length + 1).padStart(3, "0")}-${name}.png`);
+  await page.screenshot({ path: file, fullPage: false });
   summary.screenshots.push(file);
-  return file;
+  if (!summary.behaviouralStates.includes(name)) summary.behaviouralStates.push(name);
 }
-
-async function openWaffiWorkbench(page) {
+async function scenario(page, value) {
+  if (!await page.locator("#eduopsPreviewTechnicalBody").isVisible()) await page.locator("#eduopsPreviewToggle").click();
+  await page.selectOption("#eduopsPreviewLatency", "0");
+  await page.selectOption("#eduopsPreviewScenario", value);
+  await waitWorkload(page);
+  await page.locator("#eduopsPreviewToggle").click();
+}
+async function openWaffi(page) {
   await page.fill("#eduopsGlobalSearch", "Waffi");
-  await page.waitForFunction(() => document.querySelector("#eduopsGlobalResults")?.textContent.includes("Keziah Waffi"));
-  await page.locator('[data-open-applicant="FODE-26-002959"]').first().click();
-  await page.waitForSelector("#eduopsWorkbench:not([hidden])");
+  await page.waitForFunction(() => document.querySelector("#eduopsGlobalSearchResults")?.textContent.includes("Keziah Waffi"));
+  await page.locator('[data-search-open="FODE-26-002959"]').click();
+  await page.waitForFunction(() => document.querySelector("#eduopsWorkbenchTitle")?.textContent.includes("Keziah Waffi"));
 }
-
-async function captureViewport(browser, serviceUrl, viewport) {
-  const viewportDir = path.join(evidenceRoot, `${viewport.width}x${viewport.height}`);
-  ensureDir(viewportDir);
-  const page = await browser.newPage({ viewport });
-  await page.addInitScript(() => { window.EDUOPS_REQUEST_TIMEOUT_MS = 7000; });
-  page.on("console", (msg) => {
-    if (msg.type() === "error") summary.consoleErrors.push({ viewport, text: msg.text() });
-  });
-  page.on("pageerror", (err) => summary.pageErrors.push({ viewport, text: err.message }));
-  await page.goto(serviceUrl, { waitUntil: "domcontentloaded" });
-  await waitComplete(page);
-  await screenshot(page, viewportDir, "normal-ready-workload");
-  await screenshot(page, viewportDir, "deterministic-mode-labelling");
-
-  await page.locator('[data-scope="ESCALATED"]').click();
-  await waitComplete(page);
-  await page.locator('[data-state="COOLING_OFF"]').click();
-  await waitComplete(page);
-  await screenshot(page, viewportDir, "ownership-reset-unpinned");
-
-  await page.locator("#eduopsPinScope").check();
-  await page.locator('[data-scope="ESCALATED"]').click();
-  await waitComplete(page);
-  await page.locator('[data-state="COOLING_OFF"]').click();
-  await waitComplete(page);
-  await screenshot(page, viewportDir, "pinned-empty-escalated-scope");
-
-  await page.locator("#eduopsPinScope").uncheck();
-  await page.selectOption("#eduopsPageSize", "10");
-  await waitComplete(page);
-  await page.locator('[data-state="READY"]').click();
-  await waitComplete(page);
-  await page.selectOption("#eduopsPreviewLatency", "-1");
-  await page.selectOption("#eduopsPreviewScenario", "slow-6s");
-  await waitComplete(page);
-  await page.locator("#eduopsNextPage").click();
-  await page.waitForTimeout(150);
-  await screenshot(page, viewportDir, "six-second-loading-state");
-
-  await page.selectOption("#eduopsPreviewLatency", "0");
-  await page.selectOption("#eduopsPreviewScenario", "normal-authoritative");
-  await waitComplete(page);
-  await page.selectOption("#eduopsPreviewLatency", "-1");
-  await page.selectOption("#eduopsPreviewScenario", "timeout-10s");
-  await page.locator('[data-state="READY"]').click();
-  await page.waitForFunction(() => document.querySelector("#eduopsRequestStatus")?.getAttribute("data-state") === "ERROR", null, { timeout: 9000 });
-  await screenshot(page, viewportDir, "timeout-retry-state");
-  await page.selectOption("#eduopsPreviewLatency", "0");
-  await page.locator("[data-retry-workload]").click();
-  await waitComplete(page);
-
-  await setScenario(page, "rapid-supersession", "-1");
-  await page.locator('[data-state="READY"]').click();
-  await page.locator('[data-state="COMPLETE"]').click();
-  await page.locator('[data-state="REVIEW_REQUIRED"]').click();
-  await waitComplete(page);
-  await screenshot(page, viewportDir, "superseded-request-latest-rendered");
-
-  await setScenario(page, "normal-authoritative", "0");
-  await page.fill("#eduopsGlobalSearch", "Jackson");
-  await page.waitForFunction(() => document.querySelector("#eduopsGlobalResults")?.textContent.includes("Jackson Numa"));
-  await screenshot(page, viewportDir, "search-jackson");
-
-  await openWaffiWorkbench(page);
-  await screenshot(page, viewportDir, "exact-waffi-workbench");
-  await page.goBack();
+async function discardWorkbench(page) {
+  await page.locator("#eduopsCloseWorkbench").click();
+  if (await page.locator("#eduopsConfirmLayer:not([hidden])").count()) await page.locator("#eduopsConfirmProceed").click();
   await page.waitForFunction(() => document.querySelector("#eduopsWorkbench")?.hidden === true);
-  await screenshot(page, viewportDir, "browser-back-workload-return");
+}
+async function captureViewport(browser, url, viewport) {
+  const directory = path.join(evidenceRoot, `${viewport.width}x${viewport.height}`);
+  ensureDir(directory);
+  const page = await browser.newPage({ viewport });
+  page.on("console", (message) => { if (message.type() === "error") summary.consoleErrors.push({ viewport, text: message.text() }); });
+  page.on("pageerror", (error) => summary.pageErrors.push({ viewport, text: error.message }));
+  await page.goto(url, { waitUntil: "domcontentloaded" });
+  await waitWorkload(page);
+  await shot(page, directory, "01-actionability-ready-workload");
 
-  await openWaffiWorkbench(page);
-  await page.locator('[data-tab="documents"]').click();
-  await page.locator("[data-load-document-manifest]").click();
-  await page.waitForSelector("[data-document-rendition]");
-  await page.locator("[data-document-rendition]").click();
-  await page.waitForSelector(".eduops-png-preview img");
-  await screenshot(page, viewportDir, "document-png-rendition");
-  await page.locator("#eduopsCloseWorkbench").click();
+  await page.selectOption("#eduopsPageSize", "10");
+  await waitWorkload(page);
+  await page.locator("#eduopsNextPage").click();
+  await page.waitForFunction(() => /Showing 11-20/.test(document.querySelector("#eduopsVisibleRange")?.textContent || ""));
+  await shot(page, directory, "02-stable-snapshot-page-two");
 
-  await setScenario(page, "document-preview-unavailable", "0");
-  await openWaffiWorkbench(page);
-  await page.locator('[data-tab="documents"]').click();
-  await page.locator("[data-load-document-manifest]").click();
-  await page.waitForSelector("[data-document-rendition]");
-  await page.locator("[data-document-rendition]").click();
-  await page.waitForFunction(() => document.querySelector("[data-document-preview]")?.textContent.includes("PNG preview unavailable"));
-  await screenshot(page, viewportDir, "document-preview-unavailable");
-  await page.locator("#eduopsCloseWorkbench").click();
+  await page.locator('[data-work-scope="ESCALATED"]').click();
+  await page.locator('#eduopsActionNav button[data-state="COOLING_OFF"]').click();
+  await waitWorkload(page);
+  await shot(page, directory, "03-actionability-resets-ownership-scope");
 
-  await setScenario(page, "conflicting-authority", "0");
-  await screenshot(page, viewportDir, "conflicting-authority");
+  await page.fill("#eduopsGlobalSearch", "Waffi");
+  await page.waitForFunction(() => document.querySelector("#eduopsGlobalSearchResults")?.textContent.includes("Keziah Waffi"));
+  await shot(page, directory, "04-global-search-exact-waffi");
+  await page.locator('[data-search-open="FODE-26-002959"]').click();
+  await page.waitForFunction(() => document.querySelector("#eduopsWorkbenchTitle")?.textContent.includes("Keziah Waffi"));
+  await shot(page, directory, "05-exact-waffi-workbench");
 
-  await setScenario(page, "normal-authoritative", "0");
-  for (const lens of ["finance", "communications", "portal", "contactability"]) {
-    await page.locator(`[data-lens="${lens}"]`).click();
-    await page.waitForSelector("#eduopsLensPanel:not([hidden])");
-    await screenshot(page, viewportDir, `${lens}-lens`);
-  }
+  await page.locator('[data-workbench-tab="finance"]').click();
+  await shot(page, directory, "06-finance-authority-and-decision");
+  await page.locator('[data-workbench-tab="communications"]').click();
+  await shot(page, directory, "07-communications-template-and-preview");
+  await page.locator('[data-workbench-tab="portal"]').click();
+  await shot(page, directory, "08-portal-guarded-controls");
+  await page.locator('[data-workbench-tab="contactability"]').click();
+  await shot(page, directory, "09-contactability-correction");
 
-  await page.locator("summary").filter({ hasText: "Technical authority diagnostics" }).click();
-  await page.locator("#eduopsOpenParity").click();
-  await page.waitForSelector("#eduopsDrawer:not([hidden])");
-  await screenshot(page, viewportDir, "relocated-parity-diagnostics");
+  await page.locator('[data-workbench-tab="documents"]').click();
+  await page.waitForSelector(".eduops-document-preview img");
+  await shot(page, directory, "10-document-gallery-derived-png");
+  await page.fill("[data-document-note]", "Preview-only unsaved evidence note");
+  await page.goBack();
+  await page.waitForSelector("#eduopsConfirmLayer:not([hidden])");
+  await shot(page, directory, "11-browser-back-dirty-guard");
   await page.keyboard.press("Escape");
-  await page.waitForFunction(() => document.querySelector("#eduopsDrawer")?.hidden === true);
+  await page.locator("#eduopsCloseWorkbench").click();
+  await page.locator("#eduopsConfirmProceed").click();
+  await waitWorkload(page);
 
-  await page.selectOption("#eduopsPreviewSnapshot", "evidence-snapshot");
-  await page.selectOption("#eduopsPreviewDataMode", "snapshot");
-  await waitComplete(page);
-  await screenshot(page, viewportDir, "fresh-snapshot-mode-metadata");
-  await page.selectOption("#eduopsPreviewDataMode", "deterministic");
-  await waitComplete(page);
+  await page.locator('#eduopsActionNav button[data-state="READY"]').click();
+  await waitWorkload(page);
+  await page.locator("#eduopsStartSession").click();
+  await page.waitForSelector("#eduopsWorkbench:not([hidden])");
+  await page.waitForSelector("#eduopsSessionBar:not([hidden])");
+  await shot(page, directory, "12-work-session-progress");
+  await page.locator("[data-session-exit]").click();
+  await page.waitForFunction(() => document.querySelector("#eduopsWorkbench")?.hidden === true);
+  await page.locator("#eduopsSelectVisible").click();
+  await page.locator("#eduopsOpenBatch").click();
+  await page.locator('input[name="eduopsBatchOperation"][value="BATCH_COMMUNICATION"]').check();
+  await shot(page, directory, "13-batch-snapshot-bound-cohort");
+  await page.locator("[data-batch-preview]").click();
+  await page.waitForSelector(".eduops-partition-card");
+  await page.locator("[data-batch-continue]").click();
+  await shot(page, directory, "14-batch-authoritative-preview");
+  await page.locator("[data-batch-confirm]").click();
+  await page.locator("[data-batch-execute]").click();
+  await page.locator("#eduopsConfirmProceed").click();
+  await page.waitForFunction(() => document.querySelector("#eduopsBatchPanel")?.textContent.includes("RECEIPT-"));
+  await shot(page, directory, "15-batch-versioned-receipt");
+  await page.locator("[data-batch-close]").click();
+  await waitWorkload(page);
 
-  await screenshot(page, viewportDir, "corrected-actionability-navigation");
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 2);
-  summary.overflow.push({ viewport, overflow });
-  summary.timings.push(await page.evaluate(() => ({
-    clientDiagnostics: window.__EDUOPS_REQUEST_DIAGNOSTICS__ || [],
-    previewText: document.querySelector("#eduopsPreviewDiagnostics")?.textContent || ""
-  })));
+  await page.selectOption("#eduopsProductSwitcher", "KIA");
+  await waitWorkload(page);
+  await shot(page, directory, "16-kia-preview-product-isolation");
+  await page.selectOption("#eduopsProductSwitcher", "MLC");
+  await waitWorkload(page);
+  await shot(page, directory, "17-mlc-preview-product-isolation");
+  await page.selectOption("#eduopsProductSwitcher", "FODE");
+  await waitWorkload(page);
+
+  await scenario(page, "conflicting-authority");
+  await shot(page, directory, "18-conflicting-authority-fails-closed");
+  await scenario(page, "normal-authoritative");
+  await page.locator("#eduopsOpenReconciliation").click();
+  await page.waitForSelector("#eduopsReportPanel:not([hidden])");
+  await shot(page, directory, "19-reconciliation-hidden-reasons");
+  await page.keyboard.press("Escape");
+
+  summary.overflow.push({ viewport, overflow: await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 2) });
+  summary.timings.push({ viewport, requests: await page.evaluate(() => window.__EDUOPS_REQUEST_DIAGNOSTICS__ || []) });
   await page.close();
 }
 
-function validatePng(file) {
-  const signature = fs.readFileSync(file).subarray(0, 8).toString("hex");
-  return signature === "89504e470d0a1a0a";
-}
-
 (async () => {
-  createEvidenceSnapshot();
   ensureDir(evidenceRoot);
   const service = await start(0);
   const browser = await chromium.launch({ headless: true });
-  for (const viewport of viewports) {
-    await captureViewport(browser, service.url, viewport);
+  try {
+    for (const viewport of viewports) await captureViewport(browser, service.url, viewport);
+  } finally {
+    await browser.close();
+    await new Promise((resolve) => service.server.close(resolve));
   }
-  await browser.close();
-  service.server.close();
   summary.pngIntegrity = summary.screenshots.map((file) => ({ file, ok: validatePng(file) }));
   fs.writeFileSync(path.join(evidenceRoot, "RUN_SUMMARY.json"), JSON.stringify(summary, null, 2));
-  const failedPng = summary.pngIntegrity.filter((item) => !item.ok);
-  if (failedPng.length) throw new Error(`PNG integrity failed for ${failedPng.length} screenshot(s)`);
+  if (summary.pngIntegrity.some((item) => !item.ok)) throw new Error("PNG integrity failure");
   if (summary.consoleErrors.length || summary.pageErrors.length) throw new Error("Console or page errors captured");
-  if (summary.overflow.some((item) => item.overflow)) throw new Error("Horizontal overflow captured");
-  console.log(`PASS EduOps Preview Lab evidence screenshots=${summary.screenshots.length} path=${evidenceRoot}`);
-})().catch((err) => {
-  console.error(err.stack || err);
-  process.exit(1);
-});
+  if (summary.overflow.some((item) => item.overflow)) throw new Error("Horizontal page overflow captured");
+  console.log(`PASS EduOps Pass 2 evidence behaviouralStates=${summary.behaviouralStates.length} viewportExecutions=${viewports.length} screenshots=${summary.screenshots.length} path=${evidenceRoot}`);
+})().catch((error) => { console.error(error.stack || error); process.exit(1); });

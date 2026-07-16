@@ -25,8 +25,17 @@
 !Config.js
 !EduOps.html
 !EduOps_Client.html
+!EduOps_ClientBatch.html
+!EduOps_ClientComponents.html
+!EduOps_ClientCore.html
+!EduOps_ClientWorkbench.html
+!EduOps_Commands.js
 !EduOps_Contracts.js
+!EduOps_FeatureFlags.js
 !EduOps_FODE_Adapter.js
+!EduOps_Idempotency.js
+!EduOps_Locks.js
+!EduOps_Receipts.js
 !EduOps_Styles.html
 !EduOps_Workload.js
 !Routes.js

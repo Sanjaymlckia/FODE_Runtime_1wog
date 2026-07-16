@@ -364,6 +364,8 @@ function eduopsFinanceSummary_(canonical) {
     owner: eduopsClean_(canonical && canonical.owner || ""),
     blocker: eduopsClean_(finance.financeReason || ""),
     nextAction: finance.paymentVerified === true ? "No payment action" : "Review payment context",
+    invoiceReadiness: eduopsClean_(finance.invoiceReadiness || finance.invoiceStatus || "Not returned"),
+    booksMatch: eduopsClean_(finance.booksMatch || finance.booksStatus || "Informational only"),
     actions: [
       eduopsReadOnlyAction_("Verify payment", "CAN_VERIFY_PAYMENT"),
       eduopsReadOnlyAction_("Create Books invoice", "CAN_WRITE_ZOHO_BOOKS")
@@ -380,6 +382,7 @@ function eduopsCommunicationsSummary_(canonical) {
     coolingOffUntil: eduopsClean_(actionability.coolingOffUntil || ""),
     latestCommunication: eduopsClean_(comm.latestCommunicationAt || ""),
     deliveryState: eduopsClean_(comm.deliveryState || ""),
+    suppressionState: eduopsClean_(comm.suppressionState || comm.bounceState || ""),
     actions: [
       eduopsReadOnlyAction_("Preview communication", "CAN_PREVIEW_APPLICANT_COMMUNICATION"),
       eduopsReadOnlyAction_("Send communication", "CAN_SEND_INDIVIDUAL_EMAIL")
@@ -394,6 +397,7 @@ function eduopsPortalSummary_(canonical) {
     accessState: eduopsClean_(portal.accessState || ""),
     locked: portal.locked === true,
     tokenState: eduopsClean_(portal.tokenState || ""),
+    expiresAt: eduopsClean_(portal.expiresAt || ""),
     actions: [
       eduopsReadOnlyAction_("Reset portal link", "CAN_MANAGE_PORTAL_ACCESS"),
       eduopsReadOnlyAction_("Set portal access", "CAN_MANAGE_PORTAL_ACCESS")
@@ -403,12 +407,15 @@ function eduopsPortalSummary_(canonical) {
 
 function eduopsContactabilitySummary_(canonical) {
   var c = canonical && canonical.contactability || {};
+  var applicant = canonical && canonical.applicant || {};
   return {
     state: eduopsClean_(c.state || "UNKNOWN"),
-    effectiveEmail: eduopsClean_(canonical && canonical.applicant && canonical.applicant.effectiveEmail || ""),
-    phone: eduopsClean_(canonical && canonical.applicant && canonical.applicant.phone || ""),
+    effectiveEmail: eduopsClean_(applicant.effectiveEmail || applicant.email || ""),
+    emailSource: eduopsClean_(c.emailSource || applicant.emailSource || "Canonical applicant projection"),
+    phone: eduopsClean_(applicant.phone || ""),
     hasValidEmail: c.hasValidEmail === true,
     hasPhoneFallback: c.hasPhoneFallback === true,
+    suppressionState: eduopsClean_(c.suppressionState || c.bounceState || "None returned"),
     actions: [eduopsReadOnlyAction_("Correct contact details", "CAN_OPEN_REVIEW_WORKSPACE")]
   };
 }
@@ -417,6 +424,6 @@ function eduopsAuditSummary_(canonical) {
   return {
     provenance: canonical && canonical.diagnostics || {},
     readOnly: true,
-    note: "Audit details are projected for Pass 1 inspection only."
+    note: "Audit facts and EduOps command receipts are projected separately."
   };
 }

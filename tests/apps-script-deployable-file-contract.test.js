@@ -8,12 +8,13 @@ const expected = [
   "Admin_ReviewStatusAuthority.js", "Admin_RowFacts.js", "Admin_SelectedApplicantCommunications.js", "Admin_StageBatchCommunications.js",
   "Admin_WhatsAppFallback.js", "AdminUI.html", "AdminUI_OperatorNext.html", "AdminUI_OpsApplicantQueue.html", "AdminUI_OpsCommunications.html",
   "AdminUI_OpsLifecycle.html", "AdminUI_SharedRowFacts.html", "Code.js", "Config.js", "EduOps.html", "EduOps_Client.html",
-  "EduOps_Contracts.js", "EduOps_FODE_Adapter.js", "EduOps_Styles.html", "EduOps_Workload.js", "Routes.js", "Utils.js",
+  "EduOps_ClientBatch.html", "EduOps_ClientComponents.html", "EduOps_ClientCore.html", "EduOps_ClientWorkbench.html", "EduOps_Commands.js",
+  "EduOps_Contracts.js", "EduOps_FeatureFlags.js", "EduOps_FODE_Adapter.js", "EduOps_Idempotency.js", "EduOps_Locks.js", "EduOps_Receipts.js", "EduOps_Styles.html", "EduOps_Workload.js", "Routes.js", "Utils.js",
   "appsscript.json", "whoami_admin.html"
 ].sort();
 const actual = fs.readFileSync(".claspignore", "utf8").split(/\r?\n/).map((line) => line.trim()).filter((line) => /^![^*]/.test(line)).map((line) => line.slice(1).replace(/\\/g, "/")).sort();
-assert.deepEqual(actual, expected, "Deployable Apps Script filename set must match the explicit 33-file contract");
-assert.equal(actual.length, 33);
+assert.deepEqual(actual, expected, "Deployable Apps Script filename set must match the explicit 42-file contract");
+assert.equal(actual.length, 42);
 for (const file of actual) assert.equal(fs.existsSync(file), true, `Deployable runtime file is missing: ${file}`);
 assert.ok(!actual.some((file) => /^(tests|docs|\.release-proof)\//.test(file)), "Tests, docs, and release evidence must remain excluded");
 assert.ok(!actual.some((file) => /OPS\.js|OldWorkbench|OperatorDashboard/i.test(file)), "Retired standalone OPS source must not be reintroduced");

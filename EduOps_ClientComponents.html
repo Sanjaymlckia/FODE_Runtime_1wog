@@ -1,0 +1,462 @@
+<script>
+(function () {
+  "use strict";
+
+  var app = window.EduOpsApp;
+  var dom = {};
+
+  function byId(id) { return document.getElementById(id); }
+  function cacheDom() {
+    ["eduopsApp", "eduopsActionNav", "eduopsHistoryNav", "eduopsTopContext", "eduopsSnapshotShort", "eduopsSnapshotTime", "eduopsProductSwitcher", "eduopsReliabilityBanner", "eduopsGlobalSearch", "eduopsGlobalSearchResults", "eduopsPageTitle", "eduopsPageIntro", "eduopsKpis", "eduopsMetrics", "eduopsSelectedStateLabel", "eduopsSelectedWorklistLabel", "eduopsWorklistReason", "eduopsOpenBatch", "eduopsBatchReason", "eduopsWorklistKeys", "eduopsOpenReconciliation", "eduopsSearch", "eduopsOwnerFilter", "eduopsUrgencyFilter", "eduopsSort", "eduopsToggleFilters", "eduopsAdvancedFilters", "eduopsRouteFilter", "eduopsDocumentFilter", "eduopsFinanceFilter", "eduopsContactFilter", "eduopsCommunicationFilter", "eduopsCoolingFilter", "eduopsBlockKindFilter", "eduopsFilterCount", "eduopsFilterChips", "eduopsSelectionSummary", "eduopsWorklistRows", "eduopsEmptyState", "eduopsVisibleRange", "eduopsPreviousPage", "eduopsPageNumbers", "eduopsNextPage", "eduopsPageSize", "eduopsHiddenRailCount", "eduopsQuickDrawer", "eduopsCloseDrawer", "eduopsDrawerTitle", "eduopsDrawerContent", "eduopsDrawerActions", "eduopsDrawerScrim", "eduopsReportPanel", "eduopsReportType", "eduopsReportTitle", "eduopsReportContent"].forEach(function (id) { dom[id] = byId(id); });
+  }
+
+  function stateTone(key) {
+    var value = app.upper(key);
+    if (value === "READY" || value === "AUTHORITATIVE" || value === "COMPLETE") return "ready";
+    if (value === "COOLING_OFF" || value === "AWAITING_APPLICANT" || value === "AWAITING_PAYMENT" || value === "STALE") return "warn";
+    if (value === "BLOCKED" || value === "CONFLICTING" || value === "UNAVAILABLE") return "blocked";
+    return "muted";
+  }
+
+  function badge(code, detail) {
+    return '<span class="eduops-badge eduops-badge-' + stateTone(code) + '" title="' + app.esc(detail || app.explain(code)) + '">' + app.esc(app.humanize(code)) + '</span>';
+  }
+
+  function totalForState(counts, key) { return Number(counts && counts[key] || 0); }
+
+  function renderNavigation(counts) {
+    dom.eduopsActionNav.innerHTML = app.actionabilityOrder.map(function (key) {
+      var selected = app.state.actionabilityState === key;
+      return '<button type="button" data-state="' + key + '"' + (selected ? ' aria-current="page"' : '') + '><span><i class="eduops-nav-state-marker" data-state="' + key + '" aria-hidden="true"></i>' + app.esc(app.humanize(key)) + '</span><small>' + totalForState(counts, key) + '</small></button>';
+    }).join("");
+    var complete = totalForState(counts, "COMPLETE");
+    var total = Object.keys(counts || {}).reduce(function (sum, key) { return sum + Number(counts[key] || 0); }, 0);
+    dom.eduopsHistoryNav.innerHTML = '<button type="button" data-state="COMPLETE"' + (app.state.actionabilityState === "COMPLETE" ? ' aria-current="page"' : '') + '><span>Completed records</span><small>' + complete + '</small></button><button type="button" data-state="ALL"><span>All authorised records</span><small>' + total + '</small></button>';
+  }
+
+  function renderKpis(counts) {
+    dom.eduopsKpis.innerHTML = app.actionabilityOrder.map(function (key) {
+      return '<article class="eduops-kpi-card" role="listitem" data-state="' + key + '"><span class="eduops-kpi-label">' + app.esc(app.humanize(key)) + '</span><strong class="eduops-kpi-value">' + totalForState(counts, key) + '</strong><small class="eduops-kpi-caption">' + app.esc(app.explain(key)) + '</small></article>';
+    }).join("");
+  }
+
+  function renderMetrics(response) {
+    var metric = response.metricCounts || {};
+    var items = [
+      ["Total population", response.reconciliation && response.reconciliation.canonicalPopulation || response.totalMatched || 0],
+      ["Eligible now", metric.eligibleNow || 0],
+      ["Outside current page", response.reconciliation && response.reconciliation.eligibleOutsideCurrentWindow || 0],
+      ["Hidden from view", response.reconciliation && response.reconciliation.hiddenFromCurrentView || 0],
+      ["Oldest matched", response.reconciliation && response.reconciliation.oldestMatchedAgeDays !== "" ? response.reconciliation.oldestMatchedAgeDays + " days" : "-"],
+      ["Source", app.humanize(response.reliabilityState || "UNKNOWN")]
+    ];
+    dom.eduopsMetrics.innerHTML = items.map(function (item) { return '<div class="eduops-metric"><span>' + app.esc(item[0]) + '</span><strong>' + app.esc(item[1]) + '</strong></div>'; }).join("");
+  }
+
+  function renderReliability(response) {
+    var state = app.upper(response.reliabilityState || response.sourceReliability && response.sourceReliability.state || "UNKNOWN");
+    var reasons = response.reliabilityReasons || response.sourceReliability && response.sourceReliability.reasons || [];
+    dom.eduopsReliabilityBanner.setAttribute("data-reliability", state);
+    var controls = '<button id="eduopsRefreshAuthority" class="eduops-button eduops-button-primary" type="button">Refresh source</button>';
+    dom.eduopsReliabilityBanner.innerHTML = '<strong>' + app.esc(app.humanize(state)) + '</strong><span>' + app.esc(reasons[0] || app.explain(state) || "Authority state returned by the FODE adapter.") + '</span><div>' + controls + '</div>';
+  }
+
+  function renderWorklists(counts) {
+    var total = Object.keys(counts || {}).reduce(function (sum, key) { return sum + Number(counts[key] || 0); }, 0);
+    var html = '<button type="button" class="eduops-worklist-key" data-worklist="" aria-selected="' + (!app.state.worklistKey ? "true" : "false") + '">All work types<span class="eduops-key-count">' + total + '</span></button>';
+    Object.keys(counts || {}).sort().forEach(function (key) {
+      html += '<button type="button" class="eduops-worklist-key" data-worklist="' + app.esc(key) + '" aria-selected="' + (app.state.worklistKey === key ? "true" : "false") + '">' + app.esc(app.humanize(key)) + '<span class="eduops-key-count">' + Number(counts[key] || 0) + '</span></button>';
+    });
+    dom.eduopsWorklistKeys.innerHTML = html;
+  }
+
+  function scopeLabel(scope) {
+    return ({ MY: "My Work", TEAM: "Team Work", UNASSIGNED: "Unassigned", ESCALATED: "Escalated", ALL_AUTHORISED: "All Authorised Work" })[scope] || app.humanize(scope);
+  }
+
+  function renderScopes() {
+    document.querySelectorAll("[data-work-scope]").forEach(function (button) {
+      var selected = button.getAttribute("data-work-scope") === app.state.workScope;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+  }
+
+  function filterOptions(rows, field, current, emptyLabel, formatter) {
+    var values = (rows || []).map(function (row) { return row[field] || ""; }).filter(Boolean).concat(current ? [current] : []);
+    values = values.filter(function (value, index) { return values.indexOf(value) === index; }).sort();
+    return '<option value="">' + app.esc(emptyLabel) + '</option>' + values.map(function (value) { return '<option value="' + app.esc(value) + '"' + (value === current ? " selected" : "") + '>' + app.esc(formatter ? formatter(value) : app.humanize(value)) + '</option>'; }).join("");
+  }
+
+  function renderFilterControls(response) {
+    var rows = response && response.rows || [];
+    var filters = app.state.filters || {};
+    dom.eduopsSearch.value = app.state.filters.search || "";
+    dom.eduopsPageSize.value = String(app.state.pageSize);
+    dom.eduopsSort.innerHTML = '<option value="urgency:asc">Urgency</option><option value="age:asc">Longest waiting</option><option value="name:asc">Applicant name</option>';
+    dom.eduopsSort.value = (app.state.sort.key || "urgency") + ":" + (app.state.sort.direction || "asc");
+    dom.eduopsOwnerFilter.innerHTML = filterOptions(rows, "actionOwner", filters.owner, "All owners", function (value) { return value; });
+    dom.eduopsUrgencyFilter.innerHTML = filterOptions(rows, "urgencyLevel", filters.urgency, "All urgency");
+    dom.eduopsRouteFilter.innerHTML = filterOptions(rows, "primaryRoute", filters.primaryRoute, "All routes", function (value) { return value; });
+    dom.eduopsDocumentFilter.innerHTML = filterOptions(rows, "documentState", filters.documentState, "All document states");
+    dom.eduopsFinanceFilter.innerHTML = filterOptions(rows, "canonicalFinanceState", filters.financeState, "All Finance states");
+    dom.eduopsContactFilter.innerHTML = filterOptions(rows, "contactabilityState", filters.contactabilityState, "All contactability");
+    dom.eduopsCommunicationFilter.innerHTML = filterOptions(rows, "recommendedMessageType", filters.communicationState, "All communication states");
+    dom.eduopsCoolingFilter.value = filters.cooling || "";
+    dom.eduopsBlockKindFilter.innerHTML = filterOptions(rows, "blockerCode", filters.blockKind, "All blocker types");
+    var chips = [];
+    if (app.state.filters.search) chips.push(["Search", app.state.filters.search]);
+    if (app.state.workScope !== "ALL_AUTHORISED") chips.push(["Work scope", scopeLabel(app.state.workScope)]);
+    [["Owner", filters.owner], ["Urgency", filters.urgency], ["Route", filters.primaryRoute], ["Documents", filters.documentState], ["Finance", filters.financeState], ["Contactability", filters.contactabilityState], ["Communication", filters.communicationState], ["Cooling-off", filters.cooling], ["Blocker", filters.blockKind]].forEach(function (item) { if (item[1]) chips.push([item[0], app.humanize(item[1])]); });
+    dom.eduopsFilterChips.innerHTML = chips.map(function (item) { return '<span class="eduops-filter-chip">' + app.esc(item[0]) + ': ' + app.esc(item[1]) + '</span>'; }).join("");
+    dom.eduopsFilterCount.textContent = String(chips.length);
+  }
+
+  function selectedCount() { return Object.keys(app.state.selected).filter(function (key) { return app.state.selected[key] === true; }).length; }
+
+  function renderSelection(response) {
+    var count = selectedCount();
+    var selectable = (response.rows || []).filter(function (row) { return row.selectable === true; }).length;
+    var blocked = (response.rows || []).length - selectable;
+    var mode = count + " selected on this page";
+    dom.eduopsSelectionSummary.textContent = response.totalMatched + " matched / " + selectable + " eligible on this page / " + blocked + " blocked. " + mode + ".";
+    dom.eduopsOpenBatch.disabled = count === 0;
+    dom.eduopsBatchReason.textContent = dom.eduopsOpenBatch.disabled ? "Select an eligible cohort to enable a governed batch preview." : "Selection is bound to product, snapshot, query and worklist; Batch Operations revalidates before preview.";
+  }
+
+  function rowHtml(row) {
+    var id = row.applicantId;
+    var selected = app.state.selected[id] === true;
+    var blocked = row.selectable !== true;
+    var reliability = row.sourceReliability && row.sourceReliability.state || row.reliabilityState || "AUTHORITATIVE";
+    return '<tr data-applicant-row="' + app.esc(id) + '"' + (selected ? ' data-selected="true"' : '') + '>'
+      + '<td class="eduops-col-select"><input class="eduops-row-checkbox" type="checkbox" data-select-applicant="' + app.esc(id) + '" aria-label="Select ' + app.esc(row.displayName) + '"' + (selected ? " checked" : "") + (blocked ? " disabled" : "") + '></td>'
+      + '<td class="eduops-col-applicant"><button type="button" class="eduops-applicant-link" data-quick-applicant="' + app.esc(id) + '"><strong>' + app.esc(row.displayName) + '</strong><span>' + app.esc(id) + '</span></button></td>'
+      + '<td class="eduops-col-action"><strong>' + app.esc(app.humanize(row.worklistKey || row.worklistLabel)) + '</strong><span>' + app.esc(row.nextAction || app.actionLabel(row.worklistKey)) + '</span></td>'
+      + '<td class="eduops-col-owner"><strong>' + app.esc(row.actionOwner || "Unassigned") + '</strong><span>' + app.esc(scopeLabel(row.workOwnership && row.workOwnership.scope || "")) + '</span></td>'
+      + '<td class="eduops-col-route"><strong>' + app.esc(row.primaryRoute || "Operational review") + '</strong><span>Context only</span></td>'
+      + '<td class="eduops-col-urgency">' + badge(row.urgencyLevel || "NORMAL", row.urgencyReason) + '</td>'
+      + '<td class="eduops-col-authority">' + badge(row.actionabilityState, row.selectBlockReason) + '<span class="eduops-row-authority-reason">' + app.esc(blocked ? (row.selectBlockReason || row.blockerReason || "Authority blocked") : (app.explain(reliability) || "Authorised for current work")) + '</span></td>'
+      + '<td class="eduops-col-open"><button class="eduops-row-open" type="button" data-open-applicant="' + app.esc(id) + '">Open</button></td></tr>';
+  }
+
+  function renderRows(response) {
+    var rows = response.rows || [];
+    dom.eduopsWorklistRows.innerHTML = rows.map(rowHtml).join("");
+    dom.eduopsEmptyState.hidden = rows.length !== 0;
+    var start = rows.length ? ((response.page - 1) * response.pageSize + 1) : 0;
+    var end = rows.length ? start + rows.length - 1 : 0;
+    dom.eduopsVisibleRange.textContent = "Showing " + start + "-" + end + " of " + response.totalMatched;
+  }
+
+  function renderPagination(response) {
+    dom.eduopsPreviousPage.disabled = response.page <= 1;
+    dom.eduopsNextPage.disabled = response.page >= response.totalPages;
+    var pages = [];
+    var start = Math.max(1, response.page - 2);
+    var end = Math.min(response.totalPages, start + 4);
+    for (var page = start; page <= end; page++) pages.push(page);
+    dom.eduopsPageNumbers.innerHTML = pages.map(function (page) { return '<button type="button" data-page="' + page + '"' + (page === response.page ? ' aria-current="page"' : '') + '>' + page + '</button>'; }).join("");
+  }
+
+  app.renderPendingWorkload = function (request, phase) {
+    dom.eduopsWorklistReason.textContent = (phase === "QUEUED" ? "Queued " : "Loading ") + app.contextLabel(request.payload) + ". Previous results will not be presented as the requested page.";
+    dom.eduopsVisibleRange.textContent = (phase === "QUEUED" ? "Queued" : "Loading") + " page " + request.payload.page;
+    dom.eduopsWorklistRows.innerHTML = '<tr><td colspan="8"><div class="eduops-loading-state"><strong>' + app.esc(app.contextLabel(request.payload)) + '</strong><span>Request started ' + app.esc(app.nowIso()) + '. A bounded timeout and retry path are active.</span></div></td></tr>';
+  };
+
+  app.renderWorkloadError = function (request, error, outcome) {
+    dom.eduopsWorklistReason.textContent = app.contextLabel(request.payload) + " did not complete. No stale response was applied.";
+    dom.eduopsWorklistRows.innerHTML = '<tr><td colspan="8"><div class="eduops-error-state"><strong>' + app.esc(outcome === "TIMEOUT" ? "The request exceeded the 10-second limit." : "The workload request failed.") + '</strong><span>' + app.esc(error && error.message || error) + '</span><button type="button" class="eduops-button eduops-button-primary" data-retry-workload>Retry requested context</button></div></td></tr>';
+  };
+
+  app.renderWorkload = function (response, clientMs) {
+    dom.eduopsApp.setAttribute("aria-busy", "false");
+    if (app.bootstrapMachine && app.bootstrapMachine.state !== "INTERACTIVE") app.setBootstrapState("SOURCE_READY", "Authoritative product source resolved.");
+    renderNavigation(response.actionabilityCounts || {});
+    renderKpis(response.actionabilityCounts || {});
+    renderMetrics(response);
+    renderReliability(response);
+    renderWorklists(response.worklistKeyCounts || {});
+    renderScopes();
+    renderFilterControls(response);
+    renderRows(response);
+    renderSelection(response);
+    renderPagination(response);
+    dom.eduopsSelectedStateLabel.textContent = app.humanize(app.state.actionabilityState);
+    dom.eduopsSelectedWorklistLabel.textContent = app.state.worklistKey ? app.humanize(app.state.worklistKey) : "All work types";
+    dom.eduopsWorklistReason.textContent = response.totalMatched + " matched. " + app.humanize(app.state.workScope) + ". Request completed in " + clientMs + " ms; server " + Number(response.timings && response.timings.serverRpcMs || 0) + " ms.";
+    dom.eduopsTopContext.textContent = app.humanize(app.state.actionabilityState) + " / " + (app.state.worklistKey ? app.humanize(app.state.worklistKey) : "All work types");
+    dom.eduopsSnapshotShort.textContent = response.snapshotId || "Snapshot unavailable";
+    dom.eduopsSnapshotTime.textContent = response.snapshotAsOf || response.reconciliation && response.reconciliation.asOf || "Current authority";
+    dom.eduopsHiddenRailCount.textContent = String(response.reconciliation && response.reconciliation.hiddenFromCurrentView || 0);
+    if (!app.state.workbench && !app.state.batch) {
+      app.replaceRoute("workload?state=" + encodeURIComponent(app.state.actionabilityState) + "&worklist=" + encodeURIComponent(app.state.worklistKey) + "&scope=" + encodeURIComponent(app.state.workScope) + "&page=" + app.state.page);
+    }
+    if (app.bootstrapMachine && app.bootstrapMachine.state !== "INTERACTIVE") {
+      app.setBootstrapState("WORKLOAD_READY", "The first workload completed with " + (response.rows || []).length + " visible row(s).");
+      app.setBootstrapState("INTERACTIVE", "EduOps is ready. Source and workload are current.");
+    }
+  };
+
+  app.renderBootstrapError = function (phase, error) {
+    var state = app.upper(phase || "WORKLOAD_ERROR");
+    var message = String(error && error.message || error || "The Preview Lab could not initialise.");
+    dom.eduopsApp.setAttribute("aria-busy", "false");
+    dom.eduopsSnapshotShort.textContent = state === "TIMEOUT" ? "Loading timed out" : "Snapshot unavailable";
+    dom.eduopsSnapshotTime.textContent = "Retry is available";
+    dom.eduopsReliabilityBanner.setAttribute("data-reliability", "UNAVAILABLE");
+    dom.eduopsReliabilityBanner.innerHTML = '<strong>Authority source unavailable</strong><span>' + app.esc(message) + '</span><div><button id="eduopsRefreshAuthority" class="eduops-button eduops-button-primary" type="button" data-retry-bootstrap>Retry source</button><button class="eduops-button eduops-button-secondary" type="button" data-report="health">Technical details</button></div>';
+    dom.eduopsWorklistReason.textContent = "Page 1 did not complete. No stale workload was applied.";
+    dom.eduopsVisibleRange.textContent = "Workload unavailable";
+    dom.eduopsWorklistRows.innerHTML = '<tr><td colspan="8"><div class="eduops-error-state"><strong>' + (state === "TIMEOUT" ? "Loading took longer than expected" : "Workload could not be loaded") + '</strong><span>' + app.esc(message) + '</span><button type="button" class="eduops-button eduops-button-primary" data-retry-bootstrap>Retry workload</button></div></td></tr>';
+  };
+
+  function renderSearchResults(response) {
+    app.state.searchResults = response.matches || [];
+    if (!app.state.searchResults.length) {
+      dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">No matching applicant found in the active product.</span>';
+      return;
+    }
+    dom.eduopsGlobalSearchResults.innerHTML = app.state.searchResults.map(function (row) {
+      return '<article class="eduops-search-result"><div><strong>' + app.esc(row.displayName) + '</strong><span>' + app.esc(row.applicantId) + '</span><small>' + app.esc(app.humanize(row.actionabilityState)) + ' / ' + app.esc(app.humanize(row.worklistKey || row.worklistLabel)) + '</small></div><div><button class="eduops-button eduops-button-secondary" type="button" data-search-worklist="' + app.esc(row.applicantId) + '">Open worklist</button><button class="eduops-button eduops-button-primary" type="button" data-search-open="' + app.esc(row.applicantId) + '">Open Workbench</button></div></article>';
+    }).join("");
+  }
+
+  function runGlobalSearch() {
+    var query = dom.eduopsGlobalSearch.value.trim();
+    if (!query) {
+      dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Search the active product by ApplicantID, name, email or phone.</span>';
+      return;
+    }
+    dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Searching exact FODE authority...</span>';
+    app.call("eduops_searchApplicants", { product: app.state.product, query: query, limit: 12, expectedSnapshotId: app.state.snapshotId }).then(renderSearchResults).catch(function (error) {
+      dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Search failed: ' + app.esc(error.message || error) + '</span>';
+    });
+  }
+
+  function dismissGlobalSearch() {
+    dom.eduopsGlobalSearch.value = "";
+    app.state.searchResults = [];
+    dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Search the active product by ApplicantID, name, email or phone.</span>';
+  }
+
+  function openQuickView(applicantId, trigger) {
+    var row = (app.state.workload && app.state.workload.rows || []).filter(function (item) { return item.applicantId === applicantId; })[0] || app.state.searchResults.filter(function (item) { return item.applicantId === applicantId; })[0];
+    if (!row) return;
+    dom.eduopsDrawerTitle.textContent = row.displayName;
+    dom.eduopsDrawerContent.innerHTML = '<dl class="eduops-definition-list"><div><dt>ApplicantID</dt><dd>' + app.esc(row.applicantId) + '</dd></div><div><dt>Actionability</dt><dd>' + app.esc(app.humanize(row.actionabilityState)) + '</dd></div><div><dt>Worklist</dt><dd>' + app.esc(app.humanize(row.worklistKey || row.worklistLabel)) + '</dd></div><div><dt>Next action</dt><dd>' + app.esc(row.nextAction) + '</dd></div></dl>';
+    dom.eduopsDrawerActions.innerHTML = '<button class="eduops-button eduops-button-primary" type="button" data-open-applicant="' + app.esc(applicantId) + '">Open Individual Workbench</button>';
+    dom.eduopsQuickDrawer.hidden = false;
+    dom.eduopsQuickDrawer.setAttribute("aria-hidden", "false");
+    dom.eduopsDrawerScrim.hidden = false;
+    app.quickViewTrigger = trigger;
+  }
+
+  function closeQuickView() {
+    dom.eduopsQuickDrawer.setAttribute("aria-hidden", "true");
+    dom.eduopsQuickDrawer.hidden = true;
+    dom.eduopsDrawerScrim.hidden = true;
+    if (app.quickViewTrigger) app.quickViewTrigger.focus();
+  }
+
+  function reportHtml(title, purpose, rows) {
+    return '<p class="eduops-explanation"><strong>' + app.esc(title) + '.</strong> ' + app.esc(purpose) + '</p><div class="eduops-count-stack">' + (rows || []).map(function (row) { return '<div><span>' + app.esc(row[0]) + '</span><strong>' + app.esc(row[1]) + '</strong></div>'; }).join("") + '</div>';
+  }
+
+  var reportMeta = {
+    reconciliation: ["Workload reconciliation", "READ-ONLY", "Reconciles the active workload against its source snapshot."],
+    hidden: ["Hidden and excluded records", "READ-ONLY", "Explains records outside the active workload without creating another queue."],
+    finance: ["Finance Operations", "READ-ONLY", "Finance facts for the active Actionability workload."],
+    communications: ["Communications", "READ-ONLY", "Communication recommendations and eligibility for the active workload."],
+    portal: ["Portal", "READ-ONLY", "Portal state for the active workload."],
+    contactability: ["Contactability", "READ-ONLY", "Effective contactability for the active workload."],
+    lifecycle: ["Global Lifecycle", "READ-ONLY", "Lifecycle context; Actionability remains the workload authority."],
+    summary: ["Management Summary", "READ-ONLY", "Current workload scale, availability and source condition."],
+    reports: ["Reports", "READ-ONLY", "Available workload and reconciliation summaries."],
+    "audit-system": ["Audit", "READ-ONLY", "Request and receipt activity visible in this Preview Lab session."],
+    roles: ["Roles and Capabilities", "STRUCTURAL", "Current capability projection is visible; role administration is deferred."],
+    approvals: ["Assignments and Approvals", "STRUCTURAL", "Approval requirements are described; no new assignment or approval authority exists."],
+    "data-quality": ["Data Quality", "STRUCTURAL", "Reconciliation is available; a separate Data Quality workflow is deferred."],
+    health: ["System Health", "READ-ONLY", "Current Preview transport, source reliability and request status."]
+  };
+
+  function domainLensHtml(kind, workload, rows) {
+    var labels = { finance: "Finance state", communications: "Communication recommendation", portal: "Portal state", contactability: "Contactability" };
+    var list = rows.slice(0, 20).map(function (row) {
+      var value = kind === "finance" ? row.canonicalFinanceState : kind === "communications" ? row.recommendedMessageType : kind === "portal" ? row.portalState : row.contactabilityState;
+      return '<li><div><strong>' + app.esc(row.displayName) + '</strong><span>' + app.esc(row.applicantId) + ' / ' + app.esc(labels[kind]) + ': ' + app.esc(app.humanize(value || "UNKNOWN")) + '</span><small>' + app.esc(row.nextAction || "Open the exact applicant to continue.") + '</small></div><button class="eduops-button eduops-button-secondary" type="button" data-report-open-applicant="' + app.esc(row.applicantId) + '">Open Workbench</button></li>';
+    }).join("");
+    return reportHtml("Shared authority lens", reportMeta[kind][2], [["Current matched workload", workload.totalMatched || 0], ["Visible records", rows.length], ["Source", app.humanize(workload.reliabilityState || "UNKNOWN")]]) + '<p class="eduops-module-next-step">Open an exact applicant Workbench to inspect evidence or preview an available guarded action.</p><ul class="eduops-audit-list eduops-module-list">' + list + '</ul>';
+  }
+
+  function structuralHtml(kind, workload) {
+    var details = {
+      roles: [["Current role", app.state.access && app.state.access.user && app.state.access.user.role || "Preview operator"], ["Capabilities returned", Object.keys(app.state.capabilities || {}).filter(function (key) { return app.state.capabilities[key] === true; }).length], ["Role administration", "Not available in Pass 2"]],
+      approvals: [["Portal reset", "Independent approval required"], ["Large communication batch", "Independent approval required"], ["Assignment mutation", "Not available in Pass 2"]],
+      "data-quality": [["Snapshot", workload.snapshotId || "Not returned"], ["Reconciliation", workload.reconciliation && workload.reconciliation.integrityState || "Available in Reconciliation"], ["Dedicated workflow", "Deferred beyond Pass 2"]]
+    };
+    return '<div class="eduops-module-status" data-module-state="STRUCTURAL"><strong>Structural Preview</strong><span>' + app.esc(reportMeta[kind][2]) + '</span></div>' + reportHtml(reportMeta[kind][0], "This item is intentionally non-operational. No click from this panel can mutate data.", details[kind] || []);
+  }
+
+  function openReport(kind, trigger) {
+    app.state.report = kind;
+    app.reportTrigger = trigger || document.activeElement;
+    dom.eduopsReportPanel.hidden = false;
+    dom.eduopsReportPanel.setAttribute("aria-hidden", "false");
+    var meta = reportMeta[kind] || ["Supporting view", "READ-ONLY", "No operational workflow is attached to this view."];
+    dom.eduopsReportPanel.setAttribute("data-module-state", meta[1]);
+    dom.eduopsReportType.textContent = meta[1] === "STRUCTURAL" ? "Structural Preview / no operations" : "Read-only supporting view";
+    dom.eduopsReportTitle.textContent = meta[0];
+    app.setInteractionState("SUCCESS", meta[0] + " opened. " + meta[1].toLowerCase() + ".");
+    if (kind === "reconciliation" || kind === "hidden") {
+      var context = app.contextLabel(app.queryPayload());
+      var token = app.beginControlAction(trigger, "Loading...", "Loading " + meta[0] + " for " + context + ".");
+      dom.eduopsReportContent.innerHTML = '<div class="eduops-loading-state"><strong>Loading ' + app.esc(meta[0]) + '</strong><span>' + app.esc(context) + '. This request has a bounded timeout and visible retry path.</span></div>';
+      app.call("eduops_getReconciliation", app.queryPayload()).then(function (response) {
+        if (app.state.report !== kind) return;
+        var r = response.reconciliation || {};
+        var rows = [["Canonical population", r.canonicalPopulation || 0], ["Matched workload", r.totalMatched || 0], ["Visible page", r.visiblePageCount || 0], ["Outside current page", r.eligibleOutsideCurrentWindow || 0], ["Hidden from view", r.hiddenFromCurrentView || 0], ["Excluded by authority", r.excludedFromOperation || 0]];
+        var hidden = (response.hiddenReasons || []).slice(0, 30).map(function (item) { return '<li><strong>' + app.esc(item.displayName || item.applicantId) + '</strong><span>' + app.esc(item.applicantId) + ' - ' + app.esc(item.reason || app.humanize(item.reasonCode)) + '</span></li>'; }).join("");
+        dom.eduopsReportContent.innerHTML = reportHtml("Authoritative reconciliation", "Counts use one product snapshot and non-overlapping categories.", rows) + (hidden ? '<details class="eduops-disclosure" open><summary>Exact hidden reasons</summary><ul class="eduops-audit-list">' + hidden + '</ul></details>' : '<div class="eduops-empty-state"><strong>No hidden records returned</strong><span>The current view is fully reconciled.</span></div>');
+        app.finishControlAction(token, "SUCCESS", meta[0] + " loaded for " + context + ".");
+      }).catch(function (error) {
+        if (app.state.report !== kind) return;
+        var message = String(error.message || error);
+        dom.eduopsReportContent.innerHTML = '<div class="eduops-error-state"><strong>' + app.esc(meta[0]) + ' unavailable</strong><span>' + app.esc(message) + '</span><button type="button" class="eduops-button eduops-button-primary" data-retry-report="' + app.esc(kind) + '">Retry ' + app.esc(meta[0]) + '</button><small>Requested context: ' + app.esc(context) + '</small></div>';
+        app.finishControlAction(token, "ERROR", meta[0] + " failed: " + message);
+      });
+      return;
+    }
+    var workload = app.state.workload || {};
+    var rows = workload.rows || [];
+    if (["finance", "communications", "portal", "contactability"].indexOf(kind) >= 0) {
+      dom.eduopsReportContent.innerHTML = domainLensHtml(kind, workload, rows);
+      return;
+    }
+    if (/^(roles|approvals|data-quality)$/.test(kind)) {
+      dom.eduopsReportContent.innerHTML = structuralHtml(kind, workload);
+      return;
+    }
+    var population = workload.reconciliation && workload.reconciliation.canonicalPopulation || 0;
+    if (kind === "lifecycle") {
+      dom.eduopsReportContent.innerHTML = reportHtml("Lifecycle distribution", meta[2], Object.keys(workload.actionabilityCounts || {}).map(function (key) { return [app.humanize(key), Number(workload.actionabilityCounts[key] || 0)]; })) + '<p class="eduops-module-next-step">Return to the Actionability rail to choose work. Lifecycle is context only.</p>';
+    } else if (kind === "summary") {
+      dom.eduopsReportContent.innerHTML = reportHtml("Operational position", meta[2], [["Canonical population", population], ["Current matched workload", workload.totalMatched || 0], ["Eligible now", workload.metricCounts && workload.metricCounts.eligibleNow || 0], ["Hidden from current view", workload.reconciliation && workload.reconciliation.hiddenFromCurrentView || 0], ["Source reliability", app.humanize(workload.reliabilityState || "UNKNOWN")]]);
+    } else if (kind === "reports") {
+      dom.eduopsReportContent.innerHTML = reportHtml("Available read-only reports", meta[2], [["Actionability workload", workload.totalMatched || 0], ["Population reconciliation", population], ["Snapshot", workload.snapshotId || "Not returned"]]) + '<div class="eduops-module-status" data-module-state="READ-ONLY"><strong>Exports are not available in Pass 2 Preview Lab</strong><span>Use the visible summaries for owner review. No report generation or external write occurs.</span></div>';
+    } else if (kind === "audit-system") {
+      var diagnostics = window.__EDUOPS_REQUEST_DIAGNOSTICS__ || [];
+      var failures = diagnostics.filter(function (item) { return item.outcome === "ERROR" || item.outcome === "TIMEOUT"; }).length;
+      dom.eduopsReportContent.innerHTML = reportHtml("Preview session audit", meta[2], [["Workload requests", diagnostics.length], ["Failed or timed out", failures], ["Operation receipts", "Available per applicant Workbench"], ["Current snapshot", workload.snapshotId || "Not returned"]]) + '<p class="eduops-module-next-step">Open an applicant Audit tab to inspect exact versioned operation receipts.</p>';
+    } else if (kind === "health") {
+      dom.eduopsReportContent.innerHTML = reportHtml("Current system health", meta[2], [["Preview transport", app.isPreview() ? "Offline local simulation" : "Apps Script"], ["Source reliability", app.humanize(workload.reliabilityState || "UNKNOWN")], ["Snapshot", workload.snapshotId || "Not returned"], ["Last server duration", Number(workload.timings && workload.timings.serverRpcMs || 0) + " ms"], ["Mutation flags enabled", Object.keys(app.state.featureFlags || {}).filter(function (key) { return app.state.featureFlags[key] === true; }).length]]) + '<p class="eduops-module-next-step">This is a read-only status projection, not a production health certification.</p>';
+    }
+  }
+
+  function closeReport() {
+    dom.eduopsReportPanel.hidden = true;
+    dom.eduopsReportPanel.setAttribute("aria-hidden", "true");
+    app.state.report = null;
+    if (app.reportTrigger && app.reportTrigger.isConnected) app.reportTrigger.focus();
+  }
+
+  app.components = { badge: badge, stateTone: stateTone, openReport: openReport, closeReport: closeReport, closeQuickView: closeQuickView };
+
+  app.bindWorkspace = function () {
+    cacheDom();
+    dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Search the active product by ApplicantID, name, email or phone.</span>';
+    var searchTimer = null;
+    function applyFilter(key, value) {
+      app.state.filters[key] = value || "";
+      app.state.selected = {};
+      app.requestWorkload({ resetPage: true });
+    }
+    [[dom.eduopsOwnerFilter, "owner"], [dom.eduopsUrgencyFilter, "urgency"], [dom.eduopsRouteFilter, "primaryRoute"], [dom.eduopsDocumentFilter, "documentState"], [dom.eduopsFinanceFilter, "financeState"], [dom.eduopsContactFilter, "contactabilityState"], [dom.eduopsCommunicationFilter, "communicationState"], [dom.eduopsCoolingFilter, "cooling"], [dom.eduopsBlockKindFilter, "blockKind"]].forEach(function (entry) {
+      entry[0].addEventListener("change", function () { applyFilter(entry[1], this.value); });
+    });
+    dom.eduopsGlobalSearch.addEventListener("input", function () { clearTimeout(searchTimer); searchTimer = setTimeout(runGlobalSearch, 250); });
+    dom.eduopsSearch.addEventListener("input", function () { clearTimeout(searchTimer); searchTimer = setTimeout(function () { app.state.filters.search = dom.eduopsSearch.value; app.requestWorkload({ resetPage: true }); }, 250); });
+    dom.eduopsPageSize.addEventListener("change", function () { app.state.pageSize = Number(this.value || 25); app.requestWorkload({ resetPage: true }); });
+    dom.eduopsSort.addEventListener("change", function () { var parts = this.value.split(":"); app.state.sort = { key: parts[0], direction: parts[1] || "asc" }; app.requestWorkload({ resetPage: true }); });
+    dom.eduopsToggleFilters.addEventListener("click", function () { var open = dom.eduopsAdvancedFilters.hidden; dom.eduopsAdvancedFilters.hidden = !open; this.setAttribute("aria-expanded", open ? "true" : "false"); app.setInteractionState("SUCCESS", open ? "Additional workload filters opened." : "Additional workload filters closed."); });
+    byId("eduopsClearFilters").addEventListener("click", function () { app.state.filters = { search: "" }; app.state.selected = {}; app.requestWorkload({ resetPage: true }); });
+    byId("eduopsRailCollapse").addEventListener("click", function () {
+      var collapsed = dom.eduopsApp.getAttribute("data-rail-collapsed") === "true";
+      dom.eduopsApp.setAttribute("data-rail-collapsed", collapsed ? "false" : "true");
+      this.setAttribute("aria-expanded", collapsed ? "true" : "false");
+      this.setAttribute("aria-label", collapsed ? "Collapse navigation" : "Expand navigation");
+      app.setInteractionState("SUCCESS", collapsed ? "Operations navigation expanded." : "Operations navigation collapsed.");
+    });
+    byId("eduopsSelectVisible").addEventListener("click", function () { (app.state.workload.rows || []).forEach(function (row) { if (row.selectable === true) app.state.selected[row.applicantId] = true; }); app.state.selectionMode = "EXPLICIT"; renderSelection(app.state.workload); renderRows(app.state.workload); });
+    byId("eduopsSelectAllReturned").addEventListener("click", function () { app.state.selectionMode = "EXPLICIT"; (app.state.workload.rows || []).forEach(function (row) { if (row.selectable === true) app.state.selected[row.applicantId] = true; }); renderSelection(app.state.workload); renderRows(app.state.workload); app.setInteractionState("SUCCESS", "Eligible applicants on this page selected."); });
+    byId("eduopsClearSelection").addEventListener("click", function () { app.state.selected = {}; app.state.selectionMode = "EXPLICIT"; renderSelection(app.state.workload); renderRows(app.state.workload); });
+    byId("eduopsRefreshSnapshot").addEventListener("click", function () { app.requestWorkload({ refreshSnapshot: true }); });
+    byId("eduopsSafetyDetails").addEventListener("click", function () { openReport("health", this); });
+    dom.eduopsOpenReconciliation.addEventListener("click", function () { openReport("reconciliation", this); });
+    byId("eduopsCloseReport").addEventListener("click", closeReport);
+    dom.eduopsCloseDrawer.addEventListener("click", closeQuickView);
+    dom.eduopsDrawerScrim.addEventListener("click", closeQuickView);
+    dom.eduopsPreviousPage.addEventListener("click", function () { if (app.state.page > 1) { app.state.page--; app.requestWorkload(); } });
+    dom.eduopsNextPage.addEventListener("click", function () { if (app.state.workload && app.state.page < app.state.workload.totalPages) { app.state.page++; app.requestWorkload(); } });
+    dom.eduopsProductSwitcher.addEventListener("change", function () {
+      var requested = this.value;
+      if (requested !== "FODE" && !app.isPreview()) {
+        this.value = "FODE";
+        app.toast(requested + " is Preview-only in Pass 2. FODE remains the only live adapter.");
+        return;
+      }
+      app.saveProductState(app.state.product);
+      app.restoreProductState(requested);
+      app.requestWorkload();
+    });
+
+    document.addEventListener("click", function (event) {
+      var stateButton = event.target.closest("[data-state]");
+      if (stateButton && (stateButton.closest("#eduopsActionNav") || stateButton.closest("#eduopsHistoryNav"))) {
+        var requested = stateButton.getAttribute("data-state");
+        app.state.actionabilityState = requested;
+        app.state.worklistKey = "";
+        if (!app.state.workScopePinned) app.state.workScope = "ALL_AUTHORISED";
+        app.state.selected = {};
+        app.state.selectionMode = "EXPLICIT";
+        app.requestWorkload({ resetPage: true });
+        return;
+      }
+      var worklist = event.target.closest("[data-worklist]");
+      if (worklist) { app.state.worklistKey = worklist.getAttribute("data-worklist"); app.state.selected = {}; app.requestWorkload({ resetPage: true }); return; }
+      var scope = event.target.closest("[data-work-scope]");
+      if (scope) { app.state.workScope = scope.getAttribute("data-work-scope"); app.requestWorkload({ resetPage: true }); return; }
+      var page = event.target.closest("[data-page]");
+      if (page) { app.state.page = Number(page.getAttribute("data-page")); app.requestWorkload(); return; }
+      var select = event.target.closest("[data-select-applicant]");
+      if (select) { app.state.selected[select.getAttribute("data-select-applicant")] = select.checked; renderSelection(app.state.workload); return; }
+      var quick = event.target.closest("[data-quick-applicant]");
+      if (quick) { openQuickView(quick.getAttribute("data-quick-applicant"), quick); return; }
+      var open = event.target.closest("[data-open-applicant]");
+      if (open && app.openWorkbench) { closeQuickView(); app.openWorkbench(open.getAttribute("data-open-applicant"), open); return; }
+      var searchOpen = event.target.closest("[data-search-open]");
+      if (searchOpen && app.openWorkbench) { var searchApplicantId = searchOpen.getAttribute("data-search-open"); dismissGlobalSearch(); app.openWorkbench(searchApplicantId, searchOpen); return; }
+      var searchWorklist = event.target.closest("[data-search-worklist]");
+      if (searchWorklist) {
+        var found = app.state.searchResults.filter(function (row) { return row.applicantId === searchWorklist.getAttribute("data-search-worklist"); })[0];
+        if (found) { dismissGlobalSearch(); app.state.actionabilityState = found.actionabilityState; app.state.worklistKey = found.worklistKey || ""; app.state.filters.search = found.applicantId; app.requestWorkload({ resetPage: true }); }
+        return;
+      }
+      var report = event.target.closest("[data-report]");
+      if (report) { openReport(report.getAttribute("data-report"), report); return; }
+      var retryReport = event.target.closest("[data-retry-report]");
+      if (retryReport) { openReport(retryReport.getAttribute("data-retry-report"), retryReport); return; }
+      var reportApplicant = event.target.closest("[data-report-open-applicant]");
+      if (reportApplicant && app.openWorkbench) { var reportApplicantId = reportApplicant.getAttribute("data-report-open-applicant"); closeReport(); app.openWorkbench(reportApplicantId, reportApplicant); return; }
+      var retry = event.target.closest("[data-retry-workload]");
+      if (retry) { app.requestWorkload(); return; }
+      var retryBootstrap = event.target.closest("[data-retry-bootstrap]");
+      if (retryBootstrap && typeof app.retryBootstrap === "function") { app.retryBootstrap(); return; }
+      if (event.target.closest("#eduopsRefreshAuthority")) {
+        if (app.bootstrapMachine && app.bootstrapMachine.state !== "INTERACTIVE" && typeof app.retryBootstrap === "function") app.retryBootstrap();
+        else app.requestWorkload({ refreshSnapshot: true });
+      }
+    });
+  };
+})();
+</script>

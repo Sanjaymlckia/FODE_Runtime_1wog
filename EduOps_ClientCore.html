@@ -1,0 +1,526 @@
+<script>
+(function () {
+  "use strict";
+
+  var app = window.EduOpsApp = window.EduOpsApp || {};
+  var bootstrap = window.EDUOPS_BOOTSTRAP || {};
+  var actionabilityOrder = ["READY", "COOLING_OFF", "AWAITING_APPLICANT", "AWAITING_PAYMENT", "REVIEW_REQUIRED", "BLOCKED", "UNKNOWN"];
+  var requestSequence = 0;
+  var activeRequest = null;
+  var queuedRequest = null;
+  var workloadTimeoutMs = Number(window.EDUOPS_REQUEST_TIMEOUT_MS || 10000);
+  var bootstrapStartedAt = Date.now();
+  var bootstrapTimeoutMs = Number(window.EDUOPS_BOOTSTRAP_TIMEOUT_MS || 10000);
+
+  app.readRpcAllowlist = {
+    eduops_getAccessProjection: true,
+    eduops_getProfile: true,
+    eduops_queryOperationalWorkload: true,
+    eduops_searchApplicants: true,
+    eduops_getApplicantWorkbench: true,
+    eduops_getDocumentManifest: true,
+    eduops_getDocumentRendition: true,
+    eduops_getDocumentFileAction: true,
+    eduops_getReconciliation: true,
+    eduops_getParityDiagnostics: true,
+    eduops_getOperationHistory: true,
+    eduops_previewCommand: true
+  };
+  app.writeRpcAllowlist = { eduops_executeCommand: true };
+
+  app.catalog = {
+    READY: ["Ready for action", "Authorised work can proceed now.", "Open work"],
+    COOLING_OFF: ["Recently contacted - waiting period", "A known action is time-gated.", "Review availability"],
+    AWAITING_APPLICANT: ["Waiting for applicant", "Applicant input or evidence is required.", "Review follow-up"],
+    AWAITING_PAYMENT: ["Waiting for payment", "Payment or evidence is outstanding.", "Review payment follow-up"],
+    REVIEW_REQUIRED: ["Needs review", "An internal decision is required.", "Open review"],
+    BLOCKED: ["Blocked - intervention required", "A known blocker prevents progress.", "Resolve blocker"],
+    UNKNOWN: ["Classification required", "Authority cannot classify this record safely.", "Inspect authority"],
+    COMPLETE: ["Completed records", "No current operator action is required.", "View history"],
+    DOCUMENT_REVIEW: ["Review documents", "Document evidence requires an individual decision.", "Review documents"],
+    REVIEW_DOCUMENTS: ["Review documents", "Document evidence requires an individual decision.", "Review documents"],
+    DOCUMENT_FOLLOW_UP: ["Follow up missing documents", "Required evidence is missing or incomplete.", "Prepare follow-up"],
+    CONTACTABILITY_EXCEPTION: ["Correct contact details", "The effective contact route is unavailable.", "Correct details"],
+    PAYMENT_FOLLOW_UP: ["Follow up outstanding payment", "Payment remains outstanding.", "Review follow-up"],
+    PAYMENT_REVIEW: ["Verify payment evidence", "Receipt evidence requires Finance review.", "Review evidence"],
+    ENROLMENT_COMPLETION: ["Complete enrolment", "All prerequisites are ready for completion.", "Complete enrolment"],
+    NO_ACTION: ["No current action", "This record is retained for history.", "View record"],
+    PAYMENT_PENDING: ["Payment pending", "Payment has not yet been verified.", "Review payment"],
+    PAYMENT_TO_VERIFY: ["Payment to verify", "Payment evidence is awaiting verification.", "Verify evidence"],
+    PAID_VERIFIED: ["Payment verified", "Payment evidence has been verified.", "View receipt"],
+    NOT_YET_PAYMENT_APPLICABLE: ["Payment not required yet", "The applicant has not reached the payment point.", "Continue current work"],
+    PAYMENT_NOT_APPLICABLE: ["Payment not required", "Payment does not apply to the current state.", "Continue current work"],
+    EMAIL_VALID: ["Email available", "The effective email can be used.", "Continue"],
+    EMAIL_AVAILABLE: ["Email available", "The effective email can be used.", "Continue"],
+    NO_EFFECTIVE_EMAIL: ["No usable email", "No authoritative email is available.", "Correct contact details"],
+    EMAIL_BOUNCED: ["Email delivery failed", "The current email has bounced.", "Correct contact details"],
+    EMAIL_SUPPRESSED: ["Email suppressed", "Email delivery is currently suppressed.", "Review suppression"],
+    AUTHORITATIVE: ["Authoritative", "The product authority is current.", "Continue"],
+    DERIVED: ["Derived projection", "This value is derived from authoritative facts.", "Review details"],
+    STALE: ["Source changed", "Refresh or revalidate before acting.", "Refresh"],
+    CONFLICTING: ["Authority conflict", "Conflicting facts prevent safe action.", "Inspect conflict"],
+    UNAVAILABLE: ["Source unavailable", "The product authority could not be read.", "Retry"],
+    DISABLED_BY_FLAG: ["Operation not enabled", "The domain feature flag is off.", "Use Current Admin"],
+    CAPABILITY_DENIED: ["Permission required", "The current operator lacks the required capability.", "Request authorised support"]
+  };
+
+  app.state = {
+    product: "FODE",
+    actionabilityState: "READY",
+    worklistKey: "",
+    workScope: "ALL_AUTHORISED",
+    workScopePinned: false,
+    filters: { search: "" },
+    sort: { key: "urgency", direction: "asc" },
+    page: 1,
+    pageSize: 25,
+    snapshotId: "",
+    workload: null,
+    selected: {},
+    selectionMode: "EXPLICIT",
+    searchResults: [],
+    workbench: null,
+    activeTab: "overview",
+    documentManifest: null,
+    selectedDocumentIndex: 0,
+    documentRenditions: {},
+    documentOriginalActions: {},
+    documentDraft: {},
+    dirty: false,
+    batch: null,
+    workSession: null,
+    returnContext: null,
+    pendingLeave: null,
+    confirm: null,
+    report: null,
+    capabilities: {},
+    featureFlags: {},
+    profile: null,
+    access: null,
+    productStates: {}
+  };
+
+  app.bootstrapMachine = {
+    state: "BOOT_START",
+    startedAt: new Date(bootstrapStartedAt).toISOString(),
+    events: [],
+    error: null
+  };
+
+  app.setBootstrapState = function (state, detail) {
+    var next = app.upper(state || "BOOT_START");
+    var event = {
+      state: next,
+      at: app.nowIso(),
+      elapsedMs: Date.now() - bootstrapStartedAt,
+      detail: String(detail || "")
+    };
+    app.bootstrapMachine.state = next;
+    app.bootstrapMachine.error = /_ERROR$|TIMEOUT/.test(next) ? event.detail : null;
+    app.bootstrapMachine.events.push(event);
+    document.documentElement.setAttribute("data-eduops-bootstrap-state", next);
+    var root = document.getElementById("eduopsApp");
+    if (root) root.setAttribute("data-bootstrap-state", next);
+    window.__EDUOPS_BOOTSTRAP_DIAGNOSTICS__ = {
+      state: app.bootstrapMachine.state,
+      startedAt: app.bootstrapMachine.startedAt,
+      error: app.bootstrapMachine.error || "",
+      events: app.bootstrapMachine.events.slice()
+    };
+    window.dispatchEvent(new CustomEvent("eduops:bootstrap-state", { detail: event }));
+    if (next !== "INTERACTIVE") app.setInteractionState(/_ERROR$|TIMEOUT/.test(next) ? "ERROR" : "LOADING", detail || app.humanize(next));
+    app.applyBootstrapControlState(next === "INTERACTIVE");
+    return event;
+  };
+
+  app.applyBootstrapControlState = function (interactive) {
+    var selector = [
+      "#eduopsProductSwitcher", "#eduopsGlobalSearch", "#eduopsRefreshSnapshot", "#eduopsStartSession",
+      "#eduopsSearch", "#eduopsOwnerFilter", "#eduopsUrgencyFilter", "#eduopsSort", "#eduopsToggleFilters",
+      "#eduopsSelectVisible", "#eduopsSelectAllReturned", "#eduopsClearSelection", "#eduopsOpenBatch",
+      "#eduopsPreviousPage", "#eduopsNextPage", "#eduopsPageSize", "#eduopsOpenReconciliation"
+    ].join(",");
+    Array.prototype.forEach.call(document.querySelectorAll(selector), function (control) {
+      if (!interactive) {
+        if (!control.disabled) {
+          control.disabled = true;
+          control.setAttribute("data-bootstrap-disabled", "true");
+        }
+        control.setAttribute("aria-describedby", control.getAttribute("aria-describedby") || "eduopsBootstrapHelp");
+      } else if (control.getAttribute("data-bootstrap-disabled") === "true") {
+        control.disabled = false;
+        control.removeAttribute("data-bootstrap-disabled");
+      }
+    });
+    var help = document.getElementById("eduopsBootstrapHelp");
+    if (help) help.textContent = interactive ? "Workspace controls are available." : "This control becomes available after the source and workload are ready.";
+  };
+
+  app.withBootstrapTimeout = function (promise, phase) {
+    return new Promise(function (resolve, reject) {
+      var settled = false;
+      var timeout = setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        var error = new Error(app.humanize(phase) + " timed out after " + Math.round(bootstrapTimeoutMs / 1000) + " seconds.");
+        error.code = "TIMEOUT";
+        reject(error);
+      }, bootstrapTimeoutMs);
+      Promise.resolve(promise).then(function (value) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        resolve(value);
+      }, function (error) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        reject(error);
+      });
+    });
+  };
+
+  app.waitForTransport = function () {
+    return new Promise(function (resolve, reject) {
+      var deadline = Date.now() + Math.min(bootstrapTimeoutMs, 5000);
+      (function check() {
+        if (activeTransport() || window.google && google.script && google.script.run) return resolve(activeTransport() || google.script.run);
+        if (Date.now() >= deadline) return reject(new Error("The EduOps transport did not initialise."));
+        setTimeout(check, 50);
+      })();
+    });
+  };
+
+  app.bootstrapRequestState = function () {
+    return {
+      activeRequestId: activeRequest && activeRequest.id || null,
+      queuedRequestId: queuedRequest && queuedRequest.id || null,
+      unresolvedRequests: Number(Boolean(activeRequest)) + Number(Boolean(queuedRequest))
+    };
+  };
+
+  app.clone = function (value) { return JSON.parse(JSON.stringify(value == null ? null : value)); };
+  app.esc = function (value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, function (character) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character];
+    });
+  };
+  app.upper = function (value) { return String(value == null ? "" : value).trim().toUpperCase(); };
+  app.humanize = function (value) {
+    var key = app.upper(value);
+    if (app.catalog[key]) return app.catalog[key][0];
+    return key.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, function (letter) { return letter.toUpperCase(); });
+  };
+  app.explain = function (value) { var item = app.catalog[app.upper(value)]; return item ? item[1] : ""; };
+  app.actionLabel = function (value) { var item = app.catalog[app.upper(value)]; return item ? item[2] : app.humanize(value); };
+  app.isPreview = function () { return !!window.EDUOPS_TRANSPORT; };
+  app.nowIso = function () { return new Date().toISOString(); };
+  app.idempotencyKey = function (operation, applicantId) {
+    return ["EDUOPS", operation, applicantId || "COHORT", Date.now(), Math.random().toString(36).slice(2, 10)].join("::");
+  };
+
+  function activeTransport() {
+    return window.EDUOPS_TRANSPORT || window.EduOpsTransport || null;
+  }
+
+  app.call = function (name, payload) {
+    if (!app.readRpcAllowlist[name] && !app.writeRpcAllowlist[name]) {
+      return Promise.reject(new Error("EduOps RPC is not allowlisted: " + name));
+    }
+    var transport = activeTransport();
+    if (transport) {
+      if (typeof transport.call === "function") return transport.call(name, payload || {});
+      if (typeof transport[name] === "function") return transport[name](payload || {});
+      return Promise.reject(new Error("EduOps transport does not implement: " + name));
+    }
+    return new Promise(function (resolve, reject) {
+      if (!window.google || !google.script || !google.script.run) return reject(new Error("EduOps Apps Script transport is unavailable"));
+      var runner = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+      runner[name](payload || {});
+    });
+  };
+
+  app.queryPayload = function () {
+    return {
+      product: app.state.product,
+      actionabilityState: app.state.actionabilityState,
+      worklistKey: app.state.worklistKey,
+      workScope: app.state.workScope,
+      filters: app.clone(app.state.filters),
+      sort: app.clone(app.state.sort),
+      page: app.state.page,
+      pageSize: app.state.pageSize,
+      expectedSnapshotId: app.state.snapshotId || ""
+    };
+  };
+
+  app.queryFingerprint = function (payload) {
+    var p = payload || app.queryPayload();
+    return JSON.stringify({ product: p.product, actionabilityState: p.actionabilityState, worklistKey: p.worklistKey, workScope: p.workScope, filters: p.filters, sort: p.sort, pageSize: p.pageSize });
+  };
+
+  app.contextLabel = function (payload) {
+    return app.humanize(payload.actionabilityState) + " / " + (payload.worklistKey ? app.humanize(payload.worklistKey) : "All work types") + " / " + app.humanize(payload.workScope) + " / page " + payload.page;
+  };
+
+  app.saveProductState = function (product) {
+    app.state.productStates[product || app.state.product] = {
+      actionabilityState: app.state.actionabilityState,
+      worklistKey: app.state.worklistKey,
+      workScope: app.state.workScope,
+      filters: app.clone(app.state.filters),
+      sort: app.clone(app.state.sort),
+      page: app.state.page,
+      pageSize: app.state.pageSize,
+      snapshotId: app.state.snapshotId
+    };
+  };
+  app.restoreProductState = function (product) {
+    var saved = app.state.productStates[product] || {};
+    app.state.product = product;
+    app.state.actionabilityState = saved.actionabilityState || "READY";
+    app.state.worklistKey = saved.worklistKey || "";
+    app.state.workScope = saved.workScope || "ALL_AUTHORISED";
+    app.state.filters = app.clone(saved.filters || { search: "" });
+    app.state.sort = app.clone(saved.sort || { key: "urgency", direction: "asc" });
+    app.state.page = Number(saved.page || 1);
+    app.state.pageSize = Number(saved.pageSize || 25);
+    app.state.snapshotId = saved.snapshotId || "";
+    app.state.selected = {};
+    app.state.selectionMode = "EXPLICIT";
+  };
+
+  app.requestWorkload = function (options) {
+    var opts = options || {};
+    if (opts.resetPage) app.state.page = 1;
+    if (opts.refreshSnapshot) app.state.snapshotId = "";
+    var payload = app.queryPayload();
+    var request = {
+      id: ++requestSequence,
+      payload: payload,
+      fingerprint: JSON.stringify(payload),
+      startedAt: 0,
+      settled: false,
+      superseded: false
+    };
+    request.promise = new Promise(function (resolve) { request.resolve = resolve; });
+    if (activeRequest) {
+      if (activeRequest.fingerprint === request.fingerprint) {
+        recordRequestDiagnostic(request, "DEDUPED_ACTIVE", null, null);
+        return activeRequest.promise;
+      }
+      if (queuedRequest && queuedRequest.fingerprint === request.fingerprint) {
+        recordRequestDiagnostic(request, "DEDUPED_QUEUED", null, null);
+        return queuedRequest.promise;
+      }
+      activeRequest.superseded = true;
+      if (queuedRequest) {
+        queuedRequest.resolve({ response: null, error: null, outcome: "DISCARDED_SUPERSEDED" });
+        recordRequestDiagnostic(queuedRequest, "DISCARDED_SUPERSEDED", null, null);
+      }
+      queuedRequest = request;
+      if (app.renderPendingWorkload) app.renderPendingWorkload(request, "QUEUED");
+      return request.promise;
+    }
+    startRequest(request);
+    return request.promise;
+  };
+
+  function startRequest(request) {
+    activeRequest = request;
+    request.startedAt = Date.now();
+    app.setInteractionState("LOADING", "Loading " + app.contextLabel(request.payload) + ".");
+    if (app.renderPendingWorkload) app.renderPendingWorkload(request, "LOADING");
+    var timeout = setTimeout(function () {
+      finishRequest(request, null, new Error("Workload request timed out after " + Math.round(workloadTimeoutMs / 1000) + " seconds."), "TIMEOUT");
+    }, workloadTimeoutMs);
+    app.call("eduops_queryOperationalWorkload", request.payload).then(function (response) {
+      clearTimeout(timeout);
+      finishRequest(request, response || {}, null, "COMPLETE");
+    }).catch(function (error) {
+      clearTimeout(timeout);
+      finishRequest(request, null, error, "ERROR");
+    });
+  }
+
+  function finishRequest(request, response, error, outcome) {
+    if (request.settled) return;
+    request.settled = true;
+    var superseded = request.superseded || queuedRequest;
+    var finalOutcome = superseded ? "DISCARDED_SUPERSEDED" : outcome;
+    if (!superseded && error && app.renderWorkloadError) app.renderWorkloadError(request, error, outcome);
+    if (!superseded && !error) {
+      if (response.ok === false) {
+        if (app.renderWorkloadError) app.renderWorkloadError(request, new Error(response.message || response.code || "Workload rejected"), response.code || "REJECTED");
+      } else {
+        if (response.snapshotId) app.state.snapshotId = response.snapshotId;
+        app.state.workload = response;
+        if (app.renderWorkload) app.renderWorkload(response, Date.now() - request.startedAt);
+      }
+    }
+    recordRequestDiagnostic(request, finalOutcome, response, error);
+    if (!superseded) {
+      if (error || response && response.ok === false) app.setInteractionState("ERROR", "Workload request failed. Review the visible error and retry.");
+      else app.setInteractionState("SUCCESS", app.contextLabel(request.payload) + " loaded.");
+    }
+    request.resolve({ response: response, error: error, outcome: finalOutcome });
+    if (activeRequest === request) activeRequest = null;
+    if (queuedRequest) {
+      var next = queuedRequest;
+      queuedRequest = null;
+      startRequest(next);
+    }
+  }
+
+  function recordRequestDiagnostic(request, outcome, response, error) {
+    window.__EDUOPS_REQUEST_DIAGNOSTICS__ = window.__EDUOPS_REQUEST_DIAGNOSTICS__ || [];
+    window.__EDUOPS_REQUEST_DIAGNOSTICS__.push({ requestId: request.id, context: app.contextLabel(request.payload), outcome: outcome, clientRequestMs: request.startedAt ? Date.now() - request.startedAt : 0, responseSize: response ? JSON.stringify(response).length : 0, serverTimings: response && response.timings || {}, error: error ? String(error.message || error) : "" });
+  }
+
+  app.snapshotReturnContext = function () {
+    return {
+      product: app.state.product,
+      actionabilityState: app.state.actionabilityState,
+      worklistKey: app.state.worklistKey,
+      workScope: app.state.workScope,
+      filters: app.clone(app.state.filters),
+      sort: app.clone(app.state.sort),
+      page: app.state.page,
+      pageSize: app.state.pageSize,
+      snapshotId: app.state.snapshotId,
+      scrollY: window.scrollY || 0,
+      focusId: document.activeElement && document.activeElement.id || ""
+    };
+  };
+
+  app.restoreReturnContext = function (context) {
+    var ctx = context || app.state.returnContext;
+    if (!ctx) return app.requestWorkload();
+    app.state.product = ctx.product || "FODE";
+    app.state.actionabilityState = ctx.actionabilityState || "READY";
+    app.state.worklistKey = ctx.worklistKey || "";
+    app.state.workScope = ctx.workScope || "ALL_AUTHORISED";
+    app.state.filters = app.clone(ctx.filters || { search: "" });
+    app.state.sort = app.clone(ctx.sort || { key: "urgency", direction: "asc" });
+    app.state.page = Number(ctx.page || 1);
+    app.state.pageSize = Number(ctx.pageSize || 25);
+    app.state.snapshotId = ctx.snapshotId || app.state.snapshotId;
+    return app.requestWorkload().then(function () {
+      setTimeout(function () {
+        window.scrollTo(0, Number(ctx.scrollY || 0));
+        var focus = ctx.focusId ? document.getElementById(ctx.focusId) : null;
+        if (focus) focus.focus();
+      }, 0);
+    });
+  };
+
+  app.pushRoute = function (route) {
+    var value = route || "workload";
+    history.pushState({ eduopsRoute: value }, "", "#" + value);
+  };
+  app.replaceRoute = function (route) {
+    var value = route || "workload";
+    if (/^workload/.test(value) && (app.state.workbench || app.state.batch)) return;
+    history.replaceState({ eduopsRoute: value }, "", "#" + value);
+  };
+
+  app.openConfirm = function (options) {
+    var opts = options || {};
+    var layer = document.getElementById("eduopsConfirmLayer");
+    app.state.confirm = opts;
+    document.getElementById("eduopsConfirmTitle").textContent = opts.title || "Confirm operation";
+    document.getElementById("eduopsConfirmText").innerHTML = opts.html || "";
+    document.getElementById("eduopsConfirmProceed").textContent = opts.proceedLabel || "Confirm operation";
+    document.getElementById("eduopsConfirmCancel").textContent = opts.cancelLabel || "Cancel";
+    layer.hidden = false;
+    layer.setAttribute("aria-hidden", "false");
+    document.getElementById("eduopsConfirmCancel").focus();
+  };
+  app.closeConfirm = function (restoreFocus) {
+    var layer = document.getElementById("eduopsConfirmLayer");
+    var source = app.state.confirm && app.state.confirm.source;
+    layer.hidden = true;
+    layer.setAttribute("aria-hidden", "true");
+    app.state.confirm = null;
+    if (restoreFocus !== false && source && typeof source.focus === "function") source.focus();
+  };
+
+  app.toast = function (message) {
+    var toast = document.getElementById("eduopsToast");
+    toast.textContent = String(message || "");
+    toast.classList.add("eduops-toast-visible");
+    clearTimeout(app.toastTimer);
+    app.toastTimer = setTimeout(function () { toast.classList.remove("eduops-toast-visible"); }, 4000);
+  };
+
+  app.setInteractionState = function (state, message) {
+    var target = document.getElementById("eduopsInteractionStatus");
+    if (!target) return;
+    target.setAttribute("data-state", app.upper(state || "IDLE"));
+    target.textContent = String(message || "Workspace ready.");
+    target.classList.add("eduops-interaction-status-visible");
+    clearTimeout(app.interactionStatusTimer);
+    if (app.upper(state) !== "LOADING") {
+      app.interactionStatusTimer = setTimeout(function () { target.classList.remove("eduops-interaction-status-visible"); }, 5000);
+    }
+  };
+
+  app.beginControlAction = function (control, pendingLabel, message) {
+    var token = { control: control, disabled: !!(control && control.disabled), html: control && control.innerHTML || "" };
+    if (control) {
+      control.disabled = true;
+      control.setAttribute("aria-busy", "true");
+      control.setAttribute("data-interaction-state", "LOADING");
+      if (pendingLabel) control.textContent = pendingLabel;
+    }
+    app.setInteractionState("LOADING", message || pendingLabel || "Working...");
+    return token;
+  };
+
+  app.finishControlAction = function (token, state, message) {
+    var control = token && token.control;
+    if (control && control.isConnected) {
+      control.disabled = token.disabled;
+      control.removeAttribute("aria-busy");
+      control.setAttribute("data-interaction-state", app.upper(state || "SUCCESS"));
+      control.innerHTML = token.html;
+    }
+    app.setInteractionState(state || "SUCCESS", message || "Action completed.");
+  };
+
+  app.classifyControls = function (root) {
+    var scope = root && root.querySelectorAll ? root : document;
+    var controls = [];
+    if (scope.matches && scope.matches("button,a[href],input,select,textarea,summary")) controls.push(scope);
+    Array.prototype.push.apply(controls, scope.querySelectorAll("button,a[href],input,select,textarea,summary"));
+    controls.forEach(function (control) {
+      var classification = "NAVIGATION";
+      var report = control.getAttribute("data-report") || "";
+      if (control.closest("#eduopsPreviewLab")) classification = "TECHNICAL";
+      else if (/^(roles|approvals|data-quality)$/.test(report)) classification = "STRUCTURAL";
+      else if (control.matches("[data-preview-command='BOOKS_ACTION']") || control.hasAttribute("data-unavailable-control")) classification = "UNAVAILABLE";
+      else if (control.matches("input,select,textarea,[data-preview-command],[data-open-original],[data-request-correction],[data-portal-communications],[data-communication-template],[data-batch-preview],[data-batch-continue],[data-batch-confirm],[data-batch-execute],[data-session-skip],[data-session-next],[data-select-applicant],#eduopsRefreshSnapshot,#eduopsRefreshAuthority,#eduopsSelectVisible,#eduopsSelectAllReturned,#eduopsClearSelection,#eduopsClearFilters")) classification = "OPERATION";
+      control.setAttribute("data-control-classification", classification);
+      if (!control.getAttribute("data-control-id")) {
+        var commandDiscriminator = control.hasAttribute("data-preview-command") ? "preview-command:" + control.getAttribute("data-preview-command") + ":" + (control.getAttribute("data-command-scope") || "selected") : "";
+        var discriminator = control.id || commandDiscriminator || ["data-report", "data-state", "data-worklist", "data-work-scope", "data-workbench-tab", "data-open-applicant", "data-quick-applicant", "data-search-open", "data-select-applicant", "data-report-open-applicant", "data-batch-step", "data-batch-open", "data-document-index", "data-document-move", "data-page", "data-session-skip", "data-session-next", "data-session-exit", "data-preview-viewport"].map(function (name) { var value = control.getAttribute(name); return value === null ? "" : name.replace(/^data-/, "") + ":" + (value || "default"); }).filter(Boolean)[0] || control.getAttribute("aria-label") || control.textContent.trim().replace(/\s+/g, "-").slice(0, 48);
+        control.setAttribute("data-control-id", classification.toLowerCase() + ":" + discriminator);
+      }
+    });
+  };
+
+  app.installControlClassification = function () {
+    app.classifyControls(document);
+    if (app.controlClassificationObserver) return;
+    app.controlClassificationObserver = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        Array.prototype.forEach.call(mutation.addedNodes || [], function (node) { if (node.nodeType === 1) app.classifyControls(node); });
+      });
+    });
+    app.controlClassificationObserver.observe(document.body, { childList: true, subtree: true });
+  };
+
+  app.actionabilityOrder = actionabilityOrder;
+  app.bootstrap = bootstrap;
+})();
+</script>

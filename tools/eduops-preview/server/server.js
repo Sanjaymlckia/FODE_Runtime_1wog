@@ -1,30 +1,84 @@
 const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
+const crypto = require("node:crypto");
+const childProcess = require("node:child_process");
 const { listScenarios, getDelayMs, handleRpc, validateSnapshot } = require("./preview-data");
 
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
 const previewRoot = path.resolve(__dirname, "..");
 const defaultPort = Number(process.env.EDUOPS_PREVIEW_PORT || 4173);
+const serverBuildTimestamp = new Date().toISOString();
+const transportVersion = "EDUOPS_PREVIEW_TRANSPORT_V2";
+const scenarioVersion = "EDUOPS_PREVIEW_SCENARIOS_V1";
+const requestStateVersion = "EDUOPS_REQUEST_STATE_V2";
+const clientFiles = ["EduOps_ClientCore.html", "EduOps_ClientComponents.html", "EduOps_ClientWorkbench.html", "EduOps_ClientBatch.html", "EduOps_Client.html"];
 
 function readText(filePath) {
   return fs.readFileSync(filePath, "utf8");
 }
 
+function sha256(value) {
+  return crypto.createHash("sha256").update(String(value)).digest("hex");
+}
+
+function clientBuildInfo() {
+  const runtimeClientSource = clientFiles.map((fileName) => readText(path.join(repoRoot, fileName))).join("\n");
+  const previewTransportSource = readText(path.join(previewRoot, "server", "preview-transport.js"));
+  return {
+    serverBuildTimestamp,
+    runtimeClientFiles: clientFiles.slice(),
+    runtimeClientInputHash: sha256(runtimeClientSource),
+    previewTransportHash: sha256(previewTransportSource),
+    servedClientBundleHash: sha256(`${previewTransportSource}\n${runtimeClientSource}`),
+    transportVersion,
+    scenarioVersion,
+    requestStateVersion
+  };
+}
+
 function renderEduOpsPreviewHtml() {
   let html = readText(path.join(repoRoot, "EduOps.html"));
   const styles = readText(path.join(repoRoot, "EduOps_Styles.html"));
-  const client = readText(path.join(repoRoot, "EduOps_Client.html"));
+  const build = clientBuildInfo();
   const previewCss = `<style>\n${readText(path.join(previewRoot, "server", "preview-lab.css"))}\n</style>`;
-  const previewTransport = `<script>\n${readText(path.join(previewRoot, "server", "preview-transport.js"))}\n</script>`;
+  const previewBuild = `<script>window.EDUOPS_PREVIEW_BUILD=${JSON.stringify(build)};</script>`;
+  const previewTransport = `${previewBuild}\n<script>\n${readText(path.join(previewRoot, "server", "preview-transport.js"))}\n</script>`;
   html = html.replace('<?!= HtmlService.createHtmlOutputFromFile("EduOps_Styles").getContent(); ?>', styles + "\n" + previewCss);
-  html = html.replace('<?!= HtmlService.createHtmlOutputFromFile("EduOps_Client").getContent(); ?>', previewTransport + "\n" + client);
+  clientFiles.forEach((fileName, index) => {
+    const include = `<?!= HtmlService.createHtmlOutputFromFile("${fileName.replace(/\.html$/, "")}").getContent(); ?>`;
+    const source = readText(path.join(repoRoot, fileName));
+    html = html.replace(include, (index === 0 ? previewTransport + "\n" : "") + source);
+  });
   html = html
     .replace(/<\?= BUILD_VERSION \?>/g, "r352-preview")
-    .replace(/<\?= BUILD_RENDERED_AT \?>/g, new Date().toISOString())
+    .replace(/<\?= BUILD_RENDERED_AT \?>/g, serverBuildTimestamp)
     .replace(/<\?= USER_EMAIL \?>/g, "preview.owner@example.test")
     .replace(/<\?= ADMIN_ROLE \?>/g, "PREVIEW_ADMIN");
   return html;
+}
+
+function readiness() {
+  const build = clientBuildInfo();
+  let html = "";
+  let error = "";
+  try {
+    html = renderEduOpsPreviewHtml();
+  } catch (err) {
+    error = err.message || String(err);
+  }
+  const unresolvedIncludes = html.match(/<\?[^>]*HtmlService|<\?=/g) || [];
+  return {
+    ok: !error && unresolvedIncludes.length === 0,
+    serverReady: true,
+    applicationAssetsReady: !error && html.length > 0,
+    sharedClientReady: !error && clientFiles.every((fileName) => html.includes(readText(path.join(repoRoot, fileName)))),
+    previewTransportReady: !error && html.includes("window.EDUOPS_TRANSPORT = { call: call }"),
+    unresolvedIncludes,
+    error,
+    pid: process.pid,
+    ...build
+  };
 }
 
 function sendJson(res, statusCode, value) {
@@ -140,7 +194,8 @@ function routeRequest(req, res) {
     return sendJson(res, 200, listSnapshots());
   }
   if (req.method === "GET" && url.pathname === "/health") {
-    return sendJson(res, 200, { ok: true, preview: true, liveDependency: false });
+    const status = readiness();
+    return sendJson(res, status.ok ? 200 : 503, { ...status, preview: true, liveDependency: false });
   }
   if (req.method === "GET" && (url.pathname.startsWith("/preview-open-original/") || url.pathname.startsWith("/preview-download-original/"))) {
     return sendText(res, 200, "Preview Open Original representation only. No live Drive file is accessed.");
@@ -196,15 +251,36 @@ function start(port = defaultPort, host = "127.0.0.1") {
   });
 }
 
+function launchDetached() {
+  const stdoutPath = path.join(previewRoot, "preview-server.stdout.log");
+  const stderrPath = path.join(previewRoot, "preview-server.stderr.log");
+  const stdout = fs.openSync(stdoutPath, "a");
+  const stderr = fs.openSync(stderrPath, "a");
+  const child = childProcess.spawn(process.execPath, [__filename, "--child"], {
+    cwd: previewRoot,
+    detached: true,
+    stdio: ["ignore", stdout, stderr],
+    windowsHide: true
+  });
+  child.unref();
+  fs.closeSync(stdout);
+  fs.closeSync(stderr);
+  process.stdout.write(String(child.pid));
+}
+
 if (require.main === module) {
-  start().then(({ url }) => {
+  if (process.argv.includes("--daemon")) {
+    launchDetached();
+  } else {
+    start().then(({ url }) => {
     fs.writeFileSync(path.join(previewRoot, ".eduops-preview.pid"), String(process.pid));
     console.log(`EduOps Preview Lab running at ${url}`);
     console.log("NO LIVE DATA / NO LIVE MUTATIONS / SIMULATED EDUOPS CONTRACTS");
-  }).catch((err) => {
-    console.error(`EduOps Preview Lab failed to start: ${err.message || err}`);
-    process.exit(1);
-  });
+    }).catch((err) => {
+      console.error(`EduOps Preview Lab failed to start: ${err.message || err}`);
+      process.exit(1);
+    });
+  }
 }
 
-module.exports = { createServer, start, renderEduOpsPreviewHtml, repoRoot, previewRoot };
+module.exports = { createServer, start, launchDetached, renderEduOpsPreviewHtml, readiness, clientBuildInfo, repoRoot, previewRoot };

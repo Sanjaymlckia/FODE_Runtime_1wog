@@ -2,694 +2,142 @@
 (function () {
   "use strict";
 
-  var state = {
-    actionabilityState: "READY",
-    worklistKey: "",
-    workScope: "ALL_AUTHORISED",
-    workScopePinned: false,
-    page: 1,
-    pageSize: 25,
-    filters: {},
-    sort: { key: "urgency", direction: "asc" },
-    snapshotId: "",
-    workload: null,
-    searchQuery: "",
-    searchResults: [],
-    workbench: null,
-    activeTab: "overview",
-    scrollY: 0,
-    focusSelector: ""
-  };
-  var dom = {};
-  var requestSeq = 0;
-  var activeWorkloadRequest = null;
-  var queuedWorkloadRequest = null;
-  var workloadTimeoutMs = Math.max(100, Number(window.EDUOPS_REQUEST_TIMEOUT_MS || 10000));
-  window.__EDUOPS_REQUEST_DIAGNOSTICS__ = window.__EDUOPS_REQUEST_DIAGNOSTICS__ || [];
-  var rpcAllowlist = {
-    eduops_getAccessProjection: true,
-    eduops_getProfile: true,
-    eduops_queryOperationalWorkload: true,
-    eduops_searchApplicants: true,
-    eduops_getApplicantWorkbench: true,
-    eduops_getDocumentManifest: true,
-    eduops_getDocumentRendition: true,
-    eduops_getDocumentFileAction: true,
-    eduops_getReconciliation: true,
-    eduops_getParityDiagnostics: true
-  };
+  var app = window.EduOpsApp;
+  var suppressPop = false;
+  var bound = false;
 
-  function esc(value) {
-    return String(value == null ? "" : value).replace(/[&<>"']/g, function (ch) {
-      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch];
-    });
+  function byId(id) { return document.getElementById(id); }
+  function focusable(root) {
+    return Array.prototype.slice.call(root.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter(function (element) { return !element.hidden && element.offsetParent !== null; });
   }
-
-  function activeTransport_() {
-    return window.EDUOPS_TRANSPORT || window.EduOpsTransport || null;
-  }
-
-  function callRpc(name, payload) {
-    if (!rpcAllowlist[name]) return Promise.reject(new Error("EduOps RPC not allowlisted: " + name));
-    var transport = activeTransport_();
-    if (transport) {
-      if (typeof transport.call === "function") return transport.call(name, payload || {});
-      if (typeof transport[name] === "function") return transport[name](payload || {});
-      return Promise.reject(new Error("EduOps transport does not implement: " + name));
+  function handleDialogKey(event) {
+    var layer = byId("eduopsConfirmLayer");
+    if (!layer || layer.hidden) return false;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      app.closeConfirm(true);
+      return true;
     }
-    if (!window.google || !google.script || !google.script.run) {
-      return Promise.reject(new Error("EduOps Apps Script transport is unavailable"));
-    }
-    return new Promise(function (resolve, reject) {
-      google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler(reject)[name](payload || {});
-    });
+    if (event.key !== "Tab") return false;
+    var items = focusable(layer);
+    if (!items.length) return true;
+    var first = items[0];
+    var last = items[items.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    return true;
   }
-
-  function cacheDom() {
-    dom.stateNav = document.getElementById("eduopsStateNav");
-    dom.kpis = document.getElementById("eduopsKpis");
-    dom.worklists = document.getElementById("eduopsWorklists");
-    dom.scopes = document.getElementById("eduopsScopes");
-    dom.pinScope = document.getElementById("eduopsPinScope");
-    dom.reliability = document.getElementById("eduopsReliability");
-    dom.rows = document.getElementById("eduopsRows");
-    dom.title = document.getElementById("eduopsWorkloadTitle");
-    dom.meta = document.getElementById("eduopsWorkloadMeta");
-    dom.requestStatus = document.getElementById("eduopsRequestStatus");
-    dom.pageMeta = document.getElementById("eduopsPageMeta");
-    dom.prev = document.getElementById("eduopsPrevPage");
-    dom.next = document.getElementById("eduopsNextPage");
-    dom.pageSize = document.getElementById("eduopsPageSize");
-    dom.filterSearch = document.getElementById("eduopsFilterSearch");
-    dom.globalSearch = document.getElementById("eduopsGlobalSearch");
-    dom.globalResults = document.getElementById("eduopsGlobalResults");
-    dom.workbench = document.getElementById("eduopsWorkbench");
-    dom.workbenchTitle = document.getElementById("eduopsWorkbenchTitle");
-    dom.workbenchMeta = document.getElementById("eduopsWorkbenchMeta");
-    dom.workbenchTabs = document.getElementById("eduopsWorkbenchTabs");
-    dom.workbenchBody = document.getElementById("eduopsWorkbenchBody");
-    dom.closeWorkbench = document.getElementById("eduopsCloseWorkbench");
-    dom.drawer = document.getElementById("eduopsDrawer");
-    dom.drawerTitle = document.getElementById("eduopsDrawerTitle");
-    dom.drawerBody = document.getElementById("eduopsDrawerBody");
-    dom.closeDrawer = document.getElementById("eduopsCloseDrawer");
-    dom.openReconciliation = document.getElementById("eduopsOpenReconciliation");
-    dom.openParity = document.getElementById("eduopsOpenParity");
-    dom.lensPanel = document.getElementById("eduopsLensPanel");
+  function handleEscape(event) {
+    if (handleDialogKey(event)) return;
+    if (event.key !== "Escape") return;
+    var report = byId("eduopsReportPanel");
+    if (report && !report.hidden) { event.preventDefault(); app.components.closeReport(); return; }
+    var drawer = byId("eduopsQuickDrawer");
+    if (drawer && !drawer.hidden) { event.preventDefault(); app.components.closeQuickView(); return; }
+    var batch = byId("eduopsBatchWorkspace");
+    if (batch && !batch.hidden) { event.preventDefault(); app.closeBatch(); return; }
+    var workbench = byId("eduopsWorkbench");
+    if (workbench && !workbench.hidden) { event.preventDefault(); app.closeWorkbench(document.activeElement); }
   }
-
-  function buildPayload() {
-    return {
-      product: "FODE",
-      actionabilityState: state.actionabilityState,
-      worklistKey: state.worklistKey,
-      workScope: state.workScope,
-      filters: state.filters,
-      sort: state.sort,
-      page: state.page,
-      pageSize: state.pageSize,
-      expectedSnapshotId: state.snapshotId || ""
-    };
-  }
-
-  function loadWorkload(opts) {
-    var o = opts || {};
-    if (o.resetPage) state.page = 1;
-    var request = createWorkloadRequest_(buildPayload());
-    if (activeWorkloadRequest) {
-      if (activeWorkloadRequest.fingerprint === request.fingerprint) {
-        recordRequestDiagnostic_(request, "DEDUPED_ACTIVE");
-        return activeWorkloadRequest.promise;
+  function handlePopState() {
+    if (suppressPop) { suppressPop = false; return; }
+    var workbench = byId("eduopsWorkbench");
+    if (workbench && !workbench.hidden) {
+      if (app.state.dirty) {
+        suppressPop = true;
+        history.forward();
+        app.requestWorkbenchLeave(function () {
+          suppressPop = true;
+          history.back();
+          app.closeWorkbench(null, true);
+        }, byId("eduopsCloseWorkbench"));
+        return;
       }
-      if (queuedWorkloadRequest && queuedWorkloadRequest.fingerprint === request.fingerprint) {
-        recordRequestDiagnostic_(request, "DEDUPED_QUEUED");
-        return queuedWorkloadRequest.promise;
-      }
-      activeWorkloadRequest.superseded = true;
-      if (queuedWorkloadRequest) {
-        recordRequestDiagnostic_(queuedWorkloadRequest, "DISCARDED_SUPERSEDED");
-        queuedWorkloadRequest.resolve({ discarded: true, reason: "SUPERSEDED_BEFORE_START" });
-      }
-      queuedWorkloadRequest = request;
-      renderPendingWorkload_(request, "QUEUED");
-      return request.promise;
-    }
-    startWorkloadRequest_(request);
-    return request.promise;
-  }
-
-  function createWorkloadRequest_(payload) {
-    var resolveRequest;
-    var promise = new Promise(function (resolve) { resolveRequest = resolve; });
-    return {
-      id: ++requestSeq,
-      payload: payload,
-      fingerprint: JSON.stringify(payload),
-      createdAt: Date.now(),
-      startedAt: 0,
-      superseded: false,
-      settled: false,
-      resolve: resolveRequest,
-      promise: promise
-    };
-  }
-
-  function startWorkloadRequest_(request) {
-    activeWorkloadRequest = request;
-    request.startedAt = Date.now();
-    renderPendingWorkload_(request, "LOADING");
-    var timeout = setTimeout(function () {
-      finishWorkloadRequest_(request, null, new Error("Workload request timed out after " + Math.round(workloadTimeoutMs / 1000) + " seconds."), "TIMEOUT");
-    }, workloadTimeoutMs);
-    callRpc("eduops_queryOperationalWorkload", request.payload).then(function (res) {
-      clearTimeout(timeout);
-      finishWorkloadRequest_(request, res || {}, null, "COMPLETE");
-    }).catch(function (err) {
-      clearTimeout(timeout);
-      finishWorkloadRequest_(request, null, err, "ERROR");
-    });
-  }
-
-  function finishWorkloadRequest_(request, response, error, outcome) {
-    if (request.settled) {
-      recordRequestDiagnostic_(request, "DISCARDED_LATE_RESPONSE", response);
+      app.closeWorkbench(null, true);
       return;
     }
-    request.settled = true;
-    var renderMs = 0;
-    var finalOutcome = outcome;
-    if (request.superseded || queuedWorkloadRequest) {
-      finalOutcome = "DISCARDED_SUPERSEDED";
-    } else if (error) {
-      renderWorkloadError_(request, error, outcome);
-    } else {
-      state.workload = response;
-      if (response.snapshotId) state.snapshotId = response.snapshotId;
-      if (response.page) state.page = Number(response.page);
-      var renderStarted = performance.now();
-      renderWorkload(response);
-      renderMs = performance.now() - renderStarted;
-      updateRoute();
-      dom.requestStatus.setAttribute("data-state", "COMPLETE");
-      dom.requestStatus.textContent = requestContextLabel_(request.payload) + " completed in " + (Date.now() - request.startedAt) + " ms; render " + renderMs.toFixed(1) + " ms.";
-    }
-    recordRequestDiagnostic_(request, finalOutcome, response, renderMs, error);
-    request.resolve({ response: response, error: error, outcome: finalOutcome });
-    if (activeWorkloadRequest === request) activeWorkloadRequest = null;
-    if (queuedWorkloadRequest) {
-      var next = queuedWorkloadRequest;
-      queuedWorkloadRequest = null;
-      startWorkloadRequest_(next);
-    }
+    var batch = byId("eduopsBatchWorkspace");
+    if (batch && !batch.hidden) app.closeBatch(true);
   }
-
-  function recordRequestDiagnostic_(request, outcome, response, renderMs, error) {
-    var item = {
-      requestId: request.id,
-      context: requestContextLabel_(request.payload),
-      payload: request.payload,
-      outcome: outcome,
-      clientRequestStartedAt: request.startedAt ? new Date(request.startedAt).toISOString() : "",
-      clientRequestEndedAt: request.startedAt ? new Date().toISOString() : "",
-      clientRequestMs: request.startedAt ? Date.now() - request.startedAt : 0,
-      clientRenderMs: Number(renderMs || 0),
-      responseBytes: response && response.timings ? Number(response.timings.responseBytes || 0) : 0,
-      serverTimings: response && response.timings || null,
-      error: error ? String(error.message || error) : ""
-    };
-    window.__EDUOPS_REQUEST_DIAGNOSTICS__.push(item);
-    if (window.__EDUOPS_REQUEST_DIAGNOSTICS__.length > 50) window.__EDUOPS_REQUEST_DIAGNOSTICS__.shift();
-  }
-
-  function renderPendingWorkload_(request, phase) {
-    var context = requestContextLabel_(request.payload);
-    renderScopes();
-    if (state.workload) {
-      renderStates(state.workload.actionabilityCounts || {});
-      renderKpis(state.workload.actionabilityCounts || {});
-    }
-    dom.title.textContent = (phase === "QUEUED" ? "Queued: " : "Loading: ") + context;
-    dom.meta.textContent = (phase === "QUEUED" ? "Queued" : "Requesting") + " page " + request.payload.page + " at snapshot " + (request.payload.expectedSnapshotId || "current") + ".";
-    dom.pageMeta.textContent = (phase === "QUEUED" ? "Queued page " : "Loading page ") + request.payload.page;
-    dom.prev.disabled = true;
-    dom.next.disabled = true;
-    dom.rows.innerHTML = '<tr><td colspan="7">' + esc(phase === "QUEUED" ? "Queued server workload: " : "Loading server-authored workload: ") + esc(context) + '.</td></tr>';
-    dom.requestStatus.setAttribute("data-state", phase);
-    dom.requestStatus.textContent = context + (phase === "QUEUED" ? " is queued behind one in-flight read-only request; the superseded response will not be applied." : " started at " + new Date(request.startedAt).toISOString() + ".");
-  }
-
-  function renderWorkloadError_(request, error, outcome) {
-    var context = requestContextLabel_(request.payload);
-    dom.title.textContent = "Workload unavailable: " + context;
-    dom.meta.textContent = outcome === "TIMEOUT" ? "The bounded 10-second request window expired." : "The server request failed.";
-    dom.pageMeta.textContent = "Requested page " + request.payload.page;
-    dom.rows.innerHTML = '<tr><td colspan="7">EduOps workload failed for ' + esc(context) + ': ' + esc(error && error.message || error) + ' <button type="button" data-retry-workload>Retry</button></td></tr>';
-    dom.requestStatus.setAttribute("data-state", "ERROR");
-    dom.requestStatus.textContent = context + " did not complete. Retry is available; no stale response was applied.";
-  }
-
-  function requestContextLabel_(payload) {
-    var p = payload || {};
-    return labelState(p.actionabilityState) + " / " + scopeLabel_(p.workScope) + " / page " + p.page;
-  }
-
-  function scopeLabel_(scope) {
-    return ({ ALL_AUTHORISED: "All Authorised", MY: "My Work", TEAM: "Team", UNASSIGNED: "Unassigned", ESCALATED: "Escalated" })[scope] || scope;
-  }
-
-  function renderWorkload(res) {
-    renderStates(res.actionabilityCounts || {});
-    renderKpis(res.actionabilityCounts || {});
-    renderWorklists(res.worklistKeyCounts || {});
-    renderScopes();
-    renderReliability(res);
-    renderRows(res.rows || [], res);
-    dom.title.textContent = (labelState(state.actionabilityState) || "Workload") + (state.worklistKey ? " / " + state.worklistKey.replace(/_/g, " ") : "");
-    var stateTotal = Number((res.actionabilityCounts || {})[state.actionabilityState] || 0);
-    var scopeSummary = state.workScope === "ALL_AUTHORISED"
-      ? res.totalMatched + " matched"
-      : labelState(state.actionabilityState) + ": " + stateTotal + " total / " + scopeLabel_(state.workScope) + ": " + res.totalMatched + " matched";
-    dom.meta.textContent = "Page " + res.page + " of " + res.totalPages + " / " + scopeSummary + " / snapshot " + (res.snapshotId || "-");
-    dom.pageMeta.textContent = "Page " + res.page + " / " + res.totalPages;
-    dom.prev.disabled = Number(res.page || 1) <= 1;
-    dom.next.disabled = Number(res.page || 1) >= Number(res.totalPages || 1);
-  }
-
-  function labelState(stateKey) {
-    return ({
-      READY: "Ready Now",
-      COOLING_OFF: "Cooling Off",
-      AWAITING_APPLICANT: "Awaiting Applicant",
-      AWAITING_PAYMENT: "Awaiting Payment",
-      REVIEW_REQUIRED: "Review Required",
-      BLOCKED: "Blocked",
-      UNKNOWN: "Unknown",
-      COMPLETE: "Complete"
-    })[stateKey] || stateKey;
-  }
-
-  function stateKeys(counts) {
-    var fixed = ["READY", "COOLING_OFF", "AWAITING_APPLICANT", "AWAITING_PAYMENT", "REVIEW_REQUIRED", "BLOCKED", "UNKNOWN", "COMPLETE"];
-    Object.keys(counts || {}).forEach(function (key) { if (fixed.indexOf(key) < 0) fixed.push(key); });
-    return fixed;
-  }
-
-  function renderStates(counts) {
-    dom.stateNav.innerHTML = stateKeys(counts).map(function (key) {
-      return '<button type="button" data-state="' + esc(key) + '" class="' + (key === state.actionabilityState ? "active" : "") + '">' + esc(labelState(key)) + ' <strong>' + esc(counts[key] || 0) + '</strong></button>';
-    }).join("");
-  }
-
-  function renderKpis(counts) {
-    dom.kpis.innerHTML = stateKeys(counts).map(function (key) {
-      return '<span class="eduops-kpi-summary ' + (key === state.actionabilityState ? "active" : "") + '"><span>' + esc(labelState(key)) + '</span> <strong>' + esc(counts[key] || 0) + '</strong></span>';
-    }).join("");
-  }
-
-  function renderWorklists(counts) {
-    var keys = Object.keys(counts || {}).sort();
-    dom.worklists.innerHTML = '<button type="button" data-worklist="" class="' + (!state.worklistKey ? "active" : "") + '">All worklists</button>' + keys.map(function (key) {
-      return '<button type="button" data-worklist="' + esc(key) + '" class="' + (key === state.worklistKey ? "active" : "") + '">' + esc(key.replace(/_/g, " ")) + ' <strong>' + esc(counts[key]) + '</strong></button>';
-    }).join("");
-  }
-
-  function renderScopes() {
-    dom.scopes.querySelectorAll("[data-scope]").forEach(function (btn) {
-      btn.classList.toggle("active", btn.getAttribute("data-scope") === state.workScope);
-    });
-    dom.pinScope.checked = state.workScopePinned;
-  }
-
-  function renderReliability(res) {
-    var current = res || {};
-    var stateName = current.reliabilityState || "UNKNOWN";
-    dom.reliability.setAttribute("data-state", stateName);
-    dom.reliability.textContent = stateName + ": " + ((current.reliabilityReasons || [])[0] || "Source reliability not available.");
-  }
-
-  function pillClass(stateName) {
-    if (stateName === "READY" || stateName === "AUTHORITATIVE") return "ready";
-    if (stateName === "BLOCKED" || stateName === "UNKNOWN" || stateName === "CONFLICTING") return "block";
-    return "warn";
-  }
-
-  function renderRows(rows, response) {
-    if (!rows.length) {
-      var total = Number((response && response.actionabilityCounts || {})[state.actionabilityState] || 0);
-      var detail = state.workScope === "ALL_AUTHORISED" ? "" : " " + total + " total across All Authorised; 0 matched " + scopeLabel_(state.workScope) + ".";
-      dom.rows.innerHTML = '<tr><td colspan="7">No applicants matched this server workload.' + esc(detail) + '</td></tr>';
-      return;
-    }
-    dom.rows.innerHTML = rows.map(function (row) {
-      return '<tr>'
-        + '<td><strong>' + esc(row.displayName || "Unnamed") + '</strong><br><span class="eduops-code">' + esc(row.applicantId) + '</span><br>' + esc(row.email || row.phone || "") + '</td>'
-        + '<td><span class="eduops-pill ' + pillClass(row.actionabilityState) + '">' + esc(row.actionabilityLabel || row.actionabilityState) + '</span><br>' + esc(row.urgencyLevel || "") + '</td>'
-        + '<td><strong>' + esc(row.worklistLabel || row.worklistKey || "Unknown") + '</strong><br>' + esc(row.actionOwner || "") + ' / ' + esc(row.workOwnership && row.workOwnership.scope || "") + '</td>'
-        + '<td>' + esc(row.nextAction || "") + '<br><span class="eduops-code">' + esc(row.coolingOffUntil || "") + '</span></td>'
-        + '<td>Finance: ' + esc(row.canonicalFinanceState || "") + '<br>Docs: ' + esc(row.documentState || "") + '<br>Portal: ' + esc(row.portalState || "") + '</td>'
-        + '<td><span class="eduops-pill ' + pillClass(row.sourceReliability && row.sourceReliability.state) + '">' + esc(row.sourceReliability && row.sourceReliability.state || "UNKNOWN") + '</span><br>' + esc(row.blockerReason || row.selectBlockReason || "") + '</td>'
-        + '<td><button type="button" data-open-applicant="' + esc(row.applicantId) + '">Open</button></td>'
-        + '</tr>';
-    }).join("");
-  }
-
-  function runSearch() {
-    var query = dom.globalSearch.value.trim();
-    state.searchQuery = query;
-    if (!query) {
-      state.searchResults = [];
-      dom.globalResults.hidden = true;
-      dom.globalResults.innerHTML = "";
-      return;
-    }
-    callRpc("eduops_searchApplicants", { query: query, limit: 12, expectedSnapshotId: state.snapshotId }).then(function (res) {
-      if (!res || res.ok === false) throw new Error(res && (res.code || res.message) || "Search unavailable");
-      state.searchResults = res.matches || [];
-      renderSearchResults(res);
-    }).catch(function (err) {
-      dom.globalResults.hidden = false;
-      dom.globalResults.innerHTML = '<strong>Global search unavailable:</strong> ' + esc(err && err.message || err);
+  function bindConfirm() {
+    byId("eduopsConfirmCancel").addEventListener("click", function () { app.closeConfirm(true); });
+    byId("eduopsConfirmProceed").addEventListener("click", function () {
+      var confirm = app.state.confirm;
+      if (confirm && typeof confirm.onProceed === "function") confirm.onProceed();
+      else app.closeConfirm(true);
     });
   }
-
-  function renderSearchResults(res) {
-    dom.globalResults.hidden = false;
-    var matches = res.matches || [];
-    dom.globalResults.innerHTML = '<strong>Global FODE search: ' + esc(res.totalMatches || 0) + ' match(es)</strong>'
-      + (matches.length ? matches.map(function (row) {
-        return '<div class="eduops-search-item"><div><strong>' + esc(row.displayName) + '</strong><br><span class="eduops-code">' + esc(row.applicantId) + '</span><br>' + esc(row.actionabilityLabel) + ' / ' + esc(row.worklistLabel || "") + ' / ' + esc(row.primaryRoute || "") + '</div><div><button type="button" data-open-applicant="' + esc(row.applicantId) + '">Open exact</button><button type="button" data-copy-applicant="' + esc(row.applicantId) + '">Copy ID</button></div></div>';
-      }).join("") : '<p>No matches.</p>');
+  function applyBootstrap(access, profile) {
+    app.state.access = access;
+    app.state.profile = profile;
+    app.state.capabilities = access && access.user && access.user.capabilities || {};
+    app.state.featureFlags = profile && profile.featureFlags || {};
+    var userEmail = byId("eduopsUserEmail");
+    var role = byId("eduopsRole");
+    if (userEmail) userEmail.textContent = access && access.user && access.user.email || app.bootstrap.userEmail || "Authorised operator";
+    if (role) role.textContent = access && access.user && access.user.role || app.bootstrap.role || "Admin";
+    var runtime = access && access.runtime || {};
+    var runtimeTarget = byId("eduopsRuntimeIdentity");
+    if (runtimeTarget) runtimeTarget.textContent = (runtime.version || app.bootstrap.runtime || "runtime") + " / " + (runtime.deployVersion || "-");
+    var mode = byId("eduopsMode");
+    if (mode) mode.textContent = app.isPreview() ? "Preview Lab" : "FODE guarded operations";
   }
-
-  function openApplicant(applicantId) {
-    state.scrollY = window.scrollY || 0;
-    state.focusSelector = '[data-open-applicant="' + applicantId + '"]';
-    callRpc("eduops_getApplicantWorkbench", {
-      applicantId: applicantId,
-      expectedSnapshotId: state.snapshotId,
-      returnContext: buildPayload()
-    }).then(function (res) {
-      if (!res || res.ok === false) throw new Error(res && (res.message || res.code) || "Applicant unavailable");
-      state.workbench = res;
-      state.activeTab = "overview";
-      renderWorkbench();
-      dom.workbench.hidden = false;
-      history.pushState({ eduopsWorkbench: applicantId }, "", "#workbench=" + encodeURIComponent(applicantId));
-      dom.closeWorkbench.focus();
-    }).catch(function (err) {
-      alert("EduOps Workbench failed: " + (err && err.message || err));
-    });
+  function bindOnce() {
+    if (bound) return;
+    bound = true;
+    app.bindWorkspace();
+    app.bindWorkbench();
+    app.bindBatch();
+    app.installControlClassification();
+    bindConfirm();
+    document.addEventListener("keydown", handleEscape, true);
+    window.addEventListener("popstate", handlePopState);
+    var initialUrl = location.protocol === "about:" ? undefined : location.pathname + location.search + "#workload";
+    history.replaceState({ eduopsRoute: "workload" }, "", initialUrl);
   }
-
-  function renderWorkbench() {
-    var wb = state.workbench || {};
-    var identity = wb.identity || {};
-    dom.workbenchTitle.textContent = (identity.displayName || "Applicant") + " / " + (identity.applicantId || "");
-    dom.workbenchMeta.textContent = "Snapshot " + (wb.snapshotId || "-") + " / " + ((wb.sourceReliability && wb.sourceReliability.state) || "UNKNOWN");
-    var tabs = ["overview", "documents", "finance", "communications", "portal", "contactability", "audit"];
-    dom.workbenchTabs.innerHTML = tabs.map(function (tab) {
-      return '<button type="button" data-tab="' + tab + '" class="' + (tab === state.activeTab ? "active" : "") + '">' + esc(tab.replace(/\b\w/g, function (c) { return c.toUpperCase(); })) + '</button>';
-    }).join("");
-    dom.workbenchBody.innerHTML = renderWorkbenchTab(state.activeTab, wb);
+  function bootstrapFailure(phase, error) {
+    var state = error && error.code === "TIMEOUT" ? "TIMEOUT" : phase;
+    app.setBootstrapState(state, error && error.message || error);
+    if (app.renderBootstrapError) app.renderBootstrapError(state, error);
   }
-
-  function renderWorkbenchTab(tab, wb) {
-    if (tab === "overview") return detailGrid([
-      card("Authority", ["Actionability: " + value(wb.exactAuthorityProjection, "actionabilityLabel"), "Worklist: " + value(wb.exactAuthorityProjection, "worklistLabel"), "Next action: " + value(wb.exactAuthorityProjection, "nextAction")]),
-      card("Read-only controls", (wb.capabilities && wb.capabilities.pass2Actions || []).map(function (a) { return '<span class="eduops-disabled-action">' + esc(a.label) + ' / ' + esc(a.reason) + '</span>'; }))
-    ]);
-    if (tab === "documents") return renderDocumentTab(wb);
-    if (tab === "finance") return detailGrid([card("Finance", summaryLines(wb.finance))]);
-    if (tab === "communications") return detailGrid([card("Communications", summaryLines(wb.communications))]);
-    if (tab === "portal") return detailGrid([card("Portal", summaryLines(wb.portal))]);
-    if (tab === "contactability") return detailGrid([card("Contactability", summaryLines(wb.contactability))]);
-    return '<pre>' + esc(JSON.stringify(wb.auditSummary || {}, null, 2)) + '</pre>';
-  }
-
-  function value(obj, key) {
-    return obj && obj[key] != null ? obj[key] : "";
-  }
-
-  function summaryLines(obj) {
-    return Object.keys(obj || {}).filter(function (key) { return key !== "actions"; }).map(function (key) {
-      return key + ": " + (typeof obj[key] === "object" ? JSON.stringify(obj[key]) : obj[key]);
-    }).concat((obj && obj.actions || []).map(function (action) {
-      return '<span class="eduops-disabled-action">' + esc(action.label) + ' / ' + esc(action.reason) + '</span>';
-    }));
-  }
-
-  function detailGrid(cards) {
-    return '<div class="eduops-detail-grid">' + cards.join("") + '</div>';
-  }
-
-  function card(title, lines) {
-    return '<section class="eduops-detail-card"><h4>' + esc(title) + '</h4>' + (lines || []).map(function (line) {
-      return String(line).indexOf("<span") === 0 ? line : '<p>' + esc(line) + '</p>';
-    }).join("") + '</section>';
-  }
-
-  function renderDocumentTab(wb) {
-    var identity = wb && wb.identity || {};
-    return detailGrid([
-      card("Document summary", summaryLines(wb.documents)),
-      '<section class="eduops-detail-card eduops-document-gallery" data-document-gallery="' + esc(identity.applicantId || "") + '">'
-        + '<h4>Document gallery</h4>'
-        + '<p>Server-derived PNG preview where available. Open Original remains separate and signed.</p>'
-        + '<button type="button" data-load-document-manifest="' + esc(identity.applicantId || "") + '">Load document manifest</button>'
-        + '<div class="eduops-document-output" data-document-output></div>'
-      + '</section>'
-    ]);
-  }
-
-  function loadDocumentManifest(applicantId) {
-    if (!state.workbench || !applicantId) return;
-    var output = document.querySelector("[data-document-output]");
-    if (output) output.innerHTML = '<p>Loading document manifest for ' + esc(applicantId) + '...</p>';
-    callRpc("eduops_getDocumentManifest", {
-      applicantId: applicantId,
-      rowNumber: state.workbench.identity && state.workbench.identity.rowNumber,
-      expectedSnapshotId: state.snapshotId
-    }).then(function (res) {
-      if (!res || res.ok === false) throw new Error(res && (res.error || res.code) || "Document manifest unavailable");
-      renderDocumentManifest(res);
-    }).catch(function (err) {
-      if (output) output.innerHTML = '<p class="eduops-document-error">Document manifest unavailable: ' + esc(err && err.message || err) + '</p>';
-    });
-  }
-
-  function renderDocumentManifest(res) {
-    var output = document.querySelector("[data-document-output]");
-    if (!output) return;
-    var files = res.files || [];
-    output.innerHTML = '<p><strong>' + esc(files.length) + ' document candidate(s)</strong> / ' + esc(res.renditionRule || "PNG rendition rule active") + '</p>'
-      + (files.length ? files.map(function (file) {
-        return '<article class="eduops-document-file">'
-          + '<div><strong>' + esc(file.label || file.sourceField || "Document") + '</strong><br><span class="eduops-code">' + esc(file.fileName || "") + '</span><br>' + esc(file.renditionEligible ? "PNG rendition available" : "PNG preview unavailable") + '</div>'
-          + '<div class="eduops-document-actions">'
-            + '<button type="button" data-document-rendition="' + esc(file.documentKey || "") + '" data-source-field="' + esc(file.sourceField || "") + '" data-item-index="' + esc(file.itemIndex == null ? "" : file.itemIndex) + '">Preview PNG</button>'
-            + '<button type="button" data-document-open="' + esc(file.documentKey || "") + '" data-source-field="' + esc(file.sourceField || "") + '" data-item-index="' + esc(file.itemIndex == null ? "" : file.itemIndex) + '">Open Original</button>'
-          + '</div>'
-        + '</article>';
-      }).join("") : '<p>No document files were returned for this applicant.</p>')
-      + '<div class="eduops-document-preview" data-document-preview></div>';
-  }
-
-  function documentPayloadFromButton(button) {
-    var identity = state.workbench && state.workbench.identity || {};
-    return {
-      applicantId: identity.applicantId,
-      rowNumber: identity.rowNumber,
-      sourceField: button.getAttribute("data-source-field") || "",
-      itemIndex: Number(button.getAttribute("data-item-index") || 0),
-      documentKey: button.getAttribute("data-document-rendition") || button.getAttribute("data-document-open") || "",
-      expectedSnapshotId: state.snapshotId
-    };
-  }
-
-  function loadDocumentRendition(button) {
-    var preview = document.querySelector("[data-document-preview]");
-    if (preview) preview.innerHTML = '<p>Loading PNG rendition...</p>';
-    callRpc("eduops_getDocumentRendition", documentPayloadFromButton(button)).then(function (res) {
-      if (!res || res.ok === false) throw new Error(res && (res.error || res.code) || "PNG rendition unavailable");
-      if (preview) preview.innerHTML = '<figure class="eduops-png-preview"><img src="' + esc(res.dataUrl || "") + '" alt="' + esc(res.label || "Document PNG preview") + '"><figcaption>' + esc(res.fileName || res.label || "Derived PNG rendition") + ' / canonical original remains separate.</figcaption></figure>';
-    }).catch(function (err) {
-      if (preview) preview.innerHTML = '<p class="eduops-document-error">PNG preview unavailable: ' + esc(err && err.message || err) + '</p>';
-    });
-  }
-
-  function loadDocumentFileAction(button) {
-    var preview = document.querySelector("[data-document-preview]");
-    callRpc("eduops_getDocumentFileAction", documentPayloadFromButton(button)).then(function (res) {
-      if (!res || res.ok === false) throw new Error(res && (res.error || res.code) || "Open Original unavailable");
-      if (preview) preview.innerHTML = '<p><strong>Open Original action prepared.</strong> <a href="' + esc(res.openUrl || "#") + '" target="_blank" rel="noopener">Open simulated signed original</a><br><span class="eduops-code">Expires: ' + esc(res.expiresAt || "") + '</span></p>';
-    }).catch(function (err) {
-      if (preview) preview.innerHTML = '<p class="eduops-document-error">Open Original unavailable: ' + esc(err && err.message || err) + '</p>';
-    });
-  }
-
-  function closeWorkbench() {
-    dom.workbench.hidden = true;
-    state.workbench = null;
-    if (location.hash.indexOf("workbench=") >= 0) history.pushState({}, "", location.pathname + location.search + "#workload");
-    setTimeout(function () {
-      window.scrollTo(0, state.scrollY || 0);
-      var focus = state.focusSelector ? document.querySelector(state.focusSelector) : null;
-      if (focus) focus.focus();
-    }, 0);
-  }
-
-  function openReconciliation() {
-    callRpc("eduops_getReconciliation", buildPayload()).then(function (res) {
-      dom.drawerTitle.textContent = "Workload reconciliation";
-      dom.drawerBody.innerHTML = '<pre>' + esc(JSON.stringify(res.reconciliation || {}, null, 2)) + '</pre>';
-      dom.drawer.hidden = false;
-      dom.closeDrawer.focus();
-    });
-  }
-
-  function openParity() {
-    callRpc("eduops_getParityDiagnostics", { limit: 50, expectedSnapshotId: state.snapshotId }).then(function (res) {
-      if (!res || res.ok === false && res.code) throw new Error(res && (res.code || res.message) || "Parity diagnostics unavailable");
-      dom.drawerTitle.textContent = "Authority parity diagnostics";
-      dom.drawerBody.innerHTML = '<pre>' + esc(JSON.stringify(res, null, 2)) + '</pre>';
-      dom.drawer.hidden = false;
-      dom.closeDrawer.focus();
-    });
-  }
-
-  function renderLens(lens) {
-    var rows = (state.workload && state.workload.rows || []).slice(0, 8);
-    dom.lensPanel.hidden = false;
-    dom.lensPanel.innerHTML = '<header class="eduops-panel-head"><div><h3>' + esc(lens.replace(/\b\w/g, function (c) { return c.toUpperCase(); })) + ' Lens</h3><p>Read-only projection over the current server workload. No domain queue authority is created.</p></div></header>'
-      + '<div class="eduops-detail-grid">' + rows.map(function (row) {
-        return card(row.displayName + " / " + row.applicantId, [
-          "Actionability: " + row.actionabilityLabel,
-          "Finance: " + row.canonicalFinanceState,
-          "Communication: " + row.recommendedMessageType,
-          "Portal: " + row.portalState,
-          "Contactability: " + row.contactabilityState
-        ]);
-      }).join("") + '</div>';
-  }
-
-  function updateRoute() {
-    var hash = "#state=" + encodeURIComponent(state.actionabilityState)
-      + "&worklist=" + encodeURIComponent(state.worklistKey)
-      + "&scope=" + encodeURIComponent(state.workScope)
-      + "&page=" + encodeURIComponent(state.page);
-    if (location.hash !== hash && !state.workbench) history.replaceState({}, "", hash);
-  }
-
-  function bindEvents() {
-    document.addEventListener("click", function (event) {
-      var stateBtn = event.target.closest("[data-state]");
-      if (stateBtn) {
-        state.actionabilityState = stateBtn.getAttribute("data-state");
-        state.worklistKey = "";
-        if (!state.workScopePinned) state.workScope = "ALL_AUTHORISED";
-        loadWorkload({ resetPage: true });
-        return;
+  function startBootstrap() {
+    app.setBootstrapState("BOOT_START", "Starting EduOps with a clean client state.");
+    app.setBootstrapState("ASSETS_READY", "Shared client assets loaded.");
+    return app.withBootstrapTimeout(app.waitForTransport(), "TRANSPORT_READY").then(function () {
+      app.setBootstrapState("TRANSPORT_READY", "EduOps transport is ready.");
+      return app.withBootstrapTimeout(app.call("eduops_getAccessProjection", {}), "ACCESS_READY");
+    }).then(function (access) {
+      app.state.access = access;
+      app.setBootstrapState("ACCESS_READY", "Operator access projection resolved.");
+      return app.withBootstrapTimeout(app.call("eduops_getProfile", {}), "PROFILE_READY").then(function (profile) {
+        applyBootstrap(access, profile);
+        app.setBootstrapState("PROFILE_READY", "Product profile and feature projection resolved.");
+      });
+    }).then(function () {
+      return app.withBootstrapTimeout(app.requestWorkload({ refreshSnapshot: true }), "WORKLOAD_READY");
+    }).then(function (result) {
+      if (!result || result.error || !result.response || result.response.ok === false) {
+        throw result && result.error || new Error(result && result.response && (result.response.message || result.response.code) || "The first workload did not complete.");
       }
-      var worklistBtn = event.target.closest("[data-worklist]");
-      if (worklistBtn) {
-        state.worklistKey = worklistBtn.getAttribute("data-worklist");
-        loadWorkload({ resetPage: true });
-        return;
-      }
-      var scopeBtn = event.target.closest("[data-scope]");
-      if (scopeBtn) {
-        state.workScope = scopeBtn.getAttribute("data-scope");
-        loadWorkload({ resetPage: true });
-        return;
-      }
-      var openBtn = event.target.closest("[data-open-applicant]");
-      if (openBtn) {
-        openApplicant(openBtn.getAttribute("data-open-applicant"));
-        return;
-      }
-      var copyBtn = event.target.closest("[data-copy-applicant]");
-      if (copyBtn && navigator.clipboard) navigator.clipboard.writeText(copyBtn.getAttribute("data-copy-applicant"));
-      var retryBtn = event.target.closest("[data-retry-workload]");
-      if (retryBtn) {
-        loadWorkload();
-        return;
-      }
-      var tabBtn = event.target.closest("[data-tab]");
-      if (tabBtn) {
-        state.activeTab = tabBtn.getAttribute("data-tab");
-        renderWorkbench();
-        return;
-      }
-      var manifestBtn = event.target.closest("[data-load-document-manifest]");
-      if (manifestBtn) {
-        loadDocumentManifest(manifestBtn.getAttribute("data-load-document-manifest"));
-        return;
-      }
-      var renditionBtn = event.target.closest("[data-document-rendition]");
-      if (renditionBtn) {
-        loadDocumentRendition(renditionBtn);
-        return;
-      }
-      var openOriginalBtn = event.target.closest("[data-document-open]");
-      if (openOriginalBtn) {
-        loadDocumentFileAction(openOriginalBtn);
-        return;
-      }
-      var lensBtn = event.target.closest("[data-lens]");
-      if (lensBtn) renderLens(lensBtn.getAttribute("data-lens"));
-    });
-    dom.prev.addEventListener("click", function () { state.page = Math.max(1, state.page - 1); loadWorkload(); });
-    dom.next.addEventListener("click", function () { state.page += 1; loadWorkload(); });
-    dom.pageSize.addEventListener("change", function () { state.pageSize = Number(dom.pageSize.value || 25); loadWorkload({ resetPage: true }); });
-    dom.pinScope.addEventListener("change", function () { state.workScopePinned = dom.pinScope.checked === true; });
-    dom.filterSearch.addEventListener("input", debounce(function () { state.filters.search = dom.filterSearch.value.trim(); loadWorkload({ resetPage: true }); }, 250));
-    dom.globalSearch.addEventListener("input", debounce(runSearch, 250));
-    dom.closeWorkbench.addEventListener("click", closeWorkbench);
-    dom.closeDrawer.addEventListener("click", function () { dom.drawer.hidden = true; });
-    dom.openReconciliation.addEventListener("click", openReconciliation);
-    dom.openParity.addEventListener("click", openParity);
-    window.addEventListener("popstate", function () {
-      if (!dom.workbench.hidden) closeWorkbench();
-    });
-    window.addEventListener("eduops:preview-reload", function () {
-      state.snapshotId = "";
-      state.workload = null;
-      state.workbench = null;
-      dom.workbench.hidden = true;
-      loadWorkload({ resetPage: true });
-    });
-    document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape") {
-        if (!dom.drawer.hidden) dom.drawer.hidden = true;
-        else if (!dom.workbench.hidden) closeWorkbench();
-      }
+    }).catch(function (error) {
+      var current = app.bootstrapMachine && app.bootstrapMachine.state || "BOOT_START";
+      var phase = current === "TRANSPORT_READY" ? "ACCESS_ERROR" : current === "ACCESS_READY" ? "PROFILE_ERROR" : current === "PROFILE_READY" ? "WORKLOAD_ERROR" : current === "ASSETS_READY" ? "TRANSPORT_ERROR" : "SOURCE_ERROR";
+      bootstrapFailure(phase, error);
     });
   }
-
-  function debounce(fn, ms) {
-    var timer = 0;
-    return function () {
-      clearTimeout(timer);
-      timer = setTimeout(fn, ms);
-    };
+  function start() {
+    bindOnce();
+    app.retryBootstrap = startBootstrap;
+    startBootstrap();
   }
-
-  document.addEventListener("DOMContentLoaded", function () {
-    cacheDom();
-    bindEvents();
-    window.__EDUOPS_APP__ = {
-      callRpc: callRpc,
-      loadWorkload: loadWorkload,
-      state: state,
-      requestDiagnostics: window.__EDUOPS_REQUEST_DIAGNOSTICS__
-    };
-    callRpc("eduops_getAccessProjection", {}).then(function () {
-      return loadWorkload({ resetPage: true });
-    }).catch(function (err) {
-      dom.rows.innerHTML = '<tr><td colspan="7">EduOps access failed: ' + esc(err && err.message || err) + '</td></tr>';
-    });
+  window.addEventListener("eduops:preview-reload", function () {
+    app.state.snapshotId = "";
+    app.state.selected = {};
+    app.state.page = 1;
+    app.requestWorkload({ refreshSnapshot: true });
   });
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
+  else start();
 })();
 </script>

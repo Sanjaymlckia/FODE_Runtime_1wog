@@ -5,9 +5,31 @@ const CONTRACT_VERSION = "EDUOPS_SHADOW_V1";
 const PROFILE_VERSION = "FODE_SHADOW_V1";
 const SNAPSHOT_ID = "FODE-PREVIEW-SNAPSHOT-001";
 const CHANGED_SNAPSHOT_ID = "FODE-PREVIEW-SNAPSHOT-002";
+const PRODUCT_SNAPSHOT_IDS = { FODE: SNAPSHOT_ID, KIA: "KIA-PREVIEW-SNAPSHOT-001", MLC: "MLC-PREVIEW-SNAPSHOT-001" };
 const SNAPSHOT_AS_OF = "2026-07-15T00:00:00.000Z";
 const SNAPSHOT_FORMAT_VERSION = "EDUOPS_PREVIEW_SNAPSHOT_V1";
 const SANITISATION_VERSION = "EDUOPS_PREVIEW_SANITISER_V1";
+const previewStore = { previews: new Map(), receipts: new Map(), history: new Map() };
+const PREVIEW_CAPABILITIES = {
+  CAN_OPEN_REVIEW_WORKSPACE: true,
+  CAN_SAVE_DOCUMENT_STATUSES: true,
+  CAN_VERIFY_PAYMENT: true,
+  CAN_PREVIEW_APPLICANT_COMMUNICATION: true,
+  CAN_SEND_INDIVIDUAL_EMAIL: true,
+  CAN_RUN_BATCH_COMMUNICATIONS: true,
+  CAN_MANAGE_PORTAL_ACCESS: true,
+  CAN_EDIT_CONTACT_DETAILS: true,
+  CAN_WRITE_ZOHO_BOOKS: true
+};
+const PREVIEW_FLAGS = {
+  DOCUMENT_REVIEW: true,
+  FINANCE_EVIDENCE_DECISION: true,
+  SEND_INDIVIDUAL_COMMUNICATION: true,
+  CONTACTABILITY_CORRECTION: true,
+  PORTAL_ACCESS: true,
+  BATCH_COMMUNICATION: true,
+  BOOKS_ACTION: false
+};
 
 const STATE_LABELS = {
   READY: "Ready Now",
@@ -45,8 +67,35 @@ const SCENARIOS = [
   ["document-png-available", "Document PNG available", "Derived PNG rendition and separate original action are available."],
   ["document-preview-unavailable", "Document preview unavailable", "PNG fallback wording and Open Original representation remain available."],
   ["invalid-cross-applicant-document", "Invalid cross-applicant document context", "Another applicant document context is rejected."],
+  ["successful-document-review", "Successful document review", "A document decision returns a versioned simulated receipt."],
+  ["rejected-document", "Rejected document", "A rejected document remains applicant-specific and receipted."],
+  ["correction-request", "Correction request", "A document correction request hands off to an individual reviewed communication."],
+  ["dirty-document-state", "Dirty document state", "Unsaved document edits invoke the shared navigation guard."],
+  ["contact-correction", "Contact correction", "An exact applicant email correction returns a simulated receipt."],
+  ["communication-preview", "Communication preview", "Recipient, template, cooling-off and contactability are previewed."],
+  ["communication-send-receipt", "Communication send receipt", "A simulated individual send returns a versioned receipt."],
+  ["cooling-off-denial", "Cooling-off denial", "Communication preview fails closed while the applicant is cooling off."],
   ["contactability-failure", "Contactability failure", "No effective email and suppressed communication state are explained."],
-  ["large-workload", "Large workload", "Population-scale deterministic paging without browser-wide data loading."]
+  ["duplicate-send-replay", "Duplicate send replay", "Repeated send execution returns the original idempotent receipt."],
+  ["finance-verification", "Finance verification", "A supported individual verification returns a simulated receipt."],
+  ["finance-rejection", "Finance rejection unavailable", "Rejection remains blocked because no dedicated authority is proven."],
+  ["books-approval-blocked", "Books approval blocked", "Books execution remains disabled and independently approval-gated."],
+  ["portal-resend", "Portal resend", "Portal resend hands off to the reviewed Communications surface."],
+  ["portal-reset-approval-blocked", "Portal reset approval blocked", "Reset cannot execute without independent approval."],
+  ["large-workload", "Large workload", "Population-scale deterministic paging without browser-wide data loading."],
+  ["expired-command-preview", "Expired command preview", "A command preview expires before confirmation and cannot execute."],
+  ["stale-command-preview", "Stale command preview", "The product snapshot changes after preview and execution fails closed."],
+  ["capability-denied", "Capability denied", "The simulated operator lacks the operation capability."],
+  ["feature-flag-disabled", "Feature flag disabled", "The domain operation is not enabled."],
+  ["operation-lock-conflict", "Operation lock conflict", "Another simulated operation holds the guarded lock."],
+  ["partial-batch-failure", "Partial batch failure", "One applicant changes authority after preview and is handed off as an exception."],
+  ["successful-batch", "Successful batch", "A bounded communication cohort returns applicant-level receipts."],
+  ["batch-cap-exceeded", "Batch cap exceeded", "A cohort above the execution cap fails closed before confirmation."],
+  ["exception-handoff", "Batch exception handoff", "A blocked applicant opens in the exact Individual Workbench."],
+  ["work-session-progress", "Work Session progress", "Exact ApplicantID, position and outcomes remain visible through the session."],
+  ["idempotent-replay", "Idempotent replay", "Repeated execution returns the original versioned receipt."],
+  ["altered-replay-payload", "Altered replay payload", "A reused idempotency context with altered confirmation is rejected."],
+  ["product-isolation", "Product state isolation", "FODE, KIA and MLC retain independent snapshots and workspace state."]
 ].map(([id, label, description]) => ({ id, label, description }));
 
 function listScenarios() {
@@ -59,6 +108,33 @@ function scenarioById(id) {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function productCode(value) {
+  const key = String(value || "FODE").toUpperCase();
+  return Object.prototype.hasOwnProperty.call(PRODUCT_SNAPSHOT_IDS, key) ? key : "FODE";
+}
+
+function productSnapshotId(product) {
+  return PRODUCT_SNAPSHOT_IDS[productCode(product)];
+}
+
+function rowsForProduct(product, scenarioId) {
+  const key = productCode(product);
+  const rows = rowsForScenario(scenarioId);
+  if (key === "FODE") return rows;
+  return rows.map((source) => {
+    const applicantId = String(source.applicantId).replace(/^FODE/, key);
+    return {
+      ...source,
+      product: key,
+      applicantId,
+      rowKey: String(source.rowKey || "").replace(/^FODE/, key),
+      displayName: `${key} ${source.displayName}`,
+      snapshotId: productSnapshotId(key),
+      returnContext: { ...source.returnContext, product: key, applicantId }
+    };
+  });
 }
 
 function scopeFor(row) {
@@ -358,6 +434,7 @@ function snapshotWorkload(context, payload) {
 function normalizePayload(payload) {
   const p = payload && typeof payload === "object" ? payload : {};
   return {
+    product: productCode(p.product),
     actionabilityState: String(p.actionabilityState || "READY").toUpperCase(),
     worklistKey: String(p.worklistKey || ""),
     workScope: String(p.workScope || "ALL_AUTHORISED").toUpperCase(),
@@ -376,11 +453,11 @@ function queryOperationalWorkload(context, payload) {
   if (scenarioId === "source-unavailable") {
     return unavailableResponse(query, "SOURCE_UNAVAILABLE", "Preview source authority is unavailable.");
   }
-  const currentSnapshotId = scenarioId === "stale-snapshot" && query.expectedSnapshotId ? CHANGED_SNAPSHOT_ID : SNAPSHOT_ID;
+  const currentSnapshotId = scenarioId === "stale-snapshot" && query.expectedSnapshotId ? (query.product === "FODE" ? CHANGED_SNAPSHOT_ID : query.product + "-PREVIEW-SNAPSHOT-002") : productSnapshotId(query.product);
   if (query.expectedSnapshotId && query.expectedSnapshotId !== currentSnapshotId) {
     return staleResponse(query, currentSnapshotId);
   }
-  let rows = rowsForScenario(scenarioId);
+  let rows = rowsForProduct(query.product, scenarioId);
   const rel = scenarioId === "conflicting-authority"
     ? reliability("CONFLICTING", "Preview scenario reports conflicting source authorities.")
     : reliability("AUTHORITATIVE", "Preview fixture authority is deterministic.");
@@ -399,7 +476,7 @@ function queryOperationalWorkload(context, payload) {
     ok: true,
     readOnly: true,
     contractVersion: CONTRACT_VERSION,
-    product: "FODE",
+    product: query.product,
     profileVersion: PROFILE_VERSION,
     snapshotId: currentSnapshotId,
     snapshotAsOf: SNAPSHOT_AS_OF,
@@ -428,11 +505,22 @@ function queryOperationalWorkload(context, payload) {
 }
 
 function filterRows(rows, query) {
-  const search = String(query.filters && query.filters.search || "").toLowerCase();
+  const filters = query.filters || {};
+  const search = String(filters.search || "").toLowerCase();
   return rows.filter((rowItem) => {
-    if (rowItem.actionabilityState !== query.actionabilityState) return false;
+    if (query.actionabilityState !== "ALL" && rowItem.actionabilityState !== query.actionabilityState) return false;
     if (query.worklistKey && rowItem.worklistKey !== query.worklistKey) return false;
     if (query.workScope !== "ALL_AUTHORISED" && rowItem.workOwnership.scope !== query.workScope) return false;
+    if (filters.owner && rowItem.actionOwner !== filters.owner) return false;
+    if (filters.urgency && rowItem.urgencyLevel !== filters.urgency) return false;
+    if (filters.primaryRoute && rowItem.primaryRoute !== filters.primaryRoute) return false;
+    if (filters.documentState && rowItem.documentState !== filters.documentState) return false;
+    if (filters.financeState && rowItem.canonicalFinanceState !== filters.financeState) return false;
+    if (filters.contactabilityState && rowItem.contactabilityState !== filters.contactabilityState) return false;
+    if (filters.communicationState && rowItem.recommendedMessageType !== filters.communicationState) return false;
+    if (filters.blockKind && rowItem.blockerCode !== filters.blockKind) return false;
+    if (filters.cooling === "ACTIVE" && !rowItem.coolingOffUntil) return false;
+    if (filters.cooling === "NONE" && rowItem.coolingOffUntil) return false;
     if (search) {
       const hay = [rowItem.applicantId, rowItem.displayName, rowItem.email, rowItem.phone, rowItem.worklistLabel].join(" ").toLowerCase();
       if (!hay.includes(search)) return false;
@@ -458,7 +546,7 @@ function urgencyRank(value) {
 
 function worklistCounts(rows, state) {
   return rows.reduce((out, rowItem) => {
-    if (rowItem.actionabilityState === state) out[rowItem.worklistKey] = Number(out[rowItem.worklistKey] || 0) + 1;
+    if (state === "ALL" || rowItem.actionabilityState === state) out[rowItem.worklistKey] = Number(out[rowItem.worklistKey] || 0) + 1;
     return out;
   }, {});
 }
@@ -478,8 +566,8 @@ function reconciliation(allRows, matchedRows, pageRows, query, snapshotId) {
   const hiddenReasons = allRows.filter((rowItem) => !matched.has(rowItem.applicantId)).slice(0, 50).map((rowItem) => ({
     applicantId: rowItem.applicantId,
     displayName: rowItem.displayName,
-    reasonCode: rowItem.actionabilityState !== query.actionabilityState ? rowItem.actionabilityState : "FILTERED_FROM_VIEW",
-    reason: rowItem.actionabilityState !== query.actionabilityState ? `${STATE_LABELS[rowItem.actionabilityState]} is outside this Actionability state.` : "Applicant is outside the selected work scope or filter.",
+    reasonCode: query.actionabilityState !== "ALL" && rowItem.actionabilityState !== query.actionabilityState ? rowItem.actionabilityState : "FILTERED_FROM_VIEW",
+    reason: query.actionabilityState !== "ALL" && rowItem.actionabilityState !== query.actionabilityState ? `${STATE_LABELS[rowItem.actionabilityState]} is outside this Actionability state.` : "Applicant is outside the selected work scope or filter.",
     actionabilityState: rowItem.actionabilityState,
     worklistKey: rowItem.worklistKey,
     selectable: rowItem.selectable
@@ -578,6 +666,7 @@ function unavailableResponse(query, code, message) {
 
 function searchApplicants(context, payload) {
   const p = payload && typeof payload === "object" ? payload : {};
+  const product = productCode(p.product);
   if (context.mode === "snapshot") {
     var valid = validateSnapshot(context.snapshot);
     if (valid.ok !== true) return valid;
@@ -589,16 +678,18 @@ function searchApplicants(context, payload) {
     });
     return { ok: true, readOnly: true, product: "FODE", query: p.query || "", snapshotId: metadata.snapshotId, totalMatches: snapshotMatches.length, matches: snapshotMatches.slice(0, Number(p.limit || 12)), timings: { searchMs: 4 } };
   }
-  if (p.expectedSnapshotId && p.expectedSnapshotId !== SNAPSHOT_ID) {
-    return { ok: false, readOnly: true, code: "STALE_SNAPSHOT", snapshotId: SNAPSHOT_ID, expectedSnapshotId: String(p.expectedSnapshotId || "") };
+  const snapshotId = productSnapshotId(product);
+  if (p.expectedSnapshotId && p.expectedSnapshotId !== snapshotId) {
+    return { ok: false, readOnly: true, code: "STALE_SNAPSHOT", snapshotId, expectedSnapshotId: String(p.expectedSnapshotId || "") };
   }
   const query = String(p.query || "").toLowerCase();
-  const rows = rowsForScenario(context.scenarioId).filter((rowItem) => [rowItem.applicantId, rowItem.displayName, rowItem.email, rowItem.phone].join(" ").toLowerCase().includes(query));
-  return { ok: true, readOnly: true, product: "FODE", query: p.query || "", snapshotId: SNAPSHOT_ID, totalMatches: rows.length, matches: rows.slice(0, Number(p.limit || 12)), timings: { searchMs: 4 } };
+  const rows = rowsForProduct(product, context.scenarioId).filter((rowItem) => [rowItem.applicantId, rowItem.displayName, rowItem.email, rowItem.phone].join(" ").toLowerCase().includes(query));
+  return { ok: true, readOnly: true, product, query: p.query || "", snapshotId, totalMatches: rows.length, matches: rows.slice(0, Number(p.limit || 12)), timings: { searchMs: 4 } };
 }
 
 function getApplicantWorkbench(context, payload) {
   const p = payload && typeof payload === "object" ? payload : {};
+  const product = productCode(p.product || String(p.applicantId || "").split("-")[0]);
   if (context.mode === "snapshot") {
     var valid = validateSnapshot(context.snapshot);
     if (valid.ok !== true) return valid;
@@ -608,17 +699,18 @@ function getApplicantWorkbench(context, payload) {
     if (!captured) return { ok: false, readOnly: true, code: "APPLICANT_NOT_FOUND", applicantId: p.applicantId };
     return captured.workbench || captured;
   }
-  if (p.expectedSnapshotId && p.expectedSnapshotId !== SNAPSHOT_ID) {
-    return { ok: false, readOnly: true, code: "STALE_SNAPSHOT", reliabilityState: "STALE", snapshotId: SNAPSHOT_ID, expectedSnapshotId: String(p.expectedSnapshotId || ""), message: "The applicant was requested from a stale workload snapshot." };
+  const snapshotId = productSnapshotId(product);
+  if (p.expectedSnapshotId && p.expectedSnapshotId !== snapshotId) {
+    return { ok: false, readOnly: true, code: "STALE_SNAPSHOT", reliabilityState: "STALE", snapshotId, expectedSnapshotId: String(p.expectedSnapshotId || ""), message: "The applicant was requested from a stale workload snapshot." };
   }
-  const allRows = rowsForScenario(context.scenarioId);
+  const allRows = rowsForProduct(product, context.scenarioId);
   const found = allRows.find((rowItem) => rowItem.applicantId === p.applicantId);
   if (!found) return { ok: false, readOnly: true, code: "APPLICANT_NOT_FOUND", applicantId: p.applicantId };
   return {
     ok: true,
     readOnly: true,
-    product: "FODE",
-    snapshotId: SNAPSHOT_ID,
+    product,
+    snapshotId,
     rowKey: found.rowKey,
     applicantId: found.applicantId,
     identity: {
@@ -631,13 +723,14 @@ function getApplicantWorkbench(context, payload) {
     exactAuthorityProjection: found,
     applicantDetail: { ok: true, applicantId: found.applicantId, displayName: found.displayName, rowNumber: found.rowNumber, readOnly: true },
     documents: { state: found.documentState, verified: found.documentState === "VERIFIED", requiredComplete: found.documentState === "VERIFIED", uploadedRequiredCount: 2, requiredCount: 3, missingRequiredDocuments: found.documentState === "VERIFIED" ? [] : ["Proof of identity"], actions: [readOnlyAction("Save document statuses", "CAN_SAVE_DOCUMENT_STATUSES")] },
-    finance: { state: found.canonicalFinanceState, paymentApplicable: found.canonicalFinanceState !== "NOT_YET_PAYMENT_APPLICABLE", paymentEvidencePresent: found.canonicalFinanceState === "PAID_VERIFIED", paymentVerified: found.canonicalFinanceState === "PAID_VERIFIED", owner: found.actionOwner, blocker: "", nextAction: found.nextAction, actions: [readOnlyAction("Verify payment", "CAN_VERIFY_PAYMENT")] },
-    communications: { recommendedMessageType: found.recommendedMessageType, eligibility: found.communicationAuthoritySummary, coolingOffUntil: found.coolingOffUntil, actions: [readOnlyAction("Send individual email", "CAN_SEND_INDIVIDUAL_EMAIL")] },
-    portal: { state: found.portalState, submitted: found.portalState === "SUBMITTED", actions: [readOnlyAction("Manage portal access", "CAN_MANAGE_PORTAL_ACCESS")] },
-    contactability: { state: found.contactabilityState, hasValidEmail: !!found.email && found.contactabilityState !== "EMAIL_SUPPRESSED", hasPhoneFallback: !!found.phone, actions: [readOnlyAction("Correct contact details", "CAN_EDIT_CONTACT_DETAILS")] },
+    finance: { state: found.canonicalFinanceState, paymentApplicable: found.canonicalFinanceState !== "NOT_YET_PAYMENT_APPLICABLE", paymentEvidencePresent: found.canonicalFinanceState === "PAID_VERIFIED" || found.applicantId === "FODE-26-002959", paymentVerified: found.canonicalFinanceState === "PAID_VERIFIED", owner: found.actionOwner, blocker: "", nextAction: found.nextAction, invoiceReadiness: "Preview only", booksMatch: "Informational fixture", actions: [readOnlyAction("Verify payment", "CAN_VERIFY_PAYMENT")] },
+    communications: { recommendedMessageType: found.recommendedMessageType || "docs_missing", eligibility: found.communicationAuthoritySummary, coolingOffUntil: found.coolingOffUntil, latestCommunication: "2026-07-10T08:00:00.000Z", deliveryState: "No active bounce", suppressionState: "None", actions: [readOnlyAction("Send individual email", "CAN_SEND_INDIVIDUAL_EMAIL")] },
+    portal: { state: found.portalState, submitted: found.portalState === "SUBMITTED", accessState: "Open", locked: false, tokenState: "Authoritative token retained server-side", expiresAt: "2026-08-15T00:00:00.000Z", actions: [readOnlyAction("Manage portal access", "CAN_MANAGE_PORTAL_ACCESS")] },
+    contactability: { state: found.contactabilityState, effectiveEmail: found.email, emailSource: "Deterministic applicant fixture", phone: found.phone, hasValidEmail: !!found.email && found.contactabilityState !== "EMAIL_SUPPRESSED", hasPhoneFallback: !!found.phone, suppressionState: found.contactabilityState === "EMAIL_SUPPRESSED" ? "Suppressed" : "None", actions: [readOnlyAction("Correct contact details", "CAN_EDIT_CONTACT_DETAILS")] },
     auditSummary: { preview: true, source: "Deterministic Preview Lab fixture", applicantId: found.applicantId },
     sourceReliability: found.sourceReliability,
-    capabilities: { readOnly: true, role: "PREVIEW_ADMIN", capabilities: {}, enforcement: "Preview transport simulates read-only contracts only.", pass2Actions: [readOnlyAction("Run batch communications", "CAN_RUN_BATCH_COMMUNICATIONS")] },
+    capabilities: { readOnly: false, role: "PREVIEW_ADMIN", capabilities: PREVIEW_CAPABILITIES, enforcement: "Preview transport simulates guarded contracts without live dependencies.", pass2Actions: [readOnlyAction("Run batch communications", "CAN_RUN_BATCH_COMMUNICATIONS")] },
+    featureFlags: PREVIEW_FLAGS,
     returnContext: found.returnContext,
     timings: { applicantMs: 5 }
   };
@@ -657,7 +750,8 @@ function documentManifest(context, payload) {
     return applicant.documentManifest;
   }
   const applicantId = String(p.applicantId || "");
-  const wb = getApplicantWorkbench(context, { applicantId, expectedSnapshotId: SNAPSHOT_ID });
+  const product = productCode(p.product || applicantId.split("-")[0]);
+  const wb = getApplicantWorkbench(context, { product, applicantId, expectedSnapshotId: productSnapshotId(product) });
   if (wb.ok !== true) return wb;
   const unavailable = context.scenarioId === "document-preview-unavailable";
   const file = {
@@ -794,7 +888,8 @@ function documentFileAction(context, payload) {
 
 function reconciliationRpc(context, payload) {
   const workload = queryOperationalWorkload(context, payload || {});
-  return { ok: workload.ok !== false, readOnly: true, product: "FODE", snapshotId: workload.snapshotId, reconciliation: workload.reconciliation, hiddenReasons: workload.reconciliation && workload.reconciliation.hiddenReasons || [] };
+  if (workload.ok === false) return { ...workload, readOnly: true, product: workload.product || "FODE", hiddenReasons: [] };
+  return { ok: true, readOnly: true, product: workload.product || "FODE", snapshotId: workload.snapshotId, reconciliation: workload.reconciliation, hiddenReasons: workload.reconciliation && workload.reconciliation.hiddenReasons || [] };
 }
 
 function parityDiagnostics(context, payload) {
@@ -829,6 +924,113 @@ function parityDiagnostics(context, payload) {
   };
 }
 
+function operationHistory(payload) {
+  const applicantId = String(payload && payload.applicantId || "");
+  return { ok: true, readOnly: true, applicantId, receipts: (previewStore.history.get(applicantId) || []).slice() };
+}
+
+function commandDefinition(operation) {
+  const definitions = {
+    DOCUMENT_REVIEW: ["CAN_SAVE_DOCUMENT_STATUSES", false, "STANDARD"],
+    FINANCE_EVIDENCE_DECISION: ["CAN_VERIFY_PAYMENT", false, "HIGH"],
+    SEND_INDIVIDUAL_COMMUNICATION: ["CAN_SEND_INDIVIDUAL_EMAIL", false, "HIGH"],
+    CONTACTABILITY_CORRECTION: ["CAN_OPEN_REVIEW_WORKSPACE", false, "STANDARD"],
+    PORTAL_ACCESS: ["CAN_MANAGE_PORTAL_ACCESS", false, "HIGH"],
+    BATCH_COMMUNICATION: ["CAN_RUN_BATCH_COMMUNICATIONS", true, "HIGH"],
+    BOOKS_ACTION: ["CAN_WRITE_ZOHO_BOOKS", false, "CRITICAL"]
+  };
+  return definitions[String(operation || "").toUpperCase()] || null;
+}
+
+function previewCommand(context, payload) {
+  const p = payload && typeof payload === "object" ? payload : {};
+  const operation = String(p.operation || "").toUpperCase();
+  const definition = commandDefinition(operation);
+  if (!definition) return { ok: false, code: "UNSUPPORTED_OPERATION", message: `Unsupported Preview operation ${operation}` };
+  if (context.scenarioId === "feature-flag-disabled") return { ok: false, code: "DISABLED_BY_FLAG", message: `${operation} is disabled by the simulated feature flag.` };
+  if (operation === "BOOKS_ACTION") return { ok: false, code: "DISABLED_BY_FLAG", message: "Books execution is disabled in this pass." };
+  if (context.scenarioId === "capability-denied") return { ok: false, code: "CAPABILITY_DENIED", message: `${definition[0]} is required.` };
+  const currentSnapshot = context.mode === "snapshot" ? context.snapshot && context.snapshot.metadata && context.snapshot.metadata.snapshotId : productSnapshotId(p.product);
+  if (!p.snapshotId || p.snapshotId !== currentSnapshot) return { ok: false, code: "STALE_SNAPSHOT", message: "The command is not bound to the current product snapshot." };
+  const selection = p.selection && typeof p.selection === "object" ? p.selection : null;
+  if (selection && definition[1] !== true) return { ok: false, code: "BATCH_NOT_ALLOWED", message: "This operation is individual-only." };
+  if (selection && selection.queryFingerprint !== p.queryFingerprint) return { ok: false, code: "QUERY_BINDING_MISMATCH", message: "The selection query changed after selection." };
+  const selected = selection && Array.isArray(selection.selectedApplicantIds) ? selection.selectedApplicantIds.slice() : [];
+  if (selection && !selected.length) return { ok: false, code: "EMPTY_SELECTION", message: "No selected applicants remain eligible." };
+  if (selection && selected.length > 50) return { ok: false, code: "BATCH_CAP_EXCEEDED", message: "The selected cohort exceeds the bounded execution cap." };
+  if (!selection && !p.applicantId) return { ok: false, code: "APPLICANT_ID_REQUIRED", message: "ApplicantID is required." };
+  if (operation === "FINANCE_EVIDENCE_DECISION" && String(p.draft && p.draft.decision || "").toUpperCase() !== "VERIFIED") return { ok: false, code: "UNSUPPORTED_FINANCE_DECISION", message: "No dedicated Finance rejection authority is proven." };
+  if (operation === "SEND_INDIVIDUAL_COMMUNICATION" && (context.scenarioId === "cooling-off-denial" || context.scenarioId === "contactability-failure")) return { ok: false, code: context.scenarioId === "cooling-off-denial" ? "COOLDOWN_ACTIVE" : "NO_EFFECTIVE_EMAIL", message: "Communication Authority blocked this preview." };
+  const id = `PREVIEW-${operation}-${String(previewStore.previews.size + 1).padStart(4, "0")}`;
+  const createdAt = new Date();
+  const preview = {
+    ok: true,
+    state: context.scenarioId === "expired-command-preview" ? "EXPIRED" : "READY",
+    schemaVersion: "EDUOPS_COMMAND_PREVIEW_V1",
+    previewId: id,
+    operation,
+    product: p.product || "FODE",
+    snapshotId: currentSnapshot,
+    queryFingerprint: p.queryFingerprint || "",
+    applicantId: p.applicantId || "",
+    selectedApplicantIds: selected,
+    requiredCapability: definition[0],
+    risk: definition[2],
+    dualApprovalRequired: operation === "PORTAL_ACCESS" || (operation === "BATCH_COMMUNICATION" && selected.length >= 25),
+    idempotencyKey: p.idempotencyKey,
+    summary: `${operation.replace(/_/g, " ")} / ${selection ? selected.length + " applicants" : p.applicantId}`,
+    createdAt: createdAt.toISOString(),
+    expiresAt: new Date(createdAt.getTime() + (context.scenarioId === "expired-command-preview" ? -1000 : 600000)).toISOString(),
+    eligibleCount: selection ? selected.length : 1,
+    blockedCount: 0,
+    excludedCount: 0,
+    partitions: selection ? [{ partitionKey: operation, label: operation.replace(/_/g, " "), memberCount: selected.length, executionCap: 50, requiredCapability: definition[0] }] : [],
+    request: JSON.parse(JSON.stringify(p)),
+    contextFingerprint: JSON.stringify({ operation, product: p.product || "FODE", snapshotId: currentSnapshot, queryFingerprint: p.queryFingerprint || "", applicantId: p.applicantId || "", selectedApplicantIds: selected, document: p.document || null, draft: p.draft || null, approvalId: p.approvalId || "" })
+  };
+  previewStore.previews.set(id, preview);
+  return preview;
+}
+
+function executeCommand(context, payload) {
+  const p = payload && typeof payload === "object" ? payload : {};
+  if (p.confirmation !== true) return { ok: false, code: "EXPLICIT_CONFIRMATION_REQUIRED", message: "Explicit confirmation is required." };
+  const preview = previewStore.previews.get(String(p.previewId || ""));
+  if (!preview) return { ok: false, code: "PREVIEW_EXPIRED_OR_UNKNOWN", message: "The preview is unavailable." };
+  if (Date.parse(preview.expiresAt) <= Date.now()) return { ok: false, code: "PREVIEW_EXPIRED", message: "The preview expired before execution." };
+  if (preview.dualApprovalRequired === true && !preview.request.approvalId) return { ok: false, code: "DUAL_APPROVAL_REQUIRED", message: "Independent approval is required for this operation." };
+  if (preview.idempotencyKey !== p.idempotencyKey) return { ok: false, code: "IDEMPOTENCY_CONTEXT_MISMATCH", message: "The confirmation does not match the preview." };
+  if (context.scenarioId === "stale-command-preview") return { ok: false, code: "STALE_SNAPSHOT", message: "The source snapshot changed after preview." };
+  if (context.scenarioId === "operation-lock-conflict") return { ok: false, code: "OPERATION_LOCKED", message: "Another simulated operation holds the guarded lock." };
+  if (previewStore.receipts.has(p.idempotencyKey)) {
+    const stored = previewStore.receipts.get(p.idempotencyKey);
+    if (stored.contextFingerprint !== preview.contextFingerprint) return { ok: false, code: "IDEMPOTENCY_CONTEXT_CONFLICT", message: "The idempotency key was already used for another command context." };
+    return stored.receipt;
+  }
+  const ids = preview.selectedApplicantIds.length ? preview.selectedApplicantIds : [preview.applicantId];
+  const applicantOutcomes = ids.map((applicantId, index) => ({ applicantId, outcome: context.scenarioId === "partial-batch-failure" && index === ids.length - 1 ? "BLOCKED" : "COMPLETE", reason: context.scenarioId === "partial-batch-failure" && index === ids.length - 1 ? "Simulated authority change" : "Simulated authoritative receipt" }));
+  const completeCount = applicantOutcomes.filter((item) => item.outcome === "COMPLETE").length;
+  const receipt = {
+    ok: true,
+    simulated: true,
+    schemaVersion: "EDUOPS_RECEIPT_V1",
+    receiptId: `RECEIPT-${String(previewStore.receipts.size + 1).padStart(4, "0")}`,
+    previewId: preview.previewId,
+    operation: preview.operation,
+    product: preview.product,
+    snapshotId: preview.snapshotId,
+    queryFingerprint: preview.queryFingerprint,
+    applicantId: preview.applicantId,
+    selectedApplicantIds: preview.selectedApplicantIds,
+    at: nowIso(),
+    outcome: completeCount === applicantOutcomes.length ? "COMPLETE" : completeCount ? "PARTIAL" : "BLOCKED",
+    applicantOutcomes
+  };
+  previewStore.receipts.set(p.idempotencyKey, { contextFingerprint: preview.contextFingerprint, receipt });
+  ids.forEach((applicantId) => previewStore.history.set(applicantId, [receipt].concat(previewStore.history.get(applicantId) || []).slice(0, 25)));
+  return receipt;
+}
+
 function getAccessProjection() {
   return {
     ok: true,
@@ -837,8 +1039,9 @@ function getAccessProjection() {
     contractVersion: CONTRACT_VERSION,
     profileVersion: PROFILE_VERSION,
     runtime: { version: "r352-preview", deployVersion: 352 },
-    user: { email: "preview.owner@example.test", role: "PREVIEW_ADMIN", capabilities: {} },
-    rpcAllowlist: [
+    user: { email: "preview.owner@example.test", role: "PREVIEW_ADMIN", capabilities: PREVIEW_CAPABILITIES },
+    featureFlags: PREVIEW_FLAGS,
+    rpcAllowlist: { read: [
       "eduops_getAccessProjection",
       "eduops_getProfile",
       "eduops_queryOperationalWorkload",
@@ -848,8 +1051,10 @@ function getAccessProjection() {
       "eduops_getDocumentRendition",
       "eduops_getDocumentFileAction",
       "eduops_getReconciliation",
-      "eduops_getParityDiagnostics"
-    ]
+      "eduops_getParityDiagnostics",
+      "eduops_getOperationHistory",
+      "eduops_previewCommand"
+    ], write: ["eduops_executeCommand"] }
   };
 }
 
@@ -863,7 +1068,10 @@ function getProfile() {
     contractVersion: CONTRACT_VERSION,
     profileVersion: PROFILE_VERSION,
     actionabilityStates: Object.keys(STATE_LABELS),
-    workScopes: ["MY", "TEAM", "UNASSIGNED", "ESCALATED", "ALL_AUTHORISED"]
+    workScopes: ["MY", "TEAM", "UNASSIGNED", "ESCALATED", "ALL_AUTHORISED"],
+    featureFlags: PREVIEW_FLAGS,
+    commandContractVersion: "EDUOPS_COMMAND_PREVIEW_V1",
+    receiptContractVersion: "EDUOPS_RECEIPT_V1"
   };
 }
 
@@ -878,6 +1086,9 @@ function handleRpc(name, context, payload, rootDir) {
   if (name === "eduops_getDocumentFileAction") return documentFileAction(context, payload);
   if (name === "eduops_getReconciliation") return reconciliationRpc(context, payload);
   if (name === "eduops_getParityDiagnostics") return parityDiagnostics(context, payload);
+  if (name === "eduops_getOperationHistory") return operationHistory(payload);
+  if (name === "eduops_previewCommand") return previewCommand(context, payload);
+  if (name === "eduops_executeCommand") return executeCommand(context, payload);
   return { ok: false, readOnly: true, code: "UNKNOWN_RPC", message: `Preview transport does not implement ${name}` };
 }
 

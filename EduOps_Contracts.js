@@ -4,7 +4,8 @@ var EDUOPS_PROFILE_VERSION = "FODE_SHADOW_V1";
 function eduopsConfig_() {
   return {
     enabled: true,
-    readOnly: true,
+    readOnly: false,
+    operationsGuarded: true,
     product: "FODE",
     requiredCapability: "CAN_OPEN_REVIEW_WORKSPACE",
     contractVersion: EDUOPS_CONTRACT_VERSION,
@@ -23,8 +24,14 @@ function eduopsReadOnlyRpcAllowlist_() {
     "eduops_getDocumentRendition",
     "eduops_getDocumentFileAction",
     "eduops_getReconciliation",
-    "eduops_getParityDiagnostics"
+    "eduops_getParityDiagnostics",
+    "eduops_getOperationHistory",
+    "eduops_previewCommand"
   ];
+}
+
+function eduopsWriteRpcAllowlist_() {
+  return ["eduops_executeCommand"];
 }
 
 function eduopsClean_(value) {
