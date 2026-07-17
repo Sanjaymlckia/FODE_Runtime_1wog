@@ -29,7 +29,13 @@ for (const operation of ["DOCUMENT_REVIEW", "FINANCE_EVIDENCE_DECISION", "SEND_I
 assert.doesNotMatch(sources.commands, /BATCH_ASSIGNMENT|BATCH_CLASSIFICATION/, "Unproven assignment and classification authorities must not be exposed as executable commands");
 assert.match(sources.commands, /EDUOPS_LARGE_COMMUNICATION_BATCH_THRESHOLD[\s\S]*dualApprovalRequired/, "Large communication batches must require independent approval");
 assert.match(sources.commands, /admin_previewSelectedApplicantBatch[\s\S]*previewRequestId:[\s\S]*candidateHash:/, "Batch execution must consume the exact communication-authority preview context");
+assert.match(sources.commands, /projection\.capabilities \|\| projection/, "Command capability checks must unwrap the canonical capability projection");
+assert.match(sources.commands, /admin_updateParentEmailCorrected\(\{[\s\S]*newEmail:\s*draft\.email/, "Contactability correction must pass the authority-required newEmail field");
 assert.match(sources.flags, /BOOKS_ACTION: false/, "Books must default off independently");
+assert.match(sources.flags, /function eduops_setFeatureFlagsForAdminStaging[\s\S]*getAdminRole_\(actorEmail\) !== "SUPER"/, "Feature flag activation must require SUPER authority");
+assert.match(sources.flags, /SET_EDUOPS_FEATURE_FLAGS_FOR_ADMIN_STAGING/, "Feature flag activation must require explicit confirmation");
+assert.match(sources.flags, /BOOKS_ACTION_REQUIRES_SEPARATE_AUTHORITY_CIS/, "Feature flag activation must not enable Books action");
+assert.match(sources.flags, /EDUOPS_FEATURE_FLAGS_SET/, "Feature flag activation must audit before/after state");
 assert.doesNotMatch(sources.commands, /admin_createZohoBooksFodeDraftInvoice/, "Pass 2 cannot expose unrestricted Books execution");
 assert.match(sources.commands, /BATCH_NOT_ALLOWED/, "Individual operations must reject cohort selection");
 assert.match(sources.commands, /STALE_SELECTION_BINDING[\s\S]*QUERY_BINDING_MISMATCH/, "Batch preview must retain snapshot and query binding");

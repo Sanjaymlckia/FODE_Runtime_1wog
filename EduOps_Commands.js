@@ -17,7 +17,8 @@ function eduopsCommandDefinition_(operation) {
 }
 
 function eduopsRequireCommandCapability_(access, definition) {
-  var capabilities = access && access.capabilities || {};
+  var projection = access && access.capabilities || {};
+  var capabilities = projection.capabilities || projection;
   if (capabilities[definition.capability] !== true) throw new Error("CAPABILITY_DENIED: " + definition.capability + " required");
 }
 
@@ -183,7 +184,7 @@ function eduopsDispatchCommand_(preview) {
   if (preview.operation === "SEND_INDIVIDUAL_COMMUNICATION") return admin_sendApplicantMessage({ applicantId: preview.applicantId, messageType: draft.messageType, recipient: draft.recipient, subject: draft.subject, body: draft.body, confirmManualSingleSend: true, sourceView: "eduops" });
   if (preview.operation === "CONTACTABILITY_CORRECTION") {
     if (!eduopsClean_(draft.email || "")) throw new Error("CORRECTED_EMAIL_REQUIRED");
-    return admin_updateParentEmailCorrected({ applicantId: preview.applicantId, rowNumber: rowNumber, email: draft.email, reason: draft.reason });
+    return admin_updateParentEmailCorrected({ applicantId: preview.applicantId, rowNumber: rowNumber, newEmail: draft.email, reason: draft.reason });
   }
   if (preview.operation === "PORTAL_ACCESS") {
     var portalAction = eduopsUpper_(draft.action || "", "");

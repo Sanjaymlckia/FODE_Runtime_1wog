@@ -77,6 +77,7 @@ assert.match(adminUiSource, /Save document verification statuses\. Audit records
 assert.match(stagePreview, /requireOperationsAdmin_\(adminEmail\)/, "Stage Batch preview must remain Operations/Super gated");
 assert.match(stageSend, /requireOperationsAdmin_\(adminEmail\)/, "Stage Batch send must remain Operations/Super gated");
 assert.match(paymentVerify, /requireAdminCapability_\(adminEmail,\s*"CAN_VERIFY_PAYMENT"/, "Payment verification must remain capability-gated through the shared resolver");
+assert.match(paymentVerify, /var adminEmail = getCallerEmail_\(\);/, "Payment verification must use the deployed caller identity resolver");
 assert.match(zohoCreate, /canWriteZohoBooksForAdmin_\(adminEmail\)/, "Zoho Books live draft invoice creation must remain write-admin gated");
 assert.match(zohoSend, /canWriteZohoBooksForAdmin_\(adminEmail\)/, "Zoho Books live/test invoice email send must remain write-admin gated");
 

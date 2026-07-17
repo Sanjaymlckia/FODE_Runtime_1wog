@@ -11,7 +11,7 @@ function admin_setPaymentVerified(payload) {
 function admin_setPaymentVerified_impl_(payload, dbgId) {
   dbgId = String(dbgId || adminDebugId_());
   try {
-  var adminEmail = getActiveUserEmail_();
+  var adminEmail = getCallerEmail_();
   if (!isAdmin_(adminEmail)) return err_("ACCESS_DENIED", "Access denied", dbgId);
   try { requireAdminCapability_(adminEmail, "CAN_VERIFY_PAYMENT", "Access denied: payment verification capability required"); } catch (_superErr) { return err_("ACCESS_DENIED", "Access denied: payment verification capability required", dbgId); }
 
