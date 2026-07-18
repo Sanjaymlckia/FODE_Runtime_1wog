@@ -160,6 +160,8 @@ const oldClientGeneratedFingerprint = JSON.stringify({
 });
 
 const workloadResponse = jsonBoundary(context.eduops_queryOperationalWorkload(jsonBoundary(browserWorkloadRequest)));
+const batchClientSource = read("EduOps_ClientBatch.html");
+const eduopsHtmlSource = read("EduOps.html");
 
 assert.equal(workloadResponse.ok, true, "workload query succeeds");
 assert.equal(workloadResponse.totalMatched, 252, "workload query resolves the 252-member master cohort");
@@ -213,6 +215,77 @@ assert.equal(preview.partitions.length, 1, "server returns an executable partiti
 assert.equal(preview.partitions[0].memberCount, 30, "partition member count is 30");
 assert.equal(preview.selectionBinding.queryBinding.schemaVersion, "EDUOPS_QUERY_BINDING_V1", "preview retains the authoritative query binding");
 assert.equal(previewAuthorityCalls, 1, "test performed preview only and did not execute or send");
+
+const batchElements = {};
+function batchElement(id) {
+  if (!batchElements[id]) {
+    batchElements[id] = {
+      hidden: true,
+      innerHTML: "",
+      textContent: "",
+      attributes: {},
+      setAttribute(name, value) { this.attributes[name] = String(value); },
+      focus() {},
+      querySelector() { return null; }
+    };
+  }
+  return batchElements[id];
+}
+const browserApp = {
+  state: {
+    product: "FODE",
+    snapshotId: workloadResponse.snapshotId,
+    workload: workloadResponse,
+    selected: {},
+    selectionMode: "ALL_ELIGIBLE_MATCHING_QUERY",
+    selectionQueryBinding: workloadResponse.queryBinding,
+    selectionExcluded: {},
+    selectionExecutionLimit: 30,
+    selectionMessageType: "",
+    worklistKey: "",
+    workbench: null,
+    dirty: false
+  },
+  clone: jsonBoundary,
+  esc: (value) => String(value == null ? "" : value),
+  humanize: (value) => String(value == null ? "" : value).replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase()),
+  snapshotReturnContext: () => ({}),
+  pushRoute() {}
+};
+const browserContext = {
+  window: { EduOpsApp: browserApp },
+  document: { getElementById: batchElement }
+};
+vm.createContext(browserContext);
+vm.runInContext(batchClientSource.replace(/^<script>\s*/, "").replace(/\s*<\/script>\s*$/, ""), browserContext, { filename: "EduOps_ClientBatch.html" });
+browserApp.openBatch({});
+assert.equal(batchElements.eduopsBatchOperationStatus.textContent, "Operation status: Awaiting revalidation", "query-wide cohort is not mislabeled as blocked before revalidation");
+assert.equal(batchElements.eduopsBatchOperationStatus.attributes["data-state"], "READY", "query-wide cohort status is ready to revalidate");
+assert.equal(batchElements.eduopsBatchExecutionStatus.textContent, "No execution performed", "batch header does not claim confirmed execution before execution");
+assert.equal(browserApp.state.batch.masterCohortSize, 252, "client initial batch DTO retains the query-wide master cohort");
+assert.equal(browserApp.state.batch.binding.selectedApplicantIds.length, 0, "opaque query-wide selection correctly carries no explicit applicant IDs");
+assert.match(
+  batchClientSource,
+  /if \(batch\.masterCohortSize > 0\) return \{ label: "Awaiting revalidation", state: "READY" \}/,
+  "query-wide master cohorts are shown as awaiting revalidation even though their explicit applicant ID list is empty"
+);
+assert.doesNotMatch(
+  batchClientSource,
+  /batch\.binding\.selectedApplicantIds\.length \? "READY" : "BLOCKED"/,
+  "batch operation status must not mistake an opaque query-wide selection for an empty explicit selection"
+);
+assert.doesNotMatch(
+  batchClientSource,
+  /app\.humanize\(batch\.preview[\s\S]*state/,
+  "batch status must not map operation state through applicant Actionability labels"
+);
+assert.match(
+  batchClientSource,
+  /if \(batch\.step === "confirm"\) return "Execution confirmation pending";[\s\S]*return "No execution performed";/,
+  "execution status remains truthful before an execution receipt exists"
+);
+assert.match(eduopsHtmlSource, /id="eduopsBatchExecutionStatus"[\s\S]*No execution performed/, "batch shell starts with a truthful non-executed status");
+assert.doesNotMatch(eduopsHtmlSource, />Confirmed execution</, "batch shell must not claim confirmed execution before confirmation or execution");
 
 const missingBindingRequest = jsonBoundary(previewRequest);
 delete missingBindingRequest.selection.queryBinding;

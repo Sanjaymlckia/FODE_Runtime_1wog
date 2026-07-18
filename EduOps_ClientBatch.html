@@ -13,6 +13,7 @@
     dom.title = byId("eduopsBatchTitle");
     dom.subtitle = byId("eduopsBatchSubtitle");
     dom.status = byId("eduopsBatchOperationStatus");
+    dom.executionStatus = byId("eduopsBatchExecutionStatus");
     dom.cohort = byId("eduopsBatchCohort");
     dom.steps = byId("eduopsBatchSteps");
     dom.panel = byId("eduopsBatchPanel");
@@ -61,6 +62,23 @@
       ["BATCH_COMMUNICATION", "Batch communication", "The only proven batch-safe authority in this pass. Template, recipient and cooling-off are revalidated server-side."]
     ].map(function (item) { return '<label class="eduops-operation-option"><input type="radio" name="eduopsBatchOperation" value="' + item[0] + '"' + (app.state.batch.operation === item[0] ? " checked" : "") + '><span><strong>' + item[1] + '</strong><small>' + item[2] + '</small></span></label>'; }).join("");
   }
+  function operationStatus(batch) {
+    if (batch.receipt) {
+      return { label: batch.receipt.outcome === "COMPLETE" ? "Operation complete" : "Execution receipt returned", state: batch.receipt.outcome === "COMPLETE" ? "READY" : "BLOCKED" };
+    }
+    if (batch.preview) {
+      if (batch.preview.state !== "READY") return { label: "Preview blocked", state: "BLOCKED" };
+      if (batch.step === "confirm") return { label: "Awaiting confirmation", state: "READY" };
+      return { label: batch.step === "partitions" ? "Revalidation complete" : "Preview ready", state: "READY" };
+    }
+    if (batch.masterCohortSize > 0) return { label: "Awaiting revalidation", state: "READY" };
+    return { label: "No eligible selection", state: "BLOCKED" };
+  }
+  function executionStatus(batch) {
+    if (batch.receipt) return "Execution receipt returned";
+    if (batch.step === "confirm") return "Execution confirmation pending";
+    return "No execution performed";
+  }
   function renderCohort() {
     var batch = app.state.batch;
     var templates = (app.state.workload && app.state.workload.batchTemplateOptions || []).map(function (item) { return '<option value="' + app.esc(item.messageType || item.templateId) + '"' + (batch.messageType === (item.messageType || item.templateId) ? " selected" : "") + '>' + app.esc(item.title || item.label || app.humanize(item.messageType || item.templateId)) + '</option>'; }).join("");
@@ -86,8 +104,10 @@
     var batch = app.state.batch;
     cohortHeader();
     renderSteps();
-    dom.status.textContent = "Operation status: " + app.humanize(batch.preview && batch.preview.state || (batch.binding.selectedApplicantIds.length ? "READY" : "BLOCKED"));
-    dom.status.setAttribute("data-state", batch.preview && batch.preview.state === "READY" ? "READY" : batch.binding.selectedApplicantIds.length ? "READY" : "BLOCKED");
+    var status = operationStatus(batch);
+    dom.status.textContent = "Operation status: " + status.label;
+    dom.status.setAttribute("data-state", status.state);
+    dom.executionStatus.textContent = executionStatus(batch);
     if (batch.step === "cohort") dom.panel.innerHTML = renderCohort();
     else if (batch.step === "partitions") dom.panel.innerHTML = renderPartitions();
     else if (batch.step === "preview" || batch.step === "confirm") dom.panel.innerHTML = renderPreview();
