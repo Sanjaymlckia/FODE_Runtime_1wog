@@ -41,16 +41,28 @@ function eduopsNormalizeExecutionLimit_(value) {
 }
 
 function eduopsQueryFingerprintForSelection_(query) {
-  var q = eduopsNormalizeWorkloadQuery_(query || {});
-  return JSON.stringify({
-    product: q.product,
-    actionabilityState: q.actionabilityState,
-    worklistKey: q.worklistKey,
-    workScope: q.workScope,
-    filters: q.filters,
-    sort: q.sort,
-    pageSize: q.pageSize
-  });
+  return eduopsWorkloadQueryFingerprint_(query);
+}
+
+function eduopsServerSelectionQueryBinding_(source, resolved, request) {
+  var binding = source && source.queryBinding && typeof source.queryBinding === "object" ? source.queryBinding : null;
+  if (!binding) throw new Error("QUERY_SELECTION_CONTEXT_REQUIRED");
+  if (eduopsClean_(binding.schemaVersion || "") !== "EDUOPS_QUERY_BINDING_V1") throw new Error("QUERY_BINDING_MISMATCH");
+  if (eduopsClean_(binding.authority || "") !== "SERVER_AUTHORED") throw new Error("QUERY_BINDING_MISMATCH");
+  if (eduopsClean_(binding.product || "") !== "FODE") throw new Error("STALE_SELECTION_BINDING");
+  if (eduopsClean_(binding.snapshotId || "") !== resolved.snapshotId) throw new Error("STALE_SELECTION_BINDING");
+  var query = binding.query && typeof binding.query === "object" ? binding.query : null;
+  if (!query) throw new Error("QUERY_SELECTION_CONTEXT_REQUIRED");
+  var bindingFingerprint = eduopsClean_(binding.queryFingerprint || "");
+  var serverFingerprint = eduopsQueryFingerprintForSelection_(query);
+  if (!bindingFingerprint || serverFingerprint !== bindingFingerprint) throw new Error("QUERY_BINDING_MISMATCH");
+  return {
+    product: "FODE",
+    snapshotId: resolved.snapshotId,
+    query: query,
+    queryFingerprint: bindingFingerprint,
+    queryBinding: eduopsClone_(binding)
+  };
 }
 
 function eduopsResolveBatchSelection_(selection, resolved, request) {
@@ -61,17 +73,17 @@ function eduopsResolveBatchSelection_(selection, resolved, request) {
   if (eduopsClean_(source.product || "") !== "FODE" || snapshotId !== resolved.snapshotId) throw new Error("STALE_SELECTION_BINDING");
   var requestFingerprint = eduopsClean_(request && request.queryFingerprint || "");
   var selectionFingerprint = eduopsClean_(source.queryFingerprint || "");
-  if (!selectionFingerprint || selectionFingerprint !== requestFingerprint) throw new Error("QUERY_BINDING_MISMATCH");
   var excluded = {};
   normalizeSelectedApplicantBatchIds_(source.excludedApplicantIds || [], selectedApplicantBatchInputLimit_()).forEach(function (id) { excluded[id] = true; });
   var executionLimit = eduopsNormalizeExecutionLimit_(source.executionLimit || request && request.executionLimit);
   var masterIds = [];
   var blockedCount = 0;
   var query = source.query && typeof source.query === "object" ? source.query : null;
+  var queryBinding = null;
   if (mode === "ALL_ELIGIBLE_MATCHING_QUERY") {
-    if (!query) throw new Error("QUERY_SELECTION_CONTEXT_REQUIRED");
-    var queryFingerprint = eduopsQueryFingerprintForSelection_(query);
-    if (queryFingerprint !== selectionFingerprint) throw new Error("QUERY_BINDING_MISMATCH");
+    queryBinding = eduopsServerSelectionQueryBinding_(source, resolved, request);
+    query = queryBinding.query;
+    selectionFingerprint = queryBinding.queryFingerprint;
     var matched = eduopsFilterRows_(resolved.rows, eduopsNormalizeWorkloadQuery_(query), null);
     matched.sort(function (a, b) { return eduopsCompareRows_(a, b, query.sort); });
     matched.forEach(function (row) {
@@ -79,6 +91,7 @@ function eduopsResolveBatchSelection_(selection, resolved, request) {
       else blockedCount++;
     });
   } else if (mode === "EXPLICIT_SELECTION") {
+    if (selectionFingerprint && requestFingerprint && selectionFingerprint !== requestFingerprint) throw new Error("QUERY_BINDING_MISMATCH");
     masterIds = normalizeSelectedApplicantBatchIds_(source.selectedApplicantIds || [], selectedApplicantBatchInputLimit_());
   } else {
     throw new Error("UNSUPPORTED_SELECTION_MODE: " + mode);
@@ -92,6 +105,7 @@ function eduopsResolveBatchSelection_(selection, resolved, request) {
     snapshotId: resolved.snapshotId,
     queryFingerprint: selectionFingerprint,
     query: query,
+    queryBinding: queryBinding ? queryBinding.queryBinding : null,
     selectedApplicantIds: masterIds,
     excludedApplicantIds: Object.keys(excluded),
     executionApplicantIds: executionIds,
@@ -151,6 +165,7 @@ function eduops_previewCommand(payload) {
   if (selection) {
     selection = eduopsResolveBatchSelection_(selection, resolved, p);
   }
+  var draft = p.draft && typeof p.draft === "object" ? p.draft : {};
   if (applicantId) {
     var exact = eduopsFodeApplicantRead_(applicantId, {}, resolved.snapshotId);
     if (!exact || exact.ok !== true) throw new Error("APPLICANT_NOT_FOUND");
@@ -184,7 +199,7 @@ function eduops_previewCommand(payload) {
     operation: definition.operation,
     product: "FODE",
     snapshotId: resolved.snapshotId,
-    queryFingerprint: eduopsClean_(p.queryFingerprint || ""),
+    queryFingerprint: selection ? selection.queryFingerprint : eduopsClean_(p.queryFingerprint || ""),
     applicantId: applicantId,
     selectedApplicantIds: selection ? selection.executionApplicantIds.slice() : [],
     requiredCapability: definition.capability,

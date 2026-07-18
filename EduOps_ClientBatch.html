@@ -38,8 +38,10 @@
     return selectedApplicantIds().length;
   }
   function binding() {
-    var query = app.state.selectionMode === "ALL_ELIGIBLE_MATCHING_QUERY" ? (app.state.selectionQuery || app.queryPayload()) : app.queryPayload();
-    return { product: app.state.product, snapshotId: app.state.snapshotId, queryFingerprint: app.queryFingerprint(query), query: query, selectionMode: app.state.selectionMode, selectedApplicantIds: selectedApplicantIds(), excludedApplicantIds: excludedApplicantIds(), executionLimit: app.state.selectionExecutionLimit || 30 };
+    var serverBinding = app.state.selectionMode === "ALL_ELIGIBLE_MATCHING_QUERY" ? app.clone(app.state.selectionQueryBinding || null) : null;
+    var query = serverBinding && serverBinding.query || (app.state.selectionMode === "ALL_ELIGIBLE_MATCHING_QUERY" ? null : app.queryPayload());
+    var queryFingerprint = serverBinding && serverBinding.queryFingerprint || (query ? app.queryFingerprint(query) : "");
+    return { product: serverBinding && serverBinding.product || app.state.product, snapshotId: serverBinding && serverBinding.snapshotId || app.state.snapshotId, queryFingerprint: queryFingerprint, query: query, queryBinding: serverBinding, selectionMode: app.state.selectionMode, selectedApplicantIds: selectedApplicantIds(), excludedApplicantIds: excludedApplicantIds(), executionLimit: app.state.selectionExecutionLimit || 30 };
   }
   function cohortHeader() {
     var batch = app.state.batch;

@@ -426,7 +426,24 @@
     });
     byId("eduopsSelectVisible").addEventListener("click", function () { app.clearSelection(); app.state.selectionMode = "EXPLICIT_SELECTION"; (app.state.workload.rows || []).forEach(function (row) { if (row.selectable === true) app.state.selected[row.applicantId] = true; }); app.state.selectionFingerprint = app.selectionFingerprint(app.queryPayload(), app.state.snapshotId); renderSelection(app.state.workload); renderRows(app.state.workload); });
     byId("eduopsSelectAllReturned").addEventListener("click", function () { app.clearSelection(); app.state.selectionMode = "EXPLICIT_SELECTION"; (app.state.workload.rows || []).forEach(function (row) { if (row.selectable === true) app.state.selected[row.applicantId] = true; }); app.state.selectionFingerprint = app.selectionFingerprint(app.queryPayload(), app.state.snapshotId); renderSelection(app.state.workload); renderRows(app.state.workload); app.setInteractionState("SUCCESS", "Eligible applicants on this page selected."); });
-    byId("eduopsSelectAllMatching").addEventListener("click", function () { app.clearSelection(); app.state.selectionMode = "ALL_ELIGIBLE_MATCHING_QUERY"; app.state.selectionQuery = app.queryPayload(); app.state.selectionFingerprint = app.selectionFingerprint(app.state.selectionQuery, app.state.snapshotId); renderSelection(app.state.workload); renderRows(app.state.workload); app.setInteractionState("SUCCESS", "All eligible applicants matching the current query selected for bounded batch execution."); });
+    byId("eduopsSelectAllMatching").addEventListener("click", function () {
+      var binding = app.state.workload && app.state.workload.queryBinding || app.state.workload && app.state.workload.reconciliation && app.state.workload.reconciliation.queryBinding || null;
+      if (!binding || !binding.query || !binding.queryFingerprint) {
+        app.clearSelection();
+        renderSelection(app.state.workload);
+        renderRows(app.state.workload);
+        app.setInteractionState("BLOCKED", "Server query binding is unavailable. Refresh the workload before selecting all matching applicants.");
+        return;
+      }
+      app.clearSelection();
+      app.state.selectionMode = "ALL_ELIGIBLE_MATCHING_QUERY";
+      app.state.selectionQueryBinding = app.clone(binding);
+      app.state.selectionQuery = app.clone(binding.query);
+      app.state.selectionFingerprint = app.selectionFingerprint(app.state.selectionQuery, app.state.snapshotId);
+      renderSelection(app.state.workload);
+      renderRows(app.state.workload);
+      app.setInteractionState("SUCCESS", "All eligible applicants matching the server-bound query selected for bounded batch execution.");
+    });
     byId("eduopsClearSelection").addEventListener("click", function () { app.clearSelection(); renderSelection(app.state.workload); renderRows(app.state.workload); });
     byId("eduopsRefreshSnapshot").addEventListener("click", function () { app.requestWorkload({ refreshSnapshot: true }); });
     dom.eduopsOpenReconciliation.addEventListener("click", function () { openReport("reconciliation", this); });
@@ -466,7 +483,7 @@
       var page = event.target.closest("[data-page]");
       if (page) { app.state.page = Number(page.getAttribute("data-page")); app.requestWorkload(); return; }
       var select = event.target.closest("[data-select-applicant]");
-      if (select) { app.state.selectionMode = "EXPLICIT_SELECTION"; app.state.selectionQuery = null; app.state.selectionFingerprint = app.selectionFingerprint(app.queryPayload(), app.state.snapshotId); if (select.checked) app.restoreSelectionExclusion(select.getAttribute("data-select-applicant")); else app.excludeFromSelection(select.getAttribute("data-select-applicant")); renderSelection(app.state.workload); renderRows(app.state.workload); return; }
+      if (select) { app.state.selectionMode = "EXPLICIT_SELECTION"; app.state.selectionQuery = null; app.state.selectionQueryBinding = null; app.state.selectionFingerprint = app.selectionFingerprint(app.queryPayload(), app.state.snapshotId); if (select.checked) app.restoreSelectionExclusion(select.getAttribute("data-select-applicant")); else app.excludeFromSelection(select.getAttribute("data-select-applicant")); renderSelection(app.state.workload); renderRows(app.state.workload); return; }
       var quick = event.target.closest("[data-quick-applicant]");
       if (quick) { openQuickView(quick.getAttribute("data-quick-applicant"), quick); return; }
       var open = event.target.closest("[data-open-applicant]");

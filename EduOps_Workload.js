@@ -111,6 +111,9 @@ function eduops_queryOperationalWorkload(payload) {
     totalRows: resolved.totalRows,
     generatedAt: resolved.snapshotAsOf
   });
+  var queryBinding = eduopsWorkloadQueryBinding_(query, snapshotId, {
+    generatedAt: resolved.snapshotAsOf
+  });
   var workloadCompositionMs = filterMs + (Date.now() - composeRemainderStarted);
   var response = {
     ok: true,
@@ -138,6 +141,7 @@ function eduops_queryOperationalWorkload(payload) {
     worklistKeyCounts: worklistKeyCounts,
     metricCounts: metricCounts,
     batchTemplateOptions: eduopsBatchTemplateOptions_(),
+    queryBinding: queryBinding,
     reconciliation: reconciliation,
     rows: rows
   };
@@ -794,6 +798,7 @@ function eduopsReconciliationForRows_(allRows, matchedRows, pageRows, query, sna
     asOf: eduopsClean_(snapshot && snapshot.generatedAt || ""),
     integrityState: "PASS",
     queryFingerprint: eduopsWorkloadQueryFingerprint_(query),
+    queryBinding: eduopsWorkloadQueryBinding_(query, snapshotId, snapshot),
     arithmetic: {
       population: "canonicalPopulation = totalMatched + hiddenFromCurrentView",
       matched: "totalMatched = visiblePageCount + matchingOnLaterPages"
@@ -806,16 +811,54 @@ function eduopsReconciliationForRows_(allRows, matchedRows, pageRows, query, sna
 }
 
 function eduopsWorkloadQueryFingerprint_(query) {
+  return JSON.stringify(eduopsCanonicalWorkloadQueryForBinding_(query));
+}
+
+function eduopsCanonicalWorkloadQueryForBinding_(query) {
   var q = eduopsNormalizeWorkloadQuery_(query || {});
-  return JSON.stringify({
+  var filters = q.filters && typeof q.filters === "object" ? q.filters : {};
+  var sort = q.sort && typeof q.sort === "object" ? q.sort : {};
+  return {
     product: q.product,
     actionabilityState: q.actionabilityState,
     worklistKey: q.worklistKey,
     workScope: q.workScope,
-    filters: q.filters,
-    sort: q.sort,
+    filters: {
+      search: eduopsClean_(filters.search || ""),
+      owner: eduopsClean_(filters.owner || ""),
+      urgency: eduopsOptionalUpper_(filters.urgency),
+      primaryRoute: eduopsClean_(filters.primaryRoute || ""),
+      documentState: eduopsOptionalUpper_(filters.documentState),
+      financeState: eduopsOptionalUpper_(filters.financeState),
+      contactabilityState: eduopsOptionalUpper_(filters.contactabilityState),
+      communicationState: eduopsClean_(filters.communicationState || ""),
+      cooling: eduopsOptionalUpper_(filters.cooling),
+      blockKind: eduopsClean_(filters.blockKind || "")
+    },
+    sort: {
+      key: eduopsClean_(sort.key || "urgency"),
+      direction: eduopsUpper_(sort.direction || "ASC") === "DESC" ? "DESC" : "ASC"
+    },
     pageSize: q.pageSize
-  });
+  };
+}
+
+function eduopsOptionalUpper_(value) {
+  var cleaned = eduopsClean_(value || "");
+  return cleaned ? cleaned.toUpperCase() : "";
+}
+
+function eduopsWorkloadQueryBinding_(query, snapshotId, snapshot) {
+  var canonicalQuery = eduopsCanonicalWorkloadQueryForBinding_(query);
+  return {
+    schemaVersion: "EDUOPS_QUERY_BINDING_V1",
+    authority: "SERVER_AUTHORED",
+    product: canonicalQuery.product,
+    snapshotId: eduopsClean_(snapshotId || ""),
+    snapshotAsOf: eduopsClean_(snapshot && snapshot.generatedAt || snapshot && snapshot.snapshotAsOf || ""),
+    query: canonicalQuery,
+    queryFingerprint: eduopsWorkloadQueryFingerprint_(canonicalQuery)
+  };
 }
 
 function eduopsHiddenReasonGroups_(hiddenReasons) {
