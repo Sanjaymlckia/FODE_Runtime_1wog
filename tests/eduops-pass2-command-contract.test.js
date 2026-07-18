@@ -21,6 +21,13 @@ assert.match(sources.contracts, /function eduopsWriteRpcAllowlist_\(\)[\s\S]*\["
 assert.match(sources.contracts, /eduops_getOperationHistory[\s\S]*eduops_previewCommand/, "Operation history and command preview must remain read RPCs");
 assert.doesNotMatch(sources.client, /admin_[A-Za-z0-9_]+\s*\(/, "Browser source cannot invoke legacy Admin mutation RPCs");
 assert.match(sources.client, /eduops_previewCommand[\s\S]*eduops_executeCommand/, "Browser operations must preview before the shared execute endpoint");
+assert.match(sources.client, /data-message-type/, "Communication template cards must carry explicit authority message types");
+assert.match(sources.client, /custom_email/, "Custom communication template must use the established Communication Authority custom_email type");
+assert.doesNotMatch(sources.client, /operator_message/, "EduOps must not invent an unsupported browser-only communication type");
+assert.match(sources.client, /refreshWorkbenchAfterReceipt[\s\S]*eduops_getApplicantWorkbench/, "Executed mutations must refresh the exact applicant authority projection");
+assert.match(sources.client, /eduopsCommunicationHistory[\s\S]*eduops_getOperationHistory/, "Communications must surface applicant operation history in the Communications workspace");
+assert.match(sources.client, /eduops-document-card[\s\S]*data-open-original/, "Document gallery must keep evidence cards adjacent to governed Open Original workflow");
+assert.match(sources.client, /contextmenu[\s\S]*data-document-index[\s\S]*data-open-original/, "Document right-click behavior must route through the governed file action");
 
 for (const operation of ["DOCUMENT_REVIEW", "FINANCE_EVIDENCE_DECISION", "SEND_INDIVIDUAL_COMMUNICATION", "CONTACTABILITY_CORRECTION", "PORTAL_ACCESS", "BATCH_COMMUNICATION"]) {
   assert.match(sources.flags, new RegExp(`${operation}: false`), `${operation} must default off in live runtime`);
