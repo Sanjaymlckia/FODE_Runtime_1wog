@@ -4,6 +4,7 @@
 
   var app = window.EduOpsApp;
   var dom = {};
+  var CUSTOM_EMAIL_MESSAGE_TYPE = "custom_email";
 
   function byId(id) { return document.getElementById(id); }
   function ensureDom() {
@@ -33,8 +34,13 @@
       return '<div><dt>' + app.esc(item[0]) + '</dt><dd>' + app.esc(value == null || value === "" ? "Not returned" : value) + '</dd></div>';
     }).join("") + '</dl>';
   }
+  function normalizeCapabilityMap(projection) {
+    var source = projection && typeof projection === "object" ? projection : {};
+    var map = source.capabilities && typeof source.capabilities === "object" ? source.capabilities : source;
+    return map.capabilities && typeof map.capabilities === "object" ? map.capabilities : map;
+  }
   function actionCard(operation, label, description, capability, risk) {
-    var enabled = app.state.featureFlags[operation] === true && app.state.capabilities[capability] === true;
+    var enabled = commandEnabled(operation, capability);
     var reason = enabled ? "Preview required before confirmation." : app.state.featureFlags[operation] !== true ? "Disabled by the Pass 2 feature flag." : "Required capability is not granted.";
     return '<article class="eduops-domain-action"><div><strong>' + app.esc(label) + '</strong><p>' + app.esc(description) + '</p><small>' + app.esc(reason) + '</small></div><button type="button" class="eduops-button eduops-button-primary" data-preview-command="' + app.esc(operation) + '" data-command-risk="' + app.esc(risk || "STANDARD") + '"' + (enabled ? "" : " disabled") + '>Preview operation</button></article>';
   }
@@ -45,6 +51,19 @@
     if (app.state.featureFlags[operation] !== true) return "Disabled by the Pass 2 feature flag.";
     if (app.state.capabilities[capability] !== true) return "Required capability " + capability + " is not granted.";
     return "Preview is required before confirmation.";
+  }
+  function selectedCommunicationTemplate() {
+    var draft = app.state.communicationDraft || {};
+    return communicationTemplateById(draft.templateId, draft.messageType) || {};
+  }
+  function communicationEnabled() {
+    return commandEnabled("SEND_INDIVIDUAL_COMMUNICATION", "CAN_SEND_INDIVIDUAL_EMAIL") && selectedCommunicationTemplate().canSendNow === true;
+  }
+  function communicationDisabledReason() {
+    var template = selectedCommunicationTemplate();
+    if (app.state.featureFlags.SEND_INDIVIDUAL_COMMUNICATION !== true) return "Disabled by the Pass 2 feature flag.";
+    if (app.state.capabilities.CAN_SEND_INDIVIDUAL_EMAIL !== true) return "Required capability CAN_SEND_INDIVIDUAL_EMAIL is not granted.";
+    return template.blockReason || template.blockCode || "Communication Authority has not permitted this communication.";
   }
   function authorityHeader() {
     var exact = row();
@@ -161,19 +180,27 @@
   function ensureCommunicationDraft() {
     if (app.state.communicationDraft && app.state.communicationDraft.applicantId === identity().applicantId) return app.state.communicationDraft;
     var comm = app.state.workbench.communications || {};
-    var first = String(identity().displayName || "Applicant").split(/\s+/)[0];
-    app.state.communicationDraft = { applicantId: identity().applicantId, templateId: "recommended", messageType: comm.recommendedMessageType || "docs_missing", recipient: identity().email || "", subject: "FODE - Applicant follow-up", body: "Dear " + first + ",\n\nPlease review the requested FODE action.\n\nRegards,\nFODE Operations" };
+    var draft = comm.draft || {};
+    app.state.communicationDraft = { applicantId: identity().applicantId, templateId: draft.templateId || comm.recommendedTemplateId || comm.selectedMessageType || comm.recommendedMessageType || "", messageType: draft.messageType || comm.selectedMessageType || comm.recommendedMessageType || "", recipient: draft.recipient || comm.effectiveEmail || identity().email || "", subject: draft.subject || "", body: draft.body || "" };
     return app.state.communicationDraft;
   }
   function communicationTemplates(comm) {
-    var recommended = comm.recommendedMessageType || "docs_missing";
-    return [
-      ["recommended", "Recommended by authority", recommended, "Highlighted recommendation from Actionability / Communication Authority."],
-      ["docs_missing", "Missing Documents", "docs_missing", "Request outstanding document evidence."],
-      ["payment_followup", "Payment Follow-Up", "payment_followup", "Follow up while receipt/payment verification is pending."],
-      ["portal", "Portal Access", "legacy_invite", "Applicant-specific portal access communication."],
-      ["custom", "Custom Email", "custom_email", "Editable single-record message; still previewed and gated."]
-    ];
+    return Array.isArray(comm.templateGallery) ? comm.templateGallery : [];
+  }
+  function communicationTemplateById(templateId, messageType) {
+    var list = communicationTemplates(app.state.workbench.communications || {});
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].templateId === templateId || list[i].messageType === messageType) return list[i];
+    }
+    return null;
+  }
+  function applyCommunicationTemplate(templateItem) {
+    if (!templateItem) return;
+    var draft = ensureCommunicationDraft();
+    draft.templateId = templateItem.templateId || templateItem.messageType || "";
+    draft.messageType = templateItem.messageType || "";
+    draft.subject = templateItem.defaultSubject || "";
+    draft.body = templateItem.defaultBody || "";
   }
   function historyListHtml(result) {
     var receipts = result && result.receipts || [];
@@ -182,9 +209,11 @@
   function renderCommunications() {
     var comm = app.state.workbench.communications || {};
     var draft = ensureCommunicationDraft();
-    var enabled = commandEnabled("SEND_INDIVIDUAL_COMMUNICATION", "CAN_SEND_INDIVIDUAL_EMAIL");
+    var enabled = communicationEnabled();
+    var selectedTemplate = selectedCommunicationTemplate();
+    var selectedAuthority = selectedTemplate.authorityProjection || {};
     var templates = communicationTemplates(comm);
-    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-4"><header><div><h2>Template gallery</h2><p>Recommendation is separate from send permission.</p></div></header><div class="eduops-template-gallery">' + templates.map(function (item) { var recommended = item[0] === "recommended"; return '<button type="button" class="eduops-template-card" data-communication-template="' + item[0] + '" data-message-type="' + app.esc(item[2]) + '" data-recommended="' + (recommended ? "true" : "false") + '" aria-pressed="' + (draft.templateId === item[0] ? "true" : "false") + '"><strong>' + app.esc(item[1]) + '</strong><span>' + app.esc(app.humanize(item[2])) + '</span><small>' + app.esc(item[3]) + '</small></button>'; }).join("") + '</div><div class="eduops-eligibility-panel">' + definition([["Recipient", draft.recipient || identity().email], ["Contactability", (app.state.workbench.contactability || {}).state], ["Cooling-off until", comm.coolingOffUntil], ["Delivery state", comm.deliveryState], ["Latest communication", comm.latestCommunication], ["Eligibility", comm.eligibility]]) + '</div></section><section class="eduops-panel-card eduops-span-8"><header><div><h2>Reviewed individual message</h2><p>The existing Communication Authority revalidates recipient, template, cooling-off, idempotency and contactability.</p></div><span class="eduops-capability-state" data-state="' + (enabled ? "READY" : "DISABLED") + '">' + (enabled ? "Preview required" : "Disabled") + '</span></header><div class="eduops-form-grid"><label class="eduops-field eduops-field-wide">Recipient<input id="eduopsCommRecipient" type="email" value="' + app.esc(draft.recipient) + '"></label><label class="eduops-field eduops-field-wide">Subject<input id="eduopsCommSubject" type="text" value="' + app.esc(draft.subject) + '"></label><label class="eduops-field eduops-field-wide">Editable preview body<textarea id="eduopsCommBody" rows="8">' + app.esc(draft.body) + '</textarea></label></div><div class="eduops-action-row"><button class="eduops-button eduops-button-primary" type="button" data-preview-command="SEND_INDIVIDUAL_COMMUNICATION"' + (enabled ? "" : " disabled") + '>Generate authority preview</button></div><p class="eduops-action-reason">' + app.esc(disabledReason("SEND_INDIVIDUAL_COMMUNICATION", "CAN_SEND_INDIVIDUAL_EMAIL")) + '</p></section><section class="eduops-panel-card eduops-span-12"><header><div><h2>Communication history</h2><p>Recent EduOps receipts for this exact applicant.</p></div></header><div id="eduopsCommunicationHistory" class="eduops-loading-state">Loading communication history...</div></section></div>';
+    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-4"><header><div><h2>Template gallery</h2><p>Recommendation and template copy come from Communication Authority metadata.</p></div></header><div class="eduops-template-gallery">' + templates.map(function (item) { var recommended = item.recommended === true || item.messageType === comm.recommendedMessageType; return '<button type="button" class="eduops-template-card" data-communication-template="' + app.esc(item.templateId || item.messageType) + '" data-message-type="' + app.esc(item.messageType) + '" data-recommended="' + (recommended ? "true" : "false") + '" aria-pressed="' + (draft.templateId === (item.templateId || item.messageType) ? "true" : "false") + '"><strong>' + app.esc(recommended ? "Recommended: " + (item.selectedOptionLabel || item.label) : (item.selectedOptionLabel || item.label)) + '</strong><span>' + app.esc(item.label || item.messageType) + '</span><small>' + app.esc(item.purpose || item.whenToUse || item.stageSuitability) + '</small></button>'; }).join("") + '</div><div class="eduops-eligibility-panel">' + definition([["Recipient", draft.recipient || comm.effectiveEmail || identity().email], ["Contactability", (app.state.workbench.contactability || {}).state], ["Cooling-off until", comm.coolingOffUntil], ["Delivery state", comm.deliveryState], ["Latest communication", comm.latestCommunication], ["Selected template", selectedTemplate.selectedOptionLabel || selectedTemplate.label || draft.messageType], ["Authority status", selectedAuthority.Comm_Status], ["Authority reason", selectedTemplate.canSendNow ? "Authority permits communication preview." : (selectedTemplate.blockReason || selectedTemplate.blockCode)], ["Recommended template", comm.operatorRecommendation]]) + '</div></section><section class="eduops-panel-card eduops-span-8"><header><div><h2>Reviewed individual message</h2><p>The existing Communication Authority revalidates recipient, template, cooling-off, idempotency and contactability.</p></div><span class="eduops-capability-state" data-state="' + (enabled ? "READY" : "DISABLED") + '">' + (enabled ? "Preview required" : "Disabled") + '</span></header><div class="eduops-form-grid"><label class="eduops-field eduops-field-wide">Recipient<input id="eduopsCommRecipient" type="email" value="' + app.esc(draft.recipient) + '"></label><label class="eduops-field eduops-field-wide">Subject<input id="eduopsCommSubject" type="text" value="' + app.esc(draft.subject) + '"></label><label class="eduops-field eduops-field-wide">Editable preview body<textarea id="eduopsCommBody" rows="8">' + app.esc(draft.body) + '</textarea></label></div><div class="eduops-action-row"><button class="eduops-button eduops-button-primary" type="button" data-preview-command="SEND_INDIVIDUAL_COMMUNICATION"' + (enabled ? "" : " disabled") + '>Generate authority preview</button></div><p class="eduops-action-reason">' + app.esc(enabled ? "Preview is required before confirmation." : communicationDisabledReason()) + '</p></section><section class="eduops-panel-card eduops-span-12"><header><div><h2>Communication history</h2><p>Recent EduOps receipts for this exact applicant.</p></div></header><div id="eduopsCommunicationHistory" class="eduops-loading-state">Loading communication history...</div></section></div>';
   }
   function renderPortal() {
     var portal = app.state.workbench.portal || {};
@@ -236,7 +265,7 @@
     app.setInteractionState("LOADING", "Opening exact applicant " + applicantId + ".");
     app.call("eduops_getApplicantWorkbench", { product: app.state.product, applicantId: applicantId, expectedSnapshotId: app.state.snapshotId, returnContext: app.state.returnContext }).then(function (result) {
       app.state.workbench = result;
-      app.state.capabilities = result.capabilities && result.capabilities.capabilities || result.capabilities || app.state.capabilities || {};
+      app.state.capabilities = normalizeCapabilityMap(result.capabilities || app.state.capabilities || {});
       app.state.featureFlags = result.featureFlags || app.state.featureFlags || {};
       app.state.activeTab = tab || "overview";
       app.state.documentManifest = null;
@@ -278,7 +307,7 @@
     return app.call("eduops_getApplicantWorkbench", { product: app.state.product, applicantId: applicantId, expectedSnapshotId: app.state.snapshotId || app.state.workbench.snapshotId, returnContext: app.state.returnContext }).then(function (result) {
       app.state.workbench = result;
       app.state.workbench.lastReceipt = receipt;
-      app.state.capabilities = result.capabilities && result.capabilities.capabilities || result.capabilities || app.state.capabilities || {};
+      app.state.capabilities = normalizeCapabilityMap(result.capabilities || app.state.capabilities || {});
       app.state.featureFlags = result.featureFlags || app.state.featureFlags || {};
       app.state.activeTab = previousTab;
       app.state.documentManifest = null;
@@ -346,11 +375,11 @@
       var command = event.target.closest("[data-preview-command]");
       if (command) previewCommand(command.getAttribute("data-preview-command"), command);
       var correction = event.target.closest("[data-request-correction]");
-      if (correction) { app.state.activeTab = "communications"; var draft = ensureCommunicationDraft(); draft.templateId = "recommended"; draft.messageType = "docs_missing"; renderPanel(); app.setInteractionState("SUCCESS", "Correction request prepared in Communications. Review the message before preview."); return; }
+      if (correction) { app.state.activeTab = "communications"; applyCommunicationTemplate(communicationTemplateById("docs_missing", "docs_missing")); renderPanel(); app.setInteractionState("SUCCESS", "Correction request prepared in Communications. Review the message before preview."); return; }
       var portalComm = event.target.closest("[data-portal-communications]");
-      if (portalComm) { app.state.activeTab = "communications"; var portalDraft = ensureCommunicationDraft(); portalDraft.templateId = "portal"; portalDraft.messageType = "legacy_invite"; renderPanel(); app.setInteractionState("SUCCESS", "Portal resend prepared in Communications. No message has been sent."); return; }
+      if (portalComm) { app.state.activeTab = "communications"; applyCommunicationTemplate(communicationTemplateById("legacy_invite", "legacy_invite")); renderPanel(); app.setInteractionState("SUCCESS", "Portal resend prepared in Communications. No message has been sent."); return; }
       var template = event.target.closest("[data-communication-template]");
-      if (template) { var commDraft = ensureCommunicationDraft(); commDraft.templateId = template.getAttribute("data-communication-template"); commDraft.messageType = template.getAttribute("data-message-type") || (app.state.workbench.communications.recommendedMessageType || "docs_missing"); renderPanel(); app.setInteractionState("SUCCESS", template.textContent.trim().replace(/\s+/g, " ") + " selected."); return; }
+      if (template) { applyCommunicationTemplate(communicationTemplateById(template.getAttribute("data-communication-template"), template.getAttribute("data-message-type"))); renderPanel(); app.setInteractionState("SUCCESS", template.textContent.trim().replace(/\s+/g, " ") + " selected."); return; }
     });
     dom.root.addEventListener("contextmenu", function (event) {
       var documentButton = event.target.closest("[data-document-index]");

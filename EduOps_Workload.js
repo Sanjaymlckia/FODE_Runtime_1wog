@@ -202,10 +202,232 @@ function eduops_getApplicantWorkbench(payload) {
     };
   }
   var result = eduopsFodeApplicantRead_(applicantId, p.returnContext || {}, snapshotId);
-  result.capabilities = eduopsCapabilityProjection_();
+  result.capabilities = eduopsClientCapabilityProjection_(eduopsCapabilityProjection_());
+  result.communications = eduopsWorkbenchCommunicationProjection_(result.communications, applicantId, access);
   result.featureFlags = eduopsFeatureFlags_();
   result.timings = { applicantMs: Date.now() - started };
   return result;
+}
+
+function eduopsClientCapabilityProjection_(projection) {
+  var source = projection && typeof projection === "object" ? projection : {};
+  var nested = source.capabilities && typeof source.capabilities === "object" ? source.capabilities : {};
+  var map = nested.capabilities && typeof nested.capabilities === "object" ? nested.capabilities : nested;
+  return {
+    readOnly: source.readOnly === true,
+    role: eduopsClean_(source.role || nested.normalizedRole || nested.configuredRole || ""),
+    capabilities: map || {},
+    capabilityEvidence: nested.capabilityEvidence || source.capabilityEvidence || {},
+    capabilityDetails: nested.capabilityDetails || source.capabilityDetails || {},
+    enforcement: eduopsClean_(source.enforcement || "Server-side capability checks are authoritative; browser controls are presentation only."),
+    sourceShape: "EDUOPS_CLIENT_CAPABILITY_DTO_V1",
+    pass2Actions: Array.isArray(source.pass2Actions) ? source.pass2Actions.slice() : []
+  };
+}
+
+function eduopsWorkbenchCommunicationProjection_(summary, applicantId, access) {
+  var base = summary && typeof summary === "object" ? summary : {};
+  var out = eduopsClone_(base);
+  var actorEmail = eduopsClean_(access && access.email || "");
+  var actorRole = eduopsClean_(access && access.role || "");
+  try {
+    var sheet = mustGetDataSheet_(getWorkingSpreadsheet_());
+    var rowNumber = findRowByApplicantId_(sheet, applicantId);
+    if (!rowNumber) {
+      out.sendableNow = false;
+      out.canSendNow = false;
+      out.blockCode = "APPLICANT_NOT_FOUND";
+      out.blockReason = "Applicant not found.";
+      out.eligibility = out.blockReason;
+      return out;
+    }
+    var rowObj = getRowObject_(sheet, rowNumber);
+    var requestedType = eduopsClean_(base.recommendedMessageType || "");
+    var authority = buildApplicantCommunicationAuthorityProjection_(rowObj, rowNumber, sheet, requestedType, {
+      actorEmail: actorEmail,
+      actorRole: actorRole
+    });
+    var templates = eduopsCommunicationTemplateGalleryForWorkbench_(rowObj, rowNumber, sheet, authority, {
+      actorEmail: actorEmail,
+      actorRole: actorRole
+    });
+    var selectedType = eduopsClean_(authority.selectedMessageType || authority.recommendedMessageType || requestedType || "");
+    var selectedTemplate = eduopsCommunicationTemplateByType_(templates, selectedType);
+    out.authorityProjection = {
+      Comm_Stage: eduopsClean_(authority.stage || ""),
+      Comm_Status: eduopsClean_(authority.commStatus || ""),
+      Comm_Recommended_Message_Type: eduopsClean_(authority.recommendedMessageType || ""),
+      Comm_Requested_Message_Type: eduopsClean_(authority.requestedMessageType || ""),
+      Comm_Selected_Message_Type: eduopsClean_(authority.selectedMessageType || ""),
+      Comm_Permitted: authority.permitted === true,
+      Comm_Sendable_Now: authority.sendableNow === true,
+      Comm_Can_Send_Now: authority.sendableNow === true,
+      Comm_Block_Code: eduopsClean_(authority.blockCode || ""),
+      Comm_Block_Reason: eduopsClean_(authority.blockReason || ""),
+      Comm_Awaiting_Response: authority.awaitingResponse === true,
+      Comm_Authority_Source: eduopsClean_(authority.authoritySource || "")
+    };
+    out.recommendedMessageType = eduopsClean_(authority.recommendedMessageType || base.recommendedMessageType || "");
+    out.recommendedCommunication = eduopsCommunicationAuthorityDto_(authority, out.recommendedMessageType);
+    out.selectedMessageType = selectedType;
+    out.requestedMessageType = eduopsClean_(authority.requestedMessageType || "");
+    out.recommendedTemplateId = selectedTemplate.templateId || selectedType;
+    out.operatorRecommendation = eduopsClean_(selectedTemplate.selectedOptionLabel || selectedTemplate.label || selectedType || "");
+    out.templateGallery = templates;
+    out.effectiveEmail = eduopsClean_(authority.authorityResult && authority.authorityResult.effectiveEmail || rowObj.Parent_Email || rowObj.Email || "");
+    out.draft = {
+      templateId: selectedTemplate.templateId || selectedType || "recommended",
+      messageType: selectedType,
+      recipient: out.effectiveEmail,
+      subject: eduopsClean_(selectedTemplate.defaultSubject || ""),
+      body: selectedTemplate.defaultBody || ""
+    };
+    out.permitted = selectedTemplate.permitted === true;
+    out.sendableNow = selectedTemplate.canSendNow === true;
+    out.canSendNow = selectedTemplate.canSendNow === true;
+    out.blockCode = eduopsClean_(selectedTemplate.blockCode || "");
+    out.blockReason = eduopsClean_(selectedTemplate.blockReason || "");
+    out.awaitingResponse = selectedTemplate.awaitingResponse === true;
+    out.authoritySource = eduopsClean_(selectedTemplate.authoritySource || "");
+    out.eligibility = out.canSendNow ? "Authority permits communication preview." : (out.blockReason || out.blockCode || base.eligibility || "Communication Authority did not return sendability.");
+  } catch (err) {
+    out.sendableNow = false;
+    out.canSendNow = false;
+    out.blockCode = "COMMUNICATION_AUTHORITY_UNAVAILABLE";
+    out.blockReason = String(err && err.message || err || "Communication Authority projection unavailable.");
+    out.eligibility = out.blockReason;
+    out.templateGallery = [];
+  }
+  return out;
+}
+
+function eduopsCommunicationTemplateGalleryForWorkbench_(rowObj, rowNumber, sheet, authority, actor) {
+  var metadata = typeof communicationTemplateGalleryMetadata_ === "function" ? communicationTemplateGalleryMetadata_() : [];
+  var recommendedType = eduopsClean_(authority && (authority.recommendedMessageType || authority.selectedMessageType) || "");
+  return (Array.isArray(metadata) ? metadata : []).filter(function (entry) {
+    return entry && entry.selectedPickerVisible !== false;
+  }).sort(function (a, b) {
+    return Number(a.selectedOptionOrder || 999) - Number(b.selectedOptionOrder || 999);
+  }).map(function (entry) {
+    var messageType = eduopsClean_(entry.messageType || "");
+    var perTypeAuthority = eduopsCommunicationAuthorityForType_(rowObj, rowNumber, sheet, messageType, actor);
+    var draft = eduopsCommunicationDraftForType_(rowObj, rowNumber, sheet, messageType, actor);
+    return {
+      templateId: messageType,
+      messageType: messageType,
+      label: eduopsClean_(entry.label || messageType),
+      selectedOptionLabel: eduopsClean_(entry.selectedOptionLabel || entry.label || messageType),
+      purpose: eduopsClean_(entry.purpose || ""),
+      whenToUse: eduopsClean_(entry.whenToUse || ""),
+      stageSuitability: eduopsClean_(entry.stageSuitability || ""),
+      selectedOnly: entry.selectedOnly === true,
+      batchSafe: entry.batchSafe === true,
+      recommended: messageType === recommendedType,
+      authorityProjection: perTypeAuthority,
+      permitted: perTypeAuthority.Comm_Permitted === true,
+      canSendNow: perTypeAuthority.Comm_Can_Send_Now === true,
+      blockCode: eduopsClean_(perTypeAuthority.Comm_Block_Code || ""),
+      blockReason: eduopsClean_(perTypeAuthority.Comm_Block_Reason || ""),
+      authoritySource: eduopsClean_(perTypeAuthority.Comm_Authority_Source || ""),
+      awaitingResponse: perTypeAuthority.Comm_Awaiting_Response === true,
+      defaultSubject: draft.subject,
+      defaultBody: draft.body,
+      draftBlockCode: draft.blockCode,
+      draftBlockReason: draft.blockReason
+    };
+  });
+}
+
+function eduopsCommunicationAuthorityForType_(rowObj, rowNumber, sheet, messageType, actor) {
+  var requestedType = eduopsClean_(messageType || "");
+  try {
+    var ctx = resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, requestedType, {
+      actorEmail: actor && actor.actorEmail,
+      actorRole: actor && actor.actorRole,
+      action: "preview",
+      skipPortalUrlBuild: true
+    });
+    return {
+      Comm_Stage: eduopsClean_(ctx && (ctx.lifecycleStage || ctx.legacyLifecycleStage) || ""),
+      Comm_Status: ctx && ctx.sendableNow === true && ctx.eligible === true ? "ACTIONABLE" : "BLOCKED",
+      Comm_Recommended_Message_Type: eduopsClean_(messageType || ""),
+      Comm_Requested_Message_Type: requestedType,
+      Comm_Selected_Message_Type: eduopsClean_(ctx && ctx.messageType || requestedType),
+      Comm_Permitted: ctx && ctx.permitted === true,
+      Comm_Sendable_Now: ctx && ctx.sendableNow === true && ctx.eligible === true,
+      Comm_Can_Send_Now: ctx && ctx.sendableNow === true && ctx.eligible === true,
+      Comm_Block_Code: eduopsClean_(ctx && ctx.blockCode || ""),
+      Comm_Block_Reason: eduopsClean_(ctx && ctx.blockReason || ""),
+      Comm_Awaiting_Response: false,
+      Comm_Authority_Source: eduopsClean_(ctx && ctx.canonicalLifecycleAuthority && ctx.canonicalLifecycleAuthority.authoritySource || "")
+    };
+  } catch (err) {
+    return {
+      Comm_Stage: "",
+      Comm_Status: "UNAVAILABLE",
+      Comm_Recommended_Message_Type: eduopsClean_(messageType || ""),
+      Comm_Requested_Message_Type: requestedType,
+      Comm_Selected_Message_Type: requestedType,
+      Comm_Permitted: false,
+      Comm_Sendable_Now: false,
+      Comm_Can_Send_Now: false,
+      Comm_Block_Code: "COMMUNICATION_AUTHORITY_UNAVAILABLE",
+      Comm_Block_Reason: String(err && err.message || err || "Communication Authority projection unavailable."),
+      Comm_Awaiting_Response: false,
+      Comm_Authority_Source: ""
+    };
+  }
+}
+
+function eduopsCommunicationAuthorityDto_(authority, messageType) {
+  return {
+    Comm_Stage: eduopsClean_(authority && authority.stage || ""),
+    Comm_Status: eduopsClean_(authority && authority.commStatus || ""),
+    Comm_Recommended_Message_Type: eduopsClean_(authority && authority.recommendedMessageType || messageType || ""),
+    Comm_Requested_Message_Type: eduopsClean_(authority && authority.requestedMessageType || ""),
+    Comm_Selected_Message_Type: eduopsClean_(authority && authority.selectedMessageType || messageType || ""),
+    Comm_Permitted: authority && authority.permitted === true,
+    Comm_Sendable_Now: authority && authority.sendableNow === true,
+    Comm_Can_Send_Now: authority && authority.sendableNow === true,
+    Comm_Block_Code: eduopsClean_(authority && authority.blockCode || ""),
+    Comm_Block_Reason: eduopsClean_(authority && authority.blockReason || ""),
+    Comm_Awaiting_Response: authority && authority.awaitingResponse === true,
+    Comm_Authority_Source: eduopsClean_(authority && authority.authoritySource || "")
+  };
+}
+
+function eduopsCommunicationDraftForType_(rowObj, rowNumber, sheet, messageType, actor) {
+  try {
+    var ctx = resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messageType, {
+      actorEmail: actor && actor.actorEmail,
+      actorRole: actor && actor.actorRole,
+      action: "preview",
+      skipPortalUrlBuild: true
+    });
+    var built = buildApplicantMessage_(ctx);
+    return {
+      subject: eduopsClean_(built && built.subject || ""),
+      body: built && built.body || "",
+      blockCode: eduopsClean_(ctx && ctx.blockCode || ""),
+      blockReason: eduopsClean_(ctx && ctx.blockReason || "")
+    };
+  } catch (err) {
+    return {
+      subject: "",
+      body: "",
+      blockCode: "TEMPLATE_DRAFT_UNAVAILABLE",
+      blockReason: String(err && err.message || err || "Template draft unavailable.")
+    };
+  }
+}
+
+function eduopsCommunicationTemplateByType_(templates, messageType) {
+  var wanted = eduopsClean_(messageType || "");
+  var list = Array.isArray(templates) ? templates : [];
+  for (var i = 0; i < list.length; i++) {
+    if (eduopsClean_(list[i] && list[i].messageType || "") === wanted) return list[i] || {};
+  }
+  return list[0] || {};
 }
 
 function eduops_getDocumentManifest(payload) {
