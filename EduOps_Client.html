@@ -81,7 +81,7 @@
     var runtimeTarget = byId("eduopsRuntimeIdentity");
     if (runtimeTarget) runtimeTarget.textContent = (runtime.version || app.bootstrap.runtime || "runtime") + " / " + (runtime.deployVersion || "-");
     var mode = byId("eduopsMode");
-    if (mode) mode.textContent = app.isPreview() ? "Preview Lab" : "FODE guarded operations";
+    if (mode) mode.textContent = app.isPreview() ? "Local development" : "FODE Operations";
   }
   function bindOnce() {
     if (bound) return;

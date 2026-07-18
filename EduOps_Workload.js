@@ -24,13 +24,24 @@ function eduops_getAccessProjection() {
     contractVersion: cfg.contractVersion,
     profileVersion: cfg.profileVersion,
     runtime: {
+      environment: "Admin staging",
       version: CONFIG.VERSION,
-      deployVersion: CONFIG.DEPLOY_VERSION_NUMBER
+      deployVersion: CONFIG.DEPLOY_VERSION_NUMBER,
+      runtimeIdentity: String(CONFIG.VERSION || "") + " / " + String(CONFIG.DEPLOY_VERSION_NUMBER || ""),
+      deploymentIdSafe: eduopsSafeDeploymentId_(CONFIG.DEPLOYMENT_ID_ADMIN || ""),
+      sourceIdentity: eduopsClean_(CONFIG.SOURCE_COMMIT || ""),
+      appsScriptVersion: eduopsClean_(CONFIG.APPS_SCRIPT_VERSION || ""),
+      appsScriptVersionSource: CONFIG.APPS_SCRIPT_VERSION ? "CONFIG.APPS_SCRIPT_VERSION" : "not exposed by Apps Script runtime; verify deployment metadata externally"
     },
     user: {
       email: access.email,
       role: access.role,
       capabilities: access.capabilities
+    },
+    environment: "Admin staging",
+    deployment: {
+      adminDeploymentIdSafe: eduopsSafeDeploymentId_(CONFIG.DEPLOYMENT_ID_ADMIN || ""),
+      studentDeploymentIdSafe: eduopsSafeDeploymentId_(CONFIG.DEPLOYMENT_ID_STUDENT || "")
     },
     rpcAllowlist: {
       read: eduopsReadOnlyRpcAllowlist_(),
@@ -38,6 +49,13 @@ function eduops_getAccessProjection() {
     },
     featureFlags: eduopsFeatureFlags_()
   };
+}
+
+function eduopsSafeDeploymentId_(deploymentId) {
+  var value = eduopsClean_(deploymentId || "");
+  if (!value) return "";
+  if (value.length <= 16) return value;
+  return value.slice(0, 8) + "..." + value.slice(-6);
 }
 
 function eduops_getProfile() {
@@ -66,7 +84,7 @@ function eduops_queryOperationalWorkload(payload) {
   var query = eduopsNormalizeWorkloadQuery_(payload);
   var resolved = eduopsResolveFodeSnapshot_(access);
   var snapshotId = resolved.snapshotId;
-  var reliability = eduopsSourceReliability_("AUTHORITATIVE", "FODE canonical snapshot resolved for EduOps shadow workload.", "FODE workload");
+  var reliability = eduopsSourceReliability_("AUTHORITATIVE", "FODE canonical snapshot resolved for operations workload.", "FODE workload");
   if (query.expectedSnapshotId && query.expectedSnapshotId !== snapshotId) {
     reliability = eduopsSourceReliability_("STALE", "The requested workload snapshot no longer matches the current FODE authority snapshot.", "FODE workload");
   }
@@ -119,6 +137,7 @@ function eduops_queryOperationalWorkload(payload) {
     actionabilityCounts: actionabilityCounts,
     worklistKeyCounts: worklistKeyCounts,
     metricCounts: metricCounts,
+    batchTemplateOptions: eduopsBatchTemplateOptions_(),
     reconciliation: reconciliation,
     rows: rows
   };
@@ -138,6 +157,28 @@ function eduops_queryOperationalWorkload(payload) {
   response.timings.responseBytes = eduopsResponseByteSize_(response);
   response.timings.serverRpcMs = Date.now() - started;
   return response;
+}
+
+function eduopsBatchTemplateOptions_() {
+  var metadata = typeof communicationTemplateGalleryMetadata_ === "function" ? communicationTemplateGalleryMetadata_() : [];
+  return (Array.isArray(metadata) ? metadata : []).filter(function (entry) {
+    var messageType = eduopsClean_(entry && entry.messageType || "");
+    if (!messageType) return false;
+    return typeof isCommunicationTypeBatchSafe_ !== "function" || isCommunicationTypeBatchSafe_(messageType) === true;
+  }).sort(function (a, b) {
+    return Number(a.selectedOptionOrder || 999) - Number(b.selectedOptionOrder || 999);
+  }).map(function (entry) {
+    var messageType = eduopsClean_(entry.messageType || "");
+    return {
+      templateId: messageType,
+      messageType: messageType,
+      label: eduopsClean_(entry.selectedOptionLabel || entry.label || messageType),
+      title: eduopsClean_(entry.label || entry.selectedOptionLabel || messageType),
+      purpose: eduopsClean_(entry.purpose || entry.whenToUse || entry.stageSuitability || ""),
+      batchSafe: true,
+      canonicalSource: "communicationTemplateGalleryMetadata_"
+    };
+  });
 }
 
 function eduops_searchApplicants(payload) {
@@ -525,14 +566,23 @@ function eduopsHydrateDocumentPayload_(payload, requireDocumentIdentity) {
 }
 
 function eduops_getReconciliation(payload) {
-  var workload = eduops_queryOperationalWorkload(payload || {});
+  var p = payload && typeof payload === "object" ? payload : {};
+  var workload = eduops_queryOperationalWorkload(p);
+  var hiddenPage = eduopsHiddenReasonPage_(
+    workload.reconciliation && workload.reconciliation.hiddenReasonRows || [],
+    Math.max(1, Math.floor(Number(p.hiddenPage || 1))),
+    Math.max(1, Math.min(100, Math.floor(Number(p.hiddenPageSize || 50)))),
+    workload.snapshotId,
+    workload.reconciliation && workload.reconciliation.queryFingerprint || ""
+  );
   return {
     ok: true,
     readOnly: true,
     product: "FODE",
     snapshotId: workload.snapshotId,
     reconciliation: workload.reconciliation,
-    hiddenReasons: workload.reconciliation.hiddenReasons || []
+    hiddenReasons: hiddenPage.rows,
+    hiddenReasonPage: hiddenPage
   };
 }
 
@@ -731,8 +781,11 @@ function eduopsReconciliationForRows_(allRows, matchedRows, pageRows, query, sna
     visiblePageRange: pageRows.length ? (((query.page - 1) * query.pageSize + 1) + "-" + ((query.page - 1) * query.pageSize + pageRows.length)) : "0",
     returnedWindow: pageRows.length,
     eligibleOutsideCurrentWindow: Math.max(0, matchedRows.filter(function (row) { return row.selectable === true && !pageIds[row.applicantId]; }).length),
+    matchingOnLaterPages: Math.max(0, matchedRows.length - pageRows.length),
     hiddenFromCurrentView: hiddenReasons.length,
     excludedFromOperation: matchedRows.filter(function (row) { return row.selectable !== true; }).length,
+    totalAuthoritySelectable: matchedRows.filter(function (row) { return row.selectable === true; }).length,
+    totalAuthorityBlocked: matchedRows.filter(function (row) { return row.selectable !== true; }).length,
     metricCounts: eduopsMetricCounts_(matchedRows),
     oldestVisibleAgeDays: oldestVisible,
     oldestMatchedAgeDays: eduopsOldestAge_(matchedRows),
@@ -740,8 +793,55 @@ function eduopsReconciliationForRows_(allRows, matchedRows, pageRows, query, sna
     snapshotId: snapshotId,
     asOf: eduopsClean_(snapshot && snapshot.generatedAt || ""),
     integrityState: "PASS",
-    arithmetic: "canonicalPopulation = totalMatched + hiddenFromCurrentView",
+    queryFingerprint: eduopsWorkloadQueryFingerprint_(query),
+    arithmetic: {
+      population: "canonicalPopulation = totalMatched + hiddenFromCurrentView",
+      matched: "totalMatched = visiblePageCount + matchingOnLaterPages"
+    },
+    hiddenReasonGroups: eduopsHiddenReasonGroups_(hiddenReasons),
+    hiddenReasonPage: eduopsHiddenReasonPage_(hiddenReasons, 1, 50, snapshotId, eduopsWorkloadQueryFingerprint_(query)),
+    hiddenReasonRows: hiddenReasons,
     hiddenReasons: hiddenReasons.slice(0, 50)
+  };
+}
+
+function eduopsWorkloadQueryFingerprint_(query) {
+  var q = eduopsNormalizeWorkloadQuery_(query || {});
+  return JSON.stringify({
+    product: q.product,
+    actionabilityState: q.actionabilityState,
+    worklistKey: q.worklistKey,
+    workScope: q.workScope,
+    filters: q.filters,
+    sort: q.sort,
+    pageSize: q.pageSize
+  });
+}
+
+function eduopsHiddenReasonGroups_(hiddenReasons) {
+  var out = {};
+  (Array.isArray(hiddenReasons) ? hiddenReasons : []).forEach(function (item) {
+    var key = eduopsClean_(item && item.reasonCode || "UNKNOWN") || "UNKNOWN";
+    out[key] = Number(out[key] || 0) + 1;
+  });
+  return out;
+}
+
+function eduopsHiddenReasonPage_(hiddenReasons, page, pageSize, snapshotId, queryFingerprint) {
+  var rows = Array.isArray(hiddenReasons) ? hiddenReasons : [];
+  var totalHidden = rows.length;
+  var totalPages = Math.max(1, Math.ceil(totalHidden / pageSize));
+  var safePage = Math.min(Math.max(1, page), totalPages);
+  var start = (safePage - 1) * pageSize;
+  return {
+    totalHidden: totalHidden,
+    groupedCounts: eduopsHiddenReasonGroups_(rows),
+    page: safePage,
+    pageSize: pageSize,
+    totalPages: totalPages,
+    rows: rows.slice(start, start + pageSize),
+    snapshotId: snapshotId,
+    queryFingerprint: queryFingerprint
   };
 }
 

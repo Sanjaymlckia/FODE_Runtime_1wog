@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231559a6'/%3E%3Cpath d='M7 8h9v6H7zm0 10h18v6H7zm13-10h5v6h-5z' fill='white'/%3E%3C/svg%3E">
-  <title>EduOps Operations Workspace Prototype</title>
+  <title>FODE Operations Workspace</title>
   <?!= HtmlService.createHtmlOutputFromFile("EduOps_Styles").getContent(); ?>
 </head>
 <body class="eduops-body">
@@ -13,14 +13,14 @@
 
   <div id="eduopsApp" class="eduops-app" data-product="FODE" aria-busy="true">
     <header class="eduops-topbar">
-      <div class="eduops-brand" aria-label="EduOps Operations Workspace">
+      <div class="eduops-brand" aria-label="FODE Operations Workspace">
         <span class="eduops-brand-mark" aria-hidden="true">
           <svg viewBox="0 0 40 40" role="img">
             <path d="M7 9h13v7H7zM7 20h20v7H7zM24 9h9v18h-9zM7 31h26v3H7z"></path>
           </svg>
         </span>
         <span>
-          <strong>EduOps</strong>
+          <strong>FODE</strong>
           <small>Operations Workspace</small>
         </span>
       </div>
@@ -31,20 +31,26 @@
       </div>
 
       <div class="eduops-topbar-tools">
-        <div class="eduops-snapshot" title="Mock authoritative workload snapshot">
+        <div class="eduops-snapshot" title="Authoritative workload snapshot">
           <span class="eduops-status-dot" aria-hidden="true"></span>
-          <span><strong id="eduopsSnapshotShort">Snapshot loading</strong><small id="eduopsSnapshotTime">Local simulation</small></span>
+          <span><strong id="eduopsSnapshotShort">Snapshot loading</strong><small id="eduopsSnapshotTime">Snapshot time loading</small></span>
+        </div>
+        <div id="eduopsReleaseIdentity" class="eduops-release-identity" aria-label="Runtime release identity">
+          <span>Admin staging</span>
+          <strong id="eduopsRuntimeIdentity">Runtime loading</strong>
+          <small id="eduopsAppsScriptIdentity">Apps Script metadata pending</small>
+          <details>
+            <summary>Technical</summary>
+            <dl id="eduopsReleaseDetails"></dl>
+          </details>
         </div>
         <label class="eduops-profile-control" for="eduopsProductSwitcher">
           <span>Product profile</span>
           <select id="eduopsProductSwitcher" aria-describedby="eduopsProfileHelp">
             <option value="FODE">FODE</option>
-            <option value="KIA" data-preview-only="true">KIA (Preview only)</option>
-            <option value="MLC" data-preview-only="true">MLC (Preview only)</option>
           </select>
         </label>
-        <span id="eduopsProfileHelp" class="eduops-visually-hidden">FODE is live. KIA and MLC are available only in Preview Lab.</span>
-        <span class="eduops-prototype-badge">Pass 2 / guarded operations</span>
+        <span id="eduopsProfileHelp" class="eduops-visually-hidden">FODE Operations is the released operator surface.</span>
       </div>
     </header>
 
@@ -89,19 +95,13 @@
         </div>
 
         <div class="eduops-rail-footer">
-          <strong>Authority projection</strong>
-          <span>EduOps Pass 2</span>
+          <strong>FODE authoritative operations</strong>
+          <span>Admin staging identity is shown in the header</span>
           <span>FODE authority adapter</span>
         </div>
       </aside>
 
       <main class="eduops-main" id="eduopsMain">
-        <div class="eduops-safety-banner" role="note">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.8 20h18.4L12 3Zm0 5.4v5.8m0 2.8v.2"></path></svg>
-          <div><strong>Authority-controlled workspace.</strong> No write executes unless feature flag, capability, preview, confirmation, lock and idempotency checks pass.</div>
-          <button id="eduopsSafetyDetails" type="button">View authority controls</button>
-        </div>
-
         <section class="eduops-next-command" aria-label="Authority reliability and global search">
           <div id="eduopsReliabilityBanner" class="eduops-reliability-banner" data-reliability="AUTHORITATIVE">
             <strong>Authority source loading</strong>
@@ -141,7 +141,7 @@
             <div>
               <span class="eduops-eyebrow">Current workload</span>
               <h2 id="eduopsWorklistTitle"><span id="eduopsSelectedStateLabel">Ready Now</span><span aria-hidden="true"> / </span><span id="eduopsSelectedWorklistLabel">All work types</span></h2>
-              <p id="eduopsWorklistReason">Authoritative mock results for the selected Actionability state.</p>
+              <p id="eduopsWorklistReason">Authoritative results for the selected Actionability state.</p>
             </div>
             <div class="eduops-workspace-actions">
               <button id="eduopsOpenBatch" class="eduops-button eduops-button-primary" type="button" disabled aria-describedby="eduopsBatchReason">Open Batch Operations</button>
@@ -163,7 +163,7 @@
               <button type="button" data-work-scope="ESCALATED">Escalated</button>
               <button type="button" data-work-scope="ALL_AUTHORISED">All Authorised Work</button>
             </div>
-            <button id="eduopsOpenReconciliation" class="eduops-button eduops-button-secondary" type="button">Open reconciliation</button>
+            <button id="eduopsOpenReconciliation" class="eduops-button eduops-button-secondary" type="button">Open composition</button>
           </div>
 
           <div class="eduops-filter-toolbar" aria-label="Workload filters">
@@ -195,6 +195,7 @@
             <div class="eduops-selection-actions">
               <button id="eduopsSelectVisible" class="eduops-button eduops-button-secondary" type="button">Select visible</button>
               <button id="eduopsSelectAllReturned" class="eduops-button eduops-button-secondary" type="button">Select eligible page</button>
+              <button id="eduopsSelectAllMatching" class="eduops-button eduops-button-secondary" type="button">Select all matching query</button>
               <button id="eduopsClearSelection" class="eduops-button eduops-button-quiet" type="button">Clear selection</button>
             </div>
             <div id="eduopsSelectionSummary" class="eduops-selection-summary" aria-live="polite">No applicants selected.</div>
@@ -266,7 +267,7 @@
           <p id="eduopsWorkbenchSubtitle">ApplicantID</p>
         </div>
         <div class="eduops-overlay-status">
-          <span class="eduops-prototype-badge">Individual Workbench</span>
+          <span class="eduops-release-badge">Individual Workbench</span>
           <button id="eduopsWorkbenchPrevious" class="eduops-button eduops-button-secondary" type="button">Previous applicant</button>
           <button id="eduopsWorkbenchNext" class="eduops-button eduops-button-secondary" type="button">Next applicant</button>
           <button id="eduopsWorkbenchMore" class="eduops-button eduops-button-secondary" type="button">Audit context</button>
@@ -285,13 +286,13 @@
           Return to cohort
         </button>
         <div class="eduops-overlay-identity">
-          <span class="eduops-eyebrow">Governed Batch Operations</span>
+          <span class="eduops-eyebrow">Batch Operations</span>
           <h1 id="eduopsBatchTitle">Batch Operations</h1>
           <p id="eduopsBatchSubtitle">Define, revalidate, preview, confirm and receive results.</p>
         </div>
         <div class="eduops-overlay-status">
           <span id="eduopsBatchOperationStatus" class="eduops-operation-status">Operation status: awaiting cohort</span>
-          <span class="eduops-prototype-badge">Guarded execution</span>
+          <span class="eduops-release-badge">Confirmed execution</span>
         </div>
       </header>
       <div id="eduopsBatchCohort" class="eduops-batch-cohort"></div>
@@ -310,7 +311,7 @@
         <span class="eduops-eyebrow">Explicit operation confirmation</span>
         <h2 id="eduopsConfirmTitle">Confirm operation</h2>
         <div id="eduopsConfirmText"></div>
-        <div class="eduops-confirm-actions"><button id="eduopsConfirmCancel" class="eduops-button eduops-button-secondary" type="button">Cancel</button><button id="eduopsConfirmProceed" class="eduops-button eduops-button-primary" type="button">Confirm guarded operation</button></div>
+        <div class="eduops-confirm-actions"><button id="eduopsConfirmCancel" class="eduops-button eduops-button-secondary" type="button">Cancel</button><button id="eduopsConfirmProceed" class="eduops-button eduops-button-primary" type="button">Confirm operation</button></div>
       </div>
     </div>
 

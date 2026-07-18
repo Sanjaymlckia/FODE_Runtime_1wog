@@ -41,15 +41,22 @@
   }
   function actionCard(operation, label, description, capability, risk) {
     var enabled = commandEnabled(operation, capability);
-    var reason = enabled ? "Preview required before confirmation." : app.state.featureFlags[operation] !== true ? "Disabled by the Pass 2 feature flag." : "Required capability is not granted.";
+    var reason = enabled ? "Preview required before confirmation." : disabledReason(operation, capability);
     return '<article class="eduops-domain-action"><div><strong>' + app.esc(label) + '</strong><p>' + app.esc(description) + '</p><small>' + app.esc(reason) + '</small></div><button type="button" class="eduops-button eduops-button-primary" data-preview-command="' + app.esc(operation) + '" data-command-risk="' + app.esc(risk || "STANDARD") + '"' + (enabled ? "" : " disabled") + '>Preview operation</button></article>';
   }
+  function operationAvailable(operation) {
+    if (operation === "PORTAL_ACCESS" || operation === "BOOKS_ACTION") return false;
+    if (Object.prototype.hasOwnProperty.call(app.state.featureFlags || {}, operation)) return app.state.featureFlags[operation] === true;
+    return /^(DOCUMENT_REVIEW|FINANCE_EVIDENCE_DECISION|SEND_INDIVIDUAL_COMMUNICATION|CONTACTABILITY_CORRECTION|BATCH_COMMUNICATION)$/.test(operation);
+  }
   function commandEnabled(operation, capability) {
-    return app.state.featureFlags[operation] === true && app.state.capabilities[capability] === true;
+    if (operation === "PORTAL_ACCESS" || operation === "BOOKS_ACTION") return false;
+    if (Object.prototype.hasOwnProperty.call(app.state.featureFlags || {}, operation) && app.state.featureFlags[operation] !== true) return false;
+    return app.state.capabilities[capability] === true;
   }
   function disabledReason(operation, capability) {
-    if (app.state.featureFlags[operation] !== true) return "Disabled by the Pass 2 feature flag.";
-    if (app.state.capabilities[capability] !== true) return "Required capability " + capability + " is not granted.";
+    if (!operationAvailable(operation)) return operation === "PORTAL_ACCESS" ? "Portal access actions are not available in this release." : operation === "BOOKS_ACTION" ? "Books actions are not available in this release." : "This operation has been temporarily suspended by the system administrator.";
+    if (app.state.capabilities[capability] !== true) return "Your role does not permit this action (" + capability + ").";
     return "Preview is required before confirmation.";
   }
   function selectedCommunicationTemplate() {
@@ -61,8 +68,8 @@
   }
   function communicationDisabledReason() {
     var template = selectedCommunicationTemplate();
-    if (app.state.featureFlags.SEND_INDIVIDUAL_COMMUNICATION !== true) return "Disabled by the Pass 2 feature flag.";
-    if (app.state.capabilities.CAN_SEND_INDIVIDUAL_EMAIL !== true) return "Required capability CAN_SEND_INDIVIDUAL_EMAIL is not granted.";
+    if (Object.prototype.hasOwnProperty.call(app.state.featureFlags || {}, "SEND_INDIVIDUAL_COMMUNICATION") && app.state.featureFlags.SEND_INDIVIDUAL_COMMUNICATION !== true) return "Individual communication has been temporarily suspended by the system administrator.";
+    if (app.state.capabilities.CAN_SEND_INDIVIDUAL_EMAIL !== true) return "Your role does not permit individual communication (CAN_SEND_INDIVIDUAL_EMAIL).";
     return template.blockReason || template.blockCode || "Communication Authority has not permitted this communication.";
   }
   function authorityHeader() {
@@ -204,7 +211,7 @@
   }
   function historyListHtml(result) {
     var receipts = result && result.receipts || [];
-    return receipts.length ? '<ul class="eduops-audit-list">' + receipts.map(function (receipt) { return '<li><time>' + app.esc(receipt.at) + '</time><span><strong>' + app.esc(app.humanize(receipt.operation)) + '</strong><br>' + app.esc(receipt.outcome) + '</span><span>' + app.esc(receipt.receiptId) + '</span></li>'; }).join("") + '</ul>' : '<p>No EduOps Pass 2 operation receipts returned for this applicant.</p>';
+    return receipts.length ? '<ul class="eduops-audit-list">' + receipts.map(function (receipt) { return '<li><time>' + app.esc(receipt.at) + '</time><span><strong>' + app.esc(app.humanize(receipt.operation)) + '</strong><br>' + app.esc(receipt.outcome) + '</span><span>' + app.esc(receipt.receiptId) + '</span></li>'; }).join("") + '</ul>' : '<p>No operation receipts returned for this applicant.</p>';
   }
   function renderCommunications() {
     var comm = app.state.workbench.communications || {};
@@ -218,7 +225,7 @@
   function renderPortal() {
     var portal = app.state.workbench.portal || {};
     var enabled = commandEnabled("PORTAL_ACCESS", "CAN_MANAGE_PORTAL_ACCESS");
-    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-8"><header><div><h2>Portal access authority</h2><p>Applicant-specific state; no reusable link is persisted in the Workbench.</p></div><span class="eduops-status-badge" data-state="' + (portal.locked ? "BLOCKED" : "READY") + '">' + (portal.locked ? "Locked" : "Open") + '</span></header>' + definition([["Access state", portal.accessState || portal.state], ["Submission", portal.submitted ? "Submitted" : "Not submitted"], ["Token state", portal.tokenState], ["Lock state", portal.locked ? "Locked" : "Unlocked"]]) + '<button class="eduops-button eduops-button-secondary" type="button" data-portal-communications>Prepare resend in Communications</button></section><section class="eduops-panel-card eduops-span-4"><header><div><h2>Guarded access controls</h2><p>Reset requires independent approval.</p></div></header><label class="eduops-field">Portal action<select id="eduopsPortalAction"><option value="' + (portal.locked ? "UNLOCK" : "LOCK") + '">' + (portal.locked ? "Unlock access" : "Lock access") + '</option><option value="RESET">Reset portal link</option></select></label><button class="eduops-button eduops-button-primary" type="button" data-preview-command="PORTAL_ACCESS"' + (enabled ? "" : " disabled") + '>Preview Portal action</button><p class="eduops-action-reason">' + app.esc(disabledReason("PORTAL_ACCESS", "CAN_MANAGE_PORTAL_ACCESS")) + '</p></section></div>';
+    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-8"><header><div><h2>Portal access authority</h2><p>Applicant-specific state; no reusable link is persisted in the Workbench.</p></div><span class="eduops-status-badge" data-state="' + (portal.locked ? "BLOCKED" : "READY") + '">' + (portal.locked ? "Locked" : "Open") + '</span></header>' + definition([["Access state", portal.accessState || portal.state], ["Submission", portal.submitted ? "Submitted" : "Not submitted"], ["Token state", portal.tokenState], ["Lock state", portal.locked ? "Locked" : "Unlocked"]]) + '<button class="eduops-button eduops-button-secondary" type="button" data-portal-communications>Prepare resend in Communications</button></section><section class="eduops-panel-card eduops-span-4"><header><div><h2>Portal access controls</h2><p>Portal actions are unavailable in this release.</p></div></header><label class="eduops-field">Portal action<select id="eduopsPortalAction"><option value="' + (portal.locked ? "UNLOCK" : "LOCK") + '">' + (portal.locked ? "Unlock access" : "Lock access") + '</option><option value="RESET">Reset portal link</option></select></label><button class="eduops-button eduops-button-primary" type="button" data-preview-command="PORTAL_ACCESS"' + (enabled ? "" : " disabled") + '>Preview Portal action</button><p class="eduops-action-reason">' + app.esc(disabledReason("PORTAL_ACCESS", "CAN_MANAGE_PORTAL_ACCESS")) + '</p></section></div>';
   }
   function renderContactability() {
     var contact = app.state.workbench.contactability || {};
@@ -351,7 +358,7 @@
     var token = app.beginControlAction(source, "Creating preview...", "Validating " + app.humanize(operation) + " for " + payload.applicantId + ".");
     app.call("eduops_previewCommand", payload).then(function (preview) {
       app.finishControlAction(token, "SUCCESS", app.humanize(operation) + " preview is ready for confirmation.");
-      app.openConfirm({ title: "Confirm " + app.humanize(operation), html: '<div class="eduops-command-preview"><p><strong>' + app.esc(preview.summary || "Authoritative preview returned") + '</strong></p>' + definition([["ApplicantID", payload.applicantId], ["Snapshot", payload.snapshotId], ["Capability", preview.requiredCapability], ["Risk", preview.risk || "STANDARD"], ["Preview ID", preview.previewId], ["Expires", preview.expiresAt]]) + '</div>', proceedLabel: "Execute guarded operation", cancelLabel: "Return without action", source: source, onProceed: function () { var executeToken = app.beginControlAction(byId("eduopsConfirmProceed"), "Executing...", "Executing the confirmed guarded operation once."); app.call("eduops_executeCommand", { previewId: preview.previewId, idempotencyKey: payload.idempotencyKey, confirmation: true }).then(function (receipt) { app.finishControlAction(executeToken, "SUCCESS", "Receipt " + receipt.receiptId + " returned: " + receipt.outcome + ". Refreshing authoritative applicant state."); app.state.dirty = false; app.closeConfirm(false); app.toast("Receipt " + receipt.receiptId + " returned: " + receipt.outcome); return refreshWorkbenchAfterReceipt(receipt).catch(function (refreshError) { app.state.workbench.lastReceipt = receipt; renderPanel(); app.toast("Receipt returned, but authoritative refresh failed: " + (refreshError.message || refreshError)); }); }).catch(function (error) { app.finishControlAction(executeToken, "BLOCKED", "Operation blocked: " + (error.message || error)); app.closeConfirm(false); app.toast("Operation blocked: " + (error.message || error)); }); } });
+      app.openConfirm({ title: "Confirm " + app.humanize(operation), html: '<div class="eduops-command-preview"><p><strong>' + app.esc(preview.summary || "Authoritative preview returned") + '</strong></p>' + definition([["ApplicantID", payload.applicantId], ["Snapshot", payload.snapshotId], ["Capability", preview.requiredCapability], ["Risk", preview.risk || "STANDARD"], ["Preview ID", preview.previewId], ["Expires", preview.expiresAt]]) + '</div>', proceedLabel: "Execute operation", cancelLabel: "Return without action", source: source, onProceed: function () { var executeToken = app.beginControlAction(byId("eduopsConfirmProceed"), "Executing...", "Executing the confirmed operation once."); app.call("eduops_executeCommand", { previewId: preview.previewId, idempotencyKey: payload.idempotencyKey, confirmation: true }).then(function (receipt) { app.finishControlAction(executeToken, "SUCCESS", "Receipt " + receipt.receiptId + " returned: " + receipt.outcome + ". Refreshing authoritative applicant state."); app.state.dirty = false; app.closeConfirm(false); app.toast("Receipt " + receipt.receiptId + " returned: " + receipt.outcome); return refreshWorkbenchAfterReceipt(receipt).catch(function (refreshError) { app.state.workbench.lastReceipt = receipt; renderPanel(); app.toast("Receipt returned, but authoritative refresh failed: " + (refreshError.message || refreshError)); }); }).catch(function (error) { app.finishControlAction(executeToken, "BLOCKED", "Operation blocked: " + (error.message || error)); app.closeConfirm(false); app.toast("Operation blocked: " + (error.message || error)); }); } });
     }).catch(function (error) { app.finishControlAction(token, "BLOCKED", "Preview blocked: " + (error.message || error)); app.toast("Preview blocked: " + (error.message || error)); });
   }
 

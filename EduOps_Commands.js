@@ -7,8 +7,6 @@ var EDUOPS_COMMAND_DEFINITIONS = {
   BATCH_COMMUNICATION: { capability: "CAN_RUN_BATCH_COMMUNICATIONS", batchSafe: true, risk: "HIGH" }
 };
 
-var EDUOPS_LARGE_COMMUNICATION_BATCH_THRESHOLD = 25;
-
 function eduopsCommandDefinition_(operation) {
   var key = eduopsUpper_(operation, "");
   var definition = EDUOPS_COMMAND_DEFINITIONS[key];
@@ -28,10 +26,83 @@ function eduopsPreviewCacheKey_(previewId) {
 
 function eduopsCommandRequiresDualApproval_(definition, request) {
   if (definition.dualApproval === true) return true;
-  var selection = request && request.selection;
-  return definition.operation === "BATCH_COMMUNICATION" &&
-    selection && Array.isArray(selection.selectedApplicantIds) &&
-    selection.selectedApplicantIds.length >= EDUOPS_LARGE_COMMUNICATION_BATCH_THRESHOLD;
+  return false;
+}
+
+function eduopsBatchExecutionCap_() {
+  if (typeof selectedApplicantBatchLimit_ === "function") return Math.max(1, Number(selectedApplicantBatchLimit_() || 30));
+  return 30;
+}
+
+function eduopsNormalizeExecutionLimit_(value) {
+  var cap = eduopsBatchExecutionCap_();
+  var requested = Math.max(1, Math.floor(Number(value || cap)));
+  return Math.min(cap, requested);
+}
+
+function eduopsQueryFingerprintForSelection_(query) {
+  var q = eduopsNormalizeWorkloadQuery_(query || {});
+  return JSON.stringify({
+    product: q.product,
+    actionabilityState: q.actionabilityState,
+    worklistKey: q.worklistKey,
+    workScope: q.workScope,
+    filters: q.filters,
+    sort: q.sort,
+    pageSize: q.pageSize
+  });
+}
+
+function eduopsResolveBatchSelection_(selection, resolved, request) {
+  var source = selection && typeof selection === "object" ? selection : {};
+  var mode = eduopsUpper_(source.selectionMode || "EXPLICIT_SELECTION");
+  if (mode === "EXPLICIT") mode = "EXPLICIT_SELECTION";
+  var snapshotId = eduopsClean_(source.snapshotId || "");
+  if (eduopsClean_(source.product || "") !== "FODE" || snapshotId !== resolved.snapshotId) throw new Error("STALE_SELECTION_BINDING");
+  var requestFingerprint = eduopsClean_(request && request.queryFingerprint || "");
+  var selectionFingerprint = eduopsClean_(source.queryFingerprint || "");
+  if (!selectionFingerprint || selectionFingerprint !== requestFingerprint) throw new Error("QUERY_BINDING_MISMATCH");
+  var excluded = {};
+  normalizeSelectedApplicantBatchIds_(source.excludedApplicantIds || [], selectedApplicantBatchInputLimit_()).forEach(function (id) { excluded[id] = true; });
+  var executionLimit = eduopsNormalizeExecutionLimit_(source.executionLimit || request && request.executionLimit);
+  var masterIds = [];
+  var blockedCount = 0;
+  var query = source.query && typeof source.query === "object" ? source.query : null;
+  if (mode === "ALL_ELIGIBLE_MATCHING_QUERY") {
+    if (!query) throw new Error("QUERY_SELECTION_CONTEXT_REQUIRED");
+    var queryFingerprint = eduopsQueryFingerprintForSelection_(query);
+    if (queryFingerprint !== selectionFingerprint) throw new Error("QUERY_BINDING_MISMATCH");
+    var matched = eduopsFilterRows_(resolved.rows, eduopsNormalizeWorkloadQuery_(query), null);
+    matched.sort(function (a, b) { return eduopsCompareRows_(a, b, query.sort); });
+    matched.forEach(function (row) {
+      if (row.selectable === true) masterIds.push(row.applicantId);
+      else blockedCount++;
+    });
+  } else if (mode === "EXPLICIT_SELECTION") {
+    masterIds = normalizeSelectedApplicantBatchIds_(source.selectedApplicantIds || [], selectedApplicantBatchInputLimit_());
+  } else {
+    throw new Error("UNSUPPORTED_SELECTION_MODE: " + mode);
+  }
+  var remainingMasterIds = masterIds.filter(function (id) { return !excluded[id]; });
+  if (!remainingMasterIds.length) throw new Error("EMPTY_SELECTION");
+  var executionIds = remainingMasterIds.slice(0, executionLimit);
+  return {
+    selectionMode: mode,
+    product: "FODE",
+    snapshotId: resolved.snapshotId,
+    queryFingerprint: selectionFingerprint,
+    query: query,
+    selectedApplicantIds: masterIds,
+    excludedApplicantIds: Object.keys(excluded),
+    executionApplicantIds: executionIds,
+    masterCohortSize: masterIds.length,
+    excludedCount: Math.max(0, masterIds.length - remainingMasterIds.length),
+    blockedCount: blockedCount,
+    executionCohortSize: executionIds.length,
+    executionCap: eduopsBatchExecutionCap_(),
+    executionLimit: executionLimit,
+    remainingAfterExecution: Math.max(0, remainingMasterIds.length - executionIds.length)
+  };
 }
 
 function eduopsAuthorityPreview_(definition, request, applicantId, selection) {
@@ -48,10 +119,10 @@ function eduopsAuthorityPreview_(definition, request, applicantId, selection) {
   }
   if (definition.operation === "BATCH_COMMUNICATION") {
     return admin_previewSelectedApplicantBatch({
-      applicantIds: selection.selectedApplicantIds,
-      excludedApplicantIds: selection.excludedApplicantIds || [],
+      applicantIds: selection.executionApplicantIds,
+      excludedApplicantIds: [],
       messageType: draft.messageType,
-      sourceLabel: "EduOps snapshot-bound cohort",
+      sourceLabel: "EduOps " + selection.selectionMode + " execution cohort",
       sourceType: "eduops"
     });
   }
@@ -78,10 +149,7 @@ function eduops_previewCommand(payload) {
   if (selection && !definition.batchSafe) throw new Error("BATCH_NOT_ALLOWED: " + definition.operation + " is individual-only");
   if (!selection && !applicantId) throw new Error("APPLICANT_ID_REQUIRED");
   if (selection) {
-    if (eduopsClean_(selection.product) !== "FODE" || eduopsClean_(selection.snapshotId) !== resolved.snapshotId) throw new Error("STALE_SELECTION_BINDING");
-    if (eduopsClean_(selection.queryFingerprint) !== eduopsClean_(p.queryFingerprint)) throw new Error("QUERY_BINDING_MISMATCH");
-    if (!Array.isArray(selection.selectedApplicantIds) || !selection.selectedApplicantIds.length) throw new Error("EMPTY_SELECTION");
-    if (selection.selectedApplicantIds.length > 50) throw new Error("BATCH_CAP_EXCEEDED");
+    selection = eduopsResolveBatchSelection_(selection, resolved, p);
   }
   if (applicantId) {
     var exact = eduopsFodeApplicantRead_(applicantId, {}, resolved.snapshotId);
@@ -118,7 +186,7 @@ function eduops_previewCommand(payload) {
     snapshotId: resolved.snapshotId,
     queryFingerprint: eduopsClean_(p.queryFingerprint || ""),
     applicantId: applicantId,
-    selectedApplicantIds: selection ? selection.selectedApplicantIds.slice() : [],
+    selectedApplicantIds: selection ? selection.executionApplicantIds.slice() : [],
     requiredCapability: definition.capability,
     risk: definition.risk,
     dualApprovalRequired: eduopsCommandRequiresDualApproval_(definition, p),
@@ -129,10 +197,24 @@ function eduops_previewCommand(payload) {
     expiresAt: new Date(now + 10 * 60 * 1000).toISOString(),
     request: eduopsClone_(p),
     authorityPreview: eduopsClone_(authorityPreview),
-    partitions: selection ? [{ partitionKey: definition.operation, label: eduopsHumanize_(definition.operation), memberCount: selection.selectedApplicantIds.length, executionCap: 50, requiredCapability: definition.capability }] : [],
-    eligibleCount: selection ? Number(authorityPreview.eligible || authorityPreview.count || selection.selectedApplicantIds.length) : (authorityReady ? 1 : 0),
+    selectionBinding: selection ? eduopsClone_(selection) : null,
+    masterCohortSize: selection ? selection.masterCohortSize : 0,
+    executionCohortSize: selection ? selection.executionCohortSize : 0,
+    remainingAfterExecution: selection ? selection.remainingAfterExecution : 0,
+    executionCap: selection ? selection.executionCap : 0,
+    partitions: selection ? [{
+      partitionKey: draft.messageType,
+      messageType: draft.messageType,
+      label: eduopsHumanize_(draft.messageType || definition.operation),
+      memberCount: selection.executionCohortSize,
+      masterCohortSize: selection.masterCohortSize,
+      remainingAfterExecution: selection.remainingAfterExecution,
+      executionCap: selection.executionCap,
+      requiredCapability: definition.capability
+    }] : [],
+    eligibleCount: selection ? Number(authorityPreview.eligible || authorityPreview.count || selection.executionCohortSize) : (authorityReady ? 1 : 0),
     blockedCount: selection ? Number(authorityPreview.blocked || 0) : (authorityReady ? 0 : 1),
-    excludedCount: 0
+    excludedCount: selection ? selection.excludedCount : 0
   };
   if (!preview.idempotencyKey) throw new Error("IDEMPOTENCY_KEY_REQUIRED");
   CacheService.getUserCache().put(eduopsPreviewCacheKey_(preview.previewId), JSON.stringify(preview), 600);
@@ -170,6 +252,16 @@ function eduops_executeCommand(payload) {
 function eduopsDispatchCommand_(preview) {
   var request = preview.request || {};
   var draft = request.draft || {};
+  if (preview.operation === "BATCH_COMMUNICATION") {
+    var batchAuthority = preview.authorityPreview || {};
+    return admin_sendSelectedApplicantBatch({
+      previewRequestId: batchAuthority.requestId,
+      candidateHash: batchAuthority.candidateHash,
+      messageType: draft.messageType,
+      confirmSend: true,
+      sourceView: "eduops"
+    });
+  }
   var identity = eduopsFodeApplicantRead_(preview.applicantId, {}, preview.snapshotId);
   var rowNumber = Number(identity && identity.identity && identity.identity.rowNumber || 0);
   if (preview.operation === "DOCUMENT_REVIEW") {
@@ -179,7 +271,7 @@ function eduopsDispatchCommand_(preview) {
   }
   if (preview.operation === "FINANCE_EVIDENCE_DECISION") {
     if (eduopsUpper_(draft.decision || "", "") !== "VERIFIED") throw new Error("UNSUPPORTED_FINANCE_DECISION: no dedicated rejection authority is proven");
-    return admin_setPaymentVerified({ rowNumber: rowNumber, comment: draft.reason || "EduOps guarded Finance verification" });
+    return admin_setPaymentVerified({ rowNumber: rowNumber, comment: draft.reason || "EduOps Finance verification" });
   }
   if (preview.operation === "SEND_INDIVIDUAL_COMMUNICATION") return admin_sendApplicantMessage({ applicantId: preview.applicantId, messageType: draft.messageType, recipient: draft.recipient, subject: draft.subject, body: draft.body, confirmManualSingleSend: true, sourceView: "eduops" });
   if (preview.operation === "CONTACTABILITY_CORRECTION") {
@@ -191,16 +283,6 @@ function eduopsDispatchCommand_(preview) {
     if (portalAction === "RESET") return admin_resetPortalLink({ applicantId: preview.applicantId, rowNumber: rowNumber });
     if (portalAction === "LOCK" || portalAction === "UNLOCK") return admin_setPortalAccess({ rowNumber: rowNumber, status: portalAction === "LOCK" ? "Locked" : "Open" });
     throw new Error("UNSUPPORTED_PORTAL_ACTION");
-  }
-  if (preview.operation === "BATCH_COMMUNICATION") {
-    var batchAuthority = preview.authorityPreview || {};
-    return admin_sendSelectedApplicantBatch({
-      previewRequestId: batchAuthority.requestId,
-      candidateHash: batchAuthority.candidateHash,
-      messageType: draft.messageType,
-      confirmSend: true,
-      sourceView: "eduops"
-    });
   }
   throw new Error("COMMAND_HANDLER_NOT_IMPLEMENTED: " + preview.operation);
 }

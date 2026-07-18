@@ -60,7 +60,8 @@
     STALE: ["Source changed", "Refresh or revalidate before acting.", "Refresh"],
     CONFLICTING: ["Authority conflict", "Conflicting facts prevent safe action.", "Inspect conflict"],
     UNAVAILABLE: ["Source unavailable", "The product authority could not be read.", "Retry"],
-    DISABLED_BY_FLAG: ["Operation not enabled", "The domain feature flag is off.", "Use Current Admin"],
+    SUSPENDED_BY_ADMIN: ["Temporarily suspended", "This operation has been suspended by the system administrator.", "Use Current Admin"],
+    UNAVAILABLE_OPERATION: ["Operation unavailable", "This operation is not available in this release.", "Use Current Admin"],
     CAPABILITY_DENIED: ["Permission required", "The current operator lacks the required capability.", "Request authorised support"]
   };
 
@@ -77,8 +78,12 @@
     snapshotId: "",
     workload: null,
     selected: {},
-    selectionMode: "EXPLICIT",
+    selectionMode: "EXPLICIT_SELECTION",
     selectionFingerprint: "",
+    selectionQuery: null,
+    selectionExcluded: {},
+    selectionExecutionLimit: 30,
+    selectionMessageType: "",
     searchResults: [],
     workbench: null,
     activeTab: "overview",
@@ -138,7 +143,7 @@
     var selector = [
       "#eduopsProductSwitcher", "#eduopsGlobalSearch", "#eduopsRefreshSnapshot", "#eduopsStartSession",
       "#eduopsSearch", "#eduopsOwnerFilter", "#eduopsUrgencyFilter", "#eduopsSort", "#eduopsToggleFilters",
-      "#eduopsSelectVisible", "#eduopsSelectAllReturned", "#eduopsClearSelection", "#eduopsOpenBatch",
+      "#eduopsSelectVisible", "#eduopsSelectAllReturned", "#eduopsSelectAllMatching", "#eduopsClearSelection", "#eduopsOpenBatch",
       "#eduopsPreviousPage", "#eduopsNextPage", "#eduopsPageSize", "#eduopsOpenReconciliation"
     ].join(",");
     Array.prototype.forEach.call(document.querySelectorAll(selector), function (control) {
@@ -277,8 +282,26 @@
 
   app.clearSelection = function () {
     app.state.selected = {};
-    app.state.selectionMode = "EXPLICIT";
+    app.state.selectionMode = "EXPLICIT_SELECTION";
     app.state.selectionFingerprint = "";
+    app.state.selectionQuery = null;
+    app.state.selectionExcluded = {};
+    app.state.selectionExecutionLimit = 30;
+    app.state.selectionMessageType = "";
+  };
+
+  app.excludeFromSelection = function (applicantId) {
+    var id = app.upper(applicantId).replace(/\s+/g, "");
+    if (!id) return;
+    app.state.selectionExcluded[id] = true;
+    if (app.state.selected[id]) app.state.selected[id] = false;
+  };
+
+  app.restoreSelectionExclusion = function (applicantId) {
+    var id = app.upper(applicantId).replace(/\s+/g, "");
+    if (!id) return;
+    delete app.state.selectionExcluded[id];
+    if (app.state.selectionMode === "EXPLICIT_SELECTION") app.state.selected[id] = true;
   };
 
   app.contextLabel = function (payload) {
@@ -326,7 +349,8 @@
       superseded: false,
       selectionCleared: false
     };
-    if (app.state.selectionFingerprint && Object.keys(app.state.selected).some(function (key) { return app.state.selected[key] === true; }) && app.state.selectionFingerprint !== request.selectionFingerprint) {
+    var hasSelection = app.state.selectionMode === "ALL_ELIGIBLE_MATCHING_QUERY" || Object.keys(app.state.selected).some(function (key) { return app.state.selected[key] === true; });
+    if (app.state.selectionFingerprint && hasSelection && app.state.selectionFingerprint !== request.selectionFingerprint) {
       app.clearSelection();
       request.selectionCleared = true;
     }
@@ -533,11 +557,11 @@
       if (control.closest("#eduopsPreviewLab")) classification = "TECHNICAL";
       else if (/^(roles|approvals|data-quality)$/.test(report)) classification = "STRUCTURAL";
       else if (control.matches("[data-preview-command='BOOKS_ACTION']") || control.hasAttribute("data-unavailable-control")) classification = "UNAVAILABLE";
-      else if (control.matches("input,select,textarea,[data-preview-command],[data-open-original],[data-request-correction],[data-portal-communications],[data-communication-template],[data-batch-preview],[data-batch-continue],[data-batch-confirm],[data-batch-execute],[data-session-skip],[data-session-next],[data-select-applicant],#eduopsRefreshSnapshot,#eduopsRefreshAuthority,#eduopsSelectVisible,#eduopsSelectAllReturned,#eduopsClearSelection,#eduopsClearFilters")) classification = "OPERATION";
+      else if (control.matches("input,select,textarea,[data-preview-command],[data-open-original],[data-request-correction],[data-portal-communications],[data-communication-template],[data-batch-preview],[data-batch-continue],[data-batch-confirm],[data-batch-execute],[data-batch-exclude],[data-batch-restore],[data-batch-template],[data-batch-execution-limit],[data-session-skip],[data-session-next],[data-select-applicant],#eduopsRefreshSnapshot,#eduopsRefreshAuthority,#eduopsSelectVisible,#eduopsSelectAllReturned,#eduopsSelectAllMatching,#eduopsClearSelection,#eduopsClearFilters")) classification = "OPERATION";
       control.setAttribute("data-control-classification", classification);
       if (!control.getAttribute("data-control-id")) {
         var commandDiscriminator = control.hasAttribute("data-preview-command") ? "preview-command:" + control.getAttribute("data-preview-command") + ":" + (control.getAttribute("data-command-scope") || "selected") : "";
-        var discriminator = control.id || commandDiscriminator || ["data-report", "data-state", "data-worklist", "data-work-scope", "data-workbench-tab", "data-open-applicant", "data-quick-applicant", "data-search-open", "data-select-applicant", "data-report-open-applicant", "data-batch-step", "data-batch-open", "data-document-index", "data-document-move", "data-page", "data-session-skip", "data-session-next", "data-session-exit", "data-preview-viewport"].map(function (name) { var value = control.getAttribute(name); return value === null ? "" : name.replace(/^data-/, "") + ":" + (value || "default"); }).filter(Boolean)[0] || control.getAttribute("aria-label") || control.textContent.trim().replace(/\s+/g, "-").slice(0, 48);
+        var discriminator = control.id || commandDiscriminator || ["data-report", "data-state", "data-worklist", "data-work-scope", "data-workbench-tab", "data-open-applicant", "data-quick-applicant", "data-search-open", "data-select-applicant", "data-report-open-applicant", "data-batch-step", "data-batch-open", "data-batch-exclude", "data-batch-restore", "data-batch-template", "data-batch-execution-limit", "data-document-index", "data-document-move", "data-page", "data-session-skip", "data-session-next", "data-session-exit", "data-preview-viewport"].map(function (name) { var value = control.getAttribute(name); return value === null ? "" : name.replace(/^data-/, "") + ":" + (value || "default"); }).filter(Boolean)[0] || control.getAttribute("aria-label") || control.textContent.trim().replace(/\s+/g, "-").slice(0, 48);
         control.setAttribute("data-control-id", classification.toLowerCase() + ":" + discriminator);
       }
     });
