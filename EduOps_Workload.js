@@ -18,27 +18,20 @@ function eduops_getAccessProjection() {
   var access = eduopsRequireAccess_();
   var cfg = eduopsConfig_();
   return {
+    schemaVersion: "EDUOPS_ACCESS_PROJECTION_V1",
+    authoritySource: "Admin access and capability authority",
     ok: true,
     readOnly: true,
     product: cfg.product,
     contractVersion: cfg.contractVersion,
     profileVersion: cfg.profileVersion,
-    runtime: {
-      environment: "Admin staging",
-      version: CONFIG.VERSION,
-      deployVersion: CONFIG.DEPLOY_VERSION_NUMBER,
-      runtimeIdentity: String(CONFIG.VERSION || "") + " / " + String(CONFIG.DEPLOY_VERSION_NUMBER || ""),
-      deploymentIdSafe: eduopsSafeDeploymentId_(CONFIG.DEPLOYMENT_ID_ADMIN || ""),
-      sourceIdentity: eduopsClean_(CONFIG.SOURCE_COMMIT || ""),
-      appsScriptVersion: eduopsClean_(CONFIG.APPS_SCRIPT_VERSION || ""),
-      appsScriptVersionSource: CONFIG.APPS_SCRIPT_VERSION ? "CONFIG.APPS_SCRIPT_VERSION" : "not exposed by Apps Script runtime; verify deployment metadata externally"
-    },
+    runtime: eduopsRuntimeProjection_(),
     user: {
       email: access.email,
       role: access.role,
       capabilities: access.capabilities
     },
-    environment: "Admin staging",
+    environment: "FODE live production operations",
     deployment: {
       adminDeploymentIdSafe: eduopsSafeDeploymentId_(CONFIG.DEPLOYMENT_ID_ADMIN || ""),
       studentDeploymentIdSafe: eduopsSafeDeploymentId_(CONFIG.DEPLOYMENT_ID_STUDENT || "")
@@ -47,7 +40,32 @@ function eduops_getAccessProjection() {
       read: eduopsReadOnlyRpcAllowlist_(),
       write: eduopsWriteRpcAllowlist_()
     },
-    featureFlags: eduopsFeatureFlags_()
+    featureFlags: eduopsFeatureFlags_(),
+    operationAvailability: eduopsOperationAvailability_()
+  };
+}
+
+function eduopsRuntimeProjection_(snapshotId, snapshotAsOf) {
+  var cfg = typeof CONFIG === "object" && CONFIG ? CONFIG : {};
+  var appsScriptVersion = eduopsClean_(cfg.APPS_SCRIPT_VERSION || "");
+  return {
+    schemaVersion: "EDUOPS_RUNTIME_IDENTITY_V1",
+    authoritySource: "FODE runtime configuration",
+    operationalClassification: "FODE live production operations",
+    deploymentRole: "LIVE_PRODUCTION_OPERATIONS",
+    environment: "FODE live production operations",
+    version: cfg.VERSION,
+    deployVersion: cfg.DEPLOY_VERSION_NUMBER,
+    runtimeIdentity: String(cfg.VERSION || "") + " / " + String(cfg.DEPLOY_VERSION_NUMBER || ""),
+    deploymentIdSafe: eduopsSafeDeploymentId_(cfg.DEPLOYMENT_ID_ADMIN || ""),
+    deploymentIdentity: eduopsClean_(cfg.DEPLOYMENT_ID_ADMIN || ""),
+    sourceIdentity: eduopsClean_(cfg.SOURCE_COMMIT || ""),
+    appsScriptVersion: appsScriptVersion,
+    appsScriptVersionAvailable: !!appsScriptVersion,
+    appsScriptVersionReason: appsScriptVersion ? "Projected by server configuration." : "The Apps Script runtime does not expose its immutable platform version; verify the deployment pin through deployment metadata.",
+    snapshotId: eduopsClean_(snapshotId || ""),
+    snapshotAsOf: eduopsClean_(snapshotAsOf || ""),
+    dataAuthority: "FODE canonical applicant snapshot"
   };
 }
 
@@ -62,6 +80,8 @@ function eduops_getProfile() {
   eduopsRequireAccess_();
   var cfg = eduopsConfig_();
   return {
+    schemaVersion: "EDUOPS_PROFILE_V2",
+    authoritySource: "EduOps backend profile service",
     ok: true,
     readOnly: true,
     product: "FODE",
@@ -69,9 +89,12 @@ function eduops_getProfile() {
     description: "Actionability-first operations workspace over existing FODE authoritative services.",
     contractVersion: cfg.contractVersion,
     profileVersion: cfg.profileVersion,
-    actionabilityStates: ["READY", "COOLING_OFF", "AWAITING_APPLICANT", "AWAITING_PAYMENT", "REVIEW_REQUIRED", "BLOCKED", "UNKNOWN", "COMPLETE"],
-    workScopes: ["MY", "TEAM", "UNASSIGNED", "ESCALATED", "ALL_AUTHORISED"],
+    defaultQuery: { product: "FODE", actionabilityState: "READY", worklistKey: "", workScope: "ALL_AUTHORISED", filters: { search: "" }, sort: { key: "urgency", direction: "asc" }, page: 1, pageSize: 25 },
+    actionabilityStates: eduopsActionabilityPresentation_({}),
+    workScopes: eduopsWorkScopePresentation_(),
     featureFlags: eduopsFeatureFlags_(),
+    operationAvailability: eduopsOperationAvailability_(),
+    batchPolicy: { schemaVersion: "EDUOPS_BATCH_POLICY_V1", authoritySource: "Communication Authority", allowedExecutionLimits: [10, 25, eduopsBatchExecutionCap_()].filter(function (value, index, list) { return value <= eduopsBatchExecutionCap_() && list.indexOf(value) === index; }), executionCap: eduopsBatchExecutionCap_() },
     commandContractVersion: "EDUOPS_COMMAND_PREVIEW_V1",
     receiptContractVersion: "EDUOPS_RECEIPT_V1"
   };
@@ -121,6 +144,9 @@ function eduops_queryOperationalWorkload(payload) {
     contractVersion: EDUOPS_CONTRACT_VERSION,
     product: "FODE",
     profileVersion: EDUOPS_PROFILE_VERSION,
+    runtime: eduopsRuntimeProjection_(snapshotId, resolved.snapshotAsOf),
+    schemaVersion: "EDUOPS_OPERATIONAL_WORKLOAD_V2",
+    authoritySource: "Population Ledger + Actionability Resolver",
     snapshotId: snapshotId,
     snapshotAsOf: resolved.snapshotAsOf,
     snapshotCacheState: resolved.cacheState,
@@ -140,9 +166,11 @@ function eduops_queryOperationalWorkload(payload) {
     actionabilityCounts: actionabilityCounts,
     worklistKeyCounts: worklistKeyCounts,
     metricCounts: metricCounts,
-    batchTemplateOptions: eduopsBatchTemplateOptions_(),
+    batchTemplateOptions: [],
+    batchTemplateAuthority: "EXACT_COHORT_EVALUATION_REQUIRED",
     queryBinding: queryBinding,
     reconciliation: reconciliation,
+    presentation: eduopsWorkloadPresentation_(allRows, filtered, pageRows, query, reliability, reconciliation, actionabilityCounts, worklistKeyCounts),
     rows: rows
   };
   response.timings = {
@@ -163,26 +191,46 @@ function eduops_queryOperationalWorkload(payload) {
   return response;
 }
 
-function eduopsBatchTemplateOptions_() {
+function eduopsCommunicationPublicTemplateId_(messageType) {
+  var internalId = eduopsClean_(messageType || "");
+  if (internalId === "legacy_invite") return "application_portal_invitation";
+  if (internalId === "reminder") return "application_reminder";
+  return internalId;
+}
+
+function eduopsCommunicationInternalTemplateId_(templateId) {
+  var publicId = eduopsClean_(templateId || "");
+  if (publicId === "application_portal_invitation") return "legacy_invite";
+  if (publicId === "application_reminder") return "reminder";
+  return publicId;
+}
+
+function eduopsCommunicationPublicLabel_(entry) {
+  var internalId = eduopsClean_(entry && entry.messageType || "");
+  if (internalId === "legacy_invite") return "Application Portal Invitation";
+  if (internalId === "reminder") return "Application Reminder";
+  return eduopsClean_(entry && (entry.selectedOptionLabel || entry.label) || internalId);
+}
+
+function eduopsCommunicationTemplateMetadata_() {
   var metadata = typeof communicationTemplateGalleryMetadata_ === "function" ? communicationTemplateGalleryMetadata_() : [];
-  return (Array.isArray(metadata) ? metadata : []).filter(function (entry) {
-    var messageType = eduopsClean_(entry && entry.messageType || "");
-    if (!messageType) return false;
-    return typeof isCommunicationTypeBatchSafe_ !== "function" || isCommunicationTypeBatchSafe_(messageType) === true;
-  }).sort(function (a, b) {
+  return (Array.isArray(metadata) ? metadata : []).slice().sort(function (a, b) {
     return Number(a.selectedOptionOrder || 999) - Number(b.selectedOptionOrder || 999);
   }).map(function (entry) {
-    var messageType = eduopsClean_(entry.messageType || "");
+    var internalId = eduopsClean_(entry && entry.messageType || "");
     return {
-      templateId: messageType,
-      messageType: messageType,
-      label: eduopsClean_(entry.selectedOptionLabel || entry.label || messageType),
-      title: eduopsClean_(entry.label || entry.selectedOptionLabel || messageType),
-      purpose: eduopsClean_(entry.purpose || entry.whenToUse || entry.stageSuitability || ""),
-      batchSafe: true,
-      canonicalSource: "communicationTemplateGalleryMetadata_"
+      templateId: eduopsCommunicationPublicTemplateId_(internalId),
+      internalTemplateId: internalId,
+      label: eduopsCommunicationPublicLabel_(entry),
+      description: eduopsClean_(entry && (entry.purpose || entry.whenToUse || entry.stageSuitability) || ""),
+      purpose: eduopsClean_(entry && entry.purpose || ""),
+      batchSafe: entry && entry.batchSafe === true || typeof isCommunicationTypeBatchSafe_ === "function" && isCommunicationTypeBatchSafe_(internalId) === true,
+      editable: /^(freeform|limited)$/i.test(eduopsClean_(entry && entry.editableMode || "")),
+      customisable: /^freeform$/i.test(eduopsClean_(entry && entry.editableMode || "")),
+      retired: false,
+      authoritySource: "communicationTemplateGalleryMetadata_"
     };
-  });
+  }).filter(function (entry) { return !!entry.templateId; });
 }
 
 function eduops_searchApplicants(payload) {
@@ -197,7 +245,7 @@ function eduops_searchApplicants(payload) {
     return { ok: false, readOnly: true, code: "STALE_SNAPSHOT", snapshotId: snapshotId, expectedSnapshotId: eduopsClean_(p.expectedSnapshotId || "") };
   }
   if (!queryText) {
-    return { ok: true, readOnly: true, product: "FODE", query: "", totalMatches: 0, matches: [], snapshotId: snapshotId, timings: { searchMs: Date.now() - started } };
+    return { ok: true, readOnly: true, schemaVersion: "EDUOPS_SEARCH_RESULTS_V1", authoritySource: "FODE canonical applicant snapshot", product: "FODE", query: "", totalMatches: 0, matches: [], snapshotId: snapshotId, timings: { searchMs: Date.now() - started } };
   }
   var needle = queryText.toLowerCase();
   var rows = resolved.rows.filter(function (row) {
@@ -216,6 +264,8 @@ function eduops_searchApplicants(payload) {
   return {
     ok: true,
     readOnly: true,
+    schemaVersion: "EDUOPS_SEARCH_RESULTS_V1",
+    authoritySource: "FODE canonical applicant snapshot",
     product: "FODE",
     query: queryText,
     snapshotId: snapshotId,
@@ -248,10 +298,41 @@ function eduops_getApplicantWorkbench(payload) {
   }
   var result = eduopsFodeApplicantRead_(applicantId, p.returnContext || {}, snapshotId);
   result.capabilities = eduopsClientCapabilityProjection_(eduopsCapabilityProjection_());
-  result.communications = eduopsWorkbenchCommunicationProjection_(result.communications, applicantId, access);
+  result.communications = eduopsWorkbenchCommunicationProjection_(result.communications, applicantId, access, snapshotId);
   result.featureFlags = eduopsFeatureFlags_();
+  result.operationAvailability = eduopsOperationAvailability_();
+  result.actions = eduopsWorkbenchActionAuthority_(result, result.capabilities, result.operationAvailability);
   result.timings = { applicantMs: Date.now() - started };
   return result;
+}
+
+function eduopsWorkbenchActionAuthority_(workbench, capabilityProjection, operationAvailability) {
+  var capabilityMap = capabilityProjection && capabilityProjection.capabilities || {};
+  function decision(operation, capability, domainAvailable, reason, options, domainReasonCode) {
+    var operationDecision = operationAvailability && operationAvailability[operation];
+    var available = !!operationDecision && operationDecision.available === true && capabilityMap[capability] === true && domainAvailable === true;
+    return {
+      schemaVersion: "EDUOPS_WORKBENCH_ACTION_V1",
+      authoritySource: "EduOps backend operation authority",
+      operation: operation,
+      requiredCapability: capability,
+      available: available,
+      reasonCode: available ? "AVAILABLE" : !operationDecision ? "BACKEND_CONTRACT_MISSING" : operationDecision.available !== true ? operationDecision.reasonCode : capabilityMap[capability] !== true ? "CAPABILITY_DENIED" : domainReasonCode || "DOMAIN_AUTHORITY_UNAVAILABLE",
+      reason: available ? "Preview is required before confirmation." : !operationDecision ? "Authoritative operation availability was not returned. Refresh or retry before continuing." : operationDecision.available !== true ? operationDecision.reason : capabilityMap[capability] !== true ? "The authoritative capability projection does not permit this action." : reason,
+      options: Array.isArray(options) ? options : [],
+      stale: false
+    };
+  }
+  var documentOptions = Object.keys(CONFIG && CONFIG.DOC_STATUS || {}).map(function (code) {
+    return { code: code, label: eduopsHumanize_(code), authoritySource: "CONFIG.DOC_STATUS" };
+  });
+  return {
+    DOCUMENT_REVIEW: decision("DOCUMENT_REVIEW", "CAN_SAVE_DOCUMENT_STATUSES", workbench.documents && workbench.documents.available === true, "Authoritative document state was not returned. Refresh or retry before continuing.", documentOptions),
+    FINANCE_EVIDENCE_DECISION: decision("FINANCE_EVIDENCE_DECISION", "CAN_VERIFY_PAYMENT", workbench.finance && workbench.finance.available === true && workbench.finance.paymentEvidencePresent === true, "Authoritative finance evidence decision was not returned. Refresh or retry before continuing.", [{ code: "VERIFIED", label: "Payment verified", authoritySource: "Finance authority" }]),
+    SEND_INDIVIDUAL_COMMUNICATION: decision("SEND_INDIVIDUAL_COMMUNICATION", "CAN_SEND_INDIVIDUAL_EMAIL", workbench.communications && workbench.communications.schemaVersion === "EDUOPS_COMMUNICATION_SUMMARY_V1" && workbench.communications.blockCode !== "COMMUNICATION_AUTHORITY_UNAVAILABLE", "Authoritative communication decision was not returned. Refresh or retry before continuing."),
+    CONTACTABILITY_CORRECTION: decision("CONTACTABILITY_CORRECTION", "CAN_OPEN_REVIEW_WORKSPACE", workbench.contactability && workbench.contactability.available === true, "Authoritative contactability decision was not returned. Refresh or retry before continuing."),
+    PORTAL_ACCESS: decision("PORTAL_ACCESS", "CAN_MANAGE_PORTAL_ACCESS", false, "Authoritative portal-access decision was not returned. Refresh or retry before continuing.", [], "BACKEND_CONTRACT_MISSING")
+  };
 }
 
 function eduopsClientCapabilityProjection_(projection) {
@@ -270,7 +351,7 @@ function eduopsClientCapabilityProjection_(projection) {
   };
 }
 
-function eduopsWorkbenchCommunicationProjection_(summary, applicantId, access) {
+function eduopsWorkbenchCommunicationProjection_(summary, applicantId, access, snapshotId) {
   var base = summary && typeof summary === "object" ? summary : {};
   var out = eduopsClone_(base);
   var actorEmail = eduopsClean_(access && access.email || "");
@@ -296,8 +377,8 @@ function eduopsWorkbenchCommunicationProjection_(summary, applicantId, access) {
       actorEmail: actorEmail,
       actorRole: actorRole
     });
-    var selectedType = eduopsClean_(authority.selectedMessageType || authority.recommendedMessageType || requestedType || "");
-    var selectedTemplate = eduopsCommunicationTemplateByType_(templates, selectedType);
+    var recommendedType = eduopsClean_(authority.recommendedMessageType || requestedType || "");
+    var recommendedTemplate = eduopsCommunicationTemplateByType_(templates, recommendedType);
     out.authorityProjection = {
       Comm_Stage: eduopsClean_(authority.stage || ""),
       Comm_Status: eduopsClean_(authority.commStatus || ""),
@@ -312,29 +393,30 @@ function eduopsWorkbenchCommunicationProjection_(summary, applicantId, access) {
       Comm_Awaiting_Response: authority.awaitingResponse === true,
       Comm_Authority_Source: eduopsClean_(authority.authoritySource || "")
     };
-    out.recommendedMessageType = eduopsClean_(authority.recommendedMessageType || base.recommendedMessageType || "");
-    out.recommendedCommunication = eduopsCommunicationAuthorityDto_(authority, out.recommendedMessageType);
-    out.selectedMessageType = selectedType;
+    out.recommendedMessageType = recommendedTemplate.templateId || eduopsCommunicationPublicTemplateId_(recommendedType);
+    out.recommendedCommunication = eduopsCommunicationAuthorityDto_(authority, recommendedType);
+    out.selectedMessageType = "";
     out.requestedMessageType = eduopsClean_(authority.requestedMessageType || "");
-    out.recommendedTemplateId = selectedTemplate.templateId || selectedType;
-    out.operatorRecommendation = eduopsClean_(selectedTemplate.selectedOptionLabel || selectedTemplate.label || selectedType || "");
+    out.recommendedTemplateId = recommendedTemplate.templateId || eduopsCommunicationPublicTemplateId_(recommendedType);
+    out.operatorRecommendation = eduopsClean_(recommendedTemplate.label || "");
     out.templateGallery = templates;
     out.effectiveEmail = eduopsClean_(authority.authorityResult && authority.authorityResult.effectiveEmail || rowObj.Parent_Email || rowObj.Email || "");
     out.draft = {
-      templateId: selectedTemplate.templateId || selectedType || "recommended",
-      messageType: selectedType,
+      templateId: "",
+      messageType: "",
       recipient: out.effectiveEmail,
-      subject: eduopsClean_(selectedTemplate.defaultSubject || ""),
-      body: selectedTemplate.defaultBody || ""
+      subject: "",
+      body: ""
     };
-    out.permitted = selectedTemplate.permitted === true;
-    out.sendableNow = selectedTemplate.canSendNow === true;
-    out.canSendNow = selectedTemplate.canSendNow === true;
-    out.blockCode = eduopsClean_(selectedTemplate.blockCode || "");
-    out.blockReason = eduopsClean_(selectedTemplate.blockReason || "");
-    out.awaitingResponse = selectedTemplate.awaitingResponse === true;
-    out.authoritySource = eduopsClean_(selectedTemplate.authoritySource || "");
-    out.eligibility = out.canSendNow ? "Authority permits communication preview." : (out.blockReason || out.blockCode || base.eligibility || "Communication Authority did not return sendability.");
+    out.permitted = false;
+    out.sendableNow = false;
+    out.canSendNow = false;
+    out.blockCode = "EXPLICIT_TEMPLATE_SELECTION_REQUIRED";
+    out.blockReason = "Choose a communication before previewing.";
+    out.awaitingResponse = false;
+    out.authoritySource = "Communication Authority";
+    out.evaluatedSnapshot = eduopsClean_(snapshotId || "");
+    out.eligibility = out.blockReason;
   } catch (err) {
     out.sendableNow = false;
     out.canSendNow = false;
@@ -347,34 +429,39 @@ function eduopsWorkbenchCommunicationProjection_(summary, applicantId, access) {
 }
 
 function eduopsCommunicationTemplateGalleryForWorkbench_(rowObj, rowNumber, sheet, authority, actor) {
-  var metadata = typeof communicationTemplateGalleryMetadata_ === "function" ? communicationTemplateGalleryMetadata_() : [];
+  var metadata = eduopsCommunicationTemplateMetadata_();
   var recommendedType = eduopsClean_(authority && (authority.recommendedMessageType || authority.selectedMessageType) || "");
-  return (Array.isArray(metadata) ? metadata : []).filter(function (entry) {
-    return entry && entry.selectedPickerVisible !== false;
-  }).sort(function (a, b) {
-    return Number(a.selectedOptionOrder || 999) - Number(b.selectedOptionOrder || 999);
-  }).map(function (entry) {
-    var messageType = eduopsClean_(entry.messageType || "");
+  return metadata.map(function (entry) {
+    var messageType = entry.internalTemplateId;
     var perTypeAuthority = eduopsCommunicationAuthorityForType_(rowObj, rowNumber, sheet, messageType, actor);
     var draft = eduopsCommunicationDraftForType_(rowObj, rowNumber, sheet, messageType, actor);
+    var available = perTypeAuthority.Comm_Can_Send_Now === true && !draft.blockCode;
     return {
-      templateId: messageType,
-      messageType: messageType,
-      label: eduopsClean_(entry.label || messageType),
-      selectedOptionLabel: eduopsClean_(entry.selectedOptionLabel || entry.label || messageType),
-      purpose: eduopsClean_(entry.purpose || ""),
-      whenToUse: eduopsClean_(entry.whenToUse || ""),
-      stageSuitability: eduopsClean_(entry.stageSuitability || ""),
-      selectedOnly: entry.selectedOnly === true,
+      templateId: entry.templateId,
+      messageType: entry.templateId,
+      label: entry.label,
+      selectedOptionLabel: entry.label,
+      description: entry.description,
+      purpose: entry.purpose,
       batchSafe: entry.batchSafe === true,
+      availabilityState: available ? "AVAILABLE_FOR_ALL" : "UNAVAILABLE",
       recommended: messageType === recommendedType,
+      availableRecipientCount: available ? 1 : 0,
+      unavailableRecipientCount: available ? 0 : 1,
       authorityProjection: perTypeAuthority,
       permitted: perTypeAuthority.Comm_Permitted === true,
-      canSendNow: perTypeAuthority.Comm_Can_Send_Now === true,
-      blockCode: eduopsClean_(perTypeAuthority.Comm_Block_Code || ""),
-      blockReason: eduopsClean_(perTypeAuthority.Comm_Block_Reason || ""),
+      canSendNow: available,
+      selectable: available,
+      availabilityLabel: available ? "Available for this applicant" : "Unavailable",
+      reasonCode: available ? "" : eduopsClean_(draft.blockCode || perTypeAuthority.Comm_Block_Code || "COMMUNICATION_NOT_AUTHORISED"),
+      reason: available ? "Available for this applicant." : eduopsClean_(draft.blockReason || perTypeAuthority.Comm_Block_Reason || "Communication Authority did not authorise this template."),
+      blockCode: available ? "" : eduopsClean_(draft.blockCode || perTypeAuthority.Comm_Block_Code || "COMMUNICATION_NOT_AUTHORISED"),
+      blockReason: available ? "" : eduopsClean_(draft.blockReason || perTypeAuthority.Comm_Block_Reason || "Communication Authority did not authorise this template."),
       authoritySource: eduopsClean_(perTypeAuthority.Comm_Authority_Source || ""),
       awaitingResponse: perTypeAuthority.Comm_Awaiting_Response === true,
+      editable: entry.editable === true,
+      customisable: entry.customisable === true,
+      retired: false,
       defaultSubject: draft.subject,
       defaultBody: draft.body,
       draftBlockCode: draft.blockCode,
@@ -470,18 +557,23 @@ function eduopsCommunicationTemplateByType_(templates, messageType) {
   var wanted = eduopsClean_(messageType || "");
   var list = Array.isArray(templates) ? templates : [];
   for (var i = 0; i < list.length; i++) {
-    if (eduopsClean_(list[i] && list[i].messageType || "") === wanted) return list[i] || {};
+    if (eduopsClean_(list[i] && (list[i].messageType || list[i].templateId) || "") === wanted || eduopsCommunicationInternalTemplateId_(list[i] && list[i].templateId) === wanted) return list[i] || {};
   }
-  return list[0] || {};
+  return {};
 }
 
 function eduops_getDocumentManifest(payload) {
-  eduopsRequireAccess_();
+  var access = eduopsRequireAccess_();
   var started = Date.now();
   var exact = eduopsHydrateDocumentPayload_(payload || {}, false);
   if (exact.ok !== true) return exact;
   var result = admin_getApplicantDocumentManifest(exact.payload);
   result.readOnly = true;
+  result.schemaVersion = "EDUOPS_DOCUMENT_MANIFEST_V2";
+  result.authoritySource = "Document authority";
+  result.snapshotId = eduopsClean_(payload && payload.expectedSnapshotId || "");
+  result.snapshotAsOf = new Date().toISOString();
+  result.actionAuthority = eduopsWorkbenchActionAuthority_({ documents: { available: result.ok === true }, finance: {}, contactability: {} }, { capabilities: access.capabilities || {} }, eduopsOperationAvailability_()).DOCUMENT_REVIEW;
   result.rowNumber = exact.payload.rowNumber;
   result.renditionRule = "canonical original -> server-derived PNG rendition -> separate signed Open Original action";
   if (Array.isArray(result.files)) {
@@ -495,6 +587,9 @@ function eduops_getDocumentManifest(payload) {
         eduopsClean_(item.sourceField || ""),
         String(item.itemIndex === null || item.itemIndex === undefined ? "" : item.itemIndex)
       ].join("|");
+      item.statusCode = eduopsUpper_(String(item.status || "").replace(/\s+/g, "_"), "PENDING_REVIEW");
+      item.statusPresentation = eduopsCodePresentation_(item.statusCode, eduopsHumanize_(item.statusCode), "", "Document authority");
+      item.availableDecisions = result.actionAuthority.options.slice();
       return item;
     });
   }
@@ -582,6 +677,8 @@ function eduops_getReconciliation(payload) {
   return {
     ok: true,
     readOnly: true,
+    schemaVersion: "EDUOPS_RECONCILIATION_RESPONSE_V1",
+    authoritySource: "Population Ledger + Actionability Resolver",
     product: "FODE",
     snapshotId: workload.snapshotId,
     reconciliation: workload.reconciliation,
@@ -673,7 +770,6 @@ function eduopsFilterRows_(rows, query, reliability) {
   if (reliability && reliability.state === "CONFLICTING") {
     list = list.map(function (row) {
       var copy = eduopsClone_(row);
-      if (copy.actionabilityState === "READY") copy.actionabilityState = "UNKNOWN";
       copy.selectable = false;
       copy.selectBlockReason = "Source conflict prevents confident readiness.";
       return copy;
@@ -686,7 +782,7 @@ function eduopsFilterRows_(rows, query, reliability) {
     var filters = query.filters || {};
     if (filters.owner && eduopsClean_(row.actionOwner || "") !== eduopsClean_(filters.owner)) return false;
     if (filters.urgency && eduopsUpper_(row.urgencyLevel || "") !== eduopsUpper_(filters.urgency)) return false;
-    if (filters.primaryRoute && eduopsClean_(row.primaryRoute || "") !== eduopsClean_(filters.primaryRoute)) return false;
+    if (filters.primaryRoute && eduopsClean_(eduopsPrimaryRouteForRow_(row)) !== eduopsClean_(filters.primaryRoute)) return false;
     if (filters.documentState && eduopsUpper_(row.documentState || "") !== eduopsUpper_(filters.documentState)) return false;
     if (filters.financeState && eduopsUpper_(row.canonicalFinanceState || "") !== eduopsUpper_(filters.financeState)) return false;
     if (filters.contactabilityState && eduopsUpper_(row.contactabilityState || "") !== eduopsUpper_(filters.contactabilityState)) return false;
@@ -701,6 +797,111 @@ function eduopsFilterRows_(rows, query, reliability) {
     }
     return true;
   });
+}
+
+function eduopsActionabilityPresentation_(counts) {
+  var order = ["READY", "COOLING_OFF", "AWAITING_APPLICANT", "AWAITING_PAYMENT", "REVIEW_REQUIRED", "BLOCKED", "UNKNOWN", "COMPLETE"];
+  return order.map(function (code) {
+    var item = eduopsStatePresentation_(code);
+    item.count = Number(counts && counts[code] || 0);
+    return item;
+  });
+}
+
+function eduopsWorkScopePresentation_() {
+  return [
+    ["MY", "My Work"], ["TEAM", "Team Work"], ["UNASSIGNED", "Unassigned"],
+    ["ESCALATED", "Escalated"], ["ALL_AUTHORISED", "All Authorised Work"]
+  ].map(function (item) { return eduopsCodePresentation_(item[0], item[1], "Operator query scope projected by the backend.", "EduOps workload query service"); });
+}
+
+function eduopsUniqueFilterOptions_(rows, field, authoritySource) {
+  var seen = {};
+  (Array.isArray(rows) ? rows : []).forEach(function (row) {
+    var code = eduopsClean_(row && row[field] || "");
+    if (!code || seen[code]) return;
+    seen[code] = eduopsCodePresentation_(code, eduopsHumanize_(code), "", authoritySource);
+  });
+  return Object.keys(seen).sort().map(function (code) { return seen[code]; });
+}
+
+function eduopsWorklistPresentation_(counts, rows) {
+  var labels = {};
+  (Array.isArray(rows) ? rows : []).forEach(function (row) {
+    var key = eduopsClean_(row && row.worklistKey || "");
+    if (key && !labels[key]) labels[key] = eduopsClean_(row.worklistLabel || "");
+  });
+  var total = Object.keys(counts || {}).reduce(function (sum, key) { return sum + Number(counts[key] || 0); }, 0);
+  var out = [{ schemaVersion: "EDUOPS_CODE_PRESENTATION_V1", authoritySource: "Actionability Resolver", code: "", label: "All work types", reason: "All worklist types in the selected Actionability state.", available: true, stale: false, count: total }];
+  Object.keys(counts || {}).sort().forEach(function (key) {
+    var item = eduopsCodePresentation_(key, labels[key], "", "Actionability Resolver");
+    item.count = Number(counts[key] || 0);
+    out.push(item);
+  });
+  return out;
+}
+
+function eduopsDistribution_(rows, field, authoritySource) {
+  var counts = {};
+  (Array.isArray(rows) ? rows : []).forEach(function (row) {
+    var code = eduopsClean_(row && row[field] || "");
+    if (!code) return;
+    counts[code] = Number(counts[code] || 0) + 1;
+  });
+  return Object.keys(counts).sort().map(function (code) {
+    var item = eduopsCodePresentation_(code, eduopsHumanize_(code), "", authoritySource);
+    item.count = counts[code];
+    return item;
+  });
+}
+
+function eduopsWorkloadPresentation_(allRows, matchedRows, pageRows, query, reliability, reconciliation, actionabilityCounts, worklistKeyCounts) {
+  var lifecycleRows = (Array.isArray(allRows) ? allRows : []).map(function (row) {
+    var copy = eduopsClone_(row);
+    copy.lifecyclePresentationCode = row.canonicalLifecycle && (row.canonicalLifecycle.lifecycleStage || row.canonicalLifecycle.baseState) || "";
+    return copy;
+  });
+  var routeRows = (Array.isArray(allRows) ? allRows : []).map(function (row) { return { primaryRoute: eduopsPrimaryRouteForRow_(row) }; });
+  return {
+    schemaVersion: "EDUOPS_WORKLOAD_PRESENTATION_V1",
+    authoritySource: "EduOps backend projection services",
+    actionabilityBuckets: eduopsActionabilityPresentation_(actionabilityCounts),
+    allActionability: { code: "ALL", label: "All authoritative records", count: Object.keys(actionabilityCounts || {}).reduce(function (sum, key) { return sum + Number(actionabilityCounts[key] || 0); }, 0), authoritySource: "Actionability Resolver" },
+    worklists: eduopsWorklistPresentation_(worklistKeyCounts, allRows),
+    workScopes: eduopsWorkScopePresentation_(),
+    reliability: eduopsStatePresentation_(reliability && reliability.state || "UNAVAILABLE"),
+    metrics: [
+      { code: "CANONICAL_POPULATION", label: "Canonical population", value: Number(reconciliation.canonicalPopulation || 0), authoritySource: "Population Ledger" },
+      { code: "ELIGIBLE_NOW", label: "Eligible now", value: Number(reconciliation.metricCounts && reconciliation.metricCounts.eligibleNow || 0), authoritySource: "Actionability Resolver" },
+      { code: "MATCHING_LATER_PAGES", label: "Matching on later pages", value: Number(reconciliation.matchingOnLaterPages || 0), authoritySource: "EduOps workload query service" },
+      { code: "OUTSIDE_CURRENT_VIEW", label: "Outside current view", value: Number(reconciliation.hiddenFromCurrentView || 0), authoritySource: "Population Ledger" },
+      { code: "OLDEST_MATCHED", label: "Oldest matched", value: reconciliation.oldestMatchedAgeDays === "" ? "-" : String(reconciliation.oldestMatchedAgeDays) + " days", authoritySource: "Actionability Resolver" }
+    ],
+    filterOptions: {
+      owner: eduopsUniqueFilterOptions_(allRows, "actionOwner", "Actionability Resolver"),
+      urgency: eduopsUniqueFilterOptions_(allRows, "urgencyLevel", "Actionability Resolver"),
+      primaryRoute: eduopsUniqueFilterOptions_(routeRows, "primaryRoute", "Actionability Resolver"),
+      documentState: eduopsUniqueFilterOptions_(allRows, "documentState", "Document authority"),
+      financeState: eduopsUniqueFilterOptions_(allRows, "canonicalFinanceState", "Finance authority"),
+      contactabilityState: eduopsUniqueFilterOptions_(allRows, "contactabilityState", "Contactability authority"),
+      communicationState: eduopsUniqueFilterOptions_(allRows, "recommendedMessageType", "Communication Authority"),
+      cooling: [eduopsCodePresentation_("ACTIVE", "Cooling-off active", "", "Actionability Resolver"), eduopsCodePresentation_("NONE", "No cooling-off", "", "Actionability Resolver")],
+      blockKind: eduopsUniqueFilterOptions_(allRows, "reasonCode", "Actionability Resolver")
+    },
+    modules: {
+      overview: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "Population Ledger + Actionability Resolver", available: true, metrics: [] },
+      lifecycle: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "Canonical Lifecycle Resolver", available: true, distribution: eduopsDistribution_(lifecycleRows, "lifecyclePresentationCode", "Canonical Lifecycle Resolver") },
+      finance: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "Finance authority", available: true, distribution: eduopsDistribution_(allRows, "canonicalFinanceState", "Finance authority") },
+      documents: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "Document authority", available: true, distribution: eduopsDistribution_(allRows, "documentState", "Document authority") },
+      communications: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "Communication Authority", available: true, distribution: eduopsDistribution_(allRows, "recommendedMessageType", "Communication Authority") },
+      contactability: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "Contactability authority", available: true, distribution: eduopsDistribution_(allRows, "contactabilityState", "Contactability authority") },
+      portal: eduopsAuthorityUnavailable_("portal-access", "Portal Access Domain"),
+      population: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "Population Ledger", available: true, reconciliation: eduopsClone_(reconciliation) },
+      health: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "EduOps runtime projection", available: true, reliability: eduopsStatePresentation_(reliability && reliability.state || "UNAVAILABLE") }
+    },
+    evaluatedCohort: { totalMatched: matchedRows.length, visiblePageCount: pageRows.length, snapshotId: reconciliation.snapshotId, snapshotAsOf: reconciliation.asOf },
+    selection: { totalMatched: matchedRows.length, visibleSelectable: pageRows.filter(function (row) { return row.selectable === true; }).length, visibleBlocked: pageRows.filter(function (row) { return row.selectable !== true; }).length, totalAuthoritySelectable: Number(reconciliation.totalAuthoritySelectable || 0), authoritySource: "Actionability Resolver" }
+  };
 }
 
 function eduopsCompareRows_(a, b, sort) {
@@ -779,6 +980,8 @@ function eduopsReconciliationForRows_(allRows, matchedRows, pageRows, query, sna
     if (row.ageDays !== "" && (oldestVisible === "" || Number(row.ageDays) > Number(oldestVisible))) oldestVisible = Number(row.ageDays);
   });
   return {
+    schemaVersion: "EDUOPS_RECONCILIATION_V1",
+    authoritySource: "Population Ledger + Actionability Resolver",
     canonicalPopulation: Number(snapshot && snapshot.totalRows || allRows.length),
     totalMatched: matchedRows.length,
     visiblePageCount: pageRows.length,
@@ -929,13 +1132,6 @@ function eduopsCapabilityProjection_() {
     readOnly: true,
     role: access.role,
     capabilities: access.capabilities,
-    enforcement: "Server-side capability checks are authoritative; browser controls are presentation only.",
-    pass2Actions: [
-      eduopsReadOnlyAction_("Save document statuses", "CAN_SAVE_DOCUMENT_STATUSES"),
-      eduopsReadOnlyAction_("Send individual email", "CAN_SEND_INDIVIDUAL_EMAIL"),
-      eduopsReadOnlyAction_("Run batch communications", "CAN_RUN_BATCH_COMMUNICATIONS"),
-      eduopsReadOnlyAction_("Verify payment", "CAN_VERIFY_PAYMENT"),
-      eduopsReadOnlyAction_("Manage portal access", "CAN_MANAGE_PORTAL_ACCESS")
-    ]
+    enforcement: "Server-side capability checks are authoritative; browser controls are presentation only."
   };
 }

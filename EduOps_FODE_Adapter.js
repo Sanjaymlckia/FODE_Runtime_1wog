@@ -158,13 +158,14 @@ function eduopsFodeActionabilityRowFromCanonical_(canonical) {
     name: eduopsClean_(applicant.name || ""),
     email: eduopsClean_(applicant.effectiveEmail || applicant.email || ""),
     phone: eduopsClean_(applicant.phone || ""),
-    actionOwner: eduopsClean_(actionability.actionOwner || row.owner || lifecycle.actionOwner || "NONE"),
-    workloadGroupKey: eduopsUpper_(actionability.workloadGroupKey || "UNKNOWN"),
+    actionOwner: eduopsClean_(actionability.actionOwner || row.owner || lifecycle.actionOwner || ""),
+    workloadGroupKey: eduopsClean_(actionability.workloadGroupKey || "").toUpperCase(),
     worklistKey: eduopsClean_(actionability.worklistKey || ""),
     worklistLabel: eduopsClean_(actionability.worklistLabel || ""),
     worklistReason: eduopsClean_(actionability.worklistReason || ""),
     nextAction: eduopsClean_(actionability.nextAction || ""),
-    actionabilityState: eduopsUpper_(actionability.state || "UNKNOWN"),
+    nextActionDate: eduopsClean_(actionability.nextActionDate || ""),
+    actionabilityState: eduopsClean_(actionability.state || "").toUpperCase(),
     selectable: actionability.selectable === true,
     selectBlockReason: eduopsClean_(actionability.selectBlockReason || ""),
     coolingOffUntil: eduopsClean_(actionability.coolingOffUntil || ""),
@@ -177,8 +178,8 @@ function eduopsFodeActionabilityRowFromCanonical_(canonical) {
     communicationProgress: eduopsClean_(actionability.communicationProgress || ""),
     communicationProgressDetail: eduopsClean_(actionability.communicationProgressDetail || ""),
     canonicalLifecycle: {
-      baseState: eduopsUpper_(lifecycle.baseState || "UNKNOWN"),
-      lifecycleStage: eduopsUpper_(lifecycle.lifecycleStage || lifecycle.baseState || "UNKNOWN"),
+      baseState: eduopsClean_(lifecycle.baseState || "").toUpperCase(),
+      lifecycleStage: eduopsClean_(lifecycle.lifecycleStage || lifecycle.baseState || "").toUpperCase(),
       overlays: Array.isArray(lifecycle.overlays) ? lifecycle.overlays.slice() : [],
       recommendedNextAction: eduopsClean_(lifecycle.recommendedNextAction || ""),
       recommendedMessageType: eduopsClean_(lifecycle.recommendedMessageType || ""),
@@ -194,20 +195,20 @@ function eduopsFodeActionabilityRowFromCanonical_(canonical) {
     sourceAuthorities: Array.isArray(row.diagnostics && row.diagnostics.sourceAuthorities) ? row.diagnostics.sourceAuthorities.slice() : [],
     authorityState: {
       lifecycleStage: eduopsClean_(row.diagnostics && row.diagnostics.legacyLifecycleStage || lifecycle.lifecycleStage || ""),
-      documentState: eduopsClean_(documents.state || "UNKNOWN"),
+      documentState: eduopsClean_(documents.state || ""),
       requiredDocumentUploadComplete: documents.requiredComplete === true,
       uploadedRequiredDocumentCount: Number(documents.uploadedRequiredCount || 0),
       requiredDocumentCount: Number(documents.requiredCount || 0),
       missingRequiredDocuments: Array.isArray(documents.missingRequiredDocuments) ? documents.missingRequiredDocuments.slice() : [],
       docsVerified: documents.verified === true,
-      portalSubmitted: eduopsClean_(lifecycle.baseState || "") !== "APPLICATION_RECEIVED",
+      portalSubmitted: null,
       paymentEvidencePresent: financeAuthority.paymentEvidencePresent === true,
       paymentVerified: financeAuthority.paymentVerified === true,
       paymentApplicable: financeAuthority.paymentApplicable === true,
-      canonicalFinanceState: eduopsClean_(financeAuthority.financeState || "UNKNOWN"),
+      canonicalFinanceState: eduopsClean_(financeAuthority.financeState || ""),
       hasValidEmail: contactability.hasValidEmail === true,
       hasPhoneFallback: contactability.hasPhoneFallback === true,
-      contactabilityState: eduopsClean_(contactability.state || "UNKNOWN")
+      contactabilityState: eduopsClean_(contactability.state || "")
     },
     canonical: row
   };
@@ -216,22 +217,31 @@ function eduopsFodeActionabilityRowFromCanonical_(canonical) {
 function eduopsFodeRowDto_(row, query, snapshotId, reliability) {
   var sourceReliability = reliability || eduopsSourceReliability_("AUTHORITATIVE", "", "FODE adapter");
   var authorityState = row.authorityState || {};
-  var safeState = sourceReliability.state === "CONFLICTING" && row.actionabilityState === "READY" ? "UNKNOWN" : row.actionabilityState;
+  var actionabilityPresentation = eduopsStatePresentation_(row.actionabilityState);
+  var reliabilityPresentation = eduopsStatePresentation_(sourceReliability.state);
+  var worklistPresentation = eduopsCodePresentation_(row.worklistKey, row.worklistLabel, row.worklistReason, "Actionability Resolver");
+  var lifecycleState = row.canonicalLifecycle && (row.canonicalLifecycle.lifecycleStage || row.canonicalLifecycle.baseState) || "";
+  var coolingPresentation = row.actionabilityState === "COOLING_OFF"
+    ? (row.coolingOffUntil ? eduopsCodePresentation_("COOLING_OFF", "Recently contacted - waiting period", "Cooling-off expires " + row.coolingOffUntil + ".", "Actionability Resolver") : eduopsAuthorityUnavailable_("cooling-off expiry", "Actionability Resolver"))
+    : eduopsCodePresentation_("NOT_COOLING_OFF", "No waiting period", "Actionability Resolver did not return an active cooling-off gate.", "Actionability Resolver");
   return {
+    schemaVersion: "EDUOPS_WORKLOAD_ROW_V2",
+    authoritySource: "Actionability Resolver",
     rowKey: "FODE:" + eduopsClean_(row.applicantId || "") + ":" + Number(row.rowNumber || 0),
     rowNumber: Number(row.rowNumber || 0),
     applicantId: eduopsClean_(row.applicantId || ""),
     displayName: eduopsClean_(row.name || ""),
     email: eduopsClean_(row.email || ""),
     phone: eduopsClean_(row.phone || ""),
-    actionabilityState: safeState,
-    actionabilityLabel: eduopsStateLabel_(safeState),
+    actionabilityState: row.actionabilityState,
+    actionabilityLabel: actionabilityPresentation.label || "",
     worklistKey: eduopsClean_(row.worklistKey || ""),
-    worklistLabel: eduopsClean_(row.worklistLabel || eduopsHumanize_(row.worklistKey || "")),
+    worklistLabel: worklistPresentation.label || "",
     primaryRoute: eduopsPrimaryRouteForRow_(row),
     actionOwner: eduopsClean_(row.actionOwner || ""),
     workOwnership: eduopsWorkOwnership_(row),
     nextAction: eduopsClean_(row.nextAction || ""),
+    nextActionDate: eduopsClean_(row.nextActionDate || ""),
     selectable: row.selectable === true && sourceReliability.state !== "CONFLICTING",
     selectBlockReason: sourceReliability.state === "CONFLICTING" ? "Source conflict prevents confident readiness." : eduopsClean_(row.selectBlockReason || ""),
     blockerCode: eduopsClean_(row.reasonCode || row.suppressor || ""),
@@ -242,10 +252,38 @@ function eduopsFodeRowDto_(row, query, snapshotId, reliability) {
     recommendedMessageType: eduopsClean_(row.recommendedMessageType || ""),
     communicationAuthoritySummary: eduopsClean_(row.communicationProgress || row.communicationProgressDetail || ""),
     canonicalLifecycle: eduopsClone_(row.canonicalLifecycle || {}),
-    canonicalFinanceState: eduopsClean_(authorityState.canonicalFinanceState || "UNKNOWN"),
-    documentState: eduopsClean_(authorityState.documentState || "UNKNOWN"),
-    contactabilityState: eduopsClean_(authorityState.contactabilityState || "UNKNOWN"),
-    portalState: authorityState.portalSubmitted === true ? "SUBMITTED" : "NOT_SUBMITTED",
+    canonicalFinanceState: eduopsClean_(authorityState.canonicalFinanceState || ""),
+    documentState: eduopsClean_(authorityState.documentState || ""),
+    contactabilityState: eduopsClean_(authorityState.contactabilityState || ""),
+    portalState: "",
+    presentation: {
+      actionability: actionabilityPresentation,
+      worklist: worklistPresentation,
+      nextAction: eduopsCodePresentation_(row.nextAction, eduopsHumanize_(row.nextAction), row.worklistReason, "Actionability Resolver"),
+      coolingOff: coolingPresentation,
+      route: eduopsCodePresentation_(eduopsPrimaryRouteForRow_(row), eduopsPrimaryRouteForRow_(row), "", "Actionability Resolver"),
+      owner: eduopsCodePresentation_(row.actionOwner, eduopsHumanize_(row.actionOwner), "", "Actionability Resolver"),
+      urgency: eduopsCodePresentation_(row.urgencyLevel, eduopsHumanize_(row.urgencyLevel), row.urgencyReason, "Actionability Resolver"),
+      workScope: eduopsCodePresentation_(eduopsWorkScope_(row), eduopsHumanize_(eduopsWorkScope_(row)), "", "EduOps workload query service"),
+      lifecycle: eduopsCodePresentation_(lifecycleState, row.canonicalLifecycle && row.canonicalLifecycle.label || eduopsHumanize_(lifecycleState), row.canonicalLifecycle && row.canonicalLifecycle.reason || "", "Canonical Lifecycle Resolver"),
+      finance: eduopsCodePresentation_(authorityState.canonicalFinanceState, eduopsHumanize_(authorityState.canonicalFinanceState), row.explanation, "Finance authority"),
+      documents: eduopsCodePresentation_(authorityState.documentState, eduopsHumanize_(authorityState.documentState), "", "Document authority"),
+      contactability: eduopsCodePresentation_(authorityState.contactabilityState, eduopsHumanize_(authorityState.contactabilityState), "", "Contactability authority"),
+      reliability: reliabilityPresentation
+    },
+    authorityDecision: {
+      schemaVersion: "EDUOPS_ROW_AUTHORITY_DECISION_V1",
+      authoritySource: "Actionability Resolver",
+      evaluatedApplicantId: eduopsClean_(row.applicantId || ""),
+      snapshotId: snapshotId,
+      snapshotAsOf: sourceReliability.asOf || "",
+      state: row.actionabilityState,
+      reasonCode: eduopsClean_(row.reasonCode || ""),
+      reason: eduopsClean_(row.selectBlockReason || row.communicationProgressDetail || row.explanation || ""),
+      actionAvailable: row.selectable === true && sourceReliability.state !== "CONFLICTING",
+      stale: sourceReliability.state === "STALE",
+      expiryAt: eduopsClean_(row.coolingOffUntil || "")
+    },
     sourceReliability: sourceReliability,
     authorityProjectionVersion: EDUOPS_CONTRACT_VERSION,
     returnContext: eduopsReturnContext_(query, row),
@@ -285,6 +323,8 @@ function eduopsFodeSearchResultDto_(row, query, snapshotId) {
     nextAction: dto.nextAction,
     blocker: dto.blockerReason,
     primaryRoute: dto.primaryRoute,
+    presentation: dto.presentation,
+    authorityDecision: dto.authorityDecision,
     reliability: dto.sourceReliability,
     returnContext: dto.returnContext
   };
@@ -306,6 +346,8 @@ function eduopsFodeApplicantRead_(applicantId, query, snapshotId) {
   }
   return {
     ok: true,
+    schemaVersion: "EDUOPS_APPLICANT_WORKBENCH_V2",
+    authoritySource: "Canonical applicant authorities",
     product: "FODE",
     snapshotId: snapshotId,
     rowKey: projection.rowKey,
@@ -343,33 +385,43 @@ function eduopsBoundApplicantDetail_(detail) {
 
 function eduopsDocumentsSummary_(canonical) {
   var docs = canonical && canonical.documents || {};
+  var state = eduopsClean_(docs.state || "");
   return {
-    state: eduopsClean_(docs.state || "UNKNOWN"),
+    schemaVersion: "EDUOPS_DOCUMENT_AUTHORITY_V1",
+    authoritySource: "Document authority",
+    available: !!state,
+    reasonCode: state ? "DOCUMENT_STATE_RETURNED" : "BACKEND_CONTRACT_MISSING",
+    reason: state ? eduopsClean_(docs.reason || "Canonical document state returned.") : "Authoritative document state was not returned. Refresh or retry before continuing.",
+    state: state,
+    presentation: eduopsCodePresentation_(state, eduopsHumanize_(state), docs.reason, "Document authority"),
     verified: docs.verified === true,
     requiredComplete: docs.requiredComplete === true,
     uploadedRequiredCount: Number(docs.uploadedRequiredCount || 0),
     requiredCount: Number(docs.requiredCount || 0),
-    missingRequiredDocuments: Array.isArray(docs.missingRequiredDocuments) ? docs.missingRequiredDocuments.slice() : [],
-    actions: [eduopsReadOnlyAction_("Save document statuses", "CAN_SAVE_DOCUMENT_STATUSES")]
+    missingRequiredDocuments: Array.isArray(docs.missingRequiredDocuments) ? docs.missingRequiredDocuments.slice() : []
   };
 }
 
 function eduopsFinanceSummary_(canonical) {
   var finance = canonical && canonical.finance && canonical.finance.financeAuthority || {};
+  var state = eduopsClean_(finance.financeState || "");
   return {
-    state: eduopsClean_(finance.financeState || "UNKNOWN"),
+    schemaVersion: "EDUOPS_FINANCE_AUTHORITY_V1",
+    authoritySource: "Finance authority",
+    available: !!state,
+    reasonCode: state ? "FINANCE_STATE_RETURNED" : "BACKEND_CONTRACT_MISSING",
+    reason: state ? eduopsClean_(finance.financeReason || "Canonical finance state returned.") : "Authoritative finance decision was not returned. Refresh or retry before continuing.",
+    state: state,
+    presentation: eduopsCodePresentation_(state, eduopsHumanize_(state), finance.financeReason, "Finance authority"),
     paymentApplicable: finance.paymentApplicable === true,
     paymentEvidencePresent: finance.paymentEvidencePresent === true,
     paymentVerified: finance.paymentVerified === true,
     owner: eduopsClean_(canonical && canonical.owner || ""),
     blocker: eduopsClean_(finance.financeReason || ""),
-    nextAction: finance.paymentVerified === true ? "No payment action" : "Review payment context",
-    invoiceReadiness: eduopsClean_(finance.invoiceReadiness || finance.invoiceStatus || "Not returned"),
-    booksMatch: eduopsClean_(finance.booksMatch || finance.booksStatus || "Informational only"),
-    actions: [
-      eduopsReadOnlyAction_("Verify payment", "CAN_VERIFY_PAYMENT"),
-      eduopsReadOnlyAction_("Create Books invoice", "CAN_WRITE_ZOHO_BOOKS")
-    ]
+    nextAction: eduopsClean_(canonical && canonical.actionability && canonical.actionability.nextAction || ""),
+    nextActionDate: eduopsClean_(canonical && canonical.actionability && canonical.actionability.nextActionDate || canonical && canonical.actionability && canonical.actionability.coolingOffUntil || ""),
+    invoiceReadiness: eduopsClean_(finance.invoiceReadiness || finance.invoiceStatus || ""),
+    booksMatch: eduopsClean_(finance.booksMatch || finance.booksStatus || "")
   };
 }
 
@@ -377,31 +429,32 @@ function eduopsCommunicationsSummary_(canonical) {
   var comm = canonical && canonical.communication || {};
   var actionability = canonical && canonical.actionability || {};
   return {
+    schemaVersion: "EDUOPS_COMMUNICATION_SUMMARY_V1",
+    authoritySource: "Communication Authority",
     recommendedMessageType: eduopsClean_(actionability.recommendedMessageType || comm.recommendedMessageType || ""),
     eligibility: eduopsClean_(comm.authorityResult || actionability.communicationProgress || ""),
     coolingOffUntil: eduopsClean_(actionability.coolingOffUntil || ""),
     latestCommunication: eduopsClean_(comm.latestCommunicationAt || ""),
     deliveryState: eduopsClean_(comm.deliveryState || ""),
-    suppressionState: eduopsClean_(comm.suppressionState || comm.bounceState || ""),
-    actions: [
-      eduopsReadOnlyAction_("Preview communication", "CAN_PREVIEW_APPLICANT_COMMUNICATION"),
-      eduopsReadOnlyAction_("Send communication", "CAN_SEND_INDIVIDUAL_EMAIL")
-    ]
+    suppressionState: eduopsClean_(comm.suppressionState || comm.bounceState || "")
   };
 }
 
 function eduopsPortalSummary_(canonical) {
   var portal = canonical && canonical.portal || {};
+  var hasContract = !!eduopsClean_(portal.accessState || portal.state || "");
   return {
-    submitted: canonical && canonical.actionability && canonical.actionability.authorityState && canonical.actionability.authorityState.portalSubmitted === true,
+    schemaVersion: "EDUOPS_PORTAL_AUTHORITY_V1",
+    authoritySource: hasContract ? "Portal Access Domain" : "",
+    available: hasContract,
+    reasonCode: hasContract ? "PORTAL_STATE_RETURNED" : "BACKEND_CONTRACT_MISSING",
+    reason: hasContract ? eduopsClean_(portal.reason || "Portal Access Domain state returned.") : "Authoritative portal-access decision was not returned. Refresh or retry before continuing.",
+    submitted: portal.submitted === true,
     accessState: eduopsClean_(portal.accessState || ""),
     locked: portal.locked === true,
     tokenState: eduopsClean_(portal.tokenState || ""),
     expiresAt: eduopsClean_(portal.expiresAt || ""),
-    actions: [
-      eduopsReadOnlyAction_("Reset portal link", "CAN_MANAGE_PORTAL_ACCESS"),
-      eduopsReadOnlyAction_("Set portal access", "CAN_MANAGE_PORTAL_ACCESS")
-    ]
+    availableActions: []
   };
 }
 
@@ -409,19 +462,26 @@ function eduopsContactabilitySummary_(canonical) {
   var c = canonical && canonical.contactability || {};
   var applicant = canonical && canonical.applicant || {};
   return {
-    state: eduopsClean_(c.state || "UNKNOWN"),
+    schemaVersion: "EDUOPS_CONTACTABILITY_AUTHORITY_V1",
+    authoritySource: "Contactability authority",
+    available: !!eduopsClean_(c.state || ""),
+    reasonCode: c.state ? "CONTACTABILITY_STATE_RETURNED" : "BACKEND_CONTRACT_MISSING",
+    reason: c.state ? eduopsClean_(c.reason || "Canonical contactability state returned.") : "Authoritative contactability decision was not returned. Refresh or retry before continuing.",
+    state: eduopsClean_(c.state || ""),
+    presentation: eduopsCodePresentation_(c.state, eduopsHumanize_(c.state), c.reason, "Contactability authority"),
     effectiveEmail: eduopsClean_(applicant.effectiveEmail || applicant.email || ""),
-    emailSource: eduopsClean_(c.emailSource || applicant.emailSource || "Canonical applicant projection"),
+    emailSource: eduopsClean_(c.emailSource || applicant.emailSource || ""),
     phone: eduopsClean_(applicant.phone || ""),
     hasValidEmail: c.hasValidEmail === true,
     hasPhoneFallback: c.hasPhoneFallback === true,
-    suppressionState: eduopsClean_(c.suppressionState || c.bounceState || "None returned"),
-    actions: [eduopsReadOnlyAction_("Correct contact details", "CAN_OPEN_REVIEW_WORKSPACE")]
+    suppressionState: eduopsClean_(c.suppressionState || c.bounceState || "")
   };
 }
 
 function eduopsAuditSummary_(canonical) {
   return {
+    schemaVersion: "EDUOPS_AUDIT_SUMMARY_V1",
+    authoritySource: "Audit/history services",
     provenance: canonical && canonical.diagnostics || {},
     readOnly: true,
     note: "Audit facts and EduOps command receipts are projected separately."

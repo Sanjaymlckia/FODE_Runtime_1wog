@@ -17,7 +17,8 @@ function fixtureHtml() {
     window.__makeWorkload = function (payload) {
       var allCounts = ${JSON.stringify(counts)};
       var total = payload.workScope === "ALL_AUTHORISED" ? Number(allCounts[payload.actionabilityState] || 0) : 0;
-      var allRows = Array.from({ length: total }, function (_unused, index) { var id = "FODE-TEST-" + payload.actionabilityState + "-" + index; return { product: "FODE", rowKey: id, applicantId: id, displayName: "Fixture Applicant " + index, email: "fixture@example.test", actionabilityState: payload.actionabilityState, urgencyLevel: index === 0 ? "CRITICAL" : "NORMAL", worklistKey: "FIXTURE", worklistLabel: "Fixture", actionOwner: "OFFICER", workOwnership: { scope: "MY" }, nextAction: "Review fixture", canonicalFinanceState: "PAYMENT_PENDING", documentState: "REVIEW_REQUIRED", portalState: "SUBMITTED", contactabilityState: "EMAIL_AVAILABLE", selectable: true, sourceReliability: { state: "AUTHORITATIVE" } }; });
+      function p(code, label, tone) { return { schemaVersion: "EDUOPS_CODE_PRESENTATION_V1", authoritySource: "Fixture authority", code: code, label: label, reason: label, tone: tone || "ready", available: true, stale: false }; }
+      var allRows = Array.from({ length: total }, function (_unused, index) { var id = "FODE-TEST-" + payload.actionabilityState + "-" + index; var row = { product: "FODE", rowKey: id, applicantId: id, displayName: "Fixture Applicant " + index, email: "fixture@example.test", actionabilityState: payload.actionabilityState, urgencyLevel: index === 0 ? "CRITICAL" : "NORMAL", worklistKey: "FIXTURE", worklistLabel: "Fixture", actionOwner: "OFFICER", workOwnership: { scope: "MY" }, nextAction: "Review fixture", nextActionDate: "2026-07-20T00:00:00.000Z", canonicalFinanceState: "PAYMENT_PENDING", documentState: "REVIEW_REQUIRED", portalState: "SUBMITTED", contactabilityState: "EMAIL_AVAILABLE", selectable: true, sourceReliability: { state: "AUTHORITATIVE" } }; row.presentation = { actionability: p(row.actionabilityState, row.actionabilityState.replace(/_/g, " ")), worklist: p("FIXTURE", "Fixture"), nextAction: p("REVIEW_FIXTURE", "Review fixture"), coolingOff: p("NOT_COOLING_OFF", "No waiting period"), lifecycle: p("REVIEW_REQUIRED", "Review required"), finance: p("PAYMENT_PENDING", "Payment pending"), documents: p("REVIEW_REQUIRED", "Review required"), owner: p("OFFICER", "Officer"), workScope: p("MY", "My work"), route: p("REVIEW", "Review"), urgency: p(row.urgencyLevel, row.urgencyLevel), contactability: p("EMAIL_AVAILABLE", "Email available"), reliability: p("AUTHORITATIVE", "Authoritative") }; row.authorityDecision = { schemaVersion: "EDUOPS_ROW_AUTHORITY_DECISION_V1", authoritySource: "Actionability Resolver", evaluatedApplicantId: id, snapshotId: "FODE-TEST-SNAPSHOT", state: row.actionabilityState, reasonCode: "AVAILABLE", reason: "Available", actionAvailable: true, stale: false }; return row; });
       var search = String(payload.filters && payload.filters.search || "").trim().toLowerCase();
       var matchedRows = search ? allRows.filter(function (row) { return row.applicantId.toLowerCase().indexOf(search) >= 0 || row.displayName.toLowerCase().indexOf(search) >= 0; }) : allRows;
       var matched = matchedRows.length;
@@ -25,9 +26,11 @@ function fixtureHtml() {
       var page = Math.min(payload.page, totalPages);
       var offset = (page - 1) * payload.pageSize;
       var rows = matchedRows.slice(offset, offset + payload.pageSize);
-      return { ok: true, product: "FODE", snapshotId: "FODE-TEST-SNAPSHOT", snapshotAsOf: "2026-07-15T00:00:00.000Z", reliabilityState: "AUTHORITATIVE", reliabilityReasons: ["Fixture authority"], actionabilityCounts: allCounts, worklistKeyCounts: { FIXTURE: matched }, metricCounts: { eligibleNow: matched }, reconciliation: { canonicalPopulation: 200, totalMatched: matched, hiddenFromCurrentView: 200 - matched, eligibleOutsideCurrentWindow: Math.max(0, matched - rows.length) }, page: page, pageSize: payload.pageSize, totalMatched: matched, totalPages: totalPages, rows: rows, timings: { serverRpcMs: 7, canonicalSnapshotResolutionMs: 2, workloadCompositionMs: 1, sortingPagingMs: 1, responseBytes: 2048 } };
+      var buckets = Object.keys(allCounts).map(function (code) { return { code: code, label: code === "COOLING_OFF" ? "Recently contacted - waiting period" : code === "REVIEW_REQUIRED" ? "Needs review" : code.replace(/_/g, " "), reason: "Fixture authority", tone: code === "BLOCKED" ? "blocked" : "ready", available: true, count: allCounts[code] }; });
+      var presentation = { schemaVersion: "EDUOPS_WORKLOAD_PRESENTATION_V1", authoritySource: "Fixture authority", actionabilityBuckets: buckets, allActionability: { label: "All authoritative states", count: 200 }, worklists: [{ code: "", label: "All work types", count: matched }, { code: "FIXTURE", label: "Fixture", count: matched }], workScopes: [p("ALL_AUTHORISED", "All authorised work"), p("MY", "My work"), p("TEAM", "Team work"), p("UNASSIGNED", "Unassigned"), p("ESCALATED", "Escalated")], reliability: p("AUTHORITATIVE", "Authoritative"), metrics: [{ label: "Eligible now", value: matched }], filterOptions: { owner: [], urgency: [], primaryRoute: [], documentState: [], financeState: [], contactabilityState: [], communicationState: [], cooling: [], blockKind: [] }, selection: { totalMatched: matched, visibleSelectable: rows.length, visibleBlocked: 0 }, modules: {} };
+      return { ok: true, schemaVersion: "EDUOPS_OPERATIONAL_WORKLOAD_V2", authoritySource: "Fixture authority", product: "FODE", runtime: { operationalClassification: "Fixture operations", runtimeIdentity: "rTEST / 0" }, snapshotId: "FODE-TEST-SNAPSHOT", snapshotAsOf: "2026-07-15T00:00:00.000Z", reliabilityState: "AUTHORITATIVE", reliabilityReasons: ["Fixture authority"], actionabilityCounts: allCounts, worklistKeyCounts: { FIXTURE: matched }, metricCounts: { eligibleNow: matched }, reconciliation: { canonicalPopulation: 200, totalMatched: matched, hiddenFromCurrentView: 200 - matched, eligibleOutsideCurrentWindow: Math.max(0, matched - rows.length), totalAuthoritySelectable: matched, totalAuthorityBlocked: 0 }, presentation: presentation, page: page, pageSize: payload.pageSize, totalMatched: matched, totalPages: totalPages, rows: rows, timings: { serverRpcMs: 7, canonicalSnapshotResolutionMs: 2, workloadCompositionMs: 1, sortingPagingMs: 1, responseBytes: 2048 } };
     };
-    window.EDUOPS_TRANSPORT = { call: function (name, payload) { return new Promise(function (resolve) { setTimeout(function () { if (name === "eduops_getAccessProjection") return resolve({ ok: true, runtime: { version: "rTEST", deployVersion: 0 }, user: { email: "operator@example.test", role: "ADMIN", capabilities: {} } }); if (name === "eduops_getProfile") return resolve({ ok: true, featureFlags: {} }); if (name === "eduops_queryOperationalWorkload") { window.__workloadCalls.push(JSON.parse(JSON.stringify(payload || {}))); return resolve(window.__makeWorkload(payload || {})); } resolve({ ok: true, matches: [], receipts: [] }); }, name === "eduops_queryOperationalWorkload" ? window.__rpcDelayMs : 0); }); } };
+    window.EDUOPS_TRANSPORT = { call: function (name, payload) { return new Promise(function (resolve) { setTimeout(function () { if (name === "eduops_getAccessProjection") return resolve({ ok: true, schemaVersion: "EDUOPS_ACCESS_PROJECTION_V1", authoritySource: "Admin access and capability authority", runtime: { operationalClassification: "Fixture operations", runtimeIdentity: "rTEST / 0" }, user: { email: "operator@example.test", role: "ADMIN", capabilities: {} } }); if (name === "eduops_getProfile") return resolve({ ok: true, schemaVersion: "EDUOPS_PROFILE_V2", authoritySource: "EduOps backend profile service", defaultQuery: { product: "FODE", actionabilityState: "READY", worklistKey: "", workScope: "ALL_AUTHORISED", filters: { search: "" }, sort: { key: "urgency", direction: "asc" }, page: 1, pageSize: 25 }, featureFlags: {}, operationAvailability: {} }); if (name === "eduops_queryOperationalWorkload") { window.__workloadCalls.push(JSON.parse(JSON.stringify(payload || {}))); return resolve(window.__makeWorkload(payload || {})); } resolve({ ok: true, matches: [], receipts: [] }); }, name === "eduops_queryOperationalWorkload" ? window.__rpcDelayMs : 0); }); } };
   </script>`;
   clientFiles.forEach(function (file, index) { var include = '<?!= HtmlService.createHtmlOutputFromFile("' + file.replace(/\.html$/, "") + '").getContent(); ?>'; html = html.replace(include, (index === 0 ? mock : "") + fs.readFileSync(file, "utf8")); });
   return html.replace(/<\?= BUILD_VERSION \?>/g, "rTEST").replace(/<\?= BUILD_RENDERED_AT \?>/g, "2026-07-16T00:00:00.000Z").replace(/<\?= USER_EMAIL \?>/g, "operator@example.test").replace(/<\?= ADMIN_ROLE \?>/g, "ADMIN");
@@ -58,8 +61,7 @@ async function settled(page) {
 
     await page.evaluate(() => { window.__rpcDelayMs = 50; });
     const beforeDedupe = await page.evaluate(() => window.__workloadCalls.length);
-    await page.locator('#eduopsActionNav button[data-state="READY"]').click();
-    await page.locator('#eduopsActionNav button[data-state="READY"]').click();
+    await page.evaluate(() => { const control = document.querySelector('#eduopsActionNav button[data-state="READY"]'); control.click(); control.click(); });
     await page.waitForTimeout(65);
     assert.equal(await page.evaluate(() => window.__workloadCalls.length), beforeDedupe + 1, "Duplicate active request must call the server once");
     assert.ok((await page.evaluate(() => window.__EDUOPS_REQUEST_DIAGNOSTICS__)).some((item) => item.outcome === "DEDUPED_ACTIVE"));
@@ -83,26 +85,27 @@ async function settled(page) {
     await settled(page);
 
     await page.locator("#eduopsWorklistRows [data-select-applicant]").first().check();
-    assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /1 selected on this page/);
+    assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /Operator selection intent 1/);
     await page.locator("#eduopsSearch").fill("no-match");
-    await page.waitForFunction(() => !/1 selected on this page/.test(document.querySelector("#eduopsSelectionSummary")?.textContent || ""), null, { timeout: 3000 });
-    assert.doesNotMatch(await page.locator("#eduopsSelectionSummary").innerText(), /1 selected on this page/);
+    await page.waitForFunction(() => !/Operator selection intent 1/.test(document.querySelector("#eduopsSelectionSummary")?.textContent || ""), null, { timeout: 3000 });
+    assert.doesNotMatch(await page.locator("#eduopsSelectionSummary").innerText(), /Operator selection intent 1/);
     assert.equal(await page.locator("#eduopsOpenBatch").isDisabled(), true);
     await settled(page);
     assert.match(await page.locator("#eduopsVisibleRange").innerText(), /Showing 0-0 of 0/);
-    assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /0 selected on this page/);
+    assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /Operator selection intent 0/);
 
     await page.locator("#eduopsSearch").fill("");
     await page.waitForFunction(() => document.querySelectorAll("#eduopsWorklistRows [data-select-applicant]").length > 0 && !/Loading|Queued/.test(document.querySelector("#eduopsVisibleRange")?.textContent || ""), null, { timeout: 3000 });
     await page.locator("#eduopsPageSize").selectOption("10");
     await settled(page);
     await page.locator("#eduopsWorklistRows [data-select-applicant]").first().check();
+    await page.evaluate(() => { window.__rpcDelayMs = 35; });
     await page.locator("#eduopsNextPage").click();
     await page.waitForFunction(() => /Loading page 2|Queued page 2/.test(document.querySelector("#eduopsVisibleRange")?.textContent || ""), null, { timeout: 3000 });
-    assert.doesNotMatch(await page.locator("#eduopsSelectionSummary").innerText(), /1 selected on this page/);
+    assert.doesNotMatch(await page.locator("#eduopsSelectionSummary").innerText(), /Operator selection intent 1/);
     assert.equal(await page.locator("#eduopsOpenBatch").isDisabled(), true);
     await page.waitForFunction(() => /Showing 11-20/.test(document.querySelector("#eduopsVisibleRange")?.textContent || ""));
-    assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /0 selected on this page/);
+    assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /Operator selection intent 1/, "pagination preserves explicit operator intent without changing backend authority");
     await page.close();
 
     for (const viewport of [{ width: 1920, height: 1080 }, { width: 1440, height: 900 }, { width: 1366, height: 768 }]) {

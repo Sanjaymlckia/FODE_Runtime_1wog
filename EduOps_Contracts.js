@@ -26,6 +26,7 @@ function eduopsReadOnlyRpcAllowlist_() {
     "eduops_getReconciliation",
     "eduops_getParityDiagnostics",
     "eduops_getOperationHistory",
+    "eduops_getBatchCommunicationCatalogue",
     "eduops_previewCommand"
   ];
 }
@@ -171,9 +172,70 @@ function eduopsStateLabel_(state) {
   return labels[key] || eduopsHumanize_(key);
 }
 
+function eduopsAuthorityUnavailable_(domain, authoritySource) {
+  var name = eduopsClean_(domain || "authority");
+  return {
+    schemaVersion: "EDUOPS_AUTHORITY_DECISION_V1",
+    authoritySource: eduopsClean_(authoritySource || ""),
+    available: false,
+    stale: false,
+    reasonCode: "BACKEND_CONTRACT_MISSING",
+    reason: "Authoritative " + name + " decision was not returned. Refresh or retry before continuing."
+  };
+}
+
+function eduopsStatePresentation_(state) {
+  var raw = eduopsClean_(state || "");
+  if (!raw) return eduopsAuthorityUnavailable_("state presentation", "EduOps backend presentation service");
+  var key = eduopsUpper_(raw, "UNKNOWN");
+  var catalogue = {
+    READY: ["Ready for action", "Authorised work can proceed now.", "ready"],
+    COOLING_OFF: ["Recently contacted - waiting period", "A known action is time-gated.", "warn"],
+    AWAITING_APPLICANT: ["Waiting for applicant", "Applicant input or evidence is required.", "warn"],
+    AWAITING_PAYMENT: ["Waiting for payment", "Payment or evidence is outstanding.", "warn"],
+    REVIEW_REQUIRED: ["Needs review", "An internal decision is required.", "warn"],
+    BLOCKED: ["Blocked - intervention required", "A known blocker prevents progress.", "blocked"],
+    UNKNOWN: ["Classification required", "Authority cannot classify this record safely.", "blocked"],
+    COMPLETE: ["Completed records", "No current operator action is required.", "ready"],
+    AUTHORITATIVE: ["Authoritative", "The authority projection is current.", "ready"],
+    DERIVED: ["Derived projection", "This display is derived by an authoritative backend service.", "muted"],
+    STALE: ["Source changed", "Refresh or revalidate before acting.", "warn"],
+    CONFLICTING: ["Authority conflict", "Conflicting facts prevent safe action.", "blocked"],
+    UNAVAILABLE: ["Source unavailable", "The authority projection could not be returned.", "blocked"]
+  };
+  var item = catalogue[key];
+  if (!item) return eduopsAuthorityUnavailable_("state presentation", "EduOps backend presentation service");
+  return {
+    schemaVersion: "EDUOPS_STATE_PRESENTATION_V1",
+    authoritySource: "EduOps backend presentation service",
+    code: key,
+    label: item[0],
+    reason: item[1],
+    tone: item[2],
+    available: true,
+    stale: false
+  };
+}
+
+function eduopsCodePresentation_(code, label, reason, authoritySource) {
+  var value = eduopsClean_(code || "");
+  var publicLabel = eduopsClean_(label || "");
+  if (!value || !publicLabel) return eduopsAuthorityUnavailable_("state presentation", authoritySource);
+  return {
+    schemaVersion: "EDUOPS_CODE_PRESENTATION_V1",
+    authoritySource: eduopsClean_(authoritySource || "Authoritative backend service"),
+    code: value,
+    label: publicLabel,
+    reason: eduopsClean_(reason || ""),
+    available: true,
+    stale: false
+  };
+}
+
 function eduopsWorkScope_(row) {
-  var owner = eduopsUpper_(row && row.actionOwner || "NONE");
-  var urgency = eduopsUpper_(row && row.urgencyLevel || "");
+  var owner = eduopsClean_(row && row.actionOwner || "").toUpperCase();
+  var urgency = eduopsClean_(row && row.urgencyLevel || "").toUpperCase();
+  if (!owner) return "";
   if (urgency === "ESCALATED" || urgency === "DORMANT" || urgency === "UNCONTACTABLE") return "ESCALATED";
   if (owner === "NONE") return "UNASSIGNED";
   if (owner === "ADMIN" || owner === "OFFICER" || owner === "FINANCE") return "MY";
@@ -186,11 +248,11 @@ function eduopsWorkOwnership_(row) {
   return {
     scope: scope,
     assignedOperator: scope === "MY" ? "Current authorised operator" : "",
-    assignedTeam: eduopsClean_(row && row.actionOwner || "Unassigned"),
+    assignedTeam: eduopsClean_(row && row.actionOwner || ""),
     assignmentSource: "FODE Actionability Resolver projection",
     dueAt: eduopsClean_(row && row.lastRelevantDate || ""),
     escalationState: scope === "ESCALATED" ? "Escalated projection" : "Not escalated",
-    unassignedReason: scope === "UNASSIGNED" ? "No current operator owner in canonical projection" : ""
+    unassignedReason: scope === "UNASSIGNED" ? "No current operator owner in canonical projection" : !scope ? "Authoritative action owner was not returned." : ""
   };
 }
 
@@ -203,15 +265,5 @@ function eduopsReturnContext_(query, row) {
     page: eduopsNormalizePage_(query && query.page),
     pageSize: eduopsNormalizePageSize_(query && query.pageSize),
     applicantId: eduopsClean_(row && row.applicantId || "")
-  };
-}
-
-function eduopsReadOnlyAction_(label, capability) {
-  return {
-    label: label,
-    enabled: false,
-    readOnly: true,
-    requiredCapability: capability || "",
-    reason: "Available in EduOps Pass 2. Current Admin remains the operational path."
   };
 }

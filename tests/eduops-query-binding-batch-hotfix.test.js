@@ -70,7 +70,8 @@ const context = {
   },
   CacheService: {
     getUserCache: () => ({ put() {}, get() { return null; } })
-  }
+  },
+  eduopsPrimaryRouteForRow_: (row) => row.primaryRoute || ""
 };
 vm.createContext(context);
 vm.runInContext([
@@ -115,7 +116,8 @@ Object.assign(context, {
     label: "Documents follow-up",
     selectedOptionLabel: "Documents follow-up",
     selectedOptionOrder: 1,
-    purpose: "Request missing documents"
+    purpose: "Request missing documents",
+    batchSafe: true
   }],
   isCommunicationTypeBatchSafe_: (messageType) => messageType === "documents_follow_up",
   selectedApplicantBatchLimit_: () => 30,
@@ -131,8 +133,11 @@ Object.assign(context, {
       eligible: payload.applicantIds.length,
       blocked: 0,
       count: payload.applicantIds.length,
-      previewRequestId: "AUTH-PREVIEW-1",
-      candidateHash: "AUTH-HASH-1"
+      requestId: "AUTH-PREVIEW-1",
+      candidateHash: "AUTH-HASH-1",
+      subject: "Canonical documents subject",
+      body: "Canonical documents body",
+      recipients: payload.applicantIds.map((applicantId) => ({ applicantId, name: applicantId, email: `${applicantId}@example.test`, included: true, status: "Included", reason: "Communication Authority permits this recipient." }))
     };
   }
 });
@@ -234,6 +239,7 @@ function batchElement(id) {
 const browserApp = {
   state: {
     product: "FODE",
+    profile: { batchPolicy: { allowedExecutionLimits: [30], maximumExecutionLimit: 30 } },
     snapshotId: workloadResponse.snapshotId,
     workload: workloadResponse,
     selected: {},
@@ -248,7 +254,13 @@ const browserApp = {
   },
   clone: jsonBoundary,
   esc: (value) => String(value == null ? "" : value),
+  formatCode: (value) => String(value == null ? "" : value).replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase()),
   humanize: (value) => String(value == null ? "" : value).replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase()),
+  authorityUnavailable: (domain) => `Authoritative ${domain} decision was not returned. Refresh or retry before continuing.`,
+  authorityLabel: (presentation, domain) => presentation && presentation.label ? presentation.label : `Authoritative ${domain} decision was not returned. Refresh or retry before continuing.`,
+  operationAvailable: (operation) => operation === "BATCH_COMMUNICATION",
+  operationUnavailableReason: () => "Authoritative operation availability was not returned. Refresh or retry.",
+  setInteractionState() {},
   snapshotReturnContext: () => ({}),
   pushRoute() {}
 };
@@ -259,15 +271,15 @@ const browserContext = {
 vm.createContext(browserContext);
 vm.runInContext(batchClientSource.replace(/^<script>\s*/, "").replace(/\s*<\/script>\s*$/, ""), browserContext, { filename: "EduOps_ClientBatch.html" });
 browserApp.openBatch({});
-assert.equal(batchElements.eduopsBatchOperationStatus.textContent, "Operation status: Awaiting revalidation", "query-wide cohort is not mislabeled as blocked before revalidation");
-assert.equal(batchElements.eduopsBatchOperationStatus.attributes["data-state"], "READY", "query-wide cohort status is ready to revalidate");
-assert.equal(batchElements.eduopsBatchExecutionStatus.textContent, "No execution performed", "batch header does not claim confirmed execution before execution");
+assert.equal(batchElements.eduopsBatchOperationStatus.textContent, "Operation: Operator intent captured - not yet revalidated", "query-wide cohort is identified as unvalidated operator intent");
+assert.equal(batchElements.eduopsBatchOperationStatus.attributes["data-state"], "PENDING", "query-wide cohort remains pending until server revalidation");
+assert.equal(batchElements.eduopsBatchExecutionStatus.textContent, "Execution: No execution performed", "batch header does not claim confirmed execution before execution");
 assert.equal(browserApp.state.batch.masterCohortSize, 252, "client initial batch DTO retains the query-wide master cohort");
 assert.equal(browserApp.state.batch.binding.selectedApplicantIds.length, 0, "opaque query-wide selection correctly carries no explicit applicant IDs");
 assert.match(
   batchClientSource,
-  /if \(batch\.masterCohortSize > 0\) return \{ label: "Awaiting revalidation", state: "READY" \}/,
-  "query-wide master cohorts are shown as awaiting revalidation even though their explicit applicant ID list is empty"
+  /return "Operator intent captured - not yet revalidated"/,
+  "query-wide master cohorts are not presented as authorised before server revalidation"
 );
 assert.doesNotMatch(
   batchClientSource,
@@ -281,7 +293,7 @@ assert.doesNotMatch(
 );
 assert.match(
   batchClientSource,
-  /if \(batch\.step === "confirm"\) return "Execution confirmation pending";[\s\S]*return "No execution performed";/,
+  /batch\.receipt \? "Execution completed" : "Execution: No execution performed"/,
   "execution status remains truthful before an execution receipt exists"
 );
 assert.match(eduopsHtmlSource, /id="eduopsBatchExecutionStatus"[\s\S]*No execution performed/, "batch shell starts with a truthful non-executed status");

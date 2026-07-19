@@ -39,11 +39,18 @@ function eduopsBuildReceipt_(preview, authorityResult) {
     receiptId: eduopsReceiptId_(),
     previewId: preview.previewId,
     operation: preview.operation,
+    eventType: /COMMUNICATION$/.test(preview.operation) ? "COMMUNICATION" : "OPERATION",
+    publicLabel: eduopsClean_(preview.operationLabel || ""),
     product: preview.product,
     snapshotId: preview.snapshotId,
     queryFingerprint: preview.queryFingerprint || "",
     applicantId: preview.applicantId || "",
     selectedApplicantIds: preview.selectedApplicantIds || [],
+    communication: preview.selectedTemplate ? {
+      templateId: eduopsClean_(preview.selectedTemplate.templateId || ""),
+      templateLabel: eduopsClean_(preview.selectedTemplate.label || ""),
+      subject: eduopsClean_(preview.subject || "")
+    } : null,
     actor: preview.actor || "",
     at: new Date().toISOString(),
     outcome: unresolvedCount ? "PARTIAL" : blockedCount && completeCount ? "PARTIAL" : ok && !blockedCount ? "COMPLETE" : "BLOCKED",
@@ -82,5 +89,5 @@ function eduops_getOperationHistory(payload) {
   var key = "EDUOPS_HISTORY_" + applicantId.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 80);
   var receipts = [];
   try { receipts = JSON.parse(CacheService.getUserCache().get(key) || "[]"); } catch (_err) {}
-  return { ok: true, readOnly: true, applicantId: applicantId, receipts: receipts };
+  return { ok: true, readOnly: true, schemaVersion: "EDUOPS_OPERATION_HISTORY_V1", authoritySource: "Audit/history services", applicantId: applicantId, receipts: receipts, communicationReceipts: receipts.filter(function (receipt) { return receipt.eventType === "COMMUNICATION"; }) };
 }

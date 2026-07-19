@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "EDUOPS_CLIENT_AUTHORITY_POLICY_V1",
+  "authorityHierarchy": [
+    "APPROVED_BUSINESS_RULES",
+    "AUTHORITATIVE_BACKEND_SERVICES",
+    "AUTHORITATIVE_DTOS",
+    "PRESENTATION_LAYER",
+    "OPERATOR_INTENT",
+    "BACKEND_REVALIDATION",
+    "AUTHORISED_RESULT"
+  ],
+  "clientFiles": [
+    "EduOps_Client.html",
+    "EduOps_ClientCore.html",
+    "EduOps_ClientComponents.html",
+    "EduOps_ClientBatch.html",
+    "EduOps_ClientWorkbench.html"
+  ],
+  "allowedClientBehaviours": [
+    "RENDER_BACKEND_TRUTH",
+    "FORMAT_TECHNICAL_VALUES",
+    "SORT",
+    "PAGINATE",
+    "SEARCH",
+    "NAVIGATE",
+    "MANAGE_MODAL_STATE",
+    "CAPTURE_OPERATOR_INTENT",
+    "DISPLAY_FAIL_CLOSED_STATE",
+    "TRANSPORT_SERVER_BINDINGS"
+  ],
+  "forbiddenClientBehaviours": [
+    "RESOLVE_LIFECYCLE",
+    "RESOLVE_ACTIONABILITY",
+    "RESOLVE_FINANCE_STATE",
+    "RESOLVE_DOCUMENT_STATE",
+    "RESOLVE_COOLING_OFF",
+    "RESOLVE_PORTAL_ELIGIBILITY",
+    "RESOLVE_TEMPLATE_AVAILABILITY",
+    "RESOLVE_MUTATION_AVAILABILITY",
+    "RESOLVE_RECIPIENT_AUTHORITY",
+    "RESOLVE_EXECUTION_COHORT",
+    "GENERATE_QUERY_AUTHORITY",
+    "FALL_BACK_BUSINESS_STATE",
+    "REINTERPRET_RECEIPT_OR_AUDIT_LABEL",
+    "OVERRIDE_BACKEND_BLOCK"
+  ],
+  "forbiddenClientIdentifiers": [
+    "app.catalog",
+    "app.humanize",
+    "app.explain",
+    "app.actionLabel",
+    "app.queryFingerprint",
+    "stateTone",
+    "normalizeCapabilityMap",
+    "domainLensHtml"
+  ],
+  "requiredFailClosedSuffix": "decision was not returned. Refresh or retry before continuing.",
+  "directSendApis": [
+    "GmailApp",
+    "MailApp",
+    "sendEmail"
+  ]
+}

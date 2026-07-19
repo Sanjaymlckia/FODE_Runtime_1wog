@@ -36,7 +36,7 @@
           <span><strong id="eduopsSnapshotShort">Snapshot loading</strong><small id="eduopsSnapshotTime">Snapshot time loading</small></span>
         </div>
         <div id="eduopsReleaseIdentity" class="eduops-release-identity" aria-label="Runtime release identity">
-          <span>Admin staging</span>
+          <span id="eduopsOperationalClassification">FODE operations identity loading</span>
           <strong id="eduopsRuntimeIdentity">Runtime loading</strong>
           <small id="eduopsAppsScriptIdentity">Apps Script metadata pending</small>
           <details>
@@ -96,7 +96,7 @@
 
         <div class="eduops-rail-footer">
           <strong>FODE authoritative operations</strong>
-          <span>Admin staging identity is shown in the header</span>
+          <span>Live operations identity is server-projected in the header</span>
           <span>FODE authority adapter</span>
         </div>
       </aside>
@@ -197,6 +197,7 @@
               <button id="eduopsSelectAllReturned" class="eduops-button eduops-button-secondary" type="button">Select eligible page</button>
               <button id="eduopsSelectAllMatching" class="eduops-button eduops-button-secondary" type="button">Select all matching query</button>
               <button id="eduopsClearSelection" class="eduops-button eduops-button-quiet" type="button">Clear selection</button>
+              <button id="eduopsClearExclusions" class="eduops-button eduops-button-quiet" type="button">Clear exclusions</button>
             </div>
             <div id="eduopsSelectionSummary" class="eduops-selection-summary" aria-live="polite">No applicants selected.</div>
           </div>
@@ -210,6 +211,7 @@
                     <th class="eduops-col-select" scope="col"><span class="eduops-visually-hidden">Select</span></th>
                     <th class="eduops-col-applicant" scope="col">Applicant</th>
                     <th class="eduops-col-action" scope="col">Work and next action</th>
+                    <th class="eduops-col-state" scope="col">Underlying state</th>
                     <th class="eduops-col-owner" scope="col">Owner</th>
                     <th class="eduops-col-route" scope="col">Primary route</th>
                     <th class="eduops-col-urgency" scope="col">Urgency</th>

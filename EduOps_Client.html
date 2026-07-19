@@ -69,17 +69,32 @@
     });
   }
   function applyBootstrap(access, profile) {
+    if (!access || access.schemaVersion !== "EDUOPS_ACCESS_PROJECTION_V1") throw new Error("Authoritative access decision was not returned. Refresh or retry before continuing.");
+    if (!profile || profile.schemaVersion !== "EDUOPS_PROFILE_V2") throw new Error("Authoritative workspace profile decision was not returned. Refresh or retry before continuing.");
     app.state.access = access;
     app.state.profile = profile;
-    app.state.capabilities = access && access.user && access.user.capabilities || {};
-    app.state.featureFlags = profile && profile.featureFlags || {};
+    app.state.operationAvailability = profile && profile.operationAvailability || access && access.operationAvailability || {};
+    var defaults = profile && profile.defaultQuery;
+    if (!defaults || !defaults.product || !defaults.actionabilityState || !defaults.workScope || !defaults.filters || !defaults.sort || !defaults.page || !defaults.pageSize) throw new Error("Authoritative default workload query was not returned. Refresh or retry.");
+    app.state.product = defaults.product;
+    app.state.actionabilityState = defaults.actionabilityState;
+    app.state.worklistKey = defaults.worklistKey;
+    app.state.workScope = defaults.workScope;
+    app.state.filters = app.clone(defaults.filters);
+    app.state.sort = app.clone(defaults.sort);
+    app.state.page = Number(defaults.page);
+    app.state.pageSize = Number(defaults.pageSize);
     var userEmail = byId("eduopsUserEmail");
     var role = byId("eduopsRole");
-    if (userEmail) userEmail.textContent = access && access.user && access.user.email || app.bootstrap.userEmail || "Authorised operator";
-    if (role) role.textContent = access && access.user && access.user.role || app.bootstrap.role || "Admin";
+    if (userEmail) userEmail.textContent = access && access.user && access.user.email || app.bootstrap.userEmail || "Authoritative user identity unavailable.";
+    if (role) role.textContent = access && access.user && access.user.role || app.bootstrap.role || "Authoritative role unavailable.";
     var runtime = access && access.runtime || {};
+    var classificationTarget = byId("eduopsOperationalClassification");
+    if (classificationTarget) classificationTarget.textContent = runtime.operationalClassification || "Runtime identity unavailable.";
     var runtimeTarget = byId("eduopsRuntimeIdentity");
-    if (runtimeTarget) runtimeTarget.textContent = (runtime.version || app.bootstrap.runtime || "runtime") + " / " + (runtime.deployVersion || "-");
+    if (runtimeTarget) runtimeTarget.textContent = runtime.runtimeIdentity || "Runtime identity unavailable.";
+    var appsScriptTarget = byId("eduopsAppsScriptIdentity");
+    if (appsScriptTarget) appsScriptTarget.textContent = runtime.appsScriptVersion ? "Apps Script @" + runtime.appsScriptVersion : (runtime.appsScriptVersionReason || "Apps Script version unavailable from runtime authority.");
     var mode = byId("eduopsMode");
     if (mode) mode.textContent = app.isPreview() ? "Local development" : "FODE Operations";
   }

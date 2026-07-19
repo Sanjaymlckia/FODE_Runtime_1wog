@@ -22,6 +22,22 @@ function eduopsFeatureFlags_() {
   return out;
 }
 
+function eduopsOperationAvailability_() {
+  var flags = eduopsFeatureFlags_();
+  var out = {};
+  Object.keys(EDUOPS_RELEASED_OPERATION_DEFAULTS).forEach(function (key) {
+    var available = flags[key] === true;
+    var released = EDUOPS_RELEASED_OPERATION_DEFAULTS[key] === true;
+    out[key] = {
+      available: available,
+      reasonCode: available ? "AVAILABLE" : released ? "SUSPENDED_BY_ADMIN" : "UNAVAILABLE_OPERATION",
+      reason: available ? "Available for this operations workspace." : released ? "This operation has been temporarily suspended by the system administrator." : "This operation is not available in this release.",
+      authoritySource: "eduopsFeatureFlags_"
+    };
+  });
+  return out;
+}
+
 function eduopsRequireFeature_(operation) {
   var key = eduopsUpper_(operation, "");
   if (eduopsFeatureFlags_()[key] !== true) {
