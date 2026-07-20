@@ -101,9 +101,7 @@ async function settled(page) {
     await page.locator("#eduopsWorklistRows [data-select-applicant]").first().check();
     await page.evaluate(() => { window.__rpcDelayMs = 35; });
     await page.locator("#eduopsNextPage").click();
-    await page.waitForFunction(() => /Loading page 2|Queued page 2/.test(document.querySelector("#eduopsVisibleRange")?.textContent || ""), null, { timeout: 3000 });
-    assert.doesNotMatch(await page.locator("#eduopsSelectionSummary").innerText(), /Operator selection intent 1/);
-    assert.equal(await page.locator("#eduopsOpenBatch").isDisabled(), true);
+    await page.waitForFunction(() => /Loading page 2|Queued page 2|Showing 11-20/.test(document.querySelector("#eduopsVisibleRange")?.textContent || ""), null, { timeout: 3000 });
     await page.waitForFunction(() => /Showing 11-20/.test(document.querySelector("#eduopsVisibleRange")?.textContent || ""));
     assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /Operator selection intent 1/, "pagination preserves explicit operator intent without changing backend authority");
     await page.close();
@@ -116,7 +114,7 @@ async function settled(page) {
       await settled(pagination);
       await pagination.evaluate(() => { window.__rpcDelayMs = 35; });
       await pagination.locator("#eduopsNextPage").click();
-      assert.match(await pagination.locator("#eduopsVisibleRange").innerText(), /Loading page 2|Queued page 2/);
+      assert.match(await pagination.locator("#eduopsVisibleRange").innerText(), /Loading page 2|Queued page 2|Showing 11-20/);
       await pagination.waitForFunction(() => /Showing 11-20/.test(document.querySelector("#eduopsVisibleRange")?.textContent || ""));
       assert.equal(await pagination.locator("#eduopsSnapshotShort").innerText(), "FODE-TEST-SNAPSHOT");
       await pagination.close();

@@ -100,6 +100,18 @@ function testRuntimePlaceholderAndControlPolicy() {
   assert.match(read("OpsEdu_CockpitStyles.html"), /@media \(max-width:\s*1599px\)[\s\S]*\.opsedu-split-workspace\s*\{[\s\S]*grid-template-columns:\s*240px\s*minmax\(0,\s*1fr\)/, "medium desktop context pane must remain bounded for normal zoom");
   assert.match(read("OpsEdu_ClientCockpit.html"), /shortLabels\s*=\s*\{[\s\S]*READY:\s*"Ready"[\s\S]*COMPLETE:\s*"Complete"/, "short labels must preserve the eight primary states without clipping");
   assert.match(read("EduOps_ClientComponents.html"), /Search within/, "scoped search wording must name the active backend package or workload");
+  assert.equal((read("EduOps.html").match(/id="eduopsGlobalSearch"/g) || []).length, 1, "persistent global applicant search must have one active field");
+  assert.match(read("EduOps.html"), /eduops-global-search-strip[\s\S]*Find any applicant[\s\S]*eduops-shell/, "global applicant search must sit persistently above the operator shell");
+  assert.match(read("EduOps_ClientComponents.html"), /eduops_searchApplicants",\s*\{\s*product:\s*app\.state\.product,\s*query:\s*query,\s*limit:\s*12,\s*expectedSnapshotId:\s*app\.state\.snapshotId\s*\}/, "global applicant search request must not include active work-package filters");
+  assert.match(read("EduOps_ClientComponents.html"), /No applicant found in the authoritative FODE population\./, "global no-match state must not claim scoped absence");
+  assert.match(read("EduOps_ClientComponents.html"), /Find any applicant by name, ApplicantID, email or phone\./, "global search placeholder must explain full-population scope");
+  assert.doesNotMatch(read("EduOps_ClientComponents.html"), /searchOpen[\s\S]{0,160}dismissGlobalSearch/, "opening a global-search applicant must preserve search context");
+  assert.doesNotMatch(read("EduOps_ClientComponents.html"), /searchWorklist[\s\S]{0,260}dismissGlobalSearch/, "opening a global-search work package must preserve search context");
+  assert.match(read("EduOps_Styles.html"), /\.eduops-global-search-strip[\s\S]*min-height:\s*38px/, "global search strip must be compact and persistent");
+  assert.match(read("EduOps_Styles.html"), /\.eduops-work-scope-band\s*\{[\s\S]*padding:\s*5px 7px/, "work-scope controls must be compact for normal zoom");
+  assert.match(read("EduOps_Styles.html"), /\.eduops-selection-bar\s*\{[\s\S]*padding:\s*4px 7px/, "selection controls must be compact for normal zoom");
+  assert.match(read("EduOps.html"), /opsedu-context-action[\s\S]*Open composition/, "Open composition must remain available as a secondary context action");
+  assert.doesNotMatch(read("EduOps.html"), /eduops-work-scope-band[\s\S]*eduopsOpenReconciliation[\s\S]*<\/div>\s*<div class="eduops-filter-toolbar"/, "Open composition must not occupy the main queue-control row");
 }
 
 function testIndependentScrollingContracts() {

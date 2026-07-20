@@ -311,24 +311,24 @@
   function renderSearchResults(response) {
     app.state.searchResults = response.matches || [];
     if (!app.state.searchResults.length) {
-      dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">No matching applicant found in the active product.</span>';
+      dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">No applicant found in the authoritative FODE population.</span>';
       return;
     }
     dom.eduopsGlobalSearchResults.innerHTML = app.state.searchResults.map(function (row) {
       var p = row.presentation || {};
       var handoff = row.searchHandoff;
       var handoffReady = handoff && handoff.schemaVersion === "OPSEDU_SEARCH_HANDOFF_V1" && handoff.queueBinding;
-      return '<article class="eduops-search-result"><div><strong>' + app.esc(row.displayName) + '</strong><span>' + app.esc(row.applicantId) + '</span><small>' + app.esc(app.authorityLabel(p.actionability, "actionability")) + ' / ' + app.esc(app.authorityLabel(p.worklist, "worklist")) + '</small><small>' + app.esc(app.authorityLabel(p.lifecycle, "lifecycle")) + ' / ' + app.esc(app.authorityLabel(p.finance, "finance")) + ' / ' + app.esc(app.authorityLabel(p.documents, "documents")) + '</small><small>Next action: ' + app.esc(handoffReady ? app.authorityLabel(handoff.nextAction, "next action") : app.authorityUnavailable("search handoff")) + '</small><small>Current work package: ' + app.esc(handoffReady ? handoff.actionPackageLabel : app.authorityUnavailable("search handoff")) + '</small><small>' + app.esc(handoffReady ? handoff.routeReason : "") + '</small></div><div><button class="eduops-button eduops-button-secondary" type="button" data-search-worklist="' + app.esc(row.applicantId) + '"' + (handoffReady ? "" : " disabled") + '>' + app.esc(handoffReady ? handoff.openQueueLabel : "Action queue unavailable") + '</button><button class="eduops-button eduops-button-primary" type="button" data-search-open="' + app.esc(row.applicantId) + '">Open Workbench</button></div></article>';
+      return '<article class="eduops-search-result"><div><strong>' + app.esc(row.displayName) + '</strong><span>' + app.esc(row.applicantId) + '</span><small>Lifecycle: ' + app.esc(app.authorityLabel(p.lifecycle, "lifecycle")) + '</small><small>Actionability: ' + app.esc(app.authorityLabel(p.actionability, "actionability")) + '</small><small>Work package: ' + app.esc(handoffReady ? handoff.actionPackageLabel : app.authorityLabel(p.worklist, "worklist")) + '</small><small>Next action: ' + app.esc(handoffReady ? app.authorityLabel(handoff.nextAction, "next action") : app.authorityUnavailable("search handoff")) + '</small></div><div><button class="eduops-button eduops-button-secondary" type="button" data-search-worklist="' + app.esc(row.applicantId) + '"' + (handoffReady ? "" : " disabled") + '>' + app.esc(handoffReady ? handoff.openQueueLabel : "Open correct work package") + '</button><button class="eduops-button eduops-button-primary" type="button" data-search-open="' + app.esc(row.applicantId) + '">Open applicant</button></div></article>';
     }).join("");
   }
 
   function runGlobalSearch() {
     var query = dom.eduopsGlobalSearch.value.trim();
     if (!query) {
-      dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Search the active product by ApplicantID, name, email or phone.</span>';
+      dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Find any applicant by name, ApplicantID, email or phone.</span>';
       return;
     }
-    dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Searching exact FODE authority...</span>';
+    dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Searching authoritative applicants...</span>';
     app.call("eduops_searchApplicants", { product: app.state.product, query: query, limit: 12, expectedSnapshotId: app.state.snapshotId }).then(renderSearchResults).catch(function (error) {
       dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Search failed: ' + app.esc(error.message || error) + '</span>';
     });
@@ -337,7 +337,7 @@
   function dismissGlobalSearch() {
     dom.eduopsGlobalSearch.value = "";
     app.state.searchResults = [];
-    dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Search the active product by ApplicantID, name, email or phone.</span>';
+    dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Find any applicant by name, ApplicantID, email or phone.</span>';
   }
 
   function openQuickView(applicantId, trigger) {
@@ -460,7 +460,7 @@
 
   app.bindWorkspace = function () {
     cacheDom();
-    dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Search the active product by ApplicantID, name, email or phone.</span>';
+    dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Find any applicant by name, ApplicantID, email or phone.</span>';
     var searchTimer = null;
     function applyFilter(key, value) {
       app.state.filters[key] = value || "";
@@ -573,11 +573,11 @@
       var open = event.target.closest("[data-open-applicant]");
       if (open && app.openWorkbench) { closeQuickView(); app.openWorkbench(open.getAttribute("data-open-applicant"), open); return; }
       var searchOpen = event.target.closest("[data-search-open]");
-      if (searchOpen && app.openWorkbench) { var searchApplicantId = searchOpen.getAttribute("data-search-open"); dismissGlobalSearch(); app.openWorkbench(searchApplicantId, searchOpen); return; }
+      if (searchOpen && app.openWorkbench) { var searchApplicantId = searchOpen.getAttribute("data-search-open"); app.openWorkbench(searchApplicantId, searchOpen); return; }
       var searchWorklist = event.target.closest("[data-search-worklist]");
       if (searchWorklist) {
         var found = app.state.searchResults.filter(function (row) { return row.applicantId === searchWorklist.getAttribute("data-search-worklist"); })[0];
-        if (found && found.searchHandoff && app.openServerBoundQueue) { dismissGlobalSearch(); app.openServerBoundQueue(found.searchHandoff.queueBinding, found.searchHandoff.openQueueLabel); }
+        if (found && found.searchHandoff && app.openServerBoundQueue) { app.openServerBoundQueue(found.searchHandoff.queueBinding, found.searchHandoff.openQueueLabel); }
         return;
       }
       var report = event.target.closest("[data-report]");

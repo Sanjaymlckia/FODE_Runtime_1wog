@@ -56,6 +56,13 @@
       </div>
     </header>
 
+    <section class="eduops-global-search-strip" aria-label="Global applicant search">
+      <div class="eduops-global-search">
+        <label for="eduopsGlobalSearch"><span>Find any applicant</span><input id="eduopsGlobalSearch" type="search" placeholder="Name, ApplicantID, email or phone"></label>
+        <div id="eduopsGlobalSearchResults" class="eduops-global-search-results" aria-live="polite"></div>
+      </div>
+    </section>
+
     <div class="eduops-shell">
       <aside class="eduops-rail" aria-label="Operations navigation">
         <div class="eduops-rail-heading">
@@ -131,19 +138,16 @@
               <h2>Loading active queue</h2>
               <p>Authoritative queue context is loading.</p>
             </section>
+            <button id="eduopsOpenReconciliation" class="eduops-button eduops-button-secondary opsedu-context-action" type="button">Open composition</button>
             <details class="opsedu-secondary-controls">
               <summary>Search and authority status</summary>
-              <section class="eduops-next-command" aria-label="Authority reliability and global search">
+              <section class="eduops-next-command" aria-label="Authority reliability">
               <div id="eduopsReliabilityBanner" class="eduops-reliability-banner" data-reliability="AUTHORITATIVE">
                 <strong>Authority source loading</strong>
                 <span>Product adapter status is being resolved.</span>
                 <div>
                   <button id="eduopsRefreshAuthority" class="eduops-button eduops-button-primary" type="button">Refresh source</button>
                 </div>
-              </div>
-              <div class="eduops-global-search">
-                <label for="eduopsGlobalSearch"><span>Global applicant search</span><input id="eduopsGlobalSearch" type="search" placeholder="ApplicantID, name, email or phone"></label>
-                <div id="eduopsGlobalSearchResults" class="eduops-global-search-results" aria-live="polite"></div>
               </div>
               </section>
             </details>
@@ -204,7 +208,6 @@
               <button type="button" data-work-scope="ESCALATED">Escalated</button>
               <button type="button" data-work-scope="ALL_AUTHORISED">All Authorised Work</button>
             </div>
-            <button id="eduopsOpenReconciliation" class="eduops-button eduops-button-secondary" type="button">Open composition</button>
           </div>
 
           <div class="eduops-filter-toolbar" aria-label="Workload filters">
