@@ -933,6 +933,7 @@ function eduopsDemoProductRecords_(product) {
       selectable: false,
       selectBlockReason: profile.demoLabel + ". Batch, send and mutation actions are unavailable.",
       reasonCode: "DEMO_PROFILE_READ_ONLY",
+      ageDays: index + 1,
       urgencyLevel: index % 4 === 0 ? "DUE" : "NORMAL",
       urgencyReason: "Demonstration urgency from preserved " + profile.code + " prototype data.",
       coolingOffUntil: mode[0] === "COOLING_OFF" ? "2026-07-18T09:00:00.000Z" : "",

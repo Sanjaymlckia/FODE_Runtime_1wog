@@ -96,6 +96,18 @@ function testDemoProfileWorkload(product, expectedName, expectedPrefix) {
   assert.equal(response.queryBinding.query.product, product);
   assert(response.cockpit.actionPackages.every((item) => item.disabled === true), `${product} action packages must be visibly read-only/demo`);
   assert(response.cockpit.actionPackages.every((item) => item.packageId.startsWith(product + ":")), `${product} packages must be product-scoped`);
+  assertNoNonFinite(response, `${product} workload response`);
+}
+
+function assertNoNonFinite(value, label) {
+  const bad = [];
+  function scan(node, pathName) {
+    if (typeof node === "number" && !Number.isFinite(node)) bad.push(`${pathName}=${node}`);
+    if (!node || typeof node !== "object") return;
+    Object.keys(node).forEach((key) => scan(node[key], `${pathName}.${key}`));
+  }
+  scan(value, label);
+  assert.deepEqual(bad, [], `${label} must be Apps Script serializable without NaN/Infinity`);
 }
 
 function testDemoSearchIsolation() {
