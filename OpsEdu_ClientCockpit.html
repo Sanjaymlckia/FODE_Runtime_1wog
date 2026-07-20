@@ -1,0 +1,73 @@
+<script>
+(function () {
+  "use strict";
+
+  var app = window.EduOpsApp;
+  var bound = false;
+
+  function byId(id) { return document.getElementById(id); }
+  function packageById(packages, packageId) {
+    return (Array.isArray(packages) ? packages : []).filter(function (item) { return item && item.packageId === packageId; })[0] || null;
+  }
+  function failClosed(message) {
+    var target = byId("opseduActionPackages");
+    if (target) target.innerHTML = '<div class="opsedu-cockpit-error"><strong>' + app.esc(message) + '</strong><span>Refresh or retry before continuing.</span></div>';
+  }
+  function packageCard(item) {
+    var recommendation = item.recommendedCommunication;
+    var recommendationLabel = recommendation && recommendation.available === true ? recommendation.label : "";
+    return '<article class="opsedu-action-card" data-secondary="' + (item.secondary === true ? "true" : "false") + '"><div class="opsedu-action-card-top"><span>' + app.esc(item.ownerDomain) + '</span><strong>' + Number(item.count || 0) + '</strong></div><h3>' + app.esc(item.label) + '</h3><p>' + app.esc(item.routeReason) + '</p><div class="opsedu-action-card-meta"><span>' + app.esc(item.mutationBoundary) + '</span>' + (recommendationLabel ? '<span>' + app.esc(recommendationLabel) + '</span>' : "") + '</div><button type="button" class="eduops-button eduops-button-primary" data-opsedu-package="' + app.esc(item.packageId) + '"' + (item.disabled === true ? " disabled" : "") + '>' + app.esc(item.primaryActionLabel) + '</button>' + (item.disabledReason ? '<small>' + app.esc(item.disabledReason) + '</small>' : "") + '</article>';
+  }
+
+  app.openServerBoundQueue = function (binding, reason) {
+    if (!binding || binding.schemaVersion !== "EDUOPS_QUERY_BINDING_V1" || binding.authority !== "SERVER_AUTHORED" || !binding.query || !binding.snapshotId) {
+      failClosed("Authoritative action queue binding was not returned.");
+      return Promise.resolve({ ok: false, code: "BACKEND_CONTRACT_MISSING" });
+    }
+    var query = binding.query;
+    app.state.product = query.product;
+    app.state.actionabilityState = query.actionabilityState;
+    app.state.worklistKey = query.worklistKey;
+    app.state.workScope = query.workScope;
+    app.state.filters = app.clone(query.filters);
+    app.state.sort = app.clone(query.sort);
+    app.state.page = 1;
+    app.state.pageSize = Number(query.pageSize);
+    app.state.snapshotId = binding.snapshotId;
+    app.clearSelection();
+    app.setInteractionState("LOADING", reason || "Opening authoritative action queue.");
+    return app.requestWorkload().then(function (result) {
+      var worklist = byId("eduopsWorklist");
+      if (worklist) worklist.scrollIntoView({ behavior: "smooth", block: "start" });
+      return result;
+    });
+  };
+
+  app.renderOpsEduCockpit = function (response) {
+    var cockpit = response && response.cockpit;
+    if (!cockpit || cockpit.schemaVersion !== "OPSEDU_COCKPIT_V1" || !Array.isArray(cockpit.actionPackages)) {
+      failClosed("Authoritative OpsEdu cockpit decision was not returned.");
+      return;
+    }
+    byId("opseduCockpitContext").textContent = cockpit.productLabel;
+    byId("opseduCockpitHeading").textContent = cockpit.heading;
+    byId("opseduCockpitSnapshot").textContent = "Snapshot " + cockpit.snapshotId + " / " + cockpit.snapshotTimestamp;
+    byId("opseduActionPackages").innerHTML = cockpit.actionPackages.map(packageCard).join("") || '<div class="opsedu-cockpit-empty"><strong>No action packages returned.</strong><span>The backend reported no current work packages.</span></div>';
+  };
+
+  function bind() {
+    if (bound) return;
+    bound = true;
+    document.addEventListener("click", function (event) {
+      var button = event.target.closest("[data-opsedu-package]");
+      if (!button || button.disabled) return;
+      var cockpit = app.state.workload && app.state.workload.cockpit;
+      var item = packageById(cockpit && cockpit.actionPackages, button.getAttribute("data-opsedu-package"));
+      if (!item || item.disabled === true) return failClosed("Authoritative action package was not returned.");
+      app.openServerBoundQueue(item.defaultQueueBinding, "Opening " + item.label + ".");
+    });
+  }
+
+  bind();
+})();
+</script>

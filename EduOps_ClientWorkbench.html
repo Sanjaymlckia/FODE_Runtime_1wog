@@ -58,24 +58,25 @@
     var template = selectedCommunicationTemplate();
     var decision = actionDecision("SEND_INDIVIDUAL_COMMUNICATION");
     if (!decision || decision.available !== true) return decision && decision.reason || app.authorityUnavailable("communication operation");
-    return template.blockReason || template.blockCode || "Communication Authority has not permitted this communication.";
+    return template.unavailableReason || "Communication Authority has not permitted this communication.";
   }
   function authorityHeader() {
     var exact = row();
     var p = exact.presentation || {};
-    var comm = app.state.workbench.communications || {};
-    var reliability = app.state.workbench.sourceReliability || {};
-    dom.authority.innerHTML = [
+    var ribbon = app.state.workbench.applicantContextRibbon;
+    var items = [
       ["Actionability", app.authorityLabel(p.actionability, "actionability")],
       ["Worklist", app.authorityLabel(p.worklist, "worklist")],
-      ["Owner / next action", app.authorityLabel(p.owner, "action owner") + " / " + app.authorityLabel(p.nextAction, "next action")],
-      ["Underlying lifecycle", app.authorityLabel(p.lifecycle, "lifecycle state")],
-      ["Finance / documents", app.authorityLabel(p.finance, "finance") + " / " + app.authorityLabel(p.documents, "document state")],
-      ["Cooling-off", app.authorityLabel(p.coolingOff, "cooling-off")],
-      ["Recommended communication", comm.operatorRecommendation || app.authorityUnavailable("communication recommendation")],
-      ["Source", app.authorityLabel(p.reliability, "source reliability")],
-      ["Snapshot", app.state.workbench.snapshotId || app.state.snapshotId]
-    ].map(function (item) { return '<div class="eduops-authority-item"><span>' + app.esc(item[0]) + '</span><strong>' + app.esc(item[1]) + '</strong></div>'; }).join("");
+      ["Owner", app.authorityLabel(p.owner, "action owner")]
+    ];
+    if (ribbon && ribbon.schemaVersion === "OPSEDU_APPLICANT_CONTEXT_RIBBON_V1" && Array.isArray(ribbon.items)) {
+      ribbon.items.forEach(function (item) { items.push([item.label, item.displayValue]); });
+    } else {
+      items.push(["Applicant context", app.authorityUnavailable("applicant context ribbon")]);
+    }
+    items.push(["Source", app.authorityLabel(p.reliability, "source reliability")]);
+    items.push(["Snapshot", app.state.workbench.snapshotId || app.state.snapshotId]);
+    dom.authority.innerHTML = items.map(function (item) { return '<div class="eduops-authority-item"><span>' + app.esc(item[0]) + '</span><strong>' + app.esc(item[1]) + '</strong></div>'; }).join("");
   }
   function cohortRows() { return app.state.workload && app.state.workload.rows || []; }
   function cohortIndex() { return cohortRows().findIndex(function (item) { return item.applicantId === identity().applicantId; }); }
@@ -111,26 +112,35 @@
     var exact = row();
     var p = exact.presentation || {};
     var comm = app.state.workbench.communications || {};
-    var primaryTab = /payment|finance|invoice/i.test(String(exact.nextAction || exact.worklistKey || "")) ? "finance" : /email|communicat|contact/i.test(String(exact.nextAction || "")) ? "communications" : "documents";
-    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-8"><header><div><span class="eduops-eyebrow">Exact applicant authority</span><h2>Why this work is here</h2></div><span class="eduops-status-badge" data-state="' + app.esc(exact.actionabilityState) + '">' + app.esc(app.authorityLabel(p.actionability, "actionability")) + '</span></header><p class="eduops-explanation"><strong>' + app.esc(app.authorityLabel(p.nextAction, "next action")) + '.</strong> ' + app.esc(exact.authorityDecision && exact.authorityDecision.reason || app.authorityUnavailable("actionability reason")) + '</p>' + definition([["ApplicantID", identity().applicantId], ["Row identity", app.state.workbench.rowKey], ["Primary route", app.authorityLabel(p.route, "operator route")], ["Lifecycle", app.authorityLabel(p.lifecycle, "lifecycle state")], ["Finance", app.authorityLabel(p.finance, "finance")], ["Documents", app.authorityLabel(p.documents, "document state")], ["Actionability", app.authorityLabel(p.actionability, "actionability")], ["Cooling-off", app.authorityLabel(p.coolingOff, "cooling-off")], ["Contactability", app.authorityLabel(p.contactability, "contactability")]]) + '</section><section class="eduops-panel-card eduops-span-4 eduops-primary-action-card"><header><div><h2>Primary action</h2><p>Routed from the authoritative projection, not front-end lifecycle logic.</p></div></header>' + definition([["Recommended next action", app.authorityLabel(p.nextAction, "next action")], ["Recommended communication", comm.operatorRecommendation], ["Send eligibility", comm.eligibility], ["Navigation", navigationSummary()]]) + '<div class="eduops-action-row"><button type="button" class="eduops-button eduops-button-primary" data-workbench-tab-jump="' + app.esc(primaryTab) + '">Open ' + app.esc(app.formatCode(primaryTab)) + '</button><button type="button" class="eduops-button eduops-button-secondary" data-workbench-return>Return to workload</button></div></section><section class="eduops-panel-card eduops-span-12"><header><div><h2>Return context</h2><p>The Workbench preserves its invoking cohort and exact page movement.</p></div></header>' + definition([["Product", app.state.workbench.product], ["Origin page", app.state.returnContext && app.state.returnContext.page], ["Snapshot", app.state.workbench.snapshotId], ["Dirty state", app.state.dirty ? "Unsaved changes" : "Clean"]]) + '</section></div>';
+    var target = app.state.workbench.primaryActionTarget;
+    var targetAvailable = target && target.schemaVersion === "OPSEDU_PRIMARY_ACTION_TARGET_V1" && target.available === true && target.targetTab;
+    var primaryAction = targetAvailable
+      ? '<p class="eduops-explanation"><strong>' + app.esc(target.targetActionLabel) + '.</strong> ' + app.esc(target.reason) + '</p><div class="eduops-action-row"><button type="button" class="eduops-button eduops-button-primary" data-workbench-tab-jump="' + app.esc(target.targetTab) + '">Open ' + app.esc(target.targetActionLabel) + '</button><button type="button" class="eduops-button eduops-button-secondary" data-workbench-return>Return to workload</button></div>'
+      : '<div class="eduops-error-state"><strong>Authoritative primary action target unavailable.</strong><span>Refresh or retry before continuing.</span></div><div class="eduops-action-row"><button type="button" class="eduops-button eduops-button-secondary" data-workbench-return>Return to workload</button></div>';
+    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-8"><header><div><span class="eduops-eyebrow">Exact applicant authority</span><h2>Why this work is here</h2></div><span class="eduops-status-badge" data-state="' + app.esc(exact.actionabilityState) + '">' + app.esc(app.authorityLabel(p.actionability, "actionability")) + '</span></header><p class="eduops-explanation"><strong>' + app.esc(app.authorityLabel(p.nextAction, "next action")) + '.</strong> ' + app.esc(exact.authorityDecision && exact.authorityDecision.reason || app.authorityUnavailable("actionability reason")) + '</p>' + definition([["ApplicantID", identity().applicantId], ["Row identity", app.state.workbench.rowKey], ["Primary route", app.authorityLabel(p.route, "operator route")], ["Lifecycle", app.authorityLabel(p.lifecycle, "lifecycle state")], ["Finance", app.authorityLabel(p.finance, "finance")], ["Documents", app.authorityLabel(p.documents, "document state")], ["Actionability", app.authorityLabel(p.actionability, "actionability")], ["Cooling-off", app.authorityLabel(p.coolingOff, "cooling-off")], ["Contactability", app.authorityLabel(p.contactability, "contactability")]]) + '</section><section class="eduops-panel-card eduops-span-4 eduops-primary-action-card"><header><div><h2>Primary action</h2><p>Supplied by the authoritative backend target.</p></div></header>' + definition([["Recommended next action", targetAvailable ? target.targetActionLabel : app.authorityUnavailable("primary action target")], ["Recommended communication", comm.operatorRecommendation], ["Send eligibility", comm.eligibility], ["Navigation", navigationSummary()]]) + primaryAction + '</section><section class="eduops-panel-card eduops-span-12"><header><div><h2>Return context</h2><p>The Workbench preserves its invoking cohort and exact page movement.</p></div></header>' + definition([["Product", app.state.workbench.product], ["Origin page", app.state.returnContext && app.state.returnContext.page], ["Snapshot", app.state.workbench.snapshotId], ["Dirty state", app.state.dirty ? "Unsaved changes" : "Clean"]]) + '</section></div>';
   }
 
   function documentPayload(file) {
     return { applicantId: identity().applicantId, rowNumber: identity().rowNumber, expectedSnapshotId: app.state.workbench.snapshotId, sourceField: file.sourceField, itemIndex: file.itemIndex, documentKey: file.documentKey };
+  }
+  function documentFiles() {
+    var gallery = app.state.documentManifest && app.state.documentManifest.documentGallery;
+    return gallery && gallery.schemaVersion === "OPSEDU_DOCUMENT_GALLERY_V1" && Array.isArray(gallery.documents) ? gallery.documents : [];
   }
   function loadManifest() {
     if (app.state.documentManifest) return Promise.resolve(app.state.documentManifest);
     dom.panel.innerHTML = '<div class="eduops-loading-state"><strong>Loading exact document manifest</strong><span>' + app.esc(identity().applicantId) + ' / ' + app.esc(app.state.workbench.snapshotId) + '</span></div>';
     return app.call("eduops_getDocumentManifest", { applicantId: identity().applicantId, rowNumber: identity().rowNumber, expectedSnapshotId: app.state.workbench.snapshotId }).then(function (result) {
       app.state.documentManifest = result;
-      app.state.selectedDocumentIndex = Math.min(app.state.selectedDocumentIndex, Math.max(0, (result.files || []).length - 1));
+      var gallery = result && result.documentGallery;
+      app.state.selectedDocumentIndex = Math.min(app.state.selectedDocumentIndex, Math.max(0, (gallery && gallery.documents || []).length - 1));
       renderPanel();
-      if ((result.files || []).length) loadRendition(app.state.selectedDocumentIndex, true);
+      if (gallery && (gallery.documents || []).length) loadRendition(app.state.selectedDocumentIndex, true);
       return result;
     }).catch(function (error) { dom.panel.innerHTML = '<div class="eduops-error-state"><strong>Document manifest unavailable</strong><span>' + app.esc(error.message || error) + '</span></div>'; });
   }
   function loadRendition(index, prefetchAdjacent) {
-    var files = app.state.documentManifest && app.state.documentManifest.files || [];
+    var files = documentFiles();
     var file = files[index];
     if (!file) return;
     app.state.selectedDocumentIndex = index;
@@ -149,30 +159,31 @@
     if (!result) return '<div class="eduops-loading-state"><strong>Loading derived PNG rendition</strong><span>The canonical original remains authoritative.</span></div>';
     var src = result.dataUrl || result.imageDataUrl || result.pngDataUrl || result.renditionDataUrl || "";
     if (!src) return '<div class="eduops-error-state"><strong>Browser rendition unavailable</strong><span>' + app.esc(result.error || result.message || "Use the separately authorised Open Original action.") + '</span></div>';
-    return '<figure class="eduops-document-preview"><img src="' + app.esc(src) + '" alt="Derived PNG preview of ' + app.esc(file.displayName || file.name || "document") + '"><figcaption>Derived browser rendition. The canonical original is unchanged.</figcaption></figure>';
+    return '<figure class="eduops-document-preview"><img src="' + app.esc(src) + '" alt="Derived PNG preview of ' + app.esc(file.label || "document") + '"><figcaption>Derived browser rendition. The canonical original is unchanged.</figcaption></figure>';
   }
   function documentCard(item, itemIndex, selectedIndex) {
     var itemDraft = app.state.documentDraft[item.documentKey] || {};
-    var status = itemDraft.status || item.statusCode || "";
-    var label = item.displayName || item.name || item.sourceField || "Document";
-    var thumb = String(item.documentType || item.type || item.sourceField || "DOC").replace(/[_-]+/g, " ").slice(0, 18);
+    var status = itemDraft.status || item.status || "";
+    var label = item.label || "Document";
+    var thumb = String(item.documentType || "DOC").replace(/[_-]+/g, " ").slice(0, 18);
     var selectedDecision = (item.availableDecisions || []).filter(function (decision) { return decision.code === status; })[0];
     return '<button type="button" class="eduops-document-card" data-document-index="' + itemIndex + '" aria-current="' + (itemIndex === selectedIndex ? "true" : "false") + '" title="Left click to preview. Right click to open the canonical original."><span class="eduops-doc-thumb">' + app.esc(thumb) + '</span><strong>' + app.esc(label) + '</strong><small>' + app.esc(itemDraft.status ? selectedDecision && selectedDecision.label || app.authorityUnavailable("document decision") : app.authorityLabel(item.statusPresentation, "document status")) + '</small><em>' + app.esc(item.sourceField || item.documentKey || "manifest entry") + '</em></button>';
   }
   function renderDocuments() {
     var manifest = app.state.documentManifest;
     if (!manifest) { setTimeout(loadManifest, 0); return '<div class="eduops-loading-state">Resolving exact applicant manifest...</div>'; }
-    if (manifest.ok !== true || manifest.schemaVersion !== "EDUOPS_DOCUMENT_MANIFEST_V2" || !manifest.actionAuthority) return '<div class="eduops-error-state"><strong>' + app.esc(app.authorityUnavailable("document state")) + '</strong><span>' + app.esc(manifest.error || manifest.code || "BACKEND_CONTRACT_MISSING") + '</span></div>';
-    var files = manifest.files || [];
+    var gallery = manifest.documentGallery;
+    if (manifest.ok !== true || manifest.schemaVersion !== "EDUOPS_DOCUMENT_MANIFEST_V2" || !gallery || gallery.schemaVersion !== "OPSEDU_DOCUMENT_GALLERY_V1" || !manifest.actionAuthority) return '<div class="eduops-error-state"><strong>' + app.esc(app.authorityUnavailable("document gallery")) + '</strong><span>' + app.esc(manifest.error || manifest.code || "BACKEND_CONTRACT_MISSING") + '</span></div>';
+    var files = gallery.documents || [];
     if (!files.length) return '<div class="eduops-empty-state"><strong>No document files returned</strong><span>The exact applicant manifest contains no previewable entries.</span></div>';
     var index = Math.min(app.state.selectedDocumentIndex, files.length - 1);
     var file = files[index];
-    var draft = app.state.documentDraft[file.documentKey] || { status: file.statusCode || "", note: "" };
+    var draft = app.state.documentDraft[file.documentKey] || { status: file.status || "", note: "" };
     var statuses = file.availableDecisions || manifest.actionAuthority && manifest.actionAuthority.options || [];
     var canSave = commandEnabled("DOCUMENT_REVIEW", "CAN_SAVE_DOCUMENT_STATUSES");
     var options = statuses.map(function (item) { return '<option value="' + app.esc(item.code) + '"' + (draft.status === item.code ? " selected" : "") + '>' + app.esc(item.label) + '</option>'; }).join("");
     if (!statuses.length) canSave = false;
-    return '<div class="eduops-document-workspace"><aside class="eduops-document-gallery" aria-label="Applicant document manifest"><header><strong>Document gallery</strong><span>' + (index + 1) + ' of ' + files.length + '</span></header>' + files.map(function (item, itemIndex) { return documentCard(item, itemIndex, index); }).join("") + '<p class="eduops-action-reason">Left click previews. Right click opens the canonical original through the governed file action.</p></aside><section class="eduops-document-stage"><header><div><span class="eduops-eyebrow">Exact manifest entry</span><h2>' + app.esc(file.displayName || file.name || file.sourceField) + '</h2><p>' + app.esc(file.documentKey) + '</p></div><div class="eduops-action-row"><button class="eduops-button eduops-button-secondary" type="button" data-document-move="-1"' + (index <= 0 ? " disabled" : "") + '>Previous</button><button class="eduops-button eduops-button-secondary" type="button" data-document-move="1"' + (index >= files.length - 1 ? " disabled" : "") + '>Next</button></div></header><div class="eduops-document-detail-strip">' + definition([["Document type", file.documentType || file.type || file.sourceField], ["Current status", app.authorityLabel(file.statusPresentation, "document status")], ["Selected decision", draft.status ? (statuses.filter(function (item) { return item.code === draft.status; })[0] || {}).label : "No operator decision selected"], ["Source field", file.sourceField], ["Manifest key", file.documentKey]]) + '</div>' + renditionHtml(file) + '<div class="eduops-document-controls"><label>Status<select data-document-status>' + options + '</select></label><label>Reviewer note<textarea data-document-note rows="3" placeholder="Record a clear evidence-based reason">' + app.esc(draft.note) + '</textarea></label><p class="eduops-action-reason">' + app.esc(disabledReason("DOCUMENT_REVIEW", "CAN_SAVE_DOCUMENT_STATUSES")) + '</p><div class="eduops-action-row"><button class="eduops-button eduops-button-secondary" type="button" data-open-original>Open Original</button><button class="eduops-button eduops-button-secondary" type="button" data-preview-command="DOCUMENT_REVIEW"' + (canSave ? "" : " disabled") + '>Preview selected decision</button><button class="eduops-button eduops-button-primary" type="button" data-preview-command="DOCUMENT_REVIEW" data-command-scope="all"' + (canSave ? "" : " disabled") + '>Preview overall review</button><button class="eduops-button eduops-button-secondary" type="button" data-request-correction>Prepare correction request</button></div></div></section></div>';
+    return '<div class="eduops-document-workspace"><aside class="eduops-document-gallery" aria-label="Applicant document manifest"><header><strong>Document gallery</strong><span>' + (index + 1) + ' of ' + files.length + '</span></header>' + files.map(function (item, itemIndex) { return documentCard(item, itemIndex, index); }).join("") + '<p class="eduops-action-reason">Left click previews. Right click opens the canonical original through the governed file action.</p></aside><section class="eduops-document-stage"><header><div><span class="eduops-eyebrow">Exact manifest entry</span><h2>' + app.esc(file.label) + '</h2><p>' + app.esc(file.documentKey) + '</p></div><div class="eduops-action-row"><button class="eduops-button eduops-button-secondary" type="button" data-document-move="-1"' + (index <= 0 ? " disabled" : "") + '>Previous</button><button class="eduops-button eduops-button-secondary" type="button" data-document-move="1"' + (index >= files.length - 1 ? " disabled" : "") + '>Next</button></div></header><div class="eduops-document-detail-strip">' + definition([["Document type", file.documentType], ["Current status", app.authorityLabel(file.statusPresentation, "document status")], ["Selected decision", draft.status ? (statuses.filter(function (item) { return item.code === draft.status; })[0] || {}).label : "No operator decision selected"], ["Source field", file.sourceField], ["Manifest key", file.documentKey]]) + '</div>' + renditionHtml(file) + '<div class="eduops-document-controls"><label>Status<select data-document-status>' + options + '</select></label><label>Reviewer note<textarea data-document-note rows="3" placeholder="Record a clear evidence-based reason">' + app.esc(draft.note) + '</textarea></label><p class="eduops-action-reason">' + app.esc(disabledReason("DOCUMENT_REVIEW", "CAN_SAVE_DOCUMENT_STATUSES")) + '</p><div class="eduops-action-row"><button class="eduops-button eduops-button-secondary" type="button" data-open-original>Open Original</button><button class="eduops-button eduops-button-secondary" type="button" data-preview-command="DOCUMENT_REVIEW"' + (canSave ? "" : " disabled") + '>Preview selected decision</button><button class="eduops-button eduops-button-primary" type="button" data-preview-command="DOCUMENT_REVIEW" data-command-scope="all"' + (canSave ? "" : " disabled") + '>Preview overall review</button><button class="eduops-button eduops-button-secondary" type="button" data-request-correction>Prepare correction request</button></div></div></section></div>';
   }
 
   function renderFinance() {
@@ -191,7 +202,8 @@
     return app.state.communicationDraft;
   }
   function communicationTemplates(comm) {
-    return Array.isArray(comm.templateGallery) ? comm.templateGallery : [];
+    var panel = comm && comm.communicationTemplatePanel;
+    return panel && panel.schemaVersion === "OPSEDU_COMMUNICATION_TEMPLATE_PANEL_V1" && Array.isArray(panel.templates) ? panel.templates : [];
   }
   function communicationTemplateById(templateId, messageType) {
     var list = communicationTemplates(app.state.workbench.communications || {});
@@ -205,8 +217,8 @@
     var draft = ensureCommunicationDraft();
     draft.templateId = templateItem.templateId || templateItem.messageType || "";
     draft.messageType = templateItem.messageType || "";
-    draft.subject = templateItem.defaultSubject || "";
-    draft.body = templateItem.defaultBody || "";
+    draft.subject = templateItem.subject || "";
+    draft.body = templateItem.body || "";
   }
   function historyListHtml(result, communicationOnly) {
     if (!result || result.schemaVersion !== "EDUOPS_OPERATION_HISTORY_V1") return '<div class="eduops-error-state"><strong>' + app.esc(app.authorityUnavailable("audit history")) + '</strong><span>BACKEND_CONTRACT_MISSING</span></div>';
@@ -215,7 +227,8 @@
   }
   function renderCommunications() {
     var comm = app.state.workbench.communications || {};
-    if (comm.schemaVersion !== "EDUOPS_COMMUNICATION_SUMMARY_V1") return '<div class="eduops-error-state"><strong>' + app.esc(app.authorityUnavailable("communication")) + '</strong><span>BACKEND_CONTRACT_MISSING</span></div>';
+    var templatePanel = comm.communicationTemplatePanel;
+    if (comm.schemaVersion !== "EDUOPS_COMMUNICATION_SUMMARY_V1" || !templatePanel || templatePanel.schemaVersion !== "OPSEDU_COMMUNICATION_TEMPLATE_PANEL_V1") return '<div class="eduops-error-state"><strong>' + app.esc(app.authorityUnavailable("communication template panel")) + '</strong><span>BACKEND_CONTRACT_MISSING</span></div>';
     var draft = ensureCommunicationDraft();
     var enabled = communicationEnabled();
     var selectedTemplate = selectedCommunicationTemplate();
@@ -224,7 +237,7 @@
     var editable = selectedTemplate.editable === true;
     var authorityUnavailable = comm.blockCode === "COMMUNICATION_AUTHORITY_UNAVAILABLE";
     if (authorityUnavailable) return '<div class="eduops-error-state"><strong>Authoritative communication decision unavailable.</strong><span>' + app.esc(comm.blockReason || "Refresh the applicant before continuing.") + '</span></div>';
-    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-4"><header><div><h2>Template gallery</h2><p>Recommendation and availability come from Communication Authority. Choose explicitly.</p></div></header><div class="eduops-template-gallery">' + templates.map(function (item) { var recommended = item.recommended === true; var unavailable = item.selectable !== true; return '<button type="button" class="eduops-template-card" data-communication-template="' + app.esc(item.templateId) + '" data-message-type="' + app.esc(item.messageType) + '" data-recommended="' + (recommended ? "true" : "false") + '" data-availability="' + app.esc(item.availabilityState) + '" aria-pressed="' + (draft.templateId === item.templateId ? "true" : "false") + '"' + (unavailable ? " disabled" : "") + '><strong>' + app.esc(recommended ? "Recommended: " + item.label : item.label) + '</strong><span>' + app.esc(item.availabilityLabel || app.authorityUnavailable("template availability")) + '</span><small>' + app.esc(item.reason || app.authorityUnavailable("template reason")) + '</small></button>'; }).join("") + '</div><div class="eduops-eligibility-panel">' + definition([["Recipient", draft.recipient || comm.effectiveEmail], ["Contactability", (app.state.workbench.contactability || {}).state], ["Cooling-off until", comm.coolingOffUntil], ["Selected template", selectedTemplate.label || "Choose communication"], ["Authority status", selectedAuthority.Comm_Status || app.authorityUnavailable("communication status")], ["Authority reason", selectedTemplate.reason || selectedTemplate.blockReason || "Choose a communication."], ["Recommended template", comm.operatorRecommendation]]) + '</div></section><section class="eduops-panel-card eduops-span-8"><header><div><h2>Reviewed individual message</h2><p>Communication Authority controls recipient, availability, editing and final revalidation.</p></div><span class="eduops-capability-state" data-state="' + (enabled ? "READY" : "DISABLED") + '">' + (enabled ? "Preview required" : "Disabled") + '</span></header><div class="eduops-form-grid"><label class="eduops-field eduops-field-wide">Recipient<input id="eduopsCommRecipient" type="email" readonly value="' + app.esc(draft.recipient) + '"></label><label class="eduops-field eduops-field-wide">Subject<input id="eduopsCommSubject" type="text"' + (editable ? "" : " readonly") + ' value="' + app.esc(draft.subject) + '"></label><label class="eduops-field eduops-field-wide">Full message body<textarea id="eduopsCommBody" rows="10"' + (editable ? "" : " readonly") + '>' + app.esc(draft.body) + '</textarea></label></div><div class="eduops-action-row"><button class="eduops-button eduops-button-primary" type="button" data-preview-command="SEND_INDIVIDUAL_COMMUNICATION"' + (enabled ? "" : " disabled") + '>Generate authority preview</button></div><p class="eduops-action-reason">' + app.esc(enabled ? (selectedTemplate.reason || "Communication Authority permits preview.") : communicationDisabledReason()) + '</p></section><section class="eduops-panel-card eduops-span-12"><header><div><h2>Communication history</h2><p>Recent EduOps receipts for this exact applicant.</p></div></header><div id="eduopsCommunicationHistory" class="eduops-loading-state">Loading communication history...</div></section></div>';
+    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-4"><header><div><h2>Template gallery</h2><p>Recommendation and availability come from Communication Authority. Choose explicitly.</p></div></header><div class="eduops-template-gallery">' + templates.map(function (item) { var recommended = item.recommended === true; var unavailable = item.selectable !== true; return '<button type="button" class="eduops-template-card" data-communication-template="' + app.esc(item.templateId) + '" data-message-type="' + app.esc(item.messageType) + '" data-recommended="' + (recommended ? "true" : "false") + '" data-availability="' + app.esc(item.availability) + '" aria-pressed="' + (draft.templateId === item.templateId ? "true" : "false") + '"' + (unavailable ? " disabled" : "") + '><strong>' + app.esc(recommended ? "Recommended: " + item.label : item.label) + '</strong><span>' + app.esc(item.availabilityLabel || app.authorityUnavailable("template availability")) + '</span><small>' + app.esc(unavailable ? item.unavailableReason : item.description) + '</small></button>'; }).join("") + '</div><div class="eduops-eligibility-panel">' + definition([["Recipient", draft.recipient || comm.effectiveEmail], ["Contactability", (app.state.workbench.contactability || {}).state], ["Cooling-off until", comm.coolingOffUntil], ["Selected template", selectedTemplate.label || "Choose communication"], ["Authority status", selectedAuthority.Comm_Status || app.authorityUnavailable("communication status")], ["Authority reason", selectedTemplate.unavailableReason || selectedTemplate.description || "Choose a communication."], ["Recommended template", comm.operatorRecommendation]]) + '</div></section><section class="eduops-panel-card eduops-span-8"><header><div><h2>Reviewed individual message</h2><p>Communication Authority controls recipient, availability, editing and final revalidation.</p></div><span class="eduops-capability-state" data-state="' + (enabled ? "READY" : "DISABLED") + '">' + (enabled ? "Preview required" : "Disabled") + '</span></header><div class="eduops-form-grid"><label class="eduops-field eduops-field-wide">Recipient<input id="eduopsCommRecipient" type="email" readonly value="' + app.esc(draft.recipient) + '"></label><label class="eduops-field eduops-field-wide">Subject<input id="eduopsCommSubject" type="text"' + (editable ? "" : " readonly") + ' value="' + app.esc(draft.subject) + '"></label><label class="eduops-field eduops-field-wide">Full message body<textarea id="eduopsCommBody" rows="10"' + (editable ? "" : " readonly") + '>' + app.esc(draft.body) + '</textarea></label></div><div class="eduops-action-row"><button class="eduops-button eduops-button-primary" type="button" data-preview-command="SEND_INDIVIDUAL_COMMUNICATION"' + (enabled ? "" : " disabled") + '>Generate authority preview</button></div><p class="eduops-action-reason">' + app.esc(enabled ? (selectedTemplate.description || "Communication Authority permits preview.") : communicationDisabledReason()) + '</p></section><section class="eduops-panel-card eduops-span-12"><header><div><h2>Communication history</h2><p>Recent EduOps receipts for this exact applicant.</p></div></header><div id="eduopsCommunicationHistory" class="eduops-loading-state">Loading communication history...</div></section></div>';
   }
   function renderPortal() {
     var portal = app.state.workbench.portal || {};
@@ -337,9 +350,9 @@
 
   function commandDraft(operation, source, file) {
     if (operation === "DOCUMENT_REVIEW") {
-      var current = file ? app.state.documentDraft[file.documentKey] || { status: file.statusCode || "", note: "" } : {};
+      var current = file ? app.state.documentDraft[file.documentKey] || { status: file.status || "", note: "" } : {};
       if (source && source.getAttribute("data-command-scope") === "all") {
-        return { docs: (app.state.documentManifest.files || []).map(function (item) { var draft = app.state.documentDraft[item.documentKey] || { status: item.statusCode || "", note: "" }; return { file: item.sourceField, status: draft.status, comment: draft.note }; }) };
+        return { docs: documentFiles().map(function (item) { var draft = app.state.documentDraft[item.documentKey] || { status: item.status || "", note: "" }; return { file: item.sourceField, status: draft.status, comment: draft.note }; }) };
       }
       return current;
     }
@@ -357,7 +370,7 @@
   function previewCommand(operation, source) {
     app.invalidateOperationAuthority("A new operation preview was requested.");
     var manifest = app.state.documentManifest;
-    var file = manifest && manifest.files && manifest.files[app.state.selectedDocumentIndex];
+    var file = manifest && documentFiles()[app.state.selectedDocumentIndex];
     var payload = { operation: operation, product: app.state.product, applicantId: identity().applicantId, rowKey: app.state.workbench.rowKey, snapshotId: app.state.workbench.snapshotId, idempotencyKey: app.idempotencyKey(operation, identity().applicantId), document: file ? documentPayload(file) : null, draft: commandDraft(operation, source, file) };
     var token = app.beginControlAction(source, "Creating preview...", "Validating the requested operation for " + payload.applicantId + ".");
     app.call("eduops_previewCommand", payload).then(function (preview) {
@@ -390,7 +403,7 @@
       var move = event.target.closest("[data-document-move]");
       if (move) { loadRendition(app.state.selectedDocumentIndex + Number(move.getAttribute("data-document-move")), true); return; }
       var original = event.target.closest("[data-open-original]");
-      if (original) { var file = app.state.documentManifest.files[app.state.selectedDocumentIndex]; var originalToken = app.beginControlAction(original, "Authorising...", "Authorising the separate canonical original action."); app.call("eduops_getDocumentFileAction", documentPayload(file)).then(function (result) { var url = result.url || result.openUrl || result.portalUrl || ""; app.finishControlAction(originalToken, url ? "SUCCESS" : "BLOCKED", url ? "Canonical original action opened in a separate tab." : (result.message || "Open Original returned no reusable URL.")); if (url) window.open(url, "_blank", "noopener,noreferrer"); else app.toast(result.message || "Open Original action returned without a reusable URL."); }).catch(function (error) { app.finishControlAction(originalToken, "BLOCKED", "Open Original blocked: " + (error.message || error)); app.toast("Open Original blocked: " + (error.message || error)); }); return; }
+      if (original) { var file = documentFiles()[app.state.selectedDocumentIndex]; var originalToken = app.beginControlAction(original, "Authorising...", "Authorising the separate canonical original action."); app.call("eduops_getDocumentFileAction", documentPayload(file)).then(function (result) { var url = result.url || result.openUrl || result.portalUrl || ""; app.finishControlAction(originalToken, url ? "SUCCESS" : "BLOCKED", url ? "Canonical original action opened in a separate tab." : (result.message || "Open Original returned no reusable URL.")); if (url) window.open(url, "_blank", "noopener,noreferrer"); else app.toast(result.message || "Open Original action returned without a reusable URL."); }).catch(function (error) { app.finishControlAction(originalToken, "BLOCKED", "Open Original blocked: " + (error.message || error)); app.toast("Open Original blocked: " + (error.message || error)); }); return; }
       var command = event.target.closest("[data-preview-command]");
       if (command) previewCommand(command.getAttribute("data-preview-command"), command);
       var correction = event.target.closest("[data-request-correction]");
@@ -411,7 +424,7 @@
     });
     dom.root.addEventListener("input", function (event) {
       var manifest = app.state.documentManifest;
-      var file = manifest && manifest.files && manifest.files[app.state.selectedDocumentIndex];
+      var file = manifest && documentFiles()[app.state.selectedDocumentIndex];
       if (event.target.matches("[data-document-status],[data-document-note]")) {
         if (!file) return;
         var draft = app.state.documentDraft[file.documentKey] || {};

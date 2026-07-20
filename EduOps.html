@@ -7,6 +7,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231559a6'/%3E%3Cpath d='M7 8h9v6H7zm0 10h18v6H7zm13-10h5v6h-5z' fill='white'/%3E%3C/svg%3E">
   <title>FODE Operations Workspace</title>
   <?!= HtmlService.createHtmlOutputFromFile("EduOps_Styles").getContent(); ?>
+  <?!= HtmlService.createHtmlOutputFromFile("OpsEdu_CockpitStyles").getContent(); ?>
 </head>
 <body class="eduops-body">
   <a class="eduops-skip-link" href="#eduopsWorklist">Skip to worklist</a>
@@ -20,8 +21,8 @@
           </svg>
         </span>
         <span>
-          <strong>FODE</strong>
-          <small>Operations Workspace</small>
+          <strong>OpsEdu Cockpit</strong>
+          <small>Authoritative operating context loading</small>
         </span>
       </div>
 
@@ -103,7 +104,23 @@
       </aside>
 
       <main class="eduops-main" id="eduopsMain">
-        <section class="eduops-next-command" aria-label="Authority reliability and global search">
+        <section id="opseduCockpit" class="opsedu-cockpit" aria-labelledby="opseduCockpitHeading">
+          <header class="opsedu-cockpit-header">
+            <div>
+              <span class="opsedu-cockpit-kicker">OpsEdu Cockpit</span>
+              <h1 id="opseduCockpitHeading">Today's work</h1>
+              <p id="opseduCockpitContext">Authoritative operating context loading</p>
+            </div>
+            <span id="opseduCockpitSnapshot" class="opsedu-cockpit-snapshot">Authoritative work packages loading</span>
+          </header>
+          <div id="opseduActionPackages" class="opsedu-action-packages" aria-live="polite">
+            <div class="opsedu-cockpit-empty"><strong>Resolving authoritative action packages</strong><span>The cockpit will fail closed if the backend projection is unavailable.</span></div>
+          </div>
+        </section>
+
+        <details class="opsedu-secondary-controls">
+          <summary>Search and authority status</summary>
+          <section class="eduops-next-command" aria-label="Authority reliability and global search">
           <div id="eduopsReliabilityBanner" class="eduops-reliability-banner" data-reliability="AUTHORITATIVE">
             <strong>Authority source loading</strong>
             <span>Product adapter status is being resolved.</span>
@@ -115,9 +132,10 @@
             <label for="eduopsGlobalSearch"><span>Global applicant search</span><input id="eduopsGlobalSearch" type="search" placeholder="ApplicantID, name, email or phone"></label>
             <div id="eduopsGlobalSearchResults" class="eduops-global-search-results" aria-live="polite"></div>
           </div>
-        </section>
+          </section>
+        </details>
 
-        <section class="eduops-overview" aria-labelledby="eduopsPageTitle">
+        <section class="eduops-overview opsedu-secondary-surface" aria-labelledby="eduopsPageTitle">
           <div class="eduops-page-heading">
             <div>
               <span class="eduops-eyebrow">Actionability-first workload</span>
@@ -332,6 +350,7 @@
     };
   </script>
   <?!= HtmlService.createHtmlOutputFromFile("EduOps_ClientCore").getContent(); ?>
+  <?!= HtmlService.createHtmlOutputFromFile("OpsEdu_ClientCockpit").getContent(); ?>
   <?!= HtmlService.createHtmlOutputFromFile("EduOps_ClientComponents").getContent(); ?>
   <?!= HtmlService.createHtmlOutputFromFile("EduOps_ClientWorkbench").getContent(); ?>
   <?!= HtmlService.createHtmlOutputFromFile("EduOps_ClientBatch").getContent(); ?>

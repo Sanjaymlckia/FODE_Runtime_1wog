@@ -1,0 +1,54 @@
+<style>
+.opsedu-cockpit {
+  position: relative;
+  flex: 0 0 auto;
+  overflow: hidden;
+  padding: 22px;
+  color: #132f3c;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(242, 181, 68, .22), transparent 26%),
+    linear-gradient(135deg, #f7f1df 0%, #edf5ee 54%, #e2eef2 100%);
+  border: 1px solid #b8c9c4;
+  border-radius: 14px;
+  box-shadow: 0 14px 34px rgba(22, 57, 69, .12);
+}
+.eduops-main { overflow-x: hidden; overflow-y: auto; }
+.opsedu-secondary-controls,
+.opsedu-secondary-surface { flex: 0 0 auto; }
+.opsedu-cockpit-header { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+.opsedu-cockpit-kicker { display: block; margin-bottom: 4px; color: #8b5415; font: 700 12px/1.2 Georgia, serif; letter-spacing: .11em; text-transform: uppercase; }
+.opsedu-cockpit h1 { margin: 0; font: 700 clamp(28px, 3vw, 44px)/1.05 Georgia, serif; letter-spacing: -.025em; }
+.opsedu-cockpit-header p { max-width: 520px; margin: 7px 0 0; color: #4d6872; }
+.opsedu-cockpit-snapshot { color: #5c737b; font-size: 12px; text-align: right; }
+.opsedu-action-packages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.opsedu-action-card { display: grid; grid-template-rows: auto auto 1fr auto auto; gap: 9px; min-height: 205px; padding: 16px; background: rgba(255,255,255,.88); border: 1px solid #c5d4d0; border-top: 4px solid #17656a; border-radius: 10px; box-shadow: 0 6px 18px rgba(23, 70, 76, .08); }
+.opsedu-action-card[data-secondary="true"] { opacity: .72; border-top-color: #70858a; }
+.opsedu-action-card-top { display: flex; justify-content: space-between; align-items: center; color: #45636b; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+.opsedu-action-card-top strong { color: #123b45; font: 700 24px/1 Georgia, serif; }
+.opsedu-action-card h3 { margin: 0; font: 700 19px/1.15 Georgia, serif; }
+.opsedu-action-card p { margin: 0; color: #526d74; font-size: 13px; line-height: 1.4; }
+.opsedu-action-card-meta { display: flex; flex-wrap: wrap; gap: 5px; }
+.opsedu-action-card-meta span { padding: 4px 7px; color: #31545c; background: #e7f0ed; border-radius: 999px; font-size: 11px; }
+.opsedu-cockpit-error, .opsedu-cockpit-empty { display: grid; gap: 5px; padding: 18px; background: #fff4e6; border: 1px solid #d6a35e; border-radius: 8px; }
+.opsedu-secondary-controls { margin: 0; border: 1px solid #cad7d9; border-radius: 8px; background: #f7faf9; }
+.opsedu-secondary-controls > summary { cursor: pointer; padding: 10px 14px; color: #48616a; font-weight: 650; }
+.opsedu-secondary-controls[open] > summary { border-bottom: 1px solid #cad7d9; }
+.opsedu-context-ribbon { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.opsedu-context-item { display: grid; gap: 1px; padding: 4px 6px; background: #eef4f2; border: 1px solid #d1ddda; border-radius: 5px; }
+.opsedu-context-item small { color: #63777c; font-size: 9px; text-transform: uppercase; }
+.opsedu-context-item strong { color: #294c54; font-size: 11px; font-weight: 650; }
+.opsedu-context-unavailable { margin-top: 7px; color: #8a3c32; font-size: 12px; }
+.opsedu-trace { margin-top: 6px; color: #5c7178; font-size: 11px; }
+.opsedu-trace summary { cursor: pointer; }
+.opsedu-trace dl { display: grid; gap: 3px; margin: 5px 0 0; }
+.opsedu-trace dl div { display: grid; grid-template-columns: 70px 1fr; }
+.opsedu-trace dt { font-weight: 700; }
+.opsedu-trace dd { margin: 0; }
+@media (max-width: 1250px) { .opsedu-action-packages { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 720px) {
+  .opsedu-cockpit { padding: 15px; }
+  .opsedu-cockpit-header { align-items: start; flex-direction: column; }
+  .opsedu-cockpit-snapshot { text-align: left; }
+  .opsedu-action-packages { grid-template-columns: 1fr; }
+}
+</style>

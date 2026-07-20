@@ -224,6 +224,8 @@ function eduopsFodeRowDto_(row, query, snapshotId, reliability) {
   var coolingPresentation = row.actionabilityState === "COOLING_OFF"
     ? (row.coolingOffUntil ? eduopsCodePresentation_("COOLING_OFF", "Recently contacted - waiting period", "Cooling-off expires " + row.coolingOffUntil + ".", "Actionability Resolver") : eduopsAuthorityUnavailable_("cooling-off expiry", "Actionability Resolver"))
     : eduopsCodePresentation_("NOT_COOLING_OFF", "No waiting period", "Actionability Resolver did not return an active cooling-off gate.", "Actionability Resolver");
+  var primaryRoute = eduopsPrimaryRouteForRow_(row);
+  var contextRibbon = eduopsApplicantContextRibbon_(row, snapshotId);
   return {
     schemaVersion: "EDUOPS_WORKLOAD_ROW_V2",
     authoritySource: "Actionability Resolver",
@@ -237,7 +239,7 @@ function eduopsFodeRowDto_(row, query, snapshotId, reliability) {
     actionabilityLabel: actionabilityPresentation.label || "",
     worklistKey: eduopsClean_(row.worklistKey || ""),
     worklistLabel: worklistPresentation.label || "",
-    primaryRoute: eduopsPrimaryRouteForRow_(row),
+    primaryRoute: primaryRoute,
     actionOwner: eduopsClean_(row.actionOwner || ""),
     workOwnership: eduopsWorkOwnership_(row),
     nextAction: eduopsClean_(row.nextAction || ""),
@@ -271,6 +273,8 @@ function eduopsFodeRowDto_(row, query, snapshotId, reliability) {
       contactability: eduopsCodePresentation_(authorityState.contactabilityState, eduopsHumanize_(authorityState.contactabilityState), "", "Contactability authority"),
       reliability: reliabilityPresentation
     },
+    applicantContextRibbon: contextRibbon,
+    traceAudit: eduopsRowTraceAudit_(row, snapshotId),
     authorityDecision: {
       schemaVersion: "EDUOPS_ROW_AUTHORITY_DECISION_V1",
       authoritySource: "Actionability Resolver",
@@ -300,6 +304,66 @@ function eduopsPrimaryRouteForRow_(row) {
   if (owner === "OFFICER" || nextAction === "REVIEW_DOCUMENTS") return "Admissions Review";
   if (owner === "APPLICANT") return "Applicant Action";
   return "Operations";
+}
+
+function eduopsPrimaryActionTarget_(row) {
+  var route = eduopsPrimaryRouteForRow_(row);
+  var targetTab = "overview";
+  if (route === "Finance") targetTab = "finance";
+  else if (route === "Admissions Review") targetTab = "documents";
+  else if (route === "Contactability") targetTab = "contactability";
+  else if (route === "Applicant Action" && eduopsClean_(row && row.recommendedMessageType || "")) targetTab = "communications";
+  return {
+    schemaVersion: "OPSEDU_PRIMARY_ACTION_TARGET_V1",
+    authoritySource: "Actionability Resolver + EduOps backend route projection",
+    available: !!eduopsClean_(row && row.nextAction || ""),
+    targetTab: targetTab,
+    targetPanel: targetTab,
+    targetAction: eduopsClean_(row && row.nextAction || ""),
+    targetActionLabel: eduopsHumanize_(row && row.nextAction || ""),
+    reason: eduopsClean_(row && row.worklistReason || ""),
+    reasonCode: row && row.nextAction ? "AUTHORITATIVE_TARGET_RETURNED" : "BACKEND_CONTRACT_MISSING",
+    stale: false
+  };
+}
+
+function eduopsApplicantContextRibbon_(row, snapshotId) {
+  var authorityState = row && row.authorityState || {};
+  var lifecycle = row && row.canonicalLifecycle || {};
+  return {
+    schemaVersion: "OPSEDU_APPLICANT_CONTEXT_RIBBON_V1",
+    authoritySource: "Canonical Lifecycle Resolver + Actionability Resolver + Finance authority + Document authority + Contactability authority + Communication Authority",
+    applicantId: eduopsClean_(row && row.applicantId || ""),
+    snapshotId: eduopsClean_(snapshotId || ""),
+    items: [
+      { key: "lifecycle", label: "Lifecycle", value: eduopsClean_(lifecycle.lifecycleStage || lifecycle.baseState || ""), reason: eduopsClean_(lifecycle.reason || ""), authoritySource: "Canonical Lifecycle Resolver" },
+      { key: "finance", label: "Finance", value: eduopsClean_(authorityState.canonicalFinanceState || ""), reason: eduopsClean_(row && row.explanation || ""), authoritySource: "Finance authority" },
+      { key: "documents", label: "Documents", value: eduopsClean_(authorityState.documentState || ""), reason: "", authoritySource: "Document authority" },
+      { key: "contactability", label: "Contactability", value: eduopsClean_(authorityState.contactabilityState || ""), reason: "", authoritySource: "Contactability authority" },
+      { key: "cooldown", label: "Cooldown / next action", value: eduopsClean_(row && (row.coolingOffUntil || row.nextActionDate) || ""), reason: eduopsClean_(row && row.worklistReason || ""), authoritySource: "Actionability Resolver" },
+      { key: "nextAction", label: "Next action", value: eduopsClean_(row && row.nextAction || ""), reason: eduopsClean_(row && row.worklistReason || ""), authoritySource: "Actionability Resolver" },
+      { key: "communication", label: "Communication", value: eduopsClean_(row && row.recommendedMessageType || ""), reason: eduopsClean_(row && row.communicationProgressDetail || ""), authoritySource: "Communication Authority" }
+    ].map(function (item) {
+      item.available = !!item.value;
+      item.displayValue = item.value ? eduopsHumanize_(item.value) : "Authoritative decision unavailable";
+      return item;
+    })
+  };
+}
+
+function eduopsRowTraceAudit_(row, snapshotId) {
+  return {
+    schemaVersion: "OPSEDU_TRACE_AUDIT_V1",
+    authoritySource: "EduOps backend authority projection",
+    applicantId: eduopsClean_(row && row.applicantId || ""),
+    snapshotId: eduopsClean_(snapshotId || ""),
+    actionabilityState: eduopsClean_(row && row.actionabilityState || ""),
+    worklistKey: eduopsClean_(row && row.worklistKey || ""),
+    reasonCode: eduopsClean_(row && row.reasonCode || ""),
+    routeReason: eduopsClean_(row && row.worklistReason || ""),
+    sourceAuthorities: Array.isArray(row && row.sourceAuthorities) ? row.sourceAuthorities.slice() : [],
+    stale: false
+  };
 }
 
 function eduopsFodeRowsForSnapshot_(snapshot) {
@@ -360,6 +424,9 @@ function eduopsFodeApplicantRead_(applicantId, query, snapshotId) {
       phone: projection.phone
     },
     exactAuthorityProjection: projection,
+    applicantContextRibbon: projection.applicantContextRibbon,
+    primaryActionTarget: eduopsPrimaryActionTarget_(row),
+    traceAudit: projection.traceAudit,
     applicantDetail: eduopsBoundApplicantDetail_(detail),
     documents: eduopsDocumentsSummary_(canonicalRes.applicant),
     finance: eduopsFinanceSummary_(canonicalRes.applicant),

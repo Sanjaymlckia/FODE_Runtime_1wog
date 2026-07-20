@@ -49,16 +49,16 @@ ${extractFunction(client, "applyCommunicationTemplate")}
 
 context.app.state.workbench.actions.SEND_INDIVIDUAL_COMMUNICATION = { schemaVersion: "EDUOPS_WORKBENCH_ACTION_V1", available: true, reason: "Backend operation and capability authority permit preview." };
 context.app.state.communicationDraft = { templateId: "payment_followup", messageType: "payment_followup" };
-context.app.state.workbench.communications = { templateGallery: [{ templateId: "payment_followup", messageType: "payment_followup", selectable: true }] };
+context.app.state.workbench.communications = { communicationTemplatePanel: { schemaVersion: "OPSEDU_COMMUNICATION_TEMPLATE_PANEL_V1", templates: [{ templateId: "payment_followup", messageType: "payment_followup", selectable: true }] } };
 assert.equal(context.communicationEnabled(), true, "backend operation authority and per-template authority enable the EduOps communication control");
 
 context.app.state.workbench.actions.SEND_INDIVIDUAL_COMMUNICATION = { schemaVersion: "EDUOPS_WORKBENCH_ACTION_V1", available: false, reason: "The authoritative capability projection does not permit individual communication." };
-context.app.state.workbench.communications = { templateGallery: [{ templateId: "payment_followup", messageType: "payment_followup", selectable: true }] };
+context.app.state.workbench.communications = { communicationTemplatePanel: { schemaVersion: "OPSEDU_COMMUNICATION_TEMPLATE_PANEL_V1", templates: [{ templateId: "payment_followup", messageType: "payment_followup", selectable: true }] } };
 assert.equal(context.communicationEnabled(), false, "authoritative false capability must disable communication control");
 assert.match(context.communicationDisabledReason(), /authoritative capability projection/i, "false capability must display capability reason");
 
 context.app.state.workbench.actions.SEND_INDIVIDUAL_COMMUNICATION = { schemaVersion: "EDUOPS_WORKBENCH_ACTION_V1", available: true, reason: "Backend operation and capability authority permit preview." };
-context.app.state.workbench.communications = { templateGallery: [{ templateId: "payment_followup", messageType: "payment_followup", selectable: false, blockCode: "NO_EFFECTIVE_EMAIL", blockReason: "No effective parent email is available.", recommendedMessageType: "payment_followup" }] };
+context.app.state.workbench.communications = { communicationTemplatePanel: { schemaVersion: "OPSEDU_COMMUNICATION_TEMPLATE_PANEL_V1", templates: [{ templateId: "payment_followup", messageType: "payment_followup", selectable: false, unavailableReason: "No effective parent email is available.", recommendedMessageType: "payment_followup" }] } };
 assert.equal(context.communicationEnabled(), false, "Communication Authority block must disable communication even when capability is true");
 assert.equal(context.communicationDisabledReason(), "No effective parent email is available.", "authoritative block reason must be displayed");
 
@@ -69,7 +69,7 @@ function configureTemplates(templates, selectedType, capability = true) {
     identity: { applicantId: "A1", displayName: "Applicant One", email: "a@example.test" },
     exactAuthorityProjection: { canonicalLifecycle: "IGNORED", canonicalFinanceState: "IGNORED", Payment_Badge: "IGNORED", Receipt_Status: "IGNORED" },
     finance: { state: "IGNORED", paymentVerified: true },
-    communications: { recommendedMessageType: templates[0] && templates[0].messageType, templateGallery: templates }
+    communications: { recommendedMessageType: templates[0] && templates[0].messageType, communicationTemplatePanel: { schemaVersion: "OPSEDU_COMMUNICATION_TEMPLATE_PANEL_V1", templates } }
   };
 }
 
@@ -84,8 +84,8 @@ const recommendedPermitted = {
   label: "Payment Follow-Up",
   purpose: "Canonical payment follow-up",
   selectable: true,
-  defaultSubject: "FODE KIA Application - Payment Follow-Up",
-  defaultBody: "Payment authority body"
+  subject: "FODE KIA Application - Payment Follow-Up",
+  body: "Payment authority body"
 };
 const docsBlocked = {
   templateId: "docs_missing",
@@ -94,10 +94,9 @@ const docsBlocked = {
   label: "Missing Documents Follow-Up",
   purpose: "Canonical document follow-up",
   selectable: false,
-  blockCode: "DOCS_NOT_APPLICABLE",
-  blockReason: "Documents follow-up is not permitted for this selected applicant.",
-  defaultSubject: "FODE KIA Application - Missing Documents",
-  defaultBody: "Documents authority body"
+  unavailableReason: "Documents follow-up is not permitted for this selected applicant.",
+  subject: "FODE KIA Application - Missing Documents",
+  body: "Documents authority body"
 };
 const customPermitted = {
   templateId: "custom_email",
@@ -106,13 +105,12 @@ const customPermitted = {
   label: "Custom Email",
   purpose: "Canonical custom selected-applicant message",
   selectable: true,
-  defaultSubject: "Custom subject",
-  defaultBody: "Custom body"
+  subject: "Custom subject",
+  body: "Custom body"
 };
 const customBlocked = Object.assign({}, customPermitted, {
   selectable: false,
-  blockCode: "NO_EFFECTIVE_EMAIL",
-  blockReason: "Custom email is blocked by its own authority result."
+  unavailableReason: "Custom email is blocked by its own authority result."
 });
 
 configureTemplates([recommendedPermitted, docsBlocked], "payment_followup");
@@ -120,19 +118,19 @@ assert.equal(context.communicationEnabled(), true, "A: recommended permitted sel
 context.app.state.communicationDraft.templateId = docsBlocked.templateId;
 context.app.state.communicationDraft.messageType = docsBlocked.messageType;
 assert.equal(context.communicationEnabled(), false, "A: selecting an authority-blocked alternative must disable the control");
-assert.equal(context.communicationDisabledReason(), docsBlocked.blockReason, "A: alternative block reason must govern after selection");
+assert.equal(context.communicationDisabledReason(), docsBlocked.unavailableReason, "A: alternative block reason must govern after selection");
 
-configureTemplates([Object.assign({}, recommendedPermitted, { selectable: false, blockReason: "Recommended payment follow-up blocked." }), customPermitted], "payment_followup");
+configureTemplates([Object.assign({}, recommendedPermitted, { selectable: false, unavailableReason: "Recommended payment follow-up blocked." }), customPermitted], "payment_followup");
 assert.equal(context.communicationEnabled(), false, "B: default recommended blocked selection must be disabled");
 context.applyCommunicationTemplate(customPermitted);
 assert.equal(context.communicationEnabled(), true, "B: permitted alternative must enable the control");
 assert.notEqual(context.communicationDisabledReason(), "Recommended payment follow-up blocked.", "B: recommended block reason must not govern the permitted alternative");
 
-configureTemplates([Object.assign({}, recommendedPermitted, { selectable: false, blockReason: "Recommended blocked." }), customBlocked], "custom_email");
+configureTemplates([Object.assign({}, recommendedPermitted, { selectable: false, unavailableReason: "Recommended blocked." }), customBlocked], "custom_email");
 assert.equal(context.selectedCommunicationTemplate().messageType, "custom_email", "C: custom_email must map to its own canonical message type");
 assert.equal(context.communicationEnabled(), false, "C: blocked custom_email must not inherit recommended eligibility");
-assert.equal(context.communicationDisabledReason(), customBlocked.blockReason, "C: custom_email must display its own block reason");
-configureTemplates([Object.assign({}, recommendedPermitted, { selectable: false, blockReason: "Recommended blocked." }), customPermitted], "custom_email");
+assert.equal(context.communicationDisabledReason(), customBlocked.unavailableReason, "C: custom_email must display its own block reason");
+configureTemplates([Object.assign({}, recommendedPermitted, { selectable: false, unavailableReason: "Recommended blocked." }), customPermitted], "custom_email");
 assert.equal(context.communicationEnabled(), true, "C: independently permitted custom_email must enable");
 
 configureTemplates([customPermitted], "custom_email", false);
@@ -147,20 +145,20 @@ assert.equal(context.communicationEnabled(), true, "E: local lifecycle/payment/r
 
 context.applyCommunicationTemplate(recommendedPermitted);
 assert.equal(context.app.state.communicationDraft.messageType, "payment_followup", "F: recommended path keeps canonical message type");
-assert.equal(context.app.state.communicationDraft.subject, recommendedPermitted.defaultSubject, "F: recommended path uses canonical subject");
-assert.equal(context.app.state.communicationDraft.body, recommendedPermitted.defaultBody, "F: recommended path uses canonical body");
+assert.equal(context.app.state.communicationDraft.subject, recommendedPermitted.subject, "F: recommended path uses canonical subject");
+assert.equal(context.app.state.communicationDraft.body, recommendedPermitted.body, "F: recommended path uses canonical body");
 assert.equal(recommendedPermitted.selectedOptionLabel, "Payment / Receipt Follow-Up", "F: recommended path uses canonical title");
 assert.equal(recommendedPermitted.purpose, "Canonical payment follow-up", "F: recommended path uses canonical description");
 context.applyCommunicationTemplate(Object.assign({}, docsBlocked, { selectable: true }));
 assert.equal(context.app.state.communicationDraft.messageType, "docs_missing", "F: alternative path keeps canonical message type");
-assert.equal(context.app.state.communicationDraft.subject, docsBlocked.defaultSubject, "F: alternative path uses canonical subject");
-assert.equal(context.app.state.communicationDraft.body, docsBlocked.defaultBody, "F: alternative path uses canonical body");
+assert.equal(context.app.state.communicationDraft.subject, docsBlocked.subject, "F: alternative path uses canonical subject");
+assert.equal(context.app.state.communicationDraft.body, docsBlocked.body, "F: alternative path uses canonical body");
 context.applyCommunicationTemplate(customPermitted);
 assert.equal(context.app.state.communicationDraft.messageType, "custom_email", "F: custom path keeps canonical custom_email type");
-assert.equal(context.app.state.communicationDraft.subject, customPermitted.defaultSubject, "F: custom path uses established custom draft subject");
-assert.equal(context.app.state.communicationDraft.body, customPermitted.defaultBody, "F: custom path uses established custom draft body");
+assert.equal(context.app.state.communicationDraft.subject, customPermitted.subject, "F: custom path uses established custom draft subject");
+assert.equal(context.app.state.communicationDraft.body, customPermitted.body, "F: custom path uses established custom draft body");
 
-configureTemplates([Object.assign({}, recommendedPermitted, { selectable: false, blockReason: "Cooling-off authority result supplied for selected type." })], "payment_followup");
+configureTemplates([Object.assign({}, recommendedPermitted, { selectable: false, unavailableReason: "Cooling-off authority result supplied for selected type." })], "payment_followup");
 assert.equal(context.communicationDisabledReason(), "Cooling-off authority result supplied for selected type.", "H: cooling-off contrast consumes supplied selected-type authority result without changing cooldown calculations");
 
 assert.match(workload, /function eduopsClientCapabilityProjection_/, "server must produce a documented EduOps client capability DTO");
@@ -174,7 +172,7 @@ assert.match(workload, /resolveApplicantMessageContextFromRow_\(rowObj, rowNumbe
 assert.doesNotMatch(client, /FODE - Applicant follow-up/, "EduOps must not keep the generic hard-coded communication subject");
 assert.doesNotMatch(client, /Request outstanding document evidence\./, "EduOps must not keep local docs_missing template copy");
 assert.doesNotMatch(client, /Follow up while receipt\/payment verification is pending\./, "EduOps must not keep local payment_followup template copy");
-assert.match(client, /templateGallery/, "client must render the server-projected canonical template gallery");
+assert.match(client, /communicationTemplatePanel/, "client must render the server-projected canonical template panel");
 assert.match(client, /custom_email|communicationTemplateById/, "custom_email mapping must remain supported through canonical template metadata");
 assert.match(extractFunction(commands, "eduopsAuthorityPreview_"), /admin_previewApplicantMessage/, "individual communication preview must route through the existing preview authority");
 assert.match(extractFunction(commands, "eduops_executeCommand"), /PREVIEW_EXPIRED_OR_UNKNOWN[\s\S]*PREVIEW_NOT_EXECUTABLE/, "execute must require a cached executable preview");

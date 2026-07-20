@@ -89,6 +89,19 @@
     return !!decision && decision.schemaVersion === "EDUOPS_ROW_AUTHORITY_DECISION_V1" && decision.stale !== true && decision.actionAvailable === true && row.selectable === true;
   }
 
+  function contextRibbonHtml(row) {
+    var ribbon = row && row.applicantContextRibbon;
+    if (!ribbon || ribbon.schemaVersion !== "OPSEDU_APPLICANT_CONTEXT_RIBBON_V1") return '<div class="opsedu-context-unavailable">' + app.esc(app.authorityUnavailable("applicant context ribbon")) + '</div>';
+    var items = (ribbon.items || []).map(function (item) {
+      return '<span class="opsedu-context-item" data-context-key="' + app.esc(item.key) + '" title="' + app.esc(item.reason || item.authoritySource) + '"><small>' + app.esc(item.label) + '</small><strong>' + app.esc(item.displayValue) + '</strong></span>';
+    }).join("");
+    var trace = row.traceAudit;
+    var traceHtml = trace && trace.schemaVersion === "OPSEDU_TRACE_AUDIT_V1"
+      ? '<details class="opsedu-trace"><summary>Show trace</summary><dl><div><dt>Authority</dt><dd>' + app.esc(trace.authoritySource) + '</dd></div><div><dt>Snapshot</dt><dd>' + app.esc(trace.snapshotId) + '</dd></div><div><dt>Reason</dt><dd>' + app.esc(trace.reasonCode || trace.routeReason) + '</dd></div></dl></details>'
+      : '<div class="opsedu-context-unavailable">' + app.esc(app.authorityUnavailable("trace audit")) + '</div>';
+    return '<div class="opsedu-context-ribbon">' + items + '</div>' + traceHtml;
+  }
+
   function selectionCount(response) {
     if (app.state.selectionMode === "ALL_ELIGIBLE_MATCHING_QUERY") {
       return Math.max(0, Number(response && response.reconciliation && response.reconciliation.totalAuthoritySelectable || 0) - excludedCount());
@@ -120,7 +133,7 @@
     return '<tr data-applicant-row="' + app.esc(id) + '"' + (selected ? ' data-selected="true"' : '') + '>'
       + '<td class="eduops-col-select"><input class="eduops-row-checkbox" type="checkbox" data-select-applicant="' + app.esc(id) + '" aria-label="Select ' + app.esc(row.displayName) + '"' + (selected ? " checked" : "") + (blocked ? " disabled" : "") + '></td>'
       + '<td class="eduops-col-applicant"><button type="button" class="eduops-applicant-link" data-quick-applicant="' + app.esc(id) + '"><strong>' + app.esc(row.displayName) + '</strong><span>' + app.esc(id) + '</span></button></td>'
-      + '<td class="eduops-col-action"><strong>' + app.esc(app.authorityLabel(p.worklist, "worklist")) + '</strong><span>' + app.esc(app.authorityLabel(p.nextAction, "next action")) + '</span><span>Next-action date: ' + app.esc(row.nextActionDate || app.authorityUnavailable("next-action date")) + '</span></td>'
+      + '<td class="eduops-col-action"><strong>' + app.esc(app.authorityLabel(p.worklist, "worklist")) + '</strong><span>' + app.esc(app.authorityLabel(p.nextAction, "next action")) + '</span><span>Next-action date: ' + app.esc(row.nextActionDate || app.authorityUnavailable("next-action date")) + '</span>' + contextRibbonHtml(row) + '</td>'
       + '<td class="eduops-col-state"><strong>' + app.esc(app.authorityLabel(p.lifecycle, "lifecycle state")) + '</strong><span>Finance: ' + app.esc(app.authorityLabel(p.finance, "finance")) + ' / Documents: ' + app.esc(app.authorityLabel(p.documents, "document state")) + '</span><span>' + app.esc(app.authorityLabel(p.coolingOff, "cooling-off")) + (row.coolingOffUntil ? " until " + app.esc(row.coolingOffUntil) : "") + '</span></td>'
       + '<td class="eduops-col-owner"><strong>' + app.esc(app.authorityLabel(p.owner, "action owner")) + '</strong><span>' + app.esc(app.authorityLabel(p.workScope, "work scope")) + '</span></td>'
       + '<td class="eduops-col-route"><strong>' + app.esc(app.authorityLabel(p.route, "operator route")) + '</strong><span>Backend-projected context</span></td>'
@@ -189,6 +202,7 @@
     renderScopes(presentation);
     renderFilterControls(response);
     renderRows(response);
+    if (typeof app.renderOpsEduCockpit === "function") app.renderOpsEduCockpit(response);
     renderSelection(response);
     renderPagination(response);
     var selectedState = authorityItem(presentation.actionabilityBuckets, app.state.actionabilityState) || presentation.allActionability;
@@ -243,7 +257,9 @@
     }
     dom.eduopsGlobalSearchResults.innerHTML = app.state.searchResults.map(function (row) {
       var p = row.presentation || {};
-      return '<article class="eduops-search-result"><div><strong>' + app.esc(row.displayName) + '</strong><span>' + app.esc(row.applicantId) + '</span><small>' + app.esc(app.authorityLabel(p.actionability, "actionability")) + ' / ' + app.esc(app.authorityLabel(p.worklist, "worklist")) + '</small></div><div><button class="eduops-button eduops-button-secondary" type="button" data-search-worklist="' + app.esc(row.applicantId) + '">Open worklist</button><button class="eduops-button eduops-button-primary" type="button" data-search-open="' + app.esc(row.applicantId) + '">Open Workbench</button></div></article>';
+      var handoff = row.searchHandoff;
+      var handoffReady = handoff && handoff.schemaVersion === "OPSEDU_SEARCH_HANDOFF_V1" && handoff.queueBinding;
+      return '<article class="eduops-search-result"><div><strong>' + app.esc(row.displayName) + '</strong><span>' + app.esc(row.applicantId) + '</span><small>' + app.esc(app.authorityLabel(p.actionability, "actionability")) + ' / ' + app.esc(app.authorityLabel(p.worklist, "worklist")) + '</small><small>' + app.esc(app.authorityLabel(p.lifecycle, "lifecycle")) + ' / ' + app.esc(app.authorityLabel(p.finance, "finance")) + ' / ' + app.esc(app.authorityLabel(p.documents, "documents")) + '</small><small>Next action: ' + app.esc(handoffReady ? app.authorityLabel(handoff.nextAction, "next action") : app.authorityUnavailable("search handoff")) + '</small><small>Current work package: ' + app.esc(handoffReady ? handoff.actionPackageLabel : app.authorityUnavailable("search handoff")) + '</small><small>' + app.esc(handoffReady ? handoff.routeReason : "") + '</small></div><div><button class="eduops-button eduops-button-secondary" type="button" data-search-worklist="' + app.esc(row.applicantId) + '"' + (handoffReady ? "" : " disabled") + '>' + app.esc(handoffReady ? handoff.openQueueLabel : "Action queue unavailable") + '</button><button class="eduops-button eduops-button-primary" type="button" data-search-open="' + app.esc(row.applicantId) + '">Open Workbench</button></div></article>';
     }).join("");
   }
 
@@ -493,7 +509,7 @@
       var searchWorklist = event.target.closest("[data-search-worklist]");
       if (searchWorklist) {
         var found = app.state.searchResults.filter(function (row) { return row.applicantId === searchWorklist.getAttribute("data-search-worklist"); })[0];
-        if (found) { dismissGlobalSearch(); app.state.actionabilityState = found.actionabilityState; app.state.worklistKey = found.worklistKey || ""; app.state.filters.search = found.applicantId; app.requestWorkload({ resetPage: true }); }
+        if (found && found.searchHandoff && app.openServerBoundQueue) { dismissGlobalSearch(); app.openServerBoundQueue(found.searchHandoff.queueBinding, found.searchHandoff.openQueueLabel); }
         return;
       }
       var report = event.target.closest("[data-report]");
