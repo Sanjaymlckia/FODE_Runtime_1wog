@@ -103,8 +103,9 @@ function testRuntimePlaceholderAndControlPolicy() {
   assert.equal((read("EduOps.html").match(/id="eduopsGlobalSearch"/g) || []).length, 1, "persistent global applicant search must have one active field");
   assert.match(read("EduOps.html"), /eduops-global-search-strip[\s\S]*Find any applicant[\s\S]*eduops-shell/, "global applicant search must sit persistently above the operator shell");
   assert.match(read("EduOps_ClientComponents.html"), /eduops_searchApplicants",\s*\{\s*product:\s*app\.state\.product,\s*query:\s*query,\s*limit:\s*12,\s*expectedSnapshotId:\s*app\.state\.snapshotId\s*\}/, "global applicant search request must not include active work-package filters");
-  assert.match(read("EduOps_ClientComponents.html"), /No applicant found in the authoritative FODE population\./, "global no-match state must not claim scoped absence");
-  assert.match(read("EduOps_ClientComponents.html"), /Find any applicant by name, ApplicantID, email or phone\./, "global search placeholder must explain full-population scope");
+  assert.match(read("EduOps_ClientComponents.html"), /the authoritative FODE population/, "global no-match state must retain authoritative FODE population wording");
+  assert.match(read("EduOps_ClientComponents.html"), /No applicant found in '\s*\+\s*app\.esc\(productLabel\)\s*\+\s*'\./, "global no-match state must render the product-specific population label");
+  assert.match(read("EduOps_ClientComponents.html"), /Find any '\s*\+\s*app\.esc/, "global search placeholder must render the product-specific person label");
   assert.doesNotMatch(read("EduOps_ClientComponents.html"), /searchOpen[\s\S]{0,160}dismissGlobalSearch/, "opening a global-search applicant must preserve search context");
   assert.doesNotMatch(read("EduOps_ClientComponents.html"), /searchWorklist[\s\S]{0,260}dismissGlobalSearch/, "opening a global-search work package must preserve search context");
   assert.match(read("EduOps_Styles.html"), /\.eduops-global-search-strip[\s\S]*min-height:\s*38px/, "global search strip must be compact and persistent");

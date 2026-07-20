@@ -87,6 +87,7 @@ function eduops_getProfile() {
     product: "FODE",
     label: "FODE",
     description: "Actionability-first operations workspace over existing FODE authoritative services.",
+    products: eduopsProductProfileRegistry_(),
     contractVersion: cfg.contractVersion,
     profileVersion: cfg.profileVersion,
     defaultQuery: { product: "FODE", actionabilityState: "READY", worklistKey: "", workScope: "ALL_AUTHORISED", filters: { search: "" }, sort: { key: "urgency", direction: "asc" }, page: 1, pageSize: 25 },
@@ -100,11 +101,25 @@ function eduops_getProfile() {
   };
 }
 
+function eduopsProductProfileRegistry_() {
+  return [
+    { code: "FODE", label: "FODE", name: "FODE Operations", mode: "LIVE_OPERATIONS", default: true },
+    { code: "KIA", label: "KIA", name: "KIA Admissions", mode: "DEMONSTRATION_READ_ONLY", readOnlyReason: "KIA demonstration profile - no live operational actions." },
+    { code: "MLC", label: "MLC", name: "MLC Admissions and Training", mode: "DEMONSTRATION_READ_ONLY", readOnlyReason: "MLC demonstration profile - no live operational actions." }
+  ];
+}
+
+function eduopsNormalizeProduct_(product) {
+  var code = eduopsUpper_(product || "FODE");
+  return code === "KIA" || code === "MLC" ? code : "FODE";
+}
+
 function eduops_queryOperationalWorkload(payload) {
   var started = Date.now();
   var access = eduopsRequireAccess_();
   var accessMs = Date.now() - started;
   var query = eduopsNormalizeWorkloadQuery_(payload);
+  if (query.product !== "FODE") return eduopsDemoProductWorkload_(query, started, accessMs);
   var resolved = eduopsResolveFodeSnapshot_(access);
   var snapshotId = resolved.snapshotId;
   var reliability = eduopsSourceReliability_("AUTHORITATIVE", "FODE canonical snapshot resolved for operations workload.", "FODE workload");
@@ -166,6 +181,7 @@ function eduops_queryOperationalWorkload(payload) {
     actionabilityCounts: actionabilityCounts,
     worklistKeyCounts: worklistKeyCounts,
     metricCounts: metricCounts,
+    operationAvailability: eduopsOperationAvailability_(),
     batchTemplateOptions: [],
     batchTemplateAuthority: "EXACT_COHORT_EVALUATION_REQUIRED",
     queryBinding: queryBinding,
@@ -238,6 +254,8 @@ function eduops_searchApplicants(payload) {
   var started = Date.now();
   var access = eduopsRequireAccess_();
   var p = payload && typeof payload === "object" ? payload : {};
+  var product = eduopsNormalizeProduct_(p.product || "FODE");
+  if (product !== "FODE") return eduopsDemoProductSearch_(product, p, started);
   var queryText = eduopsClean_(p.query || p.search || "");
   var limit = Math.max(1, Math.min(25, Number(p.limit || 12)));
   var resolved = eduopsResolveFodeSnapshot_(access);
@@ -830,7 +848,7 @@ function eduopsResponseByteSize_(value) {
 function eduopsNormalizeWorkloadQuery_(payload) {
   var p = payload && typeof payload === "object" ? payload : {};
   return {
-    product: "FODE",
+    product: eduopsNormalizeProduct_(p.product || "FODE"),
     actionabilityState: eduopsUpper_(p.actionabilityState || "READY"),
     worklistKey: eduopsClean_(p.worklistKey || ""),
     workScope: eduopsUpper_(p.workScope || "ALL_AUTHORISED"),
@@ -839,6 +857,213 @@ function eduopsNormalizeWorkloadQuery_(payload) {
     page: eduopsNormalizePage_(p.page),
     pageSize: eduopsNormalizePageSize_(p.pageSize),
     expectedSnapshotId: eduopsClean_(p.expectedSnapshotId || "")
+  };
+}
+
+function eduopsDemoProductProfile_(product) {
+  var code = eduopsNormalizeProduct_(product);
+  if (code === "KIA") {
+    return {
+      code: "KIA",
+      name: "KIA Admissions",
+      personSingular: "Student",
+      personPlural: "Students",
+      programmeValues: ["Prep", "Grade 1", "Grade 3", "Grade 6", "Grade 8"],
+      routeLabels: ["Admissions", "Finance", "Registry", "Classroom", "Transport"],
+      owners: ["Parent", "Admissions K1", "Finance K1", "Registrar", "Class Coordinator"],
+      documentTypes: ["Birth Certificate", "Previous Report", "Student Photograph", "Fee Receipt"],
+      demoLabel: "KIA demonstration profile - no live operational actions",
+      snapshotId: "SNAP-KIA-20260714-001"
+    };
+  }
+  return {
+    code: "MLC",
+    name: "MLC Admissions and Training",
+    personSingular: "Learner",
+    personPlural: "Learners",
+    programmeValues: ["Certificate III", "Diploma", "English Foundation", "Corporate Cohort A", "Short Course"],
+    routeLabels: ["Course Admissions", "Finance", "Cohort Allocation", "LMS Access", "Corporate Training"],
+    owners: ["Learner", "Course Advisor", "Finance M1", "Cohort Lead", "LMS Admin"],
+    documentTypes: ["Identity Document", "Prior Qualification", "Learner Photograph", "Fee Receipt"],
+    demoLabel: "MLC demonstration profile - no live operational actions",
+    snapshotId: "SNAP-MLC-20260714-001"
+  };
+}
+
+function eduopsDemoProductRecords_(product) {
+  var profile = eduopsDemoProductProfile_(product);
+  var names = ["Malia Kora", "Daniel Aihi", "Ruth Kila", "Jonah Palia", "Selina Mako", "Peter Kuman", "Anita Wama", "Joel Kuri", "Maria Raka", "Thomas Buri", "Esther Lohia", "Samuel Peni", "Naomi Kapo", "Isaac Dagi", "Lydia Mena", "Paul Wari", "Grace Kila", "Andrew Toma"];
+  var modes = [
+    ["READY", "SEND_APPROVED_REMINDER", "Send Approved Reminder", "Send approved reminder", 0, 0],
+    ["READY", "PREPARE_CLASSROOM_HANDOVER", profile.code === "MLC" ? "Prepare LMS Enrolment" : "Prepare Classroom Handover", profile.code === "MLC" ? "Prepare LMS enrolment" : "Prepare classroom handover", 3, 2],
+    ["READY", "REVIEW_DOCUMENTS", "Review Documents", "Review documents individually", 1, 0],
+    ["COOLING_OFF", "PAYMENT_REMINDER_WAIT", "Payment Reminder Wait", "Wait until payment reminder is eligible", 0, 1],
+    ["AWAITING_APPLICANT", "UPLOAD_CORRECTION", "Upload Correction", "Wait for corrected upload", 0, 0],
+    ["AWAITING_PAYMENT", "PAYMENT_EVIDENCE", "Payment Evidence", "Wait for payment evidence", 0, 1],
+    ["REVIEW_REQUIRED", "ADMISSIONS_DECISION", "Admissions Decision", "Make admissions decision", 1, 0],
+    ["REVIEW_REQUIRED", "FINANCE_EXCEPTION", "Finance Exception", "Resolve Finance exception", 2, 1],
+    ["BLOCKED", "CONTACTABILITY_BLOCKED", "Contactability Blocked", "Correct contact details", 1, 4],
+    ["UNKNOWN", "DATA_INTEGRITY_REVIEW", "Data Integrity Review", "Resolve authority data", 1, 0],
+    ["COMPLETE", "COMPLETED_HISTORY", "Completed History", "No current action", 0, 2]
+  ];
+  return names.map(function (name, index) {
+    var mode = modes[index % modes.length];
+    var applicantId = profile.code + "-26-" + String(3100 + index).padStart(6, "0");
+    var finance = mode[1] === "PAYMENT_REMINDER_WAIT" || mode[1] === "PAYMENT_EVIDENCE" ? "PAYMENT_PENDING" : mode[1] === "FINANCE_EXCEPTION" ? "PAYMENT_TO_VERIFY" : "PAID_VERIFIED";
+    var documents = mode[1] === "REVIEW_DOCUMENTS" || mode[1] === "UPLOAD_CORRECTION" ? "REVIEW_REQUIRED" : "VERIFIED";
+    var emailName = name.toLowerCase().replace(/[^a-z]+/g, ".").replace(/^\.|\.$/g, "");
+    return {
+      rowKey: profile.code + "-DEMO-" + String(index + 2),
+      rowNumber: index + 2,
+      applicantId: applicantId,
+      name: name,
+      displayName: name,
+      email: emailName + "@example.edu.pg",
+      phone: "+675 7" + String(1000000 + index * 137).slice(-7),
+      product: profile.code,
+      programme: profile.programmeValues[index % profile.programmeValues.length],
+      actionabilityState: mode[0],
+      worklistKey: mode[1],
+      worklistLabel: mode[2],
+      worklistReason: profile.demoLabel + ". Preserved prototype surface; no live authority is connected.",
+      primaryRoute: profile.routeLabels[mode[5] % profile.routeLabels.length],
+      actionOwner: profile.owners[mode[4] % profile.owners.length],
+      nextAction: mode[3],
+      nextActionDate: "2026-07-" + String(14 + (index % 7)).padStart(2, "0") + "T09:30:00.000Z",
+      selectable: false,
+      selectBlockReason: profile.demoLabel + ". Batch, send and mutation actions are unavailable.",
+      reasonCode: "DEMO_PROFILE_READ_ONLY",
+      urgencyLevel: index % 4 === 0 ? "DUE" : "NORMAL",
+      urgencyReason: "Demonstration urgency from preserved " + profile.code + " prototype data.",
+      coolingOffUntil: mode[0] === "COOLING_OFF" ? "2026-07-18T09:00:00.000Z" : "",
+      recommendedMessageType: mode[1] === "SEND_APPROVED_REMINDER" ? (profile.code === "MLC" ? "cohort_notice" : "admissions_reminder") : mode[1] === "PAYMENT_REMINDER_WAIT" ? "fee_reminder" : "",
+      canonicalLifecycle: { lifecycleStage: mode[0] === "COMPLETE" ? "ENROLLED" : mode[1] === "PAYMENT_EVIDENCE" || mode[1] === "PAYMENT_REMINDER_WAIT" ? "PAYMENT_PENDING" : "APPLICATION_RECEIVED", label: mode[0] === "COMPLETE" ? "Enrolled" : mode[1] === "PAYMENT_EVIDENCE" || mode[1] === "PAYMENT_REMINDER_WAIT" ? "Payment pending" : "Application received", reason: "Preserved " + profile.code + " demonstration lifecycle." },
+      authorityState: { canonicalFinanceState: finance, documentState: documents, contactabilityState: mode[0] === "BLOCKED" ? "NO_VALID_EMAIL" : "EMAIL_AVAILABLE" },
+      documentState: documents,
+      canonicalFinanceState: finance,
+      contactabilityState: mode[0] === "BLOCKED" ? "NO_VALID_EMAIL" : "EMAIL_AVAILABLE"
+    };
+  });
+}
+
+function eduopsDemoProductRuntimeProjection_(profile, snapshotId, snapshotAsOf) {
+  var runtime = eduopsRuntimeProjection_(snapshotId, snapshotAsOf);
+  runtime.operationalClassification = profile.name;
+  runtime.environment = profile.demoLabel;
+  runtime.deploymentRole = "DEMONSTRATION_READ_ONLY";
+  runtime.dataAuthority = profile.code + " preserved demonstration snapshot";
+  return runtime;
+}
+
+function eduopsDemoOperationAvailability_(profile) {
+  var reason = profile.demoLabel + ". Batch, send and mutation actions are unavailable.";
+  return {
+    BATCH_COMMUNICATION: { available: false, reason: reason, authoritySource: profile.code + " demonstration profile" },
+    INDIVIDUAL_COMMUNICATION: { available: false, reason: reason, authoritySource: profile.code + " demonstration profile" },
+    DOCUMENT_REVIEW: { available: false, reason: reason, authoritySource: profile.code + " demonstration profile" },
+    FINANCE_VERIFICATION: { available: false, reason: reason, authoritySource: profile.code + " demonstration profile" },
+    CONTACTABILITY_CORRECTION: { available: false, reason: reason, authoritySource: profile.code + " demonstration profile" },
+    PORTAL_ACCESS: { available: false, reason: reason, authoritySource: profile.code + " demonstration profile" },
+    BOOKS_ACTION: { available: false, reason: reason, authoritySource: profile.code + " demonstration profile" }
+  };
+}
+
+function eduopsDemoProductWorkload_(query, started, accessMs) {
+  var profile = eduopsDemoProductProfile_(query.product);
+  var snapshotId = profile.snapshotId;
+  var snapshotAsOf = "2026-07-14T09:30:00.000Z";
+  var allRows = eduopsDemoProductRecords_(profile.code);
+  var reliability = eduopsSourceReliability_("AUTHORITATIVE", profile.demoLabel + ".", profile.code + " preserved profile surface");
+  var filtered = eduopsFilterRows_(allRows, query, reliability);
+  filtered.sort(function (a, b) { return eduopsCompareRows_(a, b, query.sort); });
+  var totalMatched = filtered.length;
+  var totalPages = Math.max(1, Math.ceil(totalMatched / query.pageSize));
+  var page = Math.min(query.page, totalPages);
+  var pageRows = filtered.slice((page - 1) * query.pageSize, (page - 1) * query.pageSize + query.pageSize);
+  var rows = pageRows.map(function (row) { return eduopsFodeRowDto_(row, query, snapshotId, reliability); });
+  var actionabilityCounts = eduopsActionabilityCounts_(allRows);
+  var worklistKeyCounts = eduopsWorklistCounts_(allRows, query);
+  var reconciliation = eduopsReconciliationForRows_(allRows, filtered, pageRows, query, snapshotId, { totalRows: allRows.length, generatedAt: snapshotAsOf });
+  return {
+    ok: true,
+    readOnly: true,
+    demoOnly: true,
+    product: profile.code,
+    profileVersion: EDUOPS_PROFILE_VERSION,
+    runtime: eduopsDemoProductRuntimeProjection_(profile, snapshotId, snapshotAsOf),
+    schemaVersion: "EDUOPS_OPERATIONAL_WORKLOAD_V2",
+    authoritySource: profile.code + " preserved demonstration profile",
+    snapshotId: snapshotId,
+    snapshotAsOf: snapshotAsOf,
+    reliabilityState: reliability.state,
+    reliabilityReasons: reliability.reasons,
+    actionabilityState: query.actionabilityState,
+    worklistKey: query.worklistKey,
+    workScope: query.workScope,
+    filters: query.filters,
+    sort: query.sort,
+    page: page,
+    pageSize: query.pageSize,
+    totalMatched: totalMatched,
+    totalPages: totalPages,
+    actionabilityCounts: actionabilityCounts,
+    worklistKeyCounts: worklistKeyCounts,
+    metricCounts: eduopsMetricCounts_(filtered),
+    operationAvailability: eduopsDemoOperationAvailability_(profile),
+    batchTemplateOptions: [],
+    batchTemplateAuthority: "DEMO_PROFILE_NO_LIVE_ACTIONS",
+    queryBinding: eduopsWorkloadQueryBinding_(query, snapshotId, { generatedAt: snapshotAsOf }),
+    reconciliation: reconciliation,
+    cockpit: eduopsDemoCockpitProjection_(profile, allRows, snapshotId, snapshotAsOf),
+    presentation: eduopsWorkloadPresentation_(allRows, filtered, pageRows, query, reliability, reconciliation, actionabilityCounts, worklistKeyCounts),
+    rows: rows,
+    timings: { accessMs: accessMs || 0, serverRpcMs: Date.now() - started, canonicalSnapshotResolutionMs: 0, workloadCompositionMs: Date.now() - started, sortingPagingMs: 0, responseBytes: 0 }
+  };
+}
+
+function eduopsDemoCockpitProjection_(profile, rows, snapshotId, snapshotTimestamp) {
+  var cockpit = eduopsCockpitProjection_(rows, snapshotId, snapshotTimestamp);
+  cockpit.authoritySource = profile.code + " preserved demonstration profile";
+  cockpit.productLabel = profile.name;
+  cockpit.demoOnly = true;
+  cockpit.demoReason = profile.demoLabel;
+  cockpit.actionPackages = cockpit.actionPackages.map(function (item) {
+    item.disabled = true;
+    item.disabledReason = profile.demoLabel + ". Open queue is read-only; live operations are unavailable.";
+    item.authoritySource = profile.code + " preserved demonstration profile";
+    return item;
+  });
+  return cockpit;
+}
+
+function eduopsDemoProductSearch_(product, payload, started) {
+  var profile = eduopsDemoProductProfile_(product);
+  var queryText = eduopsClean_(payload.query || payload.search || "");
+  var limit = Math.max(1, Math.min(25, Number(payload.limit || 12)));
+  var snapshotId = profile.snapshotId;
+  var snapshotAsOf = "2026-07-14T09:30:00.000Z";
+  if (!queryText) return { ok: true, readOnly: true, demoOnly: true, schemaVersion: "EDUOPS_SEARCH_RESULTS_V1", authoritySource: profile.code + " preserved demonstration profile", product: profile.code, query: "", totalMatches: 0, matches: [], snapshotId: snapshotId, timings: { searchMs: Date.now() - started } };
+  var needle = queryText.toLowerCase();
+  var rows = eduopsDemoProductRecords_(profile.code).filter(function (row) {
+    return [row.applicantId, row.name, row.email, row.phone, row.worklistLabel, row.actionabilityState, row.programme].join(" ").toLowerCase().indexOf(needle) >= 0;
+  });
+  rows.sort(function (a, b) { return eduopsClean_(a.applicantId).localeCompare(eduopsClean_(b.applicantId)); });
+  return {
+    ok: true,
+    readOnly: true,
+    demoOnly: true,
+    schemaVersion: "EDUOPS_SEARCH_RESULTS_V1",
+    authoritySource: profile.code + " preserved demonstration profile",
+    product: profile.code,
+    query: queryText,
+    snapshotId: snapshotId,
+    totalMatches: rows.length,
+    matches: rows.slice(0, limit).map(function (row) {
+      var dto = eduopsFodeRowDto_(row, eduopsNormalizeWorkloadQuery_({ product: profile.code, actionabilityState: row.actionabilityState, worklistKey: row.worklistKey, workScope: "ALL_AUTHORISED", filters: { search: "" }, sort: { key: "urgency", direction: "asc" }, page: 1, pageSize: 25 }), snapshotId, eduopsSourceReliability_("AUTHORITATIVE", profile.demoLabel + ".", profile.code + " preserved profile surface"));
+      dto.searchHandoff = eduopsSearchHandoff_(row, snapshotId, snapshotAsOf);
+      return dto;
+    }),
+    timings: { searchMs: Date.now() - started }
   };
 }
 
@@ -892,6 +1117,15 @@ function eduopsWorkScopePresentation_() {
   ].map(function (item) { return eduopsCodePresentation_(item[0], item[1], "Operator query scope projected by the backend.", "EduOps workload query service"); });
 }
 
+function eduopsRowsProduct_(rows) {
+  var list = Array.isArray(rows) ? rows : [];
+  for (var i = 0; i < list.length; i++) {
+    var product = eduopsClean_(list[i] && list[i].product || "");
+    if (product) return eduopsNormalizeProduct_(product);
+  }
+  return "FODE";
+}
+
 function eduopsCockpitProjection_(rows, snapshotId, snapshotTimestamp) {
   return {
     schemaVersion: "OPSEDU_COCKPIT_V1",
@@ -908,9 +1142,10 @@ function eduopsCockpitProjection_(rows, snapshotId, snapshotTimestamp) {
 
 function eduopsCockpitPrimaryBuckets_(rows, snapshotId, snapshotTimestamp) {
   var counts = eduopsActionabilityCounts_(rows);
+  var product = eduopsRowsProduct_(rows);
   return eduopsActionabilityPresentation_(counts).map(function (item) {
     var query = eduopsNormalizeWorkloadQuery_({
-      product: "FODE",
+      product: product,
       actionabilityState: item.code,
       worklistKey: "",
       workScope: "ALL_AUTHORISED",
@@ -970,6 +1205,7 @@ function eduopsActionPackageDescriptor_(row) {
 
 function eduopsActionPackages_(rows, snapshotId, snapshotTimestamp) {
   var groups = {};
+  var product = eduopsRowsProduct_(rows);
   (Array.isArray(rows) ? rows : []).forEach(function (row) {
     var descriptor = eduopsActionPackageDescriptor_(row);
     var key = descriptor.packageKey;
@@ -980,7 +1216,7 @@ function eduopsActionPackages_(rows, snapshotId, snapshotTimestamp) {
     var group = groups[key];
     var descriptor = group.descriptor;
     var query = eduopsNormalizeWorkloadQuery_({
-      product: "FODE",
+      product: product,
       actionabilityState: descriptor.actionabilityState,
       worklistKey: descriptor.worklistKey,
       workScope: "ALL_AUTHORISED",
@@ -1002,7 +1238,7 @@ function eduopsActionPackages_(rows, snapshotId, snapshotTimestamp) {
     var disabled = !descriptor.actionabilityState || (descriptor.worklistKey && group.rows.some(function (row) { return eduopsUpper_(row.actionabilityState || "") !== descriptor.actionabilityState; }));
     return {
       schemaVersion: "OPSEDU_ACTION_PACKAGE_V1",
-      packageId: "FODE:" + key,
+      packageId: product + ":" + key,
       actionabilityState: descriptor.actionabilityState,
       worklistKey: descriptor.worklistKey,
       label: descriptor.label,
@@ -1033,7 +1269,9 @@ function eduopsActionPackages_(rows, snapshotId, snapshotTimestamp) {
 
 function eduopsSearchHandoff_(row, snapshotId, snapshotTimestamp) {
   var descriptor = eduopsActionPackageDescriptor_(row);
+  var product = eduopsNormalizeProduct_(row && row.product || "FODE");
   var query = eduopsNormalizeWorkloadQuery_({
+    product: product,
     actionabilityState: descriptor.actionabilityState,
     worklistKey: descriptor.worklistKey,
     workScope: "ALL_AUTHORISED",
@@ -1046,7 +1284,7 @@ function eduopsSearchHandoff_(row, snapshotId, snapshotTimestamp) {
     schemaVersion: "OPSEDU_SEARCH_HANDOFF_V1",
     authoritySource: "Actionability Resolver + EduOps workload query service",
     applicantId: eduopsClean_(row && row.applicantId || ""),
-    actionPackageId: "FODE:" + descriptor.packageKey,
+    actionPackageId: product + ":" + descriptor.packageKey,
     actionPackageLabel: descriptor.label,
     openQueueLabel: "Open action queue: " + descriptor.label,
     routeReason: eduopsClean_(row && row.worklistReason || ""),

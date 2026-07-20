@@ -310,8 +310,9 @@
 
   function renderSearchResults(response) {
     app.state.searchResults = response.matches || [];
+    var productLabel = app.state.product === "FODE" ? "the authoritative FODE population" : app.state.product + " demonstration records";
     if (!app.state.searchResults.length) {
-      dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">No applicant found in the authoritative FODE population.</span>';
+      dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">No applicant found in ' + app.esc(productLabel) + '.</span>';
       return;
     }
     dom.eduopsGlobalSearchResults.innerHTML = app.state.searchResults.map(function (row) {
@@ -325,10 +326,10 @@
   function runGlobalSearch() {
     var query = dom.eduopsGlobalSearch.value.trim();
     if (!query) {
-      dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Find any applicant by name, ApplicantID, email or phone.</span>';
+      dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Find any ' + app.esc(app.state.product === "MLC" ? "learner" : app.state.product === "KIA" ? "student" : "applicant") + ' by name, ApplicantID, email or phone.</span>';
       return;
     }
-    dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Searching authoritative applicants...</span>';
+    dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Searching ' + app.esc(app.state.product === "FODE" ? "authoritative applicants" : app.state.product + " demonstration records") + '...</span>';
     app.call("eduops_searchApplicants", { product: app.state.product, query: query, limit: 12, expectedSnapshotId: app.state.snapshotId }).then(renderSearchResults).catch(function (error) {
       dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Search failed: ' + app.esc(error.message || error) + '</span>';
     });
@@ -337,7 +338,7 @@
   function dismissGlobalSearch() {
     dom.eduopsGlobalSearch.value = "";
     app.state.searchResults = [];
-    dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Find any applicant by name, ApplicantID, email or phone.</span>';
+    dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Find any ' + app.esc(app.state.product === "MLC" ? "learner" : app.state.product === "KIA" ? "student" : "applicant") + ' by name, ApplicantID, email or phone.</span>';
   }
 
   function openQuickView(applicantId, trigger) {
@@ -515,14 +516,10 @@
     dom.eduopsNextPage.addEventListener("click", function () { if (app.state.workload && app.state.page < app.state.workload.totalPages) { app.state.page++; app.requestWorkload(); } });
     dom.eduopsProductSwitcher.addEventListener("change", function () {
       var requested = this.value;
-      if (requested !== "FODE" && !app.isPreview()) {
-        this.value = "FODE";
-        app.toast("Only FODE Operations is released on this surface.");
-        return;
-      }
       app.saveProductState(app.state.product);
       app.restoreProductState(requested);
       app.clearSelection();
+      dismissGlobalSearch();
       app.requestWorkload();
     });
 

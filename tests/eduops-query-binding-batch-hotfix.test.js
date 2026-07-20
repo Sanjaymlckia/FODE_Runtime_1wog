@@ -89,6 +89,12 @@ Object.assign(context, {
     capabilities: { CAN_RUN_BATCH_COMMUNICATIONS: true }
   }),
   eduopsRequireFeature_: () => true,
+  eduopsOperationAvailability_: () => ({
+    BATCH_COMMUNICATION: { available: true, reason: "Test authority permits batch preview." },
+    DOCUMENT_REVIEW: { available: true, reason: "Test authority permits document review." },
+    FINANCE_VERIFICATION: { available: true, reason: "Test authority permits finance review." },
+    CONTACTABILITY_CORRECTION: { available: true, reason: "Test authority permits contactability correction." }
+  }),
   eduopsResolveFodeSnapshot_: () => ({
     snapshotId: "SNAP-QUERY-BINDING",
     snapshotAsOf: "2026-07-18T00:00:00.000Z",

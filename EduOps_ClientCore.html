@@ -413,6 +413,7 @@
         if (app.renderWorkloadError) app.renderWorkloadError(request, new Error(response.message || response.code || "Workload rejected"), response.code || "REJECTED");
       } else {
         if (response.snapshotId) app.state.snapshotId = response.snapshotId;
+        if (response.operationAvailability) app.state.operationAvailability = response.operationAvailability;
         app.state.workload = response;
         if (app.state.selectionMode === "ALL_ELIGIBLE_MATCHING_QUERY" && response.queryBinding) {
           app.state.selectionQueryBinding = app.clone(response.queryBinding);

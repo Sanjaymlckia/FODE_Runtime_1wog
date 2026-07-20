@@ -52,7 +52,10 @@ assert.match(sources.workload, /matchingOnLaterPages[\s\S]*totalAuthoritySelecta
 assert.match(sources.html, /FODE Operations Workspace/, "Released surface title must use FODE Operations branding");
 assert.doesNotMatch(client, /Pass 2|guarded operations|Mock authoritative|Local simulation|Preview-only|View authority controls|Authority-controlled workspace/i, "Released operator surface must not show transitional staging wording");
 assert.doesNotMatch(client, /eduops-prototype/i, "Released operator surface must not retain prototype UI hooks");
-assert.doesNotMatch(sources.html, /value="KIA"|value="MLC"/, "KIA and MLC must not appear in the released FODE product switcher");
+assert.match(sources.html, /value="FODE"[\s\S]*value="KIA"[\s\S]*value="MLC"/, "R374 product switcher must expose FODE, KIA and MLC profiles");
+assert.match(sources.html, /KIA and MLC are demonstration profiles with no live operational actions/, "KIA and MLC must be identified as demonstration-only profiles");
+assert.match(sources.workload, /mode:\s*"DEMONSTRATION_READ_ONLY"[\s\S]*KIA[\s\S]*mode:\s*"DEMONSTRATION_READ_ONLY"[\s\S]*MLC/, "KIA and MLC backend registry entries must remain demonstration/read-only");
+assert.match(sources.workload, /eduopsDemoOperationAvailability_[\s\S]*BATCH_COMMUNICATION:\s*\{\s*available:\s*false[\s\S]*DOCUMENT_REVIEW:\s*\{\s*available:\s*false/, "KIA and MLC demo workloads must fail closed for live batch and mutation operations");
 assert.match(sources.components, /eduopsRuntimeIdentity[\s\S]*eduopsAppsScriptIdentity[\s\S]*eduopsReleaseDetails/, "Runtime identity and technical details must remain visible");
 
 assert.doesNotMatch(eduopsRuntime, /GmailApp|MailApp|sendEmail\s*\(/, "EduOps client/workload/command code must not introduce direct email send bypasses");
