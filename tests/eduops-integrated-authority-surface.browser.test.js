@@ -19,6 +19,8 @@ function fixtureHtml() {
     });
     window.__p = function (code, label, reason, tone) { return { schemaVersion: "EDUOPS_CODE_PRESENTATION_V1", authoritySource: "Authoritative fixture service", code: code, label: label, reason: reason || label, tone: tone || "ready", available: true, stale: false }; };
     window.__rows.forEach(function (row) {
+      var payment = row.worklistKey === "PAYMENT_FOLLOW_UP";
+      var coolingPayment = row.actionabilityState === "COOLING_OFF";
       row.presentation = {
         actionability: window.__p(row.actionabilityState, row.actionabilityState === "COOLING_OFF" ? "Recently contacted - waiting period" : "Ready for action", row.selectBlockReason, row.actionabilityState === "COOLING_OFF" ? "warn" : "ready"),
         worklist: window.__p(row.worklistKey, row.worklistLabel),
@@ -35,6 +37,36 @@ function fixtureHtml() {
         reliability: window.__p("AUTHORITATIVE", "Authoritative")
       };
       row.authorityDecision = { schemaVersion: "EDUOPS_ROW_AUTHORITY_DECISION_V1", authoritySource: "Actionability Resolver", applicantId: row.applicantId, snapshotId: "SNAP-INTEGRATED", state: row.actionabilityState, reasonCode: row.selectable ? "AVAILABLE" : "COOLING_OFF", reason: row.selectBlockReason || "Authorised work can proceed now.", actionAvailable: row.selectable, stale: false };
+      row.operationalRow = {
+        schemaVersion: "OPSEDU_OPERATIONAL_ROW_V1",
+        authoritySource: "Fixture authority projection",
+        snapshotId: "SNAP-INTEGRATED",
+        applicantId: row.applicantId,
+        issueLabel: payment ? "Payment pending" : "Incomplete documents",
+        issueEvidence: payment ? "Payment/receipt evidence outstanding" : "Missing documents",
+        issueDetail: payment ? "Receipt evidence not verified" : "Required documents missing",
+        missingDocumentNames: payment ? [] : ["Birth ID", "School report"],
+        nextActionLabel: coolingPayment ? "Send payment reminder" : payment ? "Send payment reminder" : "Upload required documents",
+        nextActionDetail: row.worklistReason,
+        statusLabel: coolingPayment ? "Cooling off until 20 Jul" : "Ready now",
+        dueLabel: coolingPayment ? "Cooling off" : "",
+        contactLabel: "Email available",
+        selectionLabel: row.selectable ? "Selectable" : "Not selectable",
+        workPackageLabel: row.worklistLabel,
+        actionabilityLabel: row.presentation.actionability.label,
+        lifecycleLabel: row.canonicalLifecycle.label,
+        primaryRouteLabel: row.primaryRoute,
+        lifecycleOwnerLabel: row.actionOwner === "APPLICANT" ? "Applicant" : "Owner",
+        reasonCode: row.selectable ? "AVAILABLE" : "COOLING_OFF",
+        authorityResultLabel: row.presentation.actionability.label,
+        authorityReason: row.selectBlockReason || "Authorised work can proceed now.",
+        financeLabel: row.presentation.finance.label,
+        documentLabel: row.presentation.documents.label,
+        contactabilityLabel: "Email available",
+        communicationLabel: row.recommendedMessageType,
+        nextActionTimestamp: row.nextActionDate,
+        coolingOffUntil: row.coolingOffUntil
+      };
     });
     window.__binding = function (payload) { var query = { product: "FODE", actionabilityState: payload.actionabilityState, worklistKey: payload.worklistKey || "", workScope: payload.workScope, filters: payload.filters || {}, sort: payload.sort || {}, pageSize: payload.pageSize }; return { schemaVersion: "EDUOPS_QUERY_BINDING_V1", authority: "SERVER_AUTHORED", product: "FODE", snapshotId: "SNAP-INTEGRATED", query: query, queryFingerprint: "SERVER::" + JSON.stringify(query) }; };
     window.__bucket = function (code, label, count) { return { schemaVersion: "OPSEDU_PRIMARY_BUCKET_V1", authoritySource: "Actionability Resolver + EduOps workload query service", code: code, label: label, count: count, reason: "Backend-authored fixture bucket.", defaultQueueBinding: window.__binding({ actionabilityState: code, worklistKey: "", workScope: "ALL_AUTHORISED", filters: { search: "" }, sort: { key: "urgency", direction: "ASC" }, pageSize: 25 }), disabled: false, disabledReason: "", snapshotId: "SNAP-INTEGRATED", snapshotTimestamp: "2026-07-19T00:00:00.000Z" }; };
@@ -164,8 +196,8 @@ async function assertAuthorityInvalidated(page, label) {
     assert.equal(cockpitLayout.packageOverflow, false, "selected packages must not require hidden horizontal scroll");
     assert.equal(cockpitLayout.ribbonOverflow, false, "OPS ribbon must not require hidden horizontal scroll");
     assert(cockpitLayout.cockpitHeight <= 125, "OPS ribbon must remain within the compact 100-120px target range");
-    assert(cockpitLayout.contextRatio >= 0.26 && cockpitLayout.contextRatio <= 0.34, "context pane must remain near the approved 28/72 to 32/68 split");
-    assert(cockpitLayout.queueRatio >= 0.66, "applicant queue must remain the dominant workspace");
+    assert(cockpitLayout.contextRatio <= 0.24, "context pane must be bounded for R372 normal-zoom density");
+    assert(cockpitLayout.queueRatio >= 0.76, "applicant queue must receive the dominant normal-zoom workspace");
     assert.equal(cockpitLayout.cardBottoms.every((bottom) => bottom <= cockpitLayout.cockpitBottom), true, "cockpit must not clip its action cards");
     await page.locator('#opseduActionPackages [data-opsedu-package="FODE:READY:PAYMENT_FOLLOW_UP"]').click();
     await settled(page);
@@ -198,9 +230,19 @@ async function assertAuthorityInvalidated(page, label) {
       await page.evaluate(({ workload, field }) => {
         const changed = JSON.parse(JSON.stringify(workload));
         delete changed.rows[0].presentation[field];
+        if (changed.rows[0].operationalRow) {
+          if (field === "lifecycle") delete changed.rows[0].operationalRow.lifecycleLabel;
+          if (field === "finance") delete changed.rows[0].operationalRow.financeLabel;
+          if (field === "documents") delete changed.rows[0].operationalRow.documentLabel;
+          if (field === "actionability") {
+            delete changed.rows[0].operationalRow.actionabilityLabel;
+            delete changed.rows[0].operationalRow.statusLabel;
+          }
+        }
         window.EduOpsApp.renderWorkload(changed, 0);
       }, { workload: originalWorkload, field: missingField });
-      const domain = missingField === "lifecycle" ? "lifecycle state" : missingField === "documents" ? "document state" : missingField === "actionability" ? "state" : missingField;
+      await page.locator('#eduopsWorklistRows tr[data-applicant-row="FODE-26-000001"] .eduops-row-detail summary').click();
+      const domain = missingField === "lifecycle" ? "lifecycle state" : missingField === "documents" ? "document state" : missingField === "actionability" ? "actionability" : missingField;
       assert.match(await page.locator('#eduopsWorklistRows tr[data-applicant-row="FODE-26-000001"]').innerText(), new RegExp(`Authoritative ${domain} decision was not returned`, "i"), `missing ${missingField} DTO is visibly fail closed`);
     }
     await page.evaluate((workload) => {
@@ -215,13 +257,14 @@ async function assertAuthorityInvalidated(page, label) {
     await settled(page);
     assert.match(await page.locator("#eduopsSelectedStateLabel").innerText(), /Recently contacted.*waiting period/i);
     const coolingRow = page.locator('#eduopsWorklistRows tr[data-applicant-row="FODE-26-000002"]');
+    await coolingRow.locator('.eduops-row-detail summary').click();
     const coolingText = await coolingRow.innerText();
     assert.match(coolingText, /Payment pending/i, "underlying payment-pending lifecycle must remain visible");
-    assert.match(coolingText, /Finance: Payment pending/i, "underlying PAYMENT_PENDING finance state must remain visible");
+    assert.match(coolingText, /Finance[\s\S]*Payment pending/i, "underlying PAYMENT_PENDING finance state must remain visible");
     assert.match(coolingText, /Recently contacted.*waiting period|Cooling off/i, "COOLING_OFF authority state must remain visible");
-    assert.match(coolingText, /Payment follow-up after 20 July 2026/i, "payment follow-up must remain the next action");
-    assert.match(coolingText, /Next-action date: 2026-07-20T00:00:00.000Z/, "future next-action date must be visible");
-    assert.match(coolingText, /Recently contacted.*waiting period until 2026-07-20T00:00:00.000Z/i, "future cooling-off expiry must be visible");
+    assert.match(coolingText, /Send payment reminder|Payment follow-up after 20 July 2026/i, "payment follow-up must remain the next action");
+    assert.match(coolingText, /NEXT-ACTION TIMESTAMP[\s\S]*2026-07-20T00:00:00.000Z/i, "future next-action timestamp must be visible in expanded detail");
+    assert.match(coolingText, /2026-07-20T00:00:00.000Z/i, "future cooling-off expiry must be visible in expanded detail");
     await page.locator('#eduopsActionNav button[data-state="READY"]').click();
     await settled(page);
 

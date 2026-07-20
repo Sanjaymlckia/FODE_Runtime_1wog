@@ -78,7 +78,8 @@ assert.doesNotMatch(files.workbench, /communicationTemplateById\("docs_missing"|
 assert.doesNotMatch(client, /Legacy Invite|legacy template|legacy communication/i, "legacy naming must not be operator-facing");
 assert.doesNotMatch(client, /legacy_invite/, "internal compatibility ID must not reach client source");
 
-assert.match(files.components, /authorityLabel\(p\.lifecycle[\s\S]*authorityLabel\(p\.finance[\s\S]*authorityLabel\(p\.documents[\s\S]*coolingOffUntil/, "workload rows must render backend lifecycle, finance, document and cooling-off projections together");
+assert.match(files.components, /function rowDetailHtml[\s\S]*Lifecycle[\s\S]*Documents[\s\S]*Finance[\s\S]*Next-action timestamp[\s\S]*contextRibbonHtml/i, "compact workload rows must preserve backend lifecycle, finance, document and cooling-off context in expanded detail");
+assert.match(files.components, /OPSEDU_OPERATIONAL_ROW_V1[\s\S]*issueLabel[\s\S]*nextActionLabel[\s\S]*statusLabel[\s\S]*contactLabel/, "collapsed workload rows must render the backend-authored operational row DTO");
 assert.match(files.workbench, /Lifecycle[\s\S]*Finance[\s\S]*Documents[\s\S]*Actionability[\s\S]*Cooling-off/, "Workbench must expose the same state context");
 assert.match(files.workload, /operationalClassification:\s*"FODE live production operations"/, "identity classification must be server-projected");
 assert.match(files.workload, /appsScriptVersionReason/, "unavailable platform version must have a precise reason");

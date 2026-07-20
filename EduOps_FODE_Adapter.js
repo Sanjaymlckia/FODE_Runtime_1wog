@@ -273,6 +273,7 @@ function eduopsFodeRowDto_(row, query, snapshotId, reliability) {
       contactability: eduopsCodePresentation_(authorityState.contactabilityState, eduopsHumanize_(authorityState.contactabilityState), "", "Contactability authority"),
       reliability: reliabilityPresentation
     },
+    operationalRow: eduopsOperationalRowSummary_(row, authorityState, actionabilityPresentation, worklistPresentation, primaryRoute, snapshotId),
     applicantContextRibbon: contextRibbon,
     traceAudit: eduopsRowTraceAudit_(row, snapshotId),
     authorityDecision: {
@@ -292,6 +293,121 @@ function eduopsFodeRowDto_(row, query, snapshotId, reliability) {
     authorityProjectionVersion: EDUOPS_CONTRACT_VERSION,
     returnContext: eduopsReturnContext_(query, row),
     snapshotId: snapshotId
+  };
+}
+
+function eduopsShortDateLabel_(isoText) {
+  var value = eduopsClean_(isoText || "");
+  if (!value) return "";
+  var date = new Date(value);
+  if (isNaN(date.getTime())) return "";
+  var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return String(date.getUTCDate()) + " " + months[date.getUTCMonth()];
+}
+
+function eduopsMissingDocumentsSummary_(authorityState) {
+  var missing = Array.isArray(authorityState && authorityState.missingRequiredDocuments) ? authorityState.missingRequiredDocuments.filter(function (item) { return !!eduopsClean_(item); }) : [];
+  var required = Number(authorityState && authorityState.requiredDocumentCount || 0);
+  var uploaded = Number(authorityState && authorityState.uploadedRequiredDocumentCount || 0);
+  var missingCount = missing.length || Math.max(0, required - uploaded);
+  var detail = "";
+  if (missing.length > 0) {
+    detail = missing.slice(0, 2).join(", ");
+    if (missing.length > 2) detail += " +" + String(missing.length - 2);
+  } else if (missingCount > 0 && required > 0) {
+    detail = "Missing " + missingCount + " of " + required;
+  }
+  return {
+    missingCount: missingCount,
+    missingNames: missing,
+    evidenceLabel: missingCount > 0 ? (required > 0 ? "Missing " + missingCount + " of " + required : "Missing " + missingCount + " document" + (missingCount === 1 ? "" : "s")) : "",
+    evidenceDetail: detail
+  };
+}
+
+function eduopsOperationalStatusLabel_(state, selectable, coolingOffUntil) {
+  var code = eduopsUpper_(state || "");
+  if (code === "READY" && selectable === true) return "Ready now";
+  if (code === "COOLING_OFF") return coolingOffUntil ? "Cooling off until " + eduopsShortDateLabel_(coolingOffUntil) : "Cooling off";
+  if (code === "REVIEW_REQUIRED") return "Review";
+  if (code === "BLOCKED") return "Blocked";
+  if (code === "COMPLETE") return "Complete";
+  return eduopsHumanize_(code || "UNAVAILABLE");
+}
+
+function eduopsOperationalRowIssue_(row, authorityState) {
+  var lifecycle = row && row.canonicalLifecycle || {};
+  var lifecycleStage = eduopsClean_(lifecycle.lifecycleStage || lifecycle.baseState || "");
+  var lifecycleLabel = eduopsClean_(lifecycle.label || eduopsHumanize_(lifecycleStage));
+  var docs = eduopsMissingDocumentsSummary_(authorityState);
+  var financeState = eduopsClean_(authorityState && authorityState.canonicalFinanceState || "");
+  var contactState = eduopsClean_(authorityState && authorityState.contactabilityState || "");
+  if (docs.missingCount > 0) {
+    return {
+      label: lifecycleLabel || "Incomplete documents",
+      evidence: docs.evidenceLabel,
+      detail: docs.evidenceDetail,
+      missingNames: docs.missingNames
+    };
+  }
+  if (financeState) {
+    return {
+      label: lifecycleLabel || eduopsHumanize_(financeState),
+      evidence: eduopsHumanize_(financeState),
+      detail: row && row.explanation || ""
+    };
+  }
+  if (contactState) {
+    return {
+      label: lifecycleLabel || "Contactability",
+      evidence: eduopsHumanize_(contactState),
+      detail: row && row.selectBlockReason || ""
+    };
+  }
+  return {
+    label: lifecycleLabel || eduopsAuthorityUnavailable_("lifecycle state", "Canonical Lifecycle Resolver").label,
+    evidence: row && row.worklistReason || "",
+    detail: lifecycle.reason || ""
+  };
+}
+
+function eduopsOperationalRowSummary_(row, authorityState, actionabilityPresentation, worklistPresentation, primaryRoute, snapshotId) {
+  var issue = eduopsOperationalRowIssue_(row, authorityState);
+  var contactLabel = eduopsHumanize_(authorityState && authorityState.contactabilityState || "");
+  var dueLabel = "";
+  if (row && row.coolingOffUntil) dueLabel = "Cooling off";
+  else if (row && eduopsUpper_(row.urgencyLevel || "") === "NORMAL") dueLabel = "";
+  else if (row && row.urgencyLevel) dueLabel = eduopsHumanize_(row.urgencyLevel);
+  else if (row && row.nextActionDate) dueLabel = "Due " + eduopsShortDateLabel_(row.nextActionDate);
+  return {
+    schemaVersion: "OPSEDU_OPERATIONAL_ROW_V1",
+    authoritySource: "Canonical Lifecycle Resolver + Actionability Resolver + Finance authority + Document authority + Contactability authority",
+    snapshotId: snapshotId,
+    applicantId: eduopsClean_(row && row.applicantId || ""),
+    issueLabel: issue.label,
+    issueEvidence: issue.evidence,
+    issueDetail: issue.detail,
+    missingDocumentNames: issue.missingNames || [],
+    nextActionLabel: eduopsHumanize_(row && row.nextAction || ""),
+    nextActionDetail: eduopsClean_(row && row.worklistReason || ""),
+    statusLabel: eduopsOperationalStatusLabel_(row && row.actionabilityState || "", row && row.selectable === true, row && row.coolingOffUntil || ""),
+    dueLabel: dueLabel,
+    contactLabel: contactLabel,
+    selectionLabel: row && row.selectable === true ? "Selectable" : "Not selectable",
+    workPackageLabel: worklistPresentation && worklistPresentation.label || "",
+    actionabilityLabel: actionabilityPresentation && actionabilityPresentation.label || "",
+    lifecycleLabel: row && row.canonicalLifecycle && (row.canonicalLifecycle.label || eduopsHumanize_(row.canonicalLifecycle.lifecycleStage || row.canonicalLifecycle.baseState)) || "",
+    primaryRouteLabel: primaryRoute,
+    lifecycleOwnerLabel: eduopsHumanize_(row && row.canonicalLifecycle && row.canonicalLifecycle.actionOwner || row && row.actionOwner || ""),
+    reasonCode: eduopsClean_(row && row.reasonCode || ""),
+    authorityResultLabel: actionabilityPresentation && actionabilityPresentation.label || "",
+    authorityReason: eduopsClean_(row && (row.selectBlockReason || row.communicationProgressDetail || row.explanation) || ""),
+    financeLabel: eduopsHumanize_(authorityState && authorityState.canonicalFinanceState || ""),
+    documentLabel: eduopsHumanize_(authorityState && authorityState.documentState || ""),
+    contactabilityLabel: contactLabel,
+    communicationLabel: eduopsHumanize_(row && row.recommendedMessageType || ""),
+    nextActionTimestamp: eduopsClean_(row && row.nextActionDate || ""),
+    coolingOffUntil: eduopsClean_(row && row.coolingOffUntil || "")
   };
 }
 

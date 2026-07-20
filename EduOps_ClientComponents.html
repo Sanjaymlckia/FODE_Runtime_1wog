@@ -114,6 +114,49 @@
     return '<div class="opsedu-context-ribbon">' + items + '</div>' + traceHtml;
   }
 
+  function operationalRow(row) {
+    var dto = row && row.operationalRow;
+    if (!dto || dto.schemaVersion !== "OPSEDU_OPERATIONAL_ROW_V1") {
+      return {
+        issueLabel: app.authorityUnavailable("operational row"),
+        issueEvidence: "Refresh or retry before continuing.",
+        nextActionLabel: app.authorityUnavailable("next action"),
+        statusLabel: app.authorityUnavailable("actionability"),
+        contactLabel: app.authorityUnavailable("contactability"),
+        dueLabel: "",
+        workPackageLabel: app.authorityUnavailable("work package"),
+        authorityReason: app.authorityUnavailable("authority result"),
+        selectionLabel: "Not selectable",
+        missingDocumentNames: []
+      };
+    }
+    return dto;
+  }
+
+  function rowDetailHtml(row, op, blockedReason) {
+    var p = row.presentation || {};
+    var missingNames = (op.missingDocumentNames || []).join(", ");
+    return '<details class="eduops-row-detail"><summary>Expand details</summary><div class="eduops-row-detail-grid">'
+      + '<div><span>Lifecycle</span><strong>' + app.esc(op.lifecycleLabel || app.authorityLabel(p.lifecycle, "lifecycle state")) + '</strong></div>'
+      + '<div><span>Actionability</span><strong>' + app.esc(op.actionabilityLabel || app.authorityLabel(p.actionability, "actionability")) + '</strong></div>'
+      + '<div><span>Work package</span><strong>' + app.esc(op.workPackageLabel || app.authorityLabel(p.worklist, "worklist")) + '</strong></div>'
+      + '<div><span>Primary route</span><strong>' + app.esc(op.primaryRouteLabel || app.authorityLabel(p.route, "operator route")) + '</strong></div>'
+      + '<div><span>Lifecycle owner</span><strong>' + app.esc(op.lifecycleOwnerLabel || app.authorityLabel(p.owner, "owner")) + '</strong></div>'
+      + '<div><span>Operator next action</span><strong>' + app.esc(op.nextActionLabel || app.authorityLabel(p.nextAction, "next action")) + '</strong></div>'
+      + '<div><span>Reason code</span><strong>' + app.esc(op.reasonCode || "Not returned") + '</strong></div>'
+      + '<div><span>Documents</span><strong>' + app.esc(op.documentLabel || app.authorityLabel(p.documents, "document state")) + '</strong></div>'
+      + '<div><span>Missing documents</span><strong>' + app.esc(missingNames || "None returned") + '</strong></div>'
+      + '<div><span>Finance</span><strong>' + app.esc(op.financeLabel || app.authorityLabel(p.finance, "finance")) + '</strong></div>'
+      + '<div><span>Contactability</span><strong>' + app.esc(op.contactabilityLabel || app.authorityLabel(p.contactability, "contactability")) + '</strong></div>'
+      + '<div><span>Communication</span><strong>' + app.esc(op.communicationLabel || "Not returned") + '</strong></div>'
+      + '<div><span>Next-action timestamp</span><strong>' + app.esc(op.nextActionTimestamp || app.authorityUnavailable("next-action timestamp")) + '</strong></div>'
+      + '<div><span>Selection</span><strong>' + app.esc(op.selectionLabel || "Not selectable") + '</strong></div>'
+      + '<div><span>Selection block</span><strong>' + app.esc(row.selectBlockReason || "None") + '</strong></div>'
+      + '<div><span>Authority result</span><strong>' + app.esc(op.authorityResultLabel || app.authorityLabel(p.actionability, "authority result")) + '</strong></div>'
+      + '<div class="eduops-row-detail-wide"><span>Authority reason</span><strong>' + app.esc(blockedReason || op.authorityReason || "No block returned") + '</strong></div>'
+      + '</div>' + contextRibbonHtml(row) + '</details>';
+  }
+
   function selectionCount(response) {
     if (app.state.selectionMode === "ALL_ELIGIBLE_MATCHING_QUERY") {
       return Math.max(0, Number(response && response.reconciliation && response.reconciliation.totalAuthoritySelectable || 0) - excludedCount());
@@ -142,15 +185,15 @@
     var p = row.presentation || {};
     var authority = row.authorityDecision || {};
     var blockedReason = authority.reason || row.selectBlockReason || app.authorityUnavailable("actionability");
+    var op = operationalRow(row);
+    var issueMeta = [op.issueEvidence, op.issueDetail].filter(function (value) { return !!value; }).join(" - ");
+    var statusMeta = [op.contactLabel, op.dueLabel, op.statusLabel].filter(function (value) { return !!value; }).join(" - ");
     return '<tr data-applicant-row="' + app.esc(id) + '"' + (selected ? ' data-selected="true"' : '') + '>'
       + '<td class="eduops-col-select"><input class="eduops-row-checkbox" type="checkbox" data-select-applicant="' + app.esc(id) + '" aria-label="Select ' + app.esc(row.displayName) + '"' + (selected ? " checked" : "") + (blocked ? " disabled" : "") + '></td>'
       + '<td class="eduops-col-applicant"><button type="button" class="eduops-applicant-link" data-quick-applicant="' + app.esc(id) + '"><strong>' + app.esc(row.displayName) + '</strong><span>' + app.esc(id) + '</span></button></td>'
-      + '<td class="eduops-col-action"><strong>' + app.esc(app.authorityLabel(p.worklist, "worklist")) + '</strong><span>' + app.esc(app.authorityLabel(p.nextAction, "next action")) + '</span><span>Next-action date: ' + app.esc(row.nextActionDate || app.authorityUnavailable("next-action date")) + '</span>' + contextRibbonHtml(row) + '</td>'
-      + '<td class="eduops-col-state"><strong>' + app.esc(app.authorityLabel(p.lifecycle, "lifecycle state")) + '</strong><span>Finance: ' + app.esc(app.authorityLabel(p.finance, "finance")) + ' / Documents: ' + app.esc(app.authorityLabel(p.documents, "document state")) + '</span><span>' + app.esc(app.authorityLabel(p.coolingOff, "cooling-off")) + (row.coolingOffUntil ? " until " + app.esc(row.coolingOffUntil) : "") + '</span></td>'
-      + '<td class="eduops-col-owner"><strong>' + app.esc(app.authorityLabel(p.owner, "action owner")) + '</strong><span>' + app.esc(app.authorityLabel(p.workScope, "work scope")) + '</span></td>'
-      + '<td class="eduops-col-route"><strong>' + app.esc(app.authorityLabel(p.route, "operator route")) + '</strong><span>Backend-projected context</span></td>'
-      + '<td class="eduops-col-urgency">' + badge(p.urgency, row.urgencyReason) + '</td>'
-      + '<td class="eduops-col-authority">' + badge(p.actionability, blockedReason) + '<span class="eduops-row-authority-reason">' + app.esc(blockedReason) + '</span></td>'
+      + '<td class="eduops-col-issue"><strong>' + app.esc(op.issueLabel || app.authorityUnavailable("current issue")) + '</strong><span>' + app.esc(issueMeta || app.authorityUnavailable("evidence summary")) + '</span>' + rowDetailHtml(row, op, blockedReason) + '</td>'
+      + '<td class="eduops-col-next-action"><strong>' + app.esc(op.nextActionLabel || app.authorityLabel(p.nextAction, "next action")) + '</strong><span>' + app.esc(op.nextActionDetail || op.workPackageLabel || app.authorityLabel(p.worklist, "work package")) + '</span></td>'
+      + '<td class="eduops-col-row-status"><strong>' + app.esc(op.statusLabel || app.authorityLabel(p.actionability, "status")) + '</strong><span>' + app.esc(statusMeta || app.authorityUnavailable("contactability")) + '</span></td>'
       + '<td class="eduops-col-open"><button class="eduops-row-open" type="button" data-open-applicant="' + app.esc(id) + '">Open</button></td></tr>';
   }
 
@@ -183,7 +226,8 @@
     dom.eduopsPreviousPage.disabled = true;
     dom.eduopsNextPage.disabled = true;
     dom.eduopsPageNumbers.innerHTML = "";
-    dom.eduopsWorklistRows.innerHTML = '<tr><td colspan="9"><div class="eduops-loading-state"><strong>' + app.esc(app.contextLabel(request.payload)) + '</strong><span>Request started ' + app.esc(app.nowIso()) + '. A bounded timeout and retry path are active.</span></div></td></tr>';
+    dom.eduopsEmptyState.hidden = true;
+    dom.eduopsWorklistRows.innerHTML = '<tr><td colspan="6"><div class="eduops-loading-state"><strong>Loading applicant workload...</strong><span>' + app.esc(app.contextLabel(request.payload)) + ' requested. Previous applicant rows were cleared while authority responds.</span></div></td></tr>';
   };
 
   app.renderWorkloadError = function (request, error, outcome) {
@@ -196,7 +240,8 @@
     dom.eduopsPreviousPage.disabled = true;
     dom.eduopsNextPage.disabled = true;
     dom.eduopsPageNumbers.innerHTML = "";
-    dom.eduopsWorklistRows.innerHTML = '<tr><td colspan="9"><div class="eduops-error-state"><strong>' + app.esc(outcome === "TIMEOUT" ? "The request exceeded the 10-second limit." : "The workload request failed.") + '</strong><span>' + app.esc(error && error.message || error) + '</span><button type="button" class="eduops-button eduops-button-primary" data-retry-workload>Retry requested context</button></div></td></tr>';
+    dom.eduopsEmptyState.hidden = true;
+    dom.eduopsWorklistRows.innerHTML = '<tr><td colspan="6"><div class="eduops-error-state"><strong>' + app.esc(outcome === "TIMEOUT" ? "The request exceeded the 10-second limit." : "The workload request failed.") + '</strong><span>' + app.esc(error && error.message || error) + '</span><button type="button" class="eduops-button eduops-button-primary" data-retry-workload>Retry requested context</button></div></td></tr>';
   };
 
   app.renderWorkload = function (response, clientMs) {
@@ -260,7 +305,7 @@
     dom.eduopsReliabilityBanner.innerHTML = '<strong>Authority source unavailable</strong><span>' + app.esc(message) + '</span><div><button id="eduopsRefreshAuthority" class="eduops-button eduops-button-primary" type="button" data-retry-bootstrap>Retry source</button><button class="eduops-button eduops-button-secondary" type="button" data-report="health">Technical details</button></div>';
     dom.eduopsWorklistReason.textContent = "Page 1 did not complete. No stale workload was applied.";
     dom.eduopsVisibleRange.textContent = "Workload unavailable";
-    dom.eduopsWorklistRows.innerHTML = '<tr><td colspan="8"><div class="eduops-error-state"><strong>' + (state === "TIMEOUT" ? "Loading took longer than expected" : "Workload could not be loaded") + '</strong><span>' + app.esc(message) + '</span><button type="button" class="eduops-button eduops-button-primary" data-retry-bootstrap>Retry workload</button></div></td></tr>';
+    dom.eduopsWorklistRows.innerHTML = '<tr><td colspan="6"><div class="eduops-error-state"><strong>' + (state === "TIMEOUT" ? "Loading took longer than expected" : "Workload could not be loaded") + '</strong><span>' + app.esc(message) + '</span><button type="button" class="eduops-button eduops-button-primary" data-retry-bootstrap>Retry workload</button></div></td></tr>';
   };
 
   function renderSearchResults(response) {
