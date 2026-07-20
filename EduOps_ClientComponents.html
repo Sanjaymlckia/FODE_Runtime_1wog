@@ -7,7 +7,7 @@
 
   function byId(id) { return document.getElementById(id); }
   function cacheDom() {
-    ["eduopsApp", "eduopsActionNav", "eduopsHistoryNav", "eduopsTopContext", "eduopsSnapshotShort", "eduopsSnapshotTime", "eduopsRuntimeIdentity", "eduopsAppsScriptIdentity", "eduopsReleaseSnapshotIdentity", "eduopsReleaseSnapshotTime", "eduopsReleaseDetails", "eduopsProductSwitcher", "eduopsReliabilityBanner", "eduopsGlobalSearch", "eduopsGlobalSearchResults", "eduopsPageTitle", "eduopsPageIntro", "eduopsKpis", "eduopsMetrics", "eduopsSelectedStateLabel", "eduopsSelectedWorklistLabel", "eduopsWorklistReason", "eduopsOpenBatch", "eduopsBatchReason", "eduopsWorklistKeys", "eduopsOpenReconciliation", "eduopsSearch", "eduopsOwnerFilter", "eduopsUrgencyFilter", "eduopsSort", "eduopsToggleFilters", "eduopsAdvancedFilters", "eduopsRouteFilter", "eduopsDocumentFilter", "eduopsFinanceFilter", "eduopsContactFilter", "eduopsCommunicationFilter", "eduopsCoolingFilter", "eduopsBlockKindFilter", "eduopsFilterCount", "eduopsFilterChips", "eduopsSelectionSummary", "eduopsWorklistRows", "eduopsEmptyState", "eduopsVisibleRange", "eduopsPreviousPage", "eduopsPageNumbers", "eduopsNextPage", "eduopsPageSize", "eduopsHiddenRailCount", "eduopsQuickDrawer", "eduopsCloseDrawer", "eduopsDrawerTitle", "eduopsDrawerContent", "eduopsDrawerActions", "eduopsDrawerScrim", "eduopsReportPanel", "eduopsReportType", "eduopsReportTitle", "eduopsReportContent"].forEach(function (id) { dom[id] = byId(id); });
+    ["eduopsApp", "eduopsActionNav", "eduopsHistoryNav", "eduopsTopContext", "eduopsSnapshotShort", "eduopsSnapshotTime", "eduopsRuntimeIdentity", "eduopsAppsScriptIdentity", "eduopsReleaseSnapshotIdentity", "eduopsReleaseSnapshotTime", "eduopsReleaseDetails", "eduopsProductSwitcher", "eduopsReliabilityBanner", "eduopsGlobalSearch", "eduopsGlobalSearchResults", "eduopsPageTitle", "eduopsPageIntro", "eduopsKpis", "eduopsMetrics", "eduopsSelectedStateLabel", "eduopsSelectedWorklistLabel", "eduopsWorklistReason", "eduopsOpenBatch", "eduopsBatchReason", "eduopsWorklistKeys", "eduopsOpenReconciliation", "eduopsSearch", "eduopsOwnerFilter", "eduopsUrgencyFilter", "eduopsSort", "eduopsToggleFilters", "eduopsAdvancedFilters", "eduopsRouteFilter", "eduopsDocumentFilter", "eduopsFinanceFilter", "eduopsContactFilter", "eduopsCommunicationFilter", "eduopsCoolingFilter", "eduopsBlockKindFilter", "eduopsFilterCount", "eduopsFilterChips", "eduopsSelectionSummary", "eduopsWorklistRows", "eduopsEmptyState", "eduopsVisibleRange", "eduopsPreviousPage", "eduopsPageNumbers", "eduopsNextPage", "eduopsPageSize", "eduopsHiddenRailCount", "eduopsQuickDrawer", "eduopsCloseDrawer", "eduopsDrawerTitle", "eduopsDrawerContent", "eduopsDrawerActions", "eduopsDrawerScrim", "eduopsReportPanel", "eduopsReportType", "eduopsReportTitle", "eduopsReportContent", "opseduQueueContext", "opseduToolbarState", "opseduToolbarPackage"].forEach(function (id) { dom[id] = byId(id); });
   }
 
   function authorityItem(list, code) {
@@ -45,6 +45,18 @@
     dom.eduopsWorklistKeys.innerHTML = (presentation.worklists || []).map(function (item) {
       return '<button type="button" class="eduops-worklist-key" data-worklist="' + app.esc(item.code) + '" aria-selected="' + (app.state.worklistKey === item.code ? "true" : "false") + '">' + app.esc(item.label) + '<span class="eduops-key-count">' + Number(item.count || 0) + '</span></button>';
     }).join("");
+  }
+  function renderQueueContext(response, selectedState, selectedWorklist) {
+    if (!dom.opseduQueueContext) return;
+    var cockpit = response && response.cockpit || {};
+    var packages = (cockpit.actionPackages || []).filter(function (item) { return !item.actionabilityState || item.actionabilityState === app.state.actionabilityState; });
+    var activePackage = packages.filter(function (item) { return item.worklistKey === app.state.worklistKey || (!app.state.worklistKey && !item.worklistKey); })[0] || packages[0] || null;
+    var packageList = packages.map(function (item) {
+      return '<button type="button" data-opsedu-package="' + app.esc(item.packageId) + '"' + (item.disabled ? " disabled" : "") + '><span>' + app.esc(item.label) + '</span><strong>' + Number(item.count || 0) + '</strong></button>';
+    }).join("") || '<div class="opsedu-context-empty">No granular work packages returned for this state.</div>';
+    dom.opseduToolbarState.textContent = selectedState && selectedState.label || app.authorityUnavailable("actionability");
+    dom.opseduToolbarPackage.textContent = selectedWorklist && selectedWorklist.label || activePackage && activePackage.label || "All work types";
+    dom.opseduQueueContext.innerHTML = '<span class="eduops-eyebrow">Operational context</span><h2>' + app.esc(selectedState && selectedState.label || app.authorityUnavailable("actionability")) + '</h2><p>' + app.esc(activePackage && activePackage.routeReason || selectedState && selectedState.reason || app.authorityUnavailable("route reason")) + '</p><dl><div><dt>Selected package</dt><dd>' + app.esc(selectedWorklist && selectedWorklist.label || activePackage && activePackage.label || "All work types") + '</dd></div><div><dt>Package count</dt><dd>' + Number(response.totalMatched || 0) + '</dd></div><div><dt>Authority</dt><dd>' + app.esc(activePackage && activePackage.authoritySource || "Actionability Resolver") + '</dd></div><div><dt>Recommended communication</dt><dd>' + app.esc(activePackage && activePackage.recommendedCommunication && activePackage.recommendedCommunication.label || "No single package recommendation") + '</dd></div></dl><div class="opsedu-context-package-list">' + packageList + '</div>';
   }
   function renderScopes(presentation) {
     document.querySelectorAll("[data-work-scope]").forEach(function (button) {
@@ -208,6 +220,7 @@
     var selectedState = authorityItem(presentation.actionabilityBuckets, app.state.actionabilityState) || presentation.allActionability;
     var selectedWorklist = authorityItem(presentation.worklists, app.state.worklistKey);
     var selectedScope = authorityItem(presentation.workScopes, app.state.workScope);
+    renderQueueContext(response, selectedState, selectedWorklist);
     dom.eduopsSelectedStateLabel.textContent = selectedState && selectedState.label || app.authorityUnavailable("actionability");
     dom.eduopsSelectedWorklistLabel.textContent = selectedWorklist && selectedWorklist.label || app.authorityUnavailable("worklist");
     dom.eduopsSearch.placeholder = "Search within " + (selectedWorklist && selectedWorklist.label || selectedState && selectedState.label || "current workload");

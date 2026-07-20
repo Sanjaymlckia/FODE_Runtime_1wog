@@ -113,52 +113,69 @@
             </div>
             <div class="opsedu-cockpit-actions">
               <span id="opseduCockpitSnapshot" class="opsedu-cockpit-snapshot">Authoritative work packages loading</span>
-              <button class="eduops-button eduops-button-secondary" type="button" data-opsedu-package-rail aria-pressed="false">Collapse packages</button>
             </div>
           </header>
-          <div id="opseduPrimaryBuckets" class="opsedu-primary-buckets" aria-label="Primary actionability buckets"></div>
-          <h2 id="opseduPackageHeading" class="opsedu-package-heading">Current work packages</h2>
-          <div id="opseduActionPackages" class="opsedu-action-packages" aria-live="polite">
-            <div class="opsedu-cockpit-empty"><strong>Resolving authoritative action packages</strong><span>The cockpit will fail closed if the backend projection is unavailable.</span></div>
+          <div class="opsedu-ribbon-row" aria-label="Ops ribbon">
+            <div id="opseduPrimaryBuckets" class="opsedu-primary-buckets" aria-label="Primary actionability buckets"></div>
+            <div class="opsedu-ribbon-divider" aria-hidden="true"></div>
+            <div id="opseduActionPackages" class="opsedu-action-packages" aria-live="polite">
+              <div class="opsedu-cockpit-empty"><strong>Resolving authoritative action packages</strong><span>The cockpit will fail closed if the backend projection is unavailable.</span></div>
+            </div>
           </div>
         </section>
 
-        <details class="opsedu-secondary-controls">
-          <summary>Search and authority status</summary>
-          <section class="eduops-next-command" aria-label="Authority reliability and global search">
-          <div id="eduopsReliabilityBanner" class="eduops-reliability-banner" data-reliability="AUTHORITATIVE">
-            <strong>Authority source loading</strong>
-            <span>Product adapter status is being resolved.</span>
-            <div>
-              <button id="eduopsRefreshAuthority" class="eduops-button eduops-button-primary" type="button">Refresh source</button>
-            </div>
-          </div>
-          <div class="eduops-global-search">
-            <label for="eduopsGlobalSearch"><span>Global applicant search</span><input id="eduopsGlobalSearch" type="search" placeholder="ApplicantID, name, email or phone"></label>
-            <div id="eduopsGlobalSearchResults" class="eduops-global-search-results" aria-live="polite"></div>
-          </div>
-          </section>
-        </details>
+        <div class="opsedu-split-workspace">
+          <aside class="opsedu-context-pane" aria-label="Operational context">
+            <section id="opseduQueueContext" class="opsedu-queue-context">
+              <span class="eduops-eyebrow">Operational context</span>
+              <h2>Loading active queue</h2>
+              <p>Authoritative queue context is loading.</p>
+            </section>
+            <details class="opsedu-secondary-controls">
+              <summary>Search and authority status</summary>
+              <section class="eduops-next-command" aria-label="Authority reliability and global search">
+              <div id="eduopsReliabilityBanner" class="eduops-reliability-banner" data-reliability="AUTHORITATIVE">
+                <strong>Authority source loading</strong>
+                <span>Product adapter status is being resolved.</span>
+                <div>
+                  <button id="eduopsRefreshAuthority" class="eduops-button eduops-button-primary" type="button">Refresh source</button>
+                </div>
+              </div>
+              <div class="eduops-global-search">
+                <label for="eduopsGlobalSearch"><span>Global applicant search</span><input id="eduopsGlobalSearch" type="search" placeholder="ApplicantID, name, email or phone"></label>
+                <div id="eduopsGlobalSearchResults" class="eduops-global-search-results" aria-live="polite"></div>
+              </div>
+              </section>
+            </details>
 
-        <section class="eduops-overview opsedu-secondary-surface" aria-labelledby="eduopsPageTitle">
-          <div class="eduops-page-heading">
-            <div>
-              <span class="eduops-eyebrow">Actionability-first workload</span>
-              <h1 id="eduopsPageTitle">What can be acted on now?</h1>
-              <p id="eduopsPageIntro">Choose an authoritative work state, then a coherent worklist. Lifecycle and route remain context.</p>
-            </div>
-            <div class="eduops-heading-actions">
-              <button id="eduopsRefreshSnapshot" class="eduops-button eduops-button-secondary" type="button">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6.1 8.2A7 7 0 0 1 18.7 7M17.9 15.8A7 7 0 0 1 5.3 17"></path></svg>
-                Refresh workload
-              </button>
-              <button id="eduopsStartSession" class="eduops-button eduops-button-quiet" type="button">Start Work Session</button>
-            </div>
-          </div>
+            <details class="eduops-overview opsedu-secondary-surface">
+              <summary>Workload summary</summary>
+              <div class="eduops-page-heading">
+                <div>
+                  <span class="eduops-eyebrow">Actionability-first workload</span>
+                  <h1 id="eduopsPageTitle">What can be acted on now?</h1>
+                  <p id="eduopsPageIntro">Choose an authoritative work state, then a coherent worklist. Lifecycle and route remain context.</p>
+                </div>
+                <div class="eduops-heading-actions">
+                  <button id="eduopsRefreshSnapshot" class="eduops-button eduops-button-secondary" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6.1 8.2A7 7 0 0 1 18.7 7M17.9 15.8A7 7 0 0 1 5.3 17"></path></svg>
+                    Refresh workload
+                  </button>
+                  <button id="eduopsStartSession" class="eduops-button eduops-button-quiet" type="button">Start Work Session</button>
+                </div>
+              </div>
 
-          <div id="eduopsKpis" class="eduops-kpi-grid" role="list" aria-label="Actionability workload buckets"></div>
-          <div id="eduopsMetrics" class="eduops-metric-strip" aria-label="Informational workload metrics"></div>
-        </section>
+              <div id="eduopsKpis" class="eduops-kpi-grid" role="list" aria-label="Actionability workload buckets"></div>
+              <div id="eduopsMetrics" class="eduops-metric-strip" aria-label="Informational workload metrics"></div>
+            </details>
+          </aside>
+
+          <section class="opsedu-queue-pane" aria-label="Applicant action queue">
+            <div class="opsedu-queue-toolbar">
+              <span id="opseduToolbarState">State loading</span>
+              <strong id="opseduToolbarPackage">Package loading</strong>
+              <button class="eduops-button eduops-button-secondary" type="button" data-opsedu-focus-packages>Show work packages</button>
+            </div>
 
         <section id="eduopsWorklist" class="eduops-workspace" aria-labelledby="eduopsWorklistTitle" tabindex="-1">
           <header class="eduops-workspace-header">
@@ -266,6 +283,8 @@
             </footer>
           </div>
         </section>
+          </section>
+        </div>
       </main>
     </div>
 

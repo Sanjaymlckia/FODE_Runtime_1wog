@@ -3,44 +3,62 @@
   position: relative;
   flex: 0 0 auto;
   overflow: hidden;
-  padding: 12px;
+  min-height: 100px;
+  max-height: 118px;
+  padding: 8px 10px;
   color: #132f3c;
   background:
     radial-gradient(circle at 92% 8%, rgba(242, 181, 68, .22), transparent 26%),
     linear-gradient(135deg, #f7f1df 0%, #edf5ee 54%, #e2eef2 100%);
   border: 1px solid #b8c9c4;
-  border-radius: 10px;
-  box-shadow: 0 8px 20px rgba(22, 57, 69, .1);
+  border-radius: 8px;
+  box-shadow: 0 5px 14px rgba(22, 57, 69, .08);
 }
-.eduops-main { overflow-x: hidden; overflow-y: auto; }
+.eduops-main { overflow: hidden; }
 .opsedu-secondary-controls,
 .opsedu-secondary-surface { flex: 0 0 auto; }
-.opsedu-cockpit-header { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin-bottom: 9px; }
-.opsedu-cockpit-kicker { display: block; margin-bottom: 4px; color: #8b5415; font: 700 12px/1.2 Georgia, serif; letter-spacing: .11em; text-transform: uppercase; }
-.opsedu-cockpit h1 { margin: 0; font: 700 clamp(24px, 2.2vw, 34px)/1.05 Georgia, serif; letter-spacing: -.025em; }
-.opsedu-cockpit-header p { max-width: 520px; margin: 7px 0 0; color: #4d6872; }
+.opsedu-cockpit-header { display: grid; grid-template-columns: minmax(160px, 240px) minmax(120px, auto); align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 5px; }
+.opsedu-cockpit-kicker { display: block; margin-bottom: 1px; color: #8b5415; font: 700 10px/1.05 Georgia, serif; letter-spacing: .1em; text-transform: uppercase; }
+.opsedu-cockpit h1 { margin: 0; font: 700 18px/1 Georgia, serif; letter-spacing: -.025em; }
+.opsedu-cockpit-header p { display: none; }
 .opsedu-cockpit-snapshot { color: #5c737b; font-size: 12px; text-align: right; }
 .opsedu-cockpit-actions { display: grid; justify-items: end; gap: 7px; }
-.opsedu-cockpit-actions .eduops-button { min-height: 32px; padding: 5px 9px; }
-.opsedu-primary-buckets { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5px; margin-bottom: 9px; }
-.opsedu-primary-bucket { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 5px; min-height: 50px; padding: 6px 7px; color: #294953; text-align: left; background: rgba(255,255,255,.88); border: 1px solid #c5d4d0; border-radius: 7px; }
+.opsedu-ribbon-row { display: grid; grid-template-columns: minmax(720px, 1fr) 1px minmax(390px, .52fr); gap: 7px; align-items: stretch; }
+.opsedu-ribbon-divider { background: #b8c9c4; }
+.opsedu-primary-buckets { display: grid; grid-template-columns: repeat(8, minmax(82px, 1fr)); gap: 6px; }
+.opsedu-primary-bucket { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; min-height: 57px; padding: 5px 6px; color: #294953; text-align: center; background: rgba(255,255,255,.9); border: 1px solid #c5d4d0; border-radius: 6px; }
 .opsedu-primary-bucket[aria-pressed="true"] { color: #fff; background: #173b56; border-color: #173b56; }
-.opsedu-primary-bucket span { overflow: hidden; font-size: 12px; font-weight: 600; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
-.opsedu-primary-bucket strong { grid-row: 1 / span 2; grid-column: 2; align-self: center; font: 700 20px/1 Georgia, serif; }
-.opsedu-primary-bucket small { grid-column: 1 / -1; overflow: hidden; color: inherit; font-size: 10px; opacity: .78; text-overflow: ellipsis; white-space: nowrap; }
-.opsedu-package-heading { margin: 0 0 7px; color: #173b56; font-size: 14px; font-weight: 650; }
-.opsedu-action-packages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.opsedu-action-card { display: grid; grid-template-rows: auto auto 1fr auto; gap: 6px; min-height: 128px; padding: 11px; background: rgba(255,255,255,.9); border: 1px solid #c5d4d0; border-top: 4px solid #17656a; border-radius: 8px; box-shadow: 0 4px 12px rgba(23, 70, 76, .07); }
+.opsedu-primary-bucket span { overflow: hidden; font-size: 11px; font-weight: 650; line-height: 1.05; text-overflow: ellipsis; white-space: nowrap; }
+.opsedu-primary-bucket strong { align-self: center; font: 700 20px/1 Georgia, serif; }
+.opsedu-primary-bucket small { overflow: hidden; color: inherit; font-size: 10px; opacity: .78; text-overflow: ellipsis; white-space: nowrap; }
+.opsedu-action-packages { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 6px; min-width: 0; }
+.opsedu-action-card { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; grid-template-rows: 1fr; align-items: center; gap: 6px; min-width: 0; min-height: 57px; max-height: 62px; padding: 6px 7px; background: rgba(255,255,255,.92); border: 1px solid #c5d4d0; border-left: 4px solid #17656a; border-radius: 6px; box-shadow: 0 2px 8px rgba(23, 70, 76, .06); }
 .opsedu-action-card[data-secondary="true"] { opacity: .72; border-top-color: #70858a; }
-.opsedu-action-card-top { display: flex; justify-content: space-between; align-items: center; color: #45636b; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
-.opsedu-action-card-top strong { color: #123b45; font: 700 24px/1 Georgia, serif; }
-.opsedu-action-card h3 { margin: 0; font: 700 16px/1.12 Georgia, serif; }
-.opsedu-action-card p { display: -webkit-box; margin: 0; overflow: hidden; color: #526d74; font-size: 12px; line-height: 1.25; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.opsedu-action-card-meta { display: flex; flex-wrap: wrap; gap: 5px; }
-.opsedu-action-card-meta span { padding: 4px 7px; color: #31545c; background: #e7f0ed; border-radius: 999px; font-size: 11px; }
-.opsedu-cockpit[data-package-rail="collapsed"] .opsedu-action-packages,
-.opsedu-cockpit[data-package-rail="collapsed"] .opsedu-package-heading { display: none; }
+.opsedu-action-card-top { display: grid; justify-items: center; align-items: center; color: #45636b; font-size: 9px; line-height: 1; text-align: center; text-transform: uppercase; letter-spacing: .04em; }
+.opsedu-action-card-top strong { color: #123b45; font: 700 18px/1 Georgia, serif; }
+.opsedu-action-card h3 { display: -webkit-box; margin: 0; overflow: hidden; font: 700 13px/1.08 Georgia, serif; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.opsedu-action-card-meta { display: none; }
+.opsedu-action-card .eduops-button { min-height: 26px; padding: 3px 7px; font-size: 12px; }
+.opsedu-action-card small { display: none; }
 .opsedu-cockpit-error, .opsedu-cockpit-empty { display: grid; gap: 5px; padding: 18px; background: #fff4e6; border: 1px solid #d6a35e; border-radius: 8px; }
+.opsedu-split-workspace { display: grid; grid-template-columns: minmax(260px, 28%) minmax(0, 72%); flex: 1 1 auto; min-height: 0; gap: 10px; overflow: hidden; }
+.opsedu-context-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; gap: 8px; overflow: auto; }
+.opsedu-queue-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+.opsedu-queue-toolbar { position: sticky; z-index: 12; top: 0; display: grid; grid-template-columns: minmax(120px, .8fr) minmax(180px, 1fr) auto; align-items: center; gap: 8px; min-height: 42px; padding: 6px 9px; background: #fff; border: 1px solid #cad7d9; border-radius: 7px 7px 0 0; box-shadow: 0 2px 8px rgba(16,40,59,.08); }
+.opsedu-queue-toolbar span { color: #48616a; font-size: 12px; font-weight: 600; }
+.opsedu-queue-toolbar strong { overflow: hidden; color: #173b56; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.opsedu-queue-context { display: grid; gap: 8px; padding: 11px; background: #fff; border: 1px solid #cad7d9; border-radius: 8px; }
+.opsedu-queue-context h2 { margin: 0; color: #173b56; font-size: 18px; }
+.opsedu-queue-context p { margin: 0; color: #48616a; font-size: 13px; line-height: 1.35; }
+.opsedu-queue-context dl { display: grid; gap: 1px; margin: 0; overflow: hidden; background: #d7e1e6; border: 1px solid #d7e1e6; border-radius: 5px; }
+.opsedu-queue-context dl div { display: grid; grid-template-columns: 110px minmax(0,1fr); gap: 6px; padding: 6px 8px; background: #f8fafb; }
+.opsedu-queue-context dt { color: #48616a; font-size: 11px; font-weight: 600; }
+.opsedu-queue-context dd { margin: 0; color: #173b56; font-size: 12px; }
+.opsedu-context-package-list { display: grid; gap: 5px; }
+.opsedu-context-package-list button { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px; min-height: 32px; padding: 5px 7px; text-align: left; background: #f7faf9; border: 1px solid #cad7d9; border-radius: 5px; }
+.opsedu-context-package-list span { overflow: hidden; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.opsedu-context-package-list strong { color: #173b56; font-size: 13px; }
+.opsedu-context-empty { color: #48616a; font-size: 13px; }
 .opsedu-secondary-controls { margin: 0; border: 1px solid #cad7d9; border-radius: 8px; background: #f7faf9; }
 .opsedu-secondary-controls > summary { cursor: pointer; padding: 10px 14px; color: #48616a; font-weight: 650; }
 .opsedu-secondary-controls[open] > summary { border-bottom: 1px solid #cad7d9; }
@@ -55,14 +73,21 @@
 .opsedu-trace dl div { display: grid; grid-template-columns: 70px 1fr; }
 .opsedu-trace dt { font-weight: 700; }
 .opsedu-trace dd { margin: 0; }
-@media (max-width: 1400px) {
-  .opsedu-primary-buckets { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .opsedu-action-packages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 1599px) {
+  .opsedu-split-workspace { grid-template-columns: minmax(260px, 32%) minmax(0, 68%); }
+  .opsedu-ribbon-row { grid-template-columns: minmax(660px, 1fr) 1px minmax(320px, .48fr); gap: 5px; }
+  .opsedu-primary-buckets { grid-template-columns: repeat(8, minmax(70px, 1fr)); gap: 4px; }
+  .opsedu-action-packages { grid-template-columns: repeat(2, minmax(145px, 1fr)); gap: 4px; }
+  .opsedu-primary-bucket { padding-inline: 4px; }
+  .opsedu-primary-bucket span { font-size: 10px; white-space: normal; }
+  .opsedu-action-card h3 { font-size: 12px; }
 }
 @media (max-width: 720px) {
   .opsedu-cockpit { padding: 15px; }
   .opsedu-cockpit-header { align-items: start; flex-direction: column; }
   .opsedu-cockpit-snapshot { text-align: left; }
+  .opsedu-ribbon-row,
+  .opsedu-split-workspace,
   .opsedu-primary-buckets,
   .opsedu-action-packages { grid-template-columns: 1fr; }
 }

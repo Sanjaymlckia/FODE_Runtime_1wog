@@ -18,12 +18,13 @@
   }
   function bucketButton(item) {
     var active = item.code === activeState();
-    return '<button type="button" class="opsedu-primary-bucket" data-opsedu-primary-bucket="' + app.esc(item.code) + '" aria-pressed="' + (active ? "true" : "false") + '"><span>' + app.esc(item.label) + '</span><strong>' + Number(item.count || 0) + '</strong><small>' + app.esc(item.reason || item.authoritySource) + '</small></button>';
+    var shortLabels = { READY: "Ready", COOLING_OFF: "Cooling off", AWAITING_APPLICANT: "Applicant", AWAITING_PAYMENT: "Payment", REVIEW_REQUIRED: "Review", BLOCKED: "Blocked", UNKNOWN: "Classify", COMPLETE: "Complete" };
+    return '<button type="button" class="opsedu-primary-bucket" data-opsedu-primary-bucket="' + app.esc(item.code) + '" aria-pressed="' + (active ? "true" : "false") + '" title="' + app.esc(item.label + ". " + Number(item.count || 0) + ". " + (item.reason || item.authoritySource || "")) + '"><span>' + app.esc(shortLabels[item.code] || item.label) + '</span><strong>' + Number(item.count || 0) + '</strong><small>' + app.esc(item.code === "READY" ? "Act now" : item.code === "COMPLETE" ? "Done" : item.code === "UNKNOWN" ? "Classify" : "Queue") + '</small><em class="eduops-visually-hidden">' + app.esc(item.label) + '</em></button>';
   }
   function packageCard(item) {
     var recommendation = item.recommendedCommunication;
     var recommendationLabel = recommendation && recommendation.available === true ? recommendation.label : "";
-    return '<article class="opsedu-action-card" data-secondary="' + (item.secondary === true ? "true" : "false") + '"><div class="opsedu-action-card-top"><span>' + app.esc(item.ownerDomain) + '</span><strong>' + Number(item.count || 0) + '</strong></div><h3>' + app.esc(item.label) + '</h3><p>' + app.esc(item.routeReason) + '</p><div class="opsedu-action-card-meta"><span>' + app.esc(item.mutationBoundary) + '</span>' + (recommendationLabel ? '<span>' + app.esc(recommendationLabel) + '</span>' : "") + '</div><button type="button" class="eduops-button eduops-button-primary" data-opsedu-package="' + app.esc(item.packageId) + '"' + (item.disabled === true ? " disabled" : "") + '>' + app.esc(item.primaryActionLabel) + '</button>' + (item.disabledReason ? '<small>' + app.esc(item.disabledReason) + '</small>' : "") + '</article>';
+    return '<article class="opsedu-action-card" data-secondary="' + (item.secondary === true ? "true" : "false") + '" title="' + app.esc(item.label + ". " + Number(item.count || 0) + ". " + item.routeReason) + '"><div class="opsedu-action-card-top"><span>' + app.esc(item.ownerDomain) + '</span><strong>' + Number(item.count || 0) + '</strong></div><h3>' + app.esc(item.label) + '</h3><div class="opsedu-action-card-meta"><span>' + app.esc(item.mutationBoundary) + '</span>' + (recommendationLabel ? '<span>' + app.esc(recommendationLabel) + '</span>' : "") + '</div><button type="button" class="eduops-button eduops-button-primary" data-opsedu-package="' + app.esc(item.packageId) + '"' + (item.disabled === true ? " disabled" : "") + '>' + app.esc(item.primaryActionLabel) + '</button>' + (item.disabledReason ? '<small>' + app.esc(item.disabledReason) + '</small>' : "") + '</article>';
   }
 
   app.openServerBoundQueue = function (binding, reason) {
@@ -63,8 +64,6 @@
     var buckets = Array.isArray(cockpit.primaryBuckets) ? cockpit.primaryBuckets : [];
     if (bucketTarget) bucketTarget.innerHTML = buckets.map(bucketButton).join("");
     var packages = cockpit.actionPackages.filter(function (item) { return !item.actionabilityState || item.actionabilityState === activeState(); });
-    var activeBucket = packageById(buckets.map(function (item) { return { packageId: item.code, label: item.label }; }), activeState());
-    byId("opseduPackageHeading").textContent = activeBucket ? activeBucket.label + " work packages" : "Current work packages";
     byId("opseduActionPackages").innerHTML = packages.map(packageCard).join("") || '<div class="opsedu-cockpit-empty"><strong>No work packages in this state.</strong><span>The backend returned no granular packages for the selected authoritative bucket.</span></div>';
   };
 
@@ -88,13 +87,9 @@
       app.openServerBoundQueue(item.defaultQueueBinding, "Opening " + item.label + ".");
     });
     document.addEventListener("click", function (event) {
-      var button = event.target.closest("[data-opsedu-package-rail]");
-      if (!button) return;
-      var collapsed = button.getAttribute("aria-pressed") === "true";
-      button.setAttribute("aria-pressed", collapsed ? "false" : "true");
-      button.textContent = collapsed ? "Collapse packages" : "Expand packages";
+      if (!event.target.closest("[data-opsedu-focus-packages]")) return;
       var cockpit = byId("opseduCockpit");
-      if (cockpit) cockpit.setAttribute("data-package-rail", collapsed ? "expanded" : "collapsed");
+      if (cockpit) cockpit.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 

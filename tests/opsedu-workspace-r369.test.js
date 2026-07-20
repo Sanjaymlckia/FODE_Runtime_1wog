@@ -93,8 +93,12 @@ function testRuntimePlaceholderAndControlPolicy() {
   ].map(read).join("\n");
   assert.doesNotMatch(runtime, /backend DTO preview|preview placeholder/i, "runtime must not inherit preview-only placeholder wording");
   assert.doesNotMatch(runtime, />\s*Not returned\s*</i, "runtime identity details must not expose preview-style Not returned placeholders");
-  assert.match(runtime, /data-opsedu-package-rail/, "package rail control must exist");
-  assert.doesNotMatch(read("OpsEdu_ClientCockpit.html"), /Compact packages|data-package-rail=\"compact\"|data-package-rail', 'compact'/i, "runtime package rail supports only expanded/collapsed states");
+  assert.doesNotMatch(runtime, /data-opsedu-package-rail|opseduPackageHeading|data-package-rail/i, "runtime must remove the former large package rail");
+  assert.match(read("EduOps.html"), /opsedu-ribbon-row[\s\S]*opseduPrimaryBuckets[\s\S]*opsedu-ribbon-divider[\s\S]*opseduActionPackages/, "primary buckets and selected work packages must share one OPS ribbon");
+  assert.match(read("OpsEdu_CockpitStyles.html"), /\.opsedu-primary-buckets\s*\{[\s\S]*grid-template-columns:\s*repeat\(8,\s*minmax\(82px,\s*1fr\)\)/, "all eight primary states must be retained in the ribbon");
+  assert.match(read("OpsEdu_CockpitStyles.html"), /\.opsedu-split-workspace\s*\{[\s\S]*grid-template-columns:\s*minmax\(260px,\s*28%\)\s*minmax\(0,\s*72%\)/, "wide desktop split must allocate 28 percent to context and 72 percent to queue");
+  assert.match(read("OpsEdu_CockpitStyles.html"), /@media \(max-width:\s*1599px\)[\s\S]*\.opsedu-split-workspace\s*\{[\s\S]*grid-template-columns:\s*minmax\(260px,\s*32%\)\s*minmax\(0,\s*68%\)/, "medium desktop split must allocate approximately 32 percent to context and 68 percent to queue");
+  assert.match(read("OpsEdu_ClientCockpit.html"), /shortLabels\s*=\s*\{[\s\S]*READY:\s*"Ready"[\s\S]*COMPLETE:\s*"Complete"/, "short labels must preserve the eight primary states without clipping");
   assert.match(read("EduOps_ClientComponents.html"), /Search within/, "scoped search wording must name the active backend package or workload");
 }
 
@@ -103,10 +107,12 @@ function testIndependentScrollingContracts() {
   assert.match(styles, /\.eduops-rail\s*\{[\s\S]*overflow:\s*hidden auto/, "Admin navigation must scroll independently");
   assert.match(styles, /\.eduops-table-scroller\s*\{[\s\S]*overflow:\s*auto/, "Applicant worklist must scroll independently");
   assert.match(styles, /\.eduops-workbench-panel,\s*\n\.eduops-batch-panel\s*\{[\s\S]*overflow:\s*auto/, "Workbench and Batch surfaces must scroll independently");
-  assert.match(read("OpsEdu_CockpitStyles.html"), /\.opsedu-primary-buckets\s*\{[\s\S]*grid-template-columns:\s*repeat\(8/, "all eight primary states must be visible in a wrapping grid");
+  assert.match(read("OpsEdu_CockpitStyles.html"), /\.opsedu-context-pane\s*\{[\s\S]*overflow:\s*auto/, "Operational context pane must scroll independently when needed");
+  assert.match(read("OpsEdu_CockpitStyles.html"), /\.opsedu-queue-pane\s*\{[\s\S]*overflow:\s*hidden/, "Applicant queue pane must own the dominant scroll region");
+  assert.match(read("OpsEdu_CockpitStyles.html"), /\.opsedu-queue-toolbar\s*\{[\s\S]*position:\s*sticky[\s\S]*background:\s*#fff/, "Queue toolbar must be sticky and opaque");
 }
 
 testBackendWorkspaceProjection();
 testRuntimePlaceholderAndControlPolicy();
 testIndependentScrollingContracts();
-console.log("PASS opsedu-workspace-r369");
+console.log("PASS opsedu-workspace-r370");

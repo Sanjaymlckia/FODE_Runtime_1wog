@@ -133,10 +133,41 @@ async function assertAuthorityInvalidated(page, label) {
     assert.doesNotMatch(await page.locator("#eduopsReleaseIdentity").innerText(), /Admin staging/);
     assert.equal(await page.locator("#opseduCockpitHeading").innerText(), "Today's work");
     assert.equal(await page.locator("#opseduCockpitContext").innerText(), "FODE live production operations");
-    const cockpitLayout = await page.evaluate(() => { const cockpit = document.querySelector("#opseduCockpit").getBoundingClientRect(); const cards = Array.from(document.querySelectorAll("#opseduActionPackages .opsedu-action-card")).map((card) => card.getBoundingClientRect()); return { cockpitBottom: cockpit.bottom, cardBottoms: cards.map((card) => card.bottom) }; });
+    const cockpitLayout = await page.evaluate(() => {
+      const cockpit = document.querySelector("#opseduCockpit").getBoundingClientRect();
+      const ribbon = document.querySelector(".opsedu-ribbon-row");
+      const primary = document.querySelector("#opseduPrimaryBuckets");
+      const packages = document.querySelector("#opseduActionPackages");
+      const split = document.querySelector(".opsedu-split-workspace").getBoundingClientRect();
+      const context = document.querySelector(".opsedu-context-pane").getBoundingClientRect();
+      const queue = document.querySelector(".opsedu-queue-pane").getBoundingClientRect();
+      const cards = Array.from(document.querySelectorAll("#opseduActionPackages .opsedu-action-card")).map((card) => card.getBoundingClientRect());
+      return {
+        cockpitHeight: cockpit.height,
+        cockpitBottom: cockpit.bottom,
+        primaryCount: document.querySelectorAll("#opseduPrimaryBuckets [data-opsedu-primary-bucket]").length,
+        packageCount: cards.length,
+        primaryOverflow: primary.scrollWidth > primary.clientWidth,
+        packageOverflow: packages.scrollWidth > packages.clientWidth,
+        sameRibbon: Math.abs(primary.getBoundingClientRect().top - packages.getBoundingClientRect().top) <= 2,
+        ribbonOverflow: ribbon.scrollWidth > ribbon.clientWidth,
+        cardBottoms: cards.map((card) => card.bottom),
+        contextRatio: context.width / split.width,
+        queueRatio: queue.width / split.width
+      };
+    });
+    assert.equal(cockpitLayout.primaryCount, 8, "all eight primary buckets must render in the OPS ribbon");
     assert.equal(cockpitLayout.cardBottoms.length, 2, "active primary bucket work packages must render as visible cockpit cards");
+    assert.equal(cockpitLayout.packageCount, 2, "READY packages must remain visible beside the primary states");
+    assert.equal(cockpitLayout.sameRibbon, true, "primary states and selected packages must occupy one ribbon row");
+    assert.equal(cockpitLayout.primaryOverflow, false, "primary state ribbon must not require hidden horizontal scroll");
+    assert.equal(cockpitLayout.packageOverflow, false, "selected packages must not require hidden horizontal scroll");
+    assert.equal(cockpitLayout.ribbonOverflow, false, "OPS ribbon must not require hidden horizontal scroll");
+    assert(cockpitLayout.cockpitHeight <= 125, "OPS ribbon must remain within the compact 100-120px target range");
+    assert(cockpitLayout.contextRatio >= 0.26 && cockpitLayout.contextRatio <= 0.34, "context pane must remain near the approved 28/72 to 32/68 split");
+    assert(cockpitLayout.queueRatio >= 0.66, "applicant queue must remain the dominant workspace");
     assert.equal(cockpitLayout.cardBottoms.every((bottom) => bottom <= cockpitLayout.cockpitBottom), true, "cockpit must not clip its action cards");
-    await page.locator('[data-opsedu-package="FODE:READY:PAYMENT_FOLLOW_UP"]').click();
+    await page.locator('#opseduActionPackages [data-opsedu-package="FODE:READY:PAYMENT_FOLLOW_UP"]').click();
     await settled(page);
     assert.equal(await page.evaluate(() => window.EduOpsApp.state.worklistKey), "PAYMENT_FOLLOW_UP", "card click transports the exact backend worklist binding");
     assert.equal(await page.evaluate(() => window.EduOpsApp.state.actionabilityState), "READY", "card click transports the exact backend actionability binding");
