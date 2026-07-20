@@ -898,11 +898,41 @@ function eduopsCockpitProjection_(rows, snapshotId, snapshotTimestamp) {
     authoritySource: "Population Ledger + Actionability Resolver + EduOps workload query service",
     productLabel: "FODE live production operations",
     heading: "Today's work",
+    primaryBuckets: eduopsCockpitPrimaryBuckets_(rows, snapshotId, snapshotTimestamp),
     actionPackages: eduopsActionPackages_(rows, snapshotId, snapshotTimestamp),
     snapshotId: eduopsClean_(snapshotId || ""),
     snapshotTimestamp: eduopsClean_(snapshotTimestamp || ""),
     stale: false
   };
+}
+
+function eduopsCockpitPrimaryBuckets_(rows, snapshotId, snapshotTimestamp) {
+  var counts = eduopsActionabilityCounts_(rows);
+  return eduopsActionabilityPresentation_(counts).map(function (item) {
+    var query = eduopsNormalizeWorkloadQuery_({
+      product: "FODE",
+      actionabilityState: item.code,
+      worklistKey: "",
+      workScope: "ALL_AUTHORISED",
+      filters: { search: "" },
+      sort: { key: "urgency", direction: "asc" },
+      page: 1,
+      pageSize: 25
+    });
+    return {
+      schemaVersion: "OPSEDU_PRIMARY_BUCKET_V1",
+      authoritySource: "Actionability Resolver + EduOps workload query service",
+      code: item.code,
+      label: item.label,
+      count: Number(item.count || 0),
+      reason: item.reason,
+      defaultQueueBinding: eduopsWorkloadQueryBinding_(query, snapshotId, { generatedAt: snapshotTimestamp }),
+      disabled: false,
+      disabledReason: "",
+      snapshotId: eduopsClean_(snapshotId || ""),
+      snapshotTimestamp: eduopsClean_(snapshotTimestamp || "")
+    };
+  });
 }
 
 function eduopsActionPackageDescriptor_(row) {
@@ -911,12 +941,17 @@ function eduopsActionPackageDescriptor_(row) {
   var worklistLabel = eduopsClean_(row && row.worklistLabel || "");
   var descriptors = {
     PAYMENT_FOLLOW_UP: { label: "Payment follow-ups due", shortLabel: "Payment follow-ups", ownerDomain: "Finance", sortPriority: 10, mutationBoundary: "Finance authority + Communication Authority" },
-    DOCUMENT_FOLLOW_UP: { label: "Missing documents follow-ups due", shortLabel: "Missing documents", ownerDomain: "Documents", sortPriority: 20, mutationBoundary: "Document authority + Communication Authority" },
     DOCUMENT_REVIEW: { label: "Document review required", shortLabel: "Document review", ownerDomain: "Documents", sortPriority: 30, mutationBoundary: "Review Workspace + Document authority" },
     PAYMENT_REVIEW: { label: "Finance verification required", shortLabel: "Finance verification", ownerDomain: "Finance", sortPriority: 40, mutationBoundary: "Finance authority" },
     CONTACTABILITY_EXCEPTION: { label: "Contact issues", shortLabel: "Contact issues", ownerDomain: "Contactability", sortPriority: 50, mutationBoundary: "Review Workspace + Contactability authority" },
     ENROLMENT_COMPLETION: { label: "Ready for acceptance / classroom handoff", shortLabel: "Acceptance handoff", ownerDomain: "Academic Administration", sortPriority: 60, mutationBoundary: "Review Workspace + Canonical Lifecycle Resolver" }
   };
+  if (worklistKey === "DOCUMENT_FOLLOW_UP" && state === "REVIEW_REQUIRED") {
+    return { packageKey: state + ":" + worklistKey, actionabilityState: state, worklistKey: worklistKey, label: "Missing documents - review decision required", shortLabel: "Review missing documents", ownerDomain: "Documents Review", sortPriority: 25, mutationBoundary: "Review Workspace + Document authority" };
+  }
+  if (worklistKey === "DOCUMENT_FOLLOW_UP") {
+    return { packageKey: state + ":" + worklistKey, actionabilityState: state, worklistKey: worklistKey, label: "Missing documents - applicant follow-up due", shortLabel: "Applicant missing documents", ownerDomain: "Documents", sortPriority: 20, mutationBoundary: "Document authority + Communication Authority" };
+  }
   if (state === "COOLING_OFF") return { packageKey: "COOLING_OFF", actionabilityState: state, worklistKey: "", label: "Recently contacted / cooling off", shortLabel: "Waiting period", ownerDomain: "Operations", sortPriority: 70, mutationBoundary: "Actionability Resolver" };
   if (state === "REVIEW_REQUIRED" && !descriptors[worklistKey]) return { packageKey: "REVIEW_REQUIRED", actionabilityState: state, worklistKey: "", label: "Needs review", shortLabel: "Needs review", ownerDomain: "Review", sortPriority: 80, mutationBoundary: "Review Workspace" };
   if (state === "COMPLETE") return { packageKey: "COMPLETE", actionabilityState: state, worklistKey: "", label: "Completed / no action", shortLabel: "Completed", ownerDomain: "History", sortPriority: 900, mutationBoundary: "Canonical Lifecycle Resolver" };
@@ -968,6 +1003,8 @@ function eduopsActionPackages_(rows, snapshotId, snapshotTimestamp) {
     return {
       schemaVersion: "OPSEDU_ACTION_PACKAGE_V1",
       packageId: "FODE:" + key,
+      actionabilityState: descriptor.actionabilityState,
+      worklistKey: descriptor.worklistKey,
       label: descriptor.label,
       shortOperatorLabel: descriptor.shortLabel,
       count: group.rows.length,
@@ -1034,7 +1071,7 @@ function eduopsWorklistPresentation_(counts, rows) {
   var labels = {};
   (Array.isArray(rows) ? rows : []).forEach(function (row) {
     var key = eduopsClean_(row && row.worklistKey || "");
-    if (key && !labels[key]) labels[key] = eduopsClean_(row.worklistLabel || "");
+    if (key && !labels[key]) labels[key] = eduopsClean_(eduopsActionPackageDescriptor_(row).shortLabel || row.worklistLabel || "");
   });
   var total = Object.keys(counts || {}).reduce(function (sum, key) { return sum + Number(counts[key] || 0); }, 0);
   var out = [{ schemaVersion: "EDUOPS_CODE_PRESENTATION_V1", authoritySource: "Actionability Resolver", code: "", label: "All work types", reason: "All worklist types in the selected Actionability state.", available: true, stale: false, count: total }];

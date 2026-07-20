@@ -13,6 +13,13 @@
     var target = byId("opseduActionPackages");
     if (target) target.innerHTML = '<div class="opsedu-cockpit-error"><strong>' + app.esc(message) + '</strong><span>Refresh or retry before continuing.</span></div>';
   }
+  function activeState() {
+    return app.state.actionabilityState || "READY";
+  }
+  function bucketButton(item) {
+    var active = item.code === activeState();
+    return '<button type="button" class="opsedu-primary-bucket" data-opsedu-primary-bucket="' + app.esc(item.code) + '" aria-pressed="' + (active ? "true" : "false") + '"><span>' + app.esc(item.label) + '</span><strong>' + Number(item.count || 0) + '</strong><small>' + app.esc(item.reason || item.authoritySource) + '</small></button>';
+  }
   function packageCard(item) {
     var recommendation = item.recommendedCommunication;
     var recommendationLabel = recommendation && recommendation.available === true ? recommendation.label : "";
@@ -45,14 +52,20 @@
 
   app.renderOpsEduCockpit = function (response) {
     var cockpit = response && response.cockpit;
-    if (!cockpit || cockpit.schemaVersion !== "OPSEDU_COCKPIT_V1" || !Array.isArray(cockpit.actionPackages)) {
+    if (!cockpit || cockpit.schemaVersion !== "OPSEDU_COCKPIT_V1" || !Array.isArray(cockpit.primaryBuckets) || !Array.isArray(cockpit.actionPackages)) {
       failClosed("Authoritative OpsEdu cockpit decision was not returned.");
       return;
     }
     byId("opseduCockpitContext").textContent = cockpit.productLabel;
     byId("opseduCockpitHeading").textContent = cockpit.heading;
     byId("opseduCockpitSnapshot").textContent = "Snapshot " + cockpit.snapshotId + " / " + cockpit.snapshotTimestamp;
-    byId("opseduActionPackages").innerHTML = cockpit.actionPackages.map(packageCard).join("") || '<div class="opsedu-cockpit-empty"><strong>No action packages returned.</strong><span>The backend reported no current work packages.</span></div>';
+    var bucketTarget = byId("opseduPrimaryBuckets");
+    var buckets = Array.isArray(cockpit.primaryBuckets) ? cockpit.primaryBuckets : [];
+    if (bucketTarget) bucketTarget.innerHTML = buckets.map(bucketButton).join("");
+    var packages = cockpit.actionPackages.filter(function (item) { return !item.actionabilityState || item.actionabilityState === activeState(); });
+    var activeBucket = packageById(buckets.map(function (item) { return { packageId: item.code, label: item.label }; }), activeState());
+    byId("opseduPackageHeading").textContent = activeBucket ? activeBucket.label + " work packages" : "Current work packages";
+    byId("opseduActionPackages").innerHTML = packages.map(packageCard).join("") || '<div class="opsedu-cockpit-empty"><strong>No work packages in this state.</strong><span>The backend returned no granular packages for the selected authoritative bucket.</span></div>';
   };
 
   function bind() {
@@ -65,6 +78,23 @@
       var item = packageById(cockpit && cockpit.actionPackages, button.getAttribute("data-opsedu-package"));
       if (!item || item.disabled === true) return failClosed("Authoritative action package was not returned.");
       app.openServerBoundQueue(item.defaultQueueBinding, "Opening " + item.label + ".");
+    });
+    document.addEventListener("click", function (event) {
+      var button = event.target.closest("[data-opsedu-primary-bucket]");
+      if (!button || button.disabled) return;
+      var cockpit = app.state.workload && app.state.workload.cockpit;
+      var item = (Array.isArray(cockpit && cockpit.primaryBuckets) ? cockpit.primaryBuckets : []).filter(function (bucket) { return bucket && bucket.code === button.getAttribute("data-opsedu-primary-bucket"); })[0];
+      if (!item || item.disabled === true) return failClosed("Authoritative primary bucket was not returned.");
+      app.openServerBoundQueue(item.defaultQueueBinding, "Opening " + item.label + ".");
+    });
+    document.addEventListener("click", function (event) {
+      var button = event.target.closest("[data-opsedu-package-rail]");
+      if (!button) return;
+      var collapsed = button.getAttribute("aria-pressed") === "true";
+      button.setAttribute("aria-pressed", collapsed ? "false" : "true");
+      button.textContent = collapsed ? "Collapse packages" : "Expand packages";
+      var cockpit = byId("opseduCockpit");
+      if (cockpit) cockpit.setAttribute("data-package-rail", collapsed ? "expanded" : "collapsed");
     });
   }
 

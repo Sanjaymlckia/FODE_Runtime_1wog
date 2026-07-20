@@ -1,0 +1,74 @@
+[
+  {
+    "primaryActionability": "COMPLETE",
+    "workPackageId": "FODE:COMPLETE",
+    "displayLabel": "Completed / no action",
+    "applicantCount": 1,
+    "recommendedAction": "NO_ACTION",
+    "recommendedMessageType": "",
+    "authority": "Completed / No Action"
+  },
+  {
+    "primaryActionability": "COOLING_OFF",
+    "workPackageId": "FODE:COOLING_OFF",
+    "displayLabel": "Recently contacted / cooling off",
+    "applicantCount": 2,
+    "recommendedAction": "UPLOAD_REQUIRED_DOCUMENTS",
+    "recommendedMessageType": "docs_missing",
+    "authority": "Applicant Action"
+  },
+  {
+    "primaryActionability": "READY",
+    "workPackageId": "FODE:READY:DOCUMENT_FOLLOW_UP",
+    "displayLabel": "Missing documents - applicant follow-up due",
+    "applicantCount": 251,
+    "recommendedAction": "UPLOAD_REQUIRED_DOCUMENTS",
+    "recommendedMessageType": "docs_missing",
+    "authority": "Dormant"
+  },
+  {
+    "primaryActionability": "READY",
+    "workPackageId": "FODE:READY:PAYMENT_FOLLOW_UP",
+    "displayLabel": "Payment follow-ups due",
+    "applicantCount": 2,
+    "recommendedAction": "SEND_PAYMENT_REMINDER",
+    "recommendedMessageType": "payment_followup",
+    "authority": "Finance"
+  },
+  {
+    "primaryActionability": "REVIEW_REQUIRED",
+    "workPackageId": "FODE:REVIEW_REQUIRED:CONTACTABILITY_EXCEPTION",
+    "displayLabel": "Contact issues",
+    "applicantCount": 63,
+    "recommendedAction": "FIX_CONTACT_DETAILS",
+    "recommendedMessageType": "legacy_invite",
+    "authority": "Contactability Exceptions"
+  },
+  {
+    "primaryActionability": "REVIEW_REQUIRED",
+    "workPackageId": "FODE:REVIEW_REQUIRED:DOCUMENT_REVIEW",
+    "displayLabel": "Document review required",
+    "applicantCount": 7,
+    "recommendedAction": "REVIEW_DOCUMENTS",
+    "recommendedMessageType": "",
+    "authority": "Admissions Review"
+  },
+  {
+    "primaryActionability": "REVIEW_REQUIRED",
+    "workPackageId": "FODE:REVIEW_REQUIRED:DOCUMENT_FOLLOW_UP",
+    "displayLabel": "Missing documents - review decision required",
+    "applicantCount": 4,
+    "recommendedAction": "UPLOAD_REQUIRED_DOCUMENTS",
+    "recommendedMessageType": "docs_missing",
+    "authority": "Contactability Exceptions"
+  },
+  {
+    "primaryActionability": "REVIEW_REQUIRED",
+    "workPackageId": "FODE:REVIEW_REQUIRED:ENROLMENT_COMPLETION",
+    "displayLabel": "Ready for acceptance / classroom handoff",
+    "applicantCount": 2,
+    "recommendedAction": "ENROLL",
+    "recommendedMessageType": "",
+    "authority": "Academic Administration"
+  }
+]

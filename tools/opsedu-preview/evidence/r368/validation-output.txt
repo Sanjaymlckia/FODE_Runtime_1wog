@@ -1,0 +1,43 @@
+R368 OpsEdu Preview Lab validation
+--- node syntax ---
+--- validation ---
+PASS R368 OpsEdu preview validation
+Population: 332
+Work packages: 8
+Waffi package: FODE:READY:PAYMENT_FOLLOW_UP
+--- screenshots ---
+PASS R368 OpsEdu preview screenshots
+http://127.0.0.1:4183/
+--- git diff check ---
+--- evidence files ---
+
+Name                             Length
+----                             ------
+baseline-1920x1080.png           651304
+batch-preview.png                233174
+compact-summary.png               29299
+deployment-metadata-final.txt       895
+expanded-worklist-row.png         13361
+final-ahead-behind.txt                5
+final-git-status.txt               5151
+final-head.txt                       42
+final-origin-main.txt                42
+final-state.json                    527
+fresh-capture-output.txt            172
+individual-workbench.png         248904
+preview-server-hold-note.txt        416
+preview-server-startup.txt          267
+preview-server.job.txt                3
+primary-bucket-counts.json          180
+protected-six-hashes-final.json    1092
+raw-population-summary.json     5859606
+raw-route-snapshot.json         1788800
+raw-workload-all.json            337217
+redesign-1366x768.png            129506
+redesign-1920x1080.png           150932
+screenshot-output.txt                62
+search-handoff-waffi.png          28040
+snapshot-summary.json               593
+validation-output.txt               325
+waffi-trace.json                 129125
+work-package-inventory.json        2517

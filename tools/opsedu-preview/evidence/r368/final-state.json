@@ -1,0 +1,21 @@
+{
+  "verdict": "R368_OPSEDU_PREVIEW_READY_FOR_OWNER_REVIEW",
+  "readOnly": true,
+  "runtimeSourceChanged": false,
+  "liveMutation": false,
+  "communicationSend": false,
+  "snapshotPopulation": 332,
+  "workPackageCount": 8,
+  "duplicateLabelResolution": {
+    "previousLabel": "Missing documents follow-ups due",
+    "replacements": {
+      "FODE:READY:DOCUMENT_FOLLOW_UP": "Missing documents - applicant follow-up due",
+      "FODE:REVIEW_REQUIRED:DOCUMENT_FOLLOW_UP": "Missing documents - review decision required"
+    }
+  },
+  "localPreviewUrl": "http://127.0.0.1:4183/",
+  "ownerStartCommand": "D:\\Repos\\FODE_Runtime_1wog\\tools\\opsedu-preview\\START_OPSEDU_PREVIEW.cmd",
+  "screenshotEvidenceComplete": true,
+  "persistentServerHeldByCodex": false,
+  "persistentServerHoldReason": "Background process launch was blocked or did not persist after the tool command."
+}

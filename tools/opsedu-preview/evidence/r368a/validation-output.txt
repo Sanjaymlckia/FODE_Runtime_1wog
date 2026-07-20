@@ -1,0 +1,59 @@
+R368A OpsEdu final preview refinement validation
+--- node syntax ---
+--- validation ---
+PASS R368A OpsEdu preview validation
+Population: 332
+Work packages: 8
+Waffi package: FODE:READY:PAYMENT_FOLLOW_UP
+--- screenshots and behavior ---
+PASS R368A OpsEdu preview screenshots
+http://127.0.0.1:4183/
+--- git diff check ---
+--- identity proof ---
+Expected Admin whoami: r365 / 365
+Expected Student whoami: r217 / 217
+Source: runtime-context.json unless parameters are explicitly supplied.
+
+CHECK: Admin https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami
+PASS: Admin whoami r365 / 365
+CHECK: Student https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec?view=whoami
+PASS: Student whoami r217 / 217
+
+Failures: 0
+RUNTIME VERIFY PASS
+--- evidence files ---
+
+Name                              Length
+----                              ------
+batch-preview.png                 221478
+collapsed-package-rail.png         11171
+collapsed-summary.png              13506
+compact-row.png                    13174
+deployment-metadata-final.txt        895
+empty-blocked.png                  13153
+empty-classification-required.png  12123
+empty-waiting-applicant.png        12619
+empty-waiting-payment.png          12608
+error-state.png                    10875
+expanded-package-rail.png          25406
+expanded-row.png                   16799
+expanded-summary.png               24823
+final-ahead-behind.txt                 5
+final-git-status.txt                5151
+final-head.txt                        42
+final-origin-main.txt                 42
+final-state.json                     267
+full-shell-1366x768.png           128888
+full-shell-1920x1080.png          163290
+identity-proof.txt                   527
+individual-workbench.png          211773
+loading-state.png                   4533
+opaque-sticky-toolbar.png          15338
+owner-review-summary.md              523
+preview-server-startup.txt           898
+protected-six-hashes-final.json     1092
+screenshot-output.txt                 63
+styling-comparison.png            124995
+validation-output.txt                905
+waffi-payment-followup.png         13174
+waffi-search-handoff.png           12533

@@ -69,6 +69,8 @@ function testBackendProjection() {
   ];
   const cockpit = context.eduopsCockpitProjection_(rows, "SNAP-R366", "2026-07-20T00:00:00.000Z");
   assert.equal(cockpit.schemaVersion, "OPSEDU_COCKPIT_V1");
+  assert.equal(cockpit.primaryBuckets.length, 8, "all eight primary actionability buckets must be backend projected");
+  assert(cockpit.primaryBuckets.every((item) => item.defaultQueueBinding && item.defaultQueueBinding.authority === "SERVER_AUTHORED"), "primary bucket navigation must use server-authored bindings");
   const payment = cockpit.actionPackages.find((item) => item.label === "Payment follow-ups due");
   assert(payment, "payment follow-up package must be backend projected");
   assert.equal(payment.count, 2);
@@ -77,8 +79,9 @@ function testBackendProjection() {
   assert.equal(payment.defaultQueueBinding.query.worklistKey, "PAYMENT_FOLLOW_UP");
   assert.equal(payment.defaultQueueBinding.snapshotId, "SNAP-R366");
   assert.equal(payment.recommendedCommunication.label, "Payment Follow-up");
-  const documents = cockpit.actionPackages.find((item) => item.label === "Missing documents follow-ups due");
+  const documents = cockpit.actionPackages.find((item) => item.label === "Missing documents - applicant follow-up due");
   assert.equal(documents.count, 1);
+  assert.equal(documents.actionabilityState, "READY");
 
   const handoff = context.eduopsSearchHandoff_(rows[0], "SNAP-R366", "2026-07-20T00:00:00.000Z");
   assert.equal(handoff.actionPackageLabel, "Payment follow-ups due");
@@ -138,7 +141,7 @@ function testHollowClientBinding() {
     snapshotId: "SNAP-R366",
     query: { product: "FODE", actionabilityState: "READY", worklistKey: "PAYMENT_FOLLOW_UP", workScope: "ALL_AUTHORISED", filters: { search: "" }, sort: { key: "urgency", direction: "ASC" }, pageSize: 25 }
   };
-  const cockpit = { schemaVersion: "OPSEDU_COCKPIT_V1", productLabel: "FODE live production operations", heading: "Today's work", snapshotId: "SNAP-R366", snapshotTimestamp: "2026-07-20T00:00:00.000Z", actionPackages: [{ packageId: "FODE:READY:PAYMENT_FOLLOW_UP", label: "Payment follow-ups due", ownerDomain: "Finance", count: 2, routeReason: "Payment follow-up is due.", mutationBoundary: "Finance authority", primaryActionLabel: "Open queue", defaultQueueBinding: binding, disabled: false }] };
+  const cockpit = { schemaVersion: "OPSEDU_COCKPIT_V1", productLabel: "FODE live production operations", heading: "Today's work", snapshotId: "SNAP-R366", snapshotTimestamp: "2026-07-20T00:00:00.000Z", primaryBuckets: [{ schemaVersion: "OPSEDU_PRIMARY_BUCKET_V1", code: "READY", label: "Ready for action", count: 2, defaultQueueBinding: binding }], actionPackages: [{ packageId: "FODE:READY:PAYMENT_FOLLOW_UP", actionabilityState: "READY", worklistKey: "PAYMENT_FOLLOW_UP", label: "Payment follow-ups due", ownerDomain: "Finance", count: 2, routeReason: "Payment follow-up is due.", mutationBoundary: "Finance authority", primaryActionLabel: "Open queue", defaultQueueBinding: binding, disabled: false }] };
   app.state.workload = { cockpit };
   app.renderOpsEduCockpit({ cockpit });
   assert.match(element("opseduActionPackages").innerHTML, /Payment follow-ups due/);

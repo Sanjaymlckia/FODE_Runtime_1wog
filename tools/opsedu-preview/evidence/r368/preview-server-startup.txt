@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "health": {
+    "ok": true,
+    "name": "OpsEdu Preview Lab",
+    "readOnly": true,
+    "mutationEndpoints": false,
+    "port": 4183,
+    "snapshotPopulation": 332
+  },
+  "logs": [
+    "OpsEdu Preview Lab listening at http://127.0.0.1:4183/\n"
+  ]
+}

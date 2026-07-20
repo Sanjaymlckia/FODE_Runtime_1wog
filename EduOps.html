@@ -111,8 +111,13 @@
               <h1 id="opseduCockpitHeading">Today's work</h1>
               <p id="opseduCockpitContext">Authoritative operating context loading</p>
             </div>
-            <span id="opseduCockpitSnapshot" class="opsedu-cockpit-snapshot">Authoritative work packages loading</span>
+            <div class="opsedu-cockpit-actions">
+              <span id="opseduCockpitSnapshot" class="opsedu-cockpit-snapshot">Authoritative work packages loading</span>
+              <button class="eduops-button eduops-button-secondary" type="button" data-opsedu-package-rail aria-pressed="false">Collapse packages</button>
+            </div>
           </header>
+          <div id="opseduPrimaryBuckets" class="opsedu-primary-buckets" aria-label="Primary actionability buckets"></div>
+          <h2 id="opseduPackageHeading" class="opsedu-package-heading">Current work packages</h2>
           <div id="opseduActionPackages" class="opsedu-action-packages" aria-live="polite">
             <div class="opsedu-cockpit-empty"><strong>Resolving authoritative action packages</strong><span>The cockpit will fail closed if the backend projection is unavailable.</span></div>
           </div>

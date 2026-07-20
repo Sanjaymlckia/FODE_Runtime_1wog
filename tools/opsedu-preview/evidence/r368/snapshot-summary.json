@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "OPSEDU_PREVIEW_SNAPSHOT_V1",
+  "population": {
+    "authoritativeApplicants": 332,
+    "distinctApplicantIds": 332,
+    "duplicates": [],
+    "blankApplicantIdsIncluded": 0
+  },
+  "source": {
+    "baseline": "R367_ACCEPTED_OWNER_WITH_FINDINGS",
+    "liveRuntime": "r365 / 365",
+    "snapshotId": "FODE-6xND4sQ_KJhx9anb",
+    "snapshotAsOf": "2026-07-20T07:36:01.882Z",
+    "authoritySource": "Read-only EduOps/OpsEdu backend authority projections"
+  },
+  "validation": {
+    "noUnassignedActionableApplicant": true,
+    "routeRowCount": 332,
+    "packageTotal": 332
+  }
+}

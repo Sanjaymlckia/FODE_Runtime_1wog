@@ -1,0 +1,6 @@
+{
+  "ok": true,
+  "readOnly": true,
+  "snapshotPath": "D:\\Repos\\FODE_Runtime_1wog\\tools\\opsedu-preview\\snapshots\\current\\snapshot.json",
+  "population": 332
+}

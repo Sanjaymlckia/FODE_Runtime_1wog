@@ -28,8 +28,8 @@
     dom.eduopsHistoryNav.innerHTML = '<button type="button" data-state="COMPLETE"' + (app.state.actionabilityState === "COMPLETE" ? ' aria-current="page"' : '') + '><span>' + app.esc(complete && complete.label || app.authorityUnavailable("actionability")) + '</span><small>' + Number(complete && complete.count || 0) + '</small></button><button type="button" data-state="ALL"><span>' + app.esc(all.label || app.authorityUnavailable("actionability")) + '</span><small>' + Number(all.count || 0) + '</small></button>';
   }
   function renderKpis(presentation) {
-    dom.eduopsKpis.innerHTML = (presentation.actionabilityBuckets || []).filter(function (item) { return item.code !== "COMPLETE"; }).map(function (item) {
-      return '<article class="eduops-kpi-card" role="listitem" data-state="' + app.esc(item.code) + '"><span class="eduops-kpi-label">' + app.esc(item.label) + '</span><strong class="eduops-kpi-value">' + Number(item.count || 0) + '</strong><small class="eduops-kpi-caption">' + app.esc(item.reason) + '</small></article>';
+    dom.eduopsKpis.innerHTML = (presentation.actionabilityBuckets || []).map(function (item) {
+      return '<button type="button" class="eduops-kpi-card" role="listitem" data-state="' + app.esc(item.code) + '" data-state-summary="' + app.esc(item.code) + '" aria-pressed="' + (app.state.actionabilityState === item.code ? "true" : "false") + '"><span class="eduops-kpi-label">' + app.esc(item.label) + '</span><strong class="eduops-kpi-value">' + Number(item.count || 0) + '</strong><small class="eduops-kpi-caption">' + app.esc(item.reason) + '</small></button>';
     }).join("");
   }
   function renderMetrics(presentation) {
@@ -210,6 +210,7 @@
     var selectedScope = authorityItem(presentation.workScopes, app.state.workScope);
     dom.eduopsSelectedStateLabel.textContent = selectedState && selectedState.label || app.authorityUnavailable("actionability");
     dom.eduopsSelectedWorklistLabel.textContent = selectedWorklist && selectedWorklist.label || app.authorityUnavailable("worklist");
+    dom.eduopsSearch.placeholder = "Search within " + (selectedWorklist && selectedWorklist.label || selectedState && selectedState.label || "current workload");
     dom.eduopsWorklistReason.textContent = response.totalMatched + " matched. " + (selectedScope && selectedScope.label || app.authorityUnavailable("work scope")) + ". Request completed in " + clientMs + " ms; server " + Number(response.timings && response.timings.serverRpcMs || 0) + " ms.";
     dom.eduopsTopContext.textContent = (selectedState && selectedState.label || app.authorityUnavailable("actionability")) + " / " + (selectedWorklist && selectedWorklist.label || app.authorityUnavailable("worklist"));
     var runtime = response.runtime || {};
@@ -224,7 +225,7 @@
     if (operationalClassification) operationalClassification.textContent = response.runtime && response.runtime.operationalClassification || "Runtime identity unavailable.";
     if (dom.eduopsAppsScriptIdentity) dom.eduopsAppsScriptIdentity.textContent = response.runtime && response.runtime.appsScriptVersion ? "Apps Script @" + response.runtime.appsScriptVersion : (response.runtime && response.runtime.appsScriptVersionReason || "Apps Script version unavailable from runtime authority.");
     if (dom.eduopsReleaseDetails) {
-      dom.eduopsReleaseDetails.innerHTML = [["Operations surface", runtime.operationalClassification || "Runtime identity unavailable."], ["Deployment role", runtime.deploymentRole || "Not projected"], ["Deployment", runtime.deploymentIdSafe || "Not projected"], ["Source", runtime.sourceIdentity || "Not projected"], ["Data authority", runtime.dataAuthority || "Not projected"], ["Snapshot", snapshotId || "Not returned"], ["Snapshot time", snapshotAsOf || "Not returned"]].map(function (item) { return '<div><dt>' + app.esc(item[0]) + '</dt><dd>' + app.esc(item[1]) + '</dd></div>'; }).join("");
+      dom.eduopsReleaseDetails.innerHTML = [["Operations surface", runtime.operationalClassification || "Runtime identity unavailable."], ["Deployment role", runtime.deploymentRole || "Unavailable from runtime identity."], ["Deployment", runtime.deploymentIdSafe || "Unavailable from runtime identity."], ["Source", runtime.sourceIdentity || "Unavailable from runtime identity."], ["Data authority", runtime.dataAuthority || "Unavailable from runtime identity."], ["Snapshot", snapshotId || "Snapshot unavailable"], ["Snapshot time", snapshotAsOf || "Snapshot time unavailable"]].map(function (item) { return '<div><dt>' + app.esc(item[0]) + '</dt><dd>' + app.esc(item[1]) + '</dd></div>'; }).join("");
     }
     dom.eduopsHiddenRailCount.textContent = String(response.reconciliation && response.reconciliation.hiddenFromCurrentView || 0);
     if (!app.state.workbench && !app.state.batch) {
@@ -472,6 +473,15 @@
       if (stateButton && (stateButton.closest("#eduopsActionNav") || stateButton.closest("#eduopsHistoryNav"))) {
         var requested = stateButton.getAttribute("data-state");
         app.state.actionabilityState = requested;
+        app.state.worklistKey = "";
+        if (!app.state.workScopePinned) app.state.workScope = "ALL_AUTHORISED";
+        app.clearSelection();
+        app.requestWorkload({ resetPage: true });
+        return;
+      }
+      var summaryState = event.target.closest("[data-state-summary]");
+      if (summaryState) {
+        app.state.actionabilityState = summaryState.getAttribute("data-state-summary");
         app.state.worklistKey = "";
         if (!app.state.workScopePinned) app.state.workScope = "ALL_AUTHORISED";
         app.clearSelection();
