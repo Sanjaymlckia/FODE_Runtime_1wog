@@ -330,7 +330,9 @@ async function assertAuthorityInvalidated(page, label) {
     await page.locator("[data-batch-execution-limit]").selectOption("10");
     await page.waitForSelector('[data-batch-template-card="docs_missing"]');
     assert.equal(await page.locator('[data-batch-template-card="application_portal_invitation"]').isDisabled(), true);
-    assert.match(await page.locator('[data-batch-template-card="application_portal_invitation"]').innerText(), /No applicant.*authorised/);
+    assert.match(await page.locator('[data-batch-template-card="application_portal_invitation"]').innerText(), /Unavailable\. Expand authority reason/);
+    await page.locator('[data-batch-template-card="application_portal_invitation"]').locator("xpath=..").locator("summary").click();
+    assert.match(await page.locator('[data-batch-template-card="application_portal_invitation"]').locator("xpath=..").innerText(), /No applicant.*authorised/);
     assert.equal(await page.locator('[data-batch-template-card="retired_notice"]').count(), 0);
     assert.match(await page.locator('[data-batch-template-card="docs_missing"]').innerText(), /Recommended/);
     assert.doesNotMatch(await page.locator("#eduopsBatchWorkspace").innerText(), /Legacy Invite|legacy_invite/);

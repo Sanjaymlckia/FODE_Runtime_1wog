@@ -375,10 +375,12 @@ function eduopsOperationalRowSummary_(row, authorityState, actionabilityPresenta
   var issue = eduopsOperationalRowIssue_(row, authorityState);
   var contactLabel = eduopsHumanize_(authorityState && authorityState.contactabilityState || "");
   var dueLabel = "";
-  if (row && row.coolingOffUntil) dueLabel = "Cooling off";
+  if (row && row.coolingOffUntil) dueLabel = "Cooling off until " + eduopsShortDateLabel_(row.coolingOffUntil);
+  else if (row && row.nextActionDate) dueLabel = "Due " + eduopsShortDateLabel_(row.nextActionDate);
+  else if (row && eduopsUpper_(row.urgencyLevel || "") === "DUE") dueLabel = "Due now";
+  else if (row && eduopsUpper_(row.urgencyLevel || "") === "OVERDUE") dueLabel = "Overdue";
   else if (row && eduopsUpper_(row.urgencyLevel || "") === "NORMAL") dueLabel = "";
   else if (row && row.urgencyLevel) dueLabel = eduopsHumanize_(row.urgencyLevel);
-  else if (row && row.nextActionDate) dueLabel = "Due " + eduopsShortDateLabel_(row.nextActionDate);
   return {
     schemaVersion: "OPSEDU_OPERATIONAL_ROW_V1",
     authoritySource: "Canonical Lifecycle Resolver + Actionability Resolver + Finance authority + Document authority + Contactability authority",

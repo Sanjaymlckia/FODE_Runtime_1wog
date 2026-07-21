@@ -2271,4 +2271,150 @@
   .eduops-work-scope-band { padding-block: 7px; }
 }
 
+/* R375 100% zoom density layer: display-only compaction for the accepted OpsEdu shell. */
+:root {
+  --eduops-density-body: 12px;
+  --eduops-density-meta: 10px;
+  --eduops-density-control: 12px;
+  --eduops-density-control-height: 28px;
+  --eduops-density-pad-y: 4px;
+  --eduops-density-pad-x: 7px;
+  --eduops-density-gap: 4px;
+  --eduops-density-row-min: 46px;
+}
+.eduops-body,
+.eduops-app { font-size: var(--eduops-density-body); }
+.eduops-button,
+.eduops-field input,
+.eduops-field select,
+.eduops-field textarea {
+  min-height: var(--eduops-density-control-height);
+  padding: var(--eduops-density-pad-y) var(--eduops-density-pad-x);
+  font-size: var(--eduops-density-control);
+}
+.eduops-page-shell { gap: 5px; }
+.eduops-main { gap: 5px; padding-top: 5px; }
+.eduops-workspace { min-height: 0; }
+.eduops-workspace-header {
+  gap: 6px;
+  min-height: 40px;
+  padding: 5px 7px;
+}
+.eduops-workspace-header h2 { font-size: 17px; line-height: 1.05; }
+.eduops-workspace-header p { margin-top: 1px; font-size: 11px; line-height: 1.15; }
+.eduops-queue-compact-stats {
+  margin-top: 2px;
+  color: #42606f;
+  font-size: 11px;
+  font-weight: 650;
+}
+.eduops-workspace-actions:empty { display: none; }
+.eduops-worklist-key-band,
+.eduops-work-scope-band,
+.eduops-filter-toolbar,
+.eduops-selection-bar {
+  gap: var(--eduops-density-gap);
+  padding: 5px 7px;
+}
+.eduops-worklist-key-band button,
+.eduops-work-scope-band button {
+  min-height: 26px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+.eduops-filter-toolbar { grid-template-columns: minmax(260px, 1.4fr) minmax(120px, .45fr) minmax(120px, .45fr) minmax(160px, .6fr) auto; }
+.eduops-selection-bar { align-items: flex-start; flex-direction: column; }
+.eduops-selection-actions { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; width: 100%; }
+.eduops-selection-summary {
+  width: 100%;
+  color: #456171;
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: left;
+}
+.eduops-action-reason { font-size: 10px; line-height: 1.15; }
+.eduops-band-label {
+  color: #526b78;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+.eduops-table-scroller { min-height: 180px; }
+.eduops-work-table th {
+  height: 24px;
+  padding: 3px 6px;
+  font-size: 10px;
+  line-height: 1.1;
+}
+.eduops-work-table td {
+  height: var(--eduops-density-row-min);
+  padding: 3px 6px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+.eduops-work-table td > strong { font-size: 12px; line-height: 1.15; }
+.eduops-work-table td > span,
+.eduops-applicant-link span { font-size: 10px; line-height: 1.15; }
+.eduops-row-open {
+  min-height: 24px;
+  padding: 3px 7px;
+  font-size: 11px;
+}
+.eduops-row-detail { margin-top: 1px; font-size: 10px; }
+.eduops-row-detail summary { display: inline-flex; min-height: 18px; align-items: center; color: #31566c; font-weight: 650; }
+.eduops-row-detail-grid { gap: 3px; margin-top: 3px; padding: 4px; }
+.eduops-row-detail-grid span { font-size: 9px; }
+.eduops-row-detail-grid strong { font-size: 10px; }
+.eduops-badge,
+.eduops-status-badge,
+.eduops-capability-state { padding: 2px 5px; font-size: 10px; }
+.eduops-panel-card { padding: 8px; }
+.eduops-panel-card header { gap: 6px; margin-bottom: 7px; }
+.eduops-panel-card header h2 { font-size: 15px; line-height: 1.1; }
+.eduops-panel-card header p { font-size: 11px; line-height: 1.2; }
+.eduops-template-gallery { gap: 5px; margin-bottom: 8px; }
+.eduops-template-card {
+  display: block;
+  padding: 0;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #879faf;
+  border-radius: 5px;
+}
+.eduops-template-card > button {
+  width: 100%;
+  padding: 7px 8px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: inherit;
+}
+.eduops-template-card > button:disabled { cursor: not-allowed; }
+.eduops-template-card[aria-pressed="true"] { border: 2px solid #0e62aa; background: #e8f3fb; }
+.eduops-template-card[data-recommended="true"] { border-left: 5px solid #f0a51b; background: #fff9e8; }
+.eduops-template-card[data-availability="UNAVAILABLE"],
+.eduops-template-card:has(> button:disabled) { color: #526875; background: #e9eef1; border-color: #aebbc3; }
+.eduops-template-card strong,
+.eduops-template-card span,
+.eduops-template-card small { display: block; }
+.eduops-template-card strong { font-size: 13px; line-height: 1.15; }
+.eduops-template-card span { margin-top: 2px; font-size: 11px; }
+.eduops-template-card small { margin-top: 2px; font-size: 10px; line-height: 1.2; }
+.eduops-template-reason {
+  margin: 0 8px 7px;
+  color: #405c70;
+  font-size: 10px;
+}
+.eduops-template-reason summary { cursor: pointer; font-weight: 650; }
+.eduops-pagination { gap: 3px; padding: 4px 0; }
+.eduops-page-size select { min-height: 25px; }
+@media (max-width: 1366px) and (max-height: 800px) {
+  .eduops-main { gap: 3px; padding-top: 3px; }
+  .eduops-workspace-header { min-height: 36px; padding: 4px 6px; }
+  .eduops-filter-toolbar { grid-template-columns: minmax(220px, 1fr) 110px 110px minmax(120px, .6fr) auto; }
+  .eduops-work-table td { height: 42px; }
+  .eduops-col-route { display: none; }
+}
+
 </style>

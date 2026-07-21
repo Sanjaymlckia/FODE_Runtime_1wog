@@ -114,7 +114,7 @@
 
       <main class="eduops-main" id="eduopsMain">
         <section id="opseduCockpit" class="opsedu-cockpit" aria-labelledby="opseduCockpitHeading">
-          <header class="opsedu-cockpit-header">
+          <header class="opsedu-cockpit-header opsedu-density-hidden-title">
             <div>
               <span class="opsedu-cockpit-kicker">OpsEdu Cockpit</span>
               <h1 id="opseduCockpitHeading">Today's work</h1>
@@ -189,11 +189,9 @@
               <span class="eduops-eyebrow">Current workload</span>
               <h2 id="eduopsWorklistTitle"><span id="eduopsSelectedStateLabel">Ready Now</span><span aria-hidden="true"> / </span><span id="eduopsSelectedWorklistLabel">All work types</span></h2>
               <p id="eduopsWorklistReason">Authoritative results for the selected Actionability state.</p>
+              <p id="eduopsQueueCompactStats" class="eduops-queue-compact-stats">Matched, visible and selected counts loading.</p>
             </div>
-            <div class="eduops-workspace-actions">
-              <button id="eduopsOpenBatch" class="eduops-button eduops-button-primary" type="button" disabled aria-describedby="eduopsBatchReason">Open Batch Operations</button>
-              <span id="eduopsBatchReason" class="eduops-action-reason">Select an eligible cohort to enable a governed batch preview.</span>
-            </div>
+            <div class="eduops-workspace-actions" aria-hidden="true"></div>
           </header>
 
           <div class="eduops-worklist-key-band">
@@ -239,6 +237,9 @@
 
           <div class="eduops-selection-bar" aria-label="Cohort selection controls">
             <div class="eduops-selection-actions">
+              <span class="eduops-band-label">Actions</span>
+              <button id="eduopsOpenBatch" class="eduops-button eduops-button-primary" type="button" disabled aria-describedby="eduopsBatchReason">Open Batch Operations</button>
+              <span id="eduopsBatchReason" class="eduops-action-reason">Select an eligible cohort to enable a governed batch preview.</span>
               <button id="eduopsSelectVisible" class="eduops-button eduops-button-secondary" type="button">Select visible</button>
               <button id="eduopsSelectAllReturned" class="eduops-button eduops-button-secondary" type="button">Select eligible page</button>
               <button id="eduopsSelectAllMatching" class="eduops-button eduops-button-secondary" type="button">Select all matching query</button>
