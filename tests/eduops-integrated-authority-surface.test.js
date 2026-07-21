@@ -95,6 +95,15 @@ assert.equal(availability.DOCUMENT_REVIEW.available, true, "backend may interpre
 assert.equal(availability.PORTAL_ACCESS.available, false, "backend must explicitly project unreleased operations as unavailable");
 assert.equal(availability.BOOKS_ACTION.available, false, "backend must explicitly project Books as unavailable");
 assert.match(files.core, /operationAvailabilityFor[\s\S]*:\s*null[\s\S]*projected\.available === true/, "client operation availability must fail closed when the backend DTO is absent");
+assert.match(files.core, /admin_getCapabilityGrantMatrix:\s*true/, "EduOps Roles surface must allowlist the existing capability matrix RPC");
+assert.match(files.core, /admin_getTemporaryCapabilityGrants:\s*true/, "EduOps Roles surface must allowlist the existing temporary grants read RPC");
+assert.match(files.core, /admin_createTemporaryCapabilityGrant:\s*true/, "EduOps Roles surface must allowlist the audited temporary grant create RPC");
+assert.match(files.core, /admin_revokeTemporaryCapabilityGrant:\s*true/, "EduOps Roles surface must allowlist the audited temporary grant revoke RPC");
+assert.match(files.components, /function openRolesReport[\s\S]*admin_getCapabilityGrantMatrix/, "Roles structural menu must hydrate from the existing backend matrix RPC");
+assert.match(files.components, /matrix\.isSuper[\s\S]*own access only/i, "non-SUPER role view must stay scoped to own access");
+assert.match(files.components, /data-role-create-grant[\s\S]*admin_createTemporaryCapabilityGrant/, "Super temporary grant controls must call the audited backend create RPC");
+assert.match(files.components, /data-role-revoke-grant[\s\S]*admin_revokeTemporaryCapabilityGrant/, "Super temporary grant controls must call the audited backend revoke RPC");
+assert.doesNotMatch(files.components, /ADMIN_ROLES\s*=|CAN_MANAGE_ROLES\s*=\s*true/, "EduOps roles surface must not mutate durable roles or capability policy");
 
 const commandContext = {
   eduopsBatchExecutionCap_: () => 30,

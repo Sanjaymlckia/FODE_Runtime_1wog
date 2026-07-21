@@ -24,9 +24,15 @@
     eduops_getParityDiagnostics: true,
     eduops_getOperationHistory: true,
     eduops_getBatchCommunicationCatalogue: true,
-    eduops_previewCommand: true
+    eduops_previewCommand: true,
+    admin_getCapabilityGrantMatrix: true,
+    admin_getTemporaryCapabilityGrants: true
   };
-  app.writeRpcAllowlist = { eduops_executeCommand: true };
+  app.writeRpcAllowlist = {
+    eduops_executeCommand: true,
+    admin_createTemporaryCapabilityGrant: true,
+    admin_revokeTemporaryCapabilityGrant: true
+  };
 
   app.state = {
     product: "FODE",
