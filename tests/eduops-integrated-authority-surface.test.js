@@ -100,15 +100,24 @@ assert.match(files.core, /admin_getTemporaryCapabilityGrants:\s*true/, "EduOps R
 assert.match(files.core, /admin_createTemporaryCapabilityGrant:\s*true/, "EduOps Roles surface must allowlist the audited temporary grant create RPC");
 assert.match(files.core, /admin_revokeTemporaryCapabilityGrant:\s*true/, "EduOps Roles surface must allowlist the audited temporary grant revoke RPC");
 assert.match(files.components, /function openRolesReport[\s\S]*admin_getCapabilityGrantMatrix/, "Roles structural menu must hydrate from the existing backend matrix RPC");
-assert.match(files.components, /matrix\.isSuper[\s\S]*own access only/i, "non-SUPER role view must stay scoped to own access");
+assert.match(files.components, /actor\.isSuper[\s\S]*own access only/i, "non-SUPER role view must stay scoped to own access");
 assert.match(files.components, /function rolesActorProjection[\s\S]*matrix\.actorEmail[\s\S]*matrix\.actorRole/, "Roles surface must bind signed-in identity from the authoritative backend actor projection");
 assert.match(files.components, /AUTHORITATIVE_ACTOR_UNAVAILABLE[\s\S]*Roles &amp; Capabilities unavailable/, "Roles surface must fail closed when authoritative actor proof is missing");
 assert.match(files.components, /function rolesCanManageGrants[\s\S]*actor\.valid === true[\s\S]*actor\.isSuper === true[\s\S]*matrix\.schema\.ok === true/, "temporary grant controls must require verified SUPER actor and valid schema");
 assert.doesNotMatch(files.components.match(/function rolesMatrixHtml[\s\S]*?function rolesGrantHistoryHtml/)?.[0] || "", /matrix\.me|matrix\.currentUser/, "Roles matrix rendering must not depend on stale client actor field names");
 assert.match(files.components, /TEMPORARILY_ALLOWED:\s*"Temporarily allowed"/, "Roles surface must render backend grant state tokens as human presentation text");
-assert.match(files.components, /Grant status counts[\s\S]*Active[\s\S]*Scheduled[\s\S]*Expired[\s\S]*Revoked[\s\S]*Invalidated/, "Roles surface must expose explicit temporary grant lifecycle counts");
+assert.match(files.components, /Temporary grant lifecycle/, "Roles surface must expose explicit temporary grant lifecycle heading");
+assert.match(files.components, /rolesStatusCardsHtml[\s\S]*Active[\s\S]*Scheduled[\s\S]*Expired[\s\S]*Revoked[\s\S]*Invalidated/, "Roles surface must expose explicit temporary grant lifecycle counts");
+assert.match(files.components, /roles:\s*\["Roles & Capabilities",\s*"AUTHORITY"/, "Roles report must not use the no-operations preview classification");
+assert.match(files.components, /Administrative authority/, "Roles report must use accurate administrative authority wording");
+assert.match(files.components, /rolesDefinitionHtml[\s\S]*Signed-in account[\s\S]*Durable role[\s\S]*Allowlist[\s\S]*Active temporary grants/, "My Access must render separated label/value fields");
+assert.doesNotMatch(files.components, /Grant records/, "My Access must not substitute historical grant records for active grants");
+assert.match(files.components, /rolesAccountRowsHtml[\s\S]*<th>Account<\/th><th>Role<\/th><th>Individual email<\/th><th>Batch email<\/th><th>Documents<\/th><th>Finance<\/th><th>Portal<\/th><th>Role management<\/th><th>Temporary grants<\/th><th>Details<\/th>/, "Roles primary matrix must be account-first with human operational columns");
+assert.doesNotMatch(files.components.match(/function rolesAccountRowsHtml[\s\S]*?function rolesMatrixHtml/)?.[0] || "", /capability\.capabilityKey/, "primary account matrix must not expose raw capability keys");
+assert.match(files.components, /function rolesAccountDetailHtml[\s\S]*Technical key[\s\S]*capability\.capabilityKey/, "raw capability keys must be secondary technical evidence only");
+assert.doesNotMatch(files.components, /data-role-grant-account|data-role-grant-capability|data-role-revoke-grant/, "Roles surface must not scatter inline grant/revoke controls through account rows");
+assert.match(files.components, /TEMPORARILY_ALLOWED:\s*"Temporarily allowed"[\s\S]*INHERITED_ALLOWED:\s*"Allowed by role"[\s\S]*INHERITED_DENIED:\s*"Not included in role"/, "Roles state humanisation must use the required shared mapping");
 assert.match(files.components, /data-role-create-grant[\s\S]*admin_createTemporaryCapabilityGrant/, "Super temporary grant controls must call the audited backend create RPC");
-assert.match(files.components, /data-role-revoke-grant[\s\S]*admin_revokeTemporaryCapabilityGrant/, "Super temporary grant controls must call the audited backend revoke RPC");
 assert.doesNotMatch(files.components, /ADMIN_ROLES\s*=|CAN_MANAGE_ROLES\s*=\s*true/, "EduOps roles surface must not mutate durable roles or capability policy");
 
 const commandContext = {

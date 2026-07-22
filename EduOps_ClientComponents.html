@@ -377,7 +377,7 @@
     summary: ["Management Summary", "READ-ONLY", "Current workload scale, availability and source condition."],
     reports: ["Reports", "READ-ONLY", "Available workload and reconciliation summaries."],
     "audit-system": ["Audit", "READ-ONLY", "Request and receipt activity visible in this operator session."],
-    roles: ["Roles and Capabilities", "STRUCTURAL", "Current capability projection is visible; role administration remains in Current Admin."],
+    roles: ["Roles & Capabilities", "AUTHORITY", "Server-authoritative roles, capabilities, operation availability and temporary grants."],
     approvals: ["Assignments and Approvals", "STRUCTURAL", "Approval requirements are described; no new assignment authority exists."],
     "data-quality": ["Data Quality", "STRUCTURAL", "Reconciliation is available; a separate Data Quality workflow is deferred."],
     health: ["System Health", "READ-ONLY", "Current transport, source reliability and request status."]
@@ -403,11 +403,15 @@
   function capabilityLabel(value) {
     var labels = {
       TEMPORARILY_ALLOWED: "Temporarily allowed",
-      INHERITED_ALLOWED: "Role default allowed",
-      INHERITED_DENIED: "Role default denied",
+      INHERITED_ALLOWED: "Allowed by role",
+      INHERITED_DENIED: "Not included in role",
       TEMPORARY_GRANT: "Temporary grant",
       ROLE_DEFAULT: "Role default",
       NOT_ASSIGNED: "Not assigned",
+      NOT_ALLOWLISTED: "Not allowlisted",
+      AVAILABLE: "Available",
+      SUSPENDED_BY_ADMIN: "Temporarily suspended",
+      UNAVAILABLE_OPERATION: "Unavailable in this release",
       ACTIVE: "Active",
       SCHEDULED: "Scheduled",
       EXPIRED: "Expired",
@@ -415,6 +419,39 @@
       INVALIDATED: "Invalidated"
     };
     return labels[String(value || "").toUpperCase()] || String(value || "Not assigned").replace(/_/g, " ");
+  }
+  function rolesCapabilityLabel(key) {
+    var labels = {
+      CAN_SEND_INDIVIDUAL_EMAIL: "Individual email",
+      CAN_RUN_BATCH_COMMUNICATIONS: "Batch email",
+      CAN_PREVIEW_APPLICANT_COMMUNICATION: "Communication preview",
+      CAN_EDIT_APPLICANT_COMMUNICATION: "Edit communication",
+      CAN_INSERT_PORTAL_LINK: "Insert portal link",
+      CAN_GENERATE_STANDARD_QUOTE: "Generate quote",
+      CAN_GENERATE_STANDARD_INVOICE: "Generate invoice",
+      CAN_REVIEW_DOCUMENTS: "Document review",
+      CAN_SAVE_DOCUMENT_STATUSES: "Save document decisions",
+      CAN_VERIFY_PAYMENT: "Verify payment",
+      CAN_APPROVE_FINANCIAL_OVERRIDE: "Financial override",
+      CAN_MANAGE_PORTAL_ACCESS: "Portal access",
+      CAN_MANAGE_ROLES: "Role management",
+      CAN_ADMINISTER_RUNTIME: "Runtime administration",
+      CAN_DEPLOY_RUNTIME: "Deployment",
+      CAN_WRITE_ZOHO_BOOKS: "Books write actions",
+      CAN_OVERRIDE_COOLDOWN: "Override cooldown",
+      CAN_SEND_INDIVIDUAL_WHATSAPP: "Individual WhatsApp"
+    };
+    return labels[String(key || "").toUpperCase()] || capabilityLabel(key);
+  }
+  function rolesDefinitionHtml(rows, className) {
+    return '<dl class="eduops-roles-definition ' + app.esc(className || "") + '">' + (rows || []).map(function (row) {
+      return '<div><dt>' + app.esc(row[0]) + '</dt><dd>' + app.esc(row[1]) + '</dd></div>';
+    }).join("") + '</dl>';
+  }
+  function rolesStatusCardsHtml(counts) {
+    return '<div class="eduops-roles-status-grid">' + [["Active", counts.ACTIVE], ["Scheduled", counts.SCHEDULED], ["Expired", counts.EXPIRED], ["Revoked", counts.REVOKED], ["Invalidated", counts.INVALIDATED]].map(function (row) {
+      return '<div class="eduops-roles-status-card"><span>' + app.esc(row[0]) + '</span><strong>' + app.esc(row[1]) + '</strong></div>';
+    }).join("") + '</div>';
   }
   function rolesGrantStatusCounts(matrix) {
     var counts = { ACTIVE: 0, SCHEDULED: 0, EXPIRED: 0, REVOKED: 0, INVALIDATED: 0 };
@@ -454,31 +491,64 @@
     });
     return (matrix.delegableCapabilities || []).filter(function (capability) { return !granted[capability]; });
   }
+  function rolesCapability(account, key) {
+    return (account.capabilities || []).filter(function (item) { return item.capabilityKey === key; })[0] || null;
+  }
+  function rolesCapabilityState(account, key) {
+    var capability = rolesCapability(account, key);
+    if (!capability) return { label: "Unavailable", tone: "muted", source: "Not assigned", key: key, capability: null };
+    return {
+      label: capabilityLabel(capability.state),
+      tone: capabilityTone(capability.state),
+      source: capabilityLabel(capability.source || (capability.inheritedAllowed ? "ROLE_DEFAULT" : "NOT_ASSIGNED")),
+      key: key,
+      capability: capability
+    };
+  }
+  function rolesCombinedState(account, keys) {
+    var states = (keys || []).map(function (key) { return rolesCapabilityState(account, key); });
+    if (states.some(function (state) { return state.label === "Temporarily allowed"; })) return { label: "Temporarily allowed", tone: "ready" };
+    if (states.some(function (state) { return /^Allowed/.test(state.label); })) return { label: "Allowed", tone: "info" };
+    if (states.length) return { label: "Not allowed", tone: "muted" };
+    return { label: "Unavailable", tone: "muted" };
+  }
+  function rolesStateChip(state) {
+    return '<span class="eduops-roles-chip eduops-badge-' + app.esc(state.tone || "muted") + '">' + app.esc(state.label || "Unavailable") + '</span>';
+  }
+  function rolesTemporarySummary(account) {
+    var active = (account.capabilities || []).filter(function (item) { return !!item.temporaryGrant; }).length;
+    return active ? String(active) + " active" : "None active";
+  }
+  function rolesAccountDetailHtml(account) {
+    return '<details class="eduops-roles-account-detail"><summary>View details</summary><div class="eduops-roles-detail-grid">' + (account.capabilities || []).map(function (capability) {
+      var grant = capability.temporaryGrant || {};
+      return '<section><h4>' + app.esc(rolesCapabilityLabel(capability.capabilityKey)) + '</h4>'
+        + rolesDefinitionHtml([["Effective access", capabilityLabel(capability.state)], ["Source", capabilityLabel(capability.source || (capability.inheritedAllowed ? "ROLE_DEFAULT" : "NOT_ASSIGNED"))], ["Operation availability", "Projected by workload modules"], ["Temporary expiry", grant.expiresAt || "-"], ["Technical key", capability.capabilityKey]], "eduops-roles-technical") + '</section>';
+    }).join("") + '</div></details>';
+  }
+  function rolesAccountRowsHtml(matrix, accounts) {
+    if (!accounts.length) return '<div class="eduops-empty-state"><strong>No configured accounts returned</strong><span>The authority projection did not include account rows.</span></div>';
+    return '<div class="eduops-table-shell eduops-roles-table-shell"><table class="eduops-work-table eduops-roles-account-table"><thead><tr><th>Account</th><th>Role</th><th>Individual email</th><th>Batch email</th><th>Documents</th><th>Finance</th><th>Portal</th><th>Role management</th><th>Temporary grants</th><th>Details</th></tr></thead><tbody>' + accounts.map(function (account) {
+      var individual = rolesCombinedState(account, ["CAN_SEND_INDIVIDUAL_EMAIL"]);
+      var batch = rolesCombinedState(account, ["CAN_RUN_BATCH_COMMUNICATIONS"]);
+      var docs = rolesCombinedState(account, ["CAN_REVIEW_DOCUMENTS", "CAN_SAVE_DOCUMENT_STATUSES"]);
+      var finance = rolesCombinedState(account, ["CAN_VERIFY_PAYMENT", "CAN_APPROVE_FINANCIAL_OVERRIDE"]);
+      var portal = rolesCombinedState(account, ["CAN_MANAGE_PORTAL_ACCESS"]);
+      var roles = rolesCombinedState(account, ["CAN_MANAGE_ROLES"]);
+      return '<tr><td><strong>' + app.esc(account.email) + '</strong></td><td>' + app.esc(account.durableRole || "Not allowlisted") + '</td><td>' + rolesStateChip(individual) + '</td><td>' + rolesStateChip(batch) + '</td><td>' + rolesStateChip(docs) + '</td><td>' + rolesStateChip(finance) + '</td><td>' + rolesStateChip(portal) + '</td><td>' + rolesStateChip(roles) + '</td><td>' + app.esc(rolesTemporarySummary(account)) + '</td><td>' + rolesAccountDetailHtml(account) + '</td></tr>';
+    }).join("") + '</tbody></table></div>';
+  }
   function rolesMatrixHtml(matrix) {
     var actor = rolesActorProjection(matrix || {});
     if (!actor.valid) return rolesFailClosedHtml(actor);
     var canManage = rolesCanManageGrants(matrix, actor);
     var counts = rolesGrantStatusCounts(matrix);
     var accounts = actor.isSuper ? (matrix.accounts || []) : (matrix.accounts || []).filter(function (item) { return String(item.email || "").toLowerCase() === actor.email; });
-    var rows = [];
-    accounts.forEach(function (account) {
-      (account.capabilities || []).forEach(function (capability) {
-        var grant = capability.temporaryGrant || null;
-        var action = "";
-        if (canManage && account.durableRole !== "SUPER" && !capability.inheritedAllowed && !grant && (matrix.delegableCapabilities || []).indexOf(capability.capabilityKey) >= 0) {
-          action = '<button type="button" class="eduops-button eduops-button-secondary" data-role-grant-account="' + app.esc(account.email) + '" data-role-grant-capability="' + app.esc(capability.capabilityKey) + '">Grant</button>';
-        }
-        if (canManage && grant) {
-          action = '<button type="button" class="eduops-button eduops-button-secondary" data-role-revoke-grant="' + app.esc(grant.grantId) + '" data-role-record-version="' + app.esc(grant.recordVersion) + '">Revoke</button>';
-        }
-        rows.push('<tr><td><strong>' + app.esc(account.email) + '</strong><small>' + app.esc(account.durableRole || "NOT_ALLOWLISTED") + '</small></td><td>' + app.esc(capability.capabilityKey) + '</td><td>' + capabilityPill(capability.state, capabilityLabel(capability.state)) + '</td><td>' + app.esc(capabilityLabel(capability.source || (capability.inheritedAllowed ? "ROLE_DEFAULT" : "NOT_ASSIGNED"))) + '</td><td>' + app.esc(grant && grant.expiresAt || "-") + '</td><td>' + action + '</td></tr>');
-      });
-    });
     return '<div class="eduops-module-status" data-module-state="' + (matrix.schema && matrix.schema.ok ? "READ-ONLY" : "STRUCTURAL") + '"><strong>Capability_Grants schema</strong><span>' + app.esc(matrix.schema && matrix.schema.code || "SCHEMA_STATUS_UNAVAILABLE") + '</span></div>'
-      + '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-12"><header><div><h2>My access</h2><p>Server-resolved durable role, effective capabilities, and temporary grants. Operation availability remains separately projected by the workload modules.</p></div><span class="eduops-capability-state" data-state="' + (actor.isSuper ? "READY" : "PENDING") + '">' + app.esc(actor.isSuper ? "SUPER view" : "Own access only") + '</span></header>'
-      + reportHtml("Signed-in account", "Resolved by live Admin authority.", [["Account", actor.email], ["Durable role", actor.role], ["Allowlist", actor.allowlisted ? "ALLOWLISTED" : "NOT_ALLOWLISTED"], ["Grant management", canManage ? "SUPER controls enabled" : "Read-only"], ["Grant records", (matrix.grants || []).length]]) + '</section>'
-      + '<section class="eduops-panel-card eduops-span-12">' + reportHtml("Grant status counts", "Capability_Grants records grouped by lifecycle status.", [["Active", counts.ACTIVE], ["Scheduled", counts.SCHEDULED], ["Expired", counts.EXPIRED], ["Revoked", counts.REVOKED], ["Invalidated", counts.INVALIDATED]]) + '</section></div>'
-      + '<div class="eduops-table-shell"><table class="eduops-work-table"><thead><tr><th>Account</th><th>Capability</th><th>Effective</th><th>Source</th><th>Expiry</th><th>Control</th></tr></thead><tbody>' + rows.join("") + '</tbody></table></div>'
+      + '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-12"><header><div><h2>' + app.esc(actor.isSuper ? "My access" : "My access") + '</h2><p>' + app.esc(actor.isSuper ? "Server-authoritative access, operation availability and temporary grants." : "Read-only authority projection.") + '</p></div><span class="eduops-capability-state" data-state="' + (actor.isSuper ? "READY" : "PENDING") + '">' + app.esc(actor.isSuper ? "SUPER view" : "Own access only") + '</span></header>'
+      + rolesDefinitionHtml([["Signed-in account", actor.email], ["Durable role", actor.role], ["Allowlist", actor.allowlisted ? "Allowlisted" : "Not allowlisted"], ["Authority source", "CONFIG.ADMIN_ROLES"], ["Grant management", canManage ? "Enabled" : "Read-only"], ["Active temporary grants", counts.ACTIVE]], "eduops-roles-access") + '</section>'
+      + '<section class="eduops-panel-card eduops-span-12"><header><div><h2>Temporary grant lifecycle</h2><p>Historical records are shown separately from active authority.</p></div></header>' + rolesStatusCardsHtml(counts) + '</section></div>'
+      + (actor.isSuper ? '<section class="eduops-panel-card eduops-span-12 eduops-roles-matrix-card"><header><div><h2>Configured accounts</h2><p>One primary row per configured account. Capability details are secondary evidence.</p></div></header>' + rolesAccountRowsHtml(matrix, accounts) + '</section>' : '<section class="eduops-panel-card eduops-span-12 eduops-roles-matrix-card"><header><div><h2>Effective capabilities</h2><p>Self-only view for the signed-in account.</p></div></header>' + rolesAccountRowsHtml(matrix, accounts) + '</section>')
       + '<details class="eduops-disclosure" open><summary>Temporary grants and audit history</summary>' + rolesGrantHistoryHtml(matrix) + '</details>'
       + (canManage ? rolesGrantFormHtml(matrix) : '<div class="eduops-module-status" data-module-state="READ-ONLY"><strong>Grant management</strong><span>Only verified configured SUPER accounts can create or revoke temporary grants.</span></div>');
   }
@@ -486,14 +556,14 @@
     var grants = matrix.grants || [];
     if (!grants.length) return '<div class="eduops-empty-state"><strong>No temporary grant records returned</strong><span>Capability_Grants audit history is empty or unavailable to this role.</span></div>';
     return '<ul class="eduops-audit-list">' + grants.map(function (grant) {
-      return '<li><strong>' + app.esc(capabilityLabel(grant.status || "UNKNOWN")) + ' ' + app.esc(grant.capabilityKey || "") + '</strong><span>' + app.esc(grant.accountEmail || "") + ' / ' + app.esc(grant.grantId || "") + ' / ' + app.esc(grant.reason || "") + ' / ' + app.esc(grant.startsAt || "-") + ' to ' + app.esc(grant.expiresAt || "-") + '</span></li>';
+      return '<li><strong>' + app.esc(capabilityLabel(grant.status || "UNKNOWN")) + ' - ' + app.esc(rolesCapabilityLabel(grant.capabilityKey || "")) + '</strong><span>' + app.esc(grant.accountEmail || "") + ' / Grant ID ' + app.esc(grant.grantId || "") + ' / Reason: ' + app.esc(grant.reason || "") + ' / Granted ' + app.esc(grant.startsAt || "-") + ' / Expired at ' + app.esc(grant.expiresAt || "-") + '</span><details><summary>Technical evidence</summary><pre>' + app.esc(JSON.stringify(grant, null, 2)) + '</pre></details></li>';
     }).join("") + '</ul>';
   }
   function rolesGrantFormHtml(matrix) {
     var accounts = (matrix.accounts || []).filter(function (item) { return item.durableRole !== "SUPER"; });
     var accountOptions = accounts.map(function (item) { return '<option value="' + app.esc(item.email) + '">' + app.esc(item.email + " / " + item.durableRole) + '</option>'; }).join("");
     var first = accounts[0] && accounts[0].email || "";
-    var capabilityOptions = rolesGrantOptions(matrix, first).map(function (item) { return '<option value="' + app.esc(item) + '">' + app.esc(item) + '</option>'; }).join("");
+    var capabilityOptions = rolesGrantOptions(matrix, first).map(function (item) { return '<option value="' + app.esc(item) + '">' + app.esc(rolesCapabilityLabel(item)) + '</option>'; }).join("");
     return '<section class="eduops-panel-card eduops-span-12"><header><div><h2>Temporary grant management</h2><p>Creates audited temporary grants only through admin_createTemporaryCapabilityGrant.</p></div></header><div class="eduops-form-grid"><label class="eduops-field">Configured non-SUPER account<select id="eduopsRoleGrantAccount">' + accountOptions + '</select></label><label class="eduops-field">Delegable capability<select id="eduopsRoleGrantCapability">' + capabilityOptions + '</select></label><label class="eduops-field">Start time<input id="eduopsRoleGrantStart" type="datetime-local"></label><label class="eduops-field">Duration hours<input id="eduopsRoleGrantHours" type="number" min="1" max="24" value="1"></label><label class="eduops-field eduops-field-wide">Mandatory reason<textarea id="eduopsRoleGrantReason" rows="3" placeholder="Required audit reason"></textarea></label></div><div class="eduops-action-row"><button type="button" class="eduops-button eduops-button-primary" data-role-create-grant>Review and create grant</button></div><p class="eduops-action-reason">The backend rejects SUPER targets, unknown accounts, non-delegable capabilities, inherited capabilities, indefinite or overlapping grants, and durations above 24 hours.</p></section>';
   }
   function openRolesReport(trigger) {
@@ -518,7 +588,7 @@
     dom.eduopsReportPanel.setAttribute("aria-hidden", "false");
     var meta = reportMeta[kind] || ["Supporting view", "READ-ONLY", "No operational workflow is attached to this view."];
     dom.eduopsReportPanel.setAttribute("data-module-state", meta[1]);
-    dom.eduopsReportType.textContent = meta[1] === "STRUCTURAL" ? "Structural Preview / no operations" : "Read-only supporting view";
+    dom.eduopsReportType.textContent = meta[1] === "STRUCTURAL" ? "Structural Preview / no operations" : (meta[1] === "AUTHORITY" ? "Administrative authority" : "Read-only supporting view");
     dom.eduopsReportTitle.textContent = meta[0];
     app.setInteractionState("SUCCESS", meta[0] + " opened. " + meta[1].toLowerCase() + ".");
     if (kind === "reconciliation" || kind === "hidden") {
@@ -706,13 +776,6 @@
       if (report) { openReport(report.getAttribute("data-report"), report); return; }
       var retryReport = event.target.closest("[data-retry-report]");
       if (retryReport) { openReport(retryReport.getAttribute("data-retry-report"), retryReport); return; }
-      var grantAccount = event.target.closest("[data-role-grant-account]");
-      if (grantAccount) {
-        byId("eduopsRoleGrantAccount").value = grantAccount.getAttribute("data-role-grant-account");
-        byId("eduopsRoleGrantCapability").value = grantAccount.getAttribute("data-role-grant-capability");
-        byId("eduopsRoleGrantReason").focus();
-        return;
-      }
       var createGrant = event.target.closest("[data-role-create-grant]");
       if (createGrant) {
         var account = byId("eduopsRoleGrantAccount").value;
@@ -725,14 +788,6 @@
         if (!reason || reason.trim().length < 8) { app.setInteractionState("BLOCKED", "A specific grant reason is required."); return; }
         if (!window.confirm("Create audited temporary grant for " + account + " / " + capability + " until " + expiry.toLocaleString() + "?")) return;
         app.call("admin_createTemporaryCapabilityGrant", { accountEmail: account, capabilityKey: capability, startsAt: start.toISOString(), expiresAt: expiry.toISOString(), reason: reason }).then(function () { openReport("roles", createGrant); }).catch(function (error) { app.setInteractionState("BLOCKED", "Grant creation blocked: " + (error.message || error)); });
-        return;
-      }
-      var revokeGrant = event.target.closest("[data-role-revoke-grant]");
-      if (revokeGrant) {
-        var revokeReason = window.prompt("Mandatory revocation reason:");
-        if (revokeReason === null) return;
-        if (!revokeReason || revokeReason.trim().length < 8) { app.setInteractionState("BLOCKED", "A specific revocation reason is required."); return; }
-        app.call("admin_revokeTemporaryCapabilityGrant", { grantId: revokeGrant.getAttribute("data-role-revoke-grant"), recordVersion: Number(revokeGrant.getAttribute("data-role-record-version") || 0), reason: revokeReason }).then(function () { openReport("roles", revokeGrant); }).catch(function (error) { app.setInteractionState("BLOCKED", "Grant revocation blocked: " + (error.message || error)); });
         return;
       }
       var hiddenPage = event.target.closest("[data-hidden-page]");

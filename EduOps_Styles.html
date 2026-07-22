@@ -1734,6 +1734,9 @@
   .eduops-workbench-tabs button { flex: 0 0 auto; }
   .eduops-panel-grid { display: block; }
   .eduops-panel-card { margin-bottom: 10px; }
+  .eduops-roles-definition,
+  .eduops-roles-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .eduops-roles-detail-grid { grid-template-columns: 1fr; }
   .eduops-document-layout,
   .eduops-batch-layout { grid-template-columns: 1fr; }
   .eduops-document-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1770,6 +1773,8 @@
   .eduops-document-gallery,
   .eduops-template-gallery,
   .eduops-form-grid { grid-template-columns: 1fr; }
+  .eduops-roles-definition,
+  .eduops-roles-status-grid { grid-template-columns: 1fr; }
   .eduops-field.eduops-field-wide { grid-column: auto; }
   .eduops-batch-footer { align-items: flex-start; flex-direction: column; }
   .eduops-batch-footer-actions { width: 100%; flex-wrap: wrap; }
@@ -2194,6 +2199,120 @@
   border-left-color: #a86a08;
 }
 .eduops-module-status strong { font-weight: 650; }
+.eduops-roles-definition {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+.eduops-roles-definition > div {
+  min-width: 0;
+  padding: 10px;
+  background: #f7fafc;
+  border: 1px solid var(--eduops-line);
+  border-radius: 5px;
+}
+.eduops-roles-definition dt {
+  margin: 0 0 4px;
+  color: #405c70;
+  font-size: 12px;
+  font-weight: 650;
+}
+.eduops-roles-definition dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #102b3f;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.eduops-roles-status-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 9px;
+}
+.eduops-roles-status-card {
+  min-width: 0;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid var(--eduops-line);
+  border-radius: 5px;
+}
+.eduops-roles-status-card span,
+.eduops-roles-status-card strong {
+  display: block;
+}
+.eduops-roles-status-card span {
+  color: #405c70;
+  font-size: 12px;
+  font-weight: 650;
+}
+.eduops-roles-status-card strong {
+  margin-top: 3px;
+  color: #102b3f;
+  font-size: 18px;
+}
+.eduops-roles-table-shell {
+  overflow: visible;
+}
+.eduops-roles-account-table {
+  table-layout: auto;
+}
+.eduops-roles-account-table th,
+.eduops-roles-account-table td {
+  height: auto;
+  min-height: 48px;
+  vertical-align: top;
+  white-space: normal;
+}
+.eduops-roles-account-table td > strong,
+.eduops-roles-account-table td > span {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+.eduops-roles-chip {
+  display: inline-block;
+  max-width: 100%;
+  padding: 3px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: normal;
+}
+.eduops-roles-account-detail summary {
+  color: var(--eduops-blue-700);
+  cursor: pointer;
+  font-weight: 650;
+}
+.eduops-roles-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 8px;
+  max-height: 420px;
+  margin-top: 8px;
+  overflow: auto;
+}
+.eduops-roles-detail-grid section {
+  min-width: 0;
+  padding: 8px;
+  background: #f7fafc;
+  border: 1px solid var(--eduops-line);
+  border-radius: 5px;
+}
+.eduops-roles-detail-grid h4 {
+  margin: 0 0 6px;
+  color: #102b3f;
+  font-size: 13px;
+}
+.eduops-roles-technical {
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+.eduops-roles-technical > div {
+  padding: 6px;
+}
 .eduops-module-list li { grid-template-columns: minmax(0,1fr) auto; align-items: center; }
 .eduops-module-list li > div { display: grid; gap: 2px; }
 .eduops-module-list small { color: var(--eduops-ink-soft); font-size: 13px; }
