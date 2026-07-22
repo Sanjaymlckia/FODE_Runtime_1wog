@@ -116,7 +116,8 @@ assert.match(files.components, /rolesAccountRowsHtml[\s\S]*<th>Account<\/th><th>
 assert.doesNotMatch(files.components.match(/function rolesAccountRowsHtml[\s\S]*?function rolesMatrixHtml/)?.[0] || "", /capability\.capabilityKey/, "primary account matrix must not expose raw capability keys");
 assert.match(files.components, /function rolesAccountDetailHtml[\s\S]*Technical key[\s\S]*capability\.capabilityKey/, "raw capability keys must be secondary technical evidence only");
 assert.doesNotMatch(files.components, /data-role-grant-account|data-role-grant-capability|data-role-revoke-grant/, "Roles surface must not scatter inline grant/revoke controls through account rows");
-assert.match(files.components, /TEMPORARILY_ALLOWED:\s*"Temporarily allowed"[\s\S]*INHERITED_ALLOWED:\s*"Allowed by role"[\s\S]*INHERITED_DENIED:\s*"Not included in role"/, "Roles state humanisation must use the required shared mapping");
+assert.match(files.components, /TEMPORARILY_ALLOWED:\s*"Temporarily allowed"[\s\S]*INHERITED_ALLOWED:\s*"Allowed by role"[\s\S]*INHERITED_DENIED:\s*"Not included in role"[\s\S]*ROLE_DEFAULT:\s*"Durable role"/, "Roles state humanisation must use the required shared mapping");
+assert.doesNotMatch(files.components.match(/function capabilityLabel[\s\S]*?function rolesCapabilityLabel/)?.[0] || "", /Role default/, "Roles surface must not expose the stale ROLE_DEFAULT presentation label");
 assert.match(files.components, /data-role-create-grant[\s\S]*admin_createTemporaryCapabilityGrant/, "Super temporary grant controls must call the audited backend create RPC");
 assert.doesNotMatch(files.components, /ADMIN_ROLES\s*=|CAN_MANAGE_ROLES\s*=\s*true/, "EduOps roles surface must not mutate durable roles or capability policy");
 
