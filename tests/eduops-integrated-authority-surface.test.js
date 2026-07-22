@@ -101,6 +101,12 @@ assert.match(files.core, /admin_createTemporaryCapabilityGrant:\s*true/, "EduOps
 assert.match(files.core, /admin_revokeTemporaryCapabilityGrant:\s*true/, "EduOps Roles surface must allowlist the audited temporary grant revoke RPC");
 assert.match(files.components, /function openRolesReport[\s\S]*admin_getCapabilityGrantMatrix/, "Roles structural menu must hydrate from the existing backend matrix RPC");
 assert.match(files.components, /matrix\.isSuper[\s\S]*own access only/i, "non-SUPER role view must stay scoped to own access");
+assert.match(files.components, /function rolesActorProjection[\s\S]*matrix\.actorEmail[\s\S]*matrix\.actorRole/, "Roles surface must bind signed-in identity from the authoritative backend actor projection");
+assert.match(files.components, /AUTHORITATIVE_ACTOR_UNAVAILABLE[\s\S]*Roles &amp; Capabilities unavailable/, "Roles surface must fail closed when authoritative actor proof is missing");
+assert.match(files.components, /function rolesCanManageGrants[\s\S]*actor\.valid === true[\s\S]*actor\.isSuper === true[\s\S]*matrix\.schema\.ok === true/, "temporary grant controls must require verified SUPER actor and valid schema");
+assert.doesNotMatch(files.components.match(/function rolesMatrixHtml[\s\S]*?function rolesGrantHistoryHtml/)?.[0] || "", /matrix\.me|matrix\.currentUser/, "Roles matrix rendering must not depend on stale client actor field names");
+assert.match(files.components, /TEMPORARILY_ALLOWED:\s*"Temporarily allowed"/, "Roles surface must render backend grant state tokens as human presentation text");
+assert.match(files.components, /Grant status counts[\s\S]*Active[\s\S]*Scheduled[\s\S]*Expired[\s\S]*Revoked[\s\S]*Invalidated/, "Roles surface must expose explicit temporary grant lifecycle counts");
 assert.match(files.components, /data-role-create-grant[\s\S]*admin_createTemporaryCapabilityGrant/, "Super temporary grant controls must call the audited backend create RPC");
 assert.match(files.components, /data-role-revoke-grant[\s\S]*admin_revokeTemporaryCapabilityGrant/, "Super temporary grant controls must call the audited backend revoke RPC");
 assert.doesNotMatch(files.components, /ADMIN_ROLES\s*=|CAN_MANAGE_ROLES\s*=\s*true/, "EduOps roles surface must not mutate durable roles or capability policy");
