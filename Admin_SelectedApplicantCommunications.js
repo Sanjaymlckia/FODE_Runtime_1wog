@@ -10,7 +10,9 @@ function admin_previewApplicantMessage(payload) {
     var p = payload && typeof payload === "object" ? payload : {};
     var applicantId = clean_(p.applicantId || "");
     var requestedType = clean_(p.messageType || "");
-    var messageType = normalizeApplicantMessageType_(requestedType);
+    var messageType = typeof communicationResolvedMessageTypeForRequest_ === "function"
+      ? communicationResolvedMessageTypeForRequest_(requestedType, { templateId: clean_(p.templateId || requestedType), templateVersionId: clean_(p.templateVersionId || "") })
+      : normalizeApplicantMessageType_(requestedType);
     var actor = resolveAdminCommActor_(p);
     if (!applicantId) return adminCommBlockedResult_("preview", "MISSING_APPLICANT_ID", dbgId, { blockReason: "Applicant ID is required." });
     if (!messageType) {
@@ -26,6 +28,10 @@ function admin_previewApplicantMessage(payload) {
       batchLabel: clean_(p.batchLabel || ""),
       debugId: clean_(p.debugId || dbgId),
       editedRecipient: clean_(p.recipient || ""),
+      templateId: clean_(p.templateId || requestedType),
+      templateVersionId: clean_(p.templateVersionId || ""),
+      cc: clean_(p.cc || ""),
+      bcc: clean_(p.bcc || ""),
       authorityOverride: p.authorityOverride === true,
       authorityOverrideReason: clean_(p.authorityOverrideReason || "")
     };
@@ -51,7 +57,9 @@ function admin_sendApplicantMessage(payload) {
     }
     var applicantId = clean_(p.applicantId || "");
     var requestedType = clean_(p.messageType || "");
-    var messageType = normalizeApplicantMessageType_(requestedType);
+    var messageType = typeof communicationResolvedMessageTypeForRequest_ === "function"
+      ? communicationResolvedMessageTypeForRequest_(requestedType, { templateId: clean_(p.templateId || requestedType), templateVersionId: clean_(p.templateVersionId || "") })
+      : normalizeApplicantMessageType_(requestedType);
     var actor = resolveAdminCommActor_(p);
     if (Array.isArray(p.applicantIds) || Array.isArray(p.recipients) || Array.isArray(p.messages)) {
       return adminCommBlockedResult_("send", "BULK_NOT_ALLOWED", dbgId, {
@@ -98,6 +106,10 @@ function admin_sendApplicantMessage(payload) {
       debugId: clean_(p.debugId || dbgId),
       manualSingleSendProbe: true,
       editedRecipient: opsRecipientOverride || clean_(p.recipient || ""),
+      templateId: clean_(p.templateId || requestedType),
+      templateVersionId: clean_(p.templateVersionId || ""),
+      cc: clean_(p.cc || ""),
+      bcc: clean_(p.bcc || ""),
       authorityOverride: p.authorityOverride === true,
       authorityOverrideReason: clean_(p.authorityOverrideReason || "")
     };
@@ -328,7 +340,9 @@ function admin_previewSelectedApplicantBatch(payload) {
     requireOperationsAdmin_(adminEmail);
     var p = payload && typeof payload === "object" ? payload : {};
     var requestedType = clean_(p.messageType || "");
-    var messageType = normalizeApplicantMessageType_(requestedType);
+    var messageType = typeof communicationResolvedMessageTypeForRequest_ === "function"
+      ? communicationResolvedMessageTypeForRequest_(requestedType, { templateId: clean_(p.templateId || requestedType), templateVersionId: clean_(p.templateVersionId || "") })
+      : normalizeApplicantMessageType_(requestedType);
     var sourceLabel = clean_(p.sourceLabel || "Selected applicants");
     var selectedIds = normalizeSelectedApplicantBatchIds_(p.applicantIds || [], selectedApplicantBatchInputLimit_());
     var previewSendCap = selectedApplicantBatchLimit_();
@@ -403,6 +417,8 @@ function admin_previewSelectedApplicantBatch(payload) {
         actorRole: actor.actorRole,
         debugId: requestId,
         requestId: requestId,
+        templateId: clean_(p.templateId || requestedType),
+        templateVersionId: clean_(p.templateVersionId || ""),
         batchLabel: "SELECTED_BATCH_PREVIEW::" + requestId
       });
       if (context && context.eligible === true) {
@@ -447,6 +463,8 @@ function admin_previewSelectedApplicantBatch(payload) {
       sourceLabel: sourceLabel,
       sourceType: clean_(p.sourceType || "selected"),
       messageType: messageType,
+      templateId: clean_(p.templateId || requestedType),
+      templateVersionId: clean_(p.templateVersionId || ""),
       totalActionable: total,
       selectedTotal: selectedTotal,
       previewSendCap: previewSendCap,
@@ -484,6 +502,8 @@ function admin_previewSelectedApplicantBatch(payload) {
         requestId: requestId,
         sourceLabel: sourceLabel,
         messageType: messageType,
+        templateId: clean_(p.templateId || requestedType),
+        templateVersionId: clean_(p.templateVersionId || ""),
         selectedTotal: selectedTotal,
         previewSendCap: previewSendCap,
         willSendThisRun: eligibleIds.length,
@@ -513,7 +533,10 @@ function admin_sendSelectedApplicantBatch(payload) {
     if (p.confirmSend !== true) {
       return adminCommBlockedResult_("send_selected_batch", "CONFIRM_REQUIRED", dbgId, { blockReason: "Explicit confirmation is required before selected batch send." });
     }
-    var messageType = normalizeApplicantMessageType_(p.messageType || "");
+    var requestedType = clean_(p.messageType || "");
+    var messageType = typeof communicationResolvedMessageTypeForRequest_ === "function"
+      ? communicationResolvedMessageTypeForRequest_(requestedType, { templateId: clean_(p.templateId || requestedType), templateVersionId: clean_(p.templateVersionId || "") })
+      : normalizeApplicantMessageType_(requestedType);
     if (!messageType) return adminCommBlockedResult_("send_selected_batch", "UNSUPPORTED_MESSAGE_TYPE", dbgId, { blockReason: "Unsupported message type." });
     if (typeof isCommunicationTypeBatchSafe_ === "function" && isCommunicationTypeBatchSafe_(messageType) !== true) {
       return adminCommBlockedResult_("send_selected_batch", "MESSAGE_TYPE_NOT_BATCH_SAFE", dbgId, { blockReason: "Selected template is not approved for batch communication." });
@@ -525,8 +548,10 @@ function admin_sendSelectedApplicantBatch(payload) {
     var cachedHash = clean_(preview && preview.candidateHash || "");
     var cachedRequestId = clean_(preview && preview.requestId || "");
     var cachedMessageType = clean_(preview && preview.messageType || "");
+    var requestedTemplateId = clean_(p.templateId || requestedType || "");
+    var cachedTemplateId = clean_(preview && preview.templateId || "");
     var candidateIds = Array.isArray(preview && preview.candidateIds) ? normalizeSelectedApplicantBatchIds_(preview.candidateIds) : [];
-    if (!preview || !previewRequestId || previewRequestId !== cachedRequestId || !candidateHash || candidateHash !== cachedHash || cachedMessageType !== messageType || !candidateIds.length) {
+    if (!preview || !previewRequestId || previewRequestId !== cachedRequestId || !candidateHash || candidateHash !== cachedHash || cachedMessageType !== messageType || cachedTemplateId !== requestedTemplateId || !candidateIds.length) {
       return adminCommBlockedResult_("send_selected_batch", "PREVIEW_REQUIRED", dbgId, {
         blockReason: "A matching selected-batch preview is required before send.",
         previewRequestId: previewRequestId,
@@ -570,6 +595,8 @@ function admin_sendSelectedApplicantBatch(payload) {
           actorRole: actor.actorRole,
           batchLabel: batchLabel,
           debugId: requestId,
+          templateId: requestedTemplateId,
+          templateVersionId: clean_(p.templateVersionId || preview.templateVersionId || ""),
           sendSource: "ADMIN_SELECTED_BATCH",
           unattended: false
         });

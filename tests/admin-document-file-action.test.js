@@ -332,12 +332,12 @@ parentOverride = folderId;
 const dtoText = JSON.stringify(single);
 for (const sensitive of [
   folderId,
-  fileIds.birth,
   driveUrl(fileIds.birth),
   "server-only-secret"
 ]) {
   assert.equal(dtoText.includes(sensitive), false, `DTO must not contain ${sensitive}`);
 }
+assert.equal(single.fileId, fileIds.birth, "R376E governed file action DTO must identify the authorised original Drive file");
 assert.equal(dtoText.includes("drive.google.com"), false);
 assert.equal(single.sourceField, "Birth_ID_Passport_File");
 assert.equal(single.mimeType, "application/pdf");

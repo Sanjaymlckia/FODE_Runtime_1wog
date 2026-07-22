@@ -45,6 +45,8 @@ function renderEduOpsPreviewHtml() {
   const previewBuild = `<script>window.EDUOPS_PREVIEW_BUILD=${JSON.stringify(build)};</script>`;
   const previewTransport = `${previewBuild}\n<script>\n${readText(path.join(previewRoot, "server", "preview-transport.js"))}\n</script>`;
   html = html.replace('<?!= HtmlService.createHtmlOutputFromFile("EduOps_Styles").getContent(); ?>', styles + "\n" + previewCss);
+  html = html.replace('<?!= HtmlService.createHtmlOutputFromFile("OpsEdu_CockpitStyles").getContent(); ?>', readText(path.join(repoRoot, "OpsEdu_CockpitStyles.html")));
+  html = html.replace('<?!= HtmlService.createHtmlOutputFromFile("OpsEdu_ClientCockpit").getContent(); ?>', readText(path.join(repoRoot, "OpsEdu_ClientCockpit.html")));
   clientFiles.forEach((fileName, index) => {
     const include = `<?!= HtmlService.createHtmlOutputFromFile("${fileName.replace(/\.html$/, "")}").getContent(); ?>`;
     const source = readText(path.join(repoRoot, fileName));

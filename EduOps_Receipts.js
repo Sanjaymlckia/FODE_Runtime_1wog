@@ -37,6 +37,16 @@ function eduopsApplicantOutcomes_(preview, result) {
   });
 }
 
+function eduopsCommunicationFingerprint_(value) {
+  var text = String(value || "");
+  try {
+    var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, text, Utilities.Charset.UTF_8);
+    return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/g, "");
+  } catch (_err) {
+    return String(text.length);
+  }
+}
+
 function eduopsBuildReceipt_(preview, authorityResult) {
   var result = authorityResult && typeof authorityResult === "object" ? authorityResult : {};
   var resultState = eduopsUpper_(result.result || result.state || "", "");
@@ -63,8 +73,17 @@ function eduopsBuildReceipt_(preview, authorityResult) {
     selectedApplicantIds: preview.selectedApplicantIds || [],
     communication: preview.selectedTemplate ? {
       templateId: eduopsClean_(preview.selectedTemplate.templateId || ""),
+      templateVersionId: eduopsClean_(preview.selectedTemplate.templateVersionId || preview.selectedTemplate.templateVersion || "1"),
+      templateSource: eduopsClean_(preview.selectedTemplate.templateSource || "BUILT_IN"),
       templateLabel: eduopsClean_(preview.selectedTemplate.label || ""),
-      subject: eduopsClean_(preview.subject || "")
+      contentEdited: preview.selectedTemplate.contentEdited === true || (preview.request && preview.request.draft && (preview.request.draft.subject || preview.request.draft.body) ? true : false),
+      subject: eduopsClean_(preview.subject || ""),
+      subjectFingerprint: typeof eduopsCommunicationFingerprint_ === "function" ? eduopsCommunicationFingerprint_(preview.subject || "") : String(preview.subject || "").length,
+      bodyFingerprint: typeof eduopsCommunicationFingerprint_ === "function" ? eduopsCommunicationFingerprint_(preview.body || "") : String(preview.body || "").length,
+      cc: eduopsClean_(preview.cc || preview.authorityPreview && preview.authorityPreview.cc || ""),
+      bcc: eduopsClean_(preview.bcc || preview.authorityPreview && preview.authorityPreview.bcc || ""),
+      portalLinkRequired: preview.authorityPreview && preview.authorityPreview.portalLinkRequired === true,
+      portalLinkHydrated: preview.authorityPreview && preview.authorityPreview.portalLinkHydrated === true
     } : null,
     actor: preview.actor || "",
     at: new Date().toISOString(),

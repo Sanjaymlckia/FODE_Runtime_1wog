@@ -171,8 +171,20 @@ function admin_getReviewQueues(payload) {
 
   function buildReviewQueueRow_(row) {
     var item = row || {};
+    var r = Math.max(1, Number(item.rowNumber || 1)) - 1;
     var financeState = clean_(item.financeState || "").toUpperCase();
-    return buildQueueRow_(item.rowNumber, item.applicantId, item.name, {
+    var rowObj = {
+      ApplicantID: clean_(item.applicantId || ""),
+      Name: clean_(item.name || ""),
+      Parent_Email: clean_(item.effectiveEmail || ""),
+      Email: clean_(item.effectiveEmail || ""),
+      Parent_Phone: clean_(item.phone || ""),
+      Portal_Submitted: clean_(item.lifecycleBaseState || "").toUpperCase() === "APPLICATION_RECEIVED" ? "No" : "Yes",
+      Docs_Verified: clean_(item.lifecycleBaseState || "").toUpperCase() === "DOCUMENTS_TO_VERIFY" ? "No" : "Yes",
+      Payment_Received: item.paymentEvidencePresent === true ? "Yes" : "No",
+      Payment_Verified: item.paymentVerified === true ? "Yes" : "No"
+    };
+    var projected = buildQueueRow_(item.rowNumber, item.applicantId, item.name, {
       ApplicantID: clean_(item.applicantId || ""),
       applicantId: clean_(item.applicantId || ""),
       effectiveEmail: clean_(item.effectiveEmail || ""),
@@ -211,6 +223,11 @@ function admin_getReviewQueues(payload) {
       Books_Invoice_Status: "",
       docsFollowupSentAt: ""
     });
+    var authorityProjection = compatibilityCommunicationAuthorityProjection_(rowObj, r + 1);
+    for (var authorityKey in authorityProjection) {
+      if (Object.prototype.hasOwnProperty.call(authorityProjection, authorityKey)) projected[authorityKey] = authorityProjection[authorityKey];
+    }
+    return projected;
   }
 
   var fullData = normalizeReviewQueueData_({

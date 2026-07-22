@@ -105,7 +105,7 @@ function admin_getApplicantDocumentManifest(payload) {
     }
     var signedPreviewExpiresAtMs = Date.now() + (5 * 60 * 1000);
 
-    var files = [];
+    var rawManifestFiles = [];
     for (var f = 0; f < rawFiles.length; f++) {
       var meta = rawFiles[f];
       var sourceField = "";
@@ -169,7 +169,7 @@ function admin_getApplicantDocumentManifest(payload) {
         ));
       }
 
-      files.push({
+      rawManifestFiles.push({
         fileId: meta.fileId,
         fileName: meta.fileName,
         label: sourceField ? clean_((fieldByName[sourceField] && fieldByName[sourceField].label) || sourceField) : "",
@@ -195,6 +195,53 @@ function admin_getApplicantDocumentManifest(payload) {
           : "",
         warnings: fileWarnings
       });
+    }
+
+    var diagnostics = [];
+    var files = [];
+    var grouped = {};
+    for (var g = 0; g < rawManifestFiles.length; g++) {
+      var candidate = rawManifestFiles[g] || {};
+      var validSource = !!(candidate.sourceField && fieldByName[candidate.sourceField]);
+      var validIndex = candidate.itemIndex !== null && candidate.itemIndex !== undefined && Number(candidate.itemIndex) >= 0;
+      var validIdentity = !!(candidate.fileId && validIndex);
+      var validBinding = candidate.mappingMethod === "row_file_id";
+      if (!validSource || !validIdentity || !validBinding) {
+        diagnostics.push(Object.assign({}, candidate, {
+          actionable: false,
+          diagnosticReason: !validSource ? "INVALID_OR_UNRECOGNISED_SOURCE_FIELD" : (!validIdentity ? "MISSING_REUSABLE_FILE_IDENTITY" : "FILE_NOT_BOUND_TO_APPLICANT_ROW")
+        }));
+        continue;
+      }
+      var key = rowApplicantId + "|" + candidate.sourceField;
+      var evidence = {
+        fileId: candidate.fileId,
+        fileName: candidate.fileName,
+        mimeType: candidate.mimeType,
+        sizeBytes: candidate.sizeBytes,
+        createdTime: candidate.createdTime,
+        modifiedTime: candidate.modifiedTime,
+        itemIndex: candidate.itemIndex,
+        previewEligible: candidate.previewEligible,
+        renditionEligible: candidate.renditionEligible,
+        renditionKind: candidate.renditionKind,
+        thumbnailAvailable: candidate.thumbnailAvailable,
+        previewUrl: candidate.previewUrl,
+        openUrl: candidate.openUrl,
+        downloadUrl: candidate.downloadUrl,
+        warnings: candidate.warnings || []
+      };
+      if (!grouped[key]) {
+        grouped[key] = Object.assign({}, candidate, {
+          evidenceFiles: [],
+          evidenceCount: 0,
+          canonicalReviewUnit: true,
+          groupingKey: key
+        });
+        files.push(grouped[key]);
+      }
+      grouped[key].evidenceFiles.push(evidence);
+      grouped[key].evidenceCount = grouped[key].evidenceFiles.length;
     }
 
     var missingExpected = [];
@@ -228,6 +275,7 @@ function admin_getApplicantDocumentManifest(payload) {
       folderUrl: folderUrl,
       source: "drive",
       files: files,
+      diagnostics: diagnostics,
       missingExpected: missingExpected,
       warnings: warnings
     };
@@ -325,13 +373,17 @@ function admin_getApplicantDocumentFileAction(payload) {
     var mimeType = clean_(file.getMimeType ? file.getMimeType() : "");
     return {
       ok: true,
+      applicantId: applicantId,
       sourceField: sourceField,
       itemIndex: itemIndex,
+      fileId: clean_(file.getId ? file.getId() : ""),
+      fileName: clean_(file.getName ? file.getName() : ""),
       label: clean_(docField.label || sourceField),
       mimeType: mimeType,
       previewEligible: /^image\//i.test(mimeType),
       openUrl: openUrl,
       downloadUrl: downloadUrl,
+      downloadUnavailableReason: "",
       expiresAt: new Date(expiresAtMs).toISOString()
     };
   } catch (_err) {

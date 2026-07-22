@@ -124,8 +124,23 @@ function eduopsResolveCommunicationTemplate_(templateId) {
   var wanted = eduopsClean_(templateId || "");
   if (!wanted) throw new Error("EXPLICIT_TEMPLATE_SELECTION_REQUIRED");
   var metadata = eduopsCommunicationTemplateMetadata_();
+  var sourceMetadata = typeof communicationTemplateGalleryMetadata_ === "function" ? communicationTemplateGalleryMetadata_() : [];
+  var sourceByTemplateId = {};
+  (Array.isArray(sourceMetadata) ? sourceMetadata : []).forEach(function (entry) {
+    var id = eduopsClean_(entry && (entry.templateId || entry.messageType) || "");
+    if (id) sourceByTemplateId[id] = entry;
+  });
   for (var i = 0; i < metadata.length; i++) {
-    if (metadata[i].templateId === wanted) return metadata[i];
+    if (metadata[i].templateId === wanted) {
+      var template = eduopsClone_(metadata[i]);
+      var source = sourceByTemplateId[wanted] || {};
+      template.parentMessageType = eduopsClean_(source.parentMessageType || template.internalTemplateId || "");
+      template.templateVersionId = eduopsClean_(source.templateVersionId || template.templateVersionId || "1");
+      template.templateSource = eduopsClean_(source.templateSource || template.templateSource || "BUILT_IN");
+      template.subjectTemplate = source.subjectTemplate;
+      template.bodyTemplate = source.bodyTemplate;
+      return template;
+    }
   }
   throw new Error("UNKNOWN_COMMUNICATION_TEMPLATE");
 }
@@ -185,6 +200,36 @@ function eduopsBatchPreviewRecipientProjection_(authorityRecipient, canonical, t
       finance: eduopsCodePresentation_(row.canonicalFinanceState, eduopsHumanize_(row.canonicalFinanceState), "", "Finance authority")
     }
   };
+}
+
+function eduopsNormalizeDocumentReviewDocs_(docs, allowedFields) {
+  var list = Array.isArray(docs) ? docs : [];
+  var allowed = allowedFields && typeof allowedFields === "object" ? allowedFields : {};
+  var seen = {};
+  var out = [];
+  list.forEach(function (item) {
+    var field = eduopsClean_(item && item.file || "");
+    if (!field) throw new Error("DOCUMENT_SOURCE_FIELD_REQUIRED");
+    if (allowed[field] !== true) throw new Error("DOCUMENT_CONTEXT_MISMATCH");
+    if (seen[field]) throw new Error("DUPLICATE_DOCUMENT_SOURCE_FIELD: " + field);
+    seen[field] = true;
+    out.push({
+      file: field,
+      status: eduopsClean_(item && item.status || ""),
+      comment: eduopsClean_(item && item.comment || "")
+    });
+  });
+  if (!out.length) throw new Error("DOCUMENT_DECISION_REQUIRED");
+  return out;
+}
+
+function eduopsAllowedDocumentReviewFields_(manifest) {
+  var allowed = {};
+  (manifest && manifest.files || []).forEach(function (file) {
+    var field = eduopsClean_(file && file.sourceField || "");
+    if (field) allowed[field] = true;
+  });
+  return allowed;
 }
 
 function eduops_getBatchCommunicationCatalogue(payload) {
@@ -307,7 +352,11 @@ function eduopsAuthorityPreview_(definition, request, applicantId, selection, co
     return admin_previewApplicantMessage({
       applicantId: applicantId,
       messageType: communicationTemplate.internalTemplateId,
+      templateId: communicationTemplate.templateId,
+      templateVersionId: communicationTemplate.templateVersionId,
       recipient: draft.recipient,
+      cc: draft.cc,
+      bcc: draft.bcc,
       subject: draft.subject,
       body: draft.body,
       sourceView: "eduops"
@@ -318,6 +367,8 @@ function eduopsAuthorityPreview_(definition, request, applicantId, selection, co
       applicantIds: selection.executionApplicantIds,
       excludedApplicantIds: [],
       messageType: communicationTemplate.internalTemplateId,
+      templateId: communicationTemplate.templateId,
+      templateVersionId: communicationTemplate.templateVersionId,
       sourceLabel: "EduOps " + selection.selectionMode + " execution cohort",
       sourceType: "eduops"
     });
@@ -358,9 +409,7 @@ function eduopsRevalidateCommandForExecution_(preview, access) {
     if (!documentContext || documentContext.ok !== true || eduopsClean_(documentContext.payload.applicantId) !== applicantId) throw new Error("DOCUMENT_CONTEXT_MISMATCH");
     if (Array.isArray(request.draft && request.draft.docs)) {
       var manifest = admin_getApplicantDocumentManifest({ applicantId: applicantId, rowNumber: documentContext.payload.rowNumber });
-      var allowedFields = {};
-      (manifest && manifest.files || []).forEach(function (file) { allowedFields[eduopsClean_(file && file.sourceField || "")] = true; });
-      request.draft.docs.forEach(function (item) { if (!allowedFields[eduopsClean_(item && item.file || "")]) throw new Error("DOCUMENT_CONTEXT_MISMATCH"); });
+      request.draft.docs = eduopsNormalizeDocumentReviewDocs_(request.draft.docs, eduopsAllowedDocumentReviewFields_(manifest));
     }
   }
   if (definition.operation === "FINANCE_EVIDENCE_DECISION" && eduopsUpper_(request.draft && request.draft.decision || "", "") !== "VERIFIED") throw new Error("UNSUPPORTED_FINANCE_DECISION: no dedicated rejection authority is proven");
@@ -413,11 +462,7 @@ function eduops_previewCommand(payload) {
     }
     if (Array.isArray(p.draft && p.draft.docs)) {
       var manifest = admin_getApplicantDocumentManifest({ applicantId: applicantId, rowNumber: documentContext.payload.rowNumber });
-      var allowedDocumentFields = {};
-      (manifest && manifest.files || []).forEach(function (file) { allowedDocumentFields[eduopsClean_(file && file.sourceField || "")] = true; });
-      p.draft.docs.forEach(function (item) {
-        if (!allowedDocumentFields[eduopsClean_(item && item.file || "")]) throw new Error("DOCUMENT_CONTEXT_MISMATCH");
-      });
+      p.draft.docs = eduopsNormalizeDocumentReviewDocs_(p.draft.docs, eduopsAllowedDocumentReviewFields_(manifest));
     }
   }
   if (definition.operation === "FINANCE_EVIDENCE_DECISION" && eduopsUpper_(p.draft && p.draft.decision || "", "") !== "VERIFIED") {
@@ -456,9 +501,11 @@ function eduops_previewCommand(payload) {
     createdAt: new Date(now).toISOString(),
     expiresAt: new Date(now + 10 * 60 * 1000).toISOString(),
     request: eduopsClone_(p),
-    executionAuthority: communicationTemplate ? { messageType: communicationTemplate.internalTemplateId } : null,
+    executionAuthority: communicationTemplate ? { messageType: communicationTemplate.parentMessageType || communicationTemplate.internalTemplateId, templateId: communicationTemplate.templateId, templateVersionId: communicationTemplate.templateVersionId || "1" } : null,
     selectedTemplate: communicationTemplate ? {
       templateId: communicationTemplate.templateId,
+      templateVersionId: communicationTemplate.templateVersionId || communicationTemplate.templateVersion || "1",
+      templateSource: communicationTemplate.templateSource || "BUILT_IN",
       label: communicationTemplate.label,
       editable: definition.operation === "SEND_INDIVIDUAL_COMMUNICATION" && communicationTemplate.editable === true,
       customisable: definition.operation === "SEND_INDIVIDUAL_COMMUNICATION" && communicationTemplate.customisable === true,
@@ -484,6 +531,8 @@ function eduops_previewCommand(payload) {
     recipients: selection ? eduopsClone_(previewRecipients) : [],
     subject: eduopsClean_(authorityPreview.subject || ""),
     body: authorityPreview.body || "",
+    cc: eduopsClean_(authorityPreview.cc || ""),
+    bcc: eduopsClean_(authorityPreview.bcc || ""),
     eligibleCount: selection ? executionSize : (authorityReady ? 1 : 0),
     blockedCount: selection ? Number(authorityPreview.blocked || 0) : (authorityReady ? 0 : 1),
     excludedCount: selection ? selection.excludedCount : 0
@@ -534,6 +583,8 @@ function eduopsDispatchCommand_(preview) {
       previewRequestId: batchAuthority.requestId,
       candidateHash: batchAuthority.candidateHash,
       messageType: preview.executionAuthority && preview.executionAuthority.messageType,
+      templateId: preview.executionAuthority && preview.executionAuthority.templateId,
+      templateVersionId: preview.executionAuthority && preview.executionAuthority.templateVersionId,
       confirmSend: true,
       sourceView: "eduops"
     });
@@ -542,14 +593,16 @@ function eduopsDispatchCommand_(preview) {
   var rowNumber = Number(identity && identity.identity && identity.identity.rowNumber || 0);
   if (preview.operation === "DOCUMENT_REVIEW") {
     var document = request.document || {};
+    var manifest = admin_getApplicantDocumentManifest({ applicantId: preview.applicantId, rowNumber: rowNumber });
     var docs = Array.isArray(draft.docs) && draft.docs.length ? draft.docs : [{ file: document.sourceField, status: draft.status, comment: draft.note }];
+    docs = eduopsNormalizeDocumentReviewDocs_(docs, eduopsAllowedDocumentReviewFields_(manifest));
     return admin_updateDocStatuses({ applicantId: preview.applicantId, rowNumber: rowNumber, docs: docs });
   }
   if (preview.operation === "FINANCE_EVIDENCE_DECISION") {
     if (eduopsUpper_(draft.decision || "", "") !== "VERIFIED") throw new Error("UNSUPPORTED_FINANCE_DECISION: no dedicated rejection authority is proven");
     return admin_setPaymentVerified({ rowNumber: rowNumber, comment: draft.reason || "EduOps Finance verification" });
   }
-  if (preview.operation === "SEND_INDIVIDUAL_COMMUNICATION") return admin_sendApplicantMessage({ applicantId: preview.applicantId, messageType: preview.executionAuthority && preview.executionAuthority.messageType, recipient: draft.recipient, subject: draft.subject, body: draft.body, confirmManualSingleSend: true, sourceView: "eduops" });
+  if (preview.operation === "SEND_INDIVIDUAL_COMMUNICATION") return admin_sendApplicantMessage({ applicantId: preview.applicantId, messageType: preview.executionAuthority && preview.executionAuthority.messageType, templateId: preview.executionAuthority && preview.executionAuthority.templateId, templateVersionId: preview.executionAuthority && preview.executionAuthority.templateVersionId, recipient: draft.recipient, cc: draft.cc, bcc: draft.bcc, subject: draft.subject, body: draft.body, confirmManualSingleSend: true, sourceView: "eduops" });
   if (preview.operation === "CONTACTABILITY_CORRECTION") {
     if (!eduopsClean_(draft.email || "")) throw new Error("CORRECTED_EMAIL_REQUIRED");
     return admin_updateParentEmailCorrected({ applicantId: preview.applicantId, rowNumber: rowNumber, newEmail: draft.email, reason: draft.reason });

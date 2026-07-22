@@ -198,9 +198,10 @@ const result = context.admin_getApplicantDocumentManifest({ applicantId: "FODE-2
 assert.equal(result.ok, true);
 assert.equal(result.folderId, "11Uyp813DuF39yk5-dQj3JzCh1Q8frhGg");
 assert.equal(result.folderName, "keziah_waffi_2026-05-25");
-assert.equal(result.files.length, 5);
-assert.equal(result.files.filter((file) => file.sourceField).length, 5);
-assert.equal(result.files.filter((file) => file.sourceField === "Latest_School_Report_File").length, 3);
+assert.equal(result.files.length, 3);
+assert.equal(result.files.filter((file) => file.sourceField).length, 3);
+assert.equal(result.files.filter((file) => file.sourceField === "Latest_School_Report_File").length, 1);
+assert.equal(result.files.find((file) => file.sourceField === "Latest_School_Report_File").evidenceFiles.length, 3);
 assert.equal(
   JSON.stringify(Array.from(result.missingExpected, (item) => item.sourceField)),
   JSON.stringify(["Fee_Receipt_File"])
@@ -235,14 +236,12 @@ assert.equal(nonImageFiles.every((file) => !file.previewUrl), true);
 assert.equal(result.missingExpected.every((item) => !item.previewUrl), true);
 assert.equal(
   JSON.stringify(Array.from(result.files, (file) => file.itemIndex)),
-  JSON.stringify([0, 0, 1, 2, 0])
+  JSON.stringify([0, 0, 0])
 );
 assert.equal(
   JSON.stringify(Array.from(result.files, (file) => file.label)),
   JSON.stringify([
     "Birth Certificate / NID / Passport",
-    "Latest School Reports / Documents",
-    "Latest School Reports / Documents",
     "Latest School Reports / Documents",
     "Passport Size Colour Photo"
   ])
@@ -256,16 +255,12 @@ assert.equal(
   JSON.stringify([
     "Birth_ID_Passport_File",
     "Latest_School_Report_File",
-    "Latest_School_Report_File",
-    "Latest_School_Report_File",
     "Passport_Photo_File"
   ])
 );
 assert.equal(
   JSON.stringify(Array.from(result.files).filter((file) => file.renditionEligible).map((file) => file.renditionKind)),
   JSON.stringify([
-    "pdf-first-page-png",
-    "pdf-first-page-png",
     "pdf-first-page-png",
     "pdf-first-page-png",
     "image-png"

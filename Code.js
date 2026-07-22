@@ -6334,11 +6334,14 @@ function campaignSendEmailGmail_(toEmail, subject, body, meta) {
   } catch (_aliasErr) {}
   campaignLog_("GMAIL_SEND_BEGIN", traceBase);
   try {
-    GmailApp.sendEmail(to, String(subject || ""), String(body || ""), {
+    var gmailOptions = {
       from: alias,
       replyTo: replyTo,
       name: clean_(CONFIG.EMAIL_FROM_NAME || "FODE Admissions") || "FODE Admissions"
-    });
+    };
+    if (clean_(trace.cc || "")) gmailOptions.cc = clean_(trace.cc || "");
+    if (clean_(trace.bcc || "")) gmailOptions.bcc = clean_(trace.bcc || "");
+    GmailApp.sendEmail(to, String(subject || ""), String(body || ""), gmailOptions);
     campaignLog_("GMAIL_SEND_END", Object.assign({}, traceBase, { ok: true, from: alias, replyTo: replyTo }));
     return { ok: true, to: to, from: alias, replyTo: replyTo };
   } catch (e) {
@@ -6380,6 +6383,46 @@ function normalizeApplicantMessageType_(messageType) {
   var raw = clean_(messageType || "").toLowerCase();
   var allowed = Array.isArray(CONFIG.COMMUNICATION_ALLOWED_MESSAGE_TYPES) ? CONFIG.COMMUNICATION_ALLOWED_MESSAGE_TYPES : [];
   return allowed.indexOf(raw) >= 0 ? raw : "";
+}
+
+function communicationLoadActiveTemplateVariant_(templateId, versionId) {
+  var wanted = clean_(templateId || "");
+  if (!wanted) return null;
+  var index = communicationReadTemplateVariantIndex_();
+  var active = index.activeTemplateIds || [];
+  if (active.indexOf(wanted) < 0) return null;
+  var wantedVersion = clean_(versionId || (index.latestVersionByTemplateId && index.latestVersionByTemplateId[wanted]) || "");
+  if (!wantedVersion) return null;
+  var raw = PropertiesService.getScriptProperties().getProperty(communicationTemplateVariantKey_(wanted, wantedVersion)) || "";
+  if (!raw) throw new Error("COMM_TEMPLATE_VARIANT_MISSING");
+  var variant = JSON.parse(raw);
+  if (!variant || variant.status !== "ACTIVE" || variant.templateId !== wanted || variant.versionId !== wantedVersion) {
+    throw new Error("COMM_TEMPLATE_VARIANT_INDEX_MISMATCH");
+  }
+  return variant;
+}
+
+function communicationResolveTemplateVariantSelector_(messageType, opts) {
+  var options = opts && typeof opts === "object" ? opts : {};
+  var selector = clean_(options.templateId || options.templateVariantId || messageType || "");
+  var versionId = clean_(options.templateVersionId || "");
+  if (!selector) return null;
+  if (normalizeApplicantMessageType_(selector) && !clean_(options.templateId || options.templateVariantId || "")) return null;
+  try {
+    var variant = communicationLoadActiveTemplateVariant_(selector, versionId);
+    if (!variant) return null;
+    var parent = normalizeApplicantMessageType_(variant.parentMessageType || "");
+    if (!parent) throw new Error("UNKNOWN_PARENT_TEMPLATE");
+    return { variant: variant, parentMessageType: parent };
+  } catch (err) {
+    if (String(err && err.message || err || "").indexOf("COMM_TEMPLATE_VARIANT") >= 0) throw err;
+    return null;
+  }
+}
+
+function communicationResolvedMessageTypeForRequest_(messageType, opts) {
+  var variant = communicationResolveTemplateVariantSelector_(messageType, opts);
+  return variant ? variant.parentMessageType : normalizeApplicantMessageType_(messageType);
 }
 
 function normalizeApplicantBatchFilterType_(filterType) {
@@ -6863,7 +6906,7 @@ function communicationTemplateGalleryCopy_() {
 function communicationTemplateGalleryMetadata_() {
   var registry = getCommunicationSemanticRegistry_();
   var copy = communicationTemplateGalleryCopy_();
-  return registry.filter(function (entry) {
+  var builtIns = registry.filter(function (entry) {
     return entry && entry.implementationStatus === "active" && communicationDefinitionSupportsMode_(entry, "selected");
   }).map(function (entry) {
     var extra = copy[entry.messageType] || {};
@@ -6899,6 +6942,116 @@ function communicationTemplateGalleryMetadata_() {
       auditMeaning: clean_(entry.auditMeaning || "")
     };
   });
+  return builtIns.concat(typeof communicationActiveTemplateVariantMetadata_ === "function" ? communicationActiveTemplateVariantMetadata_() : []);
+}
+
+function communicationTemplateVariantIndexKey_() {
+  return "COMM_TEMPLATE_INDEX_V1";
+}
+
+function communicationTemplateVariantKey_(templateId, versionId) {
+  return "COMM_TEMPLATE::" + clean_(templateId || "") + "::" + clean_(versionId || "");
+}
+
+function communicationReadTemplateVariantIndex_() {
+  var raw = "";
+  try { raw = PropertiesService.getScriptProperties().getProperty(communicationTemplateVariantIndexKey_()) || ""; } catch (_err) {}
+  if (!clean_(raw || "")) return { schemaVersion: "COMM_TEMPLATE_INDEX_V1", activeTemplateIds: [], latestVersionByTemplateId: {} };
+  var parsed = JSON.parse(raw);
+  if (!parsed || parsed.schemaVersion !== "COMM_TEMPLATE_INDEX_V1" || !Array.isArray(parsed.activeTemplateIds) || !parsed.latestVersionByTemplateId) {
+    throw new Error("COMM_TEMPLATE_INDEX_INVALID");
+  }
+  return parsed;
+}
+
+function communicationValidateTemplateVariantPayload_(payload) {
+  var p = payload && typeof payload === "object" ? payload : {};
+  var parent = normalizeApplicantMessageType_(p.parentMessageType || p.parentSemanticTemplate || "");
+  var definition = getCommunicationSemanticDefinition_(parent);
+  if (!definition || definition.implementationStatus !== "active") throw new Error("UNKNOWN_PARENT_TEMPLATE");
+  var name = clean_(p.name || p.templateName || "");
+  var subject = clean_(p.subjectTemplate || p.subject || "");
+  var body = String(p.bodyTemplate || p.body || "");
+  if (!name || !subject || !clean_(body || "")) throw new Error("COMM_TEMPLATE_VARIANT_REQUIRED_FIELDS");
+  var validation = communicationValidateTemplateTokens_(subject, body, ["portal_url", "applicant_name", "applicant_id", "grade", "subjects"]);
+  if (validation.ok !== true) throw new Error(validation.code + ": " + validation.unresolvedToken);
+  var bytes = Utilities.newBlob(JSON.stringify(p), "application/json").getBytes().length;
+  if (bytes > 7000) throw new Error("COMM_TEMPLATE_VARIANT_TOO_LARGE");
+  return { parent: parent, definition: definition, name: name, subject: subject, body: body };
+}
+
+function communicationActiveTemplateVariantMetadata_() {
+  var index;
+  try { index = communicationReadTemplateVariantIndex_(); } catch (_err) { return []; }
+  return (index.activeTemplateIds || []).map(function (templateId) {
+    var versionId = clean_(index.latestVersionByTemplateId && index.latestVersionByTemplateId[templateId] || "");
+    if (!versionId) return null;
+    var raw = PropertiesService.getScriptProperties().getProperty(communicationTemplateVariantKey_(templateId, versionId)) || "";
+    if (!raw) throw new Error("COMM_TEMPLATE_VARIANT_MISSING");
+    var variant = JSON.parse(raw);
+    if (!variant || variant.status !== "ACTIVE" || variant.templateId !== templateId || variant.versionId !== versionId) throw new Error("COMM_TEMPLATE_VARIANT_INDEX_MISMATCH");
+    var parent = getCommunicationSemanticDefinition_(variant.parentMessageType);
+    if (!parent) return null;
+    var authority = communicationSendAuthorityForDefinition_(parent);
+    return {
+      messageType: variant.templateId,
+      parentMessageType: variant.parentMessageType,
+      templateId: variant.templateId,
+      templateVersionId: variant.versionId,
+      templateSource: "SAVED_VARIANT",
+      label: clean_(variant.name || ""),
+      selectedOptionLabel: clean_(variant.name || ""),
+      selectedOptionOrder: 500,
+      purpose: clean_(variant.description || ""),
+      whenToUse: clean_(variant.description || ""),
+      stageSuitability: clean_(parent.conditionPolicyId || ""),
+      selectedOnly: authority.selectedOnly === true,
+      batchSafe: authority.batchSafe === true,
+      allowedSendModes: authority.allowedSendModes,
+      requiresPortalLink: communicationRequiresPortalUrl_(variant.parentMessageType),
+      requiresResolvedPlaceholders: true,
+      editableMode: clean_(parent.editableMode || ""),
+      operatorWarning: clean_(parent.operatorWarning || ""),
+      auditMeaning: clean_(parent.auditMeaning || ""),
+      subjectTemplate: clean_(variant.subjectTemplate || ""),
+      bodyTemplate: String(variant.bodyTemplate || "")
+    };
+  }).filter(function (item) { return !!item; });
+}
+
+function admin_saveReusableCommunicationTemplate(payload) {
+  var adminEmail = getCallerEmail_();
+  if (!isAdmin_(adminEmail) || clean_(getAdminRole_(adminEmail) || "").toUpperCase() !== "SUPER") throw new Error("Access denied");
+  var validated = communicationValidateTemplateVariantPayload_(payload);
+  var props = PropertiesService.getScriptProperties();
+  var index = communicationReadTemplateVariantIndex_();
+  if ((index.activeTemplateIds || []).length >= 25 && index.activeTemplateIds.indexOf(clean_(payload.templateId || "")) < 0) throw new Error("COMM_TEMPLATE_VARIANT_LIMIT");
+  var templateId = clean_(payload.templateId || ("saved_" + Utilities.getUuid().replace(/[^A-Za-z0-9]+/g, "").slice(0, 20)));
+  var priorVersion = Number(index.latestVersionByTemplateId[templateId] || 0);
+  var versionId = String(priorVersion + 1);
+  var variant = {
+    templateId: templateId,
+    versionId: versionId,
+    parentMessageType: validated.parent,
+    name: validated.name,
+    description: clean_(payload.description || ""),
+    subjectTemplate: validated.subject,
+    bodyTemplate: validated.body,
+    allowedMergeFields: ["portal_url", "applicant_name", "applicant_id", "grade", "subjects"],
+    allowedSendModes: communicationSendAuthorityForDefinition_(validated.definition).allowedSendModes,
+    batchSafe: communicationSendAuthorityForDefinition_(validated.definition).batchSafe === true,
+    createdBy: clean_(adminEmail || ""),
+    createdAt: new Date().toISOString(),
+    status: "ACTIVE"
+  };
+  var key = communicationTemplateVariantKey_(templateId, versionId);
+  if (props.getProperty(key)) throw new Error("COMM_TEMPLATE_VARIANT_OVERWRITE_BLOCKED");
+  props.setProperty(key, JSON.stringify(variant));
+  if (index.activeTemplateIds.indexOf(templateId) < 0) index.activeTemplateIds.push(templateId);
+  index.latestVersionByTemplateId[templateId] = versionId;
+  props.setProperty(communicationTemplateVariantIndexKey_(), JSON.stringify(index));
+  campaignLog_("COMM_TEMPLATE_VARIANT_CREATE", { templateId: templateId, versionId: versionId, parentMessageType: validated.parent, actorEmail: adminEmail });
+  return { ok: true, templateId: templateId, versionId: versionId, parentMessageType: validated.parent, status: "ACTIVE" };
 }
 function getCommunicationSemanticDefinitionsByStatus_(status) {
   var requested = clean_(status || "").toLowerCase();
@@ -7793,7 +7946,7 @@ function communicationPortalInstructionBlock_(context, purposeText) {
   if (!url) {
     return [
       intro,
-      actionRequiredPlaceholder_("insert secure applicant portal link")
+      "{{portal_url}}"
     ].join("\n");
   }
   return [
@@ -7872,6 +8025,155 @@ function paymentInstructionsOrPlaceholder_(rowObj) {
 
 function hasUnresolvedActionRequiredPlaceholder_(subject, body) {
   return /\[ACTION REQUIRED:\s*[^\]]+\]/i.test(String(subject || "") + "\n" + String(body || ""));
+}
+
+function communicationUnresolvedTokens_(subject, body) {
+  var text = String(subject || "") + "\n" + String(body || "");
+  var out = [];
+  var seen = {};
+  function add(token) {
+    var value = clean_(token || "");
+    if (!value || seen[value]) return;
+    seen[value] = true;
+    out.push(value);
+  }
+  var actionMatches = text.match(/\[ACTION REQUIRED:[^\]]+\]/gi) || [];
+  actionMatches.forEach(add);
+  if (text.indexOf(customEmailOperatorPrompt_()) >= 0) add(customEmailOperatorPrompt_());
+  var mergeMatches = text.match(/\{\{[^}]+\}\}/g) || [];
+  mergeMatches.forEach(add);
+  return out;
+}
+
+function communicationValidateRenderedContent_(subject, body) {
+  var unresolved = communicationUnresolvedTokens_(subject, body);
+  if (!unresolved.length) return { ok: true, unresolvedTokens: [] };
+  return {
+    ok: false,
+    code: "COMMUNICATION_TEMPLATE_UNRESOLVED_TOKEN",
+    blockCode: "COMMUNICATION_TEMPLATE_UNRESOLVED_TOKEN",
+    blockReason: "Resolve unresolved communication token: " + unresolved[0],
+    unresolvedToken: unresolved[0],
+    unresolvedTokens: unresolved
+  };
+}
+
+function communicationValidateTemplateTokens_(subject, body, allowedFields) {
+  var allowed = {};
+  (Array.isArray(allowedFields) ? allowedFields : []).forEach(function (field) {
+    var key = clean_(field || "").toLowerCase();
+    if (key) allowed[key] = true;
+  });
+  var text = String(subject || "") + "\n" + String(body || "");
+  var mergeMatches = text.match(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g) || [];
+  for (var i = 0; i < mergeMatches.length; i++) {
+    var token = clean_(mergeMatches[i].replace(/[{}\s]/g, "")).toLowerCase();
+    if (allowed[token] !== true) {
+      return {
+        ok: false,
+        code: "COMMUNICATION_TEMPLATE_UNRESOLVED_TOKEN",
+        blockCode: "COMMUNICATION_TEMPLATE_UNRESOLVED_TOKEN",
+        blockReason: "Unknown merge field in saved template: {{" + token + "}}",
+        unresolvedToken: "{{" + token + "}}"
+      };
+    }
+  }
+  if (/\[ACTION REQUIRED:/i.test(text) || /\[Write your message here/i.test(text)) {
+    return {
+      ok: false,
+      code: "COMMUNICATION_TEMPLATE_UNRESOLVED_TOKEN",
+      blockCode: "COMMUNICATION_TEMPLATE_UNRESOLVED_TOKEN",
+      blockReason: "Saved templates cannot contain unresolved operator placeholders.",
+      unresolvedToken: /\[Write your message here/i.test(text) ? "[Write your message here" : "[ACTION REQUIRED:"
+    };
+  }
+  return { ok: true };
+}
+
+function communicationUnderReviewNoPaymentNotice_() {
+  return "Your application is currently under review. No payment is required at this stage. We will contact you when payment becomes applicable.";
+}
+
+function communicationDocumentVerificationCaution_() {
+  return "Your application cannot be processed further until we receive clear, complete and verifiable copies of the required original documents. Uploaded copies must be legible and accurately reproduce the original documents. We may request the originals for verification.";
+}
+
+function communicationRenderTemplateText_(template, context) {
+  var ctx = context || {};
+  var row = ctx.rowObj || {};
+  var values = {
+    portal_url: clean_(ctx.portalUrl || ""),
+    applicant_name: clean_(row.Name || row.Applicant_Name || row.Full_Name || ctx.applicantName || ""),
+    applicant_id: clean_(ctx.applicantId || row.ApplicantID || ""),
+    grade: clean_(row.Grade || row.Applied_Grade || row.Grade_Level || ""),
+    subjects: clean_(row.Subjects || row.Selected_Subjects || row.Subject_List || "")
+  };
+  return String(template || "").replace(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g, function (match, token) {
+    var key = clean_(token || "").toLowerCase();
+    return Object.prototype.hasOwnProperty.call(values, key) ? values[key] : match;
+  });
+}
+
+function communicationShouldApplyUnderReviewNoPaymentNotice_(context) {
+  var ctx = context || {};
+  var type = normalizeApplicantMessageType_(ctx.messageType || "");
+  if (["payment_followup", "application_receipt_request", "application_verified_quote", "application_acceptance_confirmation"].indexOf(type) >= 0) return false;
+  if (ctx.paymentVerified === true) return false;
+  var row = ctx.rowObj || {};
+  if (communicationDocsVerifiedForPayment_(row, { docsVerified: ctx.docsVerified === true }) === true) return false;
+  return true;
+}
+
+function communicationShouldApplyDocumentVerificationCaution_(context) {
+  var ctx = context || {};
+  var type = normalizeApplicantMessageType_(ctx.messageType || "");
+  if (type === "application_acceptance_confirmation") return false;
+  if (ctx.docsVerified === true) return false;
+  return communicationDocsMissing_(ctx.rowObj || {}) === true;
+}
+
+function communicationApplyMandatoryPolicyBlocks_(context, body) {
+  var text = String(body || "");
+  var blocks = [];
+  if (communicationShouldApplyUnderReviewNoPaymentNotice_(context) && text.indexOf(communicationUnderReviewNoPaymentNotice_()) < 0) {
+    blocks.push(communicationUnderReviewNoPaymentNotice_());
+  }
+  if (communicationShouldApplyDocumentVerificationCaution_(context) && text.indexOf(communicationDocumentVerificationCaution_()) < 0) {
+    blocks.push(communicationDocumentVerificationCaution_());
+  }
+  return blocks.length ? [text, ""].concat(blocks).join("\n\n") : text;
+}
+
+function communicationParseEmailList_(value) {
+  return String(value || "").split(/[;,]/).map(function (item) { return clean_(item || ""); }).filter(function (item) { return !!item; });
+}
+
+function communicationInternalEmailAllowed_(email) {
+  var address = clean_(email || "").toLowerCase();
+  var configured = []
+    .concat(CONFIG.SUPER_ADMIN_EMAILS || [])
+    .concat(CONFIG.ADMIN_EMAILS || []);
+  for (var i = 0; i < configured.length; i++) {
+    var item = clean_(configured[i] || "").toLowerCase();
+    if (address && item && address === item) return true;
+    var domain = item.indexOf("@") >= 0 ? item.split("@").pop() : "";
+    if (domain && address.slice(-domain.length - 1) === "@" + domain) return true;
+  }
+  return false;
+}
+
+function communicationValidateCcBcc_(cc, bcc) {
+  var ccList = communicationParseEmailList_(cc);
+  var bccList = communicationParseEmailList_(bcc);
+  if (ccList.length > 10 || bccList.length > 10) return { ok: false, code: "COMMUNICATION_CC_BCC_TOO_MANY", blockReason: "CC/BCC is limited to 10 addresses each." };
+  for (var i = 0; i < ccList.length; i++) {
+    if (isValidEffectiveEmail_(ccList[i]) !== true) return { ok: false, code: "INVALID_CC_ADDRESS", blockReason: "Invalid CC address: " + ccList[i] };
+  }
+  for (var j = 0; j < bccList.length; j++) {
+    if (isValidEffectiveEmail_(bccList[j]) !== true) return { ok: false, code: "INVALID_BCC_ADDRESS", blockReason: "Invalid BCC address: " + bccList[j] };
+    if (communicationInternalEmailAllowed_(bccList[j]) !== true) return { ok: false, code: "BCC_NOT_INTERNAL", blockReason: "BCC is restricted to approved internal addresses or domains." };
+  }
+  return { ok: true, cc: ccList.join(","), bcc: bccList.join(",") };
 }
 
 function communicationRequiresResolvedActionPlaceholders_(messageType) {
@@ -8460,7 +8762,10 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
   var options = opts && typeof opts === "object" ? opts : {};
   var debugId = clean_(options.debugId || newDebugId_());
   var requestId = clean_(options.requestId || debugId || newDebugId_());
-  var normalizedType = normalizeApplicantMessageType_(messageType);
+  var variantSelector = typeof communicationResolveTemplateVariantSelector_ === "function"
+    ? communicationResolveTemplateVariantSelector_(messageType, options)
+    : null;
+  var normalizedType = variantSelector ? variantSelector.parentMessageType : normalizeApplicantMessageType_(messageType);
   var actor = communicationGetActorInfo_(options);
   var row = rowObj || {};
   var previewMetrics = options.previewMetrics && typeof options.previewMetrics === "object" ? options.previewMetrics : null;
@@ -8483,7 +8788,11 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
     rowObj: row,
     applicantId: clean_(communicationState.applicantId || ""),
     messageType: normalizedType || clean_(messageType || ""),
-    requestedMessageType: normalizedType || clean_(messageType || ""),
+    requestedMessageType: clean_(messageType || ""),
+    templateId: variantSelector ? clean_(variantSelector.variant.templateId || "") : "",
+    templateVersionId: variantSelector ? clean_(variantSelector.variant.versionId || "") : "1",
+    templateSource: variantSelector ? "SAVED_VARIANT" : "BUILT_IN",
+    selectedTemplateVariant: variantSelector ? variantSelector.variant : null,
     permitted: false,
     sendableNow: false,
     communicationFamily: clean_(communicationState.communicationFamily || ""),
@@ -8575,10 +8884,10 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
     var secretRes = null;
     if (portalSecretLookup && portalSecretLookup.byApplicantId) {
       var cachedSecret = portalSecretLookup.byApplicantId[context.applicantId] || null;
-      if (!cachedSecret) return block("MISSING_PORTAL_SECRET");
+      if (!cachedSecret) return block("PORTAL_LINK_UNAVAILABLE", "Active applicant portal authority is unavailable.");
       var cachedStatus = clean_(cachedSecret.status || "");
-      if (portalSecretLookup.hasStatus === true && cachedStatus !== "Active") return block("INACTIVE_SECRET");
-      if (!clean_(cachedSecret.secretPlain || "") || !clean_(cachedSecret.secretHash || "")) return block("UNUSABLE_SECRET");
+      if (portalSecretLookup.hasStatus === true && cachedStatus !== "Active") return block("PORTAL_LINK_UNAVAILABLE", "Active applicant portal authority is unavailable.");
+      if (!clean_(cachedSecret.secretPlain || "") || !clean_(cachedSecret.secretHash || "")) return block("PORTAL_LINK_UNAVAILABLE", "Active applicant portal authority is unavailable.");
       secretRes = {
         ok: true,
         applicantId: context.applicantId,
@@ -8589,9 +8898,10 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
       };
     } else {
       secretRes = resolvePortalCommunicationSecret_(context.applicantId);
-      if (!secretRes.ok) return block("MISSING_PORTAL_SECRET");
+      if (!secretRes.ok) return block("PORTAL_LINK_UNAVAILABLE", "Active applicant portal authority is unavailable.");
     }
     if (!options.skipPortalUrlBuild) context.portalUrl = buildPortalCommunicationUrl_(context.applicantId, secretRes.secretPlain);
+    if (!options.skipPortalUrlBuild && !clean_(context.portalUrl || "")) return block("PORTAL_LINK_UNAVAILABLE", "Active applicant portal authority is unavailable.");
   }
 
   if (normalizedType === "docs_missing" && baseState.docsMissing !== true) {
@@ -9194,103 +9504,112 @@ function buildApplicantMessage_(context) {
   var ctx = context || {};
   var type = normalizeApplicantMessageType_(ctx.messageType || "");
   if (!type) return { ok: false, code: "UNKNOWN_MESSAGE_TYPE", subject: "", body: "" };
-  if (type === "legacy_invite") {
+  var variant = ctx.selectedTemplateVariant || null;
+  function maybeVariant(fallback) {
+    if (!variant) return fallback;
     return {
+      ok: true,
+      subject: communicationRenderTemplateText_(variant.subjectTemplate || "", ctx),
+      body: communicationRenderTemplateText_(variant.bodyTemplate || "", ctx)
+    };
+  }
+  if (type === "legacy_invite") {
+    return maybeVariant({
       ok: true,
       subject: campaignSubjectForAttempt_(0, ctx.rowNumber || 0),
       body: buildCampaignEmailBody_(ctx.rowObj || {}, ctx.portalUrl || "", ctx.applicantId || "")
-    };
+    });
   }
   if (type === "reminder") {
-    return {
+    return maybeVariant({
       ok: true,
       subject: "Reminder: Complete Your FODE KIA Online Application",
       body: buildReminderEmailBody_(ctx)
-    };
+    });
   }
   if (type === "fd_acknowledgement") {
-    return {
+    return maybeVariant({
       ok: true,
       subject: "FODE KIA Application Received - Next Steps",
       body: buildFdAcknowledgementEmailBody_(ctx)
-    };
+    });
   }
   if (type === "application_feedback") {
-    return {
+    return maybeVariant({
       ok: true,
       subject: "Application Feedback - Action Required for Your FODE KIA Application",
       body: buildApplicationFeedbackEmailBody_(ctx)
-    };
+    });
   }
   if (type === "custom_email") {
-    return {
+    return maybeVariant({
       ok: true,
       subject: buildCustomSelectedEmailSubject_(),
       body: buildCustomSelectedEmailBody_(ctx)
-    };
+    });
   }
   if (type === "docs_missing") {
-    return {
+    return maybeVariant({
       ok: true,
       subject: "FODE KIA Application - Missing Documents",
       body: buildDocsMissingEmailBody_(ctx)
-    };
+    });
   }
   if (type === "payment_followup") {
-    return {
+    return maybeVariant({
       ok: true,
       subject: "FODE KIA Application - Payment Follow-Up",
       body: buildPaymentFollowupEmailBody_(ctx)
-    };
+    });
   }
   if (type === "application_acceptance_confirmation") {
-    return {
+    return maybeVariant({
       ok: true,
       subject: buildApplicationAcceptanceConfirmationSubject_(),
       body: buildApplicationAcceptanceConfirmationBody_(ctx)
-    };
+    });
   }
   if (type === "application_verified_quote") {
-    return {
+    return maybeVariant({
       ok: true,
       subject: buildApplicationVerifiedQuoteSubject_(),
       body: buildApplicationVerifiedQuoteBody_(ctx)
-    };
+    });
   }
   if (type === "application_final_reminder") {
-    return {
+    return maybeVariant({
       ok: true,
       subject: buildApplicationFinalReminderSubject_(),
       body: buildApplicationFinalReminderBody_(ctx)
-    };
+    });
   }
   if (type === "application_exam_fee_reminder") {
-    return {
+    return maybeVariant({
       ok: true,
       subject: buildApplicationExamFeeReminderSubject_(),
       body: buildApplicationExamFeeReminderBody_(ctx)
-    };
+    });
   }
   if (type === "prospect_general_guidance") {
-    return {
+    return maybeVariant({
       ok: true,
       subject: buildProspectGeneralGuidanceSubject_(),
       body: buildProspectGeneralGuidanceBody_(ctx)
-    };
+    });
   }
   if (type === "application_receipt_request") {
-    return {
+    return maybeVariant({
       ok: true,
       subject: buildApplicationReceiptRequestSubject_(),
       body: buildApplicationReceiptRequestBody_(ctx)
-    };
+    });
   }
   if (type === "contact_fallback_manual") {
-    return {
+    return maybeVariant({
       ok: true,
       subject: buildContactFallbackManualSubject_(),
       body: buildContactFallbackManualBody_(ctx)
-    };
+    });
   }
   return { ok: false, code: "UNKNOWN_MESSAGE_TYPE", subject: "", body: "" };
 }
@@ -9585,6 +9904,9 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
     processorScope: clean_(options.processorScope || ctx.processorScope || ""),
     duplicateGuardPassed: true,
     rowObj: ctx.rowObj && typeof ctx.rowObj === "object" ? ctx.rowObj : {}
+    ,
+    cc: clean_(options.cc || ""),
+    bcc: clean_(options.bcc || "")
   });
   if (!sendRes.ok) {
     if (manualProbe) {
@@ -9698,6 +10020,8 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
       messageType: clean_(ctx.messageType || ""),
       effectiveEmail: clean_(ctx.effectiveEmail || ""),
       subject: clean_(message.subject || ""),
+      cc: clean_(options.cc || ""),
+      bcc: clean_(options.bcc || ""),
       sentAt: now.toISOString(),
       rowNumber: Number(ctx.rowNumber || 0),
       debugId: clean_(ctx.debugId || options.debugId || newDebugId_()),
@@ -10445,6 +10769,22 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
   var hasEditedBody = typeof options.editedBody === "string" && !!clean_(options.editedBody || "");
   var previewSubject = hasEditedSubject ? String(options.editedSubject) : String(built.subject || "");
   var previewBody = hasEditedBody ? String(options.editedBody) : String(built.body || "");
+  previewBody = communicationApplyMandatoryPolicyBlocks_(context, previewBody);
+  var ccBcc = communicationValidateCcBcc_(options.cc || "", options.bcc || "");
+  if (ccBcc.ok !== true) {
+    return {
+      ok: true,
+      action: "preview",
+      eligible: false,
+      result: "BLOCKED",
+      blockCode: clean_(ccBcc.code || "COMMUNICATION_CC_BCC_INVALID"),
+      blockReason: clean_(ccBcc.blockReason || "CC/BCC values are invalid."),
+      applicantId: clean_(context.applicantId || ""),
+      messageType: clean_(context.messageType || ""),
+      effectiveEmail: previewRecipient,
+      debugId: clean_(context.debugId || newDebugId_())
+    };
+  }
   if (context.messageType === "custom_email" && (!clean_(previewSubject || "") || !clean_(previewBody || ""))) {
     return {
       ok: true,
@@ -10453,6 +10793,23 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
       result: "BLOCKED",
       blockCode: !clean_(previewSubject || "") ? "MISSING_SUBJECT" : "MISSING_BODY",
       blockReason: !clean_(previewSubject || "") ? "Custom email subject is required." : "Custom email body is required.",
+      applicantId: clean_(context.applicantId || ""),
+      messageType: clean_(context.messageType || ""),
+      effectiveEmail: previewRecipient,
+      debugId: clean_(context.debugId || newDebugId_())
+    };
+  }
+  var renderedValidation = communicationValidateRenderedContent_(previewSubject, previewBody);
+  if (renderedValidation.ok !== true) {
+    return {
+      ok: true,
+      action: "preview",
+      eligible: false,
+      result: "BLOCKED",
+      blockCode: renderedValidation.blockCode,
+      blockReason: renderedValidation.blockReason,
+      unresolvedToken: renderedValidation.unresolvedToken,
+      unresolvedTokens: renderedValidation.unresolvedTokens,
       applicantId: clean_(context.applicantId || ""),
       messageType: clean_(context.messageType || ""),
       effectiveEmail: previewRecipient,
@@ -10475,10 +10832,18 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
     applicantState: clean_(context.applicantState || ""),
     applicantId: clean_(context.applicantId || ""),
     messageType: clean_(context.messageType || ""),
+    templateId: clean_(context.templateId || context.messageType || ""),
+    templateVersionId: clean_(context.templateVersionId || "1"),
+    templateSource: clean_(context.templateSource || "BUILT_IN"),
+    contentEdited: hasEditedSubject || hasEditedBody,
     effectiveEmail: previewRecipient,
     portalUrl: clean_(context.portalUrl || ""),
     subject: previewSubject,
     body: previewBody,
+    cc: ccBcc.cc,
+    bcc: ccBcc.bcc,
+    portalLinkRequired: context.requiresPortalUrl === true,
+    portalLinkHydrated: !!clean_(context.portalUrl || ""),
     debugId: clean_(context.debugId || newDebugId_())
   };
   campaignLog_("COMM_PREVIEW", {
@@ -10592,9 +10957,11 @@ function sendApplicantMessage_(applicantId, messageType, opts) {
   var editedRecipient = clean_(options.editedRecipient || context.effectiveEmail || "");
   var editedSubject = typeof options.editedSubject === "string" ? String(options.editedSubject) : String(built.subject || "");
   var editedBody = typeof options.editedBody === "string" ? String(options.editedBody) : String(built.body || "");
+  editedBody = communicationApplyMandatoryPolicyBlocks_(context, editedBody);
   context.effectiveEmail = editedRecipient;
   built.subject = editedSubject;
   built.body = editedBody;
+  var validatedCcBcc = communicationValidateCcBcc_(options.cc || "", options.bcc || "");
   if (!context.effectiveEmail) {
     context.eligible = false;
     context.blockCode = "NO_EFFECTIVE_EMAIL";
@@ -10613,15 +10980,31 @@ function sendApplicantMessage_(applicantId, messageType, opts) {
     context.blockReason = "Email body is required.";
   } else if (context.messageType === "custom_email" && hasUnresolvedCustomEmailPrompt_(built.body)) {
     context.eligible = false;
-    context.blockCode = "CUSTOM_EMAIL_PROMPT_UNRESOLVED";
-    context.blockReason = "Replace the custom email prompt with the actual message before sending.";
-  } else if (
-    communicationRequiresResolvedActionPlaceholders_(context.messageType)
+    var legacyCustomPromptCode = "CUSTOM_EMAIL_PROMPT_UNRESOLVED";
+    context.blockCode = "COMMUNICATION_TEMPLATE_UNRESOLVED_TOKEN";
+    context.blockReason = "Replace the custom email prompt with the actual message before sending. Legacy gate: " + legacyCustomPromptCode + ".";
+  } else if (validatedCcBcc.ok !== true) {
+    context.eligible = false;
+    context.blockCode = clean_(validatedCcBcc.code || "COMMUNICATION_CC_BCC_INVALID");
+    context.blockReason = clean_(validatedCcBcc.blockReason || "CC/BCC values are invalid.");
+  } else {
+    var sendRenderedValidation = communicationValidateRenderedContent_(built.subject, built.body);
+    if (sendRenderedValidation.ok !== true) {
+      context.eligible = false;
+      context.blockCode = sendRenderedValidation.blockCode;
+      context.blockReason = sendRenderedValidation.blockReason;
+      context.unresolvedToken = sendRenderedValidation.unresolvedToken;
+    }
+  }
+  if (
+    context.eligible
+    && communicationRequiresResolvedActionPlaceholders_(context.messageType)
     && hasUnresolvedActionRequiredPlaceholder_(built.subject, built.body)
   ) {
     context.eligible = false;
-    context.blockCode = "ACTION_REQUIRED_PLACEHOLDER";
-    context.blockReason = "Resolve all [ACTION REQUIRED: ...] placeholders before sending this operational template.";
+    var legacyActionPlaceholderCode = "ACTION_REQUIRED_PLACEHOLDER";
+    context.blockCode = "COMMUNICATION_TEMPLATE_UNRESOLVED_TOKEN";
+    context.blockReason = "Resolve all [ACTION REQUIRED: ...] placeholders before sending this operational template. Legacy gate: " + legacyActionPlaceholderCode + ".";
   }
   if (!context.eligible) {
     return {
@@ -10645,10 +11028,16 @@ function sendApplicantMessage_(applicantId, messageType, opts) {
       debugId: clean_(context.debugId || newDebugId_())
     };
   }
+  options.cc = validatedCcBcc.cc;
+  options.bcc = validatedCcBcc.bcc;
   var dispatched = dispatchApplicantMessage_(context, built, options);
   campaignLog_(dispatched.result === "SENT" ? "COMM_SENT" : "COMM_FAILED", {
     applicantId: clean_(context.applicantId || applicantId || ""),
     messageType: clean_(context.messageType || messageType || ""),
+    templateId: clean_(context.templateId || context.messageType || messageType || ""),
+    templateVersionId: clean_(context.templateVersionId || "1"),
+    templateSource: clean_(context.templateSource || "BUILT_IN"),
+    contentEdited: typeof options.editedSubject === "string" || typeof options.editedBody === "string",
     recipient: clean_(context.effectiveEmail || ""),
     subject: clean_(built.subject || ""),
     bodySnippet: clean_(String(built.body || "").replace(/\s+/g, " ").slice(0, 120)),

@@ -170,10 +170,30 @@ function admin_searchApplicants(payload) {
     if (!textMatch) return false;
     if (stageFilter && clean_(canonical.lifecycle && canonical.lifecycle.baseState || "").toUpperCase() !== stageFilter) return false;
     return true;
-  }).map(function (row) {
+  }).map(function (row, r) {
     var financeAuthority = row.finance && row.finance.financeAuthority || {};
     var documentState = clean_(row.documents && row.documents.state || "");
-    return {
+    var rowObj = row.rowObj || row.rawRow || row.applicant || {};
+    var authorityProjection = typeof compatibilityCommunicationAuthorityProjection_ === "function"
+      ? compatibilityCommunicationAuthorityProjection_(rowObj, r + 1)
+      : {
+        actionabilityState: clean_(row.actionability && row.actionability.state || ""),
+        selectable: row.actionability && row.actionability.selectable === true,
+        selectBlockReason: clean_(row.actionability && row.actionability.selectBlockReason || ""),
+        recommendedAction: clean_(row.actionability && row.actionability.recommendedAction || ""),
+        recommendedMessageType: clean_(row.actionability && row.actionability.recommendedMessageType || ""),
+        actionOwner: clean_(row.actionability && row.actionability.actionOwner || row.owner || ""),
+        canonicalLifecycle: {
+          baseState: clean_(row.lifecycle && row.lifecycle.baseState || ""),
+          lifecycleStage: clean_(row.lifecycle && row.lifecycle.lifecycleStage || ""),
+          overlays: Array.isArray(row.lifecycle && row.lifecycle.overlays) ? row.lifecycle.overlays.slice() : [],
+          recommendedNextAction: clean_(row.lifecycle && row.lifecycle.recommendedNextAction || ""),
+          recommendedMessageType: clean_(row.lifecycle && row.lifecycle.recommendedMessageType || ""),
+          actionOwner: clean_(row.lifecycle && row.lifecycle.actionOwner || ""),
+          reason: clean_(row.lifecycle && row.lifecycle.reason || "")
+        }
+      };
+    var out = {
       rowNumber: Number(row.identity && row.identity.rowNumber || 0),
       applicantId: clean_(row.identity && row.identity.applicantId || ""),
       name: clean_(row.applicant && row.applicant.name || ""),
@@ -203,6 +223,10 @@ function admin_searchApplicants(payload) {
         reason: clean_(row.lifecycle && row.lifecycle.reason || "")
       }
     };
+    for (var authorityKey in authorityProjection) {
+      if (Object.prototype.hasOwnProperty.call(authorityProjection, authorityKey)) out[authorityKey] = authorityProjection[authorityKey];
+    }
+    return out;
   });
   return { ok: true, rows: rows };
 }
