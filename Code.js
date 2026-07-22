@@ -9616,6 +9616,10 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
       result: "FAILED",
       code: "SEND_FAILED",
       error: clean_(sendRes.error || "SEND_FAILED"),
+      gmailAttempted: true,
+      gmailAccepted: false,
+      rowPatchConfirmed: false,
+      communicationRecorded: false,
       applicantId: clean_(ctx.applicantId || ""),
       messageType: clean_(ctx.messageType || ""),
       effectiveEmail: clean_(ctx.effectiveEmail || ""),
@@ -9623,78 +9627,108 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
       debugId: requestId
     };
   }
-  var now = new Date();
-  var nextAttempt = Math.max(1, campaignAttemptCount_(ctx.rowObj));
-  var patch = {
-    Email_Status: "SENT",
-    Email_Last_Sent_At: now.toISOString(),
-    Email_Attempt_Count: nextAttempt,
-    Email_Next_Action_Date: computeNextActionDate_(nextAttempt, now)
-  };
-  if (clean_(options.batchLabel || ctx.batchLabel || "")) patch.Email_Campaign_Batch = clean_(options.batchLabel || ctx.batchLabel || "");
-  campaignLog_("GMAIL_PATCH_BEGIN", {
-    applicantId: clean_(ctx.applicantId || ""),
-    recipient: clean_(ctx.effectiveEmail || ""),
-    alias: clean_(sendRes.from || ""),
-    requestId: requestId,
-    batchId: batchId
-  });
-  applyPatch_(ctx.sheet, ctx.rowNumber, patch);
-  campaignLog_("GMAIL_PATCH_END", {
-    applicantId: clean_(ctx.applicantId || ""),
-    recipient: clean_(ctx.effectiveEmail || ""),
-    alias: clean_(sendRes.from || ""),
-    requestId: requestId,
-    batchId: batchId
-  });
-  setCommunicationCooldownState_(ctx.applicantId, ctx.messageType, {
-    sentAt: now.toISOString(),
-    source: "email_dispatch",
-    idempotencyKey: idempotencyKey,
-    batchLabel: batchId,
-    result: "SENT"
-  }, Math.ceil(communicationCooldownMs_() / 1000));
-  recordEmailProcessingResult_(ctx, idempotencyKey, {
-    label: "EMAIL_PROCESSING_RESULT",
-    result: "SENT"
-  });
-  if (manualProbe) {
-    logManualSendProbe_("MANUAL_SEND_PROBE_RESULT", ctx, idempotencyKey, {
-      sendDecision: "SEND",
-      result: "SENT",
-      recipientCount: 1,
-      cooldownSource: "CacheService.getScriptCache"
+  try {
+    var now = new Date();
+    var nextAttempt = Math.max(1, campaignAttemptCount_(ctx.rowObj));
+    var patch = {
+      Email_Status: "SENT",
+      Email_Last_Sent_At: now.toISOString(),
+      Email_Attempt_Count: nextAttempt,
+      Email_Next_Action_Date: computeNextActionDate_(nextAttempt, now)
+    };
+    if (clean_(options.batchLabel || ctx.batchLabel || "")) patch.Email_Campaign_Batch = clean_(options.batchLabel || ctx.batchLabel || "");
+    campaignLog_("GMAIL_PATCH_BEGIN", {
+      applicantId: clean_(ctx.applicantId || ""),
+      recipient: clean_(ctx.effectiveEmail || ""),
+      alias: clean_(sendRes.from || ""),
+      requestId: requestId,
+      batchId: batchId
     });
-    setManualSendProbeStatus_({
+    applyPatch_(ctx.sheet, ctx.rowNumber, patch);
+    campaignLog_("GMAIL_PATCH_END", {
+      applicantId: clean_(ctx.applicantId || ""),
+      recipient: clean_(ctx.effectiveEmail || ""),
+      alias: clean_(sendRes.from || ""),
+      requestId: requestId,
+      batchId: batchId
+    });
+    setCommunicationCooldownState_(ctx.applicantId, ctx.messageType, {
+      sentAt: now.toISOString(),
+      source: "email_dispatch",
+      idempotencyKey: idempotencyKey,
+      batchLabel: batchId,
+      result: "SENT"
+    }, Math.ceil(communicationCooldownMs_() / 1000));
+    recordEmailProcessingResult_(ctx, idempotencyKey, {
+      label: "EMAIL_PROCESSING_RESULT",
+      result: "SENT"
+    });
+    if (manualProbe) {
+      logManualSendProbe_("MANUAL_SEND_PROBE_RESULT", ctx, idempotencyKey, {
+        sendDecision: "SEND",
+        result: "SENT",
+        recipientCount: 1,
+        cooldownSource: "CacheService.getScriptCache"
+      });
+      setManualSendProbeStatus_({
+        applicantId: clean_(ctx.applicantId || ""),
+        messageType: clean_(ctx.messageType || ""),
+        recipient: clean_(ctx.effectiveEmail || ""),
+        result: "SENT",
+        blockCode: "",
+        sentAt: now.toISOString(),
+        idempotencyKey: idempotencyKey
+      });
+    }
+    recordApplicantContactOutcome_(ctx, "SENT", {
+      actorEmail: actorEmail,
+      batchLabel: clean_(options.batchLabel || ctx.batchLabel || ""),
+      subject: clean_(message.subject || ""),
+      sentAt: now.toISOString()
+    });
+    return {
+      ok: true,
+      eligible: true,
+      result: "SENT",
+      gmailAttempted: true,
+      gmailAccepted: true,
+      rowPatchConfirmed: true,
+      communicationRecorded: true,
       applicantId: clean_(ctx.applicantId || ""),
       messageType: clean_(ctx.messageType || ""),
-      recipient: clean_(ctx.effectiveEmail || ""),
-      result: "SENT",
-      blockCode: "",
+      effectiveEmail: clean_(ctx.effectiveEmail || ""),
+      subject: clean_(message.subject || ""),
       sentAt: now.toISOString(),
-      idempotencyKey: idempotencyKey
+      rowNumber: Number(ctx.rowNumber || 0),
+      debugId: clean_(ctx.debugId || options.debugId || newDebugId_()),
+      blockCode: "",
+      blockReason: ""
+    };
+  } catch (postSendErr) {
+    recordEmailProcessingResult_(ctx, idempotencyKey, {
+      label: "EMAIL_RECONCILIATION_REQUIRED",
+      result: "RECONCILIATION_REQUIRED",
+      blockCode: "POST_SEND_PERSISTENCE_INCOMPLETE"
     });
+    return {
+      ok: false,
+      eligible: true,
+      result: "RECONCILIATION_REQUIRED",
+      code: "POST_SEND_PERSISTENCE_INCOMPLETE",
+      error: clean_(postSendErr && postSendErr.message || postSendErr || ""),
+      gmailAttempted: true,
+      gmailAccepted: true,
+      rowPatchConfirmed: false,
+      communicationRecorded: false,
+      applicantId: clean_(ctx.applicantId || ""),
+      messageType: clean_(ctx.messageType || ""),
+      effectiveEmail: clean_(ctx.effectiveEmail || ""),
+      subject: clean_(message.subject || ""),
+      debugId: requestId,
+      blockCode: "POST_SEND_PERSISTENCE_INCOMPLETE",
+      blockReason: "Gmail accepted the message but durable row or communication evidence was not fully confirmed."
+    };
   }
-  recordApplicantContactOutcome_(ctx, "SENT", {
-    actorEmail: actorEmail,
-    batchLabel: clean_(options.batchLabel || ctx.batchLabel || ""),
-    subject: clean_(message.subject || ""),
-    sentAt: now.toISOString()
-  });
-  return {
-    ok: true,
-    eligible: true,
-    result: "SENT",
-    applicantId: clean_(ctx.applicantId || ""),
-    messageType: clean_(ctx.messageType || ""),
-    effectiveEmail: clean_(ctx.effectiveEmail || ""),
-    subject: clean_(message.subject || ""),
-    sentAt: now.toISOString(),
-    rowNumber: Number(ctx.rowNumber || 0),
-    debugId: clean_(ctx.debugId || options.debugId || newDebugId_()),
-    blockCode: "",
-    blockReason: ""
-  };
 }
 
 function automatedStageRunnerDailyPrefix_() {

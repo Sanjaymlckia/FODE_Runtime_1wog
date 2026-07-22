@@ -162,6 +162,52 @@ function withSelectedApplicantBatchSendLock_(adminEmail, dbgId, callback) {
   }
 }
 
+function selectedBatchApplicantOutcome_(applicantId, sendResult, errorOpt) {
+  var result = sendResult && typeof sendResult === "object" ? sendResult : {};
+  var errorMessage = errorOpt ? clean_(errorOpt && errorOpt.message || errorOpt) : "";
+  var resultType = clean_(result.result || "").toUpperCase();
+  var blockCode = clean_(result.blockCode || result.code || "");
+  var gmailAccepted = result.gmailAccepted === true || resultType === "SENT";
+  var rowPatchConfirmed = result.rowPatchConfirmed === true || resultType === "SENT";
+  var communicationRecorded = result.communicationRecorded === true || resultType === "SENT";
+  var outcome = "FAILED";
+  if (resultType === "SENT" && gmailAccepted && rowPatchConfirmed && communicationRecorded) outcome = "SENT";
+  else if (resultType === "BLOCKED" || resultType === "DUPLICATE") outcome = "BLOCKED";
+  else if (resultType === "RECONCILIATION_REQUIRED" || gmailAccepted) outcome = "RECONCILIATION_REQUIRED";
+  else if (errorMessage) outcome = "FAILED";
+  return {
+    applicantId: clean_(applicantId || result.applicantId || ""),
+    outcome: outcome,
+    blockCode: outcome === "BLOCKED" ? (blockCode || "BLOCKED") : "",
+    reason: clean_(result.blockReason || result.reason || result.error || errorMessage || ""),
+    gmailAttempted: result.gmailAttempted === true || gmailAccepted || resultType === "FAILED",
+    gmailAccepted: gmailAccepted,
+    rowPatchConfirmed: rowPatchConfirmed,
+    communicationRecorded: communicationRecorded,
+    messageType: clean_(result.messageType || ""),
+    effectiveEmail: clean_(result.effectiveEmail || ""),
+    debugId: clean_(result.debugId || "")
+  };
+}
+
+function selectedBatchOutcomeTotals_(out) {
+  var outcomes = Array.isArray(out && out.applicantOutcomes) ? out.applicantOutcomes : [];
+  out.attempted = outcomes.length;
+  out.sent = outcomes.filter(function (item) { return item.outcome === "SENT"; }).length;
+  out.blocked = outcomes.filter(function (item) { return item.outcome === "BLOCKED"; }).length;
+  out.failed = outcomes.filter(function (item) { return item.outcome === "FAILED"; }).length;
+  out.reconciliationRequired = outcomes.filter(function (item) { return item.outcome === "RECONCILIATION_REQUIRED"; }).length;
+  out.blockedByReason = {};
+  outcomes.forEach(function (item) {
+    if (item.outcome === "BLOCKED") {
+      var code = clean_(item.blockCode || "BLOCKED");
+      out.blockedByReason[code] = Number(out.blockedByReason[code] || 0) + 1;
+    }
+  });
+  out.result = out.reconciliationRequired ? "RECONCILIATION_REQUIRED" : (out.sent && (out.blocked || out.failed) ? "PARTIAL" : (out.sent && !out.blocked && !out.failed ? "COMPLETE" : (out.blocked && !out.sent && !out.failed ? "BLOCKED" : "PARTIAL")));
+  return out;
+}
+
 function normalizeSelectedApplicantBatchIds_(ids, limitOpt) {
   return batchPolicyNormalizeCandidateIds_(ids, limitOpt || selectedApplicantBatchLimit_());
 }
@@ -489,7 +535,6 @@ function admin_sendSelectedApplicantBatch(payload) {
         cachedCandidateHashPresent: !!cachedHash
       });
     }
-    clearSelectedApplicantBatchPreviewCache_(adminEmail);
     var actor = resolveAdminCommActor_(p);
     var requestId = clean_(dbgId || newDebugId_());
     var batchLabel = "SELECTED_BATCH_SEND::" + requestId;
@@ -512,33 +557,32 @@ function admin_sendSelectedApplicantBatch(payload) {
       skipped: 0,
       failed: 0,
       blocked: 0,
+      reconciliationRequired: 0,
       blockedByReason: {},
+      applicantOutcomes: [],
       sentApplicantIdsSample: [],
       batchId: batchLabel
     };
     candidateIds.forEach(function (applicantId) {
-      out.attempted++;
-      var sendResult = sendApplicantMessage_(applicantId, messageType, {
-        actorEmail: actor.actorEmail,
-        actorRole: actor.actorRole,
-        batchLabel: batchLabel,
-        debugId: requestId,
-        sendSource: "ADMIN_SELECTED_BATCH",
-        unattended: false
-      });
-      var resultType = clean_(sendResult && sendResult.result || "").toUpperCase();
-      if (resultType === "SENT") {
-        out.sent++;
-        if (out.sentApplicantIdsSample.length < 10) out.sentApplicantIdsSample.push(applicantId);
-      } else if (resultType === "BLOCKED") {
-        out.blocked++;
-        var code = clean_(sendResult && (sendResult.blockCode || sendResult.code) || "BLOCKED");
-        out.blockedByReason[code] = Number(out.blockedByReason[code] || 0) + 1;
-      } else {
-        out.failed++;
+      try {
+        var sendResult = sendApplicantMessage_(applicantId, messageType, {
+          actorEmail: actor.actorEmail,
+          actorRole: actor.actorRole,
+          batchLabel: batchLabel,
+          debugId: requestId,
+          sendSource: "ADMIN_SELECTED_BATCH",
+          unattended: false
+        });
+        var outcome = selectedBatchApplicantOutcome_(applicantId, sendResult, null);
+        out.applicantOutcomes.push(outcome);
+        if (outcome.outcome === "SENT" && out.sentApplicantIdsSample.length < 10) out.sentApplicantIdsSample.push(applicantId);
+      } catch (recipientErr) {
+        out.applicantOutcomes.push(selectedBatchApplicantOutcome_(applicantId, null, recipientErr));
       }
     });
+    selectedBatchOutcomeTotals_(out);
     out.skipped = Math.max(0, Number(preview.candidateCount || candidateIds.length) - out.attempted);
+    clearSelectedApplicantBatchPreviewCache_(adminEmail);
     return out;
     });
   });

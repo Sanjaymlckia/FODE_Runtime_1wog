@@ -23,6 +23,7 @@
     eduops_getReconciliation: true,
     eduops_getParityDiagnostics: true,
     eduops_getOperationHistory: true,
+    eduops_recoverCommandReceipt: true,
     eduops_getBatchCommunicationCatalogue: true,
     eduops_previewCommand: true,
     admin_getCapabilityGrantMatrix: true,
@@ -503,23 +504,56 @@
   app.openConfirm = function (options) {
     var opts = options || {};
     var layer = document.getElementById("eduopsConfirmLayer");
+    var text = document.getElementById("eduopsConfirmText");
+    var proceed = document.getElementById("eduopsConfirmProceed");
+    var cancel = document.getElementById("eduopsConfirmCancel");
     app.state.confirm = opts;
     document.getElementById("eduopsConfirmTitle").textContent = opts.title || "Confirm operation";
-    document.getElementById("eduopsConfirmText").innerHTML = opts.html || "";
-    document.getElementById("eduopsConfirmProceed").textContent = opts.proceedLabel || "Confirm operation";
-    document.getElementById("eduopsConfirmCancel").textContent = opts.cancelLabel || "Cancel";
+    text.innerHTML = opts.html || "";
+    text.scrollTop = 0;
+    proceed.textContent = opts.proceedLabel || "Confirm operation";
+    proceed.disabled = false;
+    cancel.textContent = opts.cancelLabel || "Cancel";
+    cancel.disabled = false;
     layer.hidden = false;
     layer.setAttribute("aria-hidden", "false");
-    document.getElementById("eduopsConfirmCancel").focus();
+    document.body.classList.add("eduops-confirm-open");
+    cancel.focus();
   };
   app.closeConfirm = function (restoreFocus) {
     var layer = document.getElementById("eduopsConfirmLayer");
     var source = app.state.confirm && app.state.confirm.source;
+    var cancel = document.getElementById("eduopsConfirmCancel");
+    if (cancel && cancel.disabled && restoreFocus !== false) return;
     layer.hidden = true;
     layer.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("eduops-confirm-open");
     app.state.confirm = null;
     if (restoreFocus !== false && source && typeof source.focus === "function") source.focus();
   };
+  document.addEventListener("keydown", function (event) {
+    var layer = document.getElementById("eduopsConfirmLayer");
+    if (!layer || layer.hidden) return;
+    var cancel = document.getElementById("eduopsConfirmCancel");
+    if (event.key === "Escape") {
+      event.preventDefault();
+      if (!cancel || cancel.disabled) return;
+      app.closeConfirm(true);
+      return;
+    }
+    if (event.key !== "Tab") return;
+    var focusable = Array.prototype.slice.call(layer.querySelectorAll("button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])")).filter(function (el) { return el.offsetParent !== null; });
+    if (!focusable.length) return;
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
 
   app.toast = function (message) {
     var toast = document.getElementById("eduopsToast");

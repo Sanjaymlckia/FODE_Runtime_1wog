@@ -3,7 +3,18 @@ function eduopsReceiptId_() {
 }
 
 function eduopsApplicantOutcomes_(preview, result) {
-  if (Array.isArray(result.applicantOutcomes)) return result.applicantOutcomes;
+  if (Array.isArray(result.applicantOutcomes)) return result.applicantOutcomes.map(function (item) {
+    return {
+      applicantId: eduopsClean_(item && item.applicantId || ""),
+      outcome: eduopsUpper_(item && item.outcome || "", "FAILED"),
+      blockCode: eduopsClean_(item && item.blockCode || ""),
+      reason: eduopsClean_(item && item.reason || ""),
+      gmailAttempted: item && item.gmailAttempted === true,
+      gmailAccepted: item && item.gmailAccepted === true,
+      rowPatchConfirmed: item && item.rowPatchConfirmed === true,
+      communicationRecorded: item && item.communicationRecorded === true
+    };
+  });
   if (Array.isArray(result.recipients)) {
     return result.recipients.map(function (item) {
       return {
@@ -31,9 +42,13 @@ function eduopsBuildReceipt_(preview, authorityResult) {
   var resultState = eduopsUpper_(result.result || result.state || "", "");
   var ok = result.ok !== false && resultState !== "BLOCKED" && resultState !== "ERROR";
   var applicantOutcomes = eduopsApplicantOutcomes_(preview, result);
-  var completeCount = applicantOutcomes.filter(function (item) { return item.outcome === "COMPLETE"; }).length;
+  var sentCount = applicantOutcomes.filter(function (item) { return item.outcome === "SENT" || item.outcome === "COMPLETE"; }).length;
+  var completeCount = sentCount;
   var blockedCount = applicantOutcomes.filter(function (item) { return item.outcome === "BLOCKED"; }).length;
-  var unresolvedCount = applicantOutcomes.length - completeCount - blockedCount;
+  var failedCount = applicantOutcomes.filter(function (item) { return item.outcome === "FAILED"; }).length;
+  var reconciliationRequiredCount = applicantOutcomes.filter(function (item) { return item.outcome === "RECONCILIATION_REQUIRED"; }).length;
+  var unresolvedCount = applicantOutcomes.length - sentCount - blockedCount - failedCount - reconciliationRequiredCount;
+  var receiptOutcome = reconciliationRequiredCount || unresolvedCount ? "RECONCILIATION_REQUIRED" : (sentCount && (blockedCount || failedCount) ? "PARTIAL" : (sentCount && !blockedCount && !failedCount ? "COMPLETE" : (blockedCount && !sentCount && !failedCount ? "BLOCKED" : "PARTIAL")));
   var receipt = {
     schemaVersion: "EDUOPS_RECEIPT_V1",
     receiptId: eduopsReceiptId_(),
@@ -53,12 +68,15 @@ function eduopsBuildReceipt_(preview, authorityResult) {
     } : null,
     actor: preview.actor || "",
     at: new Date().toISOString(),
-    outcome: unresolvedCount ? "PARTIAL" : blockedCount && completeCount ? "PARTIAL" : ok && !blockedCount ? "COMPLETE" : "BLOCKED",
+    outcome: receiptOutcome,
     authorityCode: eduopsClean_(result.code || (ok ? "OK" : "AUTHORITY_REJECTED")),
     authorityMessage: eduopsClean_(result.message || result.error || ""),
     applicantOutcomes: applicantOutcomes,
     completeCount: completeCount,
+    sentCount: sentCount,
     blockedCount: blockedCount,
+    failedCount: failedCount,
+    reconciliationRequiredCount: reconciliationRequiredCount,
     unresolvedCount: unresolvedCount
   };
   try {
@@ -90,4 +108,26 @@ function eduops_getOperationHistory(payload) {
   var receipts = [];
   try { receipts = JSON.parse(CacheService.getUserCache().get(key) || "[]"); } catch (_err) {}
   return { ok: true, readOnly: true, schemaVersion: "EDUOPS_OPERATION_HISTORY_V1", authoritySource: "Audit/history services", applicantId: applicantId, receipts: receipts, communicationReceipts: receipts.filter(function (receipt) { return receipt.eventType === "COMMUNICATION"; }) };
+}
+
+function eduops_recoverCommandReceipt(payload) {
+  eduopsRequireAccess_();
+  var p = payload && typeof payload === "object" ? payload : {};
+  var previewId = eduopsClean_(p.previewId || "");
+  var idempotencyKey = eduopsClean_(p.idempotencyKey || "");
+  if (!previewId || !idempotencyKey) return { ok: false, readOnly: true, code: "RECOVERY_CONTEXT_REQUIRED", receipt: null };
+  var cached = CacheService.getUserCache().get(eduopsPreviewCacheKey_(previewId));
+  var contextFingerprint = "";
+  if (cached) {
+    try { contextFingerprint = eduopsIdempotencyContext_(JSON.parse(cached)); } catch (_err) {}
+  }
+  var receipt = eduopsReadIdempotentReceipt_(idempotencyKey, contextFingerprint);
+  return {
+    ok: !!receipt,
+    readOnly: true,
+    code: receipt ? "RECEIPT_FOUND" : "RECEIPT_NOT_FOUND",
+    previewId: previewId,
+    idempotencyKey: idempotencyKey,
+    receipt: receipt || null
+  };
 }

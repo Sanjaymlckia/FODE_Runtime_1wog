@@ -116,7 +116,9 @@
   }
   function renderReceipt() {
     var receipt = app.state.batch.receipt || {};
-    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-12"><header><div><h2>' + app.esc(receipt.communication && receipt.communication.templateLabel || receipt.publicLabel || app.authorityUnavailable("receipt label")) + '</h2><p>' + app.esc(receipt.receiptId || app.authorityUnavailable("receipt identity")) + '</p></div></header><dl class="eduops-definition-list"><div><dt>Outcome</dt><dd>' + app.esc(receipt.outcome || app.authorityUnavailable("receipt outcome")) + '</dd></div><div><dt>Communication</dt><dd>' + app.esc(receipt.communication && receipt.communication.templateLabel || receipt.publicLabel || app.authorityUnavailable("receipt label")) + '</dd></div><div><dt>Subject</dt><dd>' + app.esc(receipt.communication && receipt.communication.subject || app.authorityUnavailable("receipt subject")) + '</dd></div><div><dt>Completed recipients</dt><dd>' + Number(receipt.completeCount || 0) + '</dd></div></dl></section></div>';
+    var outcomes = receipt.applicantOutcomes || [];
+    var outcomeTable = outcomes.length ? '<details class="eduops-technical-details" open><summary>Recipient outcomes</summary><div class="eduops-table-scroller"><table class="eduops-work-table"><thead><tr><th>Applicant</th><th>Outcome</th><th>Block code</th><th>Reason</th><th>Gmail</th><th>Row patch</th><th>Communication record</th></tr></thead><tbody>' + outcomes.map(function (item) { return '<tr><td>' + app.esc(item.applicantId || "") + '</td><td>' + app.esc(item.outcome || "") + '</td><td>' + app.esc(item.blockCode || "") + '</td><td>' + app.esc(item.reason || "") + '</td><td>' + app.esc(item.gmailAccepted ? "Accepted" : (item.gmailAttempted ? "Attempted" : "Not attempted")) + '</td><td>' + app.esc(item.rowPatchConfirmed ? "Confirmed" : "Not confirmed") + '</td><td>' + app.esc(item.communicationRecorded ? "Recorded" : "Not recorded") + '</td></tr>'; }).join("") + '</tbody></table></div></details>' : "";
+    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-12"><header><div><h2>' + app.esc(receipt.communication && receipt.communication.templateLabel || receipt.publicLabel || app.authorityUnavailable("receipt label")) + '</h2><p>' + app.esc(receipt.receiptId || app.authorityUnavailable("receipt identity")) + '</p></div></header><dl class="eduops-definition-list"><div><dt>Outcome</dt><dd>' + app.esc(receipt.outcome || app.authorityUnavailable("receipt outcome")) + '</dd></div><div><dt>Communication</dt><dd>' + app.esc(receipt.communication && receipt.communication.templateLabel || receipt.publicLabel || app.authorityUnavailable("receipt label")) + '</dd></div><div><dt>Subject</dt><dd>' + app.esc(receipt.communication && receipt.communication.subject || app.authorityUnavailable("receipt subject")) + '</dd></div><div><dt>Sent count</dt><dd>' + Number(receipt.sentCount || receipt.completeCount || 0) + '</dd></div><div><dt>Blocked count</dt><dd>' + Number(receipt.blockedCount || 0) + '</dd></div><div><dt>Failed count</dt><dd>' + Number(receipt.failedCount || 0) + '</dd></div><div><dt>Reconciliation-required count</dt><dd>' + Number(receipt.reconciliationRequiredCount || 0) + '</dd></div><div><dt>Unresolved count</dt><dd>' + Number(receipt.unresolvedCount || 0) + '</dd></div></dl>' + outcomeTable + '</section></div>';
   }
   function operationStatus(batch) {
     if (batch.receipt) return "Operation complete";
@@ -193,6 +195,19 @@
   function execute() {
     var batch = app.state.batch;
     var recipients = (batch.preview.recipients || []).filter(function (recipient) { return recipient.included === true; });
+    function confirmationContextHtml(message) {
+      return '<div class="eduops-warning-state"><strong>' + app.esc(message) + '</strong><span>Some messages may already have been sent. Reconcile this batch before retrying.</span></div><dl class="eduops-definition-list"><div><dt>Preview ID</dt><dd>' + app.esc(batch.preview.previewId || "") + '</dd></div><div><dt>Idempotency key</dt><dd>' + app.esc(batch.preview.idempotencyKey || "") + '</dd></div><div><dt>Candidate count</dt><dd>' + Number(batch.preview.executionCohortSize || recipients.length || 0) + '</dd></div><div><dt>Confirmed at</dt><dd>' + app.esc(batch.executionConfirmedAt || "") + '</dd></div></dl>';
+    }
+    function completeWithReceipt(receipt, token) {
+      if (token) app.finishControlAction(token, "SUCCESS", "Batch receipt returned.");
+      app.state.commandPreview = null;
+      app.state.commandIdempotencyKey = "";
+      app.state.commandExecutable = false;
+      app.closeConfirm(false);
+      batch.receipt = receipt;
+      batch.step = "receipt";
+      render();
+    }
     app.openConfirm({
       title: batch.preview.summary,
       html: '<p><strong>' + app.esc(batch.preview.summary) + '</strong></p><dl class="eduops-definition-list"><div><dt>Master cohort</dt><dd>' + Number(batch.preview.masterCohortSize || 0) + '</dd></div><div><dt>This execution</dt><dd>' + Number(batch.preview.executionCohortSize || 0) + '</dd></div><div><dt>Remaining after this execution</dt><dd>' + Number(batch.preview.remainingAfterExecution || 0) + '</dd></div><div><dt>Subject</dt><dd>' + app.esc(batch.preview.subject || "") + '</dd></div><div><dt>Expires</dt><dd>' + app.esc(batch.preview.expiresAt || app.authorityUnavailable("preview expiry")) + '</dd></div></dl>' + recipientTable(recipients, false),
@@ -200,8 +215,47 @@
       cancelLabel: "Return to preview",
       source: dom.footer.querySelector("[data-batch-execute]"),
       onProceed: function () {
+        batch.executionConfirmedAt = new Date().toISOString();
         var executeToken = app.beginControlAction(byId("eduopsConfirmProceed"), "Executing...", "Executing the confirmed batch once.");
-        app.call("eduops_executeCommand", { previewId: batch.preview.previewId, idempotencyKey: batch.preview.idempotencyKey, confirmation: true }).then(function (receipt) { app.finishControlAction(executeToken, "SUCCESS", "Batch receipt returned."); app.state.commandPreview = null; app.state.commandIdempotencyKey = ""; app.state.commandExecutable = false; app.closeConfirm(false); batch.receipt = receipt; batch.step = "receipt"; render(); }).catch(function (error) { app.finishControlAction(executeToken, "BLOCKED", "Batch blocked: " + (error.message || error)); app.invalidateOperationAuthority("Batch execution was blocked."); render(); });
+        var cancel = byId("eduopsConfirmCancel");
+        if (cancel) cancel.disabled = true;
+        var settled = false;
+        var timeoutMs = Number(app.batchExecutionTimeoutMs || 90000);
+        var timer = setTimeout(function () {
+          if (settled) return;
+          var text = byId("eduopsConfirmText");
+          var proceed = byId("eduopsConfirmProceed");
+          if (text) text.innerHTML = confirmationContextHtml("Execution outcome not yet confirmed.");
+          if (proceed) proceed.disabled = true;
+          app.call("eduops_recoverCommandReceipt", { previewId: batch.preview.previewId, idempotencyKey: batch.preview.idempotencyKey }).then(function (recovery) {
+            if (settled) return;
+            if (recovery && recovery.receipt) {
+              settled = true;
+              clearTimeout(timer);
+              return completeWithReceipt(recovery.receipt, executeToken);
+            }
+            if (cancel) cancel.disabled = false;
+            app.setInteractionState("BLOCKED", "Execution outcome not yet confirmed. Reconcile before retrying.");
+          }).catch(function () {
+            if (cancel) cancel.disabled = false;
+            app.setInteractionState("BLOCKED", "Execution outcome not yet confirmed. Reconcile before retrying.");
+          });
+        }, timeoutMs);
+        app.call("eduops_executeCommand", { previewId: batch.preview.previewId, idempotencyKey: batch.preview.idempotencyKey, confirmation: true }).then(function (receipt) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          completeWithReceipt(receipt, executeToken);
+        }).catch(function (error) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          app.finishControlAction(executeToken, "BLOCKED", "Batch blocked: " + (error.message || error));
+          if (cancel) cancel.disabled = false;
+          var text = byId("eduopsConfirmText");
+          if (text) text.innerHTML = confirmationContextHtml("Execution was blocked: " + (error.message || error));
+          render();
+        });
       }
     });
   }

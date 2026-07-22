@@ -305,7 +305,7 @@ assert.match(selectedBatchPreview, /writeSelectedApplicantBatchPreviewCache_[\s\
 assert.match(selectedBatchSend, /isBatchSendEnabled_\(\) !== true/, "Selected cohort send must preserve the batch-send feature gate");
 assert.match(selectedBatchSend, /readSelectedApplicantBatchPreviewCache_\(adminEmail\)/, "Selected cohort send must require a cached preview");
 assert.match(selectedBatchSend, /withSelectedApplicantBatchSendLock_\(adminEmail, dbgId/, "Selected cohort send must be protected by a server-side user lock");
-assert.match(selectedBatchSend, /clearSelectedApplicantBatchPreviewCache_\(adminEmail\)[\s\S]*sendApplicantMessage_\(applicantId, messageType/, "Selected cohort send must consume the preview snapshot before sending");
+assert.match(selectedBatchSend, /sendApplicantMessage_\(applicantId, messageType[\s\S]*selectedBatchOutcomeTotals_\(out\)[\s\S]*clearSelectedApplicantBatchPreviewCache_\(adminEmail\)/, "Selected cohort send must preserve preview evidence until exact terminal outcomes are accumulated");
 assert.match(selectedBatchSend, /var candidateIds = Array\.isArray\(preview && preview\.candidateIds\)[\s\S]*candidateIds\.forEach/, "Selected/manual send must reuse cached capped candidates instead of raw selected rows");
 assert.doesNotMatch(selectedBatchSend, /p\.applicantIds|payload\.applicantIds/, "Selected/manual send must not rebuild recipients from the raw selected payload");
 const sixtyNineSelected = Array.from({ length: 69 }, (_, i) => `FODE-26-${String(i + 1).padStart(6, "0")}`);
