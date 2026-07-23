@@ -84,6 +84,51 @@
       return '<tr><td><strong>' + app.esc(row.name || row.displayName || "Unnamed") + '</strong><span>' + app.esc(row.applicantId) + '</span></td><td>' + app.esc(row.email || app.authorityUnavailable("recipient")) + '</td><td>' + app.esc(app.authorityLabel(p.actionability, "actionability")) + '</td><td><strong>' + app.esc(app.authorityLabel(p.lifecycle, "lifecycle state")) + '</strong><span>Finance: ' + app.esc(app.authorityLabel(p.finance, "finance")) + '</span><span>' + app.esc(row.coolingOffUntil ? "Cooling until " + row.coolingOffUntil : "No cooling expiry returned by Communication Authority") + '</span></td><td><strong>' + app.esc(row.authorityDecisionLabel || (excluded ? "Excluded by operator intent" : app.authorityUnavailable("recipient decision"))) + '</strong><span>' + app.esc(row.reason || (excluded ? "Excluded by operator intent" : app.authorityUnavailable("recipient reason"))) + '</span></td><td>' + app.esc(row.templateLabel || "Not selected") + '</td><td>' + button + '</td></tr>';
     }).join("") + '</tbody></table></div>';
   }
+  function definitionList(rows) {
+    return '<dl class="eduops-definition-list">' + (rows || []).map(function (item) {
+      return '<div><dt>' + app.esc(item[0]) + '</dt><dd>' + app.esc(item[1] == null ? "" : item[1]) + '</dd></div>';
+    }).join("") + '</dl>';
+  }
+  function previewExpired(preview) {
+    var expires = Date.parse(preview && preview.expiresAt || "");
+    return Number.isFinite(expires) && expires <= Date.now();
+  }
+  function confirmationDiagnostic(code, reason, extra) {
+    var batch = app.state.batch || {};
+    var preview = batch.preview || {};
+    var diag = {
+      blockCode: code || "BATCH_CONFIRMATION_BLOCKED",
+      blockReason: reason || "Batch confirmation could not continue.",
+      previewIdPresent: !!preview.previewId,
+      idempotencyKeyPresent: !!preview.idempotencyKey,
+      previewExpired: previewExpired(preview),
+      modalState: app.state.confirm ? "OPEN" : "CLOSED",
+      commandStarted: batch.executionStarted === true,
+      receiptReturned: !!batch.receipt
+    };
+    Object.keys(extra || {}).forEach(function (key) { diag[key] = extra[key]; });
+    batch.confirmationDiagnostic = diag;
+    return diag;
+  }
+  function diagnosticHtml(diag) {
+    if (!diag) return "";
+    return '<div class="eduops-error-state"><strong>' + app.esc(diag.blockCode) + '</strong><span>' + app.esc(diag.blockReason) + '</span></div>' + definitionList([
+      ["blockCode", diag.blockCode],
+      ["blockReason", diag.blockReason],
+      ["previewIdPresent", diag.previewIdPresent],
+      ["idempotencyKeyPresent", diag.idempotencyKeyPresent],
+      ["previewExpired", diag.previewExpired],
+      ["modalState", diag.modalState],
+      ["commandStarted", diag.commandStarted],
+      ["receiptReturned", diag.receiptReturned]
+    ]);
+  }
+  function partitionIdentity(preview) {
+    var parts = (preview && preview.partitions || []).map(function (part) {
+      return (part.label || "Partition") + " (" + Number(part.memberCount || 0) + ")";
+    }).join("; ");
+    return parts || preview && preview.queryFingerprint || app.authorityUnavailable("partition identity");
+  }
   function templateCards(batch) {
     if (batch.catalogueLoading) return '<div class="eduops-loading-state"><strong>Evaluating complete communication catalogue</strong><span>Communication Authority is evaluating the exact execution cohort.</span></div>';
     if (batch.authorityError) return '<div class="eduops-error-state"><strong>Authoritative communication decision unavailable.</strong><span>' + app.esc(batch.authorityError) + '</span><button class="eduops-button eduops-button-secondary" type="button" data-batch-retry-catalogue>Refresh or retry</button></div>';
@@ -112,7 +157,7 @@
   function renderPreview() {
     var preview = app.state.batch.preview || {};
     var template = preview.selectedTemplate || {};
-    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-12"><header><div><span class="eduops-eyebrow">Communication preview</span><h2>' + app.esc(preview.summary || app.authorityUnavailable("communication preview")) + '</h2><p>No execution has occurred.</p></div><span class="eduops-capability-state" data-state="' + (preview.executable === true ? "READY" : "BLOCKED") + '">' + app.esc(preview.statusLabel || app.authorityUnavailable("preview status")) + '</span></header><div class="eduops-form-grid"><label class="eduops-field eduops-field-wide">Canonical communication<input type="text" readonly value="' + app.esc(template.label || app.authorityUnavailable("template")) + '"></label><label class="eduops-field eduops-field-wide">Subject<input type="text" readonly value="' + app.esc(preview.subject || "") + '"></label><label class="eduops-field eduops-field-wide">Full message body<textarea rows="12" readonly>' + app.esc(preview.body || "") + '</textarea></label></div><p class="eduops-action-reason">' + app.esc(preview.statusReason || template.editingReason || app.authorityUnavailable("preview reason")) + '</p>' + recipientTable(preview.recipients || [], false) + '<details class="eduops-technical-details"><summary>Technical details</summary><dl class="eduops-definition-list"><div><dt>Preview ID</dt><dd>' + app.esc(preview.previewId) + '</dd></div><div><dt>Snapshot</dt><dd>' + app.esc(preview.snapshotId) + '</dd></div><div><dt>Expires</dt><dd>' + app.esc(app.formatPngDate(preview.expiresAt) || app.authorityUnavailable("preview expiry")) + '</dd></div><div><dt>Expiry (ISO)</dt><dd>' + app.esc(preview.expiresAt) + '</dd></div><div><dt>Query fingerprint</dt><dd>' + app.esc(preview.queryFingerprint) + '</dd></div><div><dt>Idempotency key</dt><dd>' + app.esc(preview.idempotencyKey) + '</dd></div><div><dt>Required capability</dt><dd>' + app.esc(preview.requiredCapability) + '</dd></div></dl></details></section></div>';
+    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-12"><header><div><span class="eduops-eyebrow">Communication preview</span><h2>' + app.esc(preview.summary || app.authorityUnavailable("communication preview")) + '</h2><p>No execution has occurred.</p></div><span class="eduops-capability-state" data-state="' + (preview.executable === true ? "READY" : "BLOCKED") + '">' + app.esc(preview.statusLabel || app.authorityUnavailable("preview status")) + '</span></header><div class="eduops-form-grid"><label class="eduops-field eduops-field-wide">Canonical communication<input type="text" readonly value="' + app.esc(template.label || app.authorityUnavailable("template")) + '"></label><label class="eduops-field eduops-field-wide">Subject<input type="text" readonly value="' + app.esc(preview.subject || "") + '"></label><label class="eduops-field eduops-field-wide">Full message body<textarea rows="12" readonly>' + app.esc(preview.body || "") + '</textarea></label></div><p class="eduops-action-reason">' + app.esc(preview.statusReason || template.editingReason || app.authorityUnavailable("preview reason")) + '</p>' + diagnosticHtml(app.state.batch.confirmationDiagnostic) + recipientTable(preview.recipients || [], false) + '<details class="eduops-technical-details"><summary>Technical details</summary><dl class="eduops-definition-list"><div><dt>Preview ID</dt><dd>' + app.esc(preview.previewId) + '</dd></div><div><dt>Snapshot</dt><dd>' + app.esc(preview.snapshotId) + '</dd></div><div><dt>Expires</dt><dd>' + app.esc(app.formatPngDate(preview.expiresAt) || app.authorityUnavailable("preview expiry")) + '</dd></div><div><dt>Expiry (ISO)</dt><dd>' + app.esc(preview.expiresAt) + '</dd></div><div><dt>Query fingerprint</dt><dd>' + app.esc(preview.queryFingerprint) + '</dd></div><div><dt>Idempotency key</dt><dd>' + app.esc(preview.idempotencyKey) + '</dd></div><div><dt>Required capability</dt><dd>' + app.esc(preview.requiredCapability) + '</dd></div></dl></details></section></div>';
   }
   function renderReceipt() {
     var receipt = app.state.batch.receipt || {};
@@ -177,6 +222,9 @@
     app.call("eduops_previewCommand", { operation: batch.operation, product: batch.binding.product, snapshotId: batch.binding.snapshotId, queryFingerprint: batch.binding.queryFingerprint, executionLimit: batch.binding.executionLimit, selection: batch.binding, idempotencyKey: key, draft: { messageType: batch.messageType } }).then(function (preview) {
       app.finishControlAction(token, preview.executable === true ? "SUCCESS" : "BLOCKED", preview.statusReason || preview.statusLabel || app.authorityUnavailable("batch preview"));
       batch.preview = preview;
+      batch.confirmationDiagnostic = null;
+      batch.executionStarted = false;
+      batch.receiptReturned = false;
       app.state.commandPreview = preview;
       app.state.commandIdempotencyKey = key;
       app.state.commandExecutable = false;
@@ -194,9 +242,16 @@
   }
   function execute() {
     var batch = app.state.batch;
-    var recipients = (batch.preview.recipients || []).filter(function (recipient) { return recipient.included === true; });
+    var preview = batch && batch.preview || {};
+    var recipients = (preview.recipients || []).filter(function (recipient) { return recipient.included === true; });
+    function block(code, reason, extra) {
+      var diag = confirmationDiagnostic(code, reason, extra);
+      app.setInteractionState("BLOCKED", diag.blockCode + ": " + diag.blockReason);
+      render();
+      return diag;
+    }
     function confirmationContextHtml(message) {
-      return '<div class="eduops-warning-state"><strong>' + app.esc(message) + '</strong><span>Some messages may already have been sent. Reconcile this batch before retrying.</span></div><dl class="eduops-definition-list"><div><dt>Preview ID</dt><dd>' + app.esc(batch.preview.previewId || "") + '</dd></div><div><dt>Idempotency key</dt><dd>' + app.esc(batch.preview.idempotencyKey || "") + '</dd></div><div><dt>Candidate count</dt><dd>' + Number(batch.preview.executionCohortSize || recipients.length || 0) + '</dd></div><div><dt>Confirmed at</dt><dd>' + app.esc(batch.executionConfirmedAt || "") + '</dd></div></dl>';
+      return '<div class="eduops-warning-state"><strong>' + app.esc(message) + '</strong><span>Some messages may already have been sent. Reconcile this batch before retrying.</span></div>' + definitionList([["Preview ID", batch.preview.previewId || ""], ["Idempotency key", batch.preview.idempotencyKey || ""], ["Candidate count", Number(batch.preview.executionCohortSize || recipients.length || 0)], ["Confirmed at", batch.executionConfirmedAt || ""]]);
     }
     function completeWithReceipt(receipt, token) {
       if (token) app.finishControlAction(token, "SUCCESS", "Batch receipt returned.");
@@ -205,59 +260,90 @@
       app.state.commandExecutable = false;
       app.closeConfirm(false);
       batch.receipt = receipt;
+      batch.receiptReturned = true;
       batch.step = "receipt";
       render();
     }
-    app.openConfirm({
-      title: batch.preview.summary,
-      html: '<p><strong>' + app.esc(batch.preview.summary) + '</strong></p><dl class="eduops-definition-list"><div><dt>Master cohort</dt><dd>' + Number(batch.preview.masterCohortSize || 0) + '</dd></div><div><dt>This execution</dt><dd>' + Number(batch.preview.executionCohortSize || 0) + '</dd></div><div><dt>Remaining after this execution</dt><dd>' + Number(batch.preview.remainingAfterExecution || 0) + '</dd></div><div><dt>Subject</dt><dd>' + app.esc(batch.preview.subject || "") + '</dd></div><div><dt>Expires</dt><dd>' + app.esc(app.formatPngDate(batch.preview.expiresAt) || app.authorityUnavailable("preview expiry")) + '</dd></div></dl><details class="eduops-technical-details"><summary>Technical details</summary>' + definition([["Expiry (ISO)", batch.preview.expiresAt]]) + '</details>' + recipientTable(recipients, false),
-      proceedLabel: batch.preview.summary,
-      cancelLabel: "Return to preview",
-      source: dom.footer.querySelector("[data-batch-execute]"),
-      onProceed: function () {
-        batch.executionConfirmedAt = new Date().toISOString();
-        var executeToken = app.beginControlAction(byId("eduopsConfirmProceed"), "Executing...", "Executing the confirmed batch once.");
-        var cancel = byId("eduopsConfirmCancel");
-        if (cancel) cancel.disabled = true;
-        var settled = false;
-        var timeoutMs = Number(app.batchExecutionTimeoutMs || 90000);
-        var timer = setTimeout(function () {
-          if (settled) return;
-          var text = byId("eduopsConfirmText");
-          var proceed = byId("eduopsConfirmProceed");
-          if (text) text.innerHTML = confirmationContextHtml("Execution outcome not yet confirmed.");
-          if (proceed) proceed.disabled = true;
-          app.call("eduops_recoverCommandReceipt", { previewId: batch.preview.previewId, idempotencyKey: batch.preview.idempotencyKey }).then(function (recovery) {
+    if (!preview || preview.executable !== true) return block("BATCH_CONFIRMATION_AUTHORITY_BLOCKED", preview.statusReason || preview.message || "Authoritative batch preview is not executable.");
+    if (!preview.previewId || !preview.idempotencyKey) return block("BATCH_CONFIRMATION_IDENTITY_MISSING", "Preview ID and idempotency key are required before final confirmation.");
+    if (previewExpired(preview)) return block("BATCH_CONFIRMATION_PREVIEW_EXPIRED", "The authoritative preview expired before final confirmation.");
+    if (batch.executionStarted === true && !batch.receipt) return block("BATCH_CONFIRMATION_COMMAND_REJECTED", "A prior execution attempt has no receipt. Reconcile before retrying.", { commandStarted: true });
+    if (app.state.confirm && app.state.confirm.batchPreviewId === preview.previewId) {
+      var cancel = byId("eduopsConfirmCancel");
+      if (cancel && typeof cancel.focus === "function") cancel.focus();
+      return;
+    }
+    if (app.state.confirm) return block("BATCH_CONFIRMATION_MODAL_FAILED", "Another confirmation modal is already open.");
+    try {
+      app.openConfirm({
+        title: batch.preview.summary,
+        html: '<p><strong>' + app.esc(batch.preview.summary) + '</strong></p><div class="eduops-warning-state"><strong>This final confirmation sends email.</strong><span>Proceed only if this exact batch preview is approved.</span></div>' + definitionList([["Template / message type", batch.preview.selectedTemplate && (batch.preview.selectedTemplate.label || batch.preview.selectedTemplate.messageType || batch.preview.selectedTemplate.templateId) || app.authorityUnavailable("template")], ["Recipient count", Number(batch.preview.executionCohortSize || recipients.length || 0)], ["Partition / cohort identity", partitionIdentity(batch.preview)], ["Preview ID", batch.preview.previewId], ["Expires", app.formatPngDate(batch.preview.expiresAt) || app.authorityUnavailable("preview expiry")], ["Subject", batch.preview.subject || ""]]) + '<details class="eduops-technical-details"><summary>Technical details</summary>' + definitionList([["Expiry (ISO)", batch.preview.expiresAt], ["Idempotency key", batch.preview.idempotencyKey], ["Query fingerprint", batch.preview.queryFingerprint || ""], ["Snapshot", batch.preview.snapshotId || ""]]) + '</details>' + recipientTable(recipients, false),
+        proceedLabel: batch.preview.summary,
+        cancelLabel: "Return to preview",
+        source: dom.footer.querySelector("[data-batch-execute]"),
+        batchPreviewId: batch.preview.previewId,
+        batchIdempotencyKey: batch.preview.idempotencyKey,
+        onProceed: function () {
+          if (batch.executionStarted === true) { confirmationDiagnostic("BATCH_CONFIRMATION_COMMAND_REJECTED", "A batch execution attempt is already in progress or awaiting receipt."); app.setInteractionState("BLOCKED", "BATCH_CONFIRMATION_COMMAND_REJECTED: A batch execution attempt is already in progress or awaiting receipt."); return; }
+          batch.executionConfirmedAt = new Date().toISOString();
+          batch.executionStarted = true;
+          batch.confirmationDiagnostic = null;
+          var executeToken = app.beginControlAction(byId("eduopsConfirmProceed"), "Executing...", "Executing the confirmed batch once.");
+          var cancel = byId("eduopsConfirmCancel");
+          if (cancel) cancel.disabled = true;
+          var settled = false;
+          var timeoutMs = Number(app.batchExecutionTimeoutMs || 90000);
+          var timer = setTimeout(function () {
             if (settled) return;
-            if (recovery && recovery.receipt) {
-              settled = true;
-              clearTimeout(timer);
-              return completeWithReceipt(recovery.receipt, executeToken);
+            var text = byId("eduopsConfirmText");
+            var proceed = byId("eduopsConfirmProceed");
+            if (text) text.innerHTML = confirmationContextHtml("Execution outcome not yet confirmed.");
+            if (proceed) proceed.disabled = true;
+            app.call("eduops_recoverCommandReceipt", { previewId: batch.preview.previewId, idempotencyKey: batch.preview.idempotencyKey }).then(function (recovery) {
+              if (settled) return;
+              if (recovery && recovery.receipt) {
+                settled = true;
+                clearTimeout(timer);
+                return completeWithReceipt(recovery.receipt, executeToken);
+              }
+              if (cancel) cancel.disabled = false;
+              confirmationDiagnostic("BATCH_CONFIRMATION_COMMAND_REJECTED", "Execution outcome not yet confirmed. Reconcile before retrying.");
+              app.setInteractionState("BLOCKED", "Execution outcome not yet confirmed. Reconcile before retrying.");
+            }).catch(function () {
+              if (cancel) cancel.disabled = false;
+              confirmationDiagnostic("BATCH_CONFIRMATION_COMMAND_REJECTED", "Execution outcome not yet confirmed. Reconcile before retrying.");
+              app.setInteractionState("BLOCKED", "Execution outcome not yet confirmed. Reconcile before retrying.");
+            });
+          }, timeoutMs);
+          app.call("eduops_executeCommand", { previewId: batch.preview.previewId, idempotencyKey: batch.preview.idempotencyKey, confirmation: true }).then(function (receipt) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            if (!receipt || !receipt.receiptId) {
+              if (cancel) cancel.disabled = false;
+              confirmationDiagnostic("BATCH_CONFIRMATION_COMMAND_REJECTED", "Execution returned without a receipt. Reconcile before retrying.");
+              app.finishControlAction(executeToken, "BLOCKED", "Execution returned without a receipt.");
+              var receiptText = byId("eduopsConfirmText");
+              if (receiptText) receiptText.innerHTML = confirmationContextHtml("Execution returned without a receipt.");
+              return;
             }
+            completeWithReceipt(receipt, executeToken);
+          }).catch(function (error) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            app.finishControlAction(executeToken, "BLOCKED", "Batch blocked: " + (error.message || error));
             if (cancel) cancel.disabled = false;
-            app.setInteractionState("BLOCKED", "Execution outcome not yet confirmed. Reconcile before retrying.");
-          }).catch(function () {
-            if (cancel) cancel.disabled = false;
-            app.setInteractionState("BLOCKED", "Execution outcome not yet confirmed. Reconcile before retrying.");
+            confirmationDiagnostic("BATCH_CONFIRMATION_COMMAND_REJECTED", String(error.message || error || "Batch execution command was rejected."));
+            var text = byId("eduopsConfirmText");
+            if (text) text.innerHTML = confirmationContextHtml("Execution was blocked: " + (error.message || error));
+            render();
           });
-        }, timeoutMs);
-        app.call("eduops_executeCommand", { previewId: batch.preview.previewId, idempotencyKey: batch.preview.idempotencyKey, confirmation: true }).then(function (receipt) {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timer);
-          completeWithReceipt(receipt, executeToken);
-        }).catch(function (error) {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timer);
-          app.finishControlAction(executeToken, "BLOCKED", "Batch blocked: " + (error.message || error));
-          if (cancel) cancel.disabled = false;
-          var text = byId("eduopsConfirmText");
-          if (text) text.innerHTML = confirmationContextHtml("Execution was blocked: " + (error.message || error));
-          render();
-        });
-      }
-    });
+        }
+      });
+    } catch (error) {
+      return block("BATCH_CONFIRMATION_MODAL_FAILED", String(error && error.message || error || "Batch confirmation modal could not be opened."));
+    }
   }
 
   app.openBatch = function (source) {
