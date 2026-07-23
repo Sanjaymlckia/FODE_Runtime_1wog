@@ -1,5 +1,11 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const {
+  createAuthRequiredError,
+  detectAuthRequirement,
+  launchAdminContext,
+  closeAdminContext
+} = require("./auth-fode-admin-playwright");
 
 const READ_ONLY_RPC_ALLOWLIST = Object.freeze({
   "finance-summary": "admin_getCanonicalFinanceSummary",
@@ -70,6 +76,8 @@ async function findRpcFrame(page) {
     }
     await page.waitForTimeout(500);
   }
+  const authMessage = await detectAuthRequirement(page);
+  if (authMessage) throw createAuthRequiredError(authMessage);
   throw new Error("Authenticated Admin google.script.run bridge was not found.");
 }
 
@@ -90,24 +98,26 @@ async function main() {
   const context = JSON.parse(fs.readFileSync(path.join(repoRoot, "runtime-context.json"), "utf8"));
   const adminUrl = String(context.projects.FODE.deployments.adminStaging.url || "").replace(/[?#].*$/, "");
   const output = evidencePath(repoRoot, action, args.output);
-  const authState = process.env.FODE_ADMIN_AUTH_STATE || "F:\\Playwright\\fode-secure-link-diagnostic\\auth\\admin-storage-state.json";
   const { chromium } = loadPlaywright();
-  const browser = await chromium.launch({ headless: true });
+  const session = await launchAdminContext(chromium, { headless: true });
   try {
-    const browserContext = await browser.newContext(fs.existsSync(authState) ? { storageState: authState } : {});
-    const page = await browserContext.newPage();
-    await page.goto(`${adminUrl}?view=operator-next`, { waitUntil: "domcontentloaded", timeout: 90000 });
+    const page = session.context.pages()[0] || await session.context.newPage();
+    await page.goto(`${adminUrl}?view=eduops`, { waitUntil: "domcontentloaded", timeout: 90000 });
     const result = await invoke(await findRpcFrame(page), READ_ONLY_RPC_ALLOWLIST[action], financeReadOnlyPayload(action, args));
     fs.mkdirSync(path.dirname(output), { recursive: true });
     fs.writeFileSync(output, JSON.stringify({ action, functionName: READ_ONLY_RPC_ALLOWLIST[action], capturedAt: new Date().toISOString(), result }, null, 2));
     if (!result || result.ok === false || result.readOnly !== true) throw new Error("Read-only RPC returned an invalid response contract.");
     process.stdout.write(`PASS ${action} evidence=${output}\n`);
   } finally {
-    await browser.close();
+    await closeAdminContext(session);
   }
 }
 
 if (require.main === module) main().catch((error) => {
+  if (error && error.code === "AUTH_REQUIRED") {
+    process.stderr.write(`AUTH_REQUIRED ${String(error.message || error)} dedicatedProfilePath=${error.meta && error.meta.dedicatedProfilePath || ""} storageStatePath=${error.meta && error.meta.storageStatePath || ""}\n`);
+    process.exit(2);
+  }
   process.stderr.write(`FAIL ${String(error && error.message || error)}\n`);
   process.exit(1);
 });

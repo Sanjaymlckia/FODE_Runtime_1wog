@@ -1,2 +1,0 @@
-PASS R368 OpsEdu preview screenshots
-http://127.0.0.1:4183/

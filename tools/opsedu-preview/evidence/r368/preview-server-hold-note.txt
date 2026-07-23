@@ -1,5 +1,0 @@
-Persistent server hold: NOT ESTABLISHED BY CODEX ENVIRONMENT
-Reason: background process launch was blocked or did not persist after the tool command.
-Startup proof: PASS via tests/capture-r368-screenshots.js, which started server.js, verified /health, and captured required screenshots.
-Owner start command: D:\Repos\FODE_Runtime_1wog\tools\opsedu-preview\START_OPSEDU_PREVIEW.cmd
-Local URL: http://127.0.0.1:4183/

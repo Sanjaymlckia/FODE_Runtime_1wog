@@ -8,6 +8,20 @@ test-results/
 .local_untracked_audit_hold/
 .release-proof/
 
+# FODE repository-hygiene generated material
+tools/eduops-snapshot-capture/.tmp/
+tools/eduops-snapshot-capture/preview-server.*.log
+tools/eduops-snapshot-capture/evidence/generated/
+tools/eduops-operations-preview/evidence/generated/
+prototypes/*/evidence/generated/
+prototypes/*.zip
+**/storage-state*.json
+**/*storageState*.json
+**/*auth-state*.json
+**/*session*.json
+**/browser-profile*/
+**/chrome-*-profile*/
+
 # Windows / Google Drive folder metadata
 desktop.ini
 **/desktop.ini

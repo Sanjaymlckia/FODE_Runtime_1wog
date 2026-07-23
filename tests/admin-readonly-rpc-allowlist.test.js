@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const path = require("node:path");
 const { READ_ONLY_RPC_ALLOWLIST, financeReadOnlyPayload, evidencePath } = require("../tools/fode-readonly-browser-rpc.js");
+const source = require("node:fs").readFileSync("tools/fode-readonly-browser-rpc.js", "utf8");
 
 const expected = {
   "finance-summary": "admin_getCanonicalFinanceSummary",
@@ -26,5 +27,8 @@ assert.throws(() => financeReadOnlyPayload("finance-applicant", {}), /applicant-
 const repoRoot = path.resolve(__dirname, "..");
 assert.match(evidencePath(repoRoot, "finance-summary", ""), /\.release-proof/);
 assert.throws(() => evidencePath(repoRoot, "finance-summary", path.resolve(repoRoot, "outside.json")), /must remain under \.release-proof/);
+assert.match(source, /require\("\.\/auth-fode-admin-playwright"\)/, "Read-only RPC bridge must use the canonical auth module");
+assert.match(source, /\?view=eduops/, "Read-only RPC bridge must target the canonical EduOps route");
+assert.doesNotMatch(source, /google\.script\.run\[[^\]]*args\.(?:fn|function|rpc)/, "Read-only RPC bridge must not expose generic RPC passthrough");
 
 console.log("PASS fixed authenticated read-only Finance RPC allowlist rejects mutation and arbitrary names");

@@ -30,7 +30,7 @@ Only FODE is connected in Pass 1. KIA and MLC remain future product adapters.
 
 ## Preview-First Owner Acceptance
 
-EduOps UI and interaction changes must be reviewed locally through `tools/eduops-preview/` before another Admin staging release where practical.
+EduOps UI and interaction changes must be reviewed locally through `tools/eduops-snapshot-capture/` before another Admin staging release where practical.
 
 The Preview Lab renders `EduOps.html`, `EduOps_Styles.html` and `EduOps_Client.html` from runtime source and swaps only the transport/backend boundary:
 
@@ -45,7 +45,7 @@ The Preview Lab has two explicit data modes:
 - Deterministic Scenario Mode: fixed reproducible fixtures labelled `DETERMINISTIC SCENARIO DATA / NOT CURRENT FODE DATA / NO LIVE OPERATIONS`.
 - Fresh FODE Snapshot Mode: local immutable DTO snapshot captured by an explicit developer command from authorised Admin staging read-only EduOps RPCs and labelled `CURRENT AS OF CAPTURE TIME`.
 
-Normal Preview Lab startup never contacts Admin staging. Fresh snapshots are stored under `tools/eduops-preview/local-snapshots/`, are ignored by Git, and must pass contract compatibility, sanitisation and reconciliation checks before loading.
+Normal Preview Lab startup never contacts Admin staging. Fresh snapshots are stored under `tools/eduops-snapshot-capture/evidence/generated/snapshots/`, are ignored by Git, and must pass contract compatibility, sanitisation and reconciliation checks before loading.
 
 Staging is reserved for live authority, integration, access-control and performance acceptance. The Preview Lab is the owner-facing UI/UX acceptance gate and has no automatic live data dependency.
 

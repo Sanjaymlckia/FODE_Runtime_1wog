@@ -113,7 +113,7 @@ Before migration, `admin_createCapabilityGrantPreMigrationBackup()` creates a pr
 - a restorable Script Properties JSON artifact whose values are not returned to the browser;
 - a sanitized manifest with commit, deployment pins, runtime identity, source/copy IDs, tab names, and property key/count verification.
 
-The backup RPC requires `SUPER`, exact confirmation, commit hash, and Admin/Student deployment pins. The browser runner `tools/fode-h1-browser-rpc.js` has a fixed RPC allowlist and cannot invoke arbitrary server functions.
+The backup RPC requires `SUPER`, exact confirmation, commit hash, and Admin/Student deployment pins. The former H1 browser runner was retired during the Track L repository-hygiene cleanup; mutation-capable browser bridges are no longer supported as general tooling. Any future backup/migration browser runner requires a separate bounded CIS and fixed allowlist.
 
 Dry-run command after an approved Track H deployment:
 

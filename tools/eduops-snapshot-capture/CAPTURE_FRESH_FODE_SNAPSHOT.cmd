@@ -1,0 +1,17 @@
+@echo off
+setlocal
+cd /d "%~dp0"
+where node >nul 2>nul
+if errorlevel 1 (
+  echo Node.js was not found on PATH.
+  exit /b 1
+)
+echo Capturing Fresh FODE Snapshot from authorised Admin staging read-only EduOps RPCs.
+echo This command is explicit and separate from normal Preview Lab startup.
+echo It must not be used against Student, Production or OPS.
+if "%FODE_PLAYWRIGHT_AUTH_PROFILE_DIR%"=="" (
+  set "FODE_PLAYWRIGHT_AUTH_PROFILE_DIR=%LOCALAPPDATA%\FODE_Playwright\admin-staging-profile"
+)
+node server\capture-fresh-snapshot.js %*
+if errorlevel 1 exit /b %errorlevel%
+endlocal

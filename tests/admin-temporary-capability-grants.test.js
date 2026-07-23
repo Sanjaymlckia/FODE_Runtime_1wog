@@ -7,7 +7,7 @@ const accessSource = fs.readFileSync("Admin_AccessControl.js", "utf8");
 const grantsSource = fs.readFileSync("Admin_CapabilityGrants.js", "utf8");
 const operatorNextSource = fs.readFileSync("AdminUI_OperatorNext.html", "utf8");
 const claspIgnore = fs.readFileSync(".claspignore", "utf8");
-const browserRpcTool = fs.readFileSync("tools/fode-h1-browser-rpc.js", "utf8");
+const readonlyBrowserRpcTool = fs.readFileSync("tools/fode-readonly-browser-rpc.js", "utf8");
 const runtimeContext = JSON.parse(fs.readFileSync("runtime-context.json", "utf8"));
 
 class MockRange {
@@ -348,10 +348,12 @@ assert.equal(runtimeContext.projects.FODE.capabilityGrants.runtimeIdentity, "r34
 assert.equal(runtimeContext.projects.FODE.capabilityGrants.appsScriptVersion, 373);
 assert.equal(runtimeContext.projects.FODE.deployments.studentStaging.expectedRuntime, "r217");
 assert.equal(runtimeContext.projects.FODE.deployments.studentStaging.expectedDeploy, 217);
-assert.match(browserRpcTool, /probe:[\s\S]*admin_getRuntimeInfo/);
-assert.match(browserRpcTool, /backup:[\s\S]*admin_createCapabilityGrantPreMigrationBackup/);
-assert.match(browserRpcTool, /migrate:[\s\S]*admin_planCapabilityGrantsMigration/);
-assert.doesNotMatch(browserRpcTool, /args\.(?:fn|function|rpc)/, "Browser runner must not accept arbitrary RPC function names");
+assert.match(readonlyBrowserRpcTool, /READ_ONLY_RPC_ALLOWLIST/);
+assert.match(readonlyBrowserRpcTool, /admin_getCanonicalFinanceSummary/);
+assert.doesNotMatch(readonlyBrowserRpcTool, /admin_createCapabilityGrantPreMigrationBackup/);
+assert.doesNotMatch(readonlyBrowserRpcTool, /admin_planCapabilityGrantsMigration/);
+assert.match(readonlyBrowserRpcTool, /READ_ONLY_RPC_ALLOWLIST\[action\]/, "Browser runner must map operator input through the fixed allowlist");
+assert.doesNotMatch(readonlyBrowserRpcTool, /args\.(?:fn|function)/, "Browser runner must not accept arbitrary RPC function names");
 
 console.log("PASS Capability_Grants schema is stable, dry-run first, idempotent, and refuses destructive repair");
 console.log("PASS Super-only bounded grants converge through the shared capability resolver without role mutation");
