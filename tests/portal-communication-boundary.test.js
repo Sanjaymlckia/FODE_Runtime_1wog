@@ -15,8 +15,8 @@ assert.match(codeSource, /function resolvePortalCommunicationSecret_\(applicantI
 assert.match(codeSource, /function buildPortalCommunicationUrl_\(applicantId, secretPlain\)\s*\{\s*return buildLegacyCampaignPortalUrl_\(applicantId, secretPlain\);\s*\}/, "Canonical portal communication URL builder must delegate through the compatibility helper");
 assert.match(codeSource, /function isHistoricalLegacyInviteBatchFilter_\(filterType\)\s*\{\s*return normalizeApplicantBatchFilterType_\(filterType\) === "legacy_invite_eligible";\s*\}/, "Historical batch filter classifier must exist");
 
-assert.match(codeSource, /secretRes = resolvePortalCommunicationSecret_\(context\.applicantId\);/, "Runtime preview/send path must use the canonical Portal Communication secret adapter");
-assert.match(codeSource, /context\.portalUrl = buildPortalCommunicationUrl_\(context\.applicantId, secretRes\.secretPlain\);/, "Runtime preview/send path must use the canonical Portal Communication URL adapter");
+assert.match(codeSource, /function resolveExistingStudentPortalAuthority_[\s\S]*resolvePortalCommunicationSecret_\(id\)[\s\S]*buildPortalCommunicationUrl_\(id, secretPlain\)/, "Shared Student portal authority must retain the canonical compatibility adapters");
+assert.match(codeSource, /portalAuthority = resolveExistingStudentPortalAuthority_\(context\.applicantId/, "Runtime preview/send path must consume the shared Student portal authority provider");
 assert.match(codeSource, /if \(\(isPortalCommunicationMessageType_\(normalizedType\) \|\| normalizedType === "reminder"\) && context\.portalSubmittedActive\)/, "Portal submitted block must preserve current behavior through the canonical Portal Communication classifier");
 
 assert.match(adminSource, /Historical Legacy Campaign compatibility wrapper\./, "Legacy invite batch planner must be explicitly classified as compatibility");

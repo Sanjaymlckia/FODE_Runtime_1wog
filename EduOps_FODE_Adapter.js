@@ -518,6 +518,9 @@ function eduopsFodeApplicantRead_(applicantId, query, snapshotId) {
     return { ok: false, code: canonicalRes && canonicalRes.code || "APPLICANT_NOT_FOUND", applicantId: applicantId };
   }
   var row = eduopsFodeActionabilityRowFromCanonical_(canonicalRes.applicant);
+  var portalAuthority = typeof resolveExistingStudentPortalAuthority_ === "function"
+    ? resolveExistingStudentPortalAuthority_(applicantId)
+    : { available: false, applicantId: applicantId, portalUrl: "", tokenState: "UNAVAILABLE", reasonCode: "BACKEND_CONTRACT_MISSING", reason: "Authoritative portal-access decision was not returned." };
   var reliability = eduopsSourceReliability_("AUTHORITATIVE", "Exact applicant read is composed from canonical FODE authorities.", "FODE adapter");
   var projection = eduopsFodeRowDto_(row, query || {}, snapshotId, reliability);
   var detail = {};
@@ -549,7 +552,7 @@ function eduopsFodeApplicantRead_(applicantId, query, snapshotId) {
     documents: eduopsDocumentsSummary_(canonicalRes.applicant),
     finance: eduopsFinanceSummary_(canonicalRes.applicant),
     communications: eduopsCommunicationsSummary_(canonicalRes.applicant),
-    portal: eduopsPortalSummary_(canonicalRes.applicant),
+    portal: eduopsPortalSummary_(portalAuthority),
     contactability: eduopsContactabilitySummary_(canonicalRes.applicant),
     auditSummary: eduopsAuditSummary_(canonicalRes.applicant),
     sourceReliability: reliability,
@@ -625,20 +628,20 @@ function eduopsCommunicationsSummary_(canonical) {
   };
 }
 
-function eduopsPortalSummary_(canonical) {
-  var portal = canonical && canonical.portal || {};
-  var hasContract = !!eduopsClean_(portal.accessState || portal.state || "");
+function eduopsPortalSummary_(portalAuthority) {
+  var portal = portalAuthority && typeof portalAuthority === "object" ? portalAuthority : {};
+  var hasContract = portal.available === true || !!eduopsClean_(portal.reasonCode || "");
   return {
     schemaVersion: "EDUOPS_PORTAL_AUTHORITY_V1",
     authoritySource: hasContract ? "Portal Access Domain" : "",
-    available: hasContract,
-    reasonCode: hasContract ? "PORTAL_STATE_RETURNED" : "BACKEND_CONTRACT_MISSING",
+    available: portal.available === true,
+    reasonCode: hasContract ? eduopsClean_(portal.reasonCode || "PORTAL_STATE_RETURNED") : "BACKEND_CONTRACT_MISSING",
     reason: hasContract ? eduopsClean_(portal.reason || "Portal Access Domain state returned.") : "Authoritative portal-access decision was not returned. Refresh or retry before continuing.",
-    submitted: portal.submitted === true,
-    accessState: eduopsClean_(portal.accessState || ""),
-    locked: portal.locked === true,
+    submitted: false,
+    accessState: portal.available === true ? "AVAILABLE" : "UNAVAILABLE",
+    locked: false,
     tokenState: eduopsClean_(portal.tokenState || ""),
-    expiresAt: eduopsClean_(portal.expiresAt || ""),
+    expiresAt: "",
     availableActions: []
   };
 }

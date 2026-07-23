@@ -3539,6 +3539,14 @@ function normalizePortalSecretRow_(idx, row, rowIndex) {
   };
 }
 
+function normalizePortalSecretStatus_(value) {
+  var status = clean_(value || "");
+  if (!status) return "";
+  if (status.toUpperCase() === "ACTIVE") return "ACTIVE";
+  if (status.toUpperCase() === "INACTIVE") return "INACTIVE";
+  return status.toUpperCase();
+}
+
 function emptyPortalSecretLookup_(applicantId, reason, debugId, extra) {
   var out = {
     applicantId: clean_(applicantId || ""),
@@ -3586,7 +3594,8 @@ function lookupPortalSecretForApplicant_(applicantId, opts) {
     for (var r = 0; r < data.length; r++) {
       var rec = normalizePortalSecretRow_(idx, data[r], r + 2);
       if (!rec.applicantId || rec.applicantId.toLowerCase() !== idLower) continue;
-      if (hasStatus && rec.status !== "Active") {
+      rec.status = normalizePortalSecretStatus_(rec.status || "");
+      if (hasStatus && rec.status !== "ACTIVE") {
         if (!inactiveMatch) inactiveMatch = rec;
         continue;
       }
@@ -6449,6 +6458,46 @@ function buildPortalCommunicationUrl_(applicantId, secretPlain) {
   return buildLegacyCampaignPortalUrl_(applicantId, secretPlain);
 }
 
+function resolveExistingStudentPortalAuthority_(applicantId, opts) {
+  var id = clean_(applicantId || "");
+  var options = opts && typeof opts === "object" ? opts : {};
+  var secretRes = Object.prototype.hasOwnProperty.call(options, "secretRecord")
+    ? options.secretRecord
+    : resolvePortalCommunicationSecret_(id);
+  function unavailable(code, reason) {
+    return {
+      available: false,
+      applicantId: id,
+      portalUrl: "",
+      tokenState: normalizePortalSecretStatus_(secretRes && secretRes.status || "") || "MISSING",
+      reasonCode: clean_(code || "PORTAL_LINK_UNAVAILABLE"),
+      reason: clean_(reason || "Active applicant portal authority is unavailable.")
+    };
+  }
+  if (!id) return unavailable("APPLICANT_ID_REQUIRED", "Applicant ID is required for portal authority.");
+  if (!secretRes || secretRes.ok !== true) return unavailable(clean_(secretRes && secretRes.code || "PORTAL_LINK_UNAVAILABLE"), clean_(secretRes && (secretRes.error || secretRes.code) || "Active applicant portal authority is unavailable."));
+  if (clean_(secretRes.applicantId || id || "") !== id) return unavailable("PORTAL_RECORD_MISMATCH", "Portal authority record does not belong to the selected applicant.");
+  var status = normalizePortalSecretStatus_(secretRes.status || "");
+  if (options.statusRequired === true && status !== "ACTIVE") return unavailable("PORTAL_SECRET_INACTIVE", "The applicant portal authority record is not active.");
+  var secretPlain = clean_(secretRes.secretPlain || "");
+  if (!secretPlain) return unavailable("PORTAL_LINK_UNAVAILABLE", "The active portal authority has no reusable secure token.");
+  var portalUrl = "";
+  try {
+    portalUrl = clean_(buildPortalCommunicationUrl_(id, secretPlain) || "");
+  } catch (_portalUrlErr) {
+    return unavailable("PORTAL_LINK_UNAVAILABLE", "The secure Student portal URL could not be resolved.");
+  }
+  if (!portalUrl) return unavailable("PORTAL_LINK_UNAVAILABLE", "The secure Student portal URL could not be resolved.");
+  return {
+    available: true,
+    applicantId: id,
+    portalUrl: portalUrl,
+    tokenState: "ACTIVE",
+    reasonCode: "ACTIVE_PORTAL_AUTHORITY",
+    reason: "Existing active Student portal authority returned."
+  };
+}
+
 function isHistoricalLegacyInviteBatchFilter_(filterType) {
   return normalizeApplicantBatchFilterType_(filterType) === "legacy_invite_eligible";
 }
@@ -7010,6 +7059,7 @@ function communicationActiveTemplateVariantMetadata_() {
       allowedSendModes: authority.allowedSendModes,
       requiresPortalLink: communicationRequiresPortalUrl_(variant.parentMessageType),
       requiresResolvedPlaceholders: true,
+      createdAt: clean_(variant.createdAt || ""),
       editableMode: clean_(parent.editableMode || ""),
       operatorWarning: clean_(parent.operatorWarning || ""),
       auditMeaning: clean_(parent.auditMeaning || ""),
@@ -7050,8 +7100,23 @@ function admin_saveReusableCommunicationTemplate(payload) {
   if (index.activeTemplateIds.indexOf(templateId) < 0) index.activeTemplateIds.push(templateId);
   index.latestVersionByTemplateId[templateId] = versionId;
   props.setProperty(communicationTemplateVariantIndexKey_(), JSON.stringify(index));
+  try {
+    var readBackIndex = communicationReadTemplateVariantIndex_();
+    var readBack = communicationLoadActiveTemplateVariant_(templateId, versionId);
+    if (!readBack
+      || readBack.status !== "ACTIVE"
+      || readBack.templateId !== templateId
+      || readBack.versionId !== versionId
+      || readBack.parentMessageType !== validated.parent
+      || readBackIndex.activeTemplateIds.indexOf(templateId) < 0
+      || clean_(readBackIndex.latestVersionByTemplateId[templateId] || "") !== versionId) {
+      throw new Error("READBACK_MISMATCH");
+    }
+  } catch (_readBackErr) {
+    throw new Error("REUSABLE_TEMPLATE_READBACK_FAILED");
+  }
   campaignLog_("COMM_TEMPLATE_VARIANT_CREATE", { templateId: templateId, versionId: versionId, parentMessageType: validated.parent, actorEmail: adminEmail });
-  return { ok: true, templateId: templateId, versionId: versionId, parentMessageType: validated.parent, status: "ACTIVE" };
+  return { ok: true, templateId: templateId, versionId: versionId, parentMessageType: validated.parent, active: true, readBackVerified: true };
 }
 function getCommunicationSemanticDefinitionsByStatus_(status) {
   var requested = clean_(status || "").toLowerCase();
@@ -7189,6 +7254,7 @@ function communicationBlockReason_(code, messageType) {
     DOCS_NOT_VERIFIED_FOR_PAYMENT: "Documents must be verified before payment communication is recommended.",
     PAYMENT_EVIDENCE_ALREADY_PRESENT: "Payment evidence is already present for this applicant.",
     QUOTE_NOT_READY: "Quote details are not ready for this applicant.",
+    SUBJECTS_AUTHORITY_REQUIRED: "Authoritative subject selection is required before this communication can be previewed.",
     COMM_AUTHORITY_BLOCKED: "This communication is blocked by the lifecycle authority matrix.",
     COMM_OVERRIDE_DENIED: "Only Super Admin may override this protected communication gate.",
     COMM_OVERRIDE_REASON_REQUIRED: "Super Admin override requires a written justification of at least 20 characters.",
@@ -7824,6 +7890,18 @@ function applicantGradeDisplayOrUnconfirmed_(rowObj) {
 function applicantSubjectsDisplayOrUnconfirmed_(rowObj) {
   return applicantSubjectsValue_(rowObj) || "not yet confirmed";
 }
+
+function communicationRequiresSubjects_(messageType) {
+  var type = normalizeApplicantMessageType_(messageType || "");
+  return [
+    "payment_followup",
+    "application_receipt_request",
+    "application_verified_quote",
+    "application_acceptance_confirmation",
+    "application_exam_fee_reminder"
+  ].indexOf(type) >= 0;
+}
+
 function applicantDocumentStatusSummary_(rowObj) {
   var row = rowObj || {};
   var status = typeof computeDocVerificationStatus_ === "function" ? clean_(computeDocVerificationStatus_(row) || "") : "";
@@ -7879,7 +7957,7 @@ function canonicalFodePaymentInformationBlock_(context) {
   var quote = typeof computeFodeFeeQuote_ === "function" ? computeFodeFeeQuote_(row) : null;
   var subjectCount = quote ? Number(quote.subjectCount || 0) : 0;
   if (!applicantId) return actionRequiredPlaceholder_("confirm applicant ID for payment reference");
-  if (!quote || !(subjectCount > 0)) return actionRequiredPlaceholder_("confirm subjects before calculating FODE quote");
+  if (!quote || !(subjectCount > 0)) return "Payment/quote details require authoritative subject confirmation before rendering.";
   var registration = Number(quote.registrationK || 600);
   var perSubject = Number(CONFIG.FEE_PER_SUBJECT_KINA || 450);
   var subjectFee = Number(quote.subjectFeeK || (subjectCount * perSubject));
@@ -7924,13 +8002,18 @@ function communicationApplicantSummaryBlock_(context, opts) {
   var row = ctx.rowObj || {};
   var options = opts && typeof opts === "object" ? opts : {};
   var applicantName = buildApplicantFullName_(row) || "the applicant";
+  var grade = applicantGradeValue_(row);
+  var subjects = applicantSubjectsValue_(row);
   var lines = [
     "Applicant summary:",
     "Applicant ID: " + String(ctx.applicantId || row.ApplicantID || ""),
-    "Student: " + applicantName,
-    "Grade: " + (options.useActionPlaceholders === true ? applicantGradeOrPlaceholder_(row) : applicantGradeDisplayOrUnconfirmed_(row)),
-    "Subjects: " + (options.useActionPlaceholders === true ? applicantSubjectsOrPlaceholder_(row) : applicantSubjectsDisplayOrUnconfirmed_(row))
+    "Student: " + applicantName
   ];
+  if (grade) lines.push("Grade: " + grade);
+  else if (options.includeUnavailableOptionalFields === true) lines.push("Grade: not yet confirmed");
+  else if (options.useActionPlaceholders === true && options.requireGrade === true) lines.push("Grade: " + applicantGradeOrPlaceholder_(row));
+  if (subjects) lines.push("Subjects: " + subjects);
+  else if (options.includeUnavailableOptionalFields === true) lines.push("Subjects: not yet confirmed");
   if (options.includeStatus !== false) {
     lines.push("");
     lines.push(applicantDocumentStatusSummary_(row));
@@ -8135,6 +8218,11 @@ function communicationShouldApplyDocumentVerificationCaution_(context) {
 function communicationApplyMandatoryPolicyBlocks_(context, body) {
   var text = String(body || "");
   var blocks = [];
+  var portalUrl = clean_(context && context.portalUrl || "");
+  if (context && context.requiresPortalUrl === true && portalUrl) {
+    text = text.replace(/\{\{\s*portal_url\s*\}\}/gi, portalUrl);
+    if (text.indexOf(portalUrl) < 0) blocks.push(communicationPortalInstructionBlock_(context));
+  }
   if (communicationShouldApplyUnderReviewNoPaymentNotice_(context) && text.indexOf(communicationUnderReviewNoPaymentNotice_()) < 0) {
     blocks.push(communicationUnderReviewNoPaymentNotice_());
   }
@@ -8142,6 +8230,25 @@ function communicationApplyMandatoryPolicyBlocks_(context, body) {
     blocks.push(communicationDocumentVerificationCaution_());
   }
   return blocks.length ? [text, ""].concat(blocks).join("\n\n") : text;
+}
+
+function communicationRenderFinalBody_(context, body) {
+  var text = communicationApplyMandatoryPolicyBlocks_(context, String(body || ""));
+  return communicationRenderTemplateText_(text, context || {});
+}
+
+function communicationPreviewDiagnostics_(context, details) {
+  var ctx = context && typeof context === "object" ? context : {};
+  var info = details && typeof details === "object" ? details : {};
+  return {
+    blockCode: clean_(info.blockCode || ctx.blockCode || ""),
+    blockReason: clean_(info.blockReason || ctx.blockReason || ""),
+    templateId: clean_(ctx.templateId || ctx.messageType || ""),
+    templateVersionId: clean_(ctx.templateVersionId || "1"),
+    portalLinkRequired: ctx.requiresPortalUrl === true,
+    portalLinkHydrated: ctx.requiresPortalUrl === true && !!clean_(ctx.portalUrl || ""),
+    unresolvedToken: clean_(info.unresolvedToken || ctx.unresolvedToken || "")
+  };
 }
 
 function communicationParseEmailList_(value) {
@@ -8480,7 +8587,7 @@ function buildDocsMissingEmailBody_(context) {
   }).join("\n");
   return composeSelectedApplicantEmail_(ctx, [
     "We are continuing the review of the FODE KIA application for " + applicantName + ". One or more required documents are not available, incomplete, or need resubmission before review can continue.",
-    communicationApplicantSummaryBlock_(ctx, { useActionPlaceholders: true }),
+    communicationApplicantSummaryBlock_(ctx, { includeStatus: true }),
     "Documents needing attention:",
     missingLines,
     "Next steps:",
@@ -8500,7 +8607,7 @@ function buildPaymentFollowupEmailBody_(context) {
   var applicantName = buildApplicantFullName_(row) || "the applicant";
   return composeSelectedApplicantEmail_(ctx, [
     "We are contacting you about the FODE KIA application for " + applicantName + ". Admissions still needs payment evidence or payment verification before the payment step can be completed.",
-    communicationApplicantSummaryBlock_(ctx, { useActionPlaceholders: true }),
+    communicationApplicantSummaryBlock_(ctx, { useActionPlaceholders: true, requireGrade: true, requireSubjects: true }),
     "Payment / quote and payment instructions:",
     canonicalFodePaymentInformationBlock_(ctx),
     "Next steps:",
@@ -8570,7 +8677,7 @@ function buildApplicationReceiptRequestBody_(context) {
   var applicantName = buildApplicantFullName_(row) || "the applicant";
   return composeSelectedApplicantEmail_(ctx, [
     "We are reviewing the payment information for the FODE KIA application for " + applicantName + ".",
-    communicationApplicantSummaryBlock_(ctx, { useActionPlaceholders: true }),
+    communicationApplicantSummaryBlock_(ctx, { useActionPlaceholders: true, requireGrade: true, requireSubjects: true }),
     "Payment / quote and payment instructions:",
     canonicalFodePaymentInformationBlock_(ctx),
     "Payment evidence / receipt is still required before the office can continue the payment verification step.",
@@ -8590,7 +8697,7 @@ function buildApplicationVerifiedQuoteBody_(context) {
   var applicantName = buildApplicantFullName_(row) || "the applicant";
   return composeSelectedApplicantEmail_(ctx, [
     "Admissions has completed document verification for the FODE KIA application for " + applicantName + ". The next step is to review the fee/subject guidance and provide payment evidence.",
-    communicationApplicantSummaryBlock_(ctx, { useActionPlaceholders: true }),
+    communicationApplicantSummaryBlock_(ctx, { useActionPlaceholders: true, requireGrade: true, requireSubjects: true }),
     "Payment / quote and payment instructions:",
     canonicalFodePaymentInformationBlock_(ctx),
     "Next steps:",
@@ -8615,7 +8722,7 @@ function buildApplicationAcceptanceConfirmationBody_(context) {
   var applicantName = buildApplicantFullName_(row) || "the applicant";
   return composeSelectedApplicantEmail_(ctx, [
     "Admissions is ready to confirm the current acceptance or enrolment outcome for the FODE KIA application below.",
-    communicationApplicantSummaryBlock_(ctx, { useActionPlaceholders: true }),
+    communicationApplicantSummaryBlock_(ctx, { useActionPlaceholders: true, requireGrade: true, requireSubjects: true }),
     "Acceptance / enrolment status:",
     firstNonEmptyRowValue_(row, ["Acceptance_Status", "Enrolment_Status", "Overall_Status", "Status"]) || actionRequiredPlaceholder_("confirm acceptance/enrolment status"),
     "Next steps:",
@@ -8705,21 +8812,24 @@ function buildPortalSecretPreviewLookup_() {
       var rec = normalizePortalSecretRow_(idx, row, r + 1);
       var applicantId = clean_(rec.applicantId || "");
       if (!applicantId) continue;
-      if (idx.Status && rec.status !== "Active") {
+      rec.status = normalizePortalSecretStatus_(rec.status || "");
+      if (idx.Status && rec.status !== "ACTIVE") {
         if (!byApplicantId[applicantId]) {
           byApplicantId[applicantId] = {
+            applicantId: applicantId,
             rowIndex: Number(rec.rowIndex || 0),
-            status: clean_(rec.status || ""),
+            status: rec.status,
             secretPlain: clean_(rec.secretPlain || ""),
             secretHash: clean_(rec.secretHash || "")
           };
         }
         continue;
       }
-      if (byApplicantId[applicantId] && (!idx.Status || byApplicantId[applicantId].status === "Active")) continue;
+      if (byApplicantId[applicantId] && (!idx.Status || byApplicantId[applicantId].status === "ACTIVE")) continue;
       byApplicantId[applicantId] = {
+        applicantId: applicantId,
         rowIndex: Number(rec.rowIndex || 0),
-        status: clean_(rec.status || ""),
+        status: rec.status,
         secretPlain: clean_(rec.secretPlain || ""),
         secretHash: clean_(rec.secretHash || "")
       };
@@ -8879,29 +8989,29 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
   }
   if (!authority.ok) return block(authority.blockCode, authority.blockReason);
   if (authority.overrideApplied === true) logCommunicationAuthorityOverride_(context, authority, clean_(options.action || ""));
+  if (communicationRequiresSubjects_(normalizedType) && !applicantSubjectsValue_(row)) {
+    return block("SUBJECTS_AUTHORITY_REQUIRED");
+  }
 
   if (context.requiresPortalUrl) {
-    var secretRes = null;
+    var portalAuthority = null;
     if (portalSecretLookup && portalSecretLookup.byApplicantId) {
       var cachedSecret = portalSecretLookup.byApplicantId[context.applicantId] || null;
-      if (!cachedSecret) return block("PORTAL_LINK_UNAVAILABLE", "Active applicant portal authority is unavailable.");
-      var cachedStatus = clean_(cachedSecret.status || "");
-      if (portalSecretLookup.hasStatus === true && cachedStatus !== "Active") return block("PORTAL_LINK_UNAVAILABLE", "Active applicant portal authority is unavailable.");
-      if (!clean_(cachedSecret.secretPlain || "") || !clean_(cachedSecret.secretHash || "")) return block("PORTAL_LINK_UNAVAILABLE", "Active applicant portal authority is unavailable.");
-      secretRes = {
-        ok: true,
-        applicantId: context.applicantId,
-        rowIndex: Number(cachedSecret.rowIndex || 0),
-        status: cachedStatus,
-        secretPlain: clean_(cachedSecret.secretPlain || ""),
-        secretHash: clean_(cachedSecret.secretHash || "")
-      };
+      portalAuthority = resolveExistingStudentPortalAuthority_(context.applicantId, {
+        secretRecord: cachedSecret ? {
+          ok: true,
+          applicantId: clean_(cachedSecret.applicantId || context.applicantId || ""),
+          status: clean_(cachedSecret.status || ""),
+          secretPlain: clean_(cachedSecret.secretPlain || "")
+        } : null,
+        statusRequired: portalSecretLookup.hasStatus === true
+      });
     } else {
-      secretRes = resolvePortalCommunicationSecret_(context.applicantId);
-      if (!secretRes.ok) return block("PORTAL_LINK_UNAVAILABLE", "Active applicant portal authority is unavailable.");
+      portalAuthority = resolveExistingStudentPortalAuthority_(context.applicantId);
     }
-    if (!options.skipPortalUrlBuild) context.portalUrl = buildPortalCommunicationUrl_(context.applicantId, secretRes.secretPlain);
-    if (!options.skipPortalUrlBuild && !clean_(context.portalUrl || "")) return block("PORTAL_LINK_UNAVAILABLE", "Active applicant portal authority is unavailable.");
+    if (!portalAuthority || portalAuthority.available !== true) return block("PORTAL_LINK_UNAVAILABLE", clean_(portalAuthority && portalAuthority.reason || "Active applicant portal authority is unavailable."));
+    if (!options.skipPortalUrlBuild) context.portalUrl = clean_(portalAuthority.portalUrl || "");
+    context.portalTokenState = clean_(portalAuthority.tokenState || "");
   }
 
   if (normalizedType === "docs_missing" && baseState.docsMissing !== true) {
@@ -10748,6 +10858,11 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
       applicantState: clean_(context.applicantState || ""),
       applicantId: clean_(context.applicantId || applicantId || ""),
       messageType: clean_(context.messageType || messageType || ""),
+      templateId: clean_(context.templateId || context.messageType || messageType || ""),
+      templateVersionId: clean_(context.templateVersionId || "1"),
+      portalLinkRequired: context.requiresPortalUrl === true,
+      portalLinkHydrated: context.requiresPortalUrl === true && !!clean_(context.portalUrl || ""),
+      unresolvedToken: clean_(context.unresolvedToken || ""),
       effectiveEmail: clean_(context.effectiveEmail || ""),
       debugId: clean_(context.debugId || newDebugId_())
     };
@@ -10769,7 +10884,8 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
   var hasEditedBody = typeof options.editedBody === "string" && !!clean_(options.editedBody || "");
   var previewSubject = hasEditedSubject ? String(options.editedSubject) : String(built.subject || "");
   var previewBody = hasEditedBody ? String(options.editedBody) : String(built.body || "");
-  previewBody = communicationApplyMandatoryPolicyBlocks_(context, previewBody);
+  previewSubject = communicationRenderTemplateText_(previewSubject, context);
+  previewBody = communicationRenderFinalBody_(context, previewBody);
   var ccBcc = communicationValidateCcBcc_(options.cc || "", options.bcc || "");
   if (ccBcc.ok !== true) {
     return {
@@ -10782,6 +10898,10 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
       applicantId: clean_(context.applicantId || ""),
       messageType: clean_(context.messageType || ""),
       effectiveEmail: previewRecipient,
+      templateId: clean_(context.templateId || context.messageType || ""),
+      templateVersionId: clean_(context.templateVersionId || "1"),
+      portalLinkRequired: context.requiresPortalUrl === true,
+      portalLinkHydrated: context.requiresPortalUrl === true && !!clean_(context.portalUrl || ""),
       debugId: clean_(context.debugId || newDebugId_())
     };
   }
@@ -10796,6 +10916,10 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
       applicantId: clean_(context.applicantId || ""),
       messageType: clean_(context.messageType || ""),
       effectiveEmail: previewRecipient,
+      templateId: clean_(context.templateId || context.messageType || ""),
+      templateVersionId: clean_(context.templateVersionId || "1"),
+      portalLinkRequired: context.requiresPortalUrl === true,
+      portalLinkHydrated: context.requiresPortalUrl === true && !!clean_(context.portalUrl || ""),
       debugId: clean_(context.debugId || newDebugId_())
     };
   }
@@ -10810,6 +10934,10 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
       blockReason: renderedValidation.blockReason,
       unresolvedToken: renderedValidation.unresolvedToken,
       unresolvedTokens: renderedValidation.unresolvedTokens,
+      templateId: clean_(context.templateId || context.messageType || ""),
+      templateVersionId: clean_(context.templateVersionId || "1"),
+      portalLinkRequired: context.requiresPortalUrl === true,
+      portalLinkHydrated: context.requiresPortalUrl === true && !!clean_(context.portalUrl || ""),
       applicantId: clean_(context.applicantId || ""),
       messageType: clean_(context.messageType || ""),
       effectiveEmail: previewRecipient,
@@ -10938,6 +11066,11 @@ function sendApplicantMessage_(applicantId, messageType, opts) {
       applicantState: clean_(context.applicantState || ""),
       applicantId: clean_(context.applicantId || applicantId || ""),
       messageType: clean_(context.messageType || messageType || ""),
+      templateId: clean_(context.templateId || context.messageType || messageType || ""),
+      templateVersionId: clean_(context.templateVersionId || "1"),
+      portalLinkRequired: context.requiresPortalUrl === true,
+      portalLinkHydrated: context.requiresPortalUrl === true && !!clean_(context.portalUrl || ""),
+      unresolvedToken: clean_(context.unresolvedToken || ""),
       effectiveEmail: clean_(context.effectiveEmail || ""),
       debugId: clean_(context.debugId || newDebugId_())
     };
@@ -10957,7 +11090,8 @@ function sendApplicantMessage_(applicantId, messageType, opts) {
   var editedRecipient = clean_(options.editedRecipient || context.effectiveEmail || "");
   var editedSubject = typeof options.editedSubject === "string" ? String(options.editedSubject) : String(built.subject || "");
   var editedBody = typeof options.editedBody === "string" ? String(options.editedBody) : String(built.body || "");
-  editedBody = communicationApplyMandatoryPolicyBlocks_(context, editedBody);
+  editedSubject = communicationRenderTemplateText_(editedSubject, context);
+  editedBody = communicationRenderFinalBody_(context, editedBody);
   context.effectiveEmail = editedRecipient;
   built.subject = editedSubject;
   built.body = editedBody;
@@ -11025,6 +11159,11 @@ function sendApplicantMessage_(applicantId, messageType, opts) {
       messageType: clean_(context.messageType || messageType || ""),
       effectiveEmail: clean_(context.effectiveEmail || ""),
       subject: clean_(built.subject || ""),
+      templateId: clean_(context.templateId || context.messageType || ""),
+      templateVersionId: clean_(context.templateVersionId || "1"),
+      portalLinkRequired: context.requiresPortalUrl === true,
+      portalLinkHydrated: context.requiresPortalUrl === true && !!clean_(context.portalUrl || ""),
+      unresolvedToken: clean_(context.unresolvedToken || ""),
       debugId: clean_(context.debugId || newDebugId_())
     };
   }

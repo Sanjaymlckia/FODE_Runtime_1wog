@@ -432,6 +432,7 @@ const templateFunctionNames = [
   "hasUnresolvedCustomEmailPrompt_",
   "applicantGradeDisplayOrUnconfirmed_",
   "applicantSubjectsDisplayOrUnconfirmed_",
+  "communicationRequiresSubjects_",
   "buildReminderEmailBody_",
   "buildDocsMissingEmailBody_",
   "buildPaymentFollowupEmailBody_",
@@ -511,6 +512,8 @@ assert.match(docsMissingBody, /FODE KIA Application Communication/);
 assert.match(docsMissingBody, /Applicant summary:/);
 assert.match(docsMissingBody, /not available, incomplete, or need resubmission/i);
 assert.match(docsMissingBody, /Applicant ID: FODE-26-TEST/);
+assert.doesNotMatch(docsMissingBody, /^Subjects:/m, "docs_missing must omit unavailable optional subjects");
+assert.doesNotMatch(docsMissingBody, /\[ACTION REQUIRED: confirm subjects\]/, "docs_missing must not block on subject placeholders");
 assert.match(docsMissingBody, /Latest School Reports \/ Documents: not received or not available in the current application record\./);
 assert.match(docsMissingBody, /required documents are not available, incomplete, or need resubmission/i);
 assert.match(docsMissingBody, /Document status: review is still in progress/i);
@@ -553,8 +556,8 @@ assert.match(paymentBody, /Applicant summary:/);
 assert.match(paymentBody, /Applicant ID: FODE-26-TEST/);
 assert.match(paymentBody, /Admissions still needs payment evidence or payment verification/i);
 assert.match(paymentBody, /\[ACTION REQUIRED: confirm grade\]/);
-assert.match(paymentBody, /\[ACTION REQUIRED: confirm subjects\]/);
-assert.match(paymentBody, /\[ACTION REQUIRED: confirm subjects before calculating FODE quote\]/);
+assert.doesNotMatch(paymentBody, /\[ACTION REQUIRED: confirm subjects\]/);
+assert.match(paymentBody, /Payment\/quote details require authoritative subject confirmation before rendering\./);
 assert.doesNotMatch(paymentBody, /\[ACTION REQUIRED: confirm payment instructions\]/);
 assert.match(paymentBody, /Upload or send a clear payment receipt\/evidence/i);
 assert.match(paymentBody, /does not confirm acceptance or enrolment/i);
@@ -564,8 +567,8 @@ const quoteBody = templateContext.buildApplicationVerifiedQuoteBody_(applicantCo
 assert.match(quoteBody, /completed document verification/i);
 assert.match(quoteBody, /Applicant ID: FODE-26-TEST/);
 assert.match(quoteBody, /\[ACTION REQUIRED: confirm grade\]/);
-assert.match(quoteBody, /\[ACTION REQUIRED: confirm subjects\]/);
-assert.match(quoteBody, /\[ACTION REQUIRED: confirm subjects before calculating FODE quote\]/);
+assert.doesNotMatch(quoteBody, /\[ACTION REQUIRED: confirm subjects\]/);
+assert.match(quoteBody, /Payment\/quote details require authoritative subject confirmation before rendering\./);
 assert.match(quoteBody, /payment receipt\/evidence/i);
 assert.match(quoteBody, /Next steps:/);
 const quoteReadyContext = {
@@ -606,7 +609,7 @@ assert.match(acceptanceBody, /Kundu International Academy \/ FODE Admissions/);
 assert.match(acceptanceBody, /Applicant summary:/);
 assert.match(acceptanceBody, /Applicant ID: FODE-26-TEST/);
 assert.match(acceptanceBody, /\[ACTION REQUIRED: confirm grade\]/);
-assert.match(acceptanceBody, /\[ACTION REQUIRED: confirm subjects\]/);
+assert.doesNotMatch(acceptanceBody, /\[ACTION REQUIRED: confirm subjects\]/);
 assert.match(acceptanceBody, /\[ACTION REQUIRED: confirm acceptance\/enrolment status\]/);
 assert.match(acceptanceBody, /Next steps:/);
 
@@ -616,7 +619,8 @@ assert.match(receiptRequestBody, /Applicant summary:/);
 assert.match(receiptRequestBody, /Applicant ID: FODE-26-TEST/);
 assert.match(receiptRequestBody, /Payment evidence \/ receipt is still required/i);
 assert.match(receiptRequestBody, /\[ACTION REQUIRED: confirm grade\]/);
-assert.match(receiptRequestBody, /\[ACTION REQUIRED: confirm subjects before calculating FODE quote\]/);
+assert.doesNotMatch(receiptRequestBody, /\[ACTION REQUIRED: confirm subjects\]/);
+assert.match(receiptRequestBody, /Payment\/quote details require authoritative subject confirmation before rendering\./);
 assert.match(receiptRequestBody, /upload a clear copy/i);
 assert.match(receiptRequestBody, /does not confirm acceptance or enrolment/i);
 
@@ -641,8 +645,8 @@ assert.match(customBody, /FODE KIA Application Communication/);
 assert.match(customBody, /Applicant summary:/);
 assert.match(customBody, /Applicant ID: FODE-26-TEST/);
 assert.match(customBody, /Student: Test Student/);
-assert.match(customBody, /Grade: not yet confirmed/);
-assert.match(customBody, /Subjects: not yet confirmed/);
+assert.doesNotMatch(customBody, /^Grade:/m);
+assert.doesNotMatch(customBody, /^Subjects:/m);
 assert.match(customBody, /\[Write your message here before sending\.\]/);
 assert.equal(templateContext.hasUnresolvedCustomEmailPrompt_(customBody), true);
 assert.doesNotMatch(customBody, /\[ACTION REQUIRED:/);

@@ -180,6 +180,7 @@
   };
 
   app.clone = function (value) { return JSON.parse(JSON.stringify(value == null ? null : value)); };
+  app.clean = function (value) { return String(value == null ? "" : value).trim(); };
   app.esc = function (value) {
     return String(value == null ? "" : value).replace(/[&<>"']/g, function (character) {
       return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character];
@@ -194,6 +195,23 @@
   app.authorityLabel = function (presentation, domain) { return presentation && presentation.available === true && presentation.label ? presentation.label : app.authorityUnavailable(domain); };
   app.isPreview = function () { return !!window.EDUOPS_TRANSPORT; };
   app.nowIso = function () { return new Date().toISOString(); };
+  app.formatPngDate = function (value) {
+    if (value == null || value === "") return "Not scheduled";
+    var date = value instanceof Date ? value : new Date(value);
+    if (isNaN(date.getTime())) return "Not scheduled";
+    var parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Pacific/Port_Moresby",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true
+    }).formatToParts(date);
+    var byType = {};
+    parts.forEach(function (part) { if (part.type !== "literal") byType[part.type] = part.value; });
+    return [byType.day, byType.month, byType.year].join(" ") + ", " + byType.hour + ":" + byType.minute + " " + String(byType.dayPeriod || "").toLowerCase();
+  };
   app.idempotencyKey = function (operation, applicantId) {
     return ["EDUOPS", operation, applicantId || "COHORT", Date.now(), Math.random().toString(36).slice(2, 10)].join("::");
   };

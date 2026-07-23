@@ -423,8 +423,10 @@ function admin_previewSelectedApplicantBatch(payload) {
       });
       if (context && context.eligible === true) {
         var built = buildApplicantMessage_(context);
-        if (!previewSubject) previewSubject = clean_(built.subject || "");
-        if (!previewBody) previewBody = String(built.body || "");
+        var renderedSubject = communicationRenderTemplateText_(built.subject || "", context);
+        var renderedBody = communicationRenderFinalBody_(context, built.body || "");
+        if (!previewSubject) previewSubject = clean_(renderedSubject || "");
+        if (!previewBody) previewBody = String(renderedBody || "");
         eligibleIds.push(applicantId);
         var includedAuthority = selectedApplicantBatchAuthorityDiagnostics_(context, true, "");
         recipients.push({

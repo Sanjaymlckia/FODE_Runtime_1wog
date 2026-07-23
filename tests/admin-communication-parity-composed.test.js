@@ -81,6 +81,8 @@ const context = {
   communicationApplicantAuthorityState_: () => "ACTIVE",
   communicationPaymentEvidencePresent_: (row) => !!clean(row.Fee_Receipt_File) && clean(row.Fee_Receipt_File) !== "[]",
   communicationPaymentEvidenceMissing_: (row) => !clean(row.Fee_Receipt_File) || clean(row.Fee_Receipt_File) === "[]",
+  applicantSubjectsValue_: (row) => clean(row.Subjects_Selected_Canonical || row.Subjects || ""),
+  communicationRequiresSubjects_: (type) => ["payment_followup", "application_receipt_request", "application_verified_quote", "application_acceptance_confirmation", "application_exam_fee_reminder"].includes(clean(type).toLowerCase()),
   communicationQuoteEligible_: () => false,
   communicationAcceptanceConfirmed_: () => false,
   communicationBlockReason_: (code) => clean(code),
@@ -165,6 +167,8 @@ vm.runInContext([
   extractFunction(codeSource, "communicationActorHasCapability_"),
   extractFunction(codeSource, "communicationCapabilityBlock_"),
   extractFunction(codeSource, "evaluateCommunicationAuthority_"),
+  extractFunction(codeSource, "normalizePortalSecretStatus_"),
+  extractFunction(codeSource, "resolveExistingStudentPortalAuthority_"),
   extractFunction(codeSource, "resolveApplicantMessageContextFromRow_"),
   extractFunction(codeSource, "buildApplicantCommunicationAuthorityProjection_"),
   extractFunction(codeSource, "hasPriorSuccessfulMessageSend_"),
@@ -186,6 +190,7 @@ const waffi = {
   Report_Status: "Verified",
   Photo_Status: "Verified",
   Docs_Verified: "Yes",
+  Subjects_Selected_Canonical: "English",
   Fee_Receipt_File: "[]",
   Receipt_Status: "Pending"
 };
