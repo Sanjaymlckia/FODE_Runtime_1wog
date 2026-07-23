@@ -41,14 +41,12 @@ function isApprovedGeneratedPath(rel) {
 function classifyNameReference(rel, text) {
   const normalized = rel.replace(/\\/g, "/");
   if (/^audits\/|^docs\//.test(normalized) || /^prototypes\//.test(normalized)) return "historical archive/reference";
-  if (/^(EduOps|OpsEdu|AdminUI|Admin\.js|Admin_|Code|Routes|tests\/opsedu-|tests\/operator-next-|tests\/eduops-integrated-authority-surface|tests\/apps-script-deployable-file-contract|tests\/eduops-pass1-readonly-contract)/.test(normalized)) {
-    return "runtime naming debt deferred to R376J";
-  }
+  if (/(operator-next|Operator Next)/.test(text + "\n" + normalized) && !/(OpsEdu|opsedu|eduops-next)/.test(text + "\n" + normalized)) return "approved compatibility reference";
   if (/^tools\/eduops-snapshot-capture\/server\/server\.js$/.test(normalized)) return "approved compatibility reference";
-  if (/^tools\/eduops-operations-preview\//.test(normalized) && /(opsedu-preview\.(js|css)|schemaVersion|OPSEDU_|data-opsedu|#opsedu|\.opsedu|filename: "opsedu-preview\.js")/.test(text + "\n" + normalized)) {
+  if (/^tools\/eduops-operations-preview\//.test(normalized) && /(eduops-operations-preview\.(js|css)|schemaVersion|OPSEDU_|filename: "eduops-operations-preview\.js")/.test(text + "\n" + normalized)) {
     return "approved compatibility reference";
   }
-  if (/opsedu-preview\.(js|css)$|schemaVersion|OPSEDU_|data-opsedu|#opsedu|\.opsedu/.test(text)) return "approved compatibility reference";
+  if (/eduops-operations-preview\.(js|css)$|schemaVersion|OPSEDU_/.test(text)) return "approved compatibility reference";
   return "defect requiring removal now";
 }
 

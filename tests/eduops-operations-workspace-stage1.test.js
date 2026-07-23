@@ -132,8 +132,8 @@ function testHollowClientBinding() {
   };
   const context = { window: { EduOpsApp: app }, document, Promise, Array, JSON, Number, String };
   vm.createContext(context);
-  const client = read("OpsEdu_ClientCockpit.html").replace(/^\s*<script>\s*/, "").replace(/\s*<\/script>\s*$/, "");
-  vm.runInContext(client, context, { filename: "OpsEdu_ClientCockpit.html" });
+  const client = read("EduOps_ClientOperationsWorkspace.html").replace(/^\s*<script>\s*/, "").replace(/\s*<\/script>\s*$/, "");
+  vm.runInContext(client, context, { filename: "EduOps_ClientOperationsWorkspace.html" });
 
   const binding = {
     schemaVersion: "EDUOPS_QUERY_BINDING_V1",
@@ -143,22 +143,22 @@ function testHollowClientBinding() {
   };
   const cockpit = { schemaVersion: "OPSEDU_COCKPIT_V1", productLabel: "FODE live production operations", heading: "Today's work", snapshotId: "SNAP-R366", snapshotTimestamp: "2026-07-20T00:00:00.000Z", primaryBuckets: [{ schemaVersion: "OPSEDU_PRIMARY_BUCKET_V1", code: "READY", label: "Ready for action", count: 2, defaultQueueBinding: binding }], actionPackages: [{ packageId: "FODE:READY:PAYMENT_FOLLOW_UP", actionabilityState: "READY", worklistKey: "PAYMENT_FOLLOW_UP", label: "Payment follow-ups due", ownerDomain: "Finance", count: 2, routeReason: "Payment follow-up is due.", mutationBoundary: "Finance authority", primaryActionLabel: "Open queue", defaultQueueBinding: binding, disabled: false }] };
   app.state.workload = { cockpit };
-  app.renderOpsEduCockpit({ cockpit });
-  assert.match(element("opseduActionPackages").innerHTML, /Payment follow-ups due/);
-  assert.doesNotMatch(element("opseduActionPackages").innerHTML, /Continue/);
+  app.renderEduOpsOperationsWorkspace({ cockpit });
+  assert.match(element("eduopsOperationsActionPackages").innerHTML, /Payment follow-ups due/);
+  assert.doesNotMatch(element("eduopsOperationsActionPackages").innerHTML, /Continue/);
   clickHandlers[0]({ target: { closest: () => ({ disabled: false, getAttribute: () => "FODE:READY:PAYMENT_FOLLOW_UP" }) } });
   assert.equal(app.state.worklistKey, "PAYMENT_FOLLOW_UP");
   assert.equal(app.state.snapshotId, "SNAP-R366");
   assert.deepEqual(app.requestedPayload.filters, { search: "" });
 
-  app.renderOpsEduCockpit({ cockpit: null });
-  assert.match(element("opseduActionPackages").innerHTML, /Authoritative OpsEdu cockpit decision was not returned/);
+  app.renderEduOpsOperationsWorkspace({ cockpit: null });
+  assert.match(element("eduopsOperationsActionPackages").innerHTML, /Authoritative EduOps Operations Workspace decision was not returned/);
 }
 
 function testPresentationCleanliness() {
-  const cockpitClient = read("OpsEdu_ClientCockpit.html");
+  const cockpitClient = read("EduOps_ClientOperationsWorkspace.html");
   const workbenchClient = read("EduOps_ClientWorkbench.html");
-  const allClient = ["EduOps_Client.html", "EduOps_ClientCore.html", "EduOps_ClientComponents.html", "EduOps_ClientWorkbench.html", "EduOps_ClientBatch.html", "OpsEdu_ClientCockpit.html"].map(read).join("\n");
+  const allClient = ["EduOps_Client.html", "EduOps_ClientCore.html", "EduOps_ClientComponents.html", "EduOps_ClientWorkbench.html", "EduOps_ClientBatch.html", "EduOps_ClientOperationsWorkspace.html"].map(read).join("\n");
   assert.doesNotMatch(workbenchClient, /\/payment\|finance\|invoice|\/email\|communicat\|contact/);
   assert.doesNotMatch(cockpitClient, /docs_missing|payment_followup|legacy_invite/);
   assert.doesNotMatch(allClient, /defaultSubject|defaultBody/);
@@ -173,4 +173,4 @@ function testPresentationCleanliness() {
 testBackendProjection();
 testHollowClientBinding();
 testPresentationCleanliness();
-console.log("PASS opsedu-cockpit-stage1");
+console.log("PASS eduops-operations-workspace-stage1");

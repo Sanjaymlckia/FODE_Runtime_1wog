@@ -9,11 +9,11 @@ const snapshotPath = path.join(previewRoot, "snapshots", "current", "snapshot.js
 fs.mkdirSync(evidenceDir, { recursive: true });
 
 const snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
-const client = fs.readFileSync(path.join(previewRoot, "public", "opsedu-preview.js"), "utf8");
-const css = fs.readFileSync(path.join(previewRoot, "public", "opsedu-preview.css"), "utf8");
+const client = fs.readFileSync(path.join(previewRoot, "public", "eduops-operations-preview.js"), "utf8");
+const css = fs.readFileSync(path.join(previewRoot, "public", "eduops-operations-preview.css"), "utf8");
 const server = fs.readFileSync(path.join(previewRoot, "server", "server.js"), "utf8");
 
-new vm.Script(client, { filename: "opsedu-preview.js" });
+new vm.Script(client, { filename: "eduops-operations-preview.js" });
 
 assert.equal(snapshot.population.authoritativeApplicants, 332, "authoritative population must remain 332");
 assert.equal(snapshot.validation.packageTotal, 332, "work-package total must reconcile to population");

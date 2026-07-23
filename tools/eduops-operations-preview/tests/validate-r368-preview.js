@@ -46,8 +46,8 @@ assert.equal(primaryCounts.REVIEW_REQUIRED, 76, "REVIEW_REQUIRED count must matc
 assert.equal(primaryCounts.COOLING_OFF, 2, "COOLING_OFF count must match accepted live count");
 assert.equal(primaryCounts.COMPLETE, 1, "COMPLETE count must match accepted live count");
 
-const clientSource = read("public/opsedu-preview.js");
-new vm.Script(clientSource, { filename: "opsedu-preview.js" });
+const clientSource = read("public/eduops-operations-preview.js");
+new vm.Script(clientSource, { filename: "eduops-operations-preview.js" });
 assert.match(clientSource, /Send disabled in preview/, "batch send must be visibly disabled");
 assert.match(clientSource, /data-shot="waffi-search-handoff"/, "global search handoff state must be renderable");
 assert.doesNotMatch(clientSource, /google\.script\.run|GmailApp|MailApp|sendEmail|executeCommand|previewCommand/, "preview client must not call live mutation/send transports");

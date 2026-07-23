@@ -193,7 +193,7 @@ function buildSnapshot(input) {
       liveRuntime: workload.runtime ? `${workload.runtime.version || ""} / ${workload.runtime.deployVersion || ""}`.trim() : finalVerdict.adminRuntime || "r365 / 365",
       snapshotId: workload.snapshotId || routeSnapshot.snapshotId || finalVerdict.snapshotId || "",
       snapshotAsOf: workload.snapshotAsOf || routeSnapshot.generatedAt || finalVerdict.snapshotAsOf || "",
-      authoritySource: "Read-only EduOps/OpsEdu backend authority projections"
+      authoritySource: "Read-only EduOps backend authority projections"
     },
     profile,
     population: {

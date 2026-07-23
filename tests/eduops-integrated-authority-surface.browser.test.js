@@ -3,12 +3,12 @@ const fs = require("node:fs");
 const playwrightModule = process.env.FODE_PLAYWRIGHT_MODULE || "F:/Playwright/fode-secure-link-diagnostic/node_modules/playwright";
 const { chromium } = require(playwrightModule);
 
-const clientFiles = ["EduOps_ClientCore.html", "OpsEdu_ClientCockpit.html", "EduOps_ClientComponents.html", "EduOps_ClientWorkbench.html", "EduOps_ClientBatch.html", "EduOps_Client.html"];
+const clientFiles = ["EduOps_ClientCore.html", "EduOps_ClientOperationsWorkspace.html", "EduOps_ClientComponents.html", "EduOps_ClientWorkbench.html", "EduOps_ClientBatch.html", "EduOps_Client.html"];
 
 function fixtureHtml() {
   let html = fs.readFileSync("EduOps.html", "utf8");
   html = html.replace('<?!= HtmlService.createHtmlOutputFromFile("EduOps_Styles").getContent(); ?>', fs.readFileSync("EduOps_Styles.html", "utf8"));
-  html = html.replace('<?!= HtmlService.createHtmlOutputFromFile("OpsEdu_CockpitStyles").getContent(); ?>', fs.readFileSync("OpsEdu_CockpitStyles.html", "utf8"));
+  html = html.replace('<?!= HtmlService.createHtmlOutputFromFile("EduOps_OperationsWorkspaceStyles").getContent(); ?>', fs.readFileSync("EduOps_OperationsWorkspaceStyles.html", "utf8"));
   const mock = `<script>
     window.__rpcCalls = [];
     window.__executeCalls = 0;
@@ -164,21 +164,21 @@ async function assertAuthorityInvalidated(page, label) {
     assert.equal(await page.locator("#eduopsReleaseSnapshotTime").innerText(), "As of 2026-07-19T00:00:00.000Z");
     assert.match(await page.locator("#eduopsReleaseIdentity").innerText(), /FODE live production operations[\s\S]*r362 \/ 362[\s\S]*Apps Script @397[\s\S]*Snapshot SNAP-INTEGRATED[\s\S]*As of 2026-07-19T00:00:00\.000Z/);
     assert.doesNotMatch(await page.locator("#eduopsReleaseIdentity").innerText(), /Admin staging/);
-    assert.equal(await page.locator("#opseduCockpitHeading").innerText(), "Today's work");
-    assert.equal(await page.locator("#opseduCockpitContext").innerText(), "FODE live production operations");
+    assert.equal(await page.locator("#eduopsOperationsWorkspaceHeading").innerText(), "Today's work");
+    assert.equal(await page.locator("#eduopsOperationsWorkspaceContext").innerText(), "FODE live production operations");
     const cockpitLayout = await page.evaluate(() => {
-      const cockpit = document.querySelector("#opseduCockpit").getBoundingClientRect();
-      const ribbon = document.querySelector(".opsedu-ribbon-row");
-      const primary = document.querySelector("#opseduPrimaryBuckets");
-      const packages = document.querySelector("#opseduActionPackages");
-      const split = document.querySelector(".opsedu-split-workspace").getBoundingClientRect();
-      const context = document.querySelector(".opsedu-context-pane").getBoundingClientRect();
-      const queue = document.querySelector(".opsedu-queue-pane").getBoundingClientRect();
-      const cards = Array.from(document.querySelectorAll("#opseduActionPackages .opsedu-action-card")).map((card) => card.getBoundingClientRect());
+      const cockpit = document.querySelector("#eduopsOperationsWorkspace").getBoundingClientRect();
+      const ribbon = document.querySelector(".eduops-operations-ribbon-row");
+      const primary = document.querySelector("#eduopsOperationsPrimaryBuckets");
+      const packages = document.querySelector("#eduopsOperationsActionPackages");
+      const split = document.querySelector(".eduops-operations-split-workspace").getBoundingClientRect();
+      const context = document.querySelector(".eduops-operations-context-pane").getBoundingClientRect();
+      const queue = document.querySelector(".eduops-operations-queue-pane").getBoundingClientRect();
+      const cards = Array.from(document.querySelectorAll("#eduopsOperationsActionPackages .eduops-operations-action-card")).map((card) => card.getBoundingClientRect());
       return {
         cockpitHeight: cockpit.height,
         cockpitBottom: cockpit.bottom,
-        primaryCount: document.querySelectorAll("#opseduPrimaryBuckets [data-opsedu-primary-bucket]").length,
+        primaryCount: document.querySelectorAll("#eduopsOperationsPrimaryBuckets [data-eduops-operations-primary-bucket]").length,
         packageCount: cards.length,
         primaryOverflow: primary.scrollWidth > primary.clientWidth,
         packageOverflow: packages.scrollWidth > packages.clientWidth,
@@ -221,18 +221,18 @@ async function assertAuthorityInvalidated(page, label) {
     await page.locator("#eduopsGlobalSearch").fill("not-a-fixture-applicant");
     await page.waitForFunction(() => document.querySelector("#eduopsGlobalSearchResults")?.textContent.includes("No applicant found in the authoritative FODE population."), null, { timeout: 30000 });
     assert.equal(await page.evaluate(() => window.EduOpsApp.state.worklistKey), "PAYMENT_FOLLOW_UP", "global no-match state does not disturb the active queue");
-    await page.locator('#opseduActionPackages [data-opsedu-package="FODE:READY:PAYMENT_FOLLOW_UP"]').click();
+    await page.locator('#eduopsOperationsActionPackages [data-eduops-operations-package="FODE:READY:PAYMENT_FOLLOW_UP"]').click();
     await settled(page);
     assert.equal(await page.evaluate(() => window.EduOpsApp.state.worklistKey), "PAYMENT_FOLLOW_UP", "card click transports the exact backend worklist binding");
     assert.equal(await page.evaluate(() => window.EduOpsApp.state.actionabilityState), "READY", "card click transports the exact backend actionability binding");
     assert.equal(await page.locator("#eduopsVisibleRange").innerText(), "Showing 1-1 of 1");
     assert.equal(await page.locator("#eduopsWorklistRows [data-applicant-row]").getAttribute("data-applicant-row"), "FODE-26-002959", "Waffi-like payment follow-up fixture lands in the exact queue without search");
     assert.equal(await page.evaluate(() => window.__executeCalls), 0, "cockpit navigation never executes a communication or mutation");
-    await page.locator('[data-opsedu-primary-bucket="AWAITING_APPLICANT"]').click();
+    await page.locator('[data-eduops-operations-primary-bucket="AWAITING_APPLICANT"]').click();
     await page.waitForFunction(() => document.querySelector("#eduopsApp")?.getAttribute("aria-busy") === "false" && document.querySelector("#eduopsVisibleRange")?.textContent === "Showing 0-0 of 0", null, { timeout: 30000 });
     assert.equal(await page.locator("#eduopsVisibleRange").innerText(), "Showing 0-0 of 0", "empty primary bucket clears the visible workload range");
     assert.equal(await page.locator("#eduopsWorklistRows [data-applicant-row]").count(), 0, "empty primary bucket clears stale applicant rows");
-    assert.equal(await page.locator("#opseduActionPackages .opsedu-action-card").count(), 0, "empty primary bucket clears stale package cards");
+    assert.equal(await page.locator("#eduopsOperationsActionPackages .eduops-operations-action-card").count(), 0, "empty primary bucket clears stale package cards");
     assert.equal(await page.locator("#eduopsOpenBatch").isDisabled(), true, "empty primary bucket leaves batch disabled");
     assert.equal(await page.evaluate(() => Object.keys(window.EduOpsApp.state.selected).filter((key) => window.EduOpsApp.state.selected[key]).length), 0, "empty primary bucket clears selected applicants");
     assert.equal(await page.evaluate(() => Object.keys(window.EduOpsApp.state.selectionExcluded).filter((key) => window.EduOpsApp.state.selectionExcluded[key]).length), 0, "empty primary bucket clears exclusions");

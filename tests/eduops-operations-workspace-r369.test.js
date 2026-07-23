@@ -88,17 +88,17 @@ function testRuntimePlaceholderAndControlPolicy() {
   const runtime = [
     "EduOps.html",
     "EduOps_ClientComponents.html",
-    "OpsEdu_ClientCockpit.html",
-    "OpsEdu_CockpitStyles.html"
+    "EduOps_ClientOperationsWorkspace.html",
+    "EduOps_OperationsWorkspaceStyles.html"
   ].map(read).join("\n");
   assert.doesNotMatch(runtime, /backend DTO preview|preview placeholder/i, "runtime must not inherit preview-only placeholder wording");
   assert.doesNotMatch(runtime, />\s*Not returned\s*</i, "runtime identity details must not expose preview-style Not returned placeholders");
-  assert.doesNotMatch(runtime, /data-opsedu-package-rail|opseduPackageHeading|data-package-rail/i, "runtime must remove the former large package rail");
-  assert.match(read("EduOps.html"), /opsedu-ribbon-row[\s\S]*opseduPrimaryBuckets[\s\S]*opsedu-ribbon-divider[\s\S]*opseduActionPackages/, "primary buckets and selected work packages must share one OPS ribbon");
-  assert.match(read("OpsEdu_CockpitStyles.html"), /\.opsedu-primary-buckets\s*\{[\s\S]*grid-template-columns:\s*repeat\(8,\s*minmax\(74px,\s*1fr\)\)/, "all eight primary states must be retained in the compact normal-zoom ribbon");
-  assert.match(read("OpsEdu_CockpitStyles.html"), /\.opsedu-split-workspace\s*\{[\s\S]*grid-template-columns:\s*clamp\(240px,\s*18vw,\s*280px\)\s*minmax\(0,\s*1fr\)/, "wide desktop context pane must be bounded to 240-280px");
-  assert.match(read("OpsEdu_CockpitStyles.html"), /@media \(max-width:\s*1599px\)[\s\S]*\.opsedu-split-workspace\s*\{[\s\S]*grid-template-columns:\s*240px\s*minmax\(0,\s*1fr\)/, "medium desktop context pane must remain bounded for normal zoom");
-  assert.match(read("OpsEdu_ClientCockpit.html"), /shortLabels\s*=\s*\{[\s\S]*READY:\s*"Ready"[\s\S]*COMPLETE:\s*"Complete"/, "short labels must preserve the eight primary states without clipping");
+  assert.doesNotMatch(runtime, /data-eduops-operations-package-rail|eduopsOperationsPackageHeading|data-package-rail/i, "runtime must remove the former large package rail");
+  assert.match(read("EduOps.html"), /eduops-operations-ribbon-row[\s\S]*eduopsOperationsPrimaryBuckets[\s\S]*eduops-operations-ribbon-divider[\s\S]*eduopsOperationsActionPackages/, "primary buckets and selected work packages must share one OPS ribbon");
+  assert.match(read("EduOps_OperationsWorkspaceStyles.html"), /\.eduops-operations-primary-buckets\s*\{[\s\S]*grid-template-columns:\s*repeat\(8,\s*minmax\(74px,\s*1fr\)\)/, "all eight primary states must be retained in the compact normal-zoom ribbon");
+  assert.match(read("EduOps_OperationsWorkspaceStyles.html"), /\.eduops-operations-split-workspace\s*\{[\s\S]*grid-template-columns:\s*clamp\(240px,\s*18vw,\s*280px\)\s*minmax\(0,\s*1fr\)/, "wide desktop context pane must be bounded to 240-280px");
+  assert.match(read("EduOps_OperationsWorkspaceStyles.html"), /@media \(max-width:\s*1599px\)[\s\S]*\.eduops-operations-split-workspace\s*\{[\s\S]*grid-template-columns:\s*240px\s*minmax\(0,\s*1fr\)/, "medium desktop context pane must remain bounded for normal zoom");
+  assert.match(read("EduOps_ClientOperationsWorkspace.html"), /shortLabels\s*=\s*\{[\s\S]*READY:\s*"Ready"[\s\S]*COMPLETE:\s*"Complete"/, "short labels must preserve the eight primary states without clipping");
   assert.match(read("EduOps_ClientComponents.html"), /Search within/, "scoped search wording must name the active backend package or workload");
   assert.equal((read("EduOps.html").match(/id="eduopsGlobalSearch"/g) || []).length, 1, "persistent global applicant search must have one active field");
   assert.match(read("EduOps.html"), /eduops-global-search-strip[\s\S]*Find any applicant[\s\S]*eduops-shell/, "global applicant search must sit persistently above the operator shell");
@@ -111,7 +111,7 @@ function testRuntimePlaceholderAndControlPolicy() {
   assert.match(read("EduOps_Styles.html"), /\.eduops-global-search-strip[\s\S]*min-height:\s*38px/, "global search strip must be compact and persistent");
   assert.match(read("EduOps_Styles.html"), /\.eduops-work-scope-band\s*\{[\s\S]*padding:\s*5px 7px/, "work-scope controls must be compact for normal zoom");
   assert.match(read("EduOps_Styles.html"), /\.eduops-selection-bar\s*\{[\s\S]*padding:\s*4px 7px/, "selection controls must be compact for normal zoom");
-  assert.match(read("EduOps.html"), /opsedu-context-action[\s\S]*Open composition/, "Open composition must remain available as a secondary context action");
+  assert.match(read("EduOps.html"), /eduops-operations-context-action[\s\S]*Open composition/, "Open composition must remain available as a secondary context action");
   assert.doesNotMatch(read("EduOps.html"), /eduops-work-scope-band[\s\S]*eduopsOpenReconciliation[\s\S]*<\/div>\s*<div class="eduops-filter-toolbar"/, "Open composition must not occupy the main queue-control row");
 }
 
@@ -120,12 +120,12 @@ function testIndependentScrollingContracts() {
   assert.match(styles, /\.eduops-rail\s*\{[\s\S]*overflow:\s*hidden auto/, "Admin navigation must scroll independently");
   assert.match(styles, /\.eduops-table-scroller\s*\{[\s\S]*overflow:\s*auto/, "Applicant worklist must scroll independently");
   assert.match(styles, /\.eduops-workbench-panel,\s*\n\.eduops-batch-panel\s*\{[\s\S]*overflow:\s*auto/, "Workbench and Batch surfaces must scroll independently");
-  assert.match(read("OpsEdu_CockpitStyles.html"), /\.opsedu-context-pane\s*\{[\s\S]*overflow:\s*auto/, "Operational context pane must scroll independently when needed");
-  assert.match(read("OpsEdu_CockpitStyles.html"), /\.opsedu-queue-pane\s*\{[\s\S]*overflow:\s*hidden/, "Applicant queue pane must own the dominant scroll region");
-  assert.match(read("OpsEdu_CockpitStyles.html"), /\.opsedu-queue-toolbar\s*\{[\s\S]*position:\s*sticky[\s\S]*background:\s*#fff/, "Queue toolbar must be sticky and opaque");
+  assert.match(read("EduOps_OperationsWorkspaceStyles.html"), /\.eduops-operations-context-pane\s*\{[\s\S]*overflow:\s*auto/, "Operational context pane must scroll independently when needed");
+  assert.match(read("EduOps_OperationsWorkspaceStyles.html"), /\.eduops-operations-queue-pane\s*\{[\s\S]*overflow:\s*hidden/, "Applicant queue pane must own the dominant scroll region");
+  assert.match(read("EduOps_OperationsWorkspaceStyles.html"), /\.eduops-operations-queue-toolbar\s*\{[\s\S]*position:\s*sticky[\s\S]*background:\s*#fff/, "Queue toolbar must be sticky and opaque");
 }
 
 testBackendWorkspaceProjection();
 testRuntimePlaceholderAndControlPolicy();
 testIndependentScrollingContracts();
-console.log("PASS opsedu-workspace-r370");
+console.log("PASS eduops-operations-workspace-r370");

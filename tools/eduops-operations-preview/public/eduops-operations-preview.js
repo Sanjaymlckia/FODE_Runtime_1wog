@@ -2,7 +2,7 @@
   "use strict";
 
   const params = new URLSearchParams(location.search);
-  const savedRail = sessionStorage.getItem("opsedu.preview.railMode");
+  const savedRail = sessionStorage.getItem("eduops.operations.preview.railMode");
   const state = {
     mode: params.get("mode") === "baseline" ? "baseline" : "redesign",
     snapshot: null,
@@ -148,7 +148,7 @@
 
   function setRail(mode) {
     state.railMode = mode;
-    sessionStorage.setItem("opsedu.preview.railMode", mode);
+    sessionStorage.setItem("eduops.operations.preview.railMode", mode);
     render();
   }
 

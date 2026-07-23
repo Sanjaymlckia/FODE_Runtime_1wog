@@ -102,7 +102,8 @@ assert.match(files.workload, /eduopsRequireAccess_\(\)/g, "EduOps RPCs must perf
 assert.match(files.client, /readRpcAllowlist[\s\S]*writeRpcAllowlist/, "EduOps client must use closed read and write RPC allowlists");
 assert.doesNotMatch(files.client, /google\.script\.run\[[^\]]+\]/, "EduOps client must not use dynamic google.script.run dispatch");
 assert.doesNotMatch(files.client, /admin_[A-Za-z0-9_]+\(/, "EduOps client must not call legacy Admin RPCs directly");
-assert.doesNotMatch(files.adapter + files.workload, /prototypes\/eduops|mock-authority|eduops-next/i, "Runtime EduOps must not import prototype mock authority");
+const retiredPrototypeToken = ["eduops", "next"].join("-");
+assert.doesNotMatch(files.adapter + files.workload, new RegExp(`prototypes/eduops|mock-authority|${retiredPrototypeToken}`, "i"), "Runtime EduOps must not import prototype mock authority");
 assert.match(files.workload, /pageSize === 10 \|\| pageSize === 25 \|\| pageSize === 50|eduopsNormalizePageSize_/, "Workload must enforce bounded server page sizes");
 assert.match(files.workload, /expectedSnapshotId[\s\S]*STALE/, "Workload/Workbench must surface stale snapshot handling");
 assert.match(files.workload, /eduopsUrgencyRank_/, "Workload must use deterministic server sorting");

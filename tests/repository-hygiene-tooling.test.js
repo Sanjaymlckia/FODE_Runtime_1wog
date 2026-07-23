@@ -51,8 +51,8 @@ for (const rule of [
 
 assert.equal(isApprovedGeneratedPath("tools/eduops-snapshot-capture/evidence/generated/run/a.json"), true);
 assert.equal(isApprovedGeneratedPath("tools/eduops-snapshot-capture/evidence/old-run/a.json"), false);
-assert.equal(classifyNameReference("OpsEdu_ClientCockpit.html", "OpsEdu"), "runtime naming debt deferred to R376J");
-assert.equal(classifyNameReference("tools/eduops-operations-preview/public/opsedu-preview.js", "schemaVersion: OPSEDU_TRACE_AUDIT_V1"), "approved compatibility reference");
+assert.equal(classifyNameReference("EduOps_ClientOperationsWorkspace.html", "OpsEdu"), "defect requiring removal now");
+assert.equal(classifyNameReference("tools/eduops-operations-preview/public/eduops-operations-preview.js", "schemaVersion: OPSEDU_TRACE_AUDIT_V1"), "approved compatibility reference");
 assert.equal(classifyNameReference("docs/architecture/example.md", "operator-next"), "historical archive/reference");
 
 const report = JSON.parse(cp.execFileSync("node", ["tools/check-repository-hygiene.js", "--json"], { cwd: path.join(__dirname, ".."), encoding: "utf8" }));

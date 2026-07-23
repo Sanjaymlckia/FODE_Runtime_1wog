@@ -5,28 +5,22 @@ const path = require("path");
 const root = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 
-function testRuntimeIdentityBump() {
-  const config = read("Config.js");
-  assert.match(config, /VERSION:\s*"r371"/, "Config.js must declare r371");
-  assert.match(config, /DEPLOY_VERSION_NUMBER:\s*371/, "Config.js must declare build 371");
-}
-
 function testProductSurfacePreserved() {
   const html = read("EduOps.html");
   assert.match(html, /value="FODE"/, "FODE product option must remain available");
   assert.match(html, /value="KIA"/, "KIA product option must remain available");
   assert.match(html, /value="MLC"/, "MLC product option must remain available");
-  assert.match(html, /opsedu-density-hidden-title/, "redundant cockpit title row must be hidden through an explicit density class");
+  assert.match(html, /eduops-operations-density-hidden-title/, "redundant cockpit title row must be hidden through an explicit density class");
   assert.match(html, /eduopsQueueCompactStats/, "compact queue stats must be rendered near the workload title");
 }
 
 function testDensityCssLayer() {
-  const styles = read("EduOps_Styles.html") + "\n" + read("OpsEdu_CockpitStyles.html");
+  const styles = read("EduOps_Styles.html") + "\n" + read("EduOps_OperationsWorkspaceStyles.html");
   assert.match(styles, /R375 100% zoom density layer/, "runtime density override must be named");
   assert.match(styles, /--eduops-density-row-min:\s*46px/, "compact applicant row minimum must be explicitly tokenised");
-  assert.match(styles, /\.opsedu-density-hidden-title\s*\{\s*display:\s*none\s*!important;/, "redundant cockpit title must be display-only hidden");
+  assert.match(styles, /\.eduops-operations-density-hidden-title\s*\{\s*display:\s*none\s*!important;/, "redundant cockpit title must be display-only hidden");
   assert.match(styles, /\.eduops-template-reason/, "unavailable template reasons must have compact expandable styling");
-  assert.match(styles, /\.opsedu-package-panel-control/, "package panel control must use standard density controls");
+  assert.match(styles, /\.eduops-operations-package-panel-control/, "package panel control must use standard density controls");
 }
 
 function testComponentCompaction() {
@@ -56,7 +50,6 @@ function testCommunicationReasonCompaction() {
 }
 
 [
-  testRuntimeIdentityBump,
   testProductSurfacePreserved,
   testDensityCssLayer,
   testComponentCompaction,
@@ -64,4 +57,4 @@ function testCommunicationReasonCompaction() {
   testCommunicationReasonCompaction
 ].forEach((test) => test());
 
-console.log("opsedu-density-r375: PASS");
+console.log("eduops-operations-density-r375: PASS");

@@ -7,7 +7,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231559a6'/%3E%3Cpath d='M7 8h9v6H7zm0 10h18v6H7zm13-10h5v6h-5z' fill='white'/%3E%3C/svg%3E">
   <title>FODE Operations Workspace</title>
   <?!= HtmlService.createHtmlOutputFromFile("EduOps_Styles").getContent(); ?>
-  <?!= HtmlService.createHtmlOutputFromFile("OpsEdu_CockpitStyles").getContent(); ?>
+  <?!= HtmlService.createHtmlOutputFromFile("EduOps_OperationsWorkspaceStyles").getContent(); ?>
 </head>
 <body class="eduops-body">
   <a class="eduops-skip-link" href="#eduopsWorklist">Skip to worklist</a>
@@ -21,7 +21,7 @@
           </svg>
         </span>
         <span>
-          <strong>OpsEdu Cockpit</strong>
+          <strong>EduOps Operations Workspace</strong>
           <small>Authoritative operating context loading</small>
         </span>
       </div>
@@ -113,37 +113,37 @@
       </aside>
 
       <main class="eduops-main" id="eduopsMain">
-        <section id="opseduCockpit" class="opsedu-cockpit" aria-labelledby="opseduCockpitHeading">
-          <header class="opsedu-cockpit-header opsedu-density-hidden-title">
+        <section id="eduopsOperationsWorkspace" class="eduops-operations-workspace" aria-labelledby="eduopsOperationsWorkspaceHeading">
+          <header class="eduops-operations-workspace-header eduops-operations-density-hidden-title">
             <div>
-              <span class="opsedu-cockpit-kicker">OpsEdu Cockpit</span>
-              <h1 id="opseduCockpitHeading">Today's work</h1>
-              <p id="opseduCockpitContext">Authoritative operating context loading</p>
+              <span class="eduops-operations-workspace-kicker">EduOps Operations Workspace</span>
+              <h1 id="eduopsOperationsWorkspaceHeading">Today's work</h1>
+              <p id="eduopsOperationsWorkspaceContext">Authoritative operating context loading</p>
             </div>
-            <div class="opsedu-cockpit-actions">
-              <span id="opseduCockpitSnapshot" class="opsedu-cockpit-snapshot">Authoritative work packages loading</span>
+            <div class="eduops-operations-workspace-actions">
+              <span id="eduopsOperationsWorkspaceSnapshot" class="eduops-operations-workspace-snapshot">Authoritative work packages loading</span>
             </div>
           </header>
-          <div class="opsedu-ribbon-row" aria-label="Ops ribbon">
-            <div id="opseduPrimaryBuckets" class="opsedu-primary-buckets" aria-label="Primary actionability buckets"></div>
-            <div class="opsedu-ribbon-divider" aria-hidden="true"></div>
-            <div id="opseduActionPackages" class="opsedu-action-packages" aria-live="polite">
-              <div class="opsedu-cockpit-empty"><strong>Resolving authoritative action packages</strong><span>The cockpit will fail closed if the backend projection is unavailable.</span></div>
+          <div class="eduops-operations-ribbon-row" aria-label="Ops ribbon">
+            <div id="eduopsOperationsPrimaryBuckets" class="eduops-operations-primary-buckets" aria-label="Primary actionability buckets"></div>
+            <div class="eduops-operations-ribbon-divider" aria-hidden="true"></div>
+            <div id="eduopsOperationsActionPackages" class="eduops-operations-action-packages" aria-live="polite">
+              <div class="eduops-operations-workspace-empty"><strong>Resolving authoritative action packages</strong><span>The workspace will fail closed if the backend projection is unavailable.</span></div>
             </div>
           </div>
         </section>
 
-        <div class="opsedu-split-workspace">
-          <aside class="opsedu-context-pane" aria-label="Operational context">
-            <section id="opseduQueueContext" class="opsedu-queue-context">
+        <div class="eduops-operations-split-workspace">
+          <aside class="eduops-operations-context-pane" aria-label="Operational context">
+            <section id="eduopsOperationsQueueContext" class="eduops-operations-queue-context">
               <span class="eduops-eyebrow">Operational context</span>
               <h2>Loading active queue</h2>
               <p>Authoritative queue context is loading.</p>
             </section>
-            <button id="eduopsOpenReconciliation" class="eduops-button eduops-button-secondary opsedu-context-action" type="button">Open composition</button>
-            <details class="opsedu-secondary-controls">
+            <button id="eduopsOpenReconciliation" class="eduops-button eduops-button-secondary eduops-operations-context-action" type="button">Open composition</button>
+            <details class="eduops-operations-secondary-controls">
               <summary>Search and authority status</summary>
-              <section class="eduops-next-command" aria-label="Authority reliability">
+              <section class="eduops-operations-command" aria-label="Authority reliability">
               <div id="eduopsReliabilityBanner" class="eduops-reliability-banner" data-reliability="AUTHORITATIVE">
                 <strong>Authority source loading</strong>
                 <span>Product adapter status is being resolved.</span>
@@ -154,7 +154,7 @@
               </section>
             </details>
 
-            <details class="eduops-overview opsedu-secondary-surface" hidden>
+            <details class="eduops-overview eduops-operations-secondary-surface" hidden>
               <summary>Workload summary</summary>
               <div class="eduops-page-heading">
                 <div>
@@ -176,11 +176,11 @@
             </details>
           </aside>
 
-          <section class="opsedu-queue-pane" aria-label="Applicant action queue">
-            <div class="opsedu-queue-toolbar">
-              <span id="opseduToolbarState">State loading</span>
-              <strong id="opseduToolbarPackage">Package loading</strong>
-              <button class="eduops-button eduops-button-secondary" type="button" data-opsedu-focus-packages>Show work packages</button>
+          <section class="eduops-operations-queue-pane" aria-label="Applicant action queue">
+            <div class="eduops-operations-queue-toolbar">
+              <span id="eduopsOperationsToolbarState">State loading</span>
+              <strong id="eduopsOperationsToolbarPackage">Package loading</strong>
+              <button class="eduops-button eduops-button-secondary" type="button" data-eduops-operations-focus-packages>Show work packages</button>
             </div>
 
         <section id="eduopsWorklist" class="eduops-workspace" aria-labelledby="eduopsWorklistTitle" tabindex="-1">
@@ -377,7 +377,7 @@
     };
   </script>
   <?!= HtmlService.createHtmlOutputFromFile("EduOps_ClientCore").getContent(); ?>
-  <?!= HtmlService.createHtmlOutputFromFile("OpsEdu_ClientCockpit").getContent(); ?>
+  <?!= HtmlService.createHtmlOutputFromFile("EduOps_ClientOperationsWorkspace").getContent(); ?>
   <?!= HtmlService.createHtmlOutputFromFile("EduOps_ClientComponents").getContent(); ?>
   <?!= HtmlService.createHtmlOutputFromFile("EduOps_ClientWorkbench").getContent(); ?>
   <?!= HtmlService.createHtmlOutputFromFile("EduOps_ClientBatch").getContent(); ?>

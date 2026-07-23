@@ -38,8 +38,8 @@
 !EduOps_Receipts.js
 !EduOps_Styles.html
 !EduOps_Workload.js
-!OpsEdu_ClientCockpit.html
-!OpsEdu_CockpitStyles.html
+!EduOps_ClientOperationsWorkspace.html
+!EduOps_OperationsWorkspaceStyles.html
 !Routes.js
 !Utils.js
 !whoami_admin.html

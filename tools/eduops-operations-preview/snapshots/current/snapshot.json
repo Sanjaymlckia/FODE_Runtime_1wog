@@ -7,7 +7,7 @@
     "liveRuntime": "r365 / 365",
     "snapshotId": "FODE-6xND4sQ_KJhx9anb",
     "snapshotAsOf": "2026-07-20T07:36:01.882Z",
-    "authoritySource": "Read-only EduOps/OpsEdu backend authority projections"
+    "authoritySource": "Read-only EduOps backend authority projections"
   },
   "profile": {
     "receiptContractVersion": "EDUOPS_RECEIPT_V1",

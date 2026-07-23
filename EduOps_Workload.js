@@ -10,7 +10,7 @@ function renderEduOpsApp_(e) {
   t.BUILD_SCRIPT_ID = ScriptApp.getScriptId();
   t.EDUOPS_CONFIG = eduopsConfig_();
   return t.evaluate()
-    .setTitle((CONFIG.BRAND && CONFIG.BRAND.name ? CONFIG.BRAND.name : "FODE") + " - OpsEdu Cockpit")
+    .setTitle((CONFIG.BRAND && CONFIG.BRAND.name ? CONFIG.BRAND.name : "FODE") + " - EduOps Operations Workspace")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
