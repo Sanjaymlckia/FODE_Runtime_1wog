@@ -10,7 +10,9 @@ const expected = {
   "finance-reconciliation": "admin_getCanonicalFinanceReconciliation",
   "finance-exceptions": "admin_getCanonicalFinanceExceptions",
   "finance-object-history": "admin_getCanonicalFinanceObjectHistory",
-  "finance-policy-status": "admin_getCanonicalFinancePolicyStatus"
+  "finance-policy": "admin_getCanonicalFinancePolicy",
+  "finance-zoho-health": "admin_getZohoBooksCachedReadOnlyHealth",
+  "finance-zoho-match": "admin_getZohoBooksCachedApplicantMatch"
 };
 assert.deepEqual(READ_ONLY_RPC_ALLOWLIST, expected);
 assert.ok(!Object.values(READ_ONLY_RPC_ALLOWLIST).some((name) => /set|send|create|update|delete|verifyPayment/i.test(name)), "Diagnostic bridge must contain no mutation RPC");
@@ -23,6 +25,8 @@ assert.equal(request.pageSize, 100, "Diagnostic bridge must cap Finance pages at
 assert.equal(request.searchQuery, "FODE-26-000120");
 assert.equal(request.filters.worklistKey, "PAYMENT_REVIEW");
 assert.throws(() => financeReadOnlyPayload("finance-applicant", {}), /applicant-id is required/);
+assert.throws(() => financeReadOnlyPayload("finance-zoho-match", {}), /applicant-id is required/);
+assert.deepEqual(financeReadOnlyPayload("finance-zoho-match", { "applicant-id": "FODE-26-000006" }), { applicantId: "FODE-26-000006" });
 
 const repoRoot = path.resolve(__dirname, "..");
 assert.match(evidencePath(repoRoot, "finance-summary", ""), /\.release-proof/);

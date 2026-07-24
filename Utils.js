@@ -777,6 +777,41 @@ function getZohoBooksTokenReadiness_() {
   };
 }
 
+function getZohoBooksCachedReadOnlyHealth_() {
+  var props;
+  try {
+    props = PropertiesService.getScriptProperties();
+  } catch (_propertiesError) {
+    return {
+      schemaVersion: "ZOHO_BOOKS_CACHED_HEALTH_V1",
+      readOnly: true,
+      available: false,
+      status: "REAUTHORIZATION_REQUIRED",
+      label: "Connection unavailable — reauthorization required",
+      reasonCode: "CACHED_TOKEN_STATE_UNAVAILABLE",
+      organizationConfigured: false,
+      cachedTokenPresent: false,
+      cachedTokenExpiresAt: ""
+    };
+  }
+  var organizationId = clean_(props.getProperty("ZOHO_BOOKS_ORGANIZATION_ID") || CONFIG.ZOHO_BOOKS_ORGANIZATION_ID || "");
+  var cachedToken = clean_(props.getProperty("ZOHO_BOOKS_ACCESS_TOKEN") || "");
+  var expiresMs = Number(props.getProperty("ZOHO_BOOKS_ACCESS_TOKEN_EXP_MS") || 0);
+  var available = !!organizationId && !!cachedToken && expiresMs > Date.now();
+  return {
+    schemaVersion: "ZOHO_BOOKS_CACHED_HEALTH_V1",
+    readOnly: true,
+    available: available,
+    status: available ? "CACHED_CONNECTION_AVAILABLE" : "REAUTHORIZATION_REQUIRED",
+    label: available ? "Cached connection available" : "Connection unavailable — reauthorization required",
+    reasonCode: available ? "CACHED_TOKEN_VALID" : (!organizationId ? "BOOKS_ORG_NOT_CONFIGURED" : (!cachedToken ? "CACHED_TOKEN_MISSING" : "CACHED_TOKEN_EXPIRED")),
+    organizationConfigured: !!organizationId,
+    organizationName: clean_(CONFIG.ZOHO_BOOKS_ORGANIZATION_NAME || ""),
+    cachedTokenPresent: !!cachedToken,
+    cachedTokenExpiresAt: expiresMs > 0 ? new Date(expiresMs).toISOString() : ""
+  };
+}
+
 function firstNonEmptyBooksField_(record, names) {
   var r = record || {};
   var list = Array.isArray(names) ? names : [];

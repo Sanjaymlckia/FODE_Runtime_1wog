@@ -29,6 +29,7 @@ const files = {
   contracts: read("EduOps_Contracts.js"),
   receipts: read("EduOps_Receipts.js")
 };
+const operatorNext = read("AdminUI_OperatorNext.html");
 const client = [files.html, files.client, files.core, files.components, files.batch, files.workbench].join("\n");
 
 for (const file of ["EduOps_ClientCore.html", "EduOps_ClientComponents.html", "EduOps_ClientBatch.html", "EduOps_ClientWorkbench.html"]) {
@@ -99,6 +100,18 @@ assert.match(files.core, /admin_getCapabilityGrantMatrix:\s*true/, "EduOps Roles
 assert.match(files.core, /admin_getTemporaryCapabilityGrants:\s*true/, "EduOps Roles surface must allowlist the existing temporary grants read RPC");
 assert.match(files.core, /admin_createTemporaryCapabilityGrant:\s*true/, "EduOps Roles surface must allowlist the audited temporary grant create RPC");
 assert.match(files.core, /admin_revokeTemporaryCapabilityGrant:\s*true/, "EduOps Roles surface must allowlist the audited temporary grant revoke RPC");
+[
+  "admin_getCanonicalFinanceSummary",
+  "admin_getCanonicalFinanceWorklist",
+  "admin_getCanonicalFinanceApplicant",
+  "admin_getCanonicalFinanceReconciliation",
+  "admin_getCanonicalFinanceExceptions",
+  "admin_getCanonicalFinanceObjectHistory",
+  "admin_getCanonicalFinancePolicy",
+  "admin_getZohoBooksCachedReadOnlyHealth",
+  "admin_getZohoBooksCachedApplicantMatch"
+].forEach((name) => assert.match(files.core, new RegExp(`${name}:\\s*true`), `EduOps Finance client must allowlist ${name}`));
+assert.doesNotMatch(files.core, /admin_getCanonicalFinance\*|admin_getCanonicalFinance:\s*true/, "EduOps Finance allowlist must not use wildcard or prefix RPC authority");
 assert.match(files.components, /function openRolesReport[\s\S]*admin_getCapabilityGrantMatrix/, "Roles structural menu must hydrate from the existing backend matrix RPC");
 assert.match(files.components, /actor\.isSuper[\s\S]*own access only/i, "non-SUPER role view must stay scoped to own access");
 assert.match(files.components, /function rolesActorProjection[\s\S]*matrix\.actorEmail[\s\S]*matrix\.actorRole/, "Roles surface must bind signed-in identity from the authoritative backend actor projection");
@@ -110,16 +123,27 @@ assert.match(files.components, /Temporary grant lifecycle/, "Roles surface must 
 assert.match(files.components, /rolesStatusCardsHtml[\s\S]*Active[\s\S]*Scheduled[\s\S]*Expired[\s\S]*Revoked[\s\S]*Invalidated/, "Roles surface must expose explicit temporary grant lifecycle counts");
 assert.match(files.components, /roles:\s*\["Roles & Capabilities",\s*"AUTHORITY"/, "Roles report must not use the no-operations preview classification");
 assert.match(files.components, /Administrative authority/, "Roles report must use accurate administrative authority wording");
-assert.match(files.components, /rolesDefinitionHtml[\s\S]*Signed-in account[\s\S]*Durable role[\s\S]*Allowlist[\s\S]*Active temporary grants/, "My Access must render separated label/value fields");
+assert.match(files.components, /rolesDefinitionHtml[\s\S]*Signed-in account[\s\S]*Durable role[\s\S]*Allowlist[\s\S]*Durable role management[\s\S]*Temporary capability grants[\s\S]*Active temporary grants/, "My Access must distinguish durable role management from temporary capability grants");
 assert.doesNotMatch(files.components, /Grant records/, "My Access must not substitute historical grant records for active grants");
-assert.match(files.components, /rolesAccountRowsHtml[\s\S]*<th>Account<\/th><th>Role<\/th><th>Individual email<\/th><th>Batch email<\/th><th>Documents<\/th><th>Finance<\/th><th>Portal<\/th><th>Role management<\/th><th>Temporary grants<\/th><th>Details<\/th>/, "Roles primary matrix must be account-first with human operational columns");
+assert.match(files.components, /rolesAccountRowsHtml[\s\S]*<th>Account<\/th><th>Role<\/th><th>Individual email<\/th><th>Batch email<\/th><th>Documents<\/th><th>Finance<\/th><th>Portal<\/th><th>Durable role management<\/th><th>Temporary capability grants<\/th><th>Details<\/th>/, "Roles primary matrix must be account-first with human operational columns and separated role/grant authority");
 assert.doesNotMatch(files.components.match(/function rolesAccountRowsHtml[\s\S]*?function rolesMatrixHtml/)?.[0] || "", /capability\.capabilityKey/, "primary account matrix must not expose raw capability keys");
 assert.match(files.components, /function rolesAccountDetailHtml[\s\S]*Technical key[\s\S]*capability\.capabilityKey/, "raw capability keys must be secondary technical evidence only");
-assert.doesNotMatch(files.components, /data-role-grant-account|data-role-grant-capability|data-role-revoke-grant/, "Roles surface must not scatter inline grant/revoke controls through account rows");
+assert.doesNotMatch(files.components.match(/function rolesAccountRowsHtml[\s\S]*?function rolesMatrixHtml/)?.[0] || "", /data-role-grant-account|data-role-grant-capability|data-role-revoke-grant/, "Roles surface must not scatter grant/revoke controls through account rows");
 assert.match(files.components, /TEMPORARILY_ALLOWED:\s*"Temporarily allowed"[\s\S]*INHERITED_ALLOWED:\s*"Allowed by role"[\s\S]*INHERITED_DENIED:\s*"Not included in role"[\s\S]*ROLE_DEFAULT:\s*"Durable role"/, "Roles state humanisation must use the required shared mapping");
 assert.doesNotMatch(files.components.match(/function capabilityLabel[\s\S]*?function rolesCapabilityLabel/)?.[0] || "", /Role default/, "Roles surface must not expose the stale ROLE_DEFAULT presentation label");
 assert.match(files.components, /data-role-create-grant[\s\S]*admin_createTemporaryCapabilityGrant/, "Super temporary grant controls must call the audited backend create RPC");
+assert.match(files.components, /data-role-revoke-grant[\s\S]*admin_revokeTemporaryCapabilityGrant/, "Super temporary grant controls must call the audited backend revoke RPC");
 assert.doesNotMatch(files.components, /ADMIN_ROLES\s*=|CAN_MANAGE_ROLES\s*=\s*true/, "EduOps roles surface must not mutate durable roles or capability policy");
+
+assert.match(files.components, /CAN_READ_FINANCE:\s*"Read Finance"/, "Roles & Capabilities must expose the Finance read capability");
+assert.match(files.components, /function financeCapabilityAllowed[\s\S]*CAN_READ_FINANCE/, "Finance submenu must fail closed from the authoritative actor projection");
+assert.match(files.components, /\["overview", "Overview"\][\s\S]*\["accounts", "Applicant accounts"\][\s\S]*\["reconciliation", "Reconciliation"\][\s\S]*\["exceptions", "Exceptions"\][\s\S]*\["applicant", "Applicant detail"\][\s\S]*\["zoho", "Zoho health"\][\s\S]*\["diagnostics", "Push diagnostics"\][\s\S]*\["policy", "Refunds and adjustments"\]/, "Finance submenu must expose the bounded read-only views");
+assert.match(files.components, /admin_getCanonicalFinancePolicy/, "Finance submenu must use the canonical policy RPC");
+assert.match(files.components, /admin_getZohoBooksCachedReadOnlyHealth[\s\S]*admin_getZohoBooksCachedApplicantMatch/, "Finance submenu must use cached no-write Zoho diagnostics");
+assert.match(files.components, /POLICY_REQUIRED/, "Refunds, credits and adjustments must remain policy-required");
+assert.doesNotMatch(files.components, /admin_createZohoBooksFodeDraftInvoice|admin_sendZohoBooksTestInvoiceEmail|admin_setZohoBooksOAuthProperties|admin_preflightZohoBooks/, "Finance client must contain no Zoho create, send, OAuth setup, or preflight RPC");
+assert.match(operatorNext, /operatorNextCapability_\(['"]CAN_READ_FINANCE['"]\)/, "Operator Next must hide and deny Finance without CAN_READ_FINANCE");
+assert.doesNotMatch(operatorNext, /admin_createZohoBooksFodeDraftInvoice|admin_sendZohoBooksTestInvoiceEmail|admin_setZohoBooksOAuthProperties|admin_preflightZohoBooks/, "Operator Next Finance path must contain no Zoho create, send, OAuth setup, or preflight RPC");
 
 const commandContext = {
   eduopsBatchExecutionCap_: () => 30,

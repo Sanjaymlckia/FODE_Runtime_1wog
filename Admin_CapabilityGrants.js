@@ -33,6 +33,7 @@ function capabilityGrantSchemaHeaders_() {
 
 function temporaryDelegableAdminCapabilities_() {
   return [
+    "CAN_READ_FINANCE",
     "CAN_RUN_BATCH_COMMUNICATIONS",
     "CAN_SEND_INDIVIDUAL_EMAIL",
     "CAN_PREVIEW_APPLICANT_COMMUNICATION",

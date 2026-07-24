@@ -86,6 +86,7 @@ assert.equal(enquiries.capabilities.CAN_INSERT_PORTAL_LINK, true);
 assert.equal(enquiries.capabilities.CAN_SEND_INDIVIDUAL_EMAIL, true);
 assert.equal(enquiries.capabilities.CAN_GENERATE_STANDARD_QUOTE, true);
 assert.equal(enquiries.capabilities.CAN_RUN_BATCH_COMMUNICATIONS, false);
+assert.equal(enquiries.capabilities.CAN_READ_FINANCE, false, "Finance access must not be granted by the Verifier role");
 assert.equal(enquiries.capabilities.CAN_VERIFY_PAYMENT, false);
 assert.equal(enquiries.capabilities.CAN_OVERRIDE_COOLDOWN, false);
 assert.equal(enquiries.capabilities.CAN_APPROVE_FINANCIAL_OVERRIDE, false);
@@ -93,16 +94,21 @@ assert.equal(enquiries.capabilities.CAN_ADMINISTER_RUNTIME, false);
 assert.equal(enquiries.capabilities.CAN_DEPLOY_RUNTIME, false);
 
 const principal = capabilityContext.resolveAdminCapabilities_("principal@kundu.ac");
-assert.equal(principal.normalizedRole, "OPERATIONS");
-assert.equal(principal.capabilities.CAN_RUN_BATCH_COMMUNICATIONS, true);
-assert.equal(principal.capabilities.CAN_GENERATE_STANDARD_INVOICE, true);
+assert.equal(principal.normalizedRole, "PRINCIPAL");
+assert.equal(principal.capabilities.CAN_OPEN_REVIEW_WORKSPACE, true, "Principal must receive durable EduOps route access");
+assert.equal(principal.capabilities.CAN_RUN_BATCH_COMMUNICATIONS, false);
+assert.equal(principal.capabilities.CAN_READ_FINANCE, true, "Principal must receive durable read-only Finance access without a temporary grant");
+assert.equal(principal.capabilities.CAN_GENERATE_STANDARD_INVOICE, false);
+assert.equal(principal.capabilities.CAN_WRITE_ZOHO_BOOKS, false);
 assert.equal(principal.capabilities.CAN_VERIFY_PAYMENT, false);
+assert.equal(principal.capabilities.CAN_MANAGE_ROLES, false);
 assert.equal(principal.capabilities.CAN_DEPLOY_RUNTIME, false);
 
 const operations = capabilityContext.resolveAdminCapabilities_("operations@minervacenters.com");
 assert.equal(operations.normalizedRole, "OPERATIONS");
 assert.equal(operations.capabilities.CAN_SEND_INDIVIDUAL_EMAIL, true);
 assert.equal(operations.capabilities.CAN_RUN_BATCH_COMMUNICATIONS, true);
+assert.equal(operations.capabilities.CAN_READ_FINANCE, false, "Finance access must not be granted by the Operations role");
 assert.equal(operations.capabilities.CAN_GENERATE_STANDARD_INVOICE, true);
 assert.equal(operations.capabilities.CAN_VERIFY_PAYMENT, false);
 assert.equal(operations.capabilities.CAN_OVERRIDE_COOLDOWN, false);
@@ -113,6 +119,7 @@ assert.equal(operations.capabilities.CAN_DEPLOY_RUNTIME, false);
 const superAdmin = capabilityContext.resolveAdminCapabilities_("sanjay@minervacenters.com");
 assert.equal(superAdmin.normalizedRole, "SUPER");
 assert.equal(superAdmin.capabilities.CAN_RUN_BATCH_COMMUNICATIONS, true);
+assert.equal(superAdmin.capabilities.CAN_READ_FINANCE, true, "Super Admin must retain Finance read access");
 assert.equal(superAdmin.capabilities.CAN_VERIFY_PAYMENT, true);
 assert.equal(superAdmin.capabilities.CAN_OVERRIDE_COOLDOWN, true);
 assert.equal(superAdmin.capabilities.CAN_APPROVE_FINANCIAL_OVERRIDE, true);
@@ -130,7 +137,7 @@ for (const key of Object.keys(unknown.capabilities)) {
 
 assert.equal(capabilityContext.isDocumentVerifier_("enquiries@kundu.ac"), true, "Document verifier helper must follow capability authority");
 assert.equal(capabilityContext.isOperationsAdmin_("enquiries@kundu.ac"), false, "Verifier must not receive batch authority");
-assert.equal(capabilityContext.isOperationsAdmin_("principal@kundu.ac"), true, "Operations role must receive batch authority");
+assert.equal(capabilityContext.isOperationsAdmin_("principal@kundu.ac"), false, "Principal Finance access must not confer batch authority");
 
 const projectionContext = {
   CONFIG,
@@ -223,14 +230,6 @@ const verifierSend = wrapperContext.admin_sendApplicantMessage({
   confirmManualSingleSend: true
 });
 assert.equal(verifierSend.result, "SENT", "Configured verifier must be able to send an individually reviewed applicant email");
-
-wrapperContext.__email = "principal@kundu.ac";
-const operationsSend = wrapperContext.admin_sendApplicantMessage({
-  applicantId: "FODE-26-TEST-ROLE",
-  messageType: "payment_followup",
-  confirmManualSingleSend: true
-});
-assert.equal(operationsSend.result, "SENT", "Configured Operations account must retain individual send capability");
 
 wrapperContext.__email = "operations@minervacenters.com";
 const secondOperationsSend = wrapperContext.admin_sendApplicantMessage({

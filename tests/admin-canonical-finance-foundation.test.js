@@ -3,9 +3,11 @@ const fs = require("fs");
 const vm = require("vm");
 
 const financeSource = fs.readFileSync("Admin_CanonicalFinance.js", "utf8");
+const adminSource = fs.readFileSync("Admin.js", "utf8");
 const rowFactsSource = fs.readFileSync("Admin_RowFacts.js", "utf8");
 const populationSource = fs.readFileSync("Admin_CanonicalPopulation.js", "utf8");
 const operatorNextSource = fs.readFileSync("AdminUI_OperatorNext.html", "utf8");
+const utilsSource = fs.readFileSync("Utils.js", "utf8");
 const claspIgnore = fs.readFileSync(".claspignore", "utf8");
 
 assert.match(financeSource, /CANONICAL_FINANCE_V1/, "Canonical Finance schema marker must exist");
@@ -26,11 +28,24 @@ const expectedRpcs = [
   "admin_getCanonicalFinanceReconciliation",
   "admin_getCanonicalFinanceExceptions",
   "admin_getCanonicalFinanceObjectHistory",
-  "admin_getCanonicalFinancePolicyStatus"
+  "admin_getCanonicalFinancePolicy",
+  "admin_getCanonicalFinancePolicyStatus",
+  "admin_getZohoBooksCachedReadOnlyHealth",
+  "admin_getZohoBooksCachedApplicantMatch"
 ];
 for (const name of expectedRpcs) {
   assert.match(financeSource, new RegExp(`function\\s+${name}\\s*\\(`), `${name} RPC must exist`);
 }
+assert.equal((financeSource.match(/requireCanonicalFinanceReadAccess_\(\);/g) || []).length, expectedRpcs.length, "Every detailed Finance RPC must enforce CAN_READ_FINANCE before producing a DTO");
+assert.match(financeSource, /FINANCE_READ_CAPABILITY_REQUIRED/, "Unauthorized Finance reads must return a clear denial code");
+assert.match(adminSource, /function admin_preflightZohoBooks[\s\S]*requireCanonicalFinanceReadAccess_\(\)/, "Legacy Zoho preflight must deny unauthorized Finance readers before returning details");
+assert.match(adminSource, /function admin_previewZohoBooksFodePayload[\s\S]*requireCanonicalFinanceReadAccess_\(\)/, "Legacy Zoho payload preview must deny unauthorized Finance readers before returning applicant financial data");
+assert.match(financeSource, /admin_getZohoBooksCachedApplicantMatch[\s\S]*findRowByApplicantId_[\s\S]*buildZohoBooksRowObject_/, "Applicant matching must use exact local applicant and Books metadata");
+assert.doesNotMatch(financeSource, /admin_preflightZohoBooks|ensureZohoBooksAccessToken_|zohoBooksApiRequest_|\/token/, "Finance matching must not acquire tokens or call Zoho");
+assert.match(utilsSource, /function getZohoBooksCachedReadOnlyHealth_/, "Cached no-write Zoho health provider must exist");
+assert.match(utilsSource, /Connection unavailable — reauthorization required/, "Unavailable cached health must fail closed with the approved message");
+const cachedHealth = utilsSource.match(/function getZohoBooksCachedReadOnlyHealth_[\s\S]*?\n\}/)?.[0] || "";
+assert.doesNotMatch(cachedHealth, /setProperty|setProperties|deleteProperty|UrlFetchApp|ensureZohoBooksAccessToken_|getZohoBooksTokenReadiness_|\/token/, "Cached health must not write properties, acquire tokens, or call remote APIs");
 
 assert.match(financeSource, /amount:\s*null/, "Unknown/unavailable amounts must be null, not invented zero");
 assert.match(financeSource, /state:\s*"UNAVAILABLE"/, "Unavailable amount state must be explicit");
@@ -54,6 +69,7 @@ assert.match(operatorNextSource, /onxFinancePrevious[\s\S]*onxFinanceNext/, "Ope
 assert.match(operatorNextSource, /searchQuery[\s\S]*filters:\{[\s\S]*financeScope:[\s\S]*worklistKey:/, "Operator Next Finance must hold an explicit server request contract");
 assert.match(operatorNextSource, /onxFinancePageRows[\s\S]*operatorNextFinanceStatusRows_\(rows\)/, "Every returned Finance state must remain visible and reviewable, including paid/verified rows");
 assert.match(operatorNextSource, /operatorNextLoadFinance_/, "Finance route must lazy-load canonical Finance data");
+assert.match(operatorNextSource, /CAN_READ_FINANCE/, "Operator Next must enforce the Finance read capability before loading data");
 assert.match(operatorNextSource, /POLICY REQUIRED/, "Operator Next Finance route must label policy-dependent buckets");
 assert.match(operatorNextSource, /Receipt_Status/, "Operator Next Finance route must name Receipt_Status as canonical payment authority");
 assert.doesNotMatch(operatorNextSource, /CAN_VERIFY_PAYMENT[\s\S]{0,200}admin_setPaymentVerified/, "Operator Next Finance route must not introduce direct payment mutation");
@@ -76,6 +92,12 @@ const context = {
 };
 vm.createContext(context);
 vm.runInContext(financeSource, context);
+context.getCallerEmail_ = () => "admin@example.test";
+context.isAdmin_ = () => true;
+context.adminHasCapability_ = () => false;
+assert.throws(() => context.requireCanonicalFinanceReadAccess_(), /FINANCE_READ_CAPABILITY_REQUIRED/, "Unauthorized Admins must be denied before any Finance DTO is built");
+context.adminHasCapability_ = (_email, capability) => capability === "CAN_READ_FINANCE";
+assert.equal(context.requireCanonicalFinanceReadAccess_(), "admin@example.test");
 
 function finance(row, canonical) {
   return context.resolveCanonicalFinance_(row, Object.assign({

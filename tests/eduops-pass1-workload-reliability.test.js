@@ -33,7 +33,7 @@ const context = {
   clean_(value) { return String(value == null ? "" : value).trim(); }
 };
 vm.createContext(context);
-for (const file of ["EduOps_Contracts.js", "EduOps_FODE_Adapter.js", "EduOps_Workload.js"]) {
+for (const file of ["EduOps_Contracts.js", "EduOps_FeatureFlags.js", "EduOps_FODE_Adapter.js", "EduOps_Workload.js"]) {
   vm.runInContext(fs.readFileSync(file, "utf8"), context, { filename: file });
 }
 

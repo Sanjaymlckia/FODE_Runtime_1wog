@@ -4,6 +4,14 @@ function canonicalFinanceClean_(value) {
   return typeof clean_ === "function" ? clean_(value) : String(value == null ? "" : value).trim();
 }
 
+function requireCanonicalFinanceReadAccess_() {
+  var email = getCallerEmail_();
+  if (!isAdmin_(email) || !adminHasCapability_(email, "CAN_READ_FINANCE")) {
+    throw new Error("FINANCE_READ_CAPABILITY_REQUIRED: Finance read capability is required.");
+  }
+  return email;
+}
+
 function canonicalFinanceUpper_(value) {
   return canonicalFinanceClean_(value).toUpperCase();
 }
@@ -609,17 +617,20 @@ function canonicalFinancePaged_(rows, request) {
 }
 
 function admin_getCanonicalFinanceSummary(payload) {
+  requireCanonicalFinanceReadAccess_();
   var snapshot = canonicalFinanceSnapshot_(payload || {});
   return { ok: true, readOnly: true, schemaVersion: snapshot.schemaVersion, generatedAt: snapshot.generatedAt, summary: canonicalFinanceSummaryFromRows_(snapshot.rows), sourceReconciliation: snapshot.sourceReconciliation };
 }
 
 function admin_getCanonicalFinanceWorklist(request) {
+  requireCanonicalFinanceReadAccess_();
   var snapshot = canonicalFinanceSnapshot_(request || {});
   var page = canonicalFinancePaged_(snapshot.rows, request || {});
   return { ok: true, readOnly: true, schemaVersion: snapshot.schemaVersion, generatedAt: snapshot.generatedAt, summary: canonicalFinanceSummaryFromRows_(snapshot.rows), page: page };
 }
 
 function admin_getCanonicalFinanceApplicant(payload) {
+  requireCanonicalFinanceReadAccess_();
   var applicantId = canonicalFinanceClean_(payload && payload.applicantId || "");
   if (!applicantId) return { ok: false, readOnly: true, code: "APPLICANT_ID_REQUIRED", applicant: null };
   var snapshot = canonicalFinanceSnapshot_(payload || {});
@@ -628,6 +639,7 @@ function admin_getCanonicalFinanceApplicant(payload) {
 }
 
 function admin_getCanonicalFinanceReconciliation(request) {
+  requireCanonicalFinanceReadAccess_();
   var snapshot = canonicalFinanceSnapshot_(request || {});
   var rows = snapshot.rows.map(function (row) { return canonicalFinanceReconciliationForRow_(row, null); });
   var byCode = {};
@@ -640,14 +652,24 @@ function admin_getCanonicalFinanceReconciliation(request) {
 }
 
 function admin_getCanonicalFinanceExceptions(request) {
-  var reconciliation = admin_getCanonicalFinanceReconciliation(request || {});
-  return { ok: true, readOnly: true, schemaVersion: reconciliation.schemaVersion, total: reconciliation.summary.findings, rows: reconciliation.findings };
+  requireCanonicalFinanceReadAccess_();
+  var snapshot = canonicalFinanceSnapshot_(request || {});
+  var rows = snapshot.rows.map(function (row) { return canonicalFinanceReconciliationForRow_(row, null); });
+  var findings = rows.filter(function (item) { return item.severity !== "INFO"; });
+  var limit = Math.max(1, Math.min(200, Number(request && request.limit || 50)));
+  return { ok: true, readOnly: true, schemaVersion: snapshot.schemaVersion, total: findings.length, rows: findings.slice(0, limit) };
 }
 
 function admin_getCanonicalFinanceObjectHistory(payload) {
-  var applicant = admin_getCanonicalFinanceApplicant(payload || {});
-  if (!applicant.ok) return applicant;
-  var row = applicant.applicant;
+  requireCanonicalFinanceReadAccess_();
+  var applicantId = canonicalFinanceClean_(payload && payload.applicantId || "");
+  if (!applicantId) return { ok: false, readOnly: true, code: "APPLICANT_ID_REQUIRED", applicant: null };
+  var snapshot = canonicalFinanceSnapshot_(payload || {});
+  var matches = snapshot.rows.filter(function (row) { return row.identity.applicantId === applicantId; });
+  if (matches.length !== 1) {
+    return { ok: false, readOnly: true, schemaVersion: snapshot.schemaVersion, code: matches.length > 1 ? "DUPLICATE_APPLICANT_ID" : "APPLICANT_NOT_FOUND", applicant: null };
+  }
+  var row = canonicalFinancePublicRow_(matches[0]);
   return {
     ok: true,
     readOnly: true,
@@ -663,7 +685,7 @@ function admin_getCanonicalFinanceObjectHistory(payload) {
   };
 }
 
-function admin_getCanonicalFinancePolicyStatus() {
+function canonicalFinancePolicyStatus_() {
   return {
     ok: true,
     readOnly: true,
@@ -671,5 +693,61 @@ function admin_getCanonicalFinancePolicyStatus() {
     implementedStates: ["PAYMENT_PENDING", "PAYMENT_TO_VERIFY", "PAID_VERIFIED", "NOT_YET_PAYMENT_APPLICABLE"],
     unresolvedStates: ["NOT_QUOTED", "QUOTED", "INVOICED", "PARTIALLY_PAID", "OVERDUE", "DISPUTED", "CREDIT_BALANCE", "REFUND_PENDING", "REFUNDED", "WAIVED", "CANCELLED", "WRITTEN_OFF"],
     ownerDecisionsRequired: canonicalFinancePolicyDependencies_()
+  };
+}
+
+function admin_getCanonicalFinancePolicy() {
+  requireCanonicalFinanceReadAccess_();
+  return canonicalFinancePolicyStatus_();
+}
+
+function admin_getCanonicalFinancePolicyStatus() {
+  requireCanonicalFinanceReadAccess_();
+  return canonicalFinancePolicyStatus_();
+}
+
+function admin_getZohoBooksCachedReadOnlyHealth() {
+  requireCanonicalFinanceReadAccess_();
+  return getZohoBooksCachedReadOnlyHealth_();
+}
+
+function admin_getZohoBooksCachedApplicantMatch(payload) {
+  requireCanonicalFinanceReadAccess_();
+  var applicantId = canonicalFinanceClean_(payload && payload.applicantId || "");
+  if (!applicantId) return { ok: false, readOnly: true, code: "APPLICANT_ID_REQUIRED", match: null };
+  var sheet = openDataSheet_();
+  var rowNumber = findRowByApplicantId_(sheet, applicantId);
+  if (!(rowNumber >= 2)) return { ok: false, readOnly: true, code: "APPLICANT_NOT_FOUND", match: null };
+  var context = buildZohoBooksRowObject_(sheet, rowNumber);
+  var row = context.rowObj || {};
+  if (canonicalFinanceClean_(row.ApplicantID || "") !== applicantId) {
+    return { ok: false, readOnly: true, code: "APPLICANT_BINDING_MISMATCH", match: null };
+  }
+  var payer = resolveFodePayerFromRecord_(row);
+  var contactId = canonicalFinanceClean_(row.Books_Contact_ID || "");
+  var invoiceId = canonicalFinanceClean_(row.Books_Invoice_ID || "");
+  return {
+    ok: true,
+    readOnly: true,
+    schemaVersion: "ZOHO_BOOKS_LOCAL_MATCH_V1",
+    connection: getZohoBooksCachedReadOnlyHealth_(),
+    match: {
+      applicantId: applicantId,
+      rowNumber: rowNumber,
+      payerType: canonicalFinanceClean_(payer.payerType || ""),
+      payerName: canonicalFinanceClean_(payer.name || ""),
+      payerEmail: canonicalFinanceClean_(payer.email || ""),
+      payerPhone: canonicalFinanceClean_(payer.phone || ""),
+      payerSourceField: canonicalFinanceClean_(payer.sourceField || ""),
+      billingReference: buildFodeBillingReference_(row),
+      contactId: contactId,
+      contactName: canonicalFinanceClean_(row.Books_Contact_Name || ""),
+      invoiceId: invoiceId,
+      invoiceNumber: canonicalFinanceClean_(row.Books_Invoice_Number || ""),
+      invoiceStatus: canonicalFinanceClean_(row.Books_Invoice_Status || ""),
+      pushStatus: canonicalFinanceClean_(row.Books_Push_Status || ""),
+      matchState: invoiceId ? "LOCAL_INVOICE_LINKED" : (contactId ? "LOCAL_CONTACT_LINKED" : "NO_LOCAL_BOOKS_MATCH"),
+      source: "FODE local Books integration metadata"
+    }
   };
 }

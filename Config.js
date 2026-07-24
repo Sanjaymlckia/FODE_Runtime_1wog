@@ -7,9 +7,9 @@
  */
 var CONFIG = {
   // Versioning (change control)
-  VERSION: "r382",
+  VERSION: "r385",
 CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alignment",
-  DEPLOY_VERSION_NUMBER: 382,
+  DEPLOY_VERSION_NUMBER: 385,
 BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
 
   // STAGING/PROD data mode routing (working sheet)
@@ -277,7 +277,7 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   ],
   ADMIN_ROLES: {
     "sanjay@minervacenters.com": "SUPER",
-    "principal@kundu.ac": "OPERATIONS",
+    "principal@kundu.ac": "PRINCIPAL",
     "enquiries@kundu.ac": "VERIFIER",
     "fode_kia@kundu.ac": "VERIFIER",
     "mlc@minervacenters.com": "VERIFIER",

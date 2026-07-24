@@ -14,6 +14,7 @@ function adminCapabilityCatalog_() {
     "CAN_INSERT_PORTAL_LINK",
     "CAN_GENERATE_STANDARD_QUOTE",
     "CAN_GENERATE_STANDARD_INVOICE",
+    "CAN_READ_FINANCE",
     "CAN_VERIFY_PAYMENT",
     "CAN_RUN_BATCH_COMMUNICATIONS",
     "CAN_OVERRIDE_COOLDOWN",
@@ -45,6 +46,7 @@ function adminCapabilityRoleDefaults_(role) {
     defaults.CAN_GENERATE_STANDARD_INVOICE = true;
   }
   if (normalizedRole === "SUPER") {
+    defaults.CAN_READ_FINANCE = true;
     defaults.CAN_VERIFY_PAYMENT = true;
     defaults.CAN_OVERRIDE_COOLDOWN = true;
     defaults.CAN_APPROVE_FINANCIAL_OVERRIDE = true;
@@ -53,6 +55,10 @@ function adminCapabilityRoleDefaults_(role) {
     defaults.CAN_ADMINISTER_RUNTIME = true;
     defaults.CAN_DEPLOY_RUNTIME = true;
     defaults.CAN_WRITE_ZOHO_BOOKS = true;
+  }
+  if (normalizedRole === "PRINCIPAL") {
+    defaults.CAN_OPEN_REVIEW_WORKSPACE = true;
+    defaults.CAN_READ_FINANCE = true;
   }
   return defaults;
 }
@@ -103,7 +109,7 @@ function getConfiguredAdminAccounts_() {
   var result = Object.keys(accounts).sort().map(function (email) {
     var account = accounts[email];
     var configuredRole = String(account.configuredRole || "").toUpperCase();
-    if (configuredRole !== "SUPER" && configuredRole !== "OPERATIONS") configuredRole = "VERIFIER";
+    if (configuredRole !== "SUPER" && configuredRole !== "OPERATIONS" && configuredRole !== "PRINCIPAL") configuredRole = "VERIFIER";
     return {
       email: email,
       allowlisted: account.allowlisted === true,
@@ -130,6 +136,7 @@ function getAdminRole_(email) {
   if (!match || match.allowlisted !== true) return "VERIFIER";
   if (match.configuredRole === "SUPER") return "SUPER";
   if (match.configuredRole === "OPERATIONS") return "OPERATIONS";
+  if (match.configuredRole === "PRINCIPAL") return "PRINCIPAL";
   return "VERIFIER";
 }
 
@@ -141,6 +148,7 @@ function adminCapabilityBlockCode_(capability) {
     CAN_INSERT_PORTAL_LINK: "PORTAL_LINK_CAPABILITY_REQUIRED",
     CAN_GENERATE_STANDARD_QUOTE: "STANDARD_QUOTE_CAPABILITY_REQUIRED",
     CAN_GENERATE_STANDARD_INVOICE: "STANDARD_INVOICE_CAPABILITY_REQUIRED",
+    CAN_READ_FINANCE: "FINANCE_READ_CAPABILITY_REQUIRED",
     CAN_VERIFY_PAYMENT: "PAYMENT_VERIFICATION_CAPABILITY_REQUIRED",
     CAN_RUN_BATCH_COMMUNICATIONS: "BATCH_COMMUNICATION_CAPABILITY_REQUIRED",
     CAN_OVERRIDE_COOLDOWN: "COOLDOWN_OVERRIDE_CAPABILITY_REQUIRED",
@@ -162,6 +170,7 @@ function adminCapabilityBlockReason_(capability) {
     CAN_INSERT_PORTAL_LINK: "Portal-link insertion capability is required.",
     CAN_GENERATE_STANDARD_QUOTE: "Standard quote capability is required.",
     CAN_GENERATE_STANDARD_INVOICE: "Standard invoice capability is required.",
+    CAN_READ_FINANCE: "Finance read capability is required.",
     CAN_VERIFY_PAYMENT: "Payment verification capability is required.",
     CAN_RUN_BATCH_COMMUNICATIONS: "Batch communication capability is required.",
     CAN_OVERRIDE_COOLDOWN: "Cooldown override capability is required.",
@@ -180,7 +189,7 @@ function resolveAdminCapabilities_(actor) {
   var email = normalizeAdminEmail_(input.email || input.actorEmail || "");
   var allowlisted = isAdmin_(email);
   var configuredRole = String(input.role || input.actorRole || (email ? getAdminRole_(email) : "") || "").toUpperCase();
-  if (configuredRole !== "SUPER" && configuredRole !== "OPERATIONS" && configuredRole !== "VERIFIER") {
+  if (configuredRole !== "SUPER" && configuredRole !== "OPERATIONS" && configuredRole !== "PRINCIPAL" && configuredRole !== "VERIFIER") {
     configuredRole = allowlisted ? getAdminRole_(email) : "";
   }
   var normalizedRole = allowlisted ? (configuredRole || "VERIFIER") : "";

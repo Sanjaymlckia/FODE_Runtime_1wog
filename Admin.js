@@ -1086,6 +1086,7 @@ function buildZohoBooksPreviewResult_(rowObj, options) {
 
 function admin_preflightZohoBooks(payload) {
   return withEnvelope_("admin_preflightZohoBooks", function (dbgId) {
+    requireCanonicalFinanceReadAccess_();
     var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
     var cfg = getZohoBooksConfig_();
@@ -1117,6 +1118,7 @@ function admin_preflightZohoBooks(payload) {
 
 function admin_previewZohoBooksFodePayload(payload) {
   return withEnvelope_("admin_previewZohoBooksFodePayload", function (dbgId) {
+    requireCanonicalFinanceReadAccess_();
     var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
     var sh = openDataSheet_();

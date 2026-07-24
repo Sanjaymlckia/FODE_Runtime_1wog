@@ -240,6 +240,42 @@ const afterRevoke = context.resolveAdminCapabilities_({
 assert.equal(afterRevoke.normalizedRole, "VERIFIER");
 assert.equal(afterRevoke.capabilities.CAN_RUN_BATCH_COMMUNICATIONS, false);
 
+const financeSheet = new MockSheet("Capability_Grants");
+financeSheet.appendRow(Array.from(headers));
+const financeGrant = context.capabilityGrantCreate_({
+  accountEmail: "operations@minervacenters.com",
+  capabilityKey: "CAN_READ_FINANCE",
+  expiresAt: "2026-07-13T01:30:00.000Z",
+  reason: "Review the bounded read-only Finance worklist."
+}, { actorEmail: "sanjay@minervacenters.com", sheet: financeSheet, now });
+const financeAllowed = context.resolveAdminCapabilities_({
+  email: "operations@minervacenters.com",
+  temporaryGrantOptions: { sheet: financeSheet, now: new Date("2026-07-13T00:25:00.000Z"), disableCache: true }
+});
+assert.equal(financeAllowed.normalizedRole, "OPERATIONS");
+assert.equal(financeAllowed.capabilities.CAN_READ_FINANCE, true);
+assert.equal(financeAllowed.capabilityDetails.CAN_READ_FINANCE.source, "TEMPORARY_GRANT");
+const financeCurrent = context.capabilityGrantReadRows_({
+  sheet: financeSheet,
+  now: new Date("2026-07-13T00:26:00.000Z")
+}).find((grant) => grant.grantId === financeGrant.grantId);
+context.capabilityGrantRevoke_({
+  grantId: financeGrant.grantId,
+  recordVersion: financeCurrent.recordVersion,
+  reason: "Finance review window is complete."
+}, {
+  actorEmail: "sanjay@minervacenters.com",
+  sheet: financeSheet,
+  now: new Date("2026-07-13T00:26:00.000Z")
+});
+const financeRevoked = context.resolveAdminCapabilities_({
+  email: "operations@minervacenters.com",
+  temporaryGrantOptions: { sheet: financeSheet, now: new Date("2026-07-13T00:27:00.000Z"), disableCache: true }
+});
+assert.equal(financeRevoked.capabilities.CAN_READ_FINANCE, false, "Finance revocation must take effect on the next server resolution");
+assert.ok(audit.some((entry) => entry.event === "TEMP_CAPABILITY_GRANT_CREATED" && entry.payload.capability === "CAN_READ_FINANCE"));
+assert.ok(audit.some((entry) => entry.event === "TEMP_CAPABILITY_GRANT_REVOKED" && entry.payload.capability === "CAN_READ_FINANCE"));
+
 const expiring = context.capabilityGrantCreate_({
   accountEmail: "fode_kia@kundu.ac",
   capabilityKey: "CAN_RUN_BATCH_COMMUNICATIONS",

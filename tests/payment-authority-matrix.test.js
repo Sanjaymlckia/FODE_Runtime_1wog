@@ -47,13 +47,12 @@ assert.match(docsHelper, /adminDocumentReviewVerifiedForPaymentGate_\(rowObj\)/,
 assert.match(paymentFactsHelper, /paymentVerifiedRaw: adminRowPaymentCompatibilityRawVerified_\(row\)/, "Review queue payment facts preserve raw Payment_Verified as compatibility evidence only");
 assert.match(paymentFactsHelper, /paymentBadge: canonicalPaymentBadge_\(row\)/, "Review queue payment facts must derive payment authority from canonical receipt status");
 assert.match(paymentFactsHelper, /paymentEvidencePresent: adminRowPaymentEvidencePresent_\(row\)/, "Review queue payment facts must distinguish receipt evidence from payment verification");
-assert.match(reviewQueues, /docsReviewVerified = adminRowDocsReviewVerified_\(rowObj\)/, "Review queues must use shared document review facts");
-assert.match(reviewQueues, /paymentFacts = adminRowPaymentAuthorityFacts_\(rowObj\)/, "Review queues must use shared payment authority facts");
-assert.match(reviewQueues, /docsQueueMatch = portalSubmitted && requiredDocumentUploadComplete && !docsReviewVerified/, "Documents to Verify must exclude document-verified rows");
-assert.match(reviewQueues, /awaitingPaymentQueueMatch = docsReviewVerified && !paymentVerified && !paymentEvidencePresent/, "Awaiting Payment queue must require docs verified, no raw payment verified flag, and no receipt evidence");
-assert.match(reviewQueues, /paymentsQueueMatch = docsReviewVerified && !paymentVerified && paymentEvidencePresent/, "Payments to Verify queue must require docs verified, receipt evidence, and no raw payment verified flag");
-assert.match(reviewQueues, /anomaliesQueueMatch = paymentVerified && !docsReviewVerified/, "Payment-first anomalies must detect payment before document verification");
-assert.match(reviewQueues, /paidApprovedQueueMatch = paymentVerified/, "Payment Verified queue must remain payment-authority driven");
+assert.match(reviewQueues, /buildOperationalRouteSnapshot_\(canonicalPopulationSnapshot_\(\), \{\}\)/, "Review queues must consume the canonical operational-route snapshot");
+assert.match(reviewQueues, /operational\.routeRows[\s\S]*ADMISSIONS_REVIEW/, "Documents to Verify must consume the canonical Admissions Review route");
+assert.match(reviewQueues, /row\.financeState[\s\S]*PAYMENT_PENDING[\s\S]*row\.activeFinanceWork === true/, "Awaiting Payment must use canonical active Finance work");
+assert.match(reviewQueues, /row\.financeState[\s\S]*PAYMENT_TO_VERIFY[\s\S]*row\.activeFinanceWork === true/, "Payments to Verify must use canonical active Finance work");
+assert.match(reviewQueues, /row\.financeExceptionCode[\s\S]*MANAGEMENT_EXCEPTIONS[\s\S]*UNKNOWN_UNCLASSIFIED/, "Finance anomalies must use canonical exception and route fields");
+assert.match(reviewQueues, /row\.financeState[\s\S]*PAID_VERIFIED/, "Payment Verified must use canonical Finance state");
 
 assert.match(updateDocs, /var docStage = computeDocVerificationStatus_\(refreshedRow\)/, "Document status save must derive document rollup from refreshed row state");
 assert.match(updateDocs, /setCell_\(sh, rowNumber, idx, cols\.docStage, docStage\)/, "Document status save must persist Doc_Verification_Status");

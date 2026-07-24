@@ -14,7 +14,9 @@ const READ_ONLY_RPC_ALLOWLIST = Object.freeze({
   "finance-reconciliation": "admin_getCanonicalFinanceReconciliation",
   "finance-exceptions": "admin_getCanonicalFinanceExceptions",
   "finance-object-history": "admin_getCanonicalFinanceObjectHistory",
-  "finance-policy-status": "admin_getCanonicalFinancePolicyStatus"
+  "finance-policy": "admin_getCanonicalFinancePolicy",
+  "finance-zoho-health": "admin_getZohoBooksCachedReadOnlyHealth",
+  "finance-zoho-match": "admin_getZohoBooksCachedApplicantMatch"
 });
 
 function parseArgs(argv) {
@@ -41,7 +43,7 @@ function financeReadOnlyPayload(action, args) {
       }
     };
   }
-  if (action === "finance-applicant" || action === "finance-object-history") {
+  if (action === "finance-applicant" || action === "finance-object-history" || action === "finance-zoho-match") {
     const applicantId = String(args["applicant-id"] || "").trim();
     if (!applicantId) throw new Error("--applicant-id is required for this read-only action.");
     return { applicantId };

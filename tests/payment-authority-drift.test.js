@@ -148,7 +148,8 @@ const paymentFactsHelper = extractFunction(adminSource, "adminRowPaymentAuthorit
 assert.match(paymentFactsHelper, /paymentVerifiedRaw: adminRowPaymentCompatibilityRawVerified_\(row\)/, "Queues may retain raw Payment_Verified as compatibility evidence");
 assert.match(paymentFactsHelper, /paymentBadge: canonicalPaymentBadge_\(row\)/, "Queues must derive payment badge from canonical receipt status");
 assert.match(paymentFactsHelper, /paymentVerified: isCanonicalPaymentVerified_\(row\)/, "Queues must classify payment stage from canonical payment helper");
-assert.match(reviewQueues, /paymentFacts = adminRowPaymentAuthorityFacts_\(rowObj\)/, "Queues must consume centralized payment authority facts");
+assert.match(reviewQueues, /buildOperationalRouteSnapshot_\(canonicalPopulationSnapshot_\(\), \{\}\)/, "Queues must consume the canonical operational-route snapshot");
+assert.match(reviewQueues, /row\.financeState[\s\S]*row\.activeFinanceWork === true/, "Queues must classify active payment work from canonical operational-route fields");
 assert.doesNotMatch(reviewQueues, /paymentVerified = paymentVerifiedRaw/, "Queues must not classify payment stage from raw compatibility state");
 assert.match(updateDocs, /var paymentBadge = canonicalPaymentBadge_\(refreshedRow\)/, "Document save must derive payment display from canonical receipt status");
 assert.match(updateDocs, /setCell_\(sh, rowNumber, idx, cols\.paymentCompat, paymentVerified \? "Yes" : ""\)/, "Document save may only project Payment_Verified compatibility from derived payment state");
