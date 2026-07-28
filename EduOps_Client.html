@@ -86,8 +86,16 @@
     app.state.pageSize = Number(defaults.pageSize);
     var userEmail = byId("eduopsUserEmail");
     var role = byId("eduopsRole");
+    var capabilityAuthority = access && access.user && access.user.capabilities || {};
+    var effectiveCapabilities = capabilityAuthority.capabilities && typeof capabilityAuthority.capabilities === "object" ? capabilityAuthority.capabilities : {};
+    var activeGrants = Array.isArray(capabilityAuthority.temporaryGrants) ? capabilityAuthority.temporaryGrants : [];
+    var enabledCapabilityCount = Object.keys(effectiveCapabilities).filter(function (key) { return effectiveCapabilities[key] === true; }).length;
     if (userEmail) userEmail.textContent = access && access.user && access.user.email || app.bootstrap.userEmail || "Authoritative user identity unavailable.";
-    if (role) role.textContent = access && access.user && access.user.role || app.bootstrap.role || "Authoritative role unavailable.";
+    if (role) role.textContent = capabilityAuthority.normalizedRole || access && access.user && access.user.role || app.bootstrap.role || "Authoritative role unavailable.";
+    var grants = byId("eduopsActiveGrants");
+    if (grants) grants.textContent = activeGrants.length ? "Active temporary grants: " + activeGrants.length : "Active temporary grants: none";
+    var capabilitySummary = byId("eduopsCapabilitySummary");
+    if (capabilitySummary) capabilitySummary.textContent = "Effective capabilities: " + enabledCapabilityCount;
     var runtime = access && access.runtime || {};
     var classificationTarget = byId("eduopsOperationalClassification");
     if (classificationTarget) classificationTarget.textContent = runtime.operationalClassification || "Runtime identity unavailable.";

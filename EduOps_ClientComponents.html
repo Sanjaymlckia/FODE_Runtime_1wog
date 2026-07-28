@@ -369,17 +369,20 @@
   var reportMeta = {
     reconciliation: ["Workload composition", "READ-ONLY", "Explains the active workload counts against its source snapshot."],
     hidden: ["Hidden and excluded records", "READ-ONLY", "Explains records outside the active workload without creating another queue."],
-    finance: ["Finance Operations", "READ-ONLY", "Finance facts for the active Actionability workload."],
+    finance: ["Finance", "VIEWER + GOVERNED HANDOFF", "Read-only Finance views with capability-gated exception handoff."],
+    academic: ["Registry and Exam Eligibility", "AUTHORITY", "Confirmed subjects, evidence ingestion and policy decisions."],
     communications: ["Communications", "READ-ONLY", "Communication recommendations and eligibility for the active workload."],
-    portal: ["Portal", "READ-ONLY", "Portal state for the active workload."],
+    portal: ["Portal Administration", "AUTHORITY", "Portal population status, reconciliation and governed access actions."],
+    classroom: ["Classroom Handoff", "AUTHORITY", "Readiness, subject mapping and externally completed handoff states."],
+    delivery: ["Delivery History", "READ-ONLY", "Authoritative send and bounce reconciliation states."],
     contactability: ["Contactability", "READ-ONLY", "Effective contactability for the active workload."],
     lifecycle: ["Global Lifecycle", "READ-ONLY", "Lifecycle context; Actionability remains the workload authority."],
     summary: ["Management Summary", "READ-ONLY", "Current workload scale, availability and source condition."],
     reports: ["Reports", "READ-ONLY", "Available workload and reconciliation summaries."],
     "audit-system": ["Audit", "READ-ONLY", "Request and receipt activity visible in this operator session."],
     roles: ["Roles & Capabilities", "AUTHORITY", "Server-authoritative roles, capabilities, operation availability and temporary grants."],
-    approvals: ["Assignments and Approvals", "STRUCTURAL", "Approval requirements are described; no new assignment authority exists."],
-    "data-quality": ["Data Quality", "STRUCTURAL", "Reconciliation is available; a separate Data Quality workflow is deferred."],
+    approvals: ["Assignments and Approvals", "READ-ONLY", "Current approval and reconciliation cases."],
+    "data-quality": ["Data Quality", "READ-ONLY", "Current authoritative integration gaps and conflicts."],
     health: ["System Health", "READ-ONLY", "Current transport, source reliability and request status."]
   };
 
@@ -396,19 +399,63 @@
     var capabilities = access.capabilities && typeof access.capabilities === "object" ? access.capabilities : access;
     return capabilities.CAN_READ_FINANCE === true;
   }
+  var financeUiState = {
+    accounts: { page: 1, pageSize: 25, searchQuery: "", financeState: "", matchingState: "", actionableOnly: true },
+    diagnostics: { page: 1, pageSize: 25, searchQuery: "", financeState: "", matchingState: "", actionableOnly: false },
+    reconciliation: { page: 1, pageSize: 25, searchQuery: "", severity: "", reasonCode: "", actionableOnly: true },
+    exceptions: { page: 1, pageSize: 25, searchQuery: "", severity: "", reasonCode: "", actionableOnly: true },
+    selectedApplicantId: "",
+    selectedHandoffApplicantId: "",
+    selectedHandoffApplicantName: "",
+    selectedHandoffTestRecord: false,
+    selectedHandoffCaseKind: "FINANCE_EXCEPTION",
+    searchSequence: 0
+  };
+  function financeReviewCapabilityAllowed() {
+    return completionCapabilityAllowed("CAN_REVIEW_FINANCE_EXCEPTIONS");
+  }
+  function financeHandoffCapabilityAllowed() {
+    return completionCapabilityAllowed("CAN_MANAGE_FINANCE_HANDOFF");
+  }
+  function financePngDate(value, emptyLabel) {
+    if (value == null || value === "") return emptyLabel || "Not recorded";
+    var rendered = app.formatPngDate(value);
+    return rendered === "Not scheduled" ? (emptyLabel || "Not recorded") : rendered + " PNG";
+  }
+  function financeTechnicalDetails(value) {
+    return '<details class="eduops-technical-details"><summary>Technical details</summary><pre>' + app.esc(JSON.stringify(value || {}, null, 2)) + '</pre></details>';
+  }
+  function financeTestBadgeHtml(testRecord) {
+    return testRecord === true ? '<span class="eduops-finance-test-badge">TEST</span>' : "";
+  }
+  function financeIdentityHtml(name, applicantId, testRecord) {
+    var badge = financeTestBadgeHtml(testRecord);
+    return '<div class="eduops-finance-identity"><strong>' + app.esc(name || "Name unavailable") + badge + '</strong><span>' + app.esc(applicantId || "ApplicantID unavailable") + badge + '</span></div>';
+  }
+  function financeSeverityLabel(value) {
+    return app.upper(value) === "WARN" ? "Warning" : app.formatCode(value || "UNKNOWN");
+  }
   function financeMenuHtml(active) {
-    var items = [
-      ["overview", "Overview"],
-      ["accounts", "Applicant accounts"],
-      ["reconciliation", "Reconciliation"],
-      ["exceptions", "Exceptions"],
-      ["applicant", "Applicant detail"],
-      ["zoho", "Zoho health"],
-      ["diagnostics", "Push diagnostics"],
-      ["policy", "Refunds and adjustments"]
+    var groups = [
+      ["Operations", "Read only", [
+        ["overview", "Overview"],
+        ["accounts", "Applicant accounts"],
+        ["reconciliation", "Reconciliation"],
+        ["exceptions", "Exceptions"],
+        ["applicant", "Applicant detail"]
+      ]],
+      ["Integration", "Read only", [
+        ["zoho", "Zoho health"],
+        ["diagnostics", "Push diagnostics"]
+      ]],
+      ["Policy & Handoffs", financeReviewCapabilityAllowed() || financeHandoffCapabilityAllowed() ? "Read only + Authority" : "Read only", [
+        ["policy", "Refunds and adjustments"]
+      ].concat(financeReviewCapabilityAllowed() || financeHandoffCapabilityAllowed() ? [["handoff", "Exception handoff"]] : [])]
     ];
-    return '<nav class="eduops-finance-submenu" aria-label="Finance views">' + items.map(function (item) {
-      return '<button type="button" data-finance-view="' + item[0] + '"' + (item[0] === active ? ' aria-current="page"' : "") + '>' + app.esc(item[1]) + '</button>';
+    return '<nav class="eduops-finance-submenu" aria-label="Finance views">' + groups.map(function (group) {
+      return '<div class="eduops-finance-menu-group"><span><strong>' + app.esc(group[0]) + '</strong><small>' + app.esc(group[1]) + '</small></span><div>' + group[2].map(function (item) {
+        return '<button type="button" data-finance-view="' + item[0] + '"' + (item[0] === active ? ' aria-current="page"' : "") + '>' + app.esc(item[1]) + '</button>';
+      }).join("") + '</div></div>';
     }).join("") + '</nav><div id="eduopsFinanceView" class="eduops-finance-view"><div class="eduops-loading-state"><strong>Loading Finance</strong><span>Requesting the authorized read-only projection.</span></div></div>';
   }
   function financeDefinitionHtml(rows) {
@@ -420,6 +467,16 @@
     var message = String(error && error.message || error || "Finance projection unavailable.");
     return '<div class="eduops-error-state"><strong>Finance unavailable</strong><span>' + app.esc(message) + '</span></div>';
   }
+  function financePaginationHtml(view, page) {
+    var p = page || {};
+    var totalPages = Number(p.totalPages || Math.max(1, Math.ceil(Number(p.filteredCount || 0) / Number(p.pageSize || 25))));
+    if (totalPages <= 1) return "";
+    return '<div class="eduops-pagination"><button type="button" class="eduops-button eduops-button-secondary" data-finance-page-view="' + app.esc(view) + '" data-finance-page="' + Math.max(1, Number(p.page || 1) - 1) + '"' + (p.hasPrevious ? "" : " disabled") + '>Previous</button><span>Page ' + Number(p.page || 1) + ' of ' + totalPages + ' · ' + Number(p.filteredCount || 0) + ' matching</span><button type="button" class="eduops-button eduops-button-secondary" data-finance-page-view="' + app.esc(view) + '" data-finance-page="' + (Number(p.page || 1) + 1) + '"' + (p.hasNext ? "" : " disabled") + '>Next</button></div>';
+  }
+  function financeWorklistControlsHtml(view) {
+    var state = financeUiState[view];
+    return '<div class="eduops-finance-controls"><label class="eduops-field eduops-field-wide">Search name, ApplicantID or email<input type="search" data-finance-list-search="' + app.esc(view) + '" value="' + app.esc(state.searchQuery) + '"></label><label class="eduops-field">Finance state<select data-finance-list-state="' + app.esc(view) + '"><option value="">All states</option>' + ["PAYMENT_PENDING", "PAYMENT_TO_VERIFY", "PAID_VERIFIED", "NOT_YET_PAYMENT_APPLICABLE"].map(function (value) { return '<option value="' + value + '"' + (state.financeState === value ? " selected" : "") + '>' + app.esc(app.formatCode(value)) + '</option>'; }).join("") + '</select></label><label class="eduops-field">Account match<select data-finance-list-match="' + app.esc(view) + '"><option value="">All matches</option>' + [["LOCAL_INVOICE_LINKED", "Invoice linked"], ["LOCAL_CONTACT_LINKED", "Contact linked"], ["NO_LOCAL_BOOKS_MATCH", "No local Books match"]].map(function (item) { return '<option value="' + item[0] + '"' + (state.matchingState === item[0] ? " selected" : "") + '>' + app.esc(item[1]) + '</option>'; }).join("") + '</select></label><label class="eduops-check"><input type="checkbox" data-finance-list-actionable="' + app.esc(view) + '"' + (state.actionableOnly ? " checked" : "") + '>Actionable only</label><button type="button" class="eduops-button eduops-button-primary" data-finance-apply-list="' + app.esc(view) + '">Apply</button></div>';
+  }
   function financeWorklistHtml(response, diagnosticMode) {
     var page = response && response.page || {};
     var rows = page.rows || [];
@@ -429,14 +486,76 @@
       var authority = row.financeAuthority || {};
       var books = row.objects && row.objects.books || {};
       var detail = diagnosticMode
-        ? ["Push " + (books.pushStatus || "-"), "Attempt " + (books.lastAttemptAt || "-"), "Error " + (books.lastError || "None")].join(" / ")
+        ? [
+          books.pushStatus ? "Push state: " + app.formatCode(books.pushStatus) : "Never pushed",
+          books.lastPushAt ? "Last push: " + financePngDate(books.lastPushAt) : "No push recorded",
+          books.lastAttemptAt ? "Last attempt: " + financePngDate(books.lastAttemptAt) : "No attempt recorded",
+          books.lastError ? "Last error: " + books.lastError + (books.lastErrorAt ? " · " + financePngDate(books.lastErrorAt) : "") : "No error"
+        ].join(" · ")
         : ["Contact " + (books.contactId || "not linked"), "Invoice " + (books.invoiceNumber || "not linked")].join(" / ");
-      return '<tr><td><strong>' + app.esc(identity.applicantName || identity.applicantId) + '</strong><span>' + app.esc(identity.applicantId || "") + '</span></td><td>' + app.esc(authority.financeState || "UNKNOWN") + '</td><td>' + app.esc(detail) + '</td><td><button type="button" class="eduops-button eduops-button-secondary" data-finance-applicant="' + app.esc(identity.applicantId || "") + '">View detail</button></td></tr>';
-    }).join("") + '</tbody></table></div><p class="eduops-action-reason">Page ' + Number(page.page || 1) + ' / ' + Number(page.filteredCount || 0) + ' matching / ' + Number(page.totalCount || 0) + ' total.</p>';
+      return '<tr><td>' + financeIdentityHtml(identity.applicantName, identity.applicantId, identity.testRecord) + '</td><td>' + app.esc(app.formatCode(authority.financeState || "UNKNOWN")) + '</td><td>' + app.esc(detail) + (diagnosticMode ? financeTechnicalDetails({ applicantId: identity.applicantId, books: books, resolvedAt: row.audit && row.audit.resolvedAt || "" }) : "") + '</td><td><button type="button" class="eduops-button eduops-button-secondary" data-finance-applicant="' + app.esc(identity.applicantId || "") + '">View detail</button></td></tr>';
+    }).join("") + '</tbody></table></div>';
   }
-  function financeLoadView(view, trigger) {
+  function financeFindingControlsHtml(view, groups) {
+    var state = financeUiState[view];
+    var reasonCodes = Object.keys(groups && groups.byReason || {}).sort();
+    return '<div class="eduops-finance-controls"><label class="eduops-field eduops-field-wide">Search student, ApplicantID or reason<input type="search" data-finance-finding-search="' + app.esc(view) + '" value="' + app.esc(state.searchQuery) + '"></label><label class="eduops-field">Severity<select data-finance-finding-severity="' + app.esc(view) + '"><option value="">All severities</option><option value="ERROR"' + (state.severity === "ERROR" ? " selected" : "") + '>Error</option><option value="WARN"' + (state.severity === "WARN" ? " selected" : "") + '>Warning</option></select></label><label class="eduops-field">Reason<select data-finance-finding-reason="' + app.esc(view) + '"><option value="">All reasons</option>' + reasonCodes.map(function (code) { return '<option value="' + app.esc(code) + '"' + (state.reasonCode === code ? " selected" : "") + '>' + app.esc(app.formatCode(code)) + ' (' + Number(groups.byReason[code] || 0) + ')</option>'; }).join("") + '</select></label><label class="eduops-check"><input type="checkbox" data-finance-finding-actionable="' + app.esc(view) + '"' + (state.actionableOnly ? " checked" : "") + '>Actionable only</label><button type="button" class="eduops-button eduops-button-primary" data-finance-apply-findings="' + app.esc(view) + '">Apply</button></div>';
+  }
+  function financeFindingsHtml(view, response) {
+    var page = response.page || {};
+    var rows = page.rows || response.findings || response.rows || [];
+    var grouped = Object.keys(response.groups && response.groups.byReason || {}).sort().map(function (code) {
+      return '<button type="button" class="eduops-finance-reason" data-finance-reason-drill="' + app.esc(view) + '" data-finance-reason="' + app.esc(code) + '"><strong>' + Number(response.groups.byReason[code] || 0) + '</strong><span>' + app.esc(app.formatCode(code)) + '</span></button>';
+    }).join("");
+    var table = rows.length ? '<div class="eduops-table-shell"><table class="eduops-work-table eduops-finance-table"><thead><tr><th>Student</th><th>Severity</th><th>Reason</th><th>Next step</th></tr></thead><tbody>' + rows.map(function (item) {
+      var actions = '<button type="button" class="eduops-button eduops-button-secondary" data-finance-applicant="' + app.esc(item.applicantId || "") + '">View detail</button>';
+      if (financeHandoffCapabilityAllowed()) actions += '<button type="button" class="eduops-button eduops-button-secondary" data-finance-handoff-applicant="' + app.esc(item.applicantId || "") + '" data-finance-handoff-name="' + app.esc(item.applicantName || "") + '" data-finance-handoff-test="' + (item.testRecord === true ? "true" : "false") + '" data-finance-handoff-kind="FINANCE_EXCEPTION">Prepare handoff</button>';
+      return '<tr><td>' + financeIdentityHtml(item.applicantName, item.applicantId, item.testRecord) + '</td><td>' + app.esc(financeSeverityLabel(item.severity || "WARN")) + '</td><td>' + app.esc((item.codes || []).filter(function (code) { return !/_CONSISTENT$/.test(code); }).map(app.formatCode).join(", ") || "Review required") + '</td><td><span class="eduops-finance-next-step">' + app.esc(item.recommendedOperatorAction || "Review required") + '</span><div class="eduops-action-row">' + actions + '</div></td></tr>';
+    }).join("") + '</tbody></table></div>' : '<div class="eduops-empty-state"><strong>No actionable Finance findings</strong><span>The current filters returned no Finance exceptions.</span></div>';
+    return '<div class="eduops-finance-summary"><strong>' + Number(page.filteredCount || 0) + ' matching findings</strong><span>Evaluated ' + financePngDate(response.generatedAt, "time unavailable") + '.</span></div>' + (grouped ? '<div class="eduops-finance-reason-grid">' + grouped + '</div>' : "") + financeFindingControlsHtml(view, response.groups || {}) + table + financePaginationHtml(view, page) + financeTechnicalDetails({ generatedAt: response.generatedAt, summary: response.summary || {}, rawDiagnostics: response.rawDiagnostics || page.rawDiagnostics || [] });
+  }
+  function financeApplicantSearchHtml(selectedId) {
+    return '<div class="eduops-finance-search"><label class="eduops-field eduops-field-wide">Student name<input id="eduopsFinanceApplicantName" type="search" autocomplete="off" placeholder="Start typing a student name" data-finance-name-search></label><div id="eduopsFinanceApplicantSuggestions" class="eduops-finance-suggestions" aria-live="polite"></div><span class="eduops-field-separator">or</span><label class="eduops-field">ApplicantID<input id="eduopsFinanceApplicantId" type="search" value="' + app.esc(selectedId || "") + '" placeholder="FODE-26-000000"></label><button type="button" class="eduops-button eduops-button-primary" data-finance-load-applicant>Load Finance detail</button></div><div id="eduopsFinanceApplicantResult"></div>';
+  }
+  function financeRenderApplicantSuggestions(response, query, sequence) {
+    if (sequence !== financeUiState.searchSequence) return;
+    var target = byId("eduopsFinanceApplicantSuggestions");
+    if (!target) return;
+    var rows = response && response.page && response.page.rows || [];
+    if (!rows.length) {
+      target.innerHTML = '<span>No student matched “' + app.esc(query) + '”.</span>';
+      return;
+    }
+    target.innerHTML = rows.map(function (row) {
+      var identity = row.identity || {};
+      return '<button type="button" data-finance-search-select="' + app.esc(identity.applicantId || "") + '">' + financeIdentityHtml(identity.applicantName, identity.applicantId, identity.testRecord) + '<small>' + app.esc(row.contact && row.contact.effectiveEmail || "email unavailable") + '</small></button>';
+    }).join("");
+  }
+  function financeSearchApplicants(query) {
+    var cleaned = String(query || "").trim();
+    var target = byId("eduopsFinanceApplicantSuggestions");
+    financeUiState.searchSequence += 1;
+    var sequence = financeUiState.searchSequence;
+    if (!target || cleaned.length < 2) {
+      if (target) target.innerHTML = '<span>Enter at least two characters.</span>';
+      return;
+    }
+    target.innerHTML = '<span>Searching Finance applicants...</span>';
+    app.call("admin_getCanonicalFinanceWorklist", { page: 1, pageSize: 12, searchQuery: cleaned, filters: { financeScope: "ALL_APPLICANTS" } }).then(function (response) {
+      financeRenderApplicantSuggestions(response, cleaned, sequence);
+    }).catch(function (error) { if (sequence === financeUiState.searchSequence) target.innerHTML = financeErrorHtml(error); });
+  }
+  function financeSetActiveView(view) {
+    Array.prototype.slice.call(dom.eduopsReportContent.querySelectorAll("[data-finance-view]")).forEach(function (button) {
+      if (button.getAttribute("data-finance-view") === view) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
+    });
+  }
+  function financeLoadView(view, trigger, options) {
     var target = dom.eduopsReportContent.querySelector("#eduopsFinanceView");
     if (!target) return;
+    var opts = options || {};
+    financeSetActiveView(view);
     if (!financeCapabilityAllowed()) {
       target.innerHTML = '<div class="eduops-error-state"><strong>Finance access denied</strong><span>CAN_READ_FINANCE is required. No Finance data was requested.</span></div>';
       return;
@@ -446,51 +565,98 @@
     if (view === "overview") {
       request = app.call("admin_getCanonicalFinanceSummary", {}).then(function (response) {
         var summary = response.summary || {};
-        target.innerHTML = reportHtml("Canonical Finance overview", "Receipt_Status remains payment authority.", [
-          ["Active finance work", summary.activeFinanceWork],
-          ["Payment pending", summary.paymentPending],
-          ["Payment to verify", summary.paymentToVerify],
-          ["Payment verified", summary.paidVerified],
-          ["Not yet applicable", summary.notYetPaymentApplicable],
-          ["Finance exceptions", summary.financeExceptions]
-        ]);
+        var cards = [
+          ["accounts", "Unique active applicants", summary.activeFinanceWork, "ACTIONABLE"],
+          ["accounts", "Payment pending", summary.paymentPending, "PAYMENT_PENDING"],
+          ["accounts", "Payment to verify", summary.paymentToVerify, "PAYMENT_TO_VERIFY"],
+          ["accounts", "Payment verified", summary.paidVerified, "PAID_VERIFIED"],
+          ["accounts", "Not yet applicable", summary.notYetPaymentApplicable, "NOT_YET_PAYMENT_APPLICABLE"],
+          ["reconciliation", "Finance exceptions", summary.financeExceptions, "EXCEPTIONS"]
+        ];
+        target.innerHTML = '<p class="eduops-explanation"><strong>Finance viewer — Read only.</strong> Receipt_Status remains payment authority.</p><div class="eduops-finance-overview-grid">' + cards.map(function (card) {
+          return '<button type="button" data-finance-drill="' + card[0] + '" data-finance-drill-filter="' + card[3] + '"><span>' + app.esc(card[1]) + '</span><strong>' + Number(card[2] || 0) + '</strong></button>';
+        }).join("") + '</div>' + financeTechnicalDetails({ generatedAt: response.generatedAt, summary: summary });
       });
     } else if (view === "accounts" || view === "diagnostics") {
-      request = app.call("admin_getCanonicalFinanceWorklist", { page: 1, pageSize: 50, filters: { financeScope: "ALL_APPLICANTS" } }).then(function (response) {
-        target.innerHTML = financeWorklistHtml(response, view === "diagnostics");
+      var listState = financeUiState[view];
+      request = app.call("admin_getCanonicalFinanceWorklist", {
+        page: listState.page,
+        pageSize: listState.pageSize,
+        searchQuery: listState.searchQuery,
+        filters: {
+          financeScope: "ALL_APPLICANTS",
+          financeState: listState.financeState,
+          matchingState: listState.matchingState,
+          actionableOnly: listState.actionableOnly
+        }
+      }).then(function (response) {
+        target.innerHTML = '<p class="eduops-explanation"><strong>' + (view === "diagnostics" ? "Local push diagnostics" : "Applicant accounts") + ' — Read only.</strong> No Zoho or payment write is available.</p>' + financeWorklistControlsHtml(view) + financeWorklistHtml(response, view === "diagnostics") + financePaginationHtml(view, response.page || {}) + financeTechnicalDetails({ generatedAt: response.generatedAt, appliedFilters: response.page && response.page.appliedFilters || {} });
       });
     } else if (view === "reconciliation" || view === "exceptions") {
       var rpc = view === "reconciliation" ? "admin_getCanonicalFinanceReconciliation" : "admin_getCanonicalFinanceExceptions";
-      request = app.call(rpc, { limit: 100 }).then(function (response) {
-        var rows = response.findings || response.rows || [];
-        target.innerHTML = reportHtml(view === "reconciliation" ? "Payment reconciliation" : "Finance exceptions", "Read-only findings; no correction is executed here.", [
-          ["Status", response.status || (rows.length ? "PASS_WITH_FINDINGS" : "PASS")],
-          ["Findings", response.summary && response.summary.findings != null ? response.summary.findings : response.total || rows.length]
-        ]) + (rows.length ? '<ul class="eduops-audit-list">' + rows.map(function (item) {
-          return '<li><strong>' + app.esc(item.applicantId || "Finance finding") + '</strong><span>' + app.esc((item.codes || []).join(", ") || item.recommendedOperatorAction || "Review required") + '</span></li>';
-        }).join("") + '</ul>' : '<div class="eduops-empty-state"><strong>No Finance findings</strong><span>The current reconciliation returned no exceptions.</span></div>');
+      var findingState = financeUiState[view];
+      request = app.call(rpc, {
+        page: findingState.page,
+        pageSize: findingState.pageSize,
+        searchQuery: findingState.searchQuery,
+        filters: {
+          actionableOnly: findingState.actionableOnly,
+          severity: findingState.severity,
+          reasonCode: findingState.reasonCode
+        }
+      }).then(function (response) {
+        target.innerHTML = '<p class="eduops-explanation"><strong>' + (view === "reconciliation" ? "Payment reconciliation" : "Finance exceptions") + ' — Read only.</strong> Findings are deduplicated by ApplicantID and not-yet-payable applicants are excluded unless another defect exists.</p>' + financeFindingsHtml(view, response);
       });
     } else if (view === "applicant") {
-      target.innerHTML = '<div class="eduops-form-grid"><label class="eduops-field eduops-field-wide">Applicant ID<input id="eduopsFinanceApplicantId" type="search" placeholder="FODE-26-000000"></label></div><div class="eduops-action-row"><button type="button" class="eduops-button eduops-button-primary" data-finance-load-applicant>Load Finance detail</button></div><div id="eduopsFinanceApplicantResult"></div>';
+      var selectedApplicantId = opts.applicantId || financeUiState.selectedApplicantId || "";
+      target.innerHTML = '<p class="eduops-explanation"><strong>Applicant Finance detail — Read only.</strong> Search by student name or enter an exact ApplicantID.</p>' + financeApplicantSearchHtml(selectedApplicantId);
+      if (selectedApplicantId) financeLoadApplicant(selectedApplicantId);
       request = Promise.resolve();
     } else if (view === "zoho") {
       request = app.call("admin_getZohoBooksCachedReadOnlyHealth", {}).then(function (response) {
-        target.innerHTML = '<div class="eduops-module-status" data-module-state="' + (response.available ? "READ-ONLY" : "STRUCTURAL") + '"><strong>' + app.esc(response.label || "Connection unavailable — reauthorization required") + '</strong><span>Cached-token metadata only. No OAuth or Zoho request was made.</span></div>' + financeDefinitionHtml([
+        target.innerHTML = '<p class="eduops-explanation"><strong>Zoho connection health — Read only.</strong> Cached metadata only; no OAuth or Zoho request is made.</p><div class="eduops-module-status" data-module-state="' + (response.available ? "READ-ONLY" : "STRUCTURAL") + '"><strong>' + app.esc(response.label || "Connection unavailable — reauthorization required") + '</strong><span>Cached-token metadata only. No OAuth or Zoho request was made.</span></div>' + financeDefinitionHtml([
           ["Status", response.status],
           ["Reason", response.reasonCode],
           ["Organization configured", response.organizationConfigured ? "Yes" : "No"],
           ["Cached token present", response.cachedTokenPresent ? "Yes" : "No"],
-          ["Cached token expiry", response.cachedTokenExpiresAt]
-        ]);
+          ["Cached token expiry", financePngDate(response.cachedTokenExpiresAt, "No cached expiry")]
+        ]) + financeTechnicalDetails(response);
       });
     } else if (view === "policy") {
       request = app.call("admin_getCanonicalFinancePolicy", {}).then(function (response) {
-        target.innerHTML = reportHtml("Refunds, credits and adjustments", "These states have no active mutation authority.", [
+        target.innerHTML = '<p class="eduops-explanation"><strong>Refunds, credits and adjustments — Read only.</strong> No automatic Zoho refund or financial mutation is available.</p>' + financeDefinitionHtml([
+          ["Standard outcome", "Normally non-refundable"],
+          ["School-cancelled programme", "Principal review required"],
+          ["Refund execution", "No automatic refund"],
           ["Refunds", "POLICY_REQUIRED"],
           ["Credits", "POLICY_REQUIRED"],
-          ["Adjustments", "POLICY_REQUIRED"]
-        ]) + financeDefinitionHtml([["Owner decisions required", (response.ownerDecisionsRequired || []).join("; ")]]);
+          ["Adjustments", "POLICY_REQUIRED"],
+          ["Owner decisions required", (response.ownerDecisionsRequired || []).join("; ")]
+        ]) + financeTechnicalDetails(response);
       });
+    } else if (view === "handoff") {
+      if (!financeReviewCapabilityAllowed() && !financeHandoffCapabilityAllowed()) {
+        target.innerHTML = '<div class="eduops-error-state"><strong>Finance handoff access denied</strong><span>CAN_REVIEW_FINANCE_EXCEPTIONS or CAN_MANAGE_FINANCE_HANDOFF is required. Read-only Finance access does not expose handoff controls.</span></div>';
+        request = Promise.resolve();
+      } else {
+        var prefillApplicantId = opts.applicantId || financeUiState.selectedHandoffApplicantId || "";
+        var prefillApplicantName = opts.applicantName || financeUiState.selectedHandoffApplicantName || "";
+        var prefillTestRecord = opts.testRecord === true || financeUiState.selectedHandoffTestRecord === true;
+        var prefillCaseKind = opts.caseKind || financeUiState.selectedHandoffCaseKind || "FINANCE_EXCEPTION";
+        financeUiState.selectedHandoffApplicantId = prefillApplicantId;
+        financeUiState.selectedHandoffApplicantName = prefillApplicantName;
+        financeUiState.selectedHandoffTestRecord = prefillTestRecord;
+        target.innerHTML = '<p class="eduops-explanation"><strong>Exception handoff — Authority.</strong> Preview and confirmation are governed separately from the read-only Finance viewer.</p><div id="eduopsFinanceHandoffQueue"></div>' + (financeHandoffCapabilityAllowed() ? '<div id="eduopsFinanceHandoffIdentity">' + financeIdentityHtml(prefillApplicantName, prefillApplicantId, prefillTestRecord) + '</div><div class="eduops-form-grid"><label class="eduops-field">Applicant name<input id="eduopsFinanceHandoffApplicantName" type="text" value="' + app.esc(prefillApplicantName) + '" readonly></label><label class="eduops-field">ApplicantID<input id="eduopsFinanceHandoffApplicant" type="search" value="' + app.esc(prefillApplicantId) + '" placeholder="FODE-26-000000"></label><label class="eduops-field">Case kind<select id="eduopsFinanceHandoffKind"><option value="FINANCE_EXCEPTION"' + (prefillCaseKind === "FINANCE_EXCEPTION" ? " selected" : "") + '>Finance exception</option><option value="REFUND"' + (prefillCaseKind === "REFUND" ? " selected" : "") + '>Refund</option><option value="CREDIT"' + (prefillCaseKind === "CREDIT" ? " selected" : "") + '>Credit</option><option value="ADJUSTMENT"' + (prefillCaseKind === "ADJUSTMENT" ? " selected" : "") + '>Adjustment</option></select></label><label class="eduops-field">Next state<select id="eduopsFinanceHandoffState"><option value="UNDER_REVIEW">Under review</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option><option value="POLICY_REQUIRED">Policy required</option><option value="HANDED_TO_ZOHO">Handed to Zoho</option><option value="COMPLETED_EXTERNALLY">Completed externally</option></select></label><label class="eduops-field">Evidence reference<input id="eduopsFinanceHandoffEvidence" type="text"></label><label class="eduops-field">Zoho reference<input id="eduopsFinanceHandoffZoho" type="text"></label></div><div class="eduops-action-row"><button class="eduops-button eduops-button-primary" type="button" data-finance-preview-handoff>Preview handoff</button></div>' : '<div class="eduops-module-status" data-module-state="READ-ONLY"><strong>Exception review only</strong><span>CAN_MANAGE_FINANCE_HANDOFF is required to preview or confirm a handoff.</span></div>');
+        request = financeReviewCapabilityAllowed() ? app.call("admin_getFodeFinanceExceptionWorklist", { limit: 100 }).then(function (response) {
+          var queue = byId("eduopsFinanceHandoffQueue");
+          if (!queue) return;
+          var rows = response.rows || [];
+          queue.innerHTML = rows.length ? '<div class="eduops-table-shell"><table class="eduops-work-table eduops-finance-table"><thead><tr><th>Student</th><th>Case</th><th>State</th><th>Updated</th></tr></thead><tbody>' + rows.map(function (row) {
+            return '<tr><td>' + financeIdentityHtml(row.applicantName, row.applicantId, row.testRecord) + '</td><td>' + app.esc(app.formatCode(row.caseKind)) + '</td><td>' + app.esc(app.formatCode(row.state)) + '</td><td><span>' + app.esc(financePngDate(row.updatedAt || row.reviewedAt, "Not yet reviewed")) + '</span>' + (financeHandoffCapabilityAllowed() ? '<button type="button" class="eduops-button eduops-button-secondary" data-finance-handoff-applicant="' + app.esc(row.applicantId) + '" data-finance-handoff-name="' + app.esc(row.applicantName || "") + '" data-finance-handoff-test="' + (row.testRecord === true ? "true" : "false") + '" data-finance-handoff-kind="' + app.esc(row.caseKind) + '">Prepare handoff</button>' : "") + financeTechnicalDetails(row) + '</td></tr>';
+          }).join("") + '</tbody></table></div>' : '<div class="eduops-empty-state"><strong>No Finance handoff cases</strong><span>No exception or prior handoff record is currently queued.</span></div>';
+        }) : Promise.resolve();
+        if (financeHandoffCapabilityAllowed() && prefillApplicantId) financeLoadHandoffIdentity(prefillApplicantId);
+      }
     }
     Promise.resolve(request).catch(function (error) { target.innerHTML = financeErrorHtml(error); });
   }
@@ -511,7 +677,9 @@
       var match = responses[1] && responses[1].match || {};
       var authority = finance.financeAuthority || {};
       var amounts = finance.amounts || {};
-      target.innerHTML = financeDefinitionHtml([
+      var identity = finance.identity || {};
+      financeUiState.selectedApplicantId = id;
+      target.innerHTML = financeIdentityHtml(identity.applicantName, identity.applicantId, identity.testRecord) + financeDefinitionHtml([
         ["Applicant ID", finance.identity && finance.identity.applicantId],
         ["Applicant", finance.identity && finance.identity.applicantName],
         ["Finance state", authority.financeState],
@@ -524,13 +692,278 @@
         ["Local match", match.matchState],
         ["Books contact", match.contactName || match.contactId],
         ["Books invoice", match.invoiceNumber || match.invoiceId],
-        ["Push status", match.pushStatus]
-      ]);
+        ["Push status", match.pushStatus || "Never pushed"],
+        ["Finance authority evaluated", financePngDate(finance.audit && finance.audit.resolvedAt, "Not recorded")],
+        ["Finance authority updated", financePngDate(authority.authorityTimestamp, "Not recorded")]
+      ]) + financeTechnicalDetails({ finance: finance, localBooksMatch: match });
     }).catch(function (error) { target.innerHTML = financeErrorHtml(error); });
+  }
+  function financeOpenApplicantDetail(applicantId, trigger) {
+    financeUiState.selectedApplicantId = String(applicantId || "").trim();
+    financeLoadView("applicant", trigger, { applicantId: financeUiState.selectedApplicantId });
+  }
+  function financeOpenHandoff(applicantId, caseKind, trigger) {
+    financeUiState.selectedHandoffApplicantId = String(applicantId || "").trim();
+    financeUiState.selectedHandoffApplicantName = String(trigger && trigger.getAttribute("data-finance-handoff-name") || "").trim();
+    financeUiState.selectedHandoffTestRecord = trigger && trigger.getAttribute("data-finance-handoff-test") === "true";
+    financeUiState.selectedHandoffCaseKind = String(caseKind || "FINANCE_EXCEPTION");
+    financeLoadView("handoff", trigger, {
+      applicantId: financeUiState.selectedHandoffApplicantId,
+      applicantName: financeUiState.selectedHandoffApplicantName,
+      testRecord: financeUiState.selectedHandoffTestRecord,
+      caseKind: financeUiState.selectedHandoffCaseKind
+    });
+  }
+  function financeLoadHandoffIdentity(applicantId) {
+    var id = String(applicantId || "").trim();
+    var identityTarget = byId("eduopsFinanceHandoffIdentity");
+    var nameInput = byId("eduopsFinanceHandoffApplicantName");
+    if (!id || !identityTarget || !nameInput) return;
+    app.call("admin_getCanonicalFinanceApplicant", { applicantId: id }).then(function (response) {
+      var identity = response && response.applicant && response.applicant.identity || {};
+      if (identity.applicantId !== id) throw new Error("FINANCE_HANDOFF_APPLICANT_BINDING_MISMATCH");
+      financeUiState.selectedHandoffApplicantId = identity.applicantId;
+      financeUiState.selectedHandoffApplicantName = identity.applicantName || "";
+      financeUiState.selectedHandoffTestRecord = identity.testRecord === true;
+      nameInput.value = identity.applicantName || "";
+      identityTarget.innerHTML = financeIdentityHtml(identity.applicantName, identity.applicantId, identity.testRecord);
+    }).catch(function (error) {
+      nameInput.value = "";
+      identityTarget.innerHTML = financeErrorHtml(error);
+    });
   }
   function openFinanceReport(trigger) {
     dom.eduopsReportContent.innerHTML = financeMenuHtml("overview");
     financeLoadView("overview", trigger);
+  }
+
+  function completionCapabilityAuthority() {
+    var authority = app.state.access && app.state.access.user && app.state.access.user.capabilities || {};
+    return authority.capabilities && typeof authority.capabilities === "object" ? authority.capabilities : authority;
+  }
+  function completionCapabilityAllowed(key) {
+    return completionCapabilityAuthority()[key] === true;
+  }
+  function completionMenuHtml(domain, active, items) {
+    return '<nav class="eduops-finance-submenu" aria-label="' + app.esc(domain) + ' views">' + items.map(function (item) {
+      return '<button type="button" data-completion-domain="' + app.esc(domain) + '" data-completion-view="' + app.esc(item[0]) + '"' + (item[0] === active ? ' aria-current="page"' : "") + '>' + app.esc(item[1]) + '</button>';
+    }).join("") + '</nav><div id="eduopsCompletionView" class="eduops-finance-view"><div class="eduops-loading-state"><strong>Loading authority</strong><span>Requesting the server projection.</span></div></div>';
+  }
+  function completionCountsHtml(title, counts) {
+    var rows = Object.keys(counts || {}).sort().map(function (key) { return [app.formatCode(key), counts[key]]; });
+    return reportHtml(title, "Server-authoritative state distribution.", rows.length ? rows : [["Records", 0]]);
+  }
+  function completionTechnicalHtml(value) {
+    return '<details class="eduops-disclosure"><summary>Technical details</summary><pre>' + app.esc(JSON.stringify(value || {}, null, 2)) + '</pre></details>';
+  }
+  function completionErrorHtml(title, error) {
+    return '<div class="eduops-error-state"><strong>' + app.esc(title) + '</strong><span>' + app.esc(String(error && error.message || error || "Authority unavailable.")) + '</span></div>';
+  }
+  function completionRowsHtml(rows, columns) {
+    var list = Array.isArray(rows) ? rows : [];
+    if (!list.length) return '<div class="eduops-empty-state"><strong>No matching authority records</strong><span>The selected scope returned no rows.</span></div>';
+    return '<div class="eduops-table-shell"><table class="eduops-work-table"><thead><tr>' + columns.map(function (column) { return '<th>' + app.esc(column[0]) + '</th>'; }).join("") + '</tr></thead><tbody>' + list.map(function (row) {
+      return '<tr>' + columns.map(function (column) {
+        var value = typeof column[1] === "function" ? column[1](row) : row[column[1]];
+        return '<td>' + app.esc(Array.isArray(value) ? value.join(", ") : value == null || value === "" ? "-" : value) + '</td>';
+      }).join("") + '</tr>';
+    }).join("") + '</tbody></table></div>';
+  }
+  function completionValue(id) {
+    var node = byId(id);
+    return node ? String(node.value || "").trim() : "";
+  }
+  function completionJson(id) {
+    var raw = completionValue(id);
+    if (!raw) throw new Error("JSON evidence is required.");
+    return JSON.parse(raw);
+  }
+  function previewCompletionAction(options) {
+    var opts = options || {};
+    var source = opts.source || document.activeElement;
+    var token = app.beginControlAction(source, "Previewing...", "Generating authoritative preview.");
+    app.call(opts.previewRpc, opts.payload).then(function (preview) {
+      app.finishControlAction(token, "SUCCESS", "Authoritative preview ready.");
+      var previewIdentity = opts.showApplicantIdentity
+        ? financeIdentityHtml(preview.applicantName, preview.applicantId, preview.testRecord)
+        : "";
+      var previewRows = opts.showApplicantIdentity
+        ? [["Applicant", preview.applicantName], ["Applicant ID", preview.applicantId]]
+        : [["Applicant ID", preview.applicantId]];
+      app.openConfirm({
+        title: opts.title || "Confirm authority action",
+        html: previewIdentity + financeDefinitionHtml(previewRows.concat([
+          ["State", preview.state],
+          ["Operation", preview.evidenceType || preview.action || preview.resolution || preview.nextState || "Authority update"],
+          ["Preview ID", preview.previewId],
+          ["Expires", opts.pngDates ? financePngDate(preview.expiresAt, "Not recorded") : preview.expiresAt]
+        ])) + completionTechnicalHtml(preview),
+        proceedLabel: opts.proceedLabel || "Confirm authority action",
+        cancelLabel: "Return without action",
+        source: source,
+        onProceed: function () {
+          var proceed = byId("eduopsConfirmProceed");
+          var executeToken = app.beginControlAction(proceed, "Confirming...", "Recording confirmed authority state.");
+          app.call(opts.executeRpc, {
+            previewId: preview.previewId,
+            confirmation: opts.confirmation
+          }).then(function (result) {
+            app.finishControlAction(executeToken, "SUCCESS", "Authority state recorded.");
+            app.closeConfirm(false);
+            var target = dom.eduopsReportContent.querySelector("#eduopsCompletionView") || dom.eduopsReportContent.querySelector("#eduopsFinanceView") || dom.eduopsReportContent;
+            var resultIdentity = opts.showApplicantIdentity
+              ? financeIdentityHtml(result.applicantName, result.applicantId, result.testRecord)
+              : "";
+            target.innerHTML = '<div class="eduops-module-status" data-module-state="READ-ONLY"><strong>Authority update recorded</strong><span>' + app.esc(result.state || result.status || "COMPLETED") + '</span></div>' + resultIdentity + completionTechnicalHtml(result);
+          }).catch(function (error) {
+            app.finishControlAction(executeToken, "BLOCKED", "Authority update blocked: " + String(error && error.message || error));
+          });
+        }
+      });
+    }).catch(function (error) {
+      app.finishControlAction(token, "BLOCKED", "Preview blocked: " + String(error && error.message || error));
+    });
+  }
+
+  function academicMenuHtml(active) {
+    return completionMenuHtml("academic", active, [["overview", "Overview"], ["registry", "Registry queue"], ["applicant", "Applicant & exam"], ["confirm", "Confirm Registry"], ["evidence", "Ingest evidence"]]);
+  }
+  function academicLoadView(view) {
+    var target = dom.eduopsReportContent.querySelector("#eduopsCompletionView");
+    if (!target) return;
+    target.innerHTML = '<div class="eduops-loading-state"><strong>Loading academic authority</strong><span>Requesting Registry and exam evidence.</span></div>';
+    var request;
+    if (view === "overview") {
+      request = app.call("admin_getFodeAcademicAuthorityOverview", {}).then(function (response) {
+        target.innerHTML = completionCountsHtml("Registry", response.registry || {}) + completionCountsHtml("Exam eligibility", response.examEligibility || {}) + completionTechnicalHtml(response.policy);
+      });
+    } else if (view === "registry") {
+      request = app.call("admin_getFodeRegistryWorklist", { limit: 200 }).then(function (response) {
+        target.innerHTML = completionCountsHtml("Registry queue", response.counts || {}) + completionRowsHtml(response.rows, [["Applicant", "applicantId"], ["State", "state"], ["Grade", "confirmedGrade"], ["Subjects", "confirmedSubjects"], ["Documents", function (row) { return row.documentVerification && row.documentVerification.state; }]]);
+      });
+    } else if (view === "applicant") {
+      target.innerHTML = '<div class="eduops-form-grid"><label class="eduops-field">Applicant ID<input id="eduopsAcademicApplicantId" type="search" placeholder="FODE-26-000000"></label></div><div class="eduops-action-row"><button class="eduops-button eduops-button-primary" type="button" data-completion-load-applicant="academic">Load authority</button></div><div id="eduopsCompletionApplicantResult"></div>';
+      request = Promise.resolve();
+    } else if (view === "confirm") {
+      if (!completionCapabilityAllowed("CAN_MANAGE_REGISTRY")) target.innerHTML = completionErrorHtml("Registry management access denied", "CAN_MANAGE_REGISTRY is required.");
+      else target.innerHTML = '<div class="eduops-form-grid"><label class="eduops-field">Applicant ID<input id="eduopsRegistryConfirmApplicant" type="search"></label><label class="eduops-field">Confirmed grade<input id="eduopsRegistryConfirmGrade" type="text"></label><label class="eduops-field eduops-field-wide">Confirmed subjects<input id="eduopsRegistryConfirmSubjects" type="text" placeholder="English, Mathematics"></label><label class="eduops-field eduops-field-wide">Evidence source<input id="eduopsRegistryConfirmSource" type="text"></label></div><div class="eduops-action-row"><button class="eduops-button eduops-button-primary" type="button" data-registry-preview-confirm>Preview Registry confirmation</button></div>';
+      request = Promise.resolve();
+    } else {
+      if (!completionCapabilityAllowed("CAN_MANAGE_REGISTRY")) target.innerHTML = completionErrorHtml("Academic evidence access denied", "CAN_MANAGE_REGISTRY is required.");
+      else target.innerHTML = '<div class="eduops-form-grid"><label class="eduops-field">Applicant ID<input id="eduopsAcademicEvidenceApplicant" type="search"></label><label class="eduops-field">Evidence type<select id="eduopsAcademicEvidenceType"><option value="ASSESSMENT_RESULTS">Assessment results</option><option value="EXAM_ATTEMPTS">Exam attempts</option><option value="EXAM_TIMELINE">Exam timeline</option></select></label><label class="eduops-field eduops-field-wide">Evidence source<input id="eduopsAcademicEvidenceSource" type="text"></label><label class="eduops-field eduops-field-wide">Evidence JSON<textarea id="eduopsAcademicEvidenceJson" rows="10"></textarea></label></div><div class="eduops-action-row"><button class="eduops-button eduops-button-primary" type="button" data-academic-preview-evidence>Preview evidence ingestion</button></div>';
+      request = Promise.resolve();
+    }
+    Promise.resolve(request).catch(function (error) { target.innerHTML = completionErrorHtml("Academic authority unavailable", error); });
+  }
+
+  function portalMenuHtml(active) {
+    return completionMenuHtml("portal", active, [["population", "Population"], ["applicant", "Applicant"], ["fraud", "Fraud reconciliation"], ["receipts", "Action reconciliation"], ["admin", "Access action"]]);
+  }
+  function portalLoadView(view) {
+    var target = dom.eduopsReportContent.querySelector("#eduopsCompletionView");
+    if (!target) return;
+    target.innerHTML = '<div class="eduops-loading-state"><strong>Loading portal authority</strong><span>Requesting the governed portal projection.</span></div>';
+    var request;
+    if (view === "population") {
+      request = app.call("admin_getFodePortalStatusWorklist", { limit: 200 }).then(function (response) {
+        target.innerHTML = completionCountsHtml("Portal population", response.counts || {}) + completionRowsHtml(response.rows, [["Applicant", "applicantId"], ["Access", "accessState"], ["Authority", "tokenState"], ["Termination", "terminationState"], ["Block", "blockCode"]]);
+      });
+    } else if (view === "applicant") {
+      target.innerHTML = '<div class="eduops-form-grid"><label class="eduops-field">Applicant ID<input id="eduopsPortalApplicantId" type="search"></label></div><div class="eduops-action-row"><button class="eduops-button eduops-button-primary" type="button" data-completion-load-applicant="portal">Load portal status</button></div><div id="eduopsCompletionApplicantResult"></div>';
+      request = Promise.resolve();
+    } else if (view === "fraud") {
+      request = app.call("admin_getFodeFraudReconciliationQueue", { limit: 200 }).then(function (response) {
+        target.innerHTML = completionRowsHtml(response.rows, [["Applicant", "applicantId"], ["State", "state"], ["Current fraud", "currentFraudStatus"], ["Documents", "documentState"], ["Created", "createdAt"]]) + (completionCapabilityAllowed("CAN_MANAGE_REGISTRY") && completionCapabilityAllowed("CAN_ADMIN_PORTAL_ACCESS") ? '<div class="eduops-form-grid"><label class="eduops-field">Applicant ID<input id="eduopsFraudApplicant" type="search"></label><label class="eduops-field">Resolution<select id="eduopsFraudResolution"><option value="CONFIRM_FRAUD">Confirm fraud</option><option value="DISMISS_ABORTED_CONFIRMATION">Dismiss aborted confirmation</option></select></label><label class="eduops-field">Evidence reference<input id="eduopsFraudEvidence" type="text"></label><label class="eduops-field eduops-field-wide">Reason<textarea id="eduopsFraudReason" rows="3"></textarea></label></div><div class="eduops-action-row"><button class="eduops-button eduops-button-primary" type="button" data-fraud-preview-resolution>Preview reconciliation</button></div>' : "");
+      });
+    } else if (view === "receipts") {
+      request = app.call("admin_getFodePortalActionReconciliationQueue", { limit: 200 }).then(function (response) {
+        target.innerHTML = completionRowsHtml(response.rows, [["Applicant", "applicantId"], ["Action", "action"], ["State", "status"], ["Recorded", "recordedAt"], ["Block", "blockCode"]]);
+      });
+    } else {
+      if (!completionCapabilityAllowed("CAN_ADMIN_PORTAL_ACCESS")) target.innerHTML = completionErrorHtml("Portal administration access denied", "CAN_ADMIN_PORTAL_ACCESS is required.");
+      else target.innerHTML = '<div class="eduops-form-grid"><label class="eduops-field">Applicant ID<input id="eduopsPortalActionApplicant" type="search"></label><label class="eduops-field">Action<select id="eduopsPortalAction"><option value="CREATE">Create</option><option value="ACTIVATE">Activate</option><option value="DEACTIVATE">Deactivate</option><option value="ROTATE">Rotate</option></select></label></div><div class="eduops-action-row"><button class="eduops-button eduops-button-primary" type="button" data-portal-preview-action>Preview portal action</button></div>';
+      request = Promise.resolve();
+    }
+    Promise.resolve(request).catch(function (error) { target.innerHTML = completionErrorHtml("Portal authority unavailable", error); });
+  }
+
+  function classroomMenuHtml(active) {
+    return completionMenuHtml("classroom", active, [["readiness", "Readiness"], ["applicant", "Applicant package"], ["mapping", "Subject mapping"], ["handoff", "Handoff"]]);
+  }
+  function classroomLoadView(view) {
+    var target = dom.eduopsReportContent.querySelector("#eduopsCompletionView");
+    if (!target) return;
+    target.innerHTML = '<div class="eduops-loading-state"><strong>Loading Classroom authority</strong><span>Requesting FODE readiness and handoff state.</span></div>';
+    var request;
+    if (view === "readiness") {
+      request = app.call("admin_getFodeClassroomReadinessWorklist", { limit: 200 }).then(function (response) {
+        target.innerHTML = completionCountsHtml("Classroom readiness", response.counts || {}) + completionRowsHtml(response.rows, [["Applicant", "applicantId"], ["State", "state"], ["Grade", "confirmedGrade"], ["Subjects", "confirmedSubjects"], ["Missing", "missingRequirements"]]);
+      });
+    } else if (view === "applicant") {
+      target.innerHTML = '<div class="eduops-form-grid"><label class="eduops-field">Applicant ID<input id="eduopsClassroomApplicantId" type="search"></label></div><div class="eduops-action-row"><button class="eduops-button eduops-button-primary" type="button" data-completion-load-applicant="classroom">Load handoff package</button></div><div id="eduopsCompletionApplicantResult"></div>';
+      request = Promise.resolve();
+    } else if (view === "mapping") {
+      if (!completionCapabilityAllowed("CAN_MANAGE_CLASSROOM_HANDOFF")) target.innerHTML = completionErrorHtml("Classroom mapping access denied", "CAN_MANAGE_CLASSROOM_HANDOFF is required.");
+      else target.innerHTML = '<div class="eduops-form-grid"><label class="eduops-field">Applicant ID<input id="eduopsClassroomMappingApplicant" type="search"></label><label class="eduops-field eduops-field-wide">Evidence source<input id="eduopsClassroomMappingSource" type="text"></label><label class="eduops-field eduops-field-wide">Subject mapping JSON<textarea id="eduopsClassroomMappingJson" rows="10"></textarea></label></div><div class="eduops-action-row"><button class="eduops-button eduops-button-primary" type="button" data-classroom-preview-mapping>Preview mapping</button></div>';
+      request = Promise.resolve();
+    } else {
+      if (!completionCapabilityAllowed("CAN_MANAGE_CLASSROOM_HANDOFF")) target.innerHTML = completionErrorHtml("Classroom handoff access denied", "CAN_MANAGE_CLASSROOM_HANDOFF is required.");
+      else target.innerHTML = '<div class="eduops-form-grid"><label class="eduops-field">Applicant ID<input id="eduopsClassroomHandoffApplicant" type="search"></label><label class="eduops-field">Next state<select id="eduopsClassroomHandoffState"><option value="APPROVED_FOR_HANDOFF">Approved for handoff</option><option value="HANDED_TO_CLASSROOM">Handed to Classroom</option><option value="COMPLETED_EXTERNALLY">Completed externally</option></select></label><label class="eduops-field">Evidence reference<input id="eduopsClassroomHandoffEvidence" type="text"></label><label class="eduops-field">Classroom reference<input id="eduopsClassroomHandoffReference" type="text"></label></div><div class="eduops-action-row"><button class="eduops-button eduops-button-primary" type="button" data-classroom-preview-handoff>Preview handoff</button></div>';
+      request = Promise.resolve();
+    }
+    Promise.resolve(request).catch(function (error) { target.innerHTML = completionErrorHtml("Classroom authority unavailable", error); });
+  }
+
+  function openCompletionReport(kind) {
+    if (kind === "academic") {
+      dom.eduopsReportContent.innerHTML = academicMenuHtml("overview");
+      academicLoadView("overview");
+    } else if (kind === "portal") {
+      dom.eduopsReportContent.innerHTML = portalMenuHtml("population");
+      portalLoadView("population");
+    } else if (kind === "classroom") {
+      dom.eduopsReportContent.innerHTML = classroomMenuHtml("readiness");
+      classroomLoadView("readiness");
+    }
+  }
+
+  function loadCompletionApplicant(domain) {
+    var target = byId("eduopsCompletionApplicantResult");
+    var id = completionValue(domain === "academic" ? "eduopsAcademicApplicantId" : domain === "portal" ? "eduopsPortalApplicantId" : "eduopsClassroomApplicantId");
+    if (!target || !id) return;
+    target.innerHTML = '<div class="eduops-loading-state"><strong>Loading applicant authority</strong><span>' + app.esc(id) + '</span></div>';
+    var request = domain === "academic"
+      ? Promise.all([app.call("admin_getFodeRegistryApplicant", { applicantId: id }), app.call("admin_getFodeExamEligibility", { applicantId: id })])
+      : domain === "portal"
+        ? app.call("admin_getFodePortalStatus", { applicantId: id })
+        : Promise.all([app.call("admin_getFodeClassroomReadiness", { applicantId: id }), app.call("admin_getFodeClassroomHandoffPackage", { applicantId: id })]);
+    Promise.resolve(request).then(function (response) {
+      target.innerHTML = completionTechnicalHtml(response);
+    }).catch(function (error) { target.innerHTML = completionErrorHtml("Applicant authority unavailable", error); });
+  }
+
+  function openManagementAuthorityReport(kind) {
+    var rpc = {
+      summary: "admin_getFodeManagementSummary",
+      reports: "admin_getFodeDeliveryHistory",
+      delivery: "admin_getFodeDeliveryHistory",
+      "audit-system": "admin_getFodeAuditProjection",
+      approvals: "admin_getFodeAssignmentsAndApprovals",
+      "data-quality": "admin_getFodeDataQuality",
+      health: "admin_getFodeSystemHealth"
+    }[kind];
+    if (!rpc) return;
+    dom.eduopsReportContent.innerHTML = '<div class="eduops-loading-state"><strong>Loading ' + app.esc(reportMeta[kind] && reportMeta[kind][0] || "authority") + '</strong><span>Requesting the server projection.</span></div>';
+    app.call(rpc, { limit: 200 }).then(function (response) {
+      if (kind === "summary") {
+        dom.eduopsReportContent.innerHTML = completionCountsHtml("Registry", response.registry || {}) + completionCountsHtml("Exam eligibility", response.examEligibility || {}) + completionCountsHtml("Portal", response.portal || {}) + completionCountsHtml("Classroom", response.classroom || {}) + completionCountsHtml("Delivery", response.delivery || {}) + completionTechnicalHtml(response);
+      } else if (kind === "health") {
+        dom.eduopsReportContent.innerHTML = completionTechnicalHtml(response.components || response);
+      } else {
+        var rows = response.rows || response.events || [];
+        dom.eduopsReportContent.innerHTML = completionRowsHtml(rows, kind === "audit-system" ? [["Time", "at"], ["Event", "event"], ["Evidence", function (row) { return JSON.stringify(row.evidence || {}); }]] : kind === "data-quality" ? [["Applicant", "applicantId"], ["Domain", "domain"], ["Code", "code"]] : kind === "approvals" ? [["Applicant", "applicantId"], ["Case", "caseType"], ["State", "state"]] : [["Applicant", "applicantId"], ["State", "state"], ["Sent", "sentAt"], ["Reason", "bounceReason"]]) + completionTechnicalHtml({ total: response.total, counts: response.counts || {} });
+      }
+    }).catch(function (error) { dom.eduopsReportContent.innerHTML = completionErrorHtml("Authority report unavailable", error); });
   }
 
   function capabilityTone(state) {
@@ -572,6 +1005,17 @@
       CAN_GENERATE_STANDARD_QUOTE: "Generate quote",
       CAN_GENERATE_STANDARD_INVOICE: "Generate invoice",
       CAN_READ_FINANCE: "Read Finance",
+      CAN_REVIEW_FINANCE_EXCEPTIONS: "Review Finance exceptions",
+      CAN_MANAGE_FINANCE_HANDOFF: "Manage Finance handoff",
+      CAN_READ_REGISTRY: "Read Registry",
+      CAN_MANAGE_REGISTRY: "Manage Registry",
+      CAN_REVIEW_EXAM_ELIGIBILITY: "Review exam eligibility",
+      CAN_READ_PORTAL_STATUS: "Read portal status",
+      CAN_ADMIN_PORTAL_ACCESS: "Administer portal access",
+      CAN_READ_CLASSROOM: "Read Classroom readiness",
+      CAN_MANAGE_CLASSROOM_HANDOFF: "Manage Classroom handoff",
+      CAN_READ_MANAGEMENT_REPORTS: "Read management reports",
+      CAN_READ_DELIVERY_HISTORY: "Read delivery history",
       CAN_REVIEW_DOCUMENTS: "Document review",
       CAN_SAVE_DOCUMENT_STATUSES: "Save document decisions",
       CAN_VERIFY_PAYMENT: "Verify payment",
@@ -671,14 +1115,19 @@
   }
   function rolesAccountRowsHtml(matrix, accounts) {
     if (!accounts.length) return '<div class="eduops-empty-state"><strong>No configured accounts returned</strong><span>The authority projection did not include account rows.</span></div>';
-    return '<div class="eduops-table-shell eduops-roles-table-shell"><table class="eduops-work-table eduops-roles-account-table"><thead><tr><th>Account</th><th>Role</th><th>Individual email</th><th>Batch email</th><th>Documents</th><th>Finance</th><th>Portal</th><th>Durable role management</th><th>Temporary capability grants</th><th>Details</th></tr></thead><tbody>' + accounts.map(function (account) {
+    return '<div class="eduops-table-shell eduops-roles-table-shell"><table class="eduops-work-table eduops-roles-account-table"><thead><tr><th>Account</th><th>Role</th><th>Individual email</th><th>Batch email</th><th>Documents</th><th>Finance</th><th>Registry</th><th>Exam</th><th>Portal</th><th>Classroom</th><th>Management</th><th>Delivery</th><th>Durable role management</th><th>Temporary capability grants</th><th>Details</th></tr></thead><tbody>' + accounts.map(function (account) {
       var individual = rolesCombinedState(account, ["CAN_SEND_INDIVIDUAL_EMAIL"]);
       var batch = rolesCombinedState(account, ["CAN_RUN_BATCH_COMMUNICATIONS"]);
       var docs = rolesCombinedState(account, ["CAN_REVIEW_DOCUMENTS", "CAN_SAVE_DOCUMENT_STATUSES"]);
-      var finance = rolesCombinedState(account, ["CAN_READ_FINANCE"]);
-      var portal = rolesCombinedState(account, ["CAN_MANAGE_PORTAL_ACCESS"]);
+      var finance = rolesCombinedState(account, ["CAN_READ_FINANCE", "CAN_REVIEW_FINANCE_EXCEPTIONS", "CAN_MANAGE_FINANCE_HANDOFF"]);
+      var registry = rolesCombinedState(account, ["CAN_READ_REGISTRY", "CAN_MANAGE_REGISTRY"]);
+      var exam = rolesCombinedState(account, ["CAN_REVIEW_EXAM_ELIGIBILITY"]);
+      var portal = rolesCombinedState(account, ["CAN_READ_PORTAL_STATUS", "CAN_ADMIN_PORTAL_ACCESS"]);
+      var classroom = rolesCombinedState(account, ["CAN_READ_CLASSROOM", "CAN_MANAGE_CLASSROOM_HANDOFF"]);
+      var management = rolesCombinedState(account, ["CAN_READ_MANAGEMENT_REPORTS"]);
+      var delivery = rolesCombinedState(account, ["CAN_READ_DELIVERY_HISTORY"]);
       var roles = rolesCombinedState(account, ["CAN_MANAGE_ROLES"]);
-      return '<tr><td><strong>' + app.esc(account.email) + '</strong></td><td>' + app.esc(account.durableRole || "Not allowlisted") + '</td><td>' + rolesStateChip(individual) + '</td><td>' + rolesStateChip(batch) + '</td><td>' + rolesStateChip(docs) + '</td><td>' + rolesStateChip(finance) + '</td><td>' + rolesStateChip(portal) + '</td><td>' + rolesStateChip(roles) + '</td><td>' + app.esc(rolesTemporarySummary(account)) + '</td><td>' + rolesAccountDetailHtml(account) + '</td></tr>';
+      return '<tr><td><strong>' + app.esc(account.email) + '</strong></td><td>' + app.esc(account.durableRole || "Not allowlisted") + '</td><td>' + rolesStateChip(individual) + '</td><td>' + rolesStateChip(batch) + '</td><td>' + rolesStateChip(docs) + '</td><td>' + rolesStateChip(finance) + '</td><td>' + rolesStateChip(registry) + '</td><td>' + rolesStateChip(exam) + '</td><td>' + rolesStateChip(portal) + '</td><td>' + rolesStateChip(classroom) + '</td><td>' + rolesStateChip(management) + '</td><td>' + rolesStateChip(delivery) + '</td><td>' + rolesStateChip(roles) + '</td><td>' + app.esc(rolesTemporarySummary(account)) + '</td><td>' + rolesAccountDetailHtml(account) + '</td></tr>';
     }).join("") + '</tbody></table></div>';
   }
   function rolesMatrixHtml(matrix) {
@@ -768,25 +1217,15 @@
     var workload = app.state.workload || {};
     var modules = workload.presentation && workload.presentation.modules || {};
     if (kind === "finance") { openFinanceReport(trigger); return; }
-    if (["communications", "portal", "contactability", "lifecycle"].indexOf(kind) >= 0) { dom.eduopsReportContent.innerHTML = moduleProjectionHtml(kind, modules[kind]); return; }
+    if (["academic", "portal", "classroom"].indexOf(kind) >= 0) { openCompletionReport(kind); return; }
+    if (["communications", "contactability", "lifecycle"].indexOf(kind) >= 0) { dom.eduopsReportContent.innerHTML = moduleProjectionHtml(kind, modules[kind]); return; }
     if (kind === "roles") {
       openRolesReport(trigger);
       return;
     }
-    if (/^(approvals|data-quality)$/.test(kind)) {
-      dom.eduopsReportContent.innerHTML = '<div class="eduops-error-state"><strong>' + app.esc(app.authorityUnavailable(kind)) + '</strong><span>BACKEND_CONTRACT_MISSING</span></div>';
+    if (/^(summary|reports|delivery|audit-system|approvals|data-quality|health)$/.test(kind)) {
+      openManagementAuthorityReport(kind);
       return;
-    }
-    if (kind === "summary") {
-      dom.eduopsReportContent.innerHTML = reportHtml("Operational position", meta[2], (workload.presentation.metrics || []).map(function (item) { return [item.label, item.value]; }));
-    } else if (kind === "reports") {
-      dom.eduopsReportContent.innerHTML = moduleProjectionHtml("population", modules.population);
-    } else if (kind === "audit-system") {
-      var diagnostics = window.__EDUOPS_REQUEST_DIAGNOSTICS__ || [];
-      var failures = diagnostics.filter(function (item) { return item.outcome === "ERROR" || item.outcome === "TIMEOUT"; }).length;
-      dom.eduopsReportContent.innerHTML = reportHtml("Client transport diagnostics", "Display-only browser request telemetry; not audit authority.", [["Workload requests", diagnostics.length], ["Failed or timed out", failures]]) + '<p class="eduops-module-next-step">Open an applicant Audit tab for authoritative receipts.</p>';
-    } else if (kind === "health") {
-      dom.eduopsReportContent.innerHTML = moduleProjectionHtml("health", modules.health);
     }
   }
 
@@ -803,6 +1242,7 @@
     cacheDom();
     dom.eduopsGlobalSearchResults.innerHTML = '<span class="eduops-search-placeholder">Find any applicant by name, ApplicantID, email or phone.</span>';
     var searchTimer = null;
+    var financeSearchTimer = null;
     function applyFilter(key, value) {
       app.state.filters[key] = value || "";
       app.clearSelection();
@@ -861,6 +1301,16 @@
       app.clearSelection();
       dismissGlobalSearch();
       app.requestWorkload();
+    });
+
+    document.addEventListener("input", function (event) {
+      if (event.target.matches("[data-finance-name-search]")) {
+        clearTimeout(financeSearchTimer);
+        financeSearchTimer = setTimeout(function () { financeSearchApplicants(event.target.value); }, 250);
+      }
+    });
+    document.addEventListener("change", function (event) {
+      if (event.target.matches("#eduopsFinanceHandoffApplicant")) financeLoadHandoffIdentity(event.target.value);
     });
 
     document.addEventListener("click", function (event) {
@@ -949,23 +1399,228 @@
       }
       var financeView = event.target.closest("[data-finance-view]");
       if (financeView) {
-        Array.prototype.slice.call(dom.eduopsReportContent.querySelectorAll("[data-finance-view]")).forEach(function (button) { button.removeAttribute("aria-current"); });
-        financeView.setAttribute("aria-current", "page");
         financeLoadView(financeView.getAttribute("data-finance-view"), financeView);
+        return;
+      }
+      var financeDrill = event.target.closest("[data-finance-drill]");
+      if (financeDrill) {
+        var drillView = financeDrill.getAttribute("data-finance-drill");
+        var drillFilter = financeDrill.getAttribute("data-finance-drill-filter");
+        if (drillView === "accounts") {
+          financeUiState.accounts.page = 1;
+          financeUiState.accounts.actionableOnly = drillFilter === "ACTIONABLE";
+          financeUiState.accounts.financeState = drillFilter === "ACTIONABLE" ? "" : drillFilter;
+        }
+        if (drillView === "reconciliation") {
+          financeUiState.reconciliation.page = 1;
+          financeUiState.reconciliation.actionableOnly = true;
+        }
+        financeLoadView(drillView, financeDrill);
         return;
       }
       var financeApplicant = event.target.closest("[data-finance-applicant]");
       if (financeApplicant) {
-        var applicantButton = dom.eduopsReportContent.querySelector('[data-finance-view="applicant"]');
-        if (applicantButton) applicantButton.click();
-        var applicantInput = byId("eduopsFinanceApplicantId");
-        if (applicantInput) applicantInput.value = financeApplicant.getAttribute("data-finance-applicant");
-        financeLoadApplicant(financeApplicant.getAttribute("data-finance-applicant"));
+        financeOpenApplicantDetail(financeApplicant.getAttribute("data-finance-applicant"), financeApplicant);
+        return;
+      }
+      var financeSearchSelect = event.target.closest("[data-finance-search-select]");
+      if (financeSearchSelect) {
+        financeOpenApplicantDetail(financeSearchSelect.getAttribute("data-finance-search-select"), financeSearchSelect);
         return;
       }
       var financeLoad = event.target.closest("[data-finance-load-applicant]");
       if (financeLoad) {
         financeLoadApplicant(byId("eduopsFinanceApplicantId") && byId("eduopsFinanceApplicantId").value);
+        return;
+      }
+      var financeListApply = event.target.closest("[data-finance-apply-list]");
+      if (financeListApply) {
+        var listView = financeListApply.getAttribute("data-finance-apply-list");
+        var list = financeUiState[listView];
+        list.searchQuery = String(dom.eduopsReportContent.querySelector('[data-finance-list-search="' + listView + '"]').value || "").trim();
+        list.financeState = dom.eduopsReportContent.querySelector('[data-finance-list-state="' + listView + '"]').value;
+        list.matchingState = dom.eduopsReportContent.querySelector('[data-finance-list-match="' + listView + '"]').value;
+        list.actionableOnly = dom.eduopsReportContent.querySelector('[data-finance-list-actionable="' + listView + '"]').checked;
+        list.page = 1;
+        financeLoadView(listView, financeListApply);
+        return;
+      }
+      var financeFindingApply = event.target.closest("[data-finance-apply-findings]");
+      if (financeFindingApply) {
+        var findingView = financeFindingApply.getAttribute("data-finance-apply-findings");
+        var finding = financeUiState[findingView];
+        finding.searchQuery = String(dom.eduopsReportContent.querySelector('[data-finance-finding-search="' + findingView + '"]').value || "").trim();
+        finding.severity = dom.eduopsReportContent.querySelector('[data-finance-finding-severity="' + findingView + '"]').value;
+        finding.reasonCode = dom.eduopsReportContent.querySelector('[data-finance-finding-reason="' + findingView + '"]').value;
+        finding.actionableOnly = dom.eduopsReportContent.querySelector('[data-finance-finding-actionable="' + findingView + '"]').checked;
+        finding.page = 1;
+        financeLoadView(findingView, financeFindingApply);
+        return;
+      }
+      var financeReasonDrill = event.target.closest("[data-finance-reason-drill]");
+      if (financeReasonDrill) {
+        var reasonView = financeReasonDrill.getAttribute("data-finance-reason-drill");
+        financeUiState[reasonView].reasonCode = financeReasonDrill.getAttribute("data-finance-reason");
+        financeUiState[reasonView].page = 1;
+        financeLoadView(reasonView, financeReasonDrill);
+        return;
+      }
+      var financePage = event.target.closest("[data-finance-page-view]");
+      if (financePage && !financePage.disabled) {
+        var pageView = financePage.getAttribute("data-finance-page-view");
+        financeUiState[pageView].page = Number(financePage.getAttribute("data-finance-page") || 1);
+        financeLoadView(pageView, financePage);
+        return;
+      }
+      var financeHandoffApplicant = event.target.closest("[data-finance-handoff-applicant]");
+      if (financeHandoffApplicant) {
+        financeOpenHandoff(financeHandoffApplicant.getAttribute("data-finance-handoff-applicant"), financeHandoffApplicant.getAttribute("data-finance-handoff-kind"), financeHandoffApplicant);
+        return;
+      }
+      var completionView = event.target.closest("[data-completion-view]");
+      if (completionView) {
+        Array.prototype.slice.call(dom.eduopsReportContent.querySelectorAll("[data-completion-view]")).forEach(function (button) { button.removeAttribute("aria-current"); });
+        completionView.setAttribute("aria-current", "page");
+        var completionDomain = completionView.getAttribute("data-completion-domain");
+        var completionViewName = completionView.getAttribute("data-completion-view");
+        if (completionDomain === "academic") academicLoadView(completionViewName);
+        else if (completionDomain === "portal") portalLoadView(completionViewName);
+        else if (completionDomain === "classroom") classroomLoadView(completionViewName);
+        return;
+      }
+      var completionApplicant = event.target.closest("[data-completion-load-applicant]");
+      if (completionApplicant) {
+        loadCompletionApplicant(completionApplicant.getAttribute("data-completion-load-applicant"));
+        return;
+      }
+      var registryPreview = event.target.closest("[data-registry-preview-confirm]");
+      if (registryPreview) {
+        previewCompletionAction({
+          source: registryPreview,
+          previewRpc: "admin_previewFodeRegistryConfirmation",
+          executeRpc: "admin_confirmFodeRegistry",
+          confirmation: "CONFIRM_REGISTRY_AUTHORITY",
+          title: "Confirm Registry authority",
+          payload: {
+            applicantId: completionValue("eduopsRegistryConfirmApplicant"),
+            grade: completionValue("eduopsRegistryConfirmGrade"),
+            subjects: completionValue("eduopsRegistryConfirmSubjects").split(",").map(function (item) { return item.trim(); }).filter(Boolean),
+            evidenceSource: completionValue("eduopsRegistryConfirmSource"),
+            idempotencyKey: app.idempotencyKey("REGISTRY_CONFIRMATION", completionValue("eduopsRegistryConfirmApplicant"))
+          }
+        });
+        return;
+      }
+      var academicEvidence = event.target.closest("[data-academic-preview-evidence]");
+      if (academicEvidence) {
+        try {
+          previewCompletionAction({
+            source: academicEvidence,
+            previewRpc: "admin_previewFodeAcademicEvidenceIngestion",
+            executeRpc: "admin_confirmFodeAcademicEvidenceIngestion",
+            confirmation: "CONFIRM_ACADEMIC_EVIDENCE",
+            title: "Confirm academic evidence",
+            payload: {
+              applicantId: completionValue("eduopsAcademicEvidenceApplicant"),
+              evidenceType: completionValue("eduopsAcademicEvidenceType"),
+              evidenceSource: completionValue("eduopsAcademicEvidenceSource"),
+              value: completionJson("eduopsAcademicEvidenceJson"),
+              idempotencyKey: app.idempotencyKey("ACADEMIC_EVIDENCE", completionValue("eduopsAcademicEvidenceApplicant"))
+            }
+          });
+        } catch (academicError) { app.setInteractionState("BLOCKED", "Evidence JSON invalid: " + academicError.message); }
+        return;
+      }
+      var portalAction = event.target.closest("[data-portal-preview-action]");
+      if (portalAction) {
+        previewCompletionAction({
+          source: portalAction,
+          previewRpc: "admin_previewFodePortalAccessAction",
+          executeRpc: "admin_executeFodePortalAccessAction",
+          confirmation: "CONFIRM_PORTAL_ACCESS_ACTION",
+          title: "Confirm portal access action",
+          payload: {
+            applicantId: completionValue("eduopsPortalActionApplicant"),
+            action: completionValue("eduopsPortalAction"),
+            idempotencyKey: app.idempotencyKey("PORTAL_ACCESS", completionValue("eduopsPortalActionApplicant"))
+          }
+        });
+        return;
+      }
+      var fraudResolution = event.target.closest("[data-fraud-preview-resolution]");
+      if (fraudResolution) {
+        previewCompletionAction({
+          source: fraudResolution,
+          previewRpc: "admin_previewFodeFraudReconciliationResolution",
+          executeRpc: "admin_executeFodeFraudReconciliationResolution",
+          confirmation: "CONFIRM_FRAUD_RECONCILIATION",
+          title: "Confirm fraud reconciliation",
+          payload: {
+            applicantId: completionValue("eduopsFraudApplicant"),
+            resolution: completionValue("eduopsFraudResolution"),
+            evidenceReference: completionValue("eduopsFraudEvidence"),
+            reason: completionValue("eduopsFraudReason"),
+            idempotencyKey: app.idempotencyKey("FRAUD_RECONCILIATION", completionValue("eduopsFraudApplicant"))
+          }
+        });
+        return;
+      }
+      var classroomMapping = event.target.closest("[data-classroom-preview-mapping]");
+      if (classroomMapping) {
+        try {
+          previewCompletionAction({
+            source: classroomMapping,
+            previewRpc: "admin_previewFodeClassroomSubjectMapping",
+            executeRpc: "admin_confirmFodeClassroomSubjectMapping",
+            confirmation: "CONFIRM_CLASSROOM_MAPPING",
+            title: "Confirm Classroom subject mapping",
+            payload: {
+              applicantId: completionValue("eduopsClassroomMappingApplicant"),
+              mappings: completionJson("eduopsClassroomMappingJson"),
+              evidenceSource: completionValue("eduopsClassroomMappingSource"),
+              idempotencyKey: app.idempotencyKey("CLASSROOM_MAPPING", completionValue("eduopsClassroomMappingApplicant"))
+            }
+          });
+        } catch (mappingError) { app.setInteractionState("BLOCKED", "Mapping JSON invalid: " + mappingError.message); }
+        return;
+      }
+      var classroomHandoff = event.target.closest("[data-classroom-preview-handoff]");
+      if (classroomHandoff) {
+        previewCompletionAction({
+          source: classroomHandoff,
+          previewRpc: "admin_previewFodeClassroomHandoff",
+          executeRpc: "admin_executeFodeClassroomHandoff",
+          confirmation: "CONFIRM_CLASSROOM_HANDOFF",
+          title: "Confirm Classroom handoff",
+          payload: {
+            applicantId: completionValue("eduopsClassroomHandoffApplicant"),
+            nextState: completionValue("eduopsClassroomHandoffState"),
+            evidenceReference: completionValue("eduopsClassroomHandoffEvidence"),
+            classroomReference: completionValue("eduopsClassroomHandoffReference"),
+            idempotencyKey: app.idempotencyKey("CLASSROOM_HANDOFF", completionValue("eduopsClassroomHandoffApplicant"))
+          }
+        });
+        return;
+      }
+      var financeHandoff = event.target.closest("[data-finance-preview-handoff]");
+      if (financeHandoff) {
+        previewCompletionAction({
+          source: financeHandoff,
+          previewRpc: "admin_previewFodeFinanceHandoff",
+          executeRpc: "admin_executeFodeFinanceHandoff",
+          confirmation: "CONFIRM_FINANCE_HANDOFF",
+          title: "Confirm Finance handoff state",
+          pngDates: true,
+          showApplicantIdentity: true,
+          payload: {
+            applicantId: completionValue("eduopsFinanceHandoffApplicant"),
+            caseKind: completionValue("eduopsFinanceHandoffKind"),
+            nextState: completionValue("eduopsFinanceHandoffState"),
+            evidenceReference: completionValue("eduopsFinanceHandoffEvidence"),
+            zohoReference: completionValue("eduopsFinanceHandoffZoho"),
+            idempotencyKey: app.idempotencyKey("FINANCE_HANDOFF", completionValue("eduopsFinanceHandoffApplicant"))
+          }
+        });
         return;
       }
       var hiddenPage = event.target.closest("[data-hidden-page]");

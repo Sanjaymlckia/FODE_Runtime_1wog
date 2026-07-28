@@ -48,13 +48,14 @@ const context = {
   adminOpsRequiredDocumentUploadSummary_: () => ({ requiredDocumentUploadComplete: true, uploadedRequiredCount: 4, requiredCount: 4, missingRequiredDocuments: [] }),
   adminDocumentReviewVerifiedForAutomation_: () => true,
   adminRowPortalSubmitted_: () => true,
-  adminRowPaymentAuthorityFacts_: (row) => ({ paymentEvidencePresent: context.adminRowPaymentEvidencePresent_(row), paymentVerified: String(row.Receipt_Status || "").toLowerCase() === "verified", paymentBadge: String(row.Receipt_Status || "") || "Pending" }),
+  adminRowPaymentAuthorityFacts_: (row) => ({ paymentEvidencePresent: context.adminRowPaymentEvidencePresent_(row), paymentEvidenceVerified: String(row.Receipt_Status || "").toLowerCase() === "verified", paymentVerified: false, paymentBadge: String(row.Receipt_Status || "") || "Pending" }),
   adminRowPaymentEvidencePresent_: (row) => {
     const raw = String(row.Fee_Receipt_File || "").trim();
     if (!raw || raw === "[]" || raw === "{}") return false;
     return /^https?:\/\//i.test(raw) || /^[\w-]{20,}$/.test(raw);
   },
-  isCanonicalPaymentVerified_: (row) => String(row.Receipt_Status || "").toLowerCase() === "verified",
+  isCanonicalPaymentVerified_: () => false,
+  isCanonicalPaymentEvidenceVerified_: (row) => String(row.Receipt_Status || "").toLowerCase() === "verified",
   isYes_: (value) => String(value || "").toLowerCase() === "yes",
   deriveApplicantLifecycleStage_: () => "PAYMENT_REQUIRED",
   deriveOperationalPipelineStage_: () => "PAYMENT_REQUIRED",
@@ -110,7 +111,7 @@ assert.equal(pending.worklistKey, "PAYMENT_FOLLOW_UP");
 assert.equal(pending.recommendedMessageType, "payment_followup");
 
 const paid = context.buildActionabilityPreviewRow_({ ApplicantID: "FODE-PAID", Parent_Email: "paid@example.test", Portal_Submitted: "Yes", Fee_Receipt_File: "receipt", Receipt_Status: "Verified" }, 12);
-assert.equal(paid.authorityState.canonicalFinanceState, "PAID_VERIFIED");
+assert.equal(paid.authorityState.canonicalFinanceState, "PAYMENT_EVIDENCE_VERIFIED");
 assert.notEqual(paid.nextAction, "SEND_PAYMENT_REMINDER");
 assert.notEqual(paid.nextAction, "VERIFY_PAYMENT");
 assert.equal(paid.recommendedMessageType, "");

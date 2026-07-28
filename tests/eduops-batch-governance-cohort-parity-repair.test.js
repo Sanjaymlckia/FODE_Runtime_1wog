@@ -49,7 +49,7 @@ assert.match(sources.workload, /hiddenReasonRows[\s\S]*eduopsHiddenReasonPage_/,
 assert.match(sources.components, /Count arithmetic[\s\S]*Authoritative workload composition/, "Workload composition must explain count arithmetic to operators");
 assert.match(sources.workload, /matchingOnLaterPages[\s\S]*totalAuthoritySelectable[\s\S]*totalAuthorityBlocked/, "Composition DTO must distinguish later-page matches and authority-blocked rows");
 
-assert.match(sources.html, /FODE Operations Workspace/, "Released surface title must use FODE Operations branding");
+assert.match(sources.html, /EduOps Operations/, "Released surface title must use EduOps Operations branding");
 assert.doesNotMatch(client, /Pass 2|guarded operations|Mock authoritative|Local simulation|Preview-only|View authority controls|Authority-controlled workspace/i, "Released operator surface must not show transitional staging wording");
 assert.doesNotMatch(client, /eduops-prototype/i, "Released operator surface must not retain prototype UI hooks");
 assert.match(sources.html, /value="FODE"[\s\S]*value="KIA"[\s\S]*value="MLC"/, "R374 product switcher must expose FODE, KIA and MLC profiles");

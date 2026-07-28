@@ -27,12 +27,61 @@ function eduopsReadOnlyRpcAllowlist_() {
     "eduops_getParityDiagnostics",
     "eduops_getOperationHistory",
     "eduops_getBatchCommunicationCatalogue",
-    "eduops_previewCommand"
+    "eduops_previewCommand",
+    "admin_getCapabilityGrantMatrix",
+    "admin_getTemporaryCapabilityGrants",
+    "admin_getCanonicalFinanceSummary",
+    "admin_getCanonicalFinanceWorklist",
+    "admin_getCanonicalFinanceApplicant",
+    "admin_getCanonicalFinanceReconciliation",
+    "admin_getCanonicalFinanceExceptions",
+    "admin_getCanonicalFinanceObjectHistory",
+    "admin_getCanonicalFinancePolicy",
+    "admin_getZohoBooksCachedReadOnlyHealth",
+    "admin_getZohoBooksCachedApplicantMatch",
+    "admin_getFodeRegistryApplicant",
+    "admin_getFodeRegistryWorklist",
+    "admin_getFodeExamEligibility",
+    "admin_getFodeAcademicAuthorityOverview",
+    "admin_getFodePortalStatus",
+    "admin_getFodePortalStatusWorklist",
+    "admin_getFodeFraudReconciliationQueue",
+    "admin_getFodePortalActionReconciliationQueue",
+    "admin_getFodeFinanceExceptionApplicant",
+    "admin_getFodeFinanceExceptionWorklist",
+    "admin_getFodeClassroomReadiness",
+    "admin_getFodeClassroomReadinessWorklist",
+    "admin_getFodeClassroomHandoffPackage",
+    "admin_getFodeDeliveryHistory",
+    "admin_getFodeManagementSummary",
+    "admin_getFodeAssignmentsAndApprovals",
+    "admin_getFodeDataQuality",
+    "admin_getFodeSystemHealth",
+    "admin_getFodeAuditProjection"
   ];
 }
 
 function eduopsWriteRpcAllowlist_() {
-  return ["eduops_executeCommand"];
+  return [
+    "eduops_executeCommand",
+    "admin_createTemporaryCapabilityGrant",
+    "admin_revokeTemporaryCapabilityGrant",
+    "admin_saveReusableCommunicationTemplate",
+    "admin_previewFodeRegistryConfirmation",
+    "admin_confirmFodeRegistry",
+    "admin_previewFodeAcademicEvidenceIngestion",
+    "admin_confirmFodeAcademicEvidenceIngestion",
+    "admin_previewFodePortalAccessAction",
+    "admin_executeFodePortalAccessAction",
+    "admin_previewFodeFraudReconciliationResolution",
+    "admin_executeFodeFraudReconciliationResolution",
+    "admin_previewFodeFinanceHandoff",
+    "admin_executeFodeFinanceHandoff",
+    "admin_previewFodeClassroomSubjectMapping",
+    "admin_confirmFodeClassroomSubjectMapping",
+    "admin_previewFodeClassroomHandoff",
+    "admin_executeFodeClassroomHandoff"
+  ];
 }
 
 function eduopsClean_(value) {

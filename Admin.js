@@ -1522,9 +1522,20 @@ function admin_setOverallStatus(payload) {
   if (finalStatus === "Fraudulent") {
     patch[SCHEMA.PORTAL_ACCESS_STATUS] = "Locked";
   }
+  var fraudCaseActor = {
+    email: normalizeAdminEmail_(adminEmail),
+    role: getAdminRole_(adminEmail)
+  };
+  if (finalStatus === "Fraudulent") {
+    var prospectiveFraudRow = Object.assign({}, rowObj, patch);
+    fodeEnsureFraudTerminationCase_(prospectiveFraudRow, fraudCaseActor, "PENDING_FRAUD_CONFIRMATION", true);
+  }
   patch[SCHEMA.DOC_LAST_VERIFIED_AT] = new Date();
   patch[SCHEMA.DOC_LAST_VERIFIED_BY] = adminEmail || "admin";
   applyPatch_(sh, rowNumber, patch);
+  if (finalStatus === "Fraudulent") {
+    fodeEnsureFraudTerminationCase_(getRowObject_(sh, rowNumber), fraudCaseActor, "PORTAL_ACCESS_TERMINATION_REQUIRED", true);
+  }
   captureOperatorAttribution_(sh, rowNumber, idx, {
     action: "OVERALL_STATUS",
     operatorEmail: adminEmail,
@@ -3056,6 +3067,7 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
   var paymentFacts = adminRowPaymentAuthorityFacts_(row);
   var canonicalFinanceState = resolveCanonicalFinanceState_(row, paymentFacts);
   var paymentEvidencePresent = canonicalFinanceState.paymentEvidencePresent;
+  var paymentEvidenceVerified = canonicalFinanceState.paymentEvidenceVerified === true;
   var paymentBadge = paymentFacts.paymentBadge;
   var paymentVerified = canonicalFinanceState.paymentVerified;
   var enrolled = isYes_(row.Registration_Complete) || isYes_(row.Enrolled_Confirmed) || !!clean_(row.Enrolled_At || "");
@@ -3064,6 +3076,7 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     uploadSummary: uploadSummary,
     paymentFacts: {
       paymentEvidencePresent: paymentEvidencePresent,
+      paymentEvidenceVerified: paymentEvidenceVerified,
       paymentVerified: paymentVerified,
       paymentBadge: paymentBadge
     },
@@ -3118,6 +3131,11 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     nextAction = "VERIFY_PAYMENT";
     suppressor = suppressor || "FINANCE_ACTION_PENDING";
     explanation = "Payment evidence is present, but payment authority has not verified it.";
+  } else if (canonicalFinanceState.financeState === "PAYMENT_EVIDENCE_VERIFIED") {
+    owner = "FINANCE";
+    nextAction = "NO_ACTION";
+    suppressor = suppressor || "PAYMENT_EVIDENCE_VERIFIED";
+    explanation = "Payment evidence is verified; paid settlement is not complete.";
   } else if (docsVerified && canonicalFinanceState.financeState === "PAID_VERIFIED") {
     owner = "ADMIN";
     nextAction = "ENROLL";
@@ -4356,7 +4374,7 @@ function adminOpsLifecycleStageKeyFromRow_(rowObj) {
   var paymentBadge = canonicalPaymentBadge_(row);
   var paymentState = "EVIDENCE_PENDING";
   if (/reject|invalid|failed/.test(receiptStatus)) paymentState = "CORRECTION_REQUIRED";
-  else if (/verified|approved|cleared/.test(receiptStatus) || paymentBadge === "Verified") paymentState = "VERIFIED";
+  else if (/verified|approved|cleared/.test(receiptStatus) || paymentBadge === "Verified") paymentState = "EVIDENCE_VERIFIED";
   else if (adminOpsIsYes_(row.Payment_Received)
     || hasUploadEvidence_(row.Fee_Receipt_File, "Fee_Receipt_File")
     || /pending|review|received|uploaded/.test(receiptStatus)) paymentState = "UNDER_REVIEW";
@@ -4374,8 +4392,8 @@ function adminOpsLifecycleStageKeyFromRow_(rowObj) {
   if (emailStatus === "DO_NOT_CONTACT" || adminOpsIsYes_(row.Do_Not_Contact) || adminOpsIsYes_(row.DO_NOT_CONTACT)) resolverStage = "DO_NOT_CONTACT";
   else if (terminalReason) resolverStage = "DROPPED";
   else if (adminOpsIsYes_(row.Enrolled_Confirmed) || adminOpsFirstNonBlank_(row.Enrolled_At)) resolverStage = "ENROLLED";
-  else if (paymentState === "VERIFIED" && resolverDocState === "VERIFIED") resolverStage = "ENROLMENT_READY";
-  else if (paymentState === "VERIFIED") resolverStage = "PAYMENT_VERIFIED";
+  else if (paymentState === "EVIDENCE_VERIFIED" && resolverDocState === "VERIFIED") resolverStage = "PAYMENT_EVIDENCE_VERIFIED";
+  else if (paymentState === "EVIDENCE_VERIFIED") resolverStage = "PAYMENT_EVIDENCE_VERIFIED";
   else if (paymentState === "UNDER_REVIEW" && resolverDocState === "VERIFIED") resolverStage = "PAYMENT_UNDER_REVIEW";
   else if (resolverDocState === "VERIFIED") resolverStage = "PAYMENT_EVIDENCE_PENDING";
   else if (resolverDocState === "CORRECTION_REQUIRED") resolverStage = "DOCS_CORRECTION_REQUIRED";
@@ -4392,6 +4410,7 @@ function adminOpsLifecycleStageKeyFromRow_(rowObj) {
   if (resolverStage === "PORTAL_SUBMITTED" || resolverStage === "DOCS_PENDING") return "docs";
   if (resolverStage === "DOCS_UNDER_REVIEW" || resolverStage === "DOCS_CORRECTION_REQUIRED") return "uploaded_review_required";
   if (resolverStage === "PAYMENT_EVIDENCE_PENDING" || resolverStage === "PAYMENT_UNDER_REVIEW") return invoiceRaised ? "invoice" : "payment";
+  if (resolverStage === "PAYMENT_EVIDENCE_VERIFIED") return invoiceRaised ? "invoice" : "payment";
   if (resolverStage === "PAYMENT_VERIFIED" || resolverStage === "ENROLMENT_READY") return "enrolment";
   if (resolverStage === "ENROLLED") return "classroom";
   if (resolverStage === "DO_NOT_CONTACT") return "email_issue";

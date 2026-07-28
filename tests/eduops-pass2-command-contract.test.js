@@ -17,7 +17,31 @@ for (const [name, source] of Object.entries(sources).filter(([name]) => name !==
   assert.doesNotThrow(() => new vm.Script(source, { filename: name }), `${name} must parse`);
 }
 
-assert.match(sources.contracts, /function eduopsWriteRpcAllowlist_\(\)[\s\S]*\["eduops_executeCommand"\]/, "Only one public write command endpoint is allowed");
+const writeAllowlistBlock = sources.contracts.match(/function eduopsWriteRpcAllowlist_\(\)\s*\{[\s\S]*?\n\}/);
+assert.ok(writeAllowlistBlock, "Exact public write RPC allowlist must exist");
+const expectedWriteRpcs = [
+  "eduops_executeCommand",
+  "admin_createTemporaryCapabilityGrant",
+  "admin_revokeTemporaryCapabilityGrant",
+  "admin_saveReusableCommunicationTemplate",
+  "admin_previewFodeRegistryConfirmation",
+  "admin_confirmFodeRegistry",
+  "admin_previewFodeAcademicEvidenceIngestion",
+  "admin_confirmFodeAcademicEvidenceIngestion",
+  "admin_previewFodePortalAccessAction",
+  "admin_executeFodePortalAccessAction",
+  "admin_previewFodeFraudReconciliationResolution",
+  "admin_executeFodeFraudReconciliationResolution",
+  "admin_previewFodeFinanceHandoff",
+  "admin_executeFodeFinanceHandoff",
+  "admin_previewFodeClassroomSubjectMapping",
+  "admin_confirmFodeClassroomSubjectMapping",
+  "admin_previewFodeClassroomHandoff",
+  "admin_executeFodeClassroomHandoff"
+];
+const actualWriteRpcs = [...writeAllowlistBlock[0].matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+assert.deepEqual(actualWriteRpcs, expectedWriteRpcs, "Public write RPC allowlist must contain only the approved exact endpoints");
+assert.doesNotMatch(writeAllowlistBlock[0], /\*|admin_(?:createZoho|sendZoho|preflightZoho|setZoho)|ClassroomApp|GmailApp|MailApp/, "Write allowlist must not expose wildcard or external mutation authority");
 assert.match(sources.contracts, /eduops_getOperationHistory[\s\S]*eduops_previewCommand/, "Operation history and command preview must remain read RPCs");
 assert.doesNotMatch(sources.client, /admin_[A-Za-z0-9_]+\s*\(/, "Browser source cannot invoke legacy Admin mutation RPCs");
 assert.match(sources.client, /eduops_previewCommand[\s\S]*eduops_executeCommand/, "Browser operations must preview before the shared execute endpoint");
@@ -62,4 +86,4 @@ assert.match(sources.client, /requestWorkbenchLeave[\s\S]*history\.forward[\s\S]
 assert.match(sources.client, /event\.key === "Escape"[\s\S]*app\.closeConfirm/, "Escape must close the topmost confirmation first");
 for (const field of ["documentKey", "sourceField", "itemIndex"]) assert.match(sources.client, new RegExp(field), `Document actions must carry exact manifest field ${field}`);
 
-console.log("PASS EduOps command contract releasedOperationsDefaultAvailable=true writeRpcs=1 receipts=versioned");
+console.log(`PASS EduOps command contract releasedOperationsDefaultAvailable=true writeRpcs=${expectedWriteRpcs.length} receipts=versioned`);

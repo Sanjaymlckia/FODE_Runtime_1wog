@@ -1,6 +1,7 @@
 **/*
 !Admin.js
 !Admin_AccessControl.js
+!Admin_AcademicAuthority.js
 !Admin_CapabilityGrants.js
 !Admin_CanonicalPopulation.js
 !Admin_CanonicalFinance.js
@@ -14,6 +15,7 @@
 !Admin_SelectedApplicantCommunications.js
 !Admin_StageBatchCommunications.js
 !Admin_WhatsAppFallback.js
+!Admin_OperationalIntegrationAuthority.js
 !AdminUI_OpsApplicantQueue.html
 !AdminUI_OpsCommunications.html
 !AdminUI_OpsLifecycle.html

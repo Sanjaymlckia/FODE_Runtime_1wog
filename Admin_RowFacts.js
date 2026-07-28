@@ -29,6 +29,7 @@ function adminRowPaymentAuthorityFacts_(rowObj) {
   return {
     paymentVerifiedRaw: adminRowPaymentCompatibilityRawVerified_(row),
     paymentBadge: canonicalPaymentBadge_(row),
+    paymentEvidenceVerified: typeof isCanonicalPaymentEvidenceVerified_ === "function" && isCanonicalPaymentEvidenceVerified_(row),
     paymentEvidencePresent: adminRowPaymentEvidencePresent_(row),
     paymentVerified: isCanonicalPaymentVerified_(row)
   };

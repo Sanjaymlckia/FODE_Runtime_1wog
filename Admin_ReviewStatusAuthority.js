@@ -147,6 +147,14 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
     }
   }
 
+  var fraudCaseActor = {
+    email: normalizeAdminEmail_(adminEmail),
+    role: getAdminRole_(adminEmail)
+  };
+  if (fodeRegistryDocumentAuthority_(prospectiveRow).fraudStatus === "CONFIRMED") {
+    fodeEnsureFraudTerminationCase_(prospectiveRow, fraudCaseActor, "PENDING_FRAUD_CONFIRMATION", false);
+  }
+
   for (var p = 0; p < prepared.length; p++) {
     var item = prepared[p];
     adminVerifyDocument(applicantId, item.mapping.file, toRouteStatusKey_(item.status), adminEmail || "admin", item.comment);
@@ -176,6 +184,9 @@ function admin_updateDocStatuses_impl_(payload, dbgId) {
   setCell_(sh, rowNumber, idx, "Doc_Last_Verified_At", new Date());
   setCell_(sh, rowNumber, idx, "Doc_Last_Verified_By", adminEmail || "admin");
   var finalRowObj = getRowObject_(sh, rowNumber);
+  if (fodeRegistryDocumentAuthority_(finalRowObj).fraudStatus === "CONFIRMED") {
+    fodeEnsureFraudTerminationCase_(finalRowObj, fraudCaseActor, "PORTAL_ACCESS_TERMINATION_REQUIRED", false);
+  }
   var refreshedDocStatuses = {};
   var refreshedDocStatusFields = [];
   var refreshedDocMappings = Array.isArray(CONFIG.DOC_FIELDS) ? CONFIG.DOC_FIELDS : [];

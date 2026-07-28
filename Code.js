@@ -4172,7 +4172,7 @@ function isPaymentVerified_(record) {
 function isPaymentVerifiedDerived_(row) {
   row = row || {};
   var paymentBadge = canonicalPaymentBadge_(row);
-  var paymentVerified = paymentBadge === "Verified";
+  var paymentVerified = isCanonicalPaymentVerified_(row);
   try {
     logOperationalBlock_("PAYMENT_CANONICAL_RECEIPT_STATUS", {
       applicantId: clean_(row.ApplicantID || ""),
@@ -4252,7 +4252,8 @@ function deriveCanonicalPaymentState_(row) {
   var badge = derivePaymentBadge_(row);
   return {
     badge: badge,
-    verified: badge === "Verified",
+    evidenceVerified: badge === "Verified",
+    verified: false,
     rejected: badge === "Rejected",
     pending: badge !== "Verified" && badge !== "Rejected"
   };
@@ -4266,6 +4267,10 @@ function isCanonicalPaymentVerified_(row) {
   return deriveCanonicalPaymentState_(row).verified === true;
 }
 
+function isCanonicalPaymentEvidenceVerified_(row) {
+  return deriveCanonicalPaymentState_(row).evidenceVerified === true;
+}
+
 function isCanonicalPaymentRejected_(row) {
   return deriveCanonicalPaymentState_(row).rejected === true;
 }
@@ -4277,9 +4282,8 @@ function computeOverallStatus_(row) {
   var paymentVerified = isPaymentVerifiedDerived_(row);
   // keep compatibility alignment
   if (hasOwn_(row, "Payment_Verified")) row.Payment_Verified = paymentVerified ? "Yes" : "";
-  // Payment verification is the final milestone and must not be downgraded by doc edits.
   if (paymentVerified) return "Verified";
-  if (docStage === "Verified" && paymentBadge !== "Verified") return "Docs_Verified";
+  if (docStage === "Verified") return "Docs_Verified";
   return "Pending";
 }
 
@@ -7788,7 +7792,8 @@ function communicationDocsMissing_(rowObj) {
 
 function communicationPaymentOutstanding_(rowObj) {
   var row = rowObj || {};
-  return !isCanonicalPaymentVerified_(row);
+  return !isCanonicalPaymentVerified_(row)
+    && !(typeof isCanonicalPaymentEvidenceVerified_ === "function" && isCanonicalPaymentEvidenceVerified_(row));
 }
 
 function communicationFamilyForMessageType_(messageType) {
@@ -9410,8 +9415,9 @@ function deriveApplicantLifecycleStage_(rowObj) {
   var stage = "INVITE_PENDING";
 
   if (paymentVerified) stage = "COMPLETE";
+  else if (docsVerified && !paymentVerified && paymentBadge === "Verified") stage = "PAYMENT_EVIDENCE_VERIFIED";
   else if (portalSubmittedActive || emailStatus === "RESPONDED") stage = "PROCESSING";
-  else if (docsVerified && !paymentVerified && paymentBadge !== "Verified" && receiptEvidencePresent) stage = "RECEIPT_AWAITING_VERIFICATION";
+  else if (docsVerified && !paymentVerified && receiptEvidencePresent) stage = "RECEIPT_AWAITING_VERIFICATION";
   else if (docsVerified && !paymentVerified) stage = "PAYMENT_REQUIRED";
   else if (!docsVerified && (docSignals || docStage === "Rejected")) stage = "DOCS_REQUIRED";
   else if (reminderDue) stage = "REMINDER_DUE";

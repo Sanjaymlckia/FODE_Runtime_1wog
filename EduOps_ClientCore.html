@@ -36,13 +36,46 @@
     admin_getCanonicalFinanceObjectHistory: true,
     admin_getCanonicalFinancePolicy: true,
     admin_getZohoBooksCachedReadOnlyHealth: true,
-    admin_getZohoBooksCachedApplicantMatch: true
+    admin_getZohoBooksCachedApplicantMatch: true,
+    admin_getFodeRegistryApplicant: true,
+    admin_getFodeRegistryWorklist: true,
+    admin_getFodeExamEligibility: true,
+    admin_getFodeAcademicAuthorityOverview: true,
+    admin_getFodePortalStatus: true,
+    admin_getFodePortalStatusWorklist: true,
+    admin_getFodeFraudReconciliationQueue: true,
+    admin_getFodePortalActionReconciliationQueue: true,
+    admin_getFodeFinanceExceptionApplicant: true,
+    admin_getFodeFinanceExceptionWorklist: true,
+    admin_getFodeClassroomReadiness: true,
+    admin_getFodeClassroomReadinessWorklist: true,
+    admin_getFodeClassroomHandoffPackage: true,
+    admin_getFodeDeliveryHistory: true,
+    admin_getFodeManagementSummary: true,
+    admin_getFodeAssignmentsAndApprovals: true,
+    admin_getFodeDataQuality: true,
+    admin_getFodeSystemHealth: true,
+    admin_getFodeAuditProjection: true
   };
   app.writeRpcAllowlist = {
     eduops_executeCommand: true,
     admin_createTemporaryCapabilityGrant: true,
     admin_revokeTemporaryCapabilityGrant: true,
-    admin_saveReusableCommunicationTemplate: true
+    admin_saveReusableCommunicationTemplate: true,
+    admin_previewFodeRegistryConfirmation: true,
+    admin_confirmFodeRegistry: true,
+    admin_previewFodeAcademicEvidenceIngestion: true,
+    admin_confirmFodeAcademicEvidenceIngestion: true,
+    admin_previewFodePortalAccessAction: true,
+    admin_executeFodePortalAccessAction: true,
+    admin_previewFodeFraudReconciliationResolution: true,
+    admin_executeFodeFraudReconciliationResolution: true,
+    admin_previewFodeFinanceHandoff: true,
+    admin_executeFodeFinanceHandoff: true,
+    admin_previewFodeClassroomSubjectMapping: true,
+    admin_confirmFodeClassroomSubjectMapping: true,
+    admin_previewFodeClassroomHandoff: true,
+    admin_executeFodeClassroomHandoff: true
   };
 
   app.state = {
@@ -635,9 +668,9 @@
       var classification = "NAVIGATION";
       var report = control.getAttribute("data-report") || "";
       if (control.closest("#eduopsPreviewLab")) classification = "TECHNICAL";
-      else if (/^(roles|approvals|data-quality)$/.test(report)) classification = "STRUCTURAL";
+      else if (/^roles$/.test(report)) classification = "STRUCTURAL";
       else if (control.hasAttribute("data-unavailable-control")) classification = "UNAVAILABLE";
-      else if (control.matches("input,select,textarea,[data-preview-command],[data-open-original],[data-request-correction],[data-portal-communications],[data-communication-template],[data-batch-preview],[data-batch-continue],[data-batch-confirm],[data-batch-execute],[data-batch-exclude],[data-batch-restore],[data-batch-template],[data-batch-execution-limit],[data-session-skip],[data-session-next],[data-select-applicant],#eduopsRefreshSnapshot,#eduopsRefreshAuthority,#eduopsSelectVisible,#eduopsSelectAllReturned,#eduopsSelectAllMatching,#eduopsClearSelection,#eduopsClearFilters")) classification = "OPERATION";
+      else if (control.matches("input,select,textarea,[data-preview-command],[data-open-original],[data-request-correction],[data-portal-communications],[data-communication-template],[data-batch-preview],[data-batch-continue],[data-batch-confirm],[data-batch-execute],[data-batch-exclude],[data-batch-restore],[data-batch-template],[data-batch-execution-limit],[data-session-skip],[data-session-next],[data-select-applicant],[data-registry-preview-confirm],[data-academic-preview-evidence],[data-portal-preview-action],[data-fraud-preview-resolution],[data-classroom-preview-mapping],[data-classroom-preview-handoff],[data-finance-preview-handoff],#eduopsRefreshSnapshot,#eduopsRefreshAuthority,#eduopsSelectVisible,#eduopsSelectAllReturned,#eduopsSelectAllMatching,#eduopsClearSelection,#eduopsClearFilters")) classification = "OPERATION";
       control.setAttribute("data-control-classification", classification);
       if (!control.getAttribute("data-control-id")) {
         var commandDiscriminator = control.hasAttribute("data-preview-command") ? "preview-command:" + control.getAttribute("data-preview-command") + ":" + (control.getAttribute("data-command-scope") || "selected") : "";

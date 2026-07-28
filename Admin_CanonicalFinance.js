@@ -69,6 +69,7 @@ function canonicalFinanceObjectFields_(row) {
       lastPushAt: canonicalFinanceClean_(row.Books_Last_Push_At || ""),
       lastAttemptAt: canonicalFinanceClean_(row.Books_Last_Attempt_At || ""),
       lastError: canonicalFinanceClean_(row.Books_Last_Error || ""),
+      lastErrorAt: canonicalFinanceClean_(row.Books_Last_Error_At || row.Books_Last_Attempt_At || ""),
       attemptCount: canonicalFinanceClean_(row.Books_Attempt_Count || ""),
       lastPayloadHash: canonicalFinanceClean_(row.Books_Last_Payload_Hash || ""),
       billingReference: canonicalFinanceClean_(row.FODE_Billing_Reference || "")
@@ -92,6 +93,36 @@ function canonicalFinanceDisplayPhone_(row) {
   return canonicalFinanceClean_(source.Phone || source.Phone_Number || source.WhatsApp_Number || "");
 }
 
+function canonicalFinanceApplicantName_(row, canonicalName) {
+  var source = row || {};
+  return canonicalFinanceClean_(
+    canonicalName
+    || source.Student_Name
+    || source.Applicant_Name
+    || source.Full_Name
+    || (canonicalFinanceClean_(source.First_Name) + " " + canonicalFinanceClean_(source.Last_Name))
+  );
+}
+
+function canonicalFinanceTestRecordProjection_(row, applicantId) {
+  var source = row || {};
+  var id = canonicalFinanceClean_(applicantId || source.ApplicantID || "");
+  var explicit = canonicalFinanceUpper_(source.FODE_Test_Record || source.Test_Record || source.Is_Test_Record || source.Record_Type || "");
+  if (/^(YES|TRUE|TEST|TEST_RECORD)$/.test(explicit)) {
+    return { isTestRecord: true, source: "Explicit applicant test-record field" };
+  }
+  var configured = typeof CONFIG !== "undefined" && Array.isArray(CONFIG.ZOHO_BOOKS_TEST_APPLICANT_IDS)
+    ? CONFIG.ZOHO_BOOKS_TEST_APPLICANT_IDS.map(canonicalFinanceClean_)
+    : [];
+  if (configured.indexOf(id) >= 0) {
+    return { isTestRecord: true, source: "Configured test-applicant registry" };
+  }
+  if (/(^|-)TEST(-|$)/.test(canonicalFinanceUpper_(id))) {
+    return { isTestRecord: true, source: "Governed fixture ApplicantID convention" };
+  }
+  return { isTestRecord: false, source: "" };
+}
+
 function resolveCanonicalFinanceState_(rowObj, paymentFacts) {
   var row = rowObj || {};
   var facts = paymentFacts && typeof paymentFacts === "object" ? paymentFacts : {};
@@ -100,10 +131,14 @@ function resolveCanonicalFinanceState_(rowObj, paymentFacts) {
     : facts.paymentEvidencePresent === true;
   var paymentVerified = typeof isCanonicalPaymentVerified_ === "function"
     ? isCanonicalPaymentVerified_(row) === true
-    : canonicalFinanceUpper_(row.Receipt_Status || "") === "VERIFIED";
+    : facts.paymentVerified === true;
+  var paymentEvidenceVerified = typeof isCanonicalPaymentEvidenceVerified_ === "function"
+    ? isCanonicalPaymentEvidenceVerified_(row) === true
+    : canonicalFinanceClean_(row.Receipt_Status || "").toLowerCase() === "verified";
   return {
-    financeState: paymentVerified ? "PAID_VERIFIED" : (paymentEvidencePresent ? "PAYMENT_TO_VERIFY" : "PAYMENT_PENDING"),
+    financeState: paymentVerified ? "PAID_VERIFIED" : (paymentEvidenceVerified ? "PAYMENT_EVIDENCE_VERIFIED" : (paymentEvidencePresent ? "PAYMENT_TO_VERIFY" : "PAYMENT_PENDING")),
     paymentEvidencePresent: paymentEvidencePresent,
+    paymentEvidenceVerified: paymentEvidenceVerified,
     paymentVerified: paymentVerified
   };
 }
@@ -160,6 +195,20 @@ function canonicalFinanceOperationalProjection_(financeState, lifecycle, actiona
       worklistLabel: "Payment Follow-up",
       worklistReason: "Awaiting payment evidence",
       paymentFollowupRecommended: financeRecommendedMessageType === "payment_followup",
+      paymentVerificationRequired: false,
+      mutationCapabilityRequired: ""
+    };
+  }
+  if (financeState === "PAYMENT_EVIDENCE_VERIFIED") {
+    return {
+      financeActionOwner: "FINANCE",
+      recommendedFinanceAction: "NO_PAYMENT_ACTION",
+      financeActionability: "EVIDENCE_VERIFIED",
+      workloadGroupKey: "FINANCE",
+      worklistKey: "PAYMENT_EVIDENCE_VERIFIED",
+      worklistLabel: "Payment Evidence Verified",
+      worklistReason: "Receipt_Status verifies payment evidence only.",
+      paymentFollowupRecommended: false,
       paymentVerificationRequired: false,
       mutationCapabilityRequired: ""
     };
@@ -222,25 +271,32 @@ function resolveCanonicalFinance_(rowObj, canonicalPopulationRow, opts) {
     paymentVerified: finance.paymentVerified === true
   });
   var receiptEvidencePresent = financeStateProjection.paymentEvidencePresent;
+  var receiptEvidenceVerified = financeStateProjection.paymentEvidenceVerified === true;
   var paymentVerified = financeStateProjection.paymentVerified;
   var rawPaymentVerified = canonicalFinanceClean_(row.Payment_Verified || "");
   var financeState = paymentVerified
     ? "PAID_VERIFIED"
-    : (receiptEvidencePresent
-      ? "PAYMENT_TO_VERIFY"
-      : (applicability.paymentApplicable ? "PAYMENT_PENDING" : "NOT_YET_PAYMENT_APPLICABLE"));
+    : (receiptEvidenceVerified
+      ? "PAYMENT_EVIDENCE_VERIFIED"
+      : (receiptEvidencePresent
+        ? "PAYMENT_TO_VERIFY"
+        : (applicability.paymentApplicable ? "PAYMENT_PENDING" : "NOT_YET_PAYMENT_APPLICABLE")));
   var reasonCode = paymentVerified
-    ? "RECEIPT_STATUS_VERIFIED"
-    : (receiptEvidencePresent
-      ? "RECEIPT_EVIDENCE_PENDING_VERIFICATION"
-      : (applicability.paymentApplicable ? "PAYMENT_EVIDENCE_MISSING" : "PAYMENT_NOT_YET_APPLICABLE"));
+    ? "PAID_VERIFIED"
+    : (receiptEvidenceVerified
+      ? "PAYMENT_EVIDENCE_VERIFIED"
+      : (receiptEvidencePresent
+        ? "RECEIPT_EVIDENCE_PENDING_VERIFICATION"
+        : (applicability.paymentApplicable ? "PAYMENT_EVIDENCE_MISSING" : "PAYMENT_NOT_YET_APPLICABLE")));
   var reason = paymentVerified
-    ? "Receipt_Status verifies payment."
-    : (receiptEvidencePresent
-      ? "Receipt evidence exists and requires verification."
-      : (applicability.paymentApplicable
-        ? "Payment is applicable and no genuine payment evidence is present."
-        : applicability.reason));
+    ? "Paid settlement is verified by payment authority."
+    : (receiptEvidenceVerified
+      ? "Receipt_Status verifies payment evidence only."
+      : (receiptEvidencePresent
+        ? "Receipt evidence exists and requires verification."
+        : (applicability.paymentApplicable
+          ? "Payment is applicable and no genuine payment evidence is present."
+          : applicability.reason)));
   var actionabilityGroup = canonicalFinanceUpper_(actionability.workloadGroupKey || "");
   var actionabilityState = canonicalFinanceUpper_(actionability.state || "");
   var activeFinanceWork = false;
@@ -250,8 +306,7 @@ function resolveCanonicalFinance_(rowObj, canonicalPopulationRow, opts) {
     activeFinanceWork = actionabilityGroup === "FINANCE" && actionabilityState === "READY";
   }
   var warnings = [];
-  if (rawPaymentVerified && rawPaymentVerified.toLowerCase() === "yes" && !paymentVerified) warnings.push("Payment_Verified is compatibility-only and contradicts canonical Receipt_Status.");
-  if (receiptStatusKey === "verified" && !paymentVerified) warnings.push("Receipt_Status text is present but canonical payment helper did not verify payment.");
+  if (rawPaymentVerified && rawPaymentVerified.toLowerCase() === "yes" && !paymentVerified) warnings.push("Payment_Verified is compatibility-only and cannot prove paid settlement.");
   if (receiptStatusKey === "rejected") warnings.push("Receipt evidence was rejected; policy/workflow for follow-up remains owner-dependent.");
 
   var totalFee = canonicalFinanceAmount_(row, ["Fee_Total_Kina", "Total_Fee_Kina", "Total_Fee"], "totalFee");
@@ -274,15 +329,20 @@ function resolveCanonicalFinance_(rowObj, canonicalPopulationRow, opts) {
   var reconciliationSearchCodes = [financeState + "_CONSISTENT"];
   if (amountCompleteness !== "SOURCE_LIMITED") reconciliationSearchCodes.push("AMOUNT_DATA_INCOMPLETE");
   if (warnings.length) reconciliationSearchCodes.push("FINANCE_WARNING");
+  var identityApplicantId = canonicalFinanceClean_(canonical.identity && canonical.identity.applicantId || row.ApplicantID || "");
+  var identityApplicantName = canonicalFinanceApplicantName_(row, canonical.applicant && canonical.applicant.name);
+  var testRecord = canonicalFinanceTestRecordProjection_(row, identityApplicantId);
 
   return {
     schemaVersion: CANONICAL_FINANCE_SCHEMA_VERSION,
     readOnly: true,
     identity: {
-      applicantId: canonicalFinanceClean_(canonical.identity && canonical.identity.applicantId || row.ApplicantID || ""),
+      applicantId: identityApplicantId,
       rowNumber: Number(canonical.identity && canonical.identity.rowNumber || options.rowNumber || 0),
       sourceSheetName: canonicalFinanceClean_(canonical.identity && canonical.identity.sourceSheetName || options.sourceSheetName || ""),
-      applicantName: canonicalFinanceClean_(canonical.applicant && canonical.applicant.name || row.Student_Name || row.Applicant_Name || "")
+      applicantName: identityApplicantName,
+      testRecord: testRecord.isTestRecord,
+      testRecordSource: testRecord.source
     },
     contact: {
       effectiveEmail: canonicalFinanceDisplayEmail_(row),
@@ -293,10 +353,11 @@ function resolveCanonicalFinance_(rowObj, canonicalPopulationRow, opts) {
       financeReasonCode: reasonCode,
       financeReason: reason,
       receiptStatus: receiptStatus,
-      receiptVerificationState: paymentVerified ? "VERIFIED" : (receiptEvidencePresent ? "PENDING_VERIFICATION" : (applicability.paymentApplicable ? "MISSING" : "NOT_APPLICABLE")),
+      receiptVerificationState: receiptEvidenceVerified ? "VERIFIED" : (receiptEvidencePresent ? "PENDING_VERIFICATION" : (applicability.paymentApplicable ? "MISSING" : "NOT_APPLICABLE")),
       financeAuthoritySource: "Receipt_Status / canonical payment helpers",
       authorityTimestamp: canonicalFinanceClean_(row.Doc_Last_Verified_At || row.Payment_Last_Verified_At || row.Books_Last_Push_At || ""),
       paymentVerified: paymentVerified,
+      paymentEvidenceVerified: receiptEvidenceVerified,
       paymentEvidencePresent: receiptEvidencePresent,
       paymentApplicable: applicability.paymentApplicable,
       activeFinanceWork: activeFinanceWork,
@@ -341,8 +402,8 @@ function resolveCanonicalFinance_(rowObj, canonicalPopulationRow, opts) {
       financeExceptionCode: warnings.length ? "FINANCE_WARNING" : "",
       financeExceptionReason: warnings.join(" "),
       disputeState: canonicalFinanceClean_(row.Payment_Dispute_Status || "") || "NOT_IMPLEMENTED",
-      refundState: canonicalFinanceClean_(row.Refund_Status || "") || "NOT_IMPLEMENTED",
-      creditState: canonicalFinanceClean_(row.Credit_Status || "") || "NOT_IMPLEMENTED",
+      refundState: canonicalFinanceClean_(row.Refund_Status || "") || "POLICY_REQUIRED",
+      creditState: canonicalFinanceClean_(row.Credit_Status || "") || "POLICY_REQUIRED",
       reconciliationState: "NOT_EVALUATED",
       missingRequiredFinanceData: []
     },
@@ -365,8 +426,8 @@ function resolveCanonicalFinance_(rowObj, canonicalPopulationRow, opts) {
       warnings: warnings,
       unresolvedPolicyDependencies: canonicalFinancePolicyDependencies_(),
       searchIndex: canonicalFinanceClean_([
-        canonicalFinanceClean_(canonical.identity && canonical.identity.applicantId || row.ApplicantID || ""),
-        canonicalFinanceClean_(canonical.applicant && canonical.applicant.name || row.Student_Name || row.Applicant_Name || ""),
+        identityApplicantId,
+        identityApplicantName,
         canonicalFinanceDisplayEmail_(row),
         canonicalFinanceDisplayPhone_(row),
         receiptStatus,
@@ -402,6 +463,7 @@ function canonicalFinanceReconciliationForRow_(financeDto, canonicalRow) {
   if (state === "PAYMENT_PENDING") codes.push("PAYMENT_PENDING_CONSISTENT");
   else if (state === "PAYMENT_TO_VERIFY") codes.push("PAYMENT_TO_VERIFY_CONSISTENT");
   else if (state === "PAID_VERIFIED") codes.push("PAID_VERIFIED_CONSISTENT");
+  else if (state === "NOT_YET_PAYMENT_APPLICABLE") codes.push("NOT_YET_PAYMENT_APPLICABLE_CONSISTENT");
   else {
     codes.push("FINANCE_STATE_UNKNOWN");
     severity = "WARN";
@@ -410,7 +472,7 @@ function canonicalFinanceReconciliationForRow_(financeDto, canonicalRow) {
     codes.push("PAYMENT_VERIFIED_COMPATIBILITY_DRIFT");
     severity = "WARN";
   }
-  if (dto.amounts && dto.amounts.calculationCompleteness !== "SOURCE_LIMITED") {
+  if (state !== "NOT_YET_PAYMENT_APPLICABLE" && dto.amounts && dto.amounts.calculationCompleteness !== "SOURCE_LIMITED") {
     codes.push("AMOUNT_DATA_INCOMPLETE");
     if (severity === "INFO") severity = "WARN";
   }
@@ -436,6 +498,10 @@ function canonicalFinanceReconciliationForRow_(financeDto, canonicalRow) {
     status: severity === "INFO" ? "PASS" : "PASS_WITH_FINDINGS",
     severity: severity,
     applicantId: dto.identity && dto.identity.applicantId || "",
+    applicantName: dto.identity && dto.identity.applicantName || "",
+    applicantEmail: dto.contact && dto.contact.effectiveEmail || "",
+    testRecord: dto.identity && dto.identity.testRecord === true,
+    testRecordSource: dto.identity && dto.identity.testRecordSource || "",
     rowNumber: dto.identity && dto.identity.rowNumber || 0,
     codes: codes,
     conflictingSources: [],
@@ -448,7 +514,125 @@ function canonicalFinanceReconciliationForRow_(financeDto, canonicalRow) {
     },
     recommendedOperatorAction: state === "PAYMENT_TO_VERIFY" ? "Open Review Workspace payment verification." : (state === "PAYMENT_PENDING" ? "Use payment follow-up workflow where Communication Authority permits." : "No immediate payment action."),
     mutationRoute: state === "PAYMENT_TO_VERIFY" ? "Review Workspace admin_setPaymentVerified" : "",
-    ownerPolicyRequired: false
+    ownerPolicyRequired: false,
+    evaluatedAt: dto.audit && dto.audit.resolvedAt || canonicalFinanceNowIso_()
+  };
+}
+
+function canonicalFinanceFindingSeverityRank_(severity) {
+  return { INFO: 0, WARN: 1, ERROR: 2 }[canonicalFinanceUpper_(severity)] || 0;
+}
+
+function canonicalFinanceFindingActionable_(finding) {
+  return (finding && finding.codes || []).some(function (code) {
+    return !/_CONSISTENT$/.test(canonicalFinanceUpper_(code));
+  });
+}
+
+function canonicalFinanceReconciliationRows_(financeRows) {
+  var grouped = {};
+  (financeRows || []).forEach(function (row) {
+    var finding = canonicalFinanceReconciliationForRow_(row, null);
+    var applicantId = canonicalFinanceClean_(finding.applicantId);
+    var key = applicantId || "ROW_" + Number(finding.rowNumber || 0);
+    if (!grouped[key]) {
+      grouped[key] = finding;
+      grouped[key].rowNumbers = [Number(finding.rowNumber || 0)];
+      return;
+    }
+    var current = grouped[key];
+    current.rowNumbers.push(Number(finding.rowNumber || 0));
+    (finding.codes || []).forEach(function (code) {
+      if (current.codes.indexOf(code) < 0) current.codes.push(code);
+    });
+    if (canonicalFinanceFindingSeverityRank_(finding.severity) > canonicalFinanceFindingSeverityRank_(current.severity)) {
+      current.severity = finding.severity;
+    }
+  });
+  return Object.keys(grouped).map(function (key) {
+    var finding = grouped[key];
+    if (finding.rowNumbers.length > 1) {
+      if (finding.codes.indexOf("DUPLICATE_APPLICANT_ID") < 0) finding.codes.push("DUPLICATE_APPLICANT_ID");
+      finding.severity = "ERROR";
+      finding.status = "PASS_WITH_FINDINGS";
+      finding.recommendedOperatorAction = "Resolve the duplicate ApplicantID binding before Finance action.";
+    }
+    finding.actionable = canonicalFinanceFindingActionable_(finding);
+    return finding;
+  }).sort(function (a, b) {
+    return canonicalFinanceFindingSeverityRank_(b.severity) - canonicalFinanceFindingSeverityRank_(a.severity)
+      || canonicalFinanceClean_(a.applicantName).localeCompare(canonicalFinanceClean_(b.applicantName))
+      || canonicalFinanceClean_(a.applicantId).localeCompare(canonicalFinanceClean_(b.applicantId));
+  });
+}
+
+function canonicalFinanceFindingPage_(financeRows, request) {
+  var p = request || {};
+  var pageSize = canonicalFinanceBoundedPositiveInt_(p.pageSize || p.limit, 25, 100);
+  var page = canonicalFinanceBoundedPositiveInt_(p.page, 1, Number.MAX_SAFE_INTEGER || 9007199254740991);
+  var filters = p.filters || {};
+  var actionableOnly = filters.actionableOnly !== false && p.actionableOnly !== false;
+  var severity = canonicalFinanceUpper_(filters.severity || p.severity || "");
+  var reasonCode = canonicalFinanceUpper_(filters.reasonCode || p.reasonCode || "");
+  var searchQuery = canonicalFinanceClean_(filters.searchQuery || p.searchQuery || p.search || "").toLowerCase();
+  var all = canonicalFinanceReconciliationRows_(financeRows);
+  var filtered = all.filter(function (finding) {
+    if (actionableOnly && finding.actionable !== true) return false;
+    if (severity && canonicalFinanceUpper_(finding.severity) !== severity) return false;
+    if (reasonCode && (finding.codes || []).map(canonicalFinanceUpper_).indexOf(reasonCode) < 0) return false;
+    if (searchQuery) {
+      var searchText = [
+        finding.applicantName,
+        finding.applicantId,
+        finding.applicantEmail,
+        (finding.codes || []).join(" ")
+      ].join(" ").toLowerCase();
+      if (searchText.indexOf(searchQuery) < 0) return false;
+    }
+    return true;
+  });
+  var byReason = {};
+  var bySeverity = {};
+  filtered.forEach(function (finding) {
+    bySeverity[finding.severity] = Number(bySeverity[finding.severity] || 0) + 1;
+    (finding.codes || []).forEach(function (code) {
+      if (!/_CONSISTENT$/.test(code)) byReason[code] = Number(byReason[code] || 0) + 1;
+    });
+  });
+  var filteredCount = filtered.length;
+  var totalPages = Math.max(1, Math.ceil(filteredCount / pageSize));
+  if (page > totalPages) page = totalPages;
+  var start = (page - 1) * pageSize;
+  var pageRows = filtered.slice(start, start + pageSize);
+  return {
+    totalCount: all.length,
+    actionableCount: all.filter(function (finding) { return finding.actionable === true; }).length,
+    filteredCount: filteredCount,
+    page: page,
+    pageSize: pageSize,
+    totalPages: totalPages,
+    hasNext: start + pageSize < filteredCount,
+    hasPrevious: page > 1,
+    appliedFilters: {
+      actionableOnly: actionableOnly,
+      severity: severity,
+      reasonCode: reasonCode,
+      searchQuery: searchQuery
+    },
+    groups: {
+      byReason: byReason,
+      bySeverity: bySeverity
+    },
+    rows: pageRows,
+    rawDiagnostics: pageRows.map(function (finding) {
+      return {
+        applicantId: finding.applicantId,
+        rowNumbers: finding.rowNumbers,
+        codes: finding.codes,
+        actualValues: finding.actualValues,
+        evaluatedAt: finding.evaluatedAt
+      };
+    })
   };
 }
 
@@ -481,9 +665,15 @@ function canonicalFinanceSummaryFromRows_(rows) {
   var byState = canonicalFinanceCountBy_(list, function (row) { return row.financeAuthority.financeState; });
   var byAction = canonicalFinanceCountBy_(list, function (row) { return row.operational.recommendedFinanceAction; });
   var byWorklist = canonicalFinanceCountBy_(list, function (row) { return row.operational.worklistKey || "NONE"; });
-  var exceptions = list.filter(function (row) { return row.exceptions.financeExceptionCode || (row.audit.warnings || []).length; }).length;
+  var exceptions = canonicalFinanceReconciliationRows_(list).filter(function (finding) { return finding.actionable === true; }).length;
   var paymentFollowup = list.filter(function (row) { return row.operational.paymentFollowupRecommended === true; }).length;
-  var activeFinanceWork = list.filter(function (row) { return row.financeAuthority && row.financeAuthority.activeFinanceWork === true; }).length;
+  var activeFinanceApplicants = {};
+  list.forEach(function (row) {
+    if (!(row.financeAuthority && row.financeAuthority.activeFinanceWork === true)) return;
+    var applicantId = canonicalFinanceClean_(row.identity && row.identity.applicantId || "");
+    activeFinanceApplicants[applicantId || "ROW_" + Number(row.identity && row.identity.rowNumber || 0)] = true;
+  });
+  var activeFinanceWork = Object.keys(activeFinanceApplicants).length;
   return {
     totalRows: list.length,
     byFinanceState: byState,
@@ -499,9 +689,10 @@ function canonicalFinanceSummaryFromRows_(rows) {
     financeExceptions: exceptions,
     policyDependent: {
       overdue: "POLICY_REQUIRED",
-      refunds: "WORKFLOW_PENDING",
-      credits: "WORKFLOW_PENDING",
-      writeOffs: "WORKFLOW_PENDING"
+      refunds: "POLICY_REQUIRED",
+      credits: "POLICY_REQUIRED",
+      adjustments: "POLICY_REQUIRED",
+      writeOffs: "POLICY_REQUIRED"
     }
   };
 }
@@ -568,6 +759,10 @@ function canonicalFinanceRowMatches_(row, filters) {
   if (f.paymentFollowupRecommended === true && row.operational.paymentFollowupRecommended !== true) return false;
   if (f.paymentVerificationRequired === true && row.operational.paymentVerificationRequired !== true) return false;
   if (f.exceptionOnly === true && !row.exceptions.financeExceptionCode && !(row.audit.warnings || []).length) return false;
+  if (f.actionableOnly === true && !(row.financeAuthority && row.financeAuthority.activeFinanceWork === true) && !row.exceptions.financeExceptionCode && !(row.audit.warnings || []).length) return false;
+  var books = row.objects && row.objects.books || {};
+  var matchingState = books.invoiceId ? "LOCAL_INVOICE_LINKED" : (books.contactId ? "LOCAL_CONTACT_LINKED" : "NO_LOCAL_BOOKS_MATCH");
+  if (f.matchingState && matchingState !== canonicalFinanceUpper_(f.matchingState)) return false;
   var searchQuery = canonicalFinanceClean_(f.searchQuery || f.search || "").toLowerCase();
   if (searchQuery) {
     var searchIndex = canonicalFinanceClean_(row.audit && row.audit.searchIndex || "").toLowerCase();
@@ -609,7 +804,9 @@ function canonicalFinancePaged_(rows, request) {
       worklistKey: canonicalFinanceClean_(p.filters && p.filters.worklistKey || p.worklistKey || ""),
       recommendedFinanceAction: canonicalFinanceClean_(p.filters && p.filters.recommendedFinanceAction || p.recommendedFinanceAction || ""),
       exceptionCode: canonicalFinanceClean_(p.filters && p.filters.exceptionCode || p.exceptionCode || ""),
-      exceptionOnly: (p.filters && p.filters.exceptionOnly) === true || p.exceptionOnly === true
+      exceptionOnly: (p.filters && p.filters.exceptionOnly) === true || p.exceptionOnly === true,
+      actionableOnly: (p.filters && p.filters.actionableOnly) === true || p.actionableOnly === true,
+      matchingState: canonicalFinanceClean_(p.filters && p.filters.matchingState || p.matchingState || "")
     },
     searchQuery: canonicalFinanceClean_(mergedFilters.searchQuery || ""),
     rows: filtered.slice(start, start + pageSize).map(canonicalFinanceWorklistRow_)
@@ -641,23 +838,49 @@ function admin_getCanonicalFinanceApplicant(payload) {
 function admin_getCanonicalFinanceReconciliation(request) {
   requireCanonicalFinanceReadAccess_();
   var snapshot = canonicalFinanceSnapshot_(request || {});
-  var rows = snapshot.rows.map(function (row) { return canonicalFinanceReconciliationForRow_(row, null); });
-  var byCode = {};
-  rows.forEach(function (item) {
-    (item.codes || []).forEach(function (code) { byCode[code] = Number(byCode[code] || 0) + 1; });
-  });
-  var findings = rows.filter(function (item) { return item.severity !== "INFO"; });
-  var limit = Math.max(1, Math.min(200, Number(request && request.limit || 50)));
-  return { ok: true, readOnly: true, schemaVersion: snapshot.schemaVersion, status: findings.length ? "PASS_WITH_FINDINGS" : "PASS", summary: { totalRows: rows.length, findings: findings.length, byCode: byCode }, findings: findings.slice(0, limit) };
+  var page = canonicalFinanceFindingPage_(snapshot.rows, request || {});
+  return {
+    ok: true,
+    readOnly: true,
+    schemaVersion: snapshot.schemaVersion,
+    generatedAt: snapshot.generatedAt,
+    status: page.actionableCount ? "PASS_WITH_FINDINGS" : "PASS",
+    summary: {
+      totalRows: page.totalCount,
+      findings: page.actionableCount,
+      filteredFindings: page.filteredCount,
+      byCode: page.groups.byReason,
+      bySeverity: page.groups.bySeverity
+    },
+    page: page,
+    findings: page.rows,
+    groups: page.groups,
+    rawDiagnostics: page.rawDiagnostics
+  };
 }
 
 function admin_getCanonicalFinanceExceptions(request) {
   requireCanonicalFinanceReadAccess_();
   var snapshot = canonicalFinanceSnapshot_(request || {});
-  var rows = snapshot.rows.map(function (row) { return canonicalFinanceReconciliationForRow_(row, null); });
-  var findings = rows.filter(function (item) { return item.severity !== "INFO"; });
-  var limit = Math.max(1, Math.min(200, Number(request && request.limit || 50)));
-  return { ok: true, readOnly: true, schemaVersion: snapshot.schemaVersion, total: findings.length, rows: findings.slice(0, limit) };
+  var requested = request && typeof request === "object" ? request : {};
+  var pageRequest = {};
+  Object.keys(requested).forEach(function (key) { pageRequest[key] = requested[key]; });
+  pageRequest.actionableOnly = true;
+  pageRequest.filters = {};
+  Object.keys(requested.filters || {}).forEach(function (key) { pageRequest.filters[key] = requested.filters[key]; });
+  pageRequest.filters.actionableOnly = true;
+  var page = canonicalFinanceFindingPage_(snapshot.rows, pageRequest);
+  return {
+    ok: true,
+    readOnly: true,
+    schemaVersion: snapshot.schemaVersion,
+    generatedAt: snapshot.generatedAt,
+    total: page.filteredCount,
+    rows: page.rows,
+    page: page,
+    groups: page.groups,
+    rawDiagnostics: page.rawDiagnostics
+  };
 }
 
 function admin_getCanonicalFinanceObjectHistory(payload) {

@@ -73,6 +73,7 @@ vm.runInContext([
   extractFunction(codeSource, "deriveCanonicalPaymentState_"),
   extractFunction(codeSource, "canonicalPaymentBadge_"),
   extractFunction(codeSource, "isCanonicalPaymentVerified_"),
+  extractFunction(codeSource, "isCanonicalPaymentEvidenceVerified_"),
   extractFunction(codeSource, "isCanonicalPaymentRejected_"),
   extractFunction(codeSource, "deriveFodeCrmStageFromRow_"),
   extractFunction(codeSource, "communicationPaymentOutstanding_"),
@@ -91,8 +92,8 @@ assert.equal(
 );
 assert.equal(
   context.deriveFodeCrmStageFromRow_({ Payment_Verified: "", Receipt_Status: "Verified" }),
-  "Payment Confirmed",
-  "canonical Receipt_Status Verified must produce the payment CRM stage even when raw Payment_Verified is blank"
+  "",
+  "Receipt_Status Verified must not produce the payment CRM stage"
 );
 
 assert.equal(
@@ -123,8 +124,8 @@ assert.notEqual(
 );
 assert.equal(
   context.deriveApplicantLifecycleStage_({ Docs_Verified: "Yes", Payment_Verified: "", Receipt_Status: "Verified" }),
-  "COMPLETE",
-  "canonical Receipt_Status Verified must complete lifecycle even when raw Payment_Verified is blank"
+  "PAYMENT_EVIDENCE_VERIFIED",
+  "Receipt_Status Verified must preserve evidence verification without completing lifecycle"
 );
 
 const adminDetail = extractFunction(adminSource, "admin_getApplicantDetail");

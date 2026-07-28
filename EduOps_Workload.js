@@ -10,7 +10,7 @@ function renderEduOpsApp_(e) {
   t.BUILD_SCRIPT_ID = ScriptApp.getScriptId();
   t.EDUOPS_CONFIG = eduopsConfig_();
   return t.evaluate()
-    .setTitle((CONFIG.BRAND && CONFIG.BRAND.name ? CONFIG.BRAND.name : "FODE") + " - EduOps Operations Workspace")
+    .setTitle((CONFIG.BRAND && CONFIG.BRAND.name ? CONFIG.BRAND.name : "FODE") + " - EduOps Operations")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
@@ -31,7 +31,7 @@ function eduops_getAccessProjection() {
       role: access.role,
       capabilities: access.capabilities
     },
-    environment: "FODE live production operations",
+    environment: "Admin staging",
     deployment: {
       adminDeploymentIdSafe: eduopsSafeDeploymentId_(CONFIG.DEPLOYMENT_ID_ADMIN || ""),
       studentDeploymentIdSafe: eduopsSafeDeploymentId_(CONFIG.DEPLOYMENT_ID_STUDENT || "")
@@ -51,9 +51,9 @@ function eduopsRuntimeProjection_(snapshotId, snapshotAsOf) {
   return {
     schemaVersion: "EDUOPS_RUNTIME_IDENTITY_V1",
     authoritySource: "FODE runtime configuration",
-    operationalClassification: "FODE live production operations",
-    deploymentRole: "LIVE_PRODUCTION_OPERATIONS",
-    environment: "FODE live production operations",
+    operationalClassification: "FODE Admin staging operations",
+    deploymentRole: "ADMIN_STAGING",
+    environment: "Admin staging",
     version: cfg.VERSION,
     deployVersion: cfg.DEPLOY_VERSION_NUMBER,
     runtimeIdentity: String(cfg.VERSION || "") + " / " + String(cfg.DEPLOY_VERSION_NUMBER || ""),
@@ -1131,7 +1131,7 @@ function eduopsCockpitProjection_(rows, snapshotId, snapshotTimestamp) {
   return {
     schemaVersion: "OPSEDU_COCKPIT_V1",
     authoritySource: "Population Ledger + Actionability Resolver + EduOps workload query service",
-    productLabel: "FODE live production operations",
+    productLabel: "FODE Admin staging operations",
     heading: "Today's work",
     primaryBuckets: eduopsCockpitPrimaryBuckets_(rows, snapshotId, snapshotTimestamp),
     actionPackages: eduopsActionPackages_(rows, snapshotId, snapshotTimestamp),

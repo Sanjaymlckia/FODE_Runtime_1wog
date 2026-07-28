@@ -52,10 +52,11 @@ assert.match(financeSource, /state:\s*"UNAVAILABLE"/, "Unavailable amount state 
 assert.match(financeSource, /state:\s*"UNRESOLVED"/, "Unresolved derived balances must be explicit");
 assert.match(financeSource, /PAYMENT_PENDING/, "Payment pending state must be implemented");
 assert.match(financeSource, /PAYMENT_TO_VERIFY/, "Payment to verify state must be implemented");
+assert.match(financeSource, /PAYMENT_EVIDENCE_VERIFIED/, "Receipt evidence verified state must be implemented");
 assert.match(financeSource, /PAID_VERIFIED/, "Paid verified state must be implemented");
 assert.match(financeSource, /NOT_YET_PAYMENT_APPLICABLE/, "Finance must expose applicants who are not yet payment applicable");
 assert.match(financeSource, /POLICY_REQUIRED/, "Policy-dependent states must remain explicit");
-assert.match(financeSource, /WORKFLOW_PENDING/, "Future finance workflows must remain explicit");
+assert.match(financeSource, /refunds:\s*"POLICY_REQUIRED"[\s\S]*credits:\s*"POLICY_REQUIRED"[\s\S]*adjustments:\s*"POLICY_REQUIRED"/, "Refunds, credits, and adjustments must remain policy-gated");
 
 assert.match(financeSource, /canonicalPopulationSnapshot_\(\)/, "Finance must compose the M1 canonical population snapshot");
 assert.doesNotMatch(financeSource, /getDataRange\(\)\.getValues\(\)/, "Finance module must not add a second independent full-sheet scanner");
@@ -82,6 +83,9 @@ const context = {
     return Number.isFinite(parsed) ? parsed : NaN;
   },
   isCanonicalPaymentVerified_(row) {
+    return false;
+  },
+  isCanonicalPaymentEvidenceVerified_(row) {
     return String(row && row.Receipt_Status || "").trim().toLowerCase() === "verified";
   },
   adminRowPaymentEvidencePresent_(row) {
@@ -137,8 +141,10 @@ assert.equal(toVerify.operational.mutationCapabilityRequired, "CAN_VERIFY_PAYMEN
 assert.equal(toVerify.operational.paymentFollowupRecommended, false);
 
 const verified = finance({ ApplicantID: "FODE-PAID", Receipt_Status: "Verified", Payment_Verified: "", Fee_Receipt_File: "https://receipt" });
-assert.equal(verified.financeAuthority.financeState, "PAID_VERIFIED");
-assert.equal(verified.financeAuthority.paymentVerified, true);
+assert.equal(verified.financeAuthority.financeState, "PAYMENT_EVIDENCE_VERIFIED");
+assert.equal(verified.financeAuthority.paymentEvidenceVerified, true);
+assert.equal(verified.financeAuthority.paymentVerified, false);
+assert.equal(verified.operational.worklistKey, "PAYMENT_EVIDENCE_VERIFIED");
 
 const drift = finance({ ApplicantID: "FODE-DRIFT", Receipt_Status: "", Payment_Verified: "Yes", Fee_Receipt_File: "" });
 assert.equal(drift.financeAuthority.financeState, "NOT_YET_PAYMENT_APPLICABLE");

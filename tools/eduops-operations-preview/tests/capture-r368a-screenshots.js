@@ -34,7 +34,7 @@ async function shot(page, name, selector) {
 }
 
 async function waitReady(page) {
-  await page.getByText("EduOps Operations Workspace").waitFor({ timeout: 10000 });
+  await page.getByText("EduOps Operations").waitFor({ timeout: 10000 });
   await page.getByText("Payment follow-ups due").first().waitFor({ timeout: 10000 });
 }
 

@@ -34,6 +34,8 @@ function resolveCanonicalApplicantLifecycle_(rowObj, opts) {
   var paymentFacts = typeof options.paymentFacts === "object" && options.paymentFacts
     ? options.paymentFacts
     : adminRowPaymentAuthorityFacts_(row);
+  var paymentEvidenceVerified = paymentFacts.paymentEvidenceVerified === true
+    || (typeof isCanonicalPaymentEvidenceVerified_ === "function" && isCanonicalPaymentEvidenceVerified_(row));
   var portalSubmitted = typeof options.portalSubmitted === "boolean"
     ? options.portalSubmitted
     : adminRowPortalSubmitted_(row);
@@ -103,6 +105,11 @@ function resolveCanonicalApplicantLifecycle_(rowObj, opts) {
     actionOwner = "ADMIN";
     recommendedNextAction = "COMPLETE_ENROLMENT";
     reason = "Documents and payment are verified; enrolment authority is next.";
+  } else if (docsVerified && paymentEvidenceVerified && !paymentVerified) {
+    baseState = "PAYMENT_EVIDENCE_VERIFIED";
+    actionOwner = "FINANCE";
+    recommendedNextAction = "NO_PAYMENT_ACTION";
+    reason = "Receipt_Status verifies payment evidence only; paid settlement is not complete.";
   } else if (docsVerified && paymentEvidencePresent && !paymentVerified) {
     baseState = "PAYMENT_TO_VERIFY";
     actionOwner = "FINANCE";

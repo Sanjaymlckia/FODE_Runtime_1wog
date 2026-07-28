@@ -3,18 +3,18 @@ const fs = require("node:fs");
 const crypto = require("node:crypto");
 
 const expected = [
-  "Admin.js", "Admin_AccessControl.js", "Admin_CapabilityGrants.js", "Admin_CanonicalFinance.js", "Admin_CanonicalPopulation.js",
+  "Admin.js", "Admin_AccessControl.js", "Admin_AcademicAuthority.js", "Admin_CapabilityGrants.js", "Admin_CanonicalFinance.js", "Admin_CanonicalPopulation.js",
   "Admin_DocumentGallery.js", "Admin_DocumentServices.js", "Admin_LifecycleAuthority.js", "Admin_PaymentAuthority.js", "Admin_ReviewQueues.js",
   "Admin_ReviewStatusAuthority.js", "Admin_RowFacts.js", "Admin_SelectedApplicantCommunications.js", "Admin_StageBatchCommunications.js",
-  "Admin_WhatsAppFallback.js", "AdminUI.html", "AdminUI_OperatorNext.html", "AdminUI_OpsApplicantQueue.html", "AdminUI_OpsCommunications.html",
+  "Admin_WhatsAppFallback.js", "Admin_OperationalIntegrationAuthority.js", "AdminUI.html", "AdminUI_OperatorNext.html", "AdminUI_OpsApplicantQueue.html", "AdminUI_OpsCommunications.html",
   "AdminUI_OpsLifecycle.html", "AdminUI_SharedRowFacts.html", "Code.js", "Config.js", "EduOps.html", "EduOps_Client.html",
   "EduOps_ClientBatch.html", "EduOps_ClientComponents.html", "EduOps_ClientCore.html", "EduOps_ClientWorkbench.html", "EduOps_Commands.js",
   "EduOps_Contracts.js", "EduOps_FeatureFlags.js", "EduOps_FODE_Adapter.js", "EduOps_Idempotency.js", "EduOps_Locks.js", "EduOps_Receipts.js", "EduOps_Styles.html", "EduOps_Workload.js", "EduOps_ClientOperationsWorkspace.html", "EduOps_OperationsWorkspaceStyles.html", "Routes.js", "Utils.js",
   "appsscript.json", "whoami_admin.html"
 ].sort();
 const actual = fs.readFileSync(".claspignore", "utf8").split(/\r?\n/).map((line) => line.trim()).filter((line) => /^![^*]/.test(line)).map((line) => line.slice(1).replace(/\\/g, "/")).sort();
-assert.deepEqual(actual, expected, "Deployable Apps Script filename set must match the explicit 44-file contract");
-assert.equal(actual.length, 44);
+assert.deepEqual(actual, expected, "Deployable Apps Script filename set must match the explicit 46-file contract");
+assert.equal(actual.length, 46);
 for (const file of actual) assert.equal(fs.existsSync(file), true, `Deployable runtime file is missing: ${file}`);
 assert.ok(!actual.some((file) => /^(tests|docs|\.release-proof)\//.test(file)), "Tests, docs, and release evidence must remain excluded");
 assert.ok(!actual.some((file) => /OPS\.js|OldWorkbench|OperatorDashboard/i.test(file)), "Retired standalone OPS source must not be reintroduced");

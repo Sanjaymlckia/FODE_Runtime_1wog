@@ -1,6 +1,6 @@
 # EduOps Operations Preview Lab
 
-FODE-specific local preview utility for the EduOps Operations Workspace.
+FODE-specific local preview utility for EduOps Operations.
 
 This lab is read-only. It does not change Admin, Student, production data, Sheets, Drive, finance, documents, Portal, Books, WhatsApp or communications.
 

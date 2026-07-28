@@ -54,7 +54,7 @@
   app.renderEduOpsOperationsWorkspace = function (response) {
     var cockpit = response && response.cockpit;
     if (!cockpit || cockpit.schemaVersion !== "OPSEDU_COCKPIT_V1" || !Array.isArray(cockpit.primaryBuckets) || !Array.isArray(cockpit.actionPackages)) {
-      failClosed("Authoritative EduOps Operations Workspace decision was not returned.");
+      failClosed("Authoritative EduOps Operations decision was not returned.");
       return;
     }
     byId("eduopsOperationsWorkspaceContext").textContent = cockpit.productLabel;

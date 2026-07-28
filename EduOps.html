@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231559a6'/%3E%3Cpath d='M7 8h9v6H7zm0 10h18v6H7zm13-10h5v6h-5z' fill='white'/%3E%3C/svg%3E">
-  <title>FODE Operations Workspace</title>
+  <title>FODE EduOps Operations</title>
   <?!= HtmlService.createHtmlOutputFromFile("EduOps_Styles").getContent(); ?>
   <?!= HtmlService.createHtmlOutputFromFile("EduOps_OperationsWorkspaceStyles").getContent(); ?>
 </head>
@@ -14,14 +14,14 @@
 
   <div id="eduopsApp" class="eduops-app" data-product="FODE" aria-busy="true">
     <header class="eduops-topbar">
-      <div class="eduops-brand" aria-label="FODE Operations Workspace">
+      <div class="eduops-brand" aria-label="FODE EduOps Operations">
         <span class="eduops-brand-mark" aria-hidden="true">
           <svg viewBox="0 0 40 40" role="img">
             <path d="M7 9h13v7H7zM7 20h20v7H7zM24 9h9v18h-9zM7 31h26v3H7z"></path>
           </svg>
         </span>
         <span>
-          <strong>EduOps Operations Workspace</strong>
+          <strong>EduOps Operations</strong>
           <small>Authoritative operating context loading</small>
         </span>
       </div>
@@ -84,8 +84,11 @@
           <span class="eduops-rail-label">Domain lenses</span>
           <nav class="eduops-secondary-nav" aria-label="Domain lenses">
             <button type="button" data-report="finance"><span>Finance Operations</span><small>Read only</small></button>
+            <button type="button" data-report="academic"><span>Registry &amp; Exams</span><small>Authority</small></button>
             <button type="button" data-report="communications"><span>Communications</span><small>Read only</small></button>
-            <button type="button" data-report="portal"><span>Portal</span><small>Read only</small></button>
+            <button type="button" data-report="portal"><span>Portal</span><small>Authority</small></button>
+            <button type="button" data-report="classroom"><span>Classroom Handoff</span><small>Authority</small></button>
+            <button type="button" data-report="delivery"><span>Delivery History</span><small>Read only</small></button>
             <button type="button" data-report="contactability"><span>Contactability</span><small>Read only</small></button>
           </nav>
         </div>
@@ -106,9 +109,12 @@
         </div>
 
         <div class="eduops-rail-footer">
-          <strong>FODE authoritative operations</strong>
-          <span>Live operations identity is server-projected in the header</span>
-          <span>FODE authority adapter</span>
+          <span class="eduops-identity-label">Signed-in account</span>
+          <strong id="eduopsUserEmail">Authoritative account loading</strong>
+          <span class="eduops-identity-label">Durable role</span>
+          <strong id="eduopsRole">Role loading</strong>
+          <span id="eduopsActiveGrants">Active temporary grants loading</span>
+          <span id="eduopsCapabilitySummary">Effective capabilities loading</span>
         </div>
       </aside>
 
@@ -116,7 +122,7 @@
         <section id="eduopsOperationsWorkspace" class="eduops-operations-workspace" aria-labelledby="eduopsOperationsWorkspaceHeading">
           <header class="eduops-operations-workspace-header eduops-operations-density-hidden-title">
             <div>
-              <span class="eduops-operations-workspace-kicker">EduOps Operations Workspace</span>
+              <span class="eduops-operations-workspace-kicker">EduOps Operations</span>
               <h1 id="eduopsOperationsWorkspaceHeading">Today's work</h1>
               <p id="eduopsOperationsWorkspaceContext">Authoritative operating context loading</p>
             </div>

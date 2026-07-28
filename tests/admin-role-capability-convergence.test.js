@@ -98,11 +98,16 @@ assert.equal(principal.normalizedRole, "PRINCIPAL");
 assert.equal(principal.capabilities.CAN_OPEN_REVIEW_WORKSPACE, true, "Principal must receive durable EduOps route access");
 assert.equal(principal.capabilities.CAN_RUN_BATCH_COMMUNICATIONS, false);
 assert.equal(principal.capabilities.CAN_READ_FINANCE, true, "Principal must receive durable read-only Finance access without a temporary grant");
+assert.equal(principal.capabilities.CAN_REVIEW_FINANCE_EXCEPTIONS, true, "Principal must receive durable Finance exception review authority");
+assert.equal(principal.capabilities.CAN_MANAGE_FINANCE_HANDOFF, true, "Principal must receive durable FODE-to-Zoho handoff authority");
 assert.equal(principal.capabilities.CAN_GENERATE_STANDARD_INVOICE, false);
 assert.equal(principal.capabilities.CAN_WRITE_ZOHO_BOOKS, false);
 assert.equal(principal.capabilities.CAN_VERIFY_PAYMENT, false);
 assert.equal(principal.capabilities.CAN_MANAGE_ROLES, false);
 assert.equal(principal.capabilities.CAN_DEPLOY_RUNTIME, false);
+assert.equal(principal.capabilities.CAN_READ_REGISTRY, false);
+assert.equal(principal.capabilities.CAN_ADMIN_PORTAL_ACCESS, false);
+assert.equal(principal.capabilities.CAN_MANAGE_CLASSROOM_HANDOFF, false);
 
 const operations = capabilityContext.resolveAdminCapabilities_("operations@minervacenters.com");
 assert.equal(operations.normalizedRole, "OPERATIONS");
@@ -127,6 +132,13 @@ assert.equal(superAdmin.capabilities.CAN_MANAGE_PORTAL_ACCESS, true);
 assert.equal(superAdmin.capabilities.CAN_ADMINISTER_RUNTIME, true);
 assert.equal(superAdmin.capabilities.CAN_DEPLOY_RUNTIME, true);
 assert.equal(superAdmin.capabilities.CAN_WRITE_ZOHO_BOOKS, true);
+[
+  "CAN_REVIEW_FINANCE_EXCEPTIONS", "CAN_MANAGE_FINANCE_HANDOFF",
+  "CAN_READ_REGISTRY", "CAN_MANAGE_REGISTRY", "CAN_REVIEW_EXAM_ELIGIBILITY",
+  "CAN_READ_PORTAL_STATUS", "CAN_ADMIN_PORTAL_ACCESS",
+  "CAN_READ_CLASSROOM", "CAN_MANAGE_CLASSROOM_HANDOFF",
+  "CAN_READ_MANAGEMENT_REPORTS", "CAN_READ_DELIVERY_HISTORY"
+].forEach((capability) => assert.equal(superAdmin.capabilities[capability], true, `Super must retain ${capability}`));
 
 const unknown = capabilityContext.resolveAdminCapabilities_("unknown@example.test");
 assert.equal(unknown.allowlisted, false);

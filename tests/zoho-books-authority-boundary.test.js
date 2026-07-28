@@ -64,6 +64,7 @@ vm.runInContext([
   extractFunction(codeSource, "deriveCanonicalPaymentState_"),
   extractFunction(codeSource, "canonicalPaymentBadge_"),
   extractFunction(codeSource, "isCanonicalPaymentVerified_"),
+  extractFunction(codeSource, "isCanonicalPaymentEvidenceVerified_"),
   extractFunction(codeSource, "isCanonicalPaymentRejected_"),
   extractFunction(codeSource, "communicationPaymentOutstanding_"),
   extractFunction(codeSource, "deriveApplicantLifecycleStage_")
@@ -101,12 +102,12 @@ const canonicalPaidRow = Object.assign({}, canonicalPaymentRow, {
 assert.equal(
   runtimeContext.communicationPaymentOutstanding_(canonicalPaidRow),
   false,
-  "canonical Receipt_Status Verified must remain the payment suppression authority even when raw compatibility fields differ"
+  "Receipt_Status Verified must suppress duplicate evidence requests even when raw compatibility fields differ"
 );
 assert.equal(
   runtimeContext.deriveApplicantLifecycleStage_(canonicalPaidRow),
-  "COMPLETE",
-  "canonical Receipt_Status Verified must remain the lifecycle completion authority"
+  "PAYMENT_EVIDENCE_VERIFIED",
+  "Receipt_Status Verified must not remain the lifecycle completion authority"
 );
 
 const actionabilityResolver = extractFunction(adminSource, "resolveActionabilityState_");

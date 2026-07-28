@@ -15,6 +15,17 @@ function adminCapabilityCatalog_() {
     "CAN_GENERATE_STANDARD_QUOTE",
     "CAN_GENERATE_STANDARD_INVOICE",
     "CAN_READ_FINANCE",
+    "CAN_REVIEW_FINANCE_EXCEPTIONS",
+    "CAN_MANAGE_FINANCE_HANDOFF",
+    "CAN_READ_REGISTRY",
+    "CAN_MANAGE_REGISTRY",
+    "CAN_REVIEW_EXAM_ELIGIBILITY",
+    "CAN_READ_PORTAL_STATUS",
+    "CAN_ADMIN_PORTAL_ACCESS",
+    "CAN_READ_CLASSROOM",
+    "CAN_MANAGE_CLASSROOM_HANDOFF",
+    "CAN_READ_MANAGEMENT_REPORTS",
+    "CAN_READ_DELIVERY_HISTORY",
     "CAN_VERIFY_PAYMENT",
     "CAN_RUN_BATCH_COMMUNICATIONS",
     "CAN_OVERRIDE_COOLDOWN",
@@ -55,10 +66,23 @@ function adminCapabilityRoleDefaults_(role) {
     defaults.CAN_ADMINISTER_RUNTIME = true;
     defaults.CAN_DEPLOY_RUNTIME = true;
     defaults.CAN_WRITE_ZOHO_BOOKS = true;
+    defaults.CAN_REVIEW_FINANCE_EXCEPTIONS = true;
+    defaults.CAN_MANAGE_FINANCE_HANDOFF = true;
+    defaults.CAN_READ_REGISTRY = true;
+    defaults.CAN_MANAGE_REGISTRY = true;
+    defaults.CAN_REVIEW_EXAM_ELIGIBILITY = true;
+    defaults.CAN_READ_PORTAL_STATUS = true;
+    defaults.CAN_ADMIN_PORTAL_ACCESS = true;
+    defaults.CAN_READ_CLASSROOM = true;
+    defaults.CAN_MANAGE_CLASSROOM_HANDOFF = true;
+    defaults.CAN_READ_MANAGEMENT_REPORTS = true;
+    defaults.CAN_READ_DELIVERY_HISTORY = true;
   }
   if (normalizedRole === "PRINCIPAL") {
     defaults.CAN_OPEN_REVIEW_WORKSPACE = true;
     defaults.CAN_READ_FINANCE = true;
+    defaults.CAN_REVIEW_FINANCE_EXCEPTIONS = true;
+    defaults.CAN_MANAGE_FINANCE_HANDOFF = true;
   }
   return defaults;
 }
@@ -149,6 +173,17 @@ function adminCapabilityBlockCode_(capability) {
     CAN_GENERATE_STANDARD_QUOTE: "STANDARD_QUOTE_CAPABILITY_REQUIRED",
     CAN_GENERATE_STANDARD_INVOICE: "STANDARD_INVOICE_CAPABILITY_REQUIRED",
     CAN_READ_FINANCE: "FINANCE_READ_CAPABILITY_REQUIRED",
+    CAN_REVIEW_FINANCE_EXCEPTIONS: "FINANCE_EXCEPTION_REVIEW_CAPABILITY_REQUIRED",
+    CAN_MANAGE_FINANCE_HANDOFF: "FINANCE_HANDOFF_CAPABILITY_REQUIRED",
+    CAN_READ_REGISTRY: "REGISTRY_READ_CAPABILITY_REQUIRED",
+    CAN_MANAGE_REGISTRY: "REGISTRY_MANAGEMENT_CAPABILITY_REQUIRED",
+    CAN_REVIEW_EXAM_ELIGIBILITY: "EXAM_ELIGIBILITY_REVIEW_CAPABILITY_REQUIRED",
+    CAN_READ_PORTAL_STATUS: "PORTAL_STATUS_READ_CAPABILITY_REQUIRED",
+    CAN_ADMIN_PORTAL_ACCESS: "PORTAL_ACCESS_ADMIN_CAPABILITY_REQUIRED",
+    CAN_READ_CLASSROOM: "CLASSROOM_READ_CAPABILITY_REQUIRED",
+    CAN_MANAGE_CLASSROOM_HANDOFF: "CLASSROOM_HANDOFF_CAPABILITY_REQUIRED",
+    CAN_READ_MANAGEMENT_REPORTS: "MANAGEMENT_REPORTS_READ_CAPABILITY_REQUIRED",
+    CAN_READ_DELIVERY_HISTORY: "DELIVERY_HISTORY_READ_CAPABILITY_REQUIRED",
     CAN_VERIFY_PAYMENT: "PAYMENT_VERIFICATION_CAPABILITY_REQUIRED",
     CAN_RUN_BATCH_COMMUNICATIONS: "BATCH_COMMUNICATION_CAPABILITY_REQUIRED",
     CAN_OVERRIDE_COOLDOWN: "COOLDOWN_OVERRIDE_CAPABILITY_REQUIRED",
@@ -171,6 +206,17 @@ function adminCapabilityBlockReason_(capability) {
     CAN_GENERATE_STANDARD_QUOTE: "Standard quote capability is required.",
     CAN_GENERATE_STANDARD_INVOICE: "Standard invoice capability is required.",
     CAN_READ_FINANCE: "Finance read capability is required.",
+    CAN_REVIEW_FINANCE_EXCEPTIONS: "Finance exception review capability is required.",
+    CAN_MANAGE_FINANCE_HANDOFF: "Finance handoff management capability is required.",
+    CAN_READ_REGISTRY: "Registry read capability is required.",
+    CAN_MANAGE_REGISTRY: "Registry management capability is required.",
+    CAN_REVIEW_EXAM_ELIGIBILITY: "Exam eligibility review capability is required.",
+    CAN_READ_PORTAL_STATUS: "Portal status read capability is required.",
+    CAN_ADMIN_PORTAL_ACCESS: "Portal access administration capability is required.",
+    CAN_READ_CLASSROOM: "Classroom readiness read capability is required.",
+    CAN_MANAGE_CLASSROOM_HANDOFF: "Classroom handoff management capability is required.",
+    CAN_READ_MANAGEMENT_REPORTS: "Management report capability is required.",
+    CAN_READ_DELIVERY_HISTORY: "Communication delivery history capability is required.",
     CAN_VERIFY_PAYMENT: "Payment verification capability is required.",
     CAN_RUN_BATCH_COMMUNICATIONS: "Batch communication capability is required.",
     CAN_OVERRIDE_COOLDOWN: "Cooldown override capability is required.",

@@ -199,8 +199,8 @@
       <header class="topbar">
         <div class="brand">
           <p class="eyebrow">EduOps Operations Preview Lab</p>
-          <h1>EduOps Operations Workspace</h1>
-          <p>FODE live production operations · ${esc(source.liveRuntime || "runtime identity unavailable")} · snapshot ${esc(source.snapshotId || "")}</p>
+          <h1>EduOps Operations</h1>
+          <p>FODE Admin staging operations · ${esc(source.liveRuntime || "runtime identity unavailable")} · snapshot ${esc(source.snapshotId || "")}</p>
         </div>
         <div class="mode-switch" aria-label="Preview mode selector">
           <button class="${state.mode === "baseline" ? "active" : ""}" data-mode="baseline">Accepted R367 baseline</button>

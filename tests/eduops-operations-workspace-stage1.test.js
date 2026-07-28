@@ -152,7 +152,7 @@ function testHollowClientBinding() {
   assert.deepEqual(app.requestedPayload.filters, { search: "" });
 
   app.renderEduOpsOperationsWorkspace({ cockpit: null });
-  assert.match(element("eduopsOperationsActionPackages").innerHTML, /Authoritative EduOps Operations Workspace decision was not returned/);
+  assert.match(element("eduopsOperationsActionPackages").innerHTML, /Authoritative EduOps Operations decision was not returned/);
 }
 
 function testPresentationCleanliness() {

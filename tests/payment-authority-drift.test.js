@@ -65,18 +65,18 @@ const paymentCases = [
     expectedCompatAfterOverall: ""
   },
   {
-    name: "canonical receipt verified but raw payment stale blank",
+    name: "canonical receipt evidence verified but raw payment stale blank",
     row: { Receipt_Status: "Verified", Payment_Verified: "" },
     expectedBadge: "Verified",
-    expectedDerived: true,
-    expectedCompatAfterOverall: "Yes"
+    expectedDerived: false,
+    expectedCompatAfterOverall: ""
   },
   {
-    name: "canonical and raw payment both verified",
+    name: "receipt evidence verified and raw payment stale verified",
     row: { Receipt_Status: "Verified", Payment_Verified: "Yes" },
     expectedBadge: "Verified",
-    expectedDerived: true,
-    expectedCompatAfterOverall: "Yes"
+    expectedDerived: false,
+    expectedCompatAfterOverall: ""
   },
   {
     name: "conflicting rejected receipt and raw payment verified",
@@ -104,40 +104,42 @@ for (const item of paymentCases) {
 
 function classifyWithCanonicalQueueLogic(row) {
   const docsReviewVerified = row.Docs_Verified === "Yes" || row.computedDocStatus === "Verified";
-  const paymentVerified = row.Receipt_Status === "Verified";
+  const paymentEvidenceVerified = row.Receipt_Status === "Verified";
+  const paymentVerified = false;
   const paymentEvidencePresent = Boolean(row.Fee_Receipt_File);
   return {
-    awaitingPayment: docsReviewVerified && !paymentVerified && !paymentEvidencePresent,
-    payments: docsReviewVerified && !paymentVerified && paymentEvidencePresent,
-    anomalies: paymentVerified && !docsReviewVerified,
+    awaitingPayment: docsReviewVerified && !paymentEvidenceVerified && !paymentVerified && !paymentEvidencePresent,
+    payments: docsReviewVerified && !paymentEvidenceVerified && !paymentVerified && paymentEvidencePresent,
+    evidenceVerified: docsReviewVerified && paymentEvidenceVerified,
+    anomalies: paymentEvidenceVerified && !docsReviewVerified,
     paidApproved: paymentVerified
   };
 }
 
 assert.deepEqual(
   classifyWithCanonicalQueueLogic({ Docs_Verified: "Yes", Receipt_Status: "Pending", Payment_Verified: "", Fee_Receipt_File: "https://receipt" }),
-  { awaitingPayment: false, payments: true, anomalies: false, paidApproved: false },
+  { awaitingPayment: false, payments: true, evidenceVerified: false, anomalies: false, paidApproved: false },
   "docs verified + receipt present + payment not verified must route to Payments to Verify"
 );
 assert.deepEqual(
   classifyWithCanonicalQueueLogic({ Docs_Verified: "Yes", Receipt_Status: "Verified", Payment_Verified: "", Fee_Receipt_File: "" }),
-  { awaitingPayment: false, payments: false, anomalies: false, paidApproved: true },
-  "docs verified + canonical payment verified + missing receipt routes as paid-approved payment authority state"
+  { awaitingPayment: false, payments: false, evidenceVerified: true, anomalies: false, paidApproved: false },
+  "docs verified + receipt evidence verified must not route as paid-approved"
 );
 assert.deepEqual(
   classifyWithCanonicalQueueLogic({ Docs_Verified: "Yes", Receipt_Status: "", Payment_Verified: "Yes", Fee_Receipt_File: "" }),
-  { awaitingPayment: true, payments: false, anomalies: false, paidApproved: false },
+  { awaitingPayment: true, payments: false, evidenceVerified: false, anomalies: false, paidApproved: false },
   "raw Payment_Verified yes with blank Receipt_Status must not classify as payment verified"
 );
 assert.deepEqual(
   classifyWithCanonicalQueueLogic({ Docs_Verified: "Yes", Receipt_Status: "Rejected", Payment_Verified: "Yes", Fee_Receipt_File: "https://receipt" }),
-  { awaitingPayment: false, payments: true, anomalies: false, paidApproved: false },
+  { awaitingPayment: false, payments: true, evidenceVerified: false, anomalies: false, paidApproved: false },
   "raw Payment_Verified yes with rejected Receipt_Status must not classify as payment verified"
 );
 assert.deepEqual(
   classifyWithCanonicalQueueLogic({ Docs_Verified: "", computedDocStatus: "Pending", Receipt_Status: "Verified", Payment_Verified: "Yes", Fee_Receipt_File: "https://receipt" }),
-  { awaitingPayment: false, payments: false, anomalies: true, paidApproved: true },
-  "payment-first anomaly remains visible when canonical payment is verified before document verification"
+  { awaitingPayment: false, payments: false, evidenceVerified: false, anomalies: true, paidApproved: false },
+  "payment-evidence-first anomaly remains visible before document verification"
 );
 
 const reviewQueues = extractFunction(adminSource, "admin_getReviewQueues");

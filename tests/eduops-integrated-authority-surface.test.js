@@ -82,9 +82,9 @@ assert.doesNotMatch(client, /legacy_invite/, "internal compatibility ID must not
 assert.match(files.components, /function rowDetailHtml[\s\S]*Lifecycle[\s\S]*Documents[\s\S]*Finance[\s\S]*Next-action timestamp[\s\S]*contextRibbonHtml/i, "compact workload rows must preserve backend lifecycle, finance, document and cooling-off context in expanded detail");
 assert.match(files.components, /OPSEDU_OPERATIONAL_ROW_V1[\s\S]*issueLabel[\s\S]*nextActionLabel[\s\S]*statusLabel[\s\S]*contactLabel/, "collapsed workload rows must render the backend-authored operational row DTO");
 assert.match(files.workbench, /Lifecycle[\s\S]*Finance[\s\S]*Documents[\s\S]*Actionability[\s\S]*Cooling-off/, "Workbench must expose the same state context");
-assert.match(files.workload, /operationalClassification:\s*"FODE live production operations"/, "identity classification must be server-projected");
+assert.match(files.workload, /operationalClassification:\s*"FODE Admin staging operations"/, "identity classification must be server-projected");
 assert.match(files.workload, /appsScriptVersionReason/, "unavailable platform version must have a precise reason");
-assert.doesNotMatch(client, /Admin staging/, "live identity surface must not be labelled staging");
+assert.doesNotMatch(client, /FODE Admin staging operations/, "client must not guess the server runtime classification");
 assert.doesNotMatch(client, /FODE live production operations/, "client must not guess a runtime classification");
 assert.match(client, /Runtime identity unavailable\./, "missing server identity must render the explicit unavailable state");
 
@@ -125,7 +125,7 @@ assert.match(files.components, /roles:\s*\["Roles & Capabilities",\s*"AUTHORITY"
 assert.match(files.components, /Administrative authority/, "Roles report must use accurate administrative authority wording");
 assert.match(files.components, /rolesDefinitionHtml[\s\S]*Signed-in account[\s\S]*Durable role[\s\S]*Allowlist[\s\S]*Durable role management[\s\S]*Temporary capability grants[\s\S]*Active temporary grants/, "My Access must distinguish durable role management from temporary capability grants");
 assert.doesNotMatch(files.components, /Grant records/, "My Access must not substitute historical grant records for active grants");
-assert.match(files.components, /rolesAccountRowsHtml[\s\S]*<th>Account<\/th><th>Role<\/th><th>Individual email<\/th><th>Batch email<\/th><th>Documents<\/th><th>Finance<\/th><th>Portal<\/th><th>Durable role management<\/th><th>Temporary capability grants<\/th><th>Details<\/th>/, "Roles primary matrix must be account-first with human operational columns and separated role/grant authority");
+assert.match(files.components, /rolesAccountRowsHtml[\s\S]*<th>Account<\/th><th>Role<\/th><th>Individual email<\/th><th>Batch email<\/th><th>Documents<\/th><th>Finance<\/th><th>Registry<\/th><th>Exam<\/th><th>Portal<\/th><th>Classroom<\/th><th>Management<\/th><th>Delivery<\/th><th>Durable role management<\/th><th>Temporary capability grants<\/th><th>Details<\/th>/, "Roles primary matrix must be account-first with human operational columns and separated role/grant authority");
 assert.doesNotMatch(files.components.match(/function rolesAccountRowsHtml[\s\S]*?function rolesMatrixHtml/)?.[0] || "", /capability\.capabilityKey/, "primary account matrix must not expose raw capability keys");
 assert.match(files.components, /function rolesAccountDetailHtml[\s\S]*Technical key[\s\S]*capability\.capabilityKey/, "raw capability keys must be secondary technical evidence only");
 assert.doesNotMatch(files.components.match(/function rolesAccountRowsHtml[\s\S]*?function rolesMatrixHtml/)?.[0] || "", /data-role-grant-account|data-role-grant-capability|data-role-revoke-grant/, "Roles surface must not scatter grant/revoke controls through account rows");
