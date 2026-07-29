@@ -1,6 +1,6 @@
 # FODE Runtime Architecture
 
-Status: Architecture Build V1 freeze candidate at Admin `@373`, runtime `r340 / 340`
+Status: R391B-GOV governance baseline at Admin `@427`, runtime `r391 / 391`
 Scope: documentation and governance only
 
 This folder is the consolidated architecture entrypoint for FODE Runtime.
@@ -70,9 +70,17 @@ Operations Workspace, Review Workspace and Communications consume the resulting 
 
 The arrow between Canonical Lifecycle and Actionability represents fact mutation followed by re-resolution, not recursive implementation dependency. Review Workspace mutations change row facts; the next read resolves lifecycle, workload, communication recommendation and send authority again.
 
-## V1 Runtime Truth
+## Current Runtime Truth
 
-As of `r340 / 340`, Operator Next (`?view=operator-next`) is the primary work surface. Current Admin (`?view=admin`) remains the supported fallback and hosts the shared mature Review and Batch Communication components. OPS is retired as operational authority and remains reference-only. FormDesigner remains the current intake path; Google Forms replacement remains future work.
+As of the accepted R391B baseline, Admin staging is `@427 / r391 / 391`, Student remains `@247 / r217 / 217`, and Production is untouched. The active local repository is `D:\Repos\FODE_Runtime_1wog` at Git baseline `6bbbfdd09ec8b491b7fa480481fd57fae00dcaba`.
+
+Operations Workspace and direct Workbench review are supported Admin workflows. The temporary Work Session restriction imposed after R391A is lifted because R391B made Workbench responses request-generation-bound and Work Session responses request-generation- and applicant-bound.
+
+Batch send and alternative bulk communication paths remain prohibited. Batch availability must not be inferred from UI projections, cached client state or compatibility DTOs. Duplicate, ambiguous or unproven population integrity blocks ambiguous individual actions and all Batch paths.
+
+The durable Communication Event Ledger remains deferred to R390B2 and must not be represented as ready to begin. R391C is the next implementation pass after this governance refresh is accepted.
+
+Operator Next (`?view=operator-next`) remains historical/reference context unless a future CIS explicitly changes route authority. Current Admin hosts the supported Operations Workspace and Workbench surfaces. OPS is retired as operational authority and remains reference-only. FormDesigner remains the current intake path; Google Forms replacement remains future work.
 
 Protected live surfaces include document verification, signed document routes, applicant-folder preview/gallery/lightbox, payment verification, Zoho Books, communication semantic registry, Stage Batch separation, runtime identity, release governance, and DR tooling.
 

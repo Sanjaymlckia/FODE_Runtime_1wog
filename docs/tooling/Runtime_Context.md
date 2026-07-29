@@ -6,6 +6,19 @@ Use `runtime-context.json` as the single source of project tooling configuration
 
 Runtime files such as `Config.js` still own project runtime behavior. REP context owns tooling inputs: repositories, runtime URLs, deployment IDs, expected identities, Playwright locations, evidence paths, acceptance profiles, and read-only diagnostics.
 
+Current FODE baseline recorded by `runtime-context.json`:
+
+- Repository: `D:\Repos\FODE_Runtime_1wog`
+- Git baseline: `6bbbfdd09ec8b491b7fa480481fd57fae00dcaba`
+- Admin staging: `@427 / r391 / 391`
+- Student: `@247 / r217 / 217`
+- Production: untouched
+- Accepted repairs: `R390B1`, `R391A` audit, `R391B`
+- Current restriction: Batch send prohibited
+- Next implementation pass after governance acceptance: `R391C`
+
+`runtime-context.json` is source-controlled tooling context. It records expected identities and governance state; it does not prove live runtime state by itself. Live `whoami` remains runtime truth before any release acceptance or deployment-dependent claim.
+
 ## Required Fields
 
 Each project context should define:
@@ -22,6 +35,7 @@ Each project context should define:
 - diagnostic capabilities;
 - release management defaults;
 - mutation-default feature flags.
+- accepted baseline, accepted repairs, current restrictions and next-pass guidance where needed for project governance.
 
 ## Validation
 

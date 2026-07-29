@@ -1,7 +1,58 @@
 # Architecture Governance
 
-Status: r23B consolidation draft
-Scope: documentation governance only
+Status: R391B-GOV runtime governance refresh
+Scope: documentation governance only; no runtime release
+
+## Current Accepted Runtime Baseline
+
+This document records governance state only. It does not change Apps Script source, deployments, Sheet data, Gmail, Drive, Zoho, Classroom, portal state, role grants, applicant records, tests or runtime behavior.
+
+| Surface | Accepted state |
+| --- | --- |
+| Local repository | `D:\Repos\FODE_Runtime_1wog` |
+| Git baseline | `6bbbfdd09ec8b491b7fa480481fd57fae00dcaba` |
+| Git alignment | `HEAD == origin/main`, ahead/behind `0 / 0`, clean working tree at R391B acceptance |
+| Admin staging | `@427 / r391 / 391` |
+| Student | `@247 / r217 / 217` |
+| Production | Untouched |
+
+## Accepted Work
+
+`R390B1 Communication Safety Repair` is accepted. The bounded communication implementation preserves preview identity, operation identity, receipt identity, contactability and cooldown enforcement, communication block codes and reasons, receipt and history presentation, PNG-local timestamps and explicit manual handling for later attempts. The durable Communication Event Ledger remains deferred to `R390B2`.
+
+`R391A Platform Audit` is accepted as the current audit baseline: `CRITICAL: 1`, `HIGH: 8`, `MEDIUM: 10`, `LOW: 2`, `TOTAL: 21`. The audit identified client-state and applicant-identity races, population-integrity ambiguity, classification semantics, contactability routing, Finance terminology, DTO terminology, capability semantics, Operations Workspace density, Workbench readability, dead code, duplicate or fragmented tests, bulk communication authority, durable communication history and governance drift.
+
+`R391B Critical Correctness Repair` is accepted at Admin staging `@427 / r391 / 391`. Workbench responses are request-generation-bound. Work Session responses are request-generation- and applicant-bound. Stale workload, Workbench and bootstrap responses cannot render. Applicant identity must match the active session before a response is accepted. Rows and empty-state rendering are mutually exclusive. Post-mutation and receipt responses require authoritative refresh. Duplicate or unproven population integrity blocks ambiguous individual actions and all Batch paths. Full validation passed: `77 / 77` test files and `6,821` assertions.
+
+The temporary Work Session restriction imposed after R391A is lifted. Work Session navigation and direct Workbench workflows are restored under the R391B identity and generation gates.
+
+## Current Operational Restrictions
+
+Permitted:
+
+- Work Session navigation.
+- Direct Workbench review.
+- Bounded individual applicant actions where population integrity is proven.
+- Existing accepted Admin staging workflows.
+
+Prohibited:
+
+- Batch send.
+- Any alternative bulk communication path.
+- Bypassing Stage Batch authority.
+- Acting against an applicant where population integrity is duplicated, ambiguous or unproven.
+- Beginning R390B2 before prerequisite semantic and architecture repairs are accepted.
+
+Batch send remains prohibited pending bulk-authority consolidation and later durable communication architecture. `R390B2` is not ready to begin.
+
+## Recommended Programme
+
+1. R391B-GOV - governance refresh and baseline reconciliation.
+2. R391C - classification, routing, Finance, DTO and capability semantic repair.
+3. R391D/E - Operations Workspace and Workbench density/readability refinement.
+4. R391G/H - test, architecture and communication-ownership consolidation.
+5. R391J - final governance reconciliation, only if still required.
+6. R390B2 - durable Communication Event Ledger.
 
 ## Source Preservation Rule
 
@@ -95,8 +146,8 @@ Current documented authority baseline:
 | Local Git repository | `D:\Repos\FODE_Runtime_1wog` | `AGENTS.md`, active workspace path | Mutate only files allowed by active CIS. |
 | GitHub repository | `https://github.com/Sanjaymlckia/FODE_Runtime_1wog.git` | `.git/config` | Commit/push only when explicitly authorized. |
 | Apps Script project | `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90` | `.clasp.json` | No push/version/repin without release CIS and remote-source gate. |
-| Admin staging deployment | `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ` | `Config.js`, `LIVE_URLS.md` | Repin/browser accept only after live `whoami` proof. |
-| Student staging deployment | `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv` | `Config.js`, `LIVE_URLS.md` | No Student action unless separately authorized. |
+| Admin staging deployment | `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ`, accepted `@427 / r391 / 391` | `Config.js`, `LIVE_URLS.md`, live `whoami` | Repin/browser accept only after live `whoami` proof. |
+| Student staging deployment | `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv`, accepted `@247 / r217 / 217` | `Config.js`, `LIVE_URLS.md`, live `whoami` | No Student action unless separately authorized. |
 | Production deployment | Unknown / not proven | `audits/fode_runtime_dr_backup_audit_v01.md` | Read-only until exact deployment ID and environment are proven. |
 | Runtime spreadsheet - staging | `1YFgLtUExz__fzQ4zTNoIyGTu-nrnasS7dIaShNPl7Cs`, tab `FODE_Data` | `Config.js` | No Sheet mutation unless CIS authorizes exact row/tab operation. |
 | Runtime spreadsheet - production | `1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4SalU`, tab `FODE_Data` | `Config.js`, Data Source Authority Register | Production mutation prohibited unless explicitly authorized. |

@@ -9,7 +9,9 @@
       "repository": {
         "path": "D:\\Repos\\FODE_Runtime_1wog",
         "github": "https://github.com/Sanjaymlckia/FODE_Runtime_1wog.git",
-        "branch": "main"
+        "branch": "main",
+        "acceptedBaseline": "6bbbfdd09ec8b491b7fa480481fd57fae00dcaba",
+        "baselineState": "HEAD == origin/main; ahead/behind 0 / 0; working tree clean"
       },
       "appsScript": {
         "scriptId": "1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90",
@@ -29,19 +31,16 @@
           "deploymentId": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ",
           "url": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec",
           "whoamiUrl": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami",
-          "expectedRuntime": "r354",
-          "expectedDeploy": 354,
-          "expectedAppsScriptVersion": 381,
+          "expectedRuntime": "r391",
+          "expectedDeploy": 391,
+          "expectedAppsScriptVersion": 427,
           "lastRelease": {
-            "runtimeIdentity": "r347 / 347",
-            "appsScriptVersion": 381,
-            "deploymentPin": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @381",
-            "description": "Current Admin readability, authority transparency, Operator Next parallel readability, and hidden-preview overlap correction",
+            "runtimeIdentity": "r391 / 391",
+            "appsScriptVersion": 427,
+            "deploymentPin": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @427",
+            "description": "R391B critical correctness repair",
             "commitRefs": [
-              "fc210d1",
-              "7aa2fa4",
-              "86da669",
-              "c690df3"
+              "6bbbfdd09ec8b491b7fa480481fd57fae00dcaba"
             ]
           }
         },
@@ -57,7 +56,7 @@
           "deploymentId": null,
           "url": null,
           "whoamiUrl": null,
-          "status": "not-configured-do-not-infer"
+          "status": "untouched-do-not-infer"
         },
         "ops": {
           "deploymentId": null,
@@ -179,6 +178,47 @@
         "rollbackPreference": "deployment-repin-first",
         "tagRecommendationPattern": "{project}-r{deploy}-{purpose}"
       },
+      "acceptedRepairs": {
+        "R390B1": {
+          "status": "accepted",
+          "summary": "Bounded communication safety repair preserving preview, operation, receipt identity, contactability, cooldown enforcement, block reasons, receipt/history presentation, PNG-local timestamps and manual handling for later attempts.",
+          "deferred": "Durable Communication Event Ledger remains deferred to R390B2."
+        },
+        "R391A": {
+          "status": "accepted-audit",
+          "findings": {
+            "critical": 1,
+            "high": 8,
+            "medium": 10,
+            "low": 2,
+            "total": 21
+          }
+        },
+        "R391B": {
+          "status": "accepted",
+          "admin": "@427 / r391 / 391",
+          "student": "@247 / r217 / 217",
+          "production": "untouched",
+          "validation": "77 / 77 test files PASS; 6,821 assertions"
+        }
+      },
+      "currentOperationalState": {
+        "permitted": [
+          "Work Session navigation",
+          "direct Workbench review",
+          "bounded individual applicant actions where population integrity is proven",
+          "existing accepted Admin staging workflows"
+        ],
+        "prohibited": [
+          "Batch send",
+          "any alternative bulk communication path",
+          "bypassing Stage Batch authority",
+          "acting against an applicant where population integrity is duplicated, ambiguous or unproven",
+          "beginning R390B2 before prerequisite semantic and architecture repairs are accepted"
+        ],
+        "nextPass": "R391C after R391B-GOV acceptance",
+        "deferred": "R390B2 durable Communication Event Ledger is not ready to begin."
+      },
       "featureFlags": {
         "runtimeMutationAllowedByDefault": false,
         "sheetMutationAllowedByDefault": false,
@@ -193,6 +233,7 @@
         "migrationCompletedAt": "2026-07-13T01:45:55.000Z",
         "appsScriptVersion": 373,
         "runtimeIdentity": "r340 / 340",
+        "identityScope": "historical capability-grants migration evidence, not current runtime",
         "backupReference": "FODE_Runtime_H1_Backup_20260713014329",
         "zeroGrantRowsVerified": true
       }

@@ -1,11 +1,15 @@
 # Data Source Authority Register
 
-Status: r23C prerequisite register
+Status: R391B-GOV authority register refresh
 Scope: documentation/audit only
 
-This register prevents confusion between production, staging, cleaned, historical, diagnostic, log, and secret sheets before any read-only r23C Operator Actionability Discovery continues.
+This register prevents confusion between production, staging, cleaned, historical, diagnostic, log, secret, derived UI, communication preview, communication operation, receipt/history and deployment identity sources.
 
 No runtime code, Apps Script source, Sheet data, deployment, version, repin, commit, tag, send, or deletion is changed by this document.
+
+Accepted baseline: Git `6bbbfdd09ec8b491b7fa480481fd57fae00dcaba`, Admin `@427 / r391 / 391`, Student `@247 / r217 / 217`, Production untouched.
+
+R391B is accepted. Canonical population integrity now propagates into individual and Batch authority. Duplicate, ambiguous or unproven population integrity blocks ambiguous individual actions and all Batch paths. This documentation does not lift the Batch-send prohibition.
 
 ## Mandatory Warning
 
@@ -22,6 +26,20 @@ Before drawing a production or operational conclusion from a Sheet, confirm:
 - whether the source is production/live, staging/cleaned, historical, diagnostic, log-only, or secrets-only
 
 Runtime `whoami` remains deployment truth. Sheet metadata remains data-source proof. Local source constants alone are not enough.
+
+## Authority Classes
+
+| Authority class | Current source | Authoritative for | Not authoritative for |
+| --- | --- | --- | --- |
+| Authoritative applicant population data | Proven live/staging `FODE_Data` row source plus canonical population reconciliation | Applicant row accounting, duplicate/missing ApplicantID evidence, exact row identity after source proof | UI availability labels, cached client state, communication receipt durability |
+| Derived UI projections | Operations Workspace, Workbench, Actionability and workload DTOs | Display, routing and operator affordances after accepted generation and source binding | Applicant population truth, Sheet mutation authority, deployment identity |
+| Communication previews | Preview RPC responses bound to applicant, row, operation, capability and population-integrity fingerprint | Proposed message/action eligibility before execution | Durable send history, final delivery result, independent applicant population proof |
+| Communication operation results | Execute RPC result bound to accepted preview/operation identity | Immediate operation outcome and receipt presentation | Long-term Communication Event Ledger authority |
+| Receipts and communication history | Current bounded receipt/history implementation and transient idempotency/cache projections | Short-window exact receipt/history presentation and replay handling | Final durable Communication Event Ledger; cross-cache sequence truth |
+| Deployment/runtime identity | Live `whoami`, Apps Script deployment pin, Apps Script version | Deployed runtime truth and release acceptance | Sheet row truth or source-controlled documentation truth |
+| Source-controlled governance records | `runtime-context.json`, `docs/architecture/Governance.md`, this register, `LIVE_URLS.md` | Process, expected baseline and canonical reference URLs | Live runtime behavior without `whoami`; live data without source proof |
+
+UI DTOs, cached projections and client state must never be treated as authoritative applicant population data. The current bounded receipt/history implementation must not be described as the final durable Communication Event Ledger.
 
 ## Source Discovery Basis
 
@@ -99,15 +117,16 @@ Minimum production actionability read columns:
 
 If any required communication-history columns are absent, r23C may only produce a partial non-communication actionability analysis unless separately approved.
 
-## r23C Source Decision
+## Current Source Decision
 
-For r23C Operator Actionability Discovery:
+For future read-only production analysis:
 
 - Use production `FODE_Applications_2026` / `FODE_Data` only if the operator explicitly approves production read-only analysis.
 - Do not use staging `FODE_Clean_Staged_2026` for production workload percentages.
 - Do not use `Webhook_Log` tabs as communication-history authority.
 - Do not use `PortalSecrets` for actionability discovery.
 - Do not use `Initial_to_28_May_2026_data` until its structure is proven.
+- Do not begin R390B2 until R391C semantic repairs, bulk communication ownership decisions and durable architecture prerequisites are accepted.
 
 ## Stop Condition Status
 
@@ -118,4 +137,4 @@ Production/live operational sheet can be identified safely:
 - Candidate live tab: `FODE_Data`
 - Communication-history headers: present in `FODE_Data`
 
-r23C row-level backtest remains stopped until the operator approves read-only production analysis using this source.
+Row-level production analysis remains stopped until the operator approves read-only production analysis using this source.
