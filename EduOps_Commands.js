@@ -92,6 +92,107 @@ function eduopsQueryFingerprintForSelection_(query) {
   return eduopsWorkloadQueryFingerprint_(query);
 }
 
+function eduopsPopulationIntegrityGate_(resolved) {
+  var source = resolved && typeof resolved === "object" ? resolved : {};
+  if (typeof canonicalPopulationIntegrityGate_ !== "function") {
+    var unavailable = {
+      schemaVersion: "CANONICAL_POPULATION_INTEGRITY_V1",
+      status: "UNPROVEN",
+      authoritySafeToBatch: false,
+      blockCode: "POPULATION_INTEGRITY_UNPROVEN",
+      blockReason: "Canonical population integrity evidence is absent or incomplete.",
+      populationCount: 0,
+      scannedRowCount: 0,
+      distinctApplicantIdCount: 0,
+      duplicateApplicantIdCount: 0,
+      duplicateApplicantIds: [],
+      duplicateRowReferences: [],
+      missingOrInvalidApplicantIdCount: 0,
+      missingOrInvalidApplicantIds: [],
+      reconciliationFindings: [],
+      evidenceTruncated: false,
+      integrityFingerprint: ""
+    };
+    return {
+      ok: false,
+      blockCode: unavailable.blockCode,
+      blockReason: unavailable.blockReason,
+      populationIntegrity: unavailable,
+      integrityFingerprint: ""
+    };
+  }
+  var canonicalGate = canonicalPopulationIntegrityGate_(source);
+  var integrity = eduopsClone_(canonicalGate.populationIntegrity);
+  return {
+    ok: canonicalGate.ok === true,
+    blockCode: eduopsClean_(canonicalGate.blockCode || ""),
+    blockReason: eduopsClean_(canonicalGate.blockReason || ""),
+    populationIntegrity: integrity,
+    integrityFingerprint: eduopsClean_(integrity.integrityFingerprint || ""),
+    contractIssues: Array.isArray(canonicalGate.contractIssues) ? canonicalGate.contractIssues.slice() : []
+  };
+}
+
+function eduopsPopulationIntegrityBlockedPreview_(definition, request, resolved, gate) {
+  var integrityGate = gate && typeof gate === "object" ? gate : eduopsPopulationIntegrityGate_(resolved);
+  return {
+    ok: true,
+    state: "BLOCKED",
+    executable: false,
+    statusLabel: "Blocked by population integrity",
+    statusReason: integrityGate.blockReason,
+    blockCode: integrityGate.blockCode,
+    blockReason: integrityGate.blockReason,
+    schemaVersion: "EDUOPS_COMMAND_PREVIEW_V1",
+    operation: definition && definition.operation || "BATCH_COMMUNICATION",
+    commandType: definition && definition.operation || "BATCH_COMMUNICATION",
+    operationLabel: definition && definition.publicLabel || "Batch communication",
+    product: "FODE",
+    snapshotId: eduopsClean_(resolved && resolved.snapshotId || ""),
+    queryFingerprint: eduopsClean_(request && request.queryFingerprint || ""),
+    idempotencyKey: eduopsClean_(request && request.idempotencyKey || ""),
+    selectedApplicantIds: [],
+    selectionBinding: null,
+    masterCohortSize: 0,
+    evaluatedCohortSize: 0,
+    executionCohortSize: 0,
+    remainingAfterExecution: 0,
+    executionCap: 0,
+    partitions: [],
+    recipients: [],
+    eligibleCount: 0,
+    blockedCount: Number(integrityGate.populationIntegrity && integrityGate.populationIntegrity.populationCount || 0),
+    populationIntegrity: eduopsClone_(integrityGate.populationIntegrity),
+    integrityFingerprint: eduopsClean_(integrityGate.integrityFingerprint || "")
+  };
+}
+
+function eduopsBlockPreviewForPopulationIntegrity_(preview, gate, overrideCode, overrideReason) {
+  var integrityGate = gate && typeof gate === "object" ? gate : eduopsPopulationIntegrityGate_({});
+  var code = eduopsClean_(overrideCode || integrityGate.blockCode || "POPULATION_RECONCILIATION_FAILED");
+  var reason = eduopsClean_(overrideReason || integrityGate.blockReason || "Canonical population reconciliation did not pass.");
+  preview.state = "BLOCKED";
+  preview.executable = false;
+  preview.executionRevalidationBlocked = true;
+  preview.blockCode = code;
+  preview.blockReason = reason;
+  preview.statusLabel = "Blocked during population-integrity revalidation";
+  preview.statusReason = reason;
+  preview.populationIntegrity = eduopsClone_(integrityGate.populationIntegrity);
+  preview.integrityFingerprint = eduopsClean_(integrityGate.integrityFingerprint || "");
+  preview.authorityPreview = {
+    ok: false,
+    result: "BLOCKED",
+    blockCode: code,
+    blockReason: reason,
+    eligible: 0,
+    blocked: Number(integrityGate.populationIntegrity && integrityGate.populationIntegrity.populationCount || 0),
+    recipients: [],
+    populationIntegrity: eduopsClone_(integrityGate.populationIntegrity)
+  };
+  return preview;
+}
+
 function eduopsServerSelectionQueryBinding_(source, resolved, request) {
   var binding = source && source.queryBinding && typeof source.queryBinding === "object" ? source.queryBinding : null;
   if (!binding) throw new Error("QUERY_SELECTION_CONTEXT_REQUIRED");
@@ -99,6 +200,8 @@ function eduopsServerSelectionQueryBinding_(source, resolved, request) {
   if (eduopsClean_(binding.authority || "") !== "SERVER_AUTHORED") throw new Error("QUERY_BINDING_MISMATCH");
   if (eduopsClean_(binding.product || "") !== "FODE") throw new Error("STALE_SELECTION_BINDING");
   if (eduopsClean_(binding.snapshotId || "") !== resolved.snapshotId) throw new Error("STALE_SELECTION_BINDING");
+  var resolvedIntegrityFingerprint = eduopsClean_(resolved && resolved.populationIntegrity && resolved.populationIntegrity.integrityFingerprint || "");
+  if (!resolvedIntegrityFingerprint || eduopsClean_(binding.integrityFingerprint || "") !== resolvedIntegrityFingerprint) throw new Error("STALE_SELECTION_BINDING");
   var query = binding.query && typeof binding.query === "object" ? binding.query : null;
   if (!query) throw new Error("QUERY_SELECTION_CONTEXT_REQUIRED");
   var bindingFingerprint = eduopsClean_(binding.queryFingerprint || "");
@@ -109,6 +212,7 @@ function eduopsServerSelectionQueryBinding_(source, resolved, request) {
     snapshotId: resolved.snapshotId,
     query: query,
     queryFingerprint: bindingFingerprint,
+    integrityFingerprint: resolvedIntegrityFingerprint,
     queryBinding: eduopsClone_(binding)
   };
 }
@@ -157,6 +261,7 @@ function eduopsResolveBatchSelection_(selection, resolved, request) {
     selectedApplicantIds: masterIds,
     excludedApplicantIds: Object.keys(excluded),
     executionApplicantIds: executionIds,
+    integrityFingerprint: eduopsClean_(resolved && resolved.populationIntegrity && resolved.populationIntegrity.integrityFingerprint || ""),
     masterCohortSize: masterIds.length,
     excludedCount: Math.max(0, masterIds.length - remainingMasterIds.length),
     blockedCount: blockedCount,
@@ -286,6 +391,30 @@ function eduops_getBatchCommunicationCatalogue(payload) {
   eduopsRequireCommandCapability_(access, definition);
   var p = payload && typeof payload === "object" ? payload : {};
   var resolved = eduopsResolveFodeSnapshot_(access);
+  var populationIntegrityGate = eduopsPopulationIntegrityGate_(resolved);
+  if (!populationIntegrityGate.ok) {
+    return {
+      ok: false,
+      schemaVersion: "EDUOPS_BATCH_COMMUNICATION_CATALOGUE_V1",
+      state: "BLOCKED",
+      statusLabel: "Blocked by population integrity",
+      executable: false,
+      authoritySource: "Canonical Population Integrity",
+      snapshotId: resolved.snapshotId,
+      blockCode: populationIntegrityGate.blockCode,
+      blockReason: populationIntegrityGate.blockReason,
+      populationIntegrity: eduopsClone_(populationIntegrityGate.populationIntegrity),
+      integrityFingerprint: eduopsClean_(populationIntegrityGate.integrityFingerprint || ""),
+      masterCohortSize: 0,
+      evaluatedCohortSize: 0,
+      executionLimit: 0,
+      remainingAfterEvaluation: 0,
+      excludedCount: 0,
+      blockedCount: Number(populationIntegrityGate.populationIntegrity.populationCount || 0),
+      masterRecipients: [],
+      templates: []
+    };
+  }
   var selection = eduopsResolveBatchSelection_(p.selection, resolved, p);
   var sheet = openDataSheet_();
   var rowLookup = buildSelectedApplicantRowLookup_(sheet);
@@ -381,6 +510,8 @@ function eduops_getBatchCommunicationCatalogue(payload) {
     executable: templates.some(function (template) { return template.selectable === true; }),
     authoritySource: "Communication Authority",
     snapshotId: resolved.snapshotId,
+    populationIntegrity: eduopsClone_(populationIntegrityGate.populationIntegrity),
+    integrityFingerprint: eduopsClean_(populationIntegrityGate.integrityFingerprint || ""),
     selectionBinding: eduopsClone_(selection),
     masterCohortSize: Math.max(0, selection.masterCohortSize - selection.excludedCount),
     evaluatedCohortSize: selection.executionCohortSize,
@@ -444,6 +575,21 @@ function eduopsRevalidateCommandForExecution_(preview, access) {
   eduopsRequireCommandCapability_(access, definition);
   var current = eduopsResolveFodeSnapshot_(access);
   if (current.snapshotId !== preview.snapshotId || eduopsClean_(request.snapshotId || request.expectedSnapshotId || "") !== current.snapshotId) throw new Error("STALE_SNAPSHOT: source changed before execution");
+  var populationIntegrityGate = eduopsPopulationIntegrityGate_(current);
+  if (definition.operation === "BATCH_COMMUNICATION") {
+    if (!populationIntegrityGate.ok) {
+      return eduopsBlockPreviewForPopulationIntegrity_(preview, populationIntegrityGate);
+    }
+    var previewIntegrityFingerprint = eduopsClean_(preview.integrityFingerprint || preview.populationIntegrity && preview.populationIntegrity.integrityFingerprint || "");
+    if (!previewIntegrityFingerprint || previewIntegrityFingerprint !== populationIntegrityGate.integrityFingerprint) {
+      return eduopsBlockPreviewForPopulationIntegrity_(
+        preview,
+        populationIntegrityGate,
+        "POPULATION_RECONCILIATION_FAILED",
+        "Canonical population integrity changed after preview. Refresh and preview the Batch cohort again."
+      );
+    }
+  }
   var applicantId = eduopsClean_(preview.applicantId || "");
   var selection = request.selection && typeof request.selection === "object" ? eduopsResolveBatchSelection_(request.selection, current, request) : null;
   if (selection && !definition.batchSafe) throw new Error("BATCH_NOT_ALLOWED");
@@ -512,6 +658,10 @@ function eduops_previewCommand(payload) {
   var resolved = eduopsResolveFodeSnapshot_(access);
   var requestedSnapshotId = eduopsClean_(p.snapshotId || p.expectedSnapshotId || "");
   if (!requestedSnapshotId || requestedSnapshotId !== resolved.snapshotId) throw new Error("STALE_SNAPSHOT: refresh before preview");
+  var populationIntegrityGate = eduopsPopulationIntegrityGate_(resolved);
+  if (definition.operation === "BATCH_COMMUNICATION" && !populationIntegrityGate.ok) {
+    return eduopsPopulationIntegrityBlockedPreview_(definition, p, resolved, populationIntegrityGate);
+  }
   var selection = p.selection && typeof p.selection === "object" ? p.selection : null;
   var applicantId = eduopsClean_(p.applicantId || "");
   if (selection && !definition.batchSafe) throw new Error("BATCH_NOT_ALLOWED: " + definition.operation + " is individual-only");
@@ -526,7 +676,7 @@ function eduops_previewCommand(payload) {
   }
   if (applicantId) {
     var exact = eduopsFodeApplicantRead_(applicantId, {}, resolved.snapshotId);
-    if (!exact || exact.ok !== true) throw new Error("APPLICANT_NOT_FOUND");
+    if (!exact || exact.ok !== true) throw new Error(eduopsClean_(exact && exact.code || "APPLICANT_NOT_FOUND"));
     if (p.rowKey && eduopsClean_(p.rowKey) !== eduopsClean_(exact.rowKey)) throw new Error("APPLICANT_CONTEXT_MISMATCH");
   }
   if (definition.operation === "DOCUMENT_REVIEW") {
@@ -555,6 +705,7 @@ function eduops_previewCommand(payload) {
     messageType: commandMessageType,
     product: "FODE",
     snapshotId: resolved.snapshotId,
+    integrityFingerprint: definition.operation === "BATCH_COMMUNICATION" ? populationIntegrityGate.integrityFingerprint : "",
     queryFingerprint: selection ? selection.queryFingerprint : eduopsClean_(p.queryFingerprint || ""),
     applicantId: applicantId,
     selectedApplicantIds: selectedApplicantIds,
@@ -610,6 +761,8 @@ function eduops_previewCommand(payload) {
     operationLabel: definition.publicLabel,
     product: "FODE",
     snapshotId: resolved.snapshotId,
+    populationIntegrity: definition.operation === "BATCH_COMMUNICATION" ? eduopsClone_(populationIntegrityGate.populationIntegrity) : null,
+    integrityFingerprint: definition.operation === "BATCH_COMMUNICATION" ? populationIntegrityGate.integrityFingerprint : "",
     queryFingerprint: selection ? selection.queryFingerprint : eduopsClean_(p.queryFingerprint || ""),
     applicantId: applicantId,
     selectedApplicantIds: selectedApplicantIds,
@@ -690,6 +843,20 @@ function eduops_executeCommand(payload) {
   eduopsRequireCommandCapability_(access, definition);
   var current = eduopsResolveFodeSnapshot_(access);
   if (current.snapshotId !== preview.snapshotId) throw new Error("STALE_SNAPSHOT: source changed after preview");
+  var populationIntegrityGate = eduopsPopulationIntegrityGate_(current);
+  if (definition.operation === "BATCH_COMMUNICATION") {
+    var previewIntegrityFingerprint = eduopsClean_(preview.integrityFingerprint || preview.populationIntegrity && preview.populationIntegrity.integrityFingerprint || "");
+    if (!populationIntegrityGate.ok) {
+      preview = eduopsBlockPreviewForPopulationIntegrity_(preview, populationIntegrityGate);
+    } else if (!previewIntegrityFingerprint || previewIntegrityFingerprint !== populationIntegrityGate.integrityFingerprint) {
+      preview = eduopsBlockPreviewForPopulationIntegrity_(
+        preview,
+        populationIntegrityGate,
+        "POPULATION_RECONCILIATION_FAILED",
+        "Canonical population integrity changed after preview. Refresh and preview the Batch cohort again."
+      );
+    }
+  }
   if (preview.dualApprovalRequired === true && !preview.request.approvalId) throw new Error("DUAL_APPROVAL_REQUIRED");
   return eduopsWithOperationLock_(preview.operation, preview.applicantId, function () {
     var replay = eduopsReadIdempotentReceipt_(preview.idempotencyKey, contextFingerprint, { markReplay: true });

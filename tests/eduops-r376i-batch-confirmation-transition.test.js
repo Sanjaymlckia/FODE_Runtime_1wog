@@ -51,9 +51,43 @@ function basePreview(overrides) {
   }, overrides || {});
 }
 
+function stableValue(value) {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (!value || typeof value !== "object") return value;
+  return Object.keys(value).sort().reduce((result, key) => {
+    result[key] = stableValue(value[key]);
+    return result;
+  }, {});
+}
+
+function bindingIntent(binding) {
+  const value = binding || {};
+  return JSON.stringify(stableValue({
+    product: value.product || "",
+    snapshotId: value.snapshotId || "",
+    queryFingerprint: value.queryFingerprint || "",
+    integrityFingerprint: value.integrityFingerprint || value.queryBinding && value.queryBinding.integrityFingerprint || "",
+    selectionMode: value.selectionMode || "",
+    selectedApplicantIds: (value.selectedApplicantIds || []).slice(),
+    excludedApplicantIds: (value.excludedApplicantIds || []).slice().sort(),
+    executionLimit: Number(value.executionLimit || 0)
+  }));
+}
+
 function makeHarness(options = {}) {
   const elements = {};
   const executeButton = { disabled: false, focused: false, focus() { this.focused = true; } };
+  const preview = options.preview || basePreview();
+  const batchBinding = { excludedApplicantIds: [], snapshotId: "SNAP-R376I" };
+  const previewIdentity = {
+    instanceId: 1,
+    generation: 1,
+    catalogueGeneration: 1,
+    bindingIntent: bindingIntent(batchBinding),
+    templateId: "docs_missing",
+    idempotencyKey: preview.idempotencyKey || "",
+    previewId: preview.previewId || ""
+  };
   function element(id) {
     if (!elements[id]) {
       elements[id] = {
@@ -81,12 +115,20 @@ function makeHarness(options = {}) {
       confirm: null,
       selectionExcluded: {},
       batch: {
+        instanceId: 1,
         step: "confirm",
-        binding: { excludedApplicantIds: [], snapshotId: "SNAP-R376I" },
+        binding: batchBinding,
         operation: "BATCH_COMMUNICATION",
+        templateId: "docs_missing",
+        messageType: "documents_follow_up",
         catalogue: null,
+        catalogueRequestGeneration: 1,
+        acceptedCatalogueGeneration: 1,
+        previewRequestGeneration: 1,
+        acceptedPreviewGeneration: 1,
+        acceptedPreviewIdentity: previewIdentity,
         authorityError: "",
-        preview: options.preview || basePreview(),
+        preview,
         receipt: null,
         idempotencyKey: "IDEMPOTENCY-R376I"
       }

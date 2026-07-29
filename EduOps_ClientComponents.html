@@ -56,6 +56,17 @@
     dom.eduopsOperationsToolbarPackage.textContent = selectedWorklist && selectedWorklist.label || activePackage && activePackage.label || "All work types";
     dom.eduopsOperationsQueueContext.innerHTML = '<span class="eduops-eyebrow">Operational context</span><h2>' + app.esc(selectedWorklist && selectedWorklist.label || activePackage && activePackage.label || "All work types") + '</h2><dl><div><dt>Matched</dt><dd>' + Number(response.totalMatched || 0) + '</dd></div><div><dt>Authority</dt><dd>' + app.esc(activePackage && activePackage.authoritySource || "Actionability Resolver") + '</dd></div><div><dt>Communication</dt><dd>' + app.esc(activePackage && activePackage.recommendedCommunication && activePackage.recommendedCommunication.label || "No single recommendation") + '</dd></div></dl><div class="eduops-operations-package-panel-control" role="group" aria-label="Package panel"><span>Package panel</span><button type="button" class="active">Compact</button><button type="button" data-eduops-operations-focus-packages>Expanded</button><button type="button" data-eduops-operations-hide-packages>Hidden</button></div><div class="eduops-operations-context-package-list">' + packageList + '</div>';
   }
+  function neutralizeQueueContext(state, message) {
+    var loading = state === "LOADING";
+    var label = loading ? "Loading workload" : "Workload unavailable";
+    var detail = message || (loading ? "The requested queue is being reconciled." : "Refresh or retry before using this queue.");
+    if (dom.eduopsOperationsToolbarState) dom.eduopsOperationsToolbarState.textContent = label;
+    if (dom.eduopsOperationsToolbarPackage) dom.eduopsOperationsToolbarPackage.textContent = "No current package";
+    if (dom.eduopsQueueCompactStats) dom.eduopsQueueCompactStats.textContent = loading ? "Loading requested workload · selection unavailable" : "Workload unavailable · selection unavailable";
+    if (dom.eduopsOperationsQueueContext) {
+      dom.eduopsOperationsQueueContext.innerHTML = '<span class="eduops-eyebrow">Operational context</span><h2>' + app.esc(label) + '</h2><div class="' + (loading ? "eduops-loading-state" : "eduops-error-state") + '"><strong>' + app.esc(label) + '</strong><span>' + app.esc(detail) + '</span></div>';
+    }
+  }
   function renderScopes(presentation) {
     document.querySelectorAll("[data-work-scope]").forEach(function (button) {
       var code = button.getAttribute("data-work-scope");
@@ -162,7 +173,36 @@
     return Object.keys(app.state.selected).filter(function (key) { return app.state.selected[key] === true && app.state.selectionExcluded[key] !== true; }).length;
   }
 
+  function setWorkloadControlEnabled(control, enabled) {
+    if (!control) return;
+    control.setAttribute("data-workload-disabled", enabled === true ? "false" : "true");
+    var bootstrapReady = !app.bootstrapMachine || app.bootstrapMachine.state === "INTERACTIVE";
+    if (enabled === true && !bootstrapReady) control.setAttribute("data-bootstrap-disabled", "true");
+    control.disabled = enabled !== true || !bootstrapReady;
+  }
+
+  function setBatchSelectionControlsEnabled(enabled) {
+    ["eduopsSelectVisible", "eduopsSelectAllReturned", "eduopsSelectAllMatching", "eduopsClearSelection", "eduopsClearExclusions"].forEach(function (id) {
+      setWorkloadControlEnabled(byId(id), enabled);
+    });
+  }
+  function setWorkloadControlsEnabled(enabled) {
+    setBatchSelectionControlsEnabled(enabled);
+    setWorkloadControlEnabled(byId("eduopsStartSession"), enabled);
+  }
+
+  function canUseCurrentWorkload() {
+    var workloadCurrent = app.hasCurrentWorkload && app.hasCurrentWorkload();
+    if (workloadCurrent
+        && app.state.workloadRequest.selectionValid === true
+        && app.state.workloadRequest.batchAuthorityValid === true) return true;
+    app.clearSelection();
+    app.setInteractionState("BLOCKED", workloadCurrent ? app.batchAuthorityReason() : "Wait for the requested workload to finish before using selection.");
+    return false;
+  }
+
   function renderSelection(response) {
+    response = response || {};
     var count = selectionCount(response);
     var summary = response.presentation && response.presentation.selection || {};
     var selectable = Number(summary.visibleSelectable || 0);
@@ -170,9 +210,11 @@
     var mode = app.state.selectionMode === "ALL_ELIGIBLE_MATCHING_QUERY" ? "all eligible matching current query" : "explicit selected applicants";
     dom.eduopsSelectionSummary.textContent = Number(summary.totalMatched || 0) + " matched / " + selectable + " selectable on this page / " + blocked + " unavailable. Operator selection intent " + count + " in " + mode + " / " + excludedCount() + " excluded. Execution authority is evaluated only in Batch Operations.";
     if (dom.eduopsQueueCompactStats) dom.eduopsQueueCompactStats.textContent = Number(summary.totalMatched || 0) + " matched · " + selectable + " visible · " + count + " selected · " + excludedCount() + " excluded";
-    var batchAvailable = app.operationAvailable("BATCH_COMMUNICATION");
-    dom.eduopsOpenBatch.disabled = count === 0 || !batchAvailable;
-    dom.eduopsBatchReason.textContent = !batchAvailable ? app.operationUnavailableReason("BATCH_COMMUNICATION") : count === 0 ? "Select an eligible cohort to enable a batch preview." : "Selection is bound to product, snapshot, query and worklist; Batch Operations revalidates before preview.";
+    var workloadCurrent = app.hasCurrentWorkload && app.hasCurrentWorkload() && app.state.workloadRequest.selectionValid === true;
+    var batchAuthorityCurrent = workloadCurrent && app.state.workloadRequest.batchAuthorityValid === true;
+    var batchAvailable = batchAuthorityCurrent && app.operationAvailable("BATCH_COMMUNICATION");
+    setWorkloadControlEnabled(dom.eduopsOpenBatch, count > 0 && batchAvailable);
+    dom.eduopsBatchReason.textContent = !workloadCurrent ? "Unavailable until the active workload is fully reconciled." : !batchAuthorityCurrent ? app.batchAuthorityReason() : !batchAvailable ? app.operationUnavailableReason("BATCH_COMMUNICATION") : count === 0 ? "Select an eligible cohort to enable a batch preview." : "Selection is bound to product, snapshot, query and worklist; Batch Operations revalidates before preview.";
   }
 
   function rowHtml(row) {
@@ -180,7 +222,7 @@
     var excluded = app.state.selectionExcluded && app.state.selectionExcluded[id] === true;
     var available = rowActionAvailable(row);
     var selected = app.state.selectionMode === "ALL_ELIGIBLE_MATCHING_QUERY" ? available && !excluded : app.state.selected[id] === true && !excluded;
-    var blocked = !available;
+    var blocked = !available || app.state.workloadRequest.batchAuthorityValid !== true;
     var p = row.presentation || {};
     var authority = row.authorityDecision || {};
     var blockedReason = authority.reason || row.selectBlockReason || app.authorityUnavailable("actionability");
@@ -200,14 +242,15 @@
     var rows = response.rows || [];
     dom.eduopsWorklistRows.innerHTML = rows.map(rowHtml).join("");
     dom.eduopsEmptyState.hidden = rows.length !== 0;
+    dom.eduopsEmptyState.setAttribute("aria-hidden", rows.length !== 0 ? "true" : "false");
     var start = rows.length ? ((response.page - 1) * response.pageSize + 1) : 0;
     var end = rows.length ? start + rows.length - 1 : 0;
     dom.eduopsVisibleRange.textContent = "Showing " + start + "-" + end + " of " + response.totalMatched;
   }
 
   function renderPagination(response) {
-    dom.eduopsPreviousPage.disabled = response.page <= 1;
-    dom.eduopsNextPage.disabled = response.page >= response.totalPages;
+    setWorkloadControlEnabled(dom.eduopsPreviousPage, response.page > 1);
+    setWorkloadControlEnabled(dom.eduopsNextPage, response.page < response.totalPages);
     var pages = [];
     var start = Math.max(1, response.page - 2);
     var end = Math.min(response.totalPages, start + 4);
@@ -217,39 +260,49 @@
 
   app.renderPendingWorkload = function (request, phase) {
     dom.eduopsApp.setAttribute("aria-busy", "true");
+    dom.eduopsApp.setAttribute("data-workload-phase", "LOADING");
     dom.eduopsWorklistReason.textContent = (phase === "QUEUED" ? "Queued " : "Loading ") + app.contextLabel(request.payload) + ". Previous results will not be presented as the requested page.";
     dom.eduopsVisibleRange.textContent = (phase === "QUEUED" ? "Queued" : "Loading") + " page " + request.payload.page;
     dom.eduopsSelectionSummary.textContent = request.selectionCleared ? "Selection cleared while the requested workload is being reconciled." : "Loading requested workload. Selection will be shown only after the returned page is reconciled.";
-    dom.eduopsOpenBatch.disabled = true;
+    setWorkloadControlEnabled(dom.eduopsOpenBatch, false);
     dom.eduopsBatchReason.textContent = "Unavailable until the active workload is fully reconciled.";
-    dom.eduopsPreviousPage.disabled = true;
-    dom.eduopsNextPage.disabled = true;
+    setWorkloadControlEnabled(dom.eduopsPreviousPage, false);
+    setWorkloadControlEnabled(dom.eduopsNextPage, false);
+    setWorkloadControlsEnabled(false);
     dom.eduopsPageNumbers.innerHTML = "";
     dom.eduopsEmptyState.hidden = true;
+    dom.eduopsEmptyState.setAttribute("aria-hidden", "true");
     dom.eduopsWorklistRows.innerHTML = '<tr><td colspan="6"><div class="eduops-loading-state"><strong>Loading applicant workload...</strong><span>' + app.esc(app.contextLabel(request.payload)) + ' requested. Previous applicant rows were cleared while authority responds.</span></div></td></tr>';
+    neutralizeQueueContext("LOADING", app.contextLabel(request.payload) + " is being reconciled.");
+    if (typeof app.renderEduOpsOperationsPending === "function") app.renderEduOpsOperationsPending(app.contextLabel(request.payload));
   };
 
   app.renderWorkloadError = function (request, error, outcome) {
     dom.eduopsApp.setAttribute("aria-busy", "false");
+    dom.eduopsApp.setAttribute("data-workload-phase", "FAILURE");
     dom.eduopsWorklistReason.textContent = app.contextLabel(request.payload) + " did not complete. No stale response was applied.";
     dom.eduopsVisibleRange.textContent = "Workload unavailable";
     dom.eduopsSelectionSummary.textContent = "Workload unavailable. No selection is retained for this request.";
-    dom.eduopsOpenBatch.disabled = true;
+    setWorkloadControlEnabled(dom.eduopsOpenBatch, false);
     dom.eduopsBatchReason.textContent = "Unavailable until the active workload is fully reconciled.";
-    dom.eduopsPreviousPage.disabled = true;
-    dom.eduopsNextPage.disabled = true;
+    setWorkloadControlEnabled(dom.eduopsPreviousPage, false);
+    setWorkloadControlEnabled(dom.eduopsNextPage, false);
+    setWorkloadControlsEnabled(false);
     dom.eduopsPageNumbers.innerHTML = "";
     dom.eduopsEmptyState.hidden = true;
+    dom.eduopsEmptyState.setAttribute("aria-hidden", "true");
     dom.eduopsWorklistRows.innerHTML = '<tr><td colspan="6"><div class="eduops-error-state"><strong>' + app.esc(outcome === "TIMEOUT" ? "The request exceeded the 10-second limit." : "The workload request failed.") + '</strong><span>' + app.esc(error && error.message || error) + '</span><button type="button" class="eduops-button eduops-button-primary" data-retry-workload>Retry requested context</button></div></td></tr>';
+    neutralizeQueueContext("FAILURE", error && error.message || error);
+    if (typeof app.renderEduOpsOperationsError === "function") app.renderEduOpsOperationsError(error);
   };
 
   app.renderWorkload = function (response, clientMs) {
     dom.eduopsApp.setAttribute("aria-busy", "false");
+    dom.eduopsApp.setAttribute("data-workload-phase", response && response.rows && response.rows.length ? "SUCCESS_NONEMPTY" : "EMPTY");
     var presentation = response && response.presentation;
     if (!presentation || presentation.schemaVersion !== "EDUOPS_WORKLOAD_PRESENTATION_V1") {
       return app.renderWorkloadError({ payload: app.queryPayload() }, new Error(app.authorityUnavailable("workload")), "BACKEND_CONTRACT_MISSING");
     }
-    if (app.bootstrapMachine && app.bootstrapMachine.state !== "INTERACTIVE") app.setBootstrapState("SOURCE_READY", "Authoritative product source resolved.");
     renderNavigation(presentation);
     clearLegacyKpis();
     renderMetrics(presentation);
@@ -259,6 +312,10 @@
     renderFilterControls(response);
     renderRows(response);
     if (typeof app.renderEduOpsOperationsWorkspace === "function") app.renderEduOpsOperationsWorkspace(response);
+    setWorkloadControlsEnabled(true);
+    if (app.state.workloadRequest.batchAuthorityValid !== true) setBatchSelectionControlsEnabled(false);
+    var startSession = byId("eduopsStartSession");
+    setWorkloadControlEnabled(startSession, !!(response.rows || []).length);
     renderSelection(response);
     renderPagination(response);
     var selectedState = authorityItem(presentation.actionabilityBuckets, app.state.actionabilityState) || presentation.allActionability;
@@ -288,23 +345,26 @@
     if (!app.state.workbench && !app.state.batch) {
       app.replaceRoute("workload?state=" + encodeURIComponent(app.state.actionabilityState) + "&worklist=" + encodeURIComponent(app.state.worklistKey) + "&scope=" + encodeURIComponent(app.state.workScope) + "&page=" + app.state.page);
     }
-    if (app.bootstrapMachine && app.bootstrapMachine.state !== "INTERACTIVE") {
-      app.setBootstrapState("WORKLOAD_READY", "The first workload completed with " + (response.rows || []).length + " visible row(s).");
-      app.setBootstrapState("INTERACTIVE", "EduOps is ready. Source and workload are current.");
-    }
   };
 
   app.renderBootstrapError = function (phase, error) {
     var state = app.upper(phase || "WORKLOAD_ERROR");
     var message = String(error && error.message || error || "The Preview Lab could not initialise.");
     dom.eduopsApp.setAttribute("aria-busy", "false");
+    dom.eduopsApp.setAttribute("data-workload-phase", "FAILURE");
     dom.eduopsSnapshotShort.textContent = state === "TIMEOUT" ? "Loading timed out" : "Snapshot unavailable";
     dom.eduopsSnapshotTime.textContent = "Retry is available";
     dom.eduopsReliabilityBanner.setAttribute("data-reliability", "UNAVAILABLE");
     dom.eduopsReliabilityBanner.innerHTML = '<strong>Authority source unavailable</strong><span>' + app.esc(message) + '</span><div><button id="eduopsRefreshAuthority" class="eduops-button eduops-button-primary" type="button" data-retry-bootstrap>Retry source</button><button class="eduops-button eduops-button-secondary" type="button" data-report="health">Technical details</button></div>';
     dom.eduopsWorklistReason.textContent = "Page 1 did not complete. No stale workload was applied.";
     dom.eduopsVisibleRange.textContent = "Workload unavailable";
+    setWorkloadControlsEnabled(false);
+    setWorkloadControlEnabled(dom.eduopsOpenBatch, false);
+    dom.eduopsEmptyState.hidden = true;
+    dom.eduopsEmptyState.setAttribute("aria-hidden", "true");
     dom.eduopsWorklistRows.innerHTML = '<tr><td colspan="6"><div class="eduops-error-state"><strong>' + (state === "TIMEOUT" ? "Loading took longer than expected" : "Workload could not be loaded") + '</strong><span>' + app.esc(message) + '</span><button type="button" class="eduops-button eduops-button-primary" data-retry-bootstrap>Retry workload</button></div></td></tr>';
+    neutralizeQueueContext("FAILURE", message);
+    if (typeof app.renderEduOpsOperationsError === "function") app.renderEduOpsOperationsError(error);
   };
 
   function renderSearchResults(response) {
@@ -318,7 +378,7 @@
       var p = row.presentation || {};
       var handoff = row.searchHandoff;
       var handoffReady = handoff && handoff.schemaVersion === "OPSEDU_SEARCH_HANDOFF_V1" && handoff.queueBinding;
-      return '<article class="eduops-search-result"><div><strong>' + app.esc(row.displayName) + '</strong><span>' + app.esc(row.applicantId) + '</span><small>Lifecycle: ' + app.esc(app.authorityLabel(p.lifecycle, "lifecycle")) + '</small><small>Actionability: ' + app.esc(app.authorityLabel(p.actionability, "actionability")) + '</small><small>Work package: ' + app.esc(handoffReady ? handoff.actionPackageLabel : app.authorityLabel(p.worklist, "worklist")) + '</small><small>Next action: ' + app.esc(handoffReady ? app.authorityLabel(handoff.nextAction, "next action") : app.authorityUnavailable("search handoff")) + '</small></div><div><button class="eduops-button eduops-button-secondary" type="button" data-search-worklist="' + app.esc(row.applicantId) + '"' + (handoffReady ? "" : " disabled") + '>' + app.esc(handoffReady ? handoff.openQueueLabel : "Open correct work package") + '</button><button class="eduops-button eduops-button-primary" type="button" data-search-open="' + app.esc(row.applicantId) + '">Open applicant</button></div></article>';
+      return '<article class="eduops-search-result"><div><strong>' + app.esc(row.displayName) + '</strong><span>' + app.esc(row.applicantId) + '</span><small>Lifecycle: ' + app.esc(app.authorityLabel(p.lifecycle, "lifecycle")) + '</small><small>Actionability: ' + app.esc(app.authorityLabel(p.actionability, "actionability")) + '</small><small>Work package: ' + app.esc(handoffReady ? handoff.actionPackageLabel : app.authorityLabel(p.worklist, "worklist")) + '</small><small>Next action: ' + app.esc(handoffReady ? app.authorityLabel(handoff.nextAction, "next action") : app.authorityUnavailable("search handoff")) + '</small></div><div><button class="eduops-button eduops-button-secondary" type="button" data-search-worklist="' + app.esc(row.applicantId) + '"' + (handoffReady ? "" : " disabled") + '>' + app.esc(handoffReady ? handoff.openQueueLabel : "Open correct work package") + '</button><button class="eduops-button eduops-button-primary" type="button" data-search-open="' + app.esc(row.applicantId) + '" data-search-row-number="' + Number(row.rowNumber || 0) + '">Open applicant</button></div></article>';
     }).join("");
   }
 
@@ -346,7 +406,7 @@
     dom.eduopsDrawerTitle.textContent = row.displayName;
     var p = row.presentation || {};
     dom.eduopsDrawerContent.innerHTML = '<dl class="eduops-definition-list"><div><dt>ApplicantID</dt><dd>' + app.esc(row.applicantId) + '</dd></div><div><dt>Actionability</dt><dd>' + app.esc(app.authorityLabel(p.actionability, "actionability")) + '</dd></div><div><dt>Worklist</dt><dd>' + app.esc(app.authorityLabel(p.worklist, "worklist")) + '</dd></div><div><dt>Next action</dt><dd>' + app.esc(app.authorityLabel(p.nextAction, "next action")) + '</dd></div></dl>';
-    dom.eduopsDrawerActions.innerHTML = '<button class="eduops-button eduops-button-primary" type="button" data-open-applicant="' + app.esc(applicantId) + '">Open Individual Workbench</button>';
+    dom.eduopsDrawerActions.innerHTML = '<button class="eduops-button eduops-button-primary" type="button" data-open-applicant="' + app.esc(applicantId) + '" data-open-row-number="' + Number(row.rowNumber || 0) + '">Open Individual Workbench</button>';
     dom.eduopsQuickDrawer.hidden = false;
     dom.eduopsQuickDrawer.setAttribute("aria-hidden", "false");
     dom.eduopsDrawerScrim.hidden = false;
@@ -1263,9 +1323,10 @@
       this.setAttribute("aria-label", collapsed ? "Collapse navigation" : "Expand navigation");
       app.setInteractionState("SUCCESS", collapsed ? "Operations navigation expanded." : "Operations navigation collapsed.");
     });
-    byId("eduopsSelectVisible").addEventListener("click", function () { app.clearSelection(); app.state.selectionMode = "EXPLICIT_SELECTION"; (app.state.workload.rows || []).forEach(function (row) { if (rowActionAvailable(row)) app.state.selected[row.applicantId] = true; }); app.state.selectionContext = app.selectionContext(app.queryPayload(), app.state.snapshotId); renderSelection(app.state.workload); renderRows(app.state.workload); });
-    byId("eduopsSelectAllReturned").addEventListener("click", function () { app.clearSelection(); app.state.selectionMode = "EXPLICIT_SELECTION"; (app.state.workload.rows || []).forEach(function (row) { if (rowActionAvailable(row)) app.state.selected[row.applicantId] = true; }); app.state.selectionContext = app.selectionContext(app.queryPayload(), app.state.snapshotId); renderSelection(app.state.workload); renderRows(app.state.workload); app.setInteractionState("SUCCESS", "Eligible applicants on this page selected."); });
+    byId("eduopsSelectVisible").addEventListener("click", function () { if (!canUseCurrentWorkload()) return; app.clearSelection(); app.state.selectionMode = "EXPLICIT_SELECTION"; (app.state.workload.rows || []).forEach(function (row) { if (rowActionAvailable(row)) app.state.selected[row.applicantId] = true; }); app.state.selectionContext = app.selectionContext(app.queryPayload(), app.state.snapshotId); renderSelection(app.state.workload); renderRows(app.state.workload); });
+    byId("eduopsSelectAllReturned").addEventListener("click", function () { if (!canUseCurrentWorkload()) return; app.clearSelection(); app.state.selectionMode = "EXPLICIT_SELECTION"; (app.state.workload.rows || []).forEach(function (row) { if (rowActionAvailable(row)) app.state.selected[row.applicantId] = true; }); app.state.selectionContext = app.selectionContext(app.queryPayload(), app.state.snapshotId); renderSelection(app.state.workload); renderRows(app.state.workload); app.setInteractionState("SUCCESS", "Eligible applicants on this page selected."); });
     byId("eduopsSelectAllMatching").addEventListener("click", function () {
+      if (!canUseCurrentWorkload()) return;
       var binding = app.state.workload && app.state.workload.queryBinding || app.state.workload && app.state.workload.reconciliation && app.state.workload.reconciliation.queryBinding || null;
       if (!binding || !binding.query || !binding.queryFingerprint) {
         app.clearSelection();
@@ -1283,8 +1344,8 @@
       renderRows(app.state.workload);
       app.setInteractionState("SUCCESS", "All eligible applicants matching the server-bound query selected for bounded batch execution.");
     });
-    byId("eduopsClearSelection").addEventListener("click", function () { app.clearSelection(); renderSelection(app.state.workload); renderRows(app.state.workload); });
-    byId("eduopsClearExclusions").addEventListener("click", function () { app.clearSelectionExclusions(); renderSelection(app.state.workload); renderRows(app.state.workload); app.setInteractionState("SUCCESS", "Exclusions cleared. The server-bound master cohort remains selected."); });
+    byId("eduopsClearSelection").addEventListener("click", function () { if (!canUseCurrentWorkload()) return; app.clearSelection(); renderSelection(app.state.workload); renderRows(app.state.workload); });
+    byId("eduopsClearExclusions").addEventListener("click", function () { if (!canUseCurrentWorkload()) return; app.clearSelectionExclusions(); renderSelection(app.state.workload); renderRows(app.state.workload); app.setInteractionState("SUCCESS", "Exclusions cleared. The server-bound master cohort remains selected."); });
     byId("eduopsRefreshSnapshot").addEventListener("click", function () { app.requestWorkload({ refreshSnapshot: true }); });
     dom.eduopsOpenReconciliation.addEventListener("click", function () { openReport("reconciliation", this); });
     byId("eduopsCloseReport").addEventListener("click", closeReport);
@@ -1330,6 +1391,7 @@
       if (page) { app.state.page = Number(page.getAttribute("data-page")); app.requestWorkload(); return; }
       var select = event.target.closest("[data-select-applicant]");
       if (select) {
+        if (!canUseCurrentWorkload()) return;
         var applicantId = select.getAttribute("data-select-applicant");
         if (app.state.selectionMode === "ALL_ELIGIBLE_MATCHING_QUERY") {
           if (select.checked) app.restoreSelectionExclusion(applicantId); else app.excludeFromSelection(applicantId);
@@ -1347,9 +1409,23 @@
       var quick = event.target.closest("[data-quick-applicant]");
       if (quick) { openQuickView(quick.getAttribute("data-quick-applicant"), quick); return; }
       var open = event.target.closest("[data-open-applicant]");
-      if (open && app.openWorkbench) { closeQuickView(); app.openWorkbench(open.getAttribute("data-open-applicant"), open); return; }
+      if (open && app.openWorkbench) {
+        var openApplicantId = open.getAttribute("data-open-applicant");
+        var openRow = (app.state.workload && app.state.workload.rows || []).filter(function (row) { return row.applicantId === openApplicantId; })[0]
+          || app.state.searchResults.filter(function (row) { return row.applicantId === openApplicantId; })[0]
+          || null;
+        var openRowNumber = Number(open.getAttribute("data-open-row-number") || openRow && openRow.rowNumber || 0);
+        closeQuickView();
+        app.openWorkbench(openApplicantId, open, null, openRowNumber ? { expectedRowNumber: openRowNumber } : null);
+        return;
+      }
       var searchOpen = event.target.closest("[data-search-open]");
-      if (searchOpen && app.openWorkbench) { var searchApplicantId = searchOpen.getAttribute("data-search-open"); app.openWorkbench(searchApplicantId, searchOpen); return; }
+      if (searchOpen && app.openWorkbench) {
+        var searchApplicantId = searchOpen.getAttribute("data-search-open");
+        var searchRow = app.state.searchResults.filter(function (row) { return row.applicantId === searchApplicantId; })[0] || null;
+        app.openWorkbench(searchApplicantId, searchOpen, null, searchRow && Number(searchRow.rowNumber || 0) ? { expectedRowNumber: Number(searchRow.rowNumber) } : null);
+        return;
+      }
       var searchWorklist = event.target.closest("[data-search-worklist]");
       if (searchWorklist) {
         var found = app.state.searchResults.filter(function (row) { return row.applicantId === searchWorklist.getAttribute("data-search-worklist"); })[0];

@@ -75,6 +75,7 @@ const context = {
 };
 vm.createContext(context);
 vm.runInContext([
+  read("Admin_CanonicalPopulation.js"),
   read("EduOps_Contracts.js"),
   read("EduOps_Workload.js"),
   read("EduOps_Idempotency.js"),
@@ -84,6 +85,24 @@ vm.runInContext([
 
 let previewAuthorityCalls = 0;
 const rows = makeRows();
+const populationIntegrity = {
+  schemaVersion: "CANONICAL_POPULATION_INTEGRITY_V1",
+  status: "PASS",
+  authoritySafeToBatch: true,
+  blockCode: "",
+  blockReason: "",
+  populationCount: rows.length,
+  scannedRowCount: rows.length,
+  distinctApplicantIdCount: rows.length,
+  duplicateApplicantIdCount: 0,
+  missingOrInvalidApplicantIdCount: 0,
+  duplicateApplicantIds: [],
+  duplicateRowReferences: [],
+  missingOrInvalidApplicantIds: [],
+  reconciliationFindings: [],
+  evidenceTruncated: false,
+  integrityFingerprint: "CPI-QUERY-BINDING-PASS"
+};
 Object.assign(context, {
   eduopsRequireAccess_: () => ({
     email: "owner@example.test",
@@ -103,6 +122,7 @@ Object.assign(context, {
     cacheState: "TEST",
     totalRows: rows.length,
     rows,
+    populationIntegrity,
     timings: {
       canonicalSnapshotResolutionMs: 0,
       sourceVersionMs: 0,
@@ -250,6 +270,16 @@ const browserApp = {
     profile: { batchPolicy: { allowedExecutionLimits: [30], maximumExecutionLimit: 30 } },
     snapshotId: workloadResponse.snapshotId,
     workload: workloadResponse,
+    workloadRequest: {
+      latestGeneration: 1,
+      acceptedGeneration: 1,
+      requestedFingerprint: workloadResponse.queryFingerprint,
+      acceptedFingerprint: workloadResponse.queryFingerprint,
+      phase: "SUCCESS_NONEMPTY",
+      selectionValid: true,
+      batchAuthorityValid: true,
+      projectionFresh: true
+    },
     selected: {},
     selectionMode: "ALL_ELIGIBLE_MATCHING_QUERY",
     selectionQueryBinding: workloadResponse.queryBinding,
@@ -268,6 +298,10 @@ const browserApp = {
   authorityLabel: (presentation, domain) => presentation && presentation.label ? presentation.label : `Authoritative ${domain} decision was not returned. Refresh or retry before continuing.`,
   operationAvailable: (operation) => operation === "BATCH_COMMUNICATION",
   operationUnavailableReason: () => "Authoritative operation availability was not returned. Refresh or retry.",
+  hasCurrentWorkload() {
+    return this.state.workloadRequest.projectionFresh === true
+      && this.state.workloadRequest.acceptedGeneration === this.state.workloadRequest.latestGeneration;
+  },
   setInteractionState() {},
   snapshotReturnContext: () => ({}),
   pushRoute() {}

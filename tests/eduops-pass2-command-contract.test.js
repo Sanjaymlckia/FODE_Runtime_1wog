@@ -48,7 +48,9 @@ assert.match(sources.client, /eduops_previewCommand[\s\S]*eduops_executeCommand/
 assert.match(sources.client, /data-message-type/, "Communication template cards must carry explicit authority message types");
 assert.match(sources.client, /custom_email/, "Custom communication template must use the established Communication Authority custom_email type");
 assert.doesNotMatch(sources.client, /operator_message/, "EduOps must not invent an unsupported browser-only communication type");
-assert.match(sources.client, /refreshWorkbenchAfterReceipt[\s\S]*eduops_getApplicantWorkbench/, "Executed mutations must refresh the exact applicant authority projection");
+assert.match(sources.client, /refreshWorkbenchAfterReceipt[\s\S]*requestWorkbench/, "Executed mutations must route through the generation-bound Workbench refresh");
+assert.match(sources.client, /function requestWorkbench[\s\S]*eduops_getApplicantWorkbench/, "Generation-bound Workbench refresh must reload the exact applicant authority projection");
+assert.match(sources.client, /refreshWorkbenchAfterReceipt[\s\S]*invalidateWorkloadProjection/, "Executed mutations must invalidate the mutable workload projection");
 assert.match(sources.client, /eduopsCommunicationHistory[\s\S]*eduops_getOperationHistory/, "Communications must surface applicant operation history in the Communications workspace");
 assert.match(sources.client, /eduops-document-card[\s\S]*data-open-original/, "Document gallery must keep evidence cards adjacent to governed Open Original workflow");
 assert.match(sources.client, /contextmenu[\s\S]*data-document-index[\s\S]*data-open-original/, "Document right-click behavior must route through the governed file action");

@@ -5,6 +5,7 @@
   var app = window.EduOpsApp;
   var dom = {};
   var steps = ["cohort", "partitions", "preview", "confirm", "receipt"];
+  var batchInstanceSequence = 0;
 
   function byId(id) { return document.getElementById(id); }
   function ensureDom() {
@@ -31,6 +32,53 @@
     return Object.keys(app.state.selected || {}).filter(function (id) { return app.state.selected[id] === true; });
   }
   function excludedApplicantIds() { return Object.keys(app.state.selectionExcluded || {}).filter(function (id) { return app.state.selectionExcluded[id] === true; }); }
+  function stableValue(value) {
+    if (Array.isArray(value)) return value.map(stableValue);
+    if (!value || typeof value !== "object") return value;
+    var result = {};
+    Object.keys(value).sort().forEach(function (key) { result[key] = stableValue(value[key]); });
+    return result;
+  }
+  function bindingIntent(bindingValue) {
+    var value = bindingValue || {};
+    return JSON.stringify(stableValue({
+      product: value.product || "",
+      snapshotId: value.snapshotId || "",
+      queryFingerprint: value.queryFingerprint || "",
+      integrityFingerprint: value.integrityFingerprint || value.queryBinding && value.queryBinding.integrityFingerprint || "",
+      selectionMode: value.selectionMode || "",
+      selectedApplicantIds: (value.selectedApplicantIds || []).slice(),
+      excludedApplicantIds: (value.excludedApplicantIds || []).slice().sort(),
+      executionLimit: Number(value.executionLimit || 0)
+    }));
+  }
+  function returnedBindingMatchesIntent(returnedValue, requestedValue) {
+    var returned = returnedValue || {};
+    var requested = requestedValue || {};
+    if (String(returned.product || "") !== String(requested.product || "")) return false;
+    if (String(returned.snapshotId || "") !== String(requested.snapshotId || "")) return false;
+    if (String(returned.queryFingerprint || "") !== String(requested.queryFingerprint || "")) return false;
+    if (String(returned.integrityFingerprint || returned.queryBinding && returned.queryBinding.integrityFingerprint || "") !== String(requested.integrityFingerprint || requested.queryBinding && requested.queryBinding.integrityFingerprint || "")) return false;
+    if (String(returned.selectionMode || "") !== String(requested.selectionMode || "")) return false;
+    if (Number(returned.executionLimit || 0) !== Number(requested.executionLimit || 0)) return false;
+    if (JSON.stringify((returned.excludedApplicantIds || []).slice().sort()) !== JSON.stringify((requested.excludedApplicantIds || []).slice().sort())) return false;
+    if (String(requested.selectionMode || "") === "EXPLICIT_SELECTION"
+        && JSON.stringify(returned.selectedApplicantIds || []) !== JSON.stringify(requested.selectedApplicantIds || [])) return false;
+    return true;
+  }
+  function batchRequestCurrent(token, type) {
+    var batch = app.state.batch;
+    if (!token || !batch || batch !== token.batch || Number(batch.instanceId || 0) !== Number(token.instanceId || 0)) return false;
+    if (type === "catalogue" && Number(batch.catalogueRequestGeneration || 0) !== Number(token.generation || 0)) return false;
+    if (type === "preview" && Number(batch.previewRequestGeneration || 0) !== Number(token.generation || 0)) return false;
+    if (bindingIntent(batch.binding) !== token.bindingIntent) return false;
+    if (type === "preview") {
+      if (String(batch.templateId || "") !== String(token.templateId || "")) return false;
+      if (String(batch.messageType || "") !== String(token.messageType || "")) return false;
+      if (Number(batch.acceptedCatalogueGeneration || 0) !== Number(token.catalogueGeneration || 0)) return false;
+    }
+    return true;
+  }
   function masterCohortSize() {
     if (app.state.selectionMode === "ALL_ELIGIBLE_MATCHING_QUERY") return Math.max(0, Number(app.state.workload && app.state.workload.reconciliation && app.state.workload.reconciliation.totalAuthoritySelectable || 0) - excludedApplicantIds().length);
     return selectedApplicantIds().filter(function (id) { return app.state.selectionExcluded[id] !== true; }).length;
@@ -42,6 +90,7 @@
       product: serverBinding && serverBinding.product || app.state.product,
       snapshotId: serverBinding && serverBinding.snapshotId || app.state.snapshotId,
       queryFingerprint: serverBinding && serverBinding.queryFingerprint || "",
+      integrityFingerprint: app.state.workloadRequest.populationIntegrityFingerprint || serverBinding && serverBinding.integrityFingerprint || "",
       query: query,
       queryBinding: serverBinding,
       selectionMode: app.state.selectionMode,
@@ -61,8 +110,13 @@
   function invalidate(reason, reloadCatalogue) {
     var batch = app.state.batch;
     var catalogue = reloadCatalogue ? null : batch.catalogue;
+    var preserveCatalogue = !reloadCatalogue && !!catalogue && batch.authorityValid === true;
     app.invalidateOperationAuthority(reason);
     batch.catalogue = catalogue;
+    if (preserveCatalogue) {
+      batch.authorityValid = true;
+      batch.acceptedCatalogueGeneration = batch.catalogueRequestGeneration;
+    }
   }
   function cohortHeader() {
     var batch = app.state.batch;
@@ -192,36 +246,108 @@
     if (batch.step === "receipt") footer = '<button class="eduops-button eduops-button-secondary" type="button" data-batch-close>Return to updated workload</button>';
     dom.footer.innerHTML = footer;
   }
+  function catalogueContractError(catalogue, token) {
+    if (!catalogue || catalogue.schemaVersion !== "EDUOPS_BATCH_COMMUNICATION_CATALOGUE_V1") return "Batch catalogue contract was not returned.";
+    if (String(catalogue.snapshotId || "") !== String(token.batch.binding.snapshotId || "")) return "Batch catalogue snapshot did not match the requested binding.";
+    if (catalogue.ok === false) return "";
+    if (Number(catalogue.executionLimit || 0) !== Number(token.batch.binding.executionLimit || 0)) return "Batch catalogue execution limit did not match the requested binding.";
+    if (!catalogue.selectionBinding || !returnedBindingMatchesIntent(catalogue.selectionBinding, token.requestBinding)) return "Batch catalogue selection binding did not match the requested binding.";
+    return "";
+  }
+  function previewContractError(preview, token) {
+    if (!preview || !preview.previewId) return "Batch preview contract was not returned.";
+    if (preview.schemaVersion && preview.schemaVersion !== "EDUOPS_COMMAND_PREVIEW_V1") return "Batch preview contract version was not supported.";
+    if (String(preview.operation || preview.commandType || "") !== "BATCH_COMMUNICATION") return "Batch preview operation did not match Batch Communication.";
+    if (String(preview.snapshotId || "") !== String(token.batch.binding.snapshotId || "")) return "Batch preview snapshot did not match the requested binding.";
+    if (String(preview.idempotencyKey || "") !== String(token.idempotencyKey || "")) return "Batch preview idempotency identity did not match the request.";
+    if (!preview.selectionBinding || !returnedBindingMatchesIntent(preview.selectionBinding, token.requestBinding)) return "Batch preview selection binding did not match the request.";
+    var selected = preview.selectedTemplate || {};
+    if (preview.executable === true && String(selected.templateId || "") !== String(token.templateId || "")) return "Batch preview template did not match the selected communication.";
+    if (selected.templateId && String(selected.templateId) !== String(token.templateId || "")) return "Batch preview template did not match the selected communication.";
+    var mismatchedPartition = (preview.partitions || []).some(function (part) { return part.templateId && String(part.templateId) !== String(token.templateId || ""); });
+    var mismatchedRecipient = (preview.recipients || []).some(function (recipient) { return recipient.templateId && String(recipient.templateId) !== String(token.templateId || ""); });
+    if (mismatchedPartition || mismatchedRecipient) return "Batch preview partition did not match the selected communication.";
+    return "";
+  }
   function loadCatalogue() {
     var batch = app.state.batch;
-    if (!batch.binding.executionLimit) { batch.catalogue = null; render(); return; }
+    if (!batch) return Promise.resolve({ accepted: false, outcome: "NO_BATCH" });
+    var generation = ++batch.catalogueRequestGeneration;
+    if (!batch.binding.executionLimit) { batch.catalogue = null; batch.catalogueLoading = false; render(); return Promise.resolve({ accepted: false, outcome: "NO_EXECUTION_LIMIT" }); }
+    var requestBinding = app.clone(batch.binding);
+    var token = {
+      batch: batch,
+      instanceId: batch.instanceId,
+      generation: generation,
+      bindingIntent: bindingIntent(requestBinding),
+      requestBinding: requestBinding
+    };
     batch.catalogueLoading = true;
     batch.authorityError = "";
     batch.templateId = "";
     batch.messageType = "";
     render();
-    app.call("eduops_getBatchCommunicationCatalogue", { operation: "BATCH_COMMUNICATION", product: batch.binding.product, snapshotId: batch.binding.snapshotId, queryFingerprint: batch.binding.queryFingerprint, executionLimit: batch.binding.executionLimit, selection: batch.binding }).then(function (catalogue) {
+    return app.call("eduops_getBatchCommunicationCatalogue", { operation: "BATCH_COMMUNICATION", product: requestBinding.product, snapshotId: requestBinding.snapshotId, queryFingerprint: requestBinding.queryFingerprint, executionLimit: requestBinding.executionLimit, selection: requestBinding }).then(function (catalogue) {
+      if (!batchRequestCurrent(token, "catalogue")) return { accepted: false, outcome: "DISCARDED_STALE_BATCH_CATALOGUE" };
+      var contractError = catalogueContractError(catalogue, token);
+      if (contractError) throw new Error(contractError);
       batch.catalogueLoading = false;
       batch.catalogue = catalogue;
       batch.binding = app.clone(catalogue.selectionBinding || batch.binding);
+      batch.acceptedCatalogueGeneration = generation;
+      batch.authorityValid = catalogue.ok !== false;
       batch.masterCohortSize = Number(catalogue.masterCohortSize || 0);
       render();
+      return { accepted: true, catalogue: catalogue, generation: generation };
     }).catch(function (error) {
+      if (!batchRequestCurrent(token, "catalogue")) return { accepted: false, outcome: "DISCARDED_STALE_BATCH_CATALOGUE_ERROR", error: error };
       batch.catalogueLoading = false;
       batch.catalogue = null;
+      batch.authorityValid = false;
       batch.authorityError = String(error && error.message || error || "Communication Authority did not return a decision.");
       render();
+      return { accepted: false, outcome: "BATCH_CATALOGUE_ERROR", error: error };
     });
   }
   function createPreview() {
     var batch = app.state.batch;
+    if (!batch || !batch.catalogue || batch.acceptedCatalogueGeneration !== batch.catalogueRequestGeneration || batch.authorityValid !== true) {
+      app.setInteractionState("BLOCKED", "Batch preview requires the current accepted catalogue.");
+      return Promise.resolve({ accepted: false, outcome: "BATCH_CATALOGUE_NOT_CURRENT" });
+    }
     var source = dom.footer.querySelector("[data-batch-preview]");
     var token = app.beginControlAction(source, "Revalidating...", "Revalidating exact recipients and canonical communication copy.");
     var key = app.idempotencyKey(batch.operation, "COHORT");
+    var generation = ++batch.previewRequestGeneration;
+    var requestBinding = app.clone(batch.binding);
+    var requestToken = {
+      batch: batch,
+      instanceId: batch.instanceId,
+      generation: generation,
+      bindingIntent: bindingIntent(requestBinding),
+      requestBinding: requestBinding,
+      catalogueGeneration: batch.acceptedCatalogueGeneration,
+      templateId: batch.templateId,
+      messageType: batch.messageType,
+      idempotencyKey: key
+    };
     batch.idempotencyKey = key;
-    app.call("eduops_previewCommand", { operation: batch.operation, product: batch.binding.product, snapshotId: batch.binding.snapshotId, queryFingerprint: batch.binding.queryFingerprint, executionLimit: batch.binding.executionLimit, selection: batch.binding, idempotencyKey: key, draft: { messageType: batch.messageType } }).then(function (preview) {
+    return app.call("eduops_previewCommand", { operation: batch.operation, product: requestBinding.product, snapshotId: requestBinding.snapshotId, queryFingerprint: requestBinding.queryFingerprint, executionLimit: requestBinding.executionLimit, selection: requestBinding, idempotencyKey: key, draft: { templateId: requestToken.templateId, messageType: requestToken.messageType } }).then(function (preview) {
+      if (!batchRequestCurrent(requestToken, "preview")) return { accepted: false, outcome: "DISCARDED_STALE_BATCH_PREVIEW" };
+      var contractError = previewContractError(preview, requestToken);
+      if (contractError) throw new Error(contractError);
       app.finishControlAction(token, preview.executable === true ? "SUCCESS" : "BLOCKED", preview.statusReason || preview.statusLabel || app.authorityUnavailable("batch preview"));
       batch.preview = preview;
+      batch.acceptedPreviewGeneration = generation;
+      batch.acceptedPreviewIdentity = {
+        instanceId: batch.instanceId,
+        generation: generation,
+        catalogueGeneration: requestToken.catalogueGeneration,
+        bindingIntent: requestToken.bindingIntent,
+        templateId: requestToken.templateId,
+        idempotencyKey: key,
+        previewId: preview.previewId || ""
+      };
       batch.confirmationDiagnostic = null;
       batch.executionStarted = false;
       batch.receiptReturned = false;
@@ -230,19 +356,40 @@
       app.state.commandExecutable = false;
       batch.step = "partitions";
       render();
+      return { accepted: true, preview: preview, generation: generation };
     }).catch(function (error) {
+      if (!batchRequestCurrent(requestToken, "preview")) return { accepted: false, outcome: "DISCARDED_STALE_BATCH_PREVIEW_ERROR", error: error };
       app.finishControlAction(token, "BLOCKED", "Batch preview blocked: " + (error.message || error));
       batch.preview = { state: "BLOCKED", executable: false, statusLabel: "Blocked by authority", statusReason: String(error.message || error), message: String(error.message || error), partitions: [] };
+      batch.acceptedPreviewIdentity = null;
       app.state.commandPreview = null;
       app.state.commandIdempotencyKey = "";
       app.state.commandExecutable = false;
       batch.step = "partitions";
       render();
+      return { accepted: false, outcome: "BATCH_PREVIEW_ERROR", error: error };
     });
+  }
+  function acceptedPreviewCurrent(batch, preview, identity) {
+    return !!batch
+      && app.state.batch === batch
+      && !!preview
+      && !!identity
+      && Number(identity.instanceId || 0) === Number(batch.instanceId || 0)
+      && Number(identity.generation || 0) === Number(batch.previewRequestGeneration || 0)
+      && Number(identity.generation || 0) === Number(batch.acceptedPreviewGeneration || 0)
+      && Number(identity.catalogueGeneration || 0) === Number(batch.acceptedCatalogueGeneration || 0)
+      && String(identity.bindingIntent || "") === bindingIntent(batch.binding)
+      && String(identity.templateId || "") === String(batch.templateId || "")
+      && String(identity.previewId || "") === String(preview.previewId || "")
+      && String(identity.idempotencyKey || "") === String(preview.idempotencyKey || "");
   }
   function execute() {
     var batch = app.state.batch;
     var preview = batch && batch.preview || {};
+    var previewIdentity = batch && batch.acceptedPreviewIdentity || null;
+    var previewId = preview.previewId || "";
+    var previewIdempotencyKey = preview.idempotencyKey || "";
     var recipients = (preview.recipients || []).filter(function (recipient) { return recipient.included === true; });
     function block(code, reason, extra) {
       var diag = confirmationDiagnostic(code, reason, extra);
@@ -251,18 +398,36 @@
       return diag;
     }
     function confirmationContextHtml(message) {
-      return '<div class="eduops-warning-state"><strong>' + app.esc(message) + '</strong><span>Some messages may already have been sent. Reconcile this batch before retrying.</span></div>' + definitionList([["Preview ID", batch.preview.previewId || ""], ["Idempotency key", batch.preview.idempotencyKey || ""], ["Candidate count", Number(batch.preview.executionCohortSize || recipients.length || 0)], ["Confirmed at", batch.executionConfirmedAt || ""]]);
+      return '<div class="eduops-warning-state"><strong>' + app.esc(message) + '</strong><span>Some messages may already have been sent. Reconcile this batch before retrying.</span></div>' + definitionList([["Preview ID", previewId], ["Idempotency key", previewIdempotencyKey], ["Candidate count", Number(preview.executionCohortSize || recipients.length || 0)], ["Confirmed at", batch.executionConfirmedAt || ""]]);
     }
     function completeWithReceipt(receipt, token) {
-      if (token) app.finishControlAction(token, "SUCCESS", "Batch receipt returned.");
+      var batchCurrent = acceptedPreviewCurrent(batch, preview, previewIdentity);
+      if (batchCurrent) {
+        if (token) app.finishControlAction(token, "SUCCESS", "Batch receipt returned.");
+        app.state.commandPreview = null;
+        app.state.commandIdempotencyKey = "";
+        app.state.commandExecutable = false;
+        app.closeConfirm(false);
+        batch.receipt = receipt;
+        batch.receiptReturned = true;
+        batch.step = "receipt";
+      }
+      if (app.invalidateWorkloadProjection) app.invalidateWorkloadProjection("A batch receipt changed applicant authority.");
+      if (batchCurrent && app.state.batch === batch) render();
+      return app.restoreReturnContext(app.state.returnContext).then(function () {
+        if (batchCurrent && app.state.batch === batch && app.hasCurrentWorkload && app.hasCurrentWorkload()) {
+          batch.receiptFreshnessSatisfied = true;
+          app.state.returnContext = app.snapshotReturnContext();
+        }
+        return receipt;
+      }, function () { return receipt; });
+    }
+    if (!acceptedPreviewCurrent(batch, preview, previewIdentity)) {
       app.state.commandPreview = null;
       app.state.commandIdempotencyKey = "";
       app.state.commandExecutable = false;
-      app.closeConfirm(false);
-      batch.receipt = receipt;
-      batch.receiptReturned = true;
-      batch.step = "receipt";
-      render();
+      batch.acceptedPreviewIdentity = null;
+      return block("BATCH_CONFIRMATION_IDENTITY_MISMATCH", "The accepted preview no longer matches the current Batch binding and communication.");
     }
     if (!preview || preview.executable !== true) return block("BATCH_CONFIRMATION_AUTHORITY_BLOCKED", preview.statusReason || preview.message || "Authoritative batch preview is not executable.");
     if (!preview.previewId || !preview.idempotencyKey) return block("BATCH_CONFIRMATION_IDENTITY_MISSING", "Preview ID and idempotency key are required before final confirmation.");
@@ -284,6 +449,12 @@
         batchPreviewId: batch.preview.previewId,
         batchIdempotencyKey: batch.preview.idempotencyKey,
         onProceed: function () {
+          if (!acceptedPreviewCurrent(batch, preview, previewIdentity)) {
+            confirmationDiagnostic("BATCH_CONFIRMATION_IDENTITY_MISMATCH", "The accepted preview changed after confirmation was opened.");
+            app.invalidateOperationAuthority("Batch preview identity changed before execution.");
+            app.setInteractionState("BLOCKED", "BATCH_CONFIRMATION_IDENTITY_MISMATCH: Generate a new preview.");
+            return;
+          }
           if (batch.executionStarted === true) { confirmationDiagnostic("BATCH_CONFIRMATION_COMMAND_REJECTED", "A batch execution attempt is already in progress or awaiting receipt."); app.setInteractionState("BLOCKED", "BATCH_CONFIRMATION_COMMAND_REJECTED: A batch execution attempt is already in progress or awaiting receipt."); return; }
           batch.executionConfirmedAt = new Date().toISOString();
           batch.executionStarted = true;
@@ -299,7 +470,7 @@
             var proceed = byId("eduopsConfirmProceed");
             if (text) text.innerHTML = confirmationContextHtml("Execution outcome not yet confirmed.");
             if (proceed) proceed.disabled = true;
-            app.call("eduops_recoverCommandReceipt", { previewId: batch.preview.previewId, idempotencyKey: batch.preview.idempotencyKey }).then(function (recovery) {
+            app.call("eduops_recoverCommandReceipt", { previewId: previewId, idempotencyKey: previewIdempotencyKey }).then(function (recovery) {
               if (settled) return;
               if (recovery && recovery.receipt) {
                 settled = true;
@@ -315,7 +486,7 @@
               app.setInteractionState("BLOCKED", "Execution outcome not yet confirmed. Reconcile before retrying.");
             });
           }, timeoutMs);
-          app.call("eduops_executeCommand", { previewId: batch.preview.previewId, idempotencyKey: batch.preview.idempotencyKey, confirmation: true }).then(function (receipt) {
+          app.call("eduops_executeCommand", { previewId: previewId, idempotencyKey: previewIdempotencyKey, confirmation: true }).then(function (receipt) {
             if (settled) return;
             settled = true;
             clearTimeout(timer);
@@ -327,11 +498,12 @@
               if (receiptText) receiptText.innerHTML = confirmationContextHtml("Execution returned without a receipt.");
               return;
             }
-            completeWithReceipt(receipt, executeToken);
+            return completeWithReceipt(receipt, executeToken);
           }).catch(function (error) {
             if (settled) return;
             settled = true;
             clearTimeout(timer);
+            if (app.state.batch !== batch) return;
             app.finishControlAction(executeToken, "BLOCKED", "Batch blocked: " + (error.message || error));
             if (cancel) cancel.disabled = false;
             confirmationDiagnostic("BATCH_CONFIRMATION_COMMAND_REJECTED", String(error.message || error || "Batch execution command was rejected."));
@@ -347,12 +519,36 @@
   }
 
   app.openBatch = function (source) {
+    if (!app.hasCurrentWorkload || !app.hasCurrentWorkload()) { app.setInteractionState("BLOCKED", "Batch Operations requires a fully reconciled current workload."); return; }
+    if (app.state.workloadRequest.batchAuthorityValid !== true) { app.setInteractionState("BLOCKED", app.batchAuthorityReason()); return; }
     if (!app.operationAvailable("BATCH_COMMUNICATION")) { app.setInteractionState("BLOCKED", app.operationUnavailableReason("BATCH_COMMUNICATION")); return; }
     if (!app.state.profile || !app.state.profile.batchPolicy || !Array.isArray(app.state.profile.batchPolicy.allowedExecutionLimits)) { app.setInteractionState("BLOCKED", app.authorityUnavailable("batch execution policy")); return; }
     if (app.state.workbench && app.state.dirty) return app.requestWorkbenchLeave(function () { app.openBatch(source); }, source);
     ensureDom();
     app.state.returnContext = app.snapshotReturnContext();
-    app.state.batch = { step: "cohort", binding: binding(), rows: selectedRows(), masterCohortSize: masterCohortSize(), operation: "BATCH_COMMUNICATION", templateId: "", messageType: "", catalogue: null, catalogueLoading: false, authorityError: "", preview: null, receipt: null, idempotencyKey: "", source: source };
+    app.state.batch = {
+      instanceId: ++batchInstanceSequence,
+      step: "cohort",
+      binding: binding(),
+      rows: selectedRows(),
+      masterCohortSize: masterCohortSize(),
+      operation: "BATCH_COMMUNICATION",
+      templateId: "",
+      messageType: "",
+      catalogue: null,
+      catalogueLoading: false,
+      catalogueRequestGeneration: 0,
+      acceptedCatalogueGeneration: 0,
+      previewRequestGeneration: 0,
+      acceptedPreviewGeneration: 0,
+      acceptedPreviewIdentity: null,
+      authorityValid: false,
+      authorityError: "",
+      preview: null,
+      receipt: null,
+      idempotencyKey: "",
+      source: source
+    };
     dom.root.hidden = false;
     dom.root.setAttribute("aria-hidden", "false");
     dom.title.textContent = "Batch Operations";
@@ -361,34 +557,128 @@
     render();
     byId("eduopsCloseBatch").focus();
   };
-  app.closeBatch = function (fromHistory) { ensureDom(); dom.root.hidden = true; dom.root.setAttribute("aria-hidden", "true"); app.state.batch = null; if (!fromHistory) app.replaceRoute("workload"); return app.restoreReturnContext(); };
+  app.closeBatch = function (fromHistory) {
+    ensureDom();
+    if (app.state.confirm && app.state.confirm.batchPreviewId) app.closeConfirm(false);
+    if (app.state.batch && app.state.batch.receipt) {
+      if (app.state.batch.receiptFreshnessSatisfied !== true && app.invalidateWorkloadProjection) app.invalidateWorkloadProjection("A batch receipt changed applicant authority.");
+      app.clearSelection();
+    }
+    dom.root.hidden = true;
+    dom.root.setAttribute("aria-hidden", "true");
+    app.state.batch = null;
+    if (!fromHistory) app.replaceRoute("workload");
+    return app.restoreReturnContext();
+  };
 
   function openWorkSession() {
+    if (!app.hasCurrentWorkload || !app.hasCurrentWorkload()) { app.setInteractionState("BLOCKED", "Work Session requires a fully reconciled current workload."); return; }
     var rows = (app.state.workload && app.state.workload.rows || []).slice();
     if (!rows.length) { app.setInteractionState("BLOCKED", "Work Session cannot start because the current workload has no visible applicants."); return; }
-    app.state.workSession = { applicantIds: rows.map(function (row) { return row.applicantId; }), index: 0, completed: [], skipped: [], exceptions: [] };
-    app.openWorkbench(rows[0].applicantId, byId("eduopsStartSession"));
+    var session = app.state.workSession = {
+      applicantIds: rows.map(function (row) { return row.applicantId; }),
+      rowNumbers: rows.reduce(function (result, row) { result[row.applicantId] = Number(row.rowNumber || 0); return result; }, {}),
+      index: 0,
+      activeApplicantId: "",
+      pendingTransition: { targetIndex: 0, applicantId: rows[0].applicantId },
+      completed: [],
+      skipped: [],
+      exceptions: []
+    };
     renderSession();
+    app.openWorkbench(rows[0].applicantId, byId("eduopsStartSession"), "overview", {
+      expectedRowNumber: session.rowNumbers[rows[0].applicantId],
+      sessionApplicantId: rows[0].applicantId,
+      onBeforeAccept: function () {
+        if (app.state.workSession !== session || !session.pendingTransition || session.pendingTransition.applicantId !== rows[0].applicantId) return false;
+        session.activeApplicantId = rows[0].applicantId;
+        session.pendingTransition = null;
+        return true;
+      }
+    }).then(function (result) {
+      if (app.state.workSession !== session || !result || result.accepted !== true) return;
+      renderSession();
+    }).catch(function () {
+      if (app.state.workSession === session) {
+        session.pendingTransition = null;
+        renderSession();
+      }
+    });
   }
   function renderSession() {
     ensureDom();
     var session = app.state.workSession;
-    if (!session || !app.state.workbench) { dom.session.hidden = true; return; }
+    if (!session) { dom.session.hidden = true; return; }
     var current = session.applicantIds[session.index];
+    var workbenchId = app.state.workbench && app.state.workbench.identity && app.state.workbench.identity.applicantId || "";
+    var resolved = !session.pendingTransition
+      && session.activeApplicantId === current
+      && workbenchId === current
+      && (!app.hasCurrentWorkbenchIdentity || app.hasCurrentWorkbenchIdentity());
     dom.session.hidden = false;
-    dom.session.innerHTML = '<div><strong>Work Session</strong><span>' + (session.index + 1) + ' of ' + session.applicantIds.length + ' / ' + app.esc(current) + '</span></div><div class="eduops-action-row"><button class="eduops-button eduops-button-secondary" type="button" data-session-skip>Skip</button><button class="eduops-button eduops-button-primary" type="button" data-session-next>Complete and next</button><button class="eduops-button eduops-button-secondary" type="button" data-session-exit>Return to workload</button></div>';
+    dom.session.innerHTML = '<div><strong>Work Session</strong><span>' + (session.index + 1) + ' of ' + session.applicantIds.length + ' / ' + app.esc(current) + (resolved ? "" : " / resolving exact applicant") + '</span></div><div class="eduops-action-row"><button class="eduops-button eduops-button-secondary" type="button" data-session-previous' + (resolved && session.index > 0 ? "" : " disabled") + '>Previous</button><button class="eduops-button eduops-button-secondary" type="button" data-session-skip' + (resolved ? "" : " disabled") + '>Skip</button><button class="eduops-button eduops-button-primary" type="button" data-session-next' + (resolved ? "" : " disabled") + '>Complete and next</button><button class="eduops-button eduops-button-secondary" type="button" data-session-exit>Return to workload</button></div>';
+    if (typeof app.updateWorkbenchNavigation === "function") app.updateWorkbenchNavigation();
+  }
+  function recordSessionOutcome(session, applicantId, outcome) {
+    if (!outcome) return;
+    ["completed", "skipped", "exceptions"].forEach(function (key) {
+      session[key] = (session[key] || []).filter(function (id) { return id !== applicantId; });
+    });
+    session[outcome].push(applicantId);
+  }
+  function transitionSession(targetIndex, outcome, source) {
+    var session = app.state.workSession;
+    if (!session || session.pendingTransition) return Promise.resolve({ accepted: false, outcome: "SESSION_TRANSITION_PENDING" });
+    var current = session.applicantIds[session.index];
+    var workbenchId = app.state.workbench && app.state.workbench.identity && app.state.workbench.identity.applicantId || "";
+    if (session.activeApplicantId !== current || workbenchId !== current || app.hasCurrentWorkbenchIdentity && !app.hasCurrentWorkbenchIdentity()) return Promise.resolve({ accepted: false, outcome: "SESSION_IDENTITY_UNRESOLVED" });
+    if (app.state.dirty) return app.requestWorkbenchLeave(function () { return transitionSession(targetIndex, outcome, source); }, source || dom.session);
+    if (targetIndex < 0) return Promise.resolve({ accepted: false, outcome: "SESSION_START_REACHED" });
+    if (targetIndex >= session.applicantIds.length) {
+      recordSessionOutcome(session, current, outcome);
+      app.state.workSession = null;
+      return app.closeWorkbench();
+    }
+    var targetApplicantId = session.applicantIds[targetIndex];
+    session.pendingTransition = { targetIndex: targetIndex, applicantId: targetApplicantId, outcome: outcome };
+    renderSession();
+    return app.openWorkbench(targetApplicantId, source || dom.session, app.state.activeTab, {
+      expectedRowNumber: session.rowNumbers[targetApplicantId],
+      sessionApplicantId: targetApplicantId,
+      onBeforeAccept: function () {
+        if (app.state.workSession !== session
+            || !session.pendingTransition
+            || session.pendingTransition.targetIndex !== targetIndex
+            || session.pendingTransition.applicantId !== targetApplicantId) return false;
+        recordSessionOutcome(session, current, outcome);
+        session.index = targetIndex;
+        session.activeApplicantId = targetApplicantId;
+        session.pendingTransition = null;
+        return true;
+      }
+    }).then(function (result) {
+      if (app.state.workSession !== session || !result || result.accepted !== true) return result;
+      renderSession();
+      return result;
+    }).catch(function () {
+      if (app.state.workSession === session) {
+        session.pendingTransition = null;
+        renderSession();
+      }
+      return { accepted: false, outcome: "SESSION_TRANSITION_ERROR" };
+    });
   }
   function advanceSession(outcome) {
     var session = app.state.workSession;
     if (!session) return;
-    var current = session.applicantIds[session.index];
-    session[outcome].push(current);
-    if (session.index >= session.applicantIds.length - 1) { app.state.workSession = null; app.closeWorkbench(); return; }
-    session.index++;
-    app.state.dirty = false;
-    app.openWorkbench(session.applicantIds[session.index], dom.session);
-    setTimeout(renderSession, 0);
+    return transitionSession(session.index + 1, outcome, dom.session);
   }
+
+  app.navigateWorkSession = function (delta, outcome, source) {
+    var session = app.state.workSession;
+    if (!session) return Promise.resolve({ accepted: false, outcome: "NO_WORK_SESSION" });
+    return transitionSession(session.index + Number(delta || 0), outcome || null, source || dom.session);
+  };
 
   app.bindBatch = function () {
     ensureDom();
@@ -422,6 +712,7 @@
       if (restore) { app.restoreSelectionExclusion(restore.getAttribute("data-batch-restore")); app.state.batch.binding = binding(); app.state.batch.masterCohortSize = masterCohortSize(); loadCatalogue(); }
     });
     document.addEventListener("click", function (event) {
+      if (event.target.closest("[data-session-previous]")) app.navigateWorkSession(-1, null, event.target);
       if (event.target.closest("[data-session-skip]")) advanceSession("skipped");
       if (event.target.closest("[data-session-next]")) advanceSession("completed");
       if (event.target.closest("[data-session-exit]")) { app.state.workSession = null; app.closeWorkbench(); }

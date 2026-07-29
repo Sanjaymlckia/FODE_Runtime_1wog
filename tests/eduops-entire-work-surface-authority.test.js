@@ -10,6 +10,7 @@ const clients = Object.fromEntries(policy.clientFiles.map((file) => [file, read(
 const clientSource = Object.values(clients).join("\n");
 const workload = read("EduOps_Workload.js");
 const adapter = read("EduOps_FODE_Adapter.js");
+const canonicalPopulation = read("Admin_CanonicalPopulation.js");
 const contracts = read("EduOps_Contracts.js");
 const commands = read("EduOps_Commands.js");
 const receipts = read("EduOps_Receipts.js");
@@ -55,7 +56,7 @@ assert.doesNotMatch(clients["EduOps_ClientWorkbench.html"], /CAN_SEND_INDIVIDUAL
 assert.doesNotMatch(clients["EduOps_ClientWorkbench.html"], /portalSubmitted|OPEN_PORTAL|LOCK_PORTAL/, "client cannot infer or execute portal state");
 assert.match(clients["EduOps_ClientBatch.html"], /profile\.batchPolicy\.allowedExecutionLimits/, "execution limits come from the backend profile");
 assert.match(clients["EduOps_ClientBatch.html"], /recipient\.included === true/, "client can only retain recipients included by backend authority");
-assert.doesNotMatch(clients["EduOps_ClientBatch.html"], /push\([^)]*(?:recipient|applicant)/i, "client cannot add recipients to a server cohort");
+assert.doesNotMatch(clients["EduOps_ClientBatch.html"], /\b(?:recipients|selectedRecipients|serverCohort|catalogueRecipients)\s*\.push\s*\(/i, "client cannot add recipients to a server cohort");
 assert.match(clients["EduOps_ClientBatch.html"], /selectionQueryBinding/, "query-wide selection transports the server-issued binding");
 assert.doesNotMatch(clients["EduOps_ClientBatch.html"], /JSON\.stringify\([^)]*query[^)]*\).*fingerprint|fingerprint.*JSON\.stringify/, "client cannot reconstruct a query fingerprint");
 
@@ -94,29 +95,48 @@ assert.match(unavailable.reason, /Authoritative finance decision was not returne
 const unknownState = helperContext.eduopsStatePresentation_("");
 assert.equal(unknownState.available, false, "empty state does not create a fallback business state");
 
+const safePopulationIntegrity = {
+  schemaVersion: "CANONICAL_POPULATION_INTEGRITY_V1",
+  status: "PASS",
+  authoritySafeToBatch: true,
+  blockCode: "",
+  blockReason: "",
+  populationCount: 1,
+  scannedRowCount: 1,
+  distinctApplicantIdCount: 1,
+  duplicateApplicantIdCount: 0,
+  missingOrInvalidApplicantIdCount: 0,
+  duplicateApplicantIds: [],
+  duplicateRowReferences: [],
+  missingOrInvalidApplicantIds: [],
+  reconciliationFindings: [],
+  evidenceTruncated: false,
+  integrityFingerprint: "CPI-ENTIRE-WORK-PASS"
+};
 const commandContext = {
+  clean_: (value) => String(value == null ? "" : value).trim(),
   eduopsClean_: (value) => String(value == null ? "" : value).trim(),
   eduopsUpper_: (value) => String(value == null ? "" : value).trim().toUpperCase(),
   eduopsClone_: (value) => JSON.parse(JSON.stringify(value)),
   eduopsRequireFeature_: () => {},
-  eduopsResolveFodeSnapshot_: () => ({ snapshotId: "SNAP-1", rows: [{ applicantId: "FODE-1" }] }),
+  eduopsResolveFodeSnapshot_: () => ({ snapshotId: "SNAP-1", rows: [{ applicantId: "FODE-1" }], populationIntegrity: safePopulationIntegrity }),
   eduopsFodeApplicantRead_: () => ({ ok: true, rowKey: "FODE:FODE-1:2" }),
   Utilities: { getUuid: () => "uuid" }
 };
 vm.createContext(commandContext);
-vm.runInContext(`${commands}\nthis.revalidate = eduopsRevalidateCommandForExecution_;`, commandContext, { filename: "EduOps_Commands.js" });
+vm.runInContext(`${canonicalPopulation}\n${commands}\nthis.revalidate = eduopsRevalidateCommandForExecution_;`, commandContext, { filename: "EduOps_Commands.js" });
 const access = { capabilities: { CAN_OPEN_REVIEW_WORKSPACE: true, CAN_RUN_BATCH_COMMUNICATIONS: true } };
 const individualPreview = { operation: "CONTACTABILITY_CORRECTION", applicantId: "FODE-1", snapshotId: "SNAP-1", selectedApplicantIds: [], request: { operation: "CONTACTABILITY_CORRECTION", applicantId: "FODE-1", rowKey: "FODE:FODE-1:2", snapshotId: "SNAP-1", draft: { email: "new@example.test", reason: "Correction" } } };
 assert.equal(commandContext.revalidate(individualPreview, access).operation, "CONTACTABILITY_CORRECTION", "operator intent is revalidated without becoming authorisation");
 commandContext.eduopsResolveFodeSnapshot_ = () => ({ snapshotId: "SNAP-2", rows: [] });
 assert.throws(() => commandContext.revalidate(individualPreview, access), /STALE_SNAPSHOT/, "stale authority blocks mutation before dispatch");
 
-commandContext.eduopsResolveFodeSnapshot_ = () => ({ snapshotId: "SNAP-1", rows: [{ applicantId: "FODE-1" }] });
+commandContext.eduopsResolveFodeSnapshot_ = () => ({ snapshotId: "SNAP-1", rows: [{ applicantId: "FODE-1" }], populationIntegrity: safePopulationIntegrity });
 commandContext.eduopsResolveBatchSelection_ = () => ({ executionApplicantIds: ["FODE-1"], selectionMode: "EXPLICIT_SELECTION" });
 commandContext.eduopsResolveCommunicationTemplate_ = () => ({ internalTemplateId: "docs_missing", templateId: "docs_missing", label: "Missing documents" });
 commandContext.eduopsBatchPreviewRecipientProjection_ = (recipient) => ({ applicantId: recipient.applicantId, included: recipient.included === true });
 commandContext.eduopsAuthorityPreview_ = () => ({ ok: true, state: "READY", recipients: [{ applicantId: "FODE-1", included: true }] });
-const batchPreview = { operation: "BATCH_COMMUNICATION", applicantId: "", snapshotId: "SNAP-1", selectedApplicantIds: ["FODE-1"], recipients: [{ applicantId: "FODE-1", included: true }], request: { operation: "BATCH_COMMUNICATION", snapshotId: "SNAP-1", selection: { selectionMode: "EXPLICIT_SELECTION" }, draft: { templateId: "docs_missing" } } };
+const batchPreview = { operation: "BATCH_COMMUNICATION", applicantId: "", snapshotId: "SNAP-1", populationIntegrity: safePopulationIntegrity, integrityFingerprint: safePopulationIntegrity.integrityFingerprint, selectedApplicantIds: ["FODE-1"], recipients: [{ applicantId: "FODE-1", included: true }], request: { operation: "BATCH_COMMUNICATION", snapshotId: "SNAP-1", selection: { selectionMode: "EXPLICIT_SELECTION" }, draft: { templateId: "docs_missing" } } };
 assert.equal(commandContext.revalidate(batchPreview, access).authorityPreview.state, "READY", "exact server recipient membership passes final revalidation");
 commandContext.eduopsAuthorityPreview_ = () => ({ ok: true, state: "READY", recipients: [{ applicantId: "FODE-1", included: true }, { applicantId: "FODE-2", included: true }] });
 assert.throws(() => commandContext.revalidate(batchPreview, access), /RECIPIENT_AUTHORITY_CHANGED/, "client cannot add recipients or enlarge a server-authorised cohort");

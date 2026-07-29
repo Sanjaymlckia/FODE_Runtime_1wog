@@ -1,4 +1,6 @@
 var CANONICAL_POPULATION_SCHEMA_VERSION = "CANONICAL_POPULATION_V1";
+var CANONICAL_POPULATION_INTEGRITY_SCHEMA_VERSION = "CANONICAL_POPULATION_INTEGRITY_V1";
+var CANONICAL_POPULATION_INTEGRITY_EVIDENCE_LIMIT = 25;
 
 function canonicalPopulationClone_(value) {
   if (value === null || value === undefined) return value;
@@ -206,19 +208,118 @@ function canonicalPopulationSumCounts_(counts) {
   }, 0);
 }
 
-function canonicalPopulationReconciliation_(rows, ledger, workingViewRows) {
+function canonicalPopulationIntegrityHash_(value) {
+  var source = String(value == null ? "" : value);
+  try {
+    if (typeof Utilities !== "undefined" && Utilities.computeDigest && Utilities.base64EncodeWebSafe) {
+      var digest = Utilities.computeDigest(
+        Utilities.DigestAlgorithm.SHA_256,
+        source,
+        Utilities.Charset.UTF_8
+      );
+      return Utilities.base64EncodeWebSafe(digest).replace(/=+$/g, "");
+    }
+  } catch (_digestErr) {}
+  var hash = 2166136261;
+  for (var i = 0; i < source.length; i++) {
+    hash ^= source.charCodeAt(i);
+    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+    hash = hash >>> 0;
+  }
+  return ("00000000" + hash.toString(16)).slice(-8);
+}
+
+function canonicalPopulationIdentityEvidenceFromValues_(data) {
+  var rows = Array.isArray(data) ? data : [];
+  var headers = rows[0] || [];
+  var byApplicantId = {};
+  var missing = [];
+  var populationCount = 0;
+  var dataBearingRowCount = 0;
+  for (var r = 1; r < rows.length; r++) {
+    var raw = rows[r] || [];
+    var hasData = raw.some(function (value) { return !!clean_(value == null ? "" : value); });
+    if (!hasData) continue;
+    dataBearingRowCount++;
+    var rowObj = populationLedgerRowObjectFromValues_(headers, raw);
+    var applicantId = clean_(rowObj.ApplicantID || "");
+    if (!applicantId) {
+      missing.push({ rowNumber: r + 1, reasonCode: "MISSING_APPLICANT_ID" });
+      continue;
+    }
+    populationCount++;
+    if (!byApplicantId[applicantId]) byApplicantId[applicantId] = [];
+    byApplicantId[applicantId].push(r + 1);
+  }
+  var distinctIds = Object.keys(byApplicantId).sort();
+  var duplicateRowReferences = distinctIds.filter(function (applicantId) {
+    return byApplicantId[applicantId].length > 1;
+  }).map(function (applicantId) {
+    return { applicantId: applicantId, rowNumbers: byApplicantId[applicantId].slice() };
+  });
+  var duplicateIds = duplicateRowReferences.map(function (item) { return item.applicantId; });
+  var limit = CANONICAL_POPULATION_INTEGRITY_EVIDENCE_LIMIT;
+  return {
+    scannedRowCount: Math.max(0, rows.length - 1),
+    dataBearingRowCount: dataBearingRowCount,
+    populationCount: populationCount,
+    distinctApplicantIdCount: distinctIds.length,
+    duplicateApplicantIdCount: duplicateIds.length,
+    duplicateApplicantIds: duplicateIds.slice(0, limit),
+    duplicateRowReferences: duplicateRowReferences.slice(0, limit),
+    missingOrInvalidApplicantIdCount: missing.length,
+    missingOrInvalidApplicantIds: missing.slice(0, limit),
+    evidenceTruncated: duplicateIds.length > limit || missing.length > limit,
+    _internalFingerprintSource: {
+      distinctApplicantIds: distinctIds,
+      duplicateRowReferences: duplicateRowReferences,
+      missingOrInvalidApplicantIds: missing
+    }
+  };
+}
+
+function canonicalPopulationIdentityEvidenceFromRows_(rows) {
+  var list = Array.isArray(rows) ? rows : [];
+  var byApplicantId = {};
+  list.forEach(function (row) {
+    var applicantId = clean_(row && row.identity && row.identity.applicantId || "");
+    if (!byApplicantId[applicantId]) byApplicantId[applicantId] = [];
+    byApplicantId[applicantId].push(Number(row && row.identity && row.identity.rowNumber || 0));
+  });
+  var ids = Object.keys(byApplicantId).sort();
+  var duplicateRowReferences = ids.filter(function (applicantId) {
+    return applicantId && byApplicantId[applicantId].length > 1;
+  }).map(function (applicantId) {
+    return { applicantId: applicantId, rowNumbers: byApplicantId[applicantId].slice() };
+  });
+  return {
+    scannedRowCount: list.length,
+    dataBearingRowCount: list.length,
+    populationCount: list.length,
+    distinctApplicantIdCount: ids.filter(Boolean).length,
+    duplicateApplicantIdCount: duplicateRowReferences.length,
+    duplicateApplicantIds: duplicateRowReferences.map(function (item) { return item.applicantId; }),
+    duplicateRowReferences: duplicateRowReferences,
+    missingOrInvalidApplicantIdCount: 0,
+    missingOrInvalidApplicantIds: [],
+    evidenceTruncated: false,
+    _internalFingerprintSource: {
+      distinctApplicantIds: ids,
+      duplicateRowReferences: duplicateRowReferences,
+      missingOrInvalidApplicantIds: []
+    }
+  };
+}
+
+function canonicalPopulationReconciliation_(rows, ledger, workingViewRows, identityEvidence) {
   var list = Array.isArray(rows) ? rows : [];
   var working = Array.isArray(workingViewRows) ? workingViewRows : [];
+  var identity = identityEvidence && typeof identityEvidence === "object"
+    ? identityEvidence
+    : canonicalPopulationIdentityEvidenceFromRows_(list);
   var lifecycleCounts = canonicalPopulationCountBy_(list, function (row) { return row.lifecycle.baseState; });
   var actionabilityCounts = canonicalPopulationCountBy_(list, function (row) { return row.actionability.state; });
   var financeCounts = canonicalPopulationCountBy_(list, function (row) { return row.finance.state; });
-  var ids = {};
-  var duplicateIds = [];
-  list.forEach(function (row) {
-    var id = clean_(row.identity.applicantId || "");
-    if (ids[id]) duplicateIds.push(id);
-    ids[id] = true;
-  });
   var populationKeys = {};
   list.forEach(function (row) { populationKeys[clean_(row.identity.key || "")] = true; });
   var workingViewOutsidePopulation = working.filter(function (row) {
@@ -230,7 +331,9 @@ function canonicalPopulationReconciliation_(rows, ledger, workingViewRows) {
     lifecycleTotalsReconcile: canonicalPopulationSumCounts_(lifecycleCounts) === list.length,
     actionabilityTotalsReconcile: canonicalPopulationSumCounts_(actionabilityCounts) === list.length,
     financeTotalsReconcile: canonicalPopulationSumCounts_(financeCounts) === list.length,
-    uniqueApplicantIds: duplicateIds.length === 0,
+    uniqueApplicantIds: Number(identity.duplicateApplicantIdCount || 0) === 0,
+    noMissingOrInvalidApplicantIds: Number(identity.missingOrInvalidApplicantIdCount || 0) === 0,
+    sourceIdentityRowsAccountedFor: Number(identity.populationCount || 0) + Number(identity.missingOrInvalidApplicantIdCount || 0) === Number(identity.dataBearingRowCount || 0),
     workingViewIsSubset: workingViewOutsidePopulation.length === 0,
     opsDependencyPresent: false
   };
@@ -238,12 +341,17 @@ function canonicalPopulationReconciliation_(rows, ledger, workingViewRows) {
     status: Object.keys(checks).every(function (key) { return checks[key] === true || (key === "opsDependencyPresent" && checks[key] === false); }) ? "PASS" : "FAIL",
     checks: checks,
     populationRows: list.length,
+    populationCount: Number(identity.populationCount || list.length),
+    scannedRowCount: Number(identity.scannedRowCount || 0),
+    distinctApplicantIdCount: Number(identity.distinctApplicantIdCount || 0),
     ledgerApplicantRows: ledgerCount,
     lifecycleCounts: lifecycleCounts,
     actionabilityCounts: actionabilityCounts,
     financeCounts: financeCounts,
     ledgerLifecycleCounts: Object.assign({}, ledger && ledger.lifecycleCounts || {}),
-    duplicateApplicantIds: duplicateIds,
+    duplicateApplicantIds: Array.isArray(identity.duplicateApplicantIds) ? identity.duplicateApplicantIds.slice() : [],
+    duplicateRowReferences: canonicalPopulationClone_(identity.duplicateRowReferences || []),
+    missingOrInvalidApplicantIds: canonicalPopulationClone_(identity.missingOrInvalidApplicantIds || []),
     workingView: {
       returnedRows: working.length,
       outsideCanonicalPopulation: workingViewOutsidePopulation,
@@ -256,9 +364,216 @@ function canonicalPopulationReconciliation_(rows, ledger, workingViewRows) {
   };
 }
 
+function canonicalPopulationIntegrityFromReconciliation_(reconciliation, identityEvidence) {
+  var reconciliationDto = reconciliation && typeof reconciliation === "object" ? reconciliation : {};
+  var identity = identityEvidence && typeof identityEvidence === "object" ? identityEvidence : {};
+  var duplicateReferences = Array.isArray(identity.duplicateRowReferences) ? identity.duplicateRowReferences : [];
+  var missingRows = Array.isArray(identity.missingOrInvalidApplicantIds) ? identity.missingOrInvalidApplicantIds : [];
+  var findings = [];
+  duplicateReferences.forEach(function (item) {
+    findings.push({
+      code: "DUPLICATE_APPLICANT_ID",
+      severity: "CRITICAL",
+      applicantId: clean_(item && item.applicantId || ""),
+      rowNumbers: Array.isArray(item && item.rowNumbers) ? item.rowNumbers.slice() : [],
+      message: "ApplicantID occurs on more than one source row."
+    });
+  });
+  missingRows.forEach(function (item) {
+    findings.push({
+      code: clean_(item && item.reasonCode || "MISSING_APPLICANT_ID"),
+      severity: "CRITICAL",
+      applicantId: "",
+      rowNumbers: [Number(item && item.rowNumber || 0)].filter(function (rowNumber) { return rowNumber > 0; }),
+      message: "A populated source row has no usable ApplicantID."
+    });
+  });
+  Object.keys(reconciliationDto.checks || {}).sort().forEach(function (key) {
+    if (key === "opsDependencyPresent" || reconciliationDto.checks[key] === true) return;
+    findings.push({
+      code: "RECONCILIATION_CHECK_FAILED",
+      severity: "CRITICAL",
+      applicantId: "",
+      rowNumbers: [],
+      check: key,
+      message: "Canonical population reconciliation check failed: " + key + "."
+    });
+  });
+  var duplicateCount = Number(identity.duplicateApplicantIdCount || duplicateReferences.length);
+  var missingCount = Number(identity.missingOrInvalidApplicantIdCount || missingRows.length);
+  var status = reconciliationDto.status === "PASS" && duplicateCount === 0 && missingCount === 0 ? "PASS" : "FAIL";
+  var blockCode = "";
+  var blockReason = "";
+  if (status !== "PASS") {
+    if (duplicateCount > 0) {
+      blockCode = "DUPLICATE_APPLICANT_ID";
+      blockReason = duplicateCount + " duplicate ApplicantID" + (duplicateCount === 1 ? "" : "s") + " require reconciliation before Batch authority can proceed.";
+    } else {
+      blockCode = "POPULATION_RECONCILIATION_FAILED";
+      blockReason = missingCount > 0
+        ? missingCount + " populated source row" + (missingCount === 1 ? " has" : "s have") + " no usable ApplicantID."
+        : "Canonical population reconciliation did not pass.";
+    }
+  }
+  var fullEvidence = identity._internalFingerprintSource || {
+    duplicateRowReferences: duplicateReferences,
+    missingOrInvalidApplicantIds: missingRows
+  };
+  var fingerprintSource = JSON.stringify({
+    schemaVersion: CANONICAL_POPULATION_INTEGRITY_SCHEMA_VERSION,
+    status: status,
+    populationCount: Number(identity.populationCount || 0),
+    scannedRowCount: Number(identity.scannedRowCount || 0),
+    distinctApplicantIdCount: Number(identity.distinctApplicantIdCount || 0),
+    evidence: fullEvidence,
+    checks: reconciliationDto.checks || {}
+  });
+  return {
+    schemaVersion: CANONICAL_POPULATION_INTEGRITY_SCHEMA_VERSION,
+    status: status,
+    authoritySafeToBatch: status === "PASS",
+    blockCode: blockCode,
+    blockReason: blockReason,
+    populationCount: Number(identity.populationCount || 0),
+    scannedRowCount: Number(identity.scannedRowCount || 0),
+    distinctApplicantIdCount: Number(identity.distinctApplicantIdCount || 0),
+    duplicateApplicantIdCount: duplicateCount,
+    duplicateApplicantIds: Array.isArray(identity.duplicateApplicantIds) ? identity.duplicateApplicantIds.slice() : [],
+    duplicateRowReferences: canonicalPopulationClone_(duplicateReferences),
+    missingOrInvalidApplicantIdCount: missingCount,
+    missingOrInvalidApplicantIds: canonicalPopulationClone_(missingRows),
+    reconciliationFindings: findings.slice(0, CANONICAL_POPULATION_INTEGRITY_EVIDENCE_LIMIT),
+    evidenceTruncated: identity.evidenceTruncated === true || findings.length > CANONICAL_POPULATION_INTEGRITY_EVIDENCE_LIMIT,
+    integrityFingerprint: "CPI-" + canonicalPopulationIntegrityHash_(fingerprintSource)
+  };
+}
+
+function canonicalPopulationIntegrityUnproven_(reason) {
+  var blockReason = clean_(reason || "Canonical population integrity was not returned.");
+  return {
+    schemaVersion: CANONICAL_POPULATION_INTEGRITY_SCHEMA_VERSION,
+    status: "UNPROVEN",
+    authoritySafeToBatch: false,
+    blockCode: "POPULATION_INTEGRITY_UNPROVEN",
+    blockReason: blockReason,
+    populationCount: 0,
+    scannedRowCount: 0,
+    distinctApplicantIdCount: 0,
+    duplicateApplicantIdCount: 0,
+    duplicateApplicantIds: [],
+    duplicateRowReferences: [],
+    missingOrInvalidApplicantIdCount: 0,
+    missingOrInvalidApplicantIds: [],
+    reconciliationFindings: [{
+      code: "POPULATION_INTEGRITY_UNPROVEN",
+      severity: "CRITICAL",
+      applicantId: "",
+      rowNumbers: [],
+      message: blockReason
+    }],
+    evidenceTruncated: false,
+    integrityFingerprint: ""
+  };
+}
+
+function canonicalPopulationIntegrityContractIssues_(integrity) {
+  var source = integrity && typeof integrity === "object" ? integrity : {};
+  var issues = [];
+  function has(key) {
+    return Object.prototype.hasOwnProperty.call(source, key);
+  }
+  function validCount(key) {
+    if (!has(key)) {
+      issues.push("MISSING_" + key.toUpperCase());
+      return false;
+    }
+    var value = Number(source[key]);
+    if (!isFinite(value) || value < 0 || Math.floor(value) !== value) {
+      issues.push("INVALID_" + key.toUpperCase());
+      return false;
+    }
+    return true;
+  }
+  function validArray(key) {
+    if (!Array.isArray(source[key])) {
+      issues.push("INVALID_" + key.toUpperCase());
+      return false;
+    }
+    return true;
+  }
+
+  var schemaVersion = clean_(source.schemaVersion || "");
+  var status = clean_(source.status || "").toUpperCase();
+  var fingerprint = clean_(source.integrityFingerprint || "");
+  if (schemaVersion !== CANONICAL_POPULATION_INTEGRITY_SCHEMA_VERSION) issues.push("INVALID_SCHEMA_VERSION");
+  if (status !== "PASS" && status !== "FAIL" && status !== "UNPROVEN") issues.push("INVALID_STATUS");
+  if (typeof source.authoritySafeToBatch !== "boolean") issues.push("INVALID_AUTHORITY_SAFE_TO_BATCH");
+  if (typeof source.blockCode !== "string") issues.push("INVALID_BLOCK_CODE");
+  if (typeof source.blockReason !== "string") issues.push("INVALID_BLOCK_REASON");
+  if (!fingerprint) issues.push("MISSING_INTEGRITY_FINGERPRINT");
+
+  var populationCountValid = validCount("populationCount");
+  var scannedRowCountValid = validCount("scannedRowCount");
+  var distinctCountValid = validCount("distinctApplicantIdCount");
+  var duplicateCountValid = validCount("duplicateApplicantIdCount");
+  var missingCountValid = validCount("missingOrInvalidApplicantIdCount");
+  var duplicateIdsValid = validArray("duplicateApplicantIds");
+  var duplicateRowsValid = validArray("duplicateRowReferences");
+  var missingRowsValid = validArray("missingOrInvalidApplicantIds");
+  var findingsValid = validArray("reconciliationFindings");
+  if (typeof source.evidenceTruncated !== "boolean") issues.push("INVALID_EVIDENCE_TRUNCATED");
+
+  if (status === "PASS") {
+    if (source.authoritySafeToBatch !== true) issues.push("PASS_NOT_AUTHORITY_SAFE");
+    if (clean_(source.blockCode || "") || clean_(source.blockReason || "")) issues.push("PASS_HAS_BLOCK");
+    if (populationCountValid && distinctCountValid && Number(source.populationCount) !== Number(source.distinctApplicantIdCount)) issues.push("PASS_POPULATION_DISTINCT_MISMATCH");
+    if (populationCountValid && scannedRowCountValid && Number(source.scannedRowCount) < Number(source.populationCount)) issues.push("PASS_SCANNED_ROWS_UNDERCOUNT");
+    if (duplicateCountValid && Number(source.duplicateApplicantIdCount) !== 0) issues.push("PASS_DUPLICATE_COUNT_NONZERO");
+    if (duplicateIdsValid && source.duplicateApplicantIds.length !== 0) issues.push("PASS_DUPLICATE_IDS_PRESENT");
+    if (duplicateRowsValid && source.duplicateRowReferences.length !== 0) issues.push("PASS_DUPLICATE_ROWS_PRESENT");
+    if (missingCountValid && Number(source.missingOrInvalidApplicantIdCount) !== 0) issues.push("PASS_MISSING_ID_COUNT_NONZERO");
+    if (missingRowsValid && source.missingOrInvalidApplicantIds.length !== 0) issues.push("PASS_MISSING_ID_ROWS_PRESENT");
+    if (findingsValid && source.reconciliationFindings.length !== 0) issues.push("PASS_RECONCILIATION_FINDINGS_PRESENT");
+    if (source.evidenceTruncated === true) issues.push("PASS_EVIDENCE_TRUNCATED");
+  } else if (source.authoritySafeToBatch === true) {
+    issues.push("NON_PASS_MARKED_AUTHORITY_SAFE");
+  }
+  return issues;
+}
+
+function canonicalPopulationIntegrityGate_(snapshotOrIntegrity) {
+  var source = snapshotOrIntegrity && typeof snapshotOrIntegrity === "object" ? snapshotOrIntegrity : {};
+  var integrity = source.populationIntegrity && typeof source.populationIntegrity === "object"
+    ? source.populationIntegrity
+    : source;
+  var status = clean_(integrity && integrity.status || "").toUpperCase();
+  var contractIssues = canonicalPopulationIntegrityContractIssues_(integrity);
+  if (contractIssues.length) {
+    var unproven = canonicalPopulationIntegrityUnproven_(
+      "Canonical population integrity evidence is absent, incomplete or inconsistent: " + contractIssues.join(", ") + "."
+    );
+    return {
+      ok: false,
+      blockCode: unproven.blockCode,
+      blockReason: unproven.blockReason,
+      populationIntegrity: unproven,
+      contractIssues: contractIssues
+    };
+  }
+  var safe = status === "PASS" && integrity.authoritySafeToBatch === true;
+  return {
+    ok: safe,
+    blockCode: safe ? "" : clean_(integrity.blockCode || "POPULATION_RECONCILIATION_FAILED"),
+    blockReason: safe ? "" : clean_(integrity.blockReason || "Canonical population reconciliation did not pass."),
+    populationIntegrity: canonicalPopulationClone_(integrity),
+    contractIssues: []
+  };
+}
+
 function buildCanonicalPopulationFromValues_(data, sourceSheetName, opts) {
   var options = opts && typeof opts === "object" ? opts : {};
   var headers = data && data[0] || [];
+  var identityEvidence = canonicalPopulationIdentityEvidenceFromValues_(data);
   var rows = [];
   var sourceRowsByRowNumber = {};
   var authorityRowsByRowNumber = {};
@@ -293,6 +608,8 @@ function buildCanonicalPopulationFromValues_(data, sourceSheetName, opts) {
   var workingViewRows = authorityRows.slice(0, workingViewLimit).map(function (row) {
     return canonicalByKey[clean_(row.applicantId || "") + "#" + String(Number(row.rowNumber || 0))];
   }).filter(Boolean);
+  var reconciliation = canonicalPopulationReconciliation_(rows, ledger, workingViewRows, identityEvidence);
+  var populationIntegrity = canonicalPopulationIntegrityFromReconciliation_(reconciliation, identityEvidence);
   return {
     ok: true,
     readOnly: true,
@@ -310,8 +627,10 @@ function buildCanonicalPopulationFromValues_(data, sourceSheetName, opts) {
       contactability: canonicalPopulationCountBy_(rows, function (row) { return row.contactability.state; })
     },
     populationLedger: populationLedgerPublicSummary_(ledger),
-    reconciliation: canonicalPopulationReconciliation_(rows, ledger, workingViewRows),
-    _internalSourceRowsByRowNumber: sourceRowsByRowNumber
+    reconciliation: reconciliation,
+    populationIntegrity: populationIntegrity,
+    _internalSourceRowsByRowNumber: sourceRowsByRowNumber,
+    _internalData: data
   };
 }
 
@@ -417,12 +736,22 @@ function buildCanonicalCohort_(snapshot, request, opts) {
 function canonicalPopulationSnapshot_() {
   var adminEmail = getCallerEmail_();
   if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+  return canonicalPopulationIntegritySnapshot_({
+    actor: typeof communicationGetActorInfo_ === "function" ? communicationGetActorInfo_({ actorEmail: adminEmail }) : null
+  });
+}
+
+function canonicalPopulationIntegritySnapshot_(opts) {
+  var options = opts && typeof opts === "object" ? opts : {};
   var sheet = openDataSheet_();
   var data = sheet.getDataRange().getValues();
   var sourceSheetName = sheet && typeof sheet.getName === "function" ? sheet.getName() : "";
-  return buildCanonicalPopulationFromValues_(data, sourceSheetName, {
-    actor: typeof communicationGetActorInfo_ === "function" ? communicationGetActorInfo_({ actorEmail: adminEmail }) : null
+  var snapshot = buildCanonicalPopulationFromValues_(data, sourceSheetName, {
+    actor: options.actor || null,
+    nowMs: options.nowMs
   });
+  snapshot._internalSheet = sheet;
+  return snapshot;
 }
 
 function canonicalPopulationPublicSnapshot_(snapshot, includeRows) {
@@ -697,7 +1026,18 @@ function admin_getCanonicalApplicant(payload) {
       actor: typeof communicationGetActorInfo_ === "function" ? communicationGetActorInfo_({ actorEmail: adminEmail }) : null
     }));
   }
-  return { ok: matches.length === 1, readOnly: true, code: matches.length > 1 ? "DUPLICATE_APPLICANT_ID" : (matches.length ? "" : "APPLICANT_NOT_FOUND"), applicant: matches.length ? canonicalPopulationClone_(matches[0]) : null };
+  var duplicateRowReferences = matches.length > 1 ? [{
+    applicantId: applicantId,
+    rowNumbers: matches.map(function (match) { return Number(match && match.identity && match.identity.rowNumber || 0); })
+  }] : [];
+  return {
+    ok: matches.length === 1,
+    readOnly: true,
+    code: matches.length > 1 ? "DUPLICATE_APPLICANT_ID" : (matches.length ? "" : "APPLICANT_NOT_FOUND"),
+    blockReason: matches.length > 1 ? "ApplicantID occurs on more than one source row." : "",
+    duplicateRowReferences: duplicateRowReferences,
+    applicant: matches.length === 1 ? canonicalPopulationClone_(matches[0]) : null
+  };
 }
 
 function admin_searchCanonicalPopulation(payload) {

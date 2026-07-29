@@ -87,13 +87,14 @@ function eduopsResolveFodeSnapshot_(access) {
     try { cached = eduopsFodeSnapshotCacheRead_(cache, baseKey); } catch (_cacheReadErr) { cached = null; }
   }
   var cacheReadMs = Date.now() - cacheReadStarted;
-  if (cached && cached.snapshotId && Array.isArray(cached.rows)) {
+  if (cached && cached.snapshotId && Array.isArray(cached.rows) && cached.populationIntegrity && typeof cached.populationIntegrity === "object") {
     return {
       snapshotId: cached.snapshotId,
       snapshotAsOf: cached.snapshotAsOf,
       sourceSheetName: cached.sourceSheetName,
       totalRows: Number(cached.totalRows || cached.rows.length),
       rows: cached.rows,
+      populationIntegrity: eduopsClone_(cached.populationIntegrity),
       sourceVersion: sourceVersion,
       cacheState: "HIT",
       timings: {
@@ -116,7 +117,29 @@ function eduopsResolveFodeSnapshot_(access) {
     snapshotAsOf: eduopsClean_(snapshot.generatedAt || ""),
     sourceSheetName: eduopsClean_(snapshot.sourceSheetName || sourceVersion.sheetName || ""),
     totalRows: Number(snapshot.totalRows || 0),
-    rows: eduopsFodeCacheableRows_(snapshot)
+    rows: eduopsFodeCacheableRows_(snapshot),
+    populationIntegrity: snapshot.populationIntegrity && typeof snapshot.populationIntegrity === "object"
+      ? eduopsClone_(snapshot.populationIntegrity)
+      : (typeof canonicalPopulationIntegrityUnproven_ === "function"
+        ? canonicalPopulationIntegrityUnproven_("Canonical FODE snapshot did not expose population integrity.")
+        : {
+            schemaVersion: "CANONICAL_POPULATION_INTEGRITY_V1",
+            status: "UNPROVEN",
+            authoritySafeToBatch: false,
+            blockCode: "POPULATION_INTEGRITY_UNPROVEN",
+            blockReason: "Canonical FODE snapshot did not expose population integrity.",
+            populationCount: 0,
+            scannedRowCount: 0,
+            distinctApplicantIdCount: 0,
+            duplicateApplicantIdCount: 0,
+            duplicateApplicantIds: [],
+            duplicateRowReferences: [],
+            missingOrInvalidApplicantIdCount: 0,
+            missingOrInvalidApplicantIds: [],
+            reconciliationFindings: [],
+            evidenceTruncated: false,
+            integrityFingerprint: ""
+          })
   };
   var projectionMs = Date.now() - projectionStarted;
   var cacheWriteStarted = Date.now();
@@ -130,6 +153,7 @@ function eduopsResolveFodeSnapshot_(access) {
     sourceSheetName: record.sourceSheetName,
     totalRows: record.totalRows || record.rows.length,
     rows: record.rows,
+    populationIntegrity: eduopsClone_(record.populationIntegrity),
     sourceVersion: sourceVersion,
     cacheState: sourceVersion.cacheable ? "MISS_REHYDRATED" : "UNCACHEABLE_REHYDRATED",
     timings: {

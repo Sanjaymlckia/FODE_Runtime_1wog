@@ -27,7 +27,32 @@ assert.doesNotThrow(() => new vm.Script(client.replace(/^<script>\s*/, "").repla
 assert.doesNotThrow(() => new vm.Script(workload, { filename: "EduOps_Workload.js" }));
 
 const context = { app: {
-  state: { operationAvailability: {}, capabilities: {}, workbench: { actions: {}, communications: {} } },
+  state: {
+    operationAvailability: {},
+    capabilities: {},
+    workloadRequest: {
+      latestGeneration: 7,
+      acceptedGeneration: 7,
+      requestedFingerprint: "CURRENT_WORKLOAD",
+      acceptedFingerprint: "CURRENT_WORKLOAD"
+    },
+    workbench: {
+      actions: {},
+      communications: {},
+      identity: { applicantId: "A1", rowNumber: 42 },
+      snapshotId: "SNAPSHOT-1"
+    },
+    workbenchRequest: {
+      phase: "SUCCESS",
+      latestGeneration: 1,
+      acceptedGeneration: 1,
+      originatingWorkloadLatestGeneration: 7,
+      originatingWorkloadAcceptedGeneration: 7,
+      originatingWorkloadRequestedFingerprint: "CURRENT_WORKLOAD",
+      originatingWorkloadAcceptedFingerprint: "CURRENT_WORKLOAD",
+      workSessionApplicantId: ""
+    }
+  },
   operationAvailable(operation) { return this.state.operationAvailability[operation]?.available === true; },
   operationUnavailableReason(operation) { return this.state.operationAvailability[operation]?.reason || "Authoritative operation availability was not returned. Refresh or retry."; },
   authorityUnavailable(domain) { return `Authoritative ${domain} decision was not returned. Refresh or retry before continuing.`; }
@@ -35,6 +60,10 @@ const context = { app: {
 vm.createContext(context);
 vm.runInContext(`
 ${extractFunction(client, "identity")}
+${extractFunction(client, "originatingWorkloadCurrent")}
+${extractFunction(client, "workbenchIdentityToken")}
+${extractFunction(client, "workbenchTokenCurrent")}
+${extractFunction(client, "acceptedWorkbenchCurrent")}
 ${extractFunction(client, "operationAvailable")}
 ${extractFunction(client, "actionDecision")}
 ${extractFunction(client, "commandEnabled")}
@@ -66,7 +95,8 @@ function configureTemplates(templates, selectedType, capability = true) {
   context.app.state.communicationDraft = { applicantId: "A1", templateId: selectedType, messageType: selectedType };
   context.app.state.workbench = {
     actions: { SEND_INDIVIDUAL_COMMUNICATION: { schemaVersion: "EDUOPS_WORKBENCH_ACTION_V1", available: capability, reason: capability ? "Backend operation and capability authority permit preview." : "The authoritative capability projection does not permit individual communication." } },
-    identity: { applicantId: "A1", displayName: "Applicant One", email: "a@example.test" },
+    identity: { applicantId: "A1", rowNumber: 42, displayName: "Applicant One", email: "a@example.test" },
+    snapshotId: "SNAPSHOT-1",
     exactAuthorityProjection: { canonicalLifecycle: "IGNORED", canonicalFinanceState: "IGNORED", Payment_Badge: "IGNORED", Receipt_Status: "IGNORED" },
     finance: { state: "IGNORED", paymentVerified: true },
     communications: { recommendedMessageType: templates[0] && templates[0].messageType, communicationTemplatePanel: { schemaVersion: "OPSEDU_COMMUNICATION_TEMPLATE_PANEL_V1", templates } }

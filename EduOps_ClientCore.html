@@ -7,6 +7,8 @@
   var requestSequence = 0;
   var activeRequest = null;
   var queuedRequest = null;
+  var workloadRequests = {};
+  var bootstrapSequence = 0;
   var workloadTimeoutMs = Number(window.EDUOPS_REQUEST_TIMEOUT_MS || 10000);
   var bootstrapStartedAt = Date.now();
   var bootstrapTimeoutMs = Number(window.EDUOPS_BOOTSTRAP_TIMEOUT_MS || 10000);
@@ -90,6 +92,21 @@
     pageSize: 25,
     snapshotId: "",
     workload: null,
+    workloadRequest: {
+      latestGeneration: 0,
+      acceptedGeneration: 0,
+      requestedFingerprint: "",
+      acceptedFingerprint: "",
+      phase: "IDLE",
+      selectionValid: false,
+      batchAuthorityValid: false,
+      batchAuthorityCode: "POPULATION_INTEGRITY_UNPROVEN",
+      batchAuthorityReason: "Canonical population integrity authority has not been accepted for Batch Operations.",
+      populationIntegrityStatus: "UNPROVEN",
+      populationIntegrityFingerprint: "",
+      projectionFresh: false,
+      invalidationReason: ""
+    },
     selected: {},
     selectionMode: "EXPLICIT_SELECTION",
     selectionContext: null,
@@ -100,6 +117,18 @@
     selectionMessageType: "",
     searchResults: [],
     workbench: null,
+    workbenchRequest: {
+      latestGeneration: 0,
+      acceptedGeneration: 0,
+      phase: "IDLE",
+      expectedApplicantId: "",
+      expectedRowNumber: 0,
+      originatingWorkloadLatestGeneration: 0,
+      originatingWorkloadAcceptedGeneration: 0,
+      originatingWorkloadRequestedFingerprint: "",
+      originatingWorkloadAcceptedFingerprint: "",
+      workSessionApplicantId: ""
+    },
     activeTab: "overview",
     documentManifest: null,
     selectedDocumentIndex: 0,
@@ -123,13 +152,30 @@
   };
 
   app.bootstrapMachine = {
+    generation: 0,
+    acceptedGeneration: 0,
     state: "BOOT_START",
     startedAt: new Date(bootstrapStartedAt).toISOString(),
     events: [],
     error: null
   };
 
-  app.setBootstrapState = function (state, detail) {
+  app.beginBootstrapGeneration = function () {
+    var generation = ++bootstrapSequence;
+    bootstrapStartedAt = Date.now();
+    app.bootstrapMachine.generation = generation;
+    app.bootstrapMachine.state = "BOOT_START";
+    app.bootstrapMachine.startedAt = new Date(bootstrapStartedAt).toISOString();
+    app.bootstrapMachine.error = null;
+    return generation;
+  };
+
+  app.isCurrentBootstrapGeneration = function (generation) {
+    return Number(generation || 0) === Number(app.bootstrapMachine.generation || 0);
+  };
+
+  app.setBootstrapState = function (state, detail, generation) {
+    if (generation && !app.isCurrentBootstrapGeneration(generation)) return null;
     var next = app.upper(state || "BOOT_START");
     var event = {
       state: next,
@@ -138,6 +184,7 @@
       detail: String(detail || "")
     };
     app.bootstrapMachine.state = next;
+    if (next === "INTERACTIVE" && generation) app.bootstrapMachine.acceptedGeneration = generation;
     app.bootstrapMachine.error = /_ERROR$|TIMEOUT/.test(next) ? event.detail : null;
     app.bootstrapMachine.events.push(event);
     document.documentElement.setAttribute("data-eduops-bootstrap-state", next);
@@ -145,6 +192,8 @@
     if (root) root.setAttribute("data-bootstrap-state", next);
     window.__EDUOPS_BOOTSTRAP_DIAGNOSTICS__ = {
       state: app.bootstrapMachine.state,
+      generation: app.bootstrapMachine.generation,
+      acceptedGeneration: app.bootstrapMachine.acceptedGeneration,
       startedAt: app.bootstrapMachine.startedAt,
       error: app.bootstrapMachine.error || "",
       events: app.bootstrapMachine.events.slice()
@@ -170,7 +219,7 @@
         }
         control.setAttribute("aria-describedby", control.getAttribute("aria-describedby") || "eduopsBootstrapHelp");
       } else if (control.getAttribute("data-bootstrap-disabled") === "true") {
-        control.disabled = false;
+        control.disabled = control.getAttribute("data-workload-disabled") === "true";
         control.removeAttribute("data-bootstrap-disabled");
       }
     });
@@ -214,10 +263,16 @@
   };
 
   app.bootstrapRequestState = function () {
+    var unresolved = Object.keys(workloadRequests).filter(function (key) { return workloadRequests[key] && workloadRequests[key].settled !== true; });
     return {
       activeRequestId: activeRequest && activeRequest.id || null,
       queuedRequestId: queuedRequest && queuedRequest.id || null,
-      unresolvedRequests: Number(Boolean(activeRequest)) + Number(Boolean(queuedRequest))
+      unresolvedRequests: unresolved.length,
+      workloadGeneration: app.state.workloadRequest.latestGeneration,
+      acceptedWorkloadGeneration: app.state.workloadRequest.acceptedGeneration,
+      workloadPhase: app.state.workloadRequest.phase,
+      bootstrapGeneration: app.bootstrapMachine.generation,
+      acceptedBootstrapGeneration: app.bootstrapMachine.acceptedGeneration
     };
   };
 
@@ -305,6 +360,67 @@
     };
   };
 
+  app.populationIntegrityDecision = function (response) {
+    var integrity = response && response.populationIntegrity;
+    var schemaValid = !!integrity && integrity.schemaVersion === "CANONICAL_POPULATION_INTEGRITY_V1";
+    var claimedStatus = schemaValid ? String(integrity.status || "").toUpperCase() : "";
+    var fingerprint = schemaValid ? String(integrity.integrityFingerprint || "").trim() : "";
+    function nonnegativeInteger(value) {
+      var number = Number(value);
+      return isFinite(number) && number >= 0 && Math.floor(number) === number;
+    }
+    var countsValid = schemaValid
+      && nonnegativeInteger(integrity.populationCount)
+      && nonnegativeInteger(integrity.scannedRowCount)
+      && nonnegativeInteger(integrity.distinctApplicantIdCount)
+      && nonnegativeInteger(integrity.duplicateApplicantIdCount)
+      && nonnegativeInteger(integrity.missingOrInvalidApplicantIdCount);
+    var evidenceValid = schemaValid
+      && Array.isArray(integrity.duplicateApplicantIds)
+      && Array.isArray(integrity.duplicateRowReferences)
+      && Array.isArray(integrity.missingOrInvalidApplicantIds)
+      && Array.isArray(integrity.reconciliationFindings)
+      && typeof integrity.evidenceTruncated === "boolean";
+    var passConsistent = countsValid
+      && evidenceValid
+      && Number(integrity.populationCount) === Number(integrity.distinctApplicantIdCount)
+      && Number(integrity.scannedRowCount) >= Number(integrity.populationCount)
+      && Number(integrity.duplicateApplicantIdCount) === 0
+      && Number(integrity.missingOrInvalidApplicantIdCount) === 0
+      && integrity.duplicateApplicantIds.length === 0
+      && integrity.duplicateRowReferences.length === 0
+      && integrity.missingOrInvalidApplicantIds.length === 0
+      && integrity.reconciliationFindings.length === 0
+      && integrity.evidenceTruncated === false;
+    var valid = schemaValid
+      && claimedStatus === "PASS"
+      && integrity.authoritySafeToBatch === true
+      && !!fingerprint
+      && passConsistent;
+    var provenUnsafe = schemaValid && claimedStatus === "FAIL";
+    var status = valid ? "PASS" : (provenUnsafe ? "FAIL" : "UNPROVEN");
+    var canonicalUnprovenReason = "Canonical population integrity authority was not returned with an exact safe Batch fingerprint. Refresh or reconcile the population before Batch Operations.";
+    return {
+      valid: valid,
+      status: status,
+      fingerprint: fingerprint,
+      blockCode: valid
+        ? ""
+        : (provenUnsafe
+          ? String(integrity.blockCode || "POPULATION_INTEGRITY_UNSAFE")
+          : "POPULATION_INTEGRITY_UNPROVEN"),
+      blockReason: valid
+        ? ""
+        : (provenUnsafe
+          ? String(integrity.blockReason || "Canonical population integrity authority reported that this workload is unsafe for Batch Operations.")
+          : canonicalUnprovenReason)
+    };
+  };
+  app.batchAuthorityReason = function () {
+    return app.state.workloadRequest.batchAuthorityReason
+      || "Canonical population integrity has not permitted Batch Operations.";
+  };
+
   app.selectionContext = function (payload, snapshotId) {
     var p = payload || app.queryPayload();
     return {
@@ -338,17 +454,24 @@
     app.invalidateBatchAuthority("Selection cleared.");
   };
 
-  app.invalidateOperationAuthority = function (reason) {
+  app.invalidateOperationAuthority = function (reason, options) {
+    var opts = options || {};
     app.state.commandPreview = null;
     app.state.commandIdempotencyKey = "";
     app.state.commandExecutable = false;
     if (app.state.confirm && typeof app.closeConfirm === "function") app.closeConfirm(false);
     var batch = app.state.batch;
     if (!batch) return;
-    batch.step = "cohort";
+    batch.catalogueRequestGeneration = Number(batch.catalogueRequestGeneration || 0) + 1;
+    batch.previewRequestGeneration = Number(batch.previewRequestGeneration || 0) + 1;
+    batch.acceptedCatalogueGeneration = 0;
+    batch.acceptedPreviewGeneration = 0;
+    batch.acceptedPreviewIdentity = null;
+    batch.authorityValid = false;
+    if (!(opts.preserveBatchReceipt === true && batch.receipt)) batch.step = "cohort";
     batch.catalogue = null;
     batch.preview = null;
-    batch.receipt = null;
+    if (!(opts.preserveBatchReceipt === true && batch.receipt)) batch.receipt = null;
     batch.idempotencyKey = "";
     batch.authorityError = "";
     batch.invalidationReason = reason || "Selection or communication intent changed.";
@@ -425,11 +548,29 @@
     if (opts.resetPage) app.state.page = 1;
     if (opts.refreshSnapshot) app.state.snapshotId = "";
     var payload = app.queryPayload();
+    var fingerprint = JSON.stringify(payload);
+    var bootstrapGeneration = Number(opts.bootstrapGeneration || 0);
+    var existing = Object.keys(workloadRequests).map(function (key) { return workloadRequests[key]; }).filter(function (item) {
+      return item
+        && item.settled !== true
+        && item.superseded !== true
+        && item.fingerprint === fingerprint
+        && Number(item.bootstrapGeneration || 0) === bootstrapGeneration;
+    })[0];
+    if (existing) {
+      recordRequestDiagnostic({
+        id: requestSequence + 1,
+        payload: payload,
+        startedAt: 0
+      }, "DEDUPED_ACTIVE", null, null);
+      return existing.promise;
+    }
     var request = {
       id: ++requestSequence,
       payload: payload,
-      fingerprint: JSON.stringify(payload),
+      fingerprint: fingerprint,
       selectionContext: app.selectionContext(payload, payload.expectedSnapshotId || app.state.snapshotId || ""),
+      bootstrapGeneration: bootstrapGeneration,
       startedAt: 0,
       settled: false,
       superseded: false,
@@ -441,24 +582,26 @@
       request.selectionCleared = true;
     }
     request.promise = new Promise(function (resolve) { request.resolve = resolve; });
-    if (activeRequest) {
-      if (activeRequest.fingerprint === request.fingerprint) {
-        recordRequestDiagnostic(request, "DEDUPED_ACTIVE", null, null);
-        return activeRequest.promise;
-      }
-      if (queuedRequest && queuedRequest.fingerprint === request.fingerprint) {
-        recordRequestDiagnostic(request, "DEDUPED_QUEUED", null, null);
-        return queuedRequest.promise;
-      }
-      activeRequest.superseded = true;
-      if (queuedRequest) {
-        queuedRequest.resolve({ response: null, error: null, outcome: "DISCARDED_SUPERSEDED" });
-        recordRequestDiagnostic(queuedRequest, "DISCARDED_SUPERSEDED", null, null);
-      }
-      queuedRequest = request;
-      if (app.renderPendingWorkload) app.renderPendingWorkload(request, "QUEUED");
-      return request.promise;
-    }
+    Object.keys(workloadRequests).forEach(function (key) {
+      var prior = workloadRequests[key];
+      if (prior && prior.settled !== true) prior.superseded = true;
+    });
+    workloadRequests[request.id] = request;
+    activeRequest = request;
+    queuedRequest = null;
+    app.state.workloadRequest.latestGeneration = request.id;
+    app.state.workloadRequest.requestedFingerprint = request.fingerprint;
+    app.state.workloadRequest.phase = "LOADING";
+    app.state.workloadRequest.selectionValid = false;
+    app.state.workloadRequest.batchAuthorityValid = false;
+    app.state.workloadRequest.batchAuthorityCode = "WORKLOAD_PENDING";
+    app.state.workloadRequest.batchAuthorityReason = "The requested workload is still being reconciled.";
+    app.state.workloadRequest.populationIntegrityStatus = "PENDING";
+    app.state.workloadRequest.populationIntegrityFingerprint = "";
+    app.state.workloadRequest.projectionFresh = false;
+    app.state.workload = null;
+    app.invalidateOperationAuthority("A newer workload request is pending.", { preserveBatchReceipt: !!(app.state.batch && app.state.batch.receipt) });
+    if (app.state.workSession) app.state.workSession = null;
     startRequest(request);
     return request.promise;
   };
@@ -483,18 +626,48 @@
   function finishRequest(request, response, error, outcome) {
     if (request.settled) return;
     request.settled = true;
-    var superseded = request.superseded || queuedRequest;
-    var finalOutcome = superseded ? "DISCARDED_SUPERSEDED" : outcome;
-    if (!superseded && error && app.renderWorkloadError) app.renderWorkloadError(request, error, outcome);
-    if (!superseded && !error) {
+    delete workloadRequests[request.id];
+    var currentFingerprint = JSON.stringify(app.queryPayload());
+    var bootstrapCurrent = !request.bootstrapGeneration || app.isCurrentBootstrapGeneration(request.bootstrapGeneration);
+    var current = request.id === app.state.workloadRequest.latestGeneration
+      && request.fingerprint === app.state.workloadRequest.requestedFingerprint
+      && request.fingerprint === currentFingerprint
+      && bootstrapCurrent;
+    var finalOutcome = current ? outcome : "DISCARDED_SUPERSEDED";
+    if (current && error && app.renderWorkloadError) {
+      app.state.workloadRequest.phase = "FAILURE";
+      app.renderWorkloadError(request, error, outcome);
+    }
+    if (current && !error) {
       if (response.ok === false) {
         app.state.workload = null;
         app.clearSelection();
+        app.state.workloadRequest.phase = "FAILURE";
+        app.state.workloadRequest.selectionValid = false;
+        app.state.workloadRequest.batchAuthorityValid = false;
+        app.state.workloadRequest.batchAuthorityCode = "WORKLOAD_REQUEST_FAILED";
+        app.state.workloadRequest.batchAuthorityReason = "The requested workload was rejected before population integrity could be accepted.";
+        app.state.workloadRequest.populationIntegrityStatus = "UNPROVEN";
+        app.state.workloadRequest.populationIntegrityFingerprint = "";
+        app.state.workloadRequest.projectionFresh = false;
         if (app.renderWorkloadError) app.renderWorkloadError(request, new Error(response.message || response.code || "Workload rejected"), response.code || "REJECTED");
       } else {
+        var populationIntegrity = app.populationIntegrityDecision(response);
         if (response.snapshotId) app.state.snapshotId = response.snapshotId;
         if (response.operationAvailability) app.state.operationAvailability = response.operationAvailability;
         app.state.workload = response;
+        app.state.workloadRequest.acceptedGeneration = request.id;
+        app.state.workloadRequest.acceptedFingerprint = request.fingerprint;
+        app.state.workloadRequest.phase = (response.rows || []).length ? "SUCCESS_NONEMPTY" : "SUCCESS_EMPTY";
+        app.state.workloadRequest.selectionValid = true;
+        app.state.workloadRequest.batchAuthorityValid = populationIntegrity.valid;
+        app.state.workloadRequest.batchAuthorityCode = populationIntegrity.blockCode;
+        app.state.workloadRequest.batchAuthorityReason = populationIntegrity.blockReason;
+        app.state.workloadRequest.populationIntegrityStatus = populationIntegrity.status;
+        app.state.workloadRequest.populationIntegrityFingerprint = populationIntegrity.fingerprint;
+        app.state.workloadRequest.projectionFresh = true;
+        app.state.workloadRequest.invalidationReason = "";
+        if (!populationIntegrity.valid) app.clearSelection();
         if (app.state.selectionMode === "ALL_ELIGIBLE_MATCHING_QUERY" && response.queryBinding) {
           app.state.selectionQueryBinding = app.clone(response.queryBinding);
           app.state.selectionQuery = app.clone(response.queryBinding.query || null);
@@ -503,28 +676,93 @@
         if (app.renderWorkload) app.renderWorkload(response, Date.now() - request.startedAt);
       }
     }
-    if (!superseded && error) {
+    if (current && error) {
       app.state.workload = null;
       app.clearSelection();
+      app.state.workloadRequest.selectionValid = false;
+      app.state.workloadRequest.batchAuthorityValid = false;
+      app.state.workloadRequest.batchAuthorityCode = "WORKLOAD_REQUEST_FAILED";
+      app.state.workloadRequest.batchAuthorityReason = "The requested workload failed before population integrity could be accepted.";
+      app.state.workloadRequest.populationIntegrityStatus = "UNPROVEN";
+      app.state.workloadRequest.populationIntegrityFingerprint = "";
+      app.state.workloadRequest.projectionFresh = false;
     }
     recordRequestDiagnostic(request, finalOutcome, response, error);
-    if (!superseded) {
+    if (current) {
       if (error || response && response.ok === false) app.setInteractionState("ERROR", "Workload request failed. Review the visible error and retry.");
       else app.setInteractionState("SUCCESS", app.contextLabel(request.payload) + " loaded.");
     }
-    request.resolve({ response: response, error: error, outcome: finalOutcome });
+    request.resolve({
+      response: response,
+      error: error,
+      outcome: finalOutcome,
+      accepted: current && !error && response && response.ok !== false,
+      generation: request.id,
+      fingerprint: request.fingerprint,
+      bootstrapGeneration: request.bootstrapGeneration
+    });
     if (activeRequest === request) activeRequest = null;
-    if (queuedRequest) {
-      var next = queuedRequest;
-      queuedRequest = null;
-      startRequest(next);
-    }
   }
 
   function recordRequestDiagnostic(request, outcome, response, error) {
     window.__EDUOPS_REQUEST_DIAGNOSTICS__ = window.__EDUOPS_REQUEST_DIAGNOSTICS__ || [];
     window.__EDUOPS_REQUEST_DIAGNOSTICS__.push({ requestId: request.id, context: app.contextLabel(request.payload), outcome: outcome, clientRequestMs: request.startedAt ? Date.now() - request.startedAt : 0, responseSize: response ? JSON.stringify(response).length : 0, serverTimings: response && response.timings || {}, error: error ? String(error.message || error) : "" });
   }
+
+  app.hasPendingWorkloadRequest = function () {
+    return app.state.workloadRequest.phase === "LOADING";
+  };
+
+  app.hasCurrentWorkload = function () {
+    var request = app.state.workloadRequest;
+    return !!app.state.workload
+      && (request.phase === "SUCCESS_NONEMPTY" || request.phase === "SUCCESS_EMPTY")
+      && request.acceptedGeneration === request.latestGeneration
+      && request.acceptedFingerprint === request.requestedFingerprint
+      && request.projectionFresh === true;
+  };
+
+  app.invalidateWorkloadProjection = function (reason, options) {
+    var message = String(reason || "The workload projection may have changed.");
+    var opts = options || {};
+    app.state.workloadRequest.projectionFresh = false;
+    app.state.workloadRequest.selectionValid = false;
+    app.state.workloadRequest.batchAuthorityValid = false;
+    app.state.workloadRequest.batchAuthorityCode = "WORKLOAD_PROJECTION_INVALIDATED";
+    app.state.workloadRequest.batchAuthorityReason = message;
+    app.state.workloadRequest.populationIntegrityStatus = "UNPROVEN";
+    app.state.workloadRequest.populationIntegrityFingerprint = "";
+    app.state.workloadRequest.invalidationReason = message;
+    app.state.selected = {};
+    app.state.selectionMode = "EXPLICIT_SELECTION";
+    app.state.selectionContext = null;
+    app.state.selectionQuery = null;
+    app.state.selectionQueryBinding = null;
+    app.state.selectionExcluded = {};
+    app.state.selectionExecutionLimit = 0;
+    app.state.selectionMessageType = "";
+    app.state.workSession = null;
+    if (opts.preserveWorkbenchAuthority !== true) {
+      app.state.commandPreview = null;
+      app.state.commandIdempotencyKey = "";
+      app.state.commandExecutable = false;
+    }
+    var batch = app.state.batch;
+    if (batch) {
+      batch.catalogueRequestGeneration = Number(batch.catalogueRequestGeneration || 0) + 1;
+      batch.previewRequestGeneration = Number(batch.previewRequestGeneration || 0) + 1;
+      batch.acceptedCatalogueGeneration = 0;
+      batch.acceptedPreviewGeneration = 0;
+      batch.acceptedPreviewIdentity = null;
+      batch.catalogue = null;
+      batch.preview = null;
+      batch.idempotencyKey = "";
+      batch.authorityError = "";
+      batch.authorityValid = false;
+      batch.invalidationReason = message;
+      if (!batch.receipt) batch.step = "cohort";
+    }
+  };
 
   app.snapshotReturnContext = function () {
     return {
@@ -537,6 +775,8 @@
       page: app.state.page,
       pageSize: app.state.pageSize,
       snapshotId: app.state.snapshotId,
+      workloadGeneration: app.state.workloadRequest.acceptedGeneration,
+      workloadFingerprint: app.state.workloadRequest.acceptedFingerprint,
       scrollY: window.scrollY || 0,
       focusId: document.activeElement && document.activeElement.id || ""
     };
@@ -551,7 +791,10 @@
   }
   function currentWorkloadMatchesReturnContext(ctx) {
     var workload = app.state.workload;
-    if (!ctx || !workload || !Array.isArray(workload.rows) || !workload.rows.length) return false;
+    if (!ctx || !workload || !Array.isArray(workload.rows) || !workload.rows.length || !app.hasCurrentWorkload()) return false;
+    if (Object.keys(workloadRequests).length) return false;
+    if (ctx.workloadGeneration && Number(ctx.workloadGeneration) !== Number(app.state.workloadRequest.acceptedGeneration)) return false;
+    if (ctx.workloadFingerprint && String(ctx.workloadFingerprint) !== String(app.state.workloadRequest.acceptedFingerprint)) return false;
     var snapshotId = ctx.snapshotId || app.state.snapshotId || "";
     if (snapshotId && workload.snapshotId && String(workload.snapshotId) !== String(snapshotId)) return false;
     return String(workload.product || app.state.product || "") === String(ctx.product || app.state.product || "")
@@ -566,7 +809,8 @@
 
   app.restoreReturnContext = function (context) {
     var ctx = context || app.state.returnContext;
-    if (!ctx) return app.requestWorkload();
+    var forceFreshSnapshot = app.state.workloadRequest.projectionFresh !== true;
+    if (!ctx) return app.requestWorkload({ refreshSnapshot: forceFreshSnapshot });
     var defaults = app.state.profile && app.state.profile.defaultQuery || {};
     app.state.product = ctx.product || defaults.product || "FODE";
     app.state.actionabilityState = ctx.actionabilityState || defaults.actionabilityState || "";
@@ -576,15 +820,16 @@
     app.state.sort = app.clone(ctx.sort || defaults.sort || {});
     app.state.page = Number(ctx.page || 1);
     app.state.pageSize = Number(ctx.pageSize || 25);
-    app.state.snapshotId = ctx.snapshotId || app.state.snapshotId;
-    if (currentWorkloadMatchesReturnContext(ctx)) {
+    app.state.snapshotId = forceFreshSnapshot ? "" : (ctx.snapshotId || app.state.snapshotId);
+    if (!forceFreshSnapshot && currentWorkloadMatchesReturnContext(ctx)) {
       if (app.state.workload.operationAvailability) app.state.operationAvailability = app.state.workload.operationAvailability;
       if (app.renderWorkload) app.renderWorkload(app.state.workload, 0);
       restoreReturnFocus(ctx);
       return Promise.resolve(app.state.workload);
     }
-    return app.requestWorkload().then(function () {
+    return app.requestWorkload({ refreshSnapshot: forceFreshSnapshot }).then(function (result) {
       restoreReturnFocus(ctx);
+      return result && result.response || null;
     });
   };
 

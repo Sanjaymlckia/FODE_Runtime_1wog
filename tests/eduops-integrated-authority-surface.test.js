@@ -175,8 +175,9 @@ assert.equal(explicit(30, 10).executionCohortSize, 10, "30 selected with limit 1
 function queryWide(limit) {
   const query = { actionabilityState: "READY" };
   const fingerprint = JSON.stringify(query);
-  const resolved = { snapshotId: "SNAP", rows: rows(253) };
-  const queryBinding = { schemaVersion: "EDUOPS_QUERY_BINDING_V1", authority: "SERVER_AUTHORED", product: "FODE", snapshotId: "SNAP", query, queryFingerprint: fingerprint };
+  const integrityFingerprint = "CPI-INTEGRATED-AUTHORITY-PASS";
+  const resolved = { snapshotId: "SNAP", rows: rows(253), populationIntegrity: { integrityFingerprint } };
+  const queryBinding = { schemaVersion: "EDUOPS_QUERY_BINDING_V1", authority: "SERVER_AUTHORED", product: "FODE", snapshotId: "SNAP", integrityFingerprint, query, queryFingerprint: fingerprint };
   return commandContext.eduopsResolveBatchSelection_({ product: "FODE", snapshotId: "SNAP", selectionMode: "ALL_ELIGIBLE_MATCHING_QUERY", queryBinding, excludedApplicantIds: [], executionLimit: limit }, resolved, { executionLimit: limit });
 }
 assert.equal(queryWide(30).executionCohortSize, 30, "query-wide 253 with limit 30 produces 30");

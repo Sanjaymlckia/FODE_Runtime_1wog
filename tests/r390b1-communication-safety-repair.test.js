@@ -77,16 +77,17 @@ const selectedSource = read("Admin_SelectedApplicantCommunications.js");
 const workbenchSource = read("EduOps_ClientWorkbench.html");
 const stageBatchSource = read("Admin_StageBatchCommunications.js");
 
-// Stage Batch is outside R390B1's allowed runtime set. Lock its normalized source
-// to the accepted R389A baseline while exercising the communication repair.
-const normalizedStageBatchHash = crypto
-  .createHash("sha256")
-  .update(stageBatchSource.replace(/\r\n/g, "\n"), "utf8")
-  .digest("hex");
-assert.equal(
-  normalizedStageBatchHash,
-  "bd5cfe8a7f8c4ad83fc1a56f1eb77a9ff36a0c25726f8068c72411895b615aa3",
-  "R390B1 must not change Stage Batch runtime source"
+// R391B explicitly authorizes Stage Batch population-integrity gates. Preserve
+// the R390 communication identity assertions while requiring the new boundary.
+assert.match(
+  extractFunction(stageBatchSource, "admin_previewStageBatch"),
+  /populationIntegrity/i,
+  "Stage Batch preview must retain the R391B population-integrity gate"
+);
+assert.match(
+  extractFunction(stageBatchSource, "admin_sendStageBatch"),
+  /populationIntegrity/i,
+  "Stage Batch send must retain the R391B population-integrity revalidation"
 );
 
 const previewSource = extractFunction(commandsSource, "eduops_previewCommand");

@@ -70,7 +70,8 @@ assert.equal(policyContext.communicationApplyMandatoryPolicyBlocks_({ requiresPo
 assert.match(code, /var readBackIndex = communicationReadTemplateVariantIndex_\(\)[\s\S]*communicationLoadActiveTemplateVariant_\(templateId, versionId\)/, "template save must read back index and version in the same RPC cycle");
 assert.match(code, /REUSABLE_TEMPLATE_READBACK_FAILED/, "template read-back mismatch must fail closed");
 assert.match(code, /active: true, readBackVerified: true/, "successful save response must prove active read-back");
-assert.match(workbench, /function refreshWorkbenchAfterTemplateSave[\s\S]*eduops_getApplicantWorkbench[\s\S]*communicationTemplateById\(saveResult\.templateId[\s\S]*applyCommunicationTemplate\(saved\)/, "successful save must refresh and auto-select the saved variant");
+assert.match(workbench, /function refreshWorkloadThenWorkbench[\s\S]*restoreReturnContext[\s\S]*hasCurrentWorkload[\s\S]*expectedWorkloadRow[\s\S]*requestWorkbench/, "template refresh must first accept a fresh workload generation and exact applicant row");
+assert.match(workbench, /function refreshWorkbenchAfterTemplateSave[\s\S]*refreshWorkloadThenWorkbench\(applicantId,\s*"communications"\)[\s\S]*communicationTemplateById\(saveResult\.templateId[\s\S]*applyCommunicationTemplate\(saved\)/, "successful save must reopen the guarded Workbench and auto-select the saved variant");
 assert.match(workbench, /Reusable template saved and selected:[\s\S]*result\.templateId[\s\S]*result\.versionId/, "operator success must identify template and version");
 
 console.log("PASS R376F Documents runtime, portal authority, reusable template persistence, and PNG dates");

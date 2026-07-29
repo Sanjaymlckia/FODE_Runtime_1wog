@@ -402,6 +402,10 @@ function stageBatchPreviewResponse_(data) {
     alreadySentExcluded: Number(src.alreadySentExcluded || 0),
     failedExcluded: Number(src.failedExcluded || 0),
     blockedByReason: src.blockedByReason || {},
+    populationIntegrity: src.populationIntegrity && typeof src.populationIntegrity === "object"
+      ? JSON.parse(JSON.stringify(src.populationIntegrity))
+      : null,
+    integrityFingerprint: clean_(src.integrityFingerprint || src.populationIntegrity && src.populationIntegrity.integrityFingerprint || ""),
     canonicalLifecycleDiagnostics: src.canonicalLifecycleDiagnostics && typeof src.canonicalLifecycleDiagnostics === "object"
       ? JSON.parse(JSON.stringify(src.canonicalLifecycleDiagnostics))
       : stageBatchCanonicalDiagnosticsSummary_(),
@@ -423,6 +427,46 @@ function stageBatchPreviewResponse_(data) {
       payloadAssemblyMs: Number(phaseSrc.payloadAssemblyMs || 0)
     }
   };
+}
+
+function stageBatchPopulationIntegrityGate_(snapshotOpt, actor) {
+  if (typeof canonicalPopulationIntegritySnapshot_ !== "function" || typeof canonicalPopulationIntegrityGate_ !== "function") {
+    return {
+      ok: false,
+      blockCode: "POPULATION_INTEGRITY_UNPROVEN",
+      blockReason: "Canonical population integrity authority is unavailable.",
+      populationIntegrity: {
+        schemaVersion: "CANONICAL_POPULATION_INTEGRITY_V1",
+        status: "UNPROVEN",
+        authoritySafeToBatch: false,
+        blockCode: "POPULATION_INTEGRITY_UNPROVEN",
+        blockReason: "Canonical population integrity authority is unavailable.",
+        integrityFingerprint: ""
+      },
+      integrityFingerprint: "",
+      snapshot: null
+    };
+  }
+  var snapshot = snapshotOpt && typeof snapshotOpt === "object"
+    ? snapshotOpt
+    : canonicalPopulationIntegritySnapshot_({ actor: actor || null });
+  var gate = canonicalPopulationIntegrityGate_(snapshot);
+  gate.integrityFingerprint = clean_(gate.populationIntegrity && gate.populationIntegrity.integrityFingerprint || "");
+  gate.snapshot = snapshot;
+  return gate;
+}
+
+function stageBatchPopulationIntegrityBlockedResult_(action, requestId, gate, blockCode, blockReason) {
+  var integrityGate = gate && typeof gate === "object" ? gate : stageBatchPopulationIntegrityGate_(null, null);
+  var out = adminCommBlockedResult_(
+    action,
+    clean_(blockCode || integrityGate.blockCode || "POPULATION_RECONCILIATION_FAILED"),
+    requestId,
+    { blockReason: clean_(blockReason || integrityGate.blockReason || "Canonical population reconciliation did not pass.") }
+  );
+  out.populationIntegrity = integrityGate.populationIntegrity;
+  out.integrityFingerprint = clean_(integrityGate.integrityFingerprint || "");
+  return out;
 }
 
 function stageBatchPreviewFinalizeForRpc_(data) {
@@ -501,8 +545,49 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
   phaseTimings.rowHydrationMs = Number(phaseTimings.rowHydrationMs || 0);
   phaseTimings.resolutionMs = Number(phaseTimings.resolutionMs || 0);
   phaseTimings.payloadAssemblyMs = Number(phaseTimings.payloadAssemblyMs || 0);
-  var sh = openDataSheet_();
-  var values = sh.getDataRange().getValues();
+  var populationIntegrityGate = stageBatchPopulationIntegrityGate_(options.populationIntegritySnapshot || null, {
+    actorEmail: actorEmail,
+    actorRole: actorRole
+  });
+  if (!populationIntegrityGate.ok) {
+    return {
+      stage: normalizedStage,
+      messageType: messageType,
+      requestId: requestId,
+      limit: batchLimit,
+      requestedOffset: requestedOffset,
+      offset: 0,
+      offsetApplied: false,
+      offsetIgnored: requestedOffset > 0,
+      offsetMode: "PRODUCTION_STATEFUL",
+      totalInStage: 0,
+      eligibleUnsentTotal: 0,
+      alreadySentExcluded: 0,
+      failedExcluded: 0,
+      blockedTotal: Number(populationIntegrityGate.populationIntegrity && populationIntegrityGate.populationIntegrity.populationCount || 0),
+      blockedByReason: (function () {
+        var reasons = {};
+        reasons[populationIntegrityGate.blockCode] = Number(populationIntegrityGate.populationIntegrity && populationIntegrityGate.populationIntegrity.populationCount || 0);
+        return reasons;
+      })(),
+      blockedApplicantIdsSample: [],
+      candidates: [],
+      populationIntegrityBlocked: true,
+      blockCode: populationIntegrityGate.blockCode,
+      blockReason: populationIntegrityGate.blockReason,
+      populationIntegrity: populationIntegrityGate.populationIntegrity,
+      integrityFingerprint: populationIntegrityGate.integrityFingerprint,
+      canonicalLifecycleDiagnostics: stageBatchCanonicalDiagnosticsSummary_(),
+      elapsedMs: 0,
+      phaseTimings: phaseTimings,
+      emptyReason: populationIntegrityGate.blockReason
+    };
+  }
+  var populationSnapshot = populationIntegrityGate.snapshot || {};
+  var sh = options.sourceSheet || populationSnapshot._internalSheet || openDataSheet_();
+  var values = Array.isArray(options.sourceValues)
+    ? options.sourceValues
+    : (Array.isArray(populationSnapshot._internalData) ? populationSnapshot._internalData : sh.getDataRange().getValues());
   var headers = (values && values.length) ? values[0] : [];
   var totalInStage = 0;
   var eligibleUnsentTotal = 0;
@@ -559,6 +644,8 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
       blockedByReason: {},
       blockedApplicantIdsSample: [],
       candidates: [],
+      populationIntegrity: populationIntegrityGate.populationIntegrity,
+      integrityFingerprint: populationIntegrityGate.integrityFingerprint,
       canonicalLifecycleDiagnostics: canonicalLifecycleDiagnostics,
       elapsedMs: new Date().getTime() - startedAtMs,
       phaseTimings: phaseTimings
@@ -725,6 +812,8 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
     blockedByReason: blockedByReason,
     blockedApplicantIdsSample: blockedApplicantIdsSample,
     candidates: candidates,
+    populationIntegrity: populationIntegrityGate.populationIntegrity,
+    integrityFingerprint: populationIntegrityGate.integrityFingerprint,
     communicationCohorts: stageBatchCommunicationCohortsList_(communicationCohortMap),
     eligibleCountBounded: eligibleCountBounded,
     scanCursor: cursor,
@@ -823,6 +912,30 @@ function admin_previewStageBatch(payload) {
         }));
       }
       var actor = resolveAdminCommActor_(p);
+      var populationIntegrityGate = stageBatchPopulationIntegrityGate_(null, actor);
+      if (!populationIntegrityGate.ok) {
+        clearStageBatchPreviewCache_(adminEmail);
+        var integrityBlockedOut = stageBatchPreviewResponse_({
+          ok: false,
+          result: "BLOCKED",
+          message: populationIntegrityGate.blockReason,
+          blockCode: populationIntegrityGate.blockCode,
+          blockReason: populationIntegrityGate.blockReason,
+          requestId: requestId,
+          debugId: dbgId,
+          stage: clean_(p.stage || ""),
+          messageType: clean_(p.messageType || ""),
+          count: 0,
+          previewLimit: Number(p.limit || 0),
+          populationIntegrity: populationIntegrityGate.populationIntegrity,
+          integrityFingerprint: populationIntegrityGate.integrityFingerprint,
+          elapsedMs: new Date().getTime() - startedAtMs,
+          phaseTimings: phaseTimings
+        });
+        return typeof previewRpcTerminalSummary_ === "function"
+          ? previewRpcTerminalSummary_(stageBatchPreviewFinalizeForRpc_(integrityBlockedOut))
+          : stageBatchPreviewFinalizeForRpc_(integrityBlockedOut);
+      }
       stage = normalizeStageBatchStage_(p.stage || "");
       var discoverOnly = p.discoverOnly === true;
       var limitMeta = stageBatchLimitMeta_(p.limit);
@@ -875,7 +988,10 @@ function admin_previewStageBatch(payload) {
         discoverOnly: discoverOnly,
         previewEarlyStop: true,
         previewEligibleBuffer: 2,
-        deterministicPreview: true
+        deterministicPreview: true,
+        populationIntegritySnapshot: populationIntegrityGate.snapshot,
+        sourceSheet: populationIntegrityGate.snapshot && populationIntegrityGate.snapshot._internalSheet,
+        sourceValues: populationIntegrityGate.snapshot && populationIntegrityGate.snapshot._internalData
       });
       var candidateIds = stageBatchCandidateIds_(cohort);
       var candidateCount = candidateIds.length;
@@ -937,6 +1053,8 @@ function admin_previewStageBatch(payload) {
         blockedByReason: cohort.blockedByReason || {},
         eligibleApplicantIdsSample: [],
         blockedApplicantIdsSample: Array.isArray(cohort.blockedApplicantIdsSample) ? cohort.blockedApplicantIdsSample.slice(0, 10) : [],
+        populationIntegrity: populationIntegrityGate.populationIntegrity,
+        integrityFingerprint: populationIntegrityGate.integrityFingerprint,
         canonicalLifecycleDiagnostics: cohort.canonicalLifecycleDiagnostics || stageBatchCanonicalDiagnosticsSummary_(),
         propertyGuard: propertyGuard,
         emptyReason: emptyReason,
@@ -965,7 +1083,9 @@ function admin_previewStageBatch(payload) {
           candidateCount: candidateCount,
           candidateHash: candidateHash,
           batchId: batchId,
-          idempotencySummary: idempotencySummary
+          idempotencySummary: idempotencySummary,
+          populationIntegrity: populationIntegrityGate.populationIntegrity,
+          integrityFingerprint: populationIntegrityGate.integrityFingerprint
         });
       }
       out.elapsedMs = Math.max(Number(out.elapsedMs || 0), new Date().getTime() - startedAtMs);
@@ -1096,6 +1216,11 @@ function admin_sendStageBatch(payload) {
           offset: requestedOffset
         });
       }
+      var populationIntegrityGate = stageBatchPopulationIntegrityGate_(null, actor);
+      if (!populationIntegrityGate.ok) {
+        clearStageBatchPreviewCache_(adminEmail);
+        return stageBatchPopulationIntegrityBlockedResult_("send_stage_batch", requestId, populationIntegrityGate);
+      }
       var previewGate = readStageBatchPreviewCache_(adminEmail);
       var cachedStage = clean_(previewGate && previewGate.stage || "").toUpperCase();
       var cachedMessageType = clean_(previewGate && previewGate.messageType || "");
@@ -1129,11 +1254,24 @@ function admin_sendStageBatch(payload) {
       }) : [];
       var previewCandidateCount = Number(previewGate && previewGate.candidateCount != null ? previewGate.candidateCount : previewCandidateIds.length);
       var previewCandidateHash = clean_(previewGate && previewGate.candidateHash || "");
+      var previewIntegrityFingerprint = clean_(previewGate && previewGate.integrityFingerprint || previewGate && previewGate.populationIntegrity && previewGate.populationIntegrity.integrityFingerprint || "");
       var cachedCandidateHashPresent = !!previewCandidateHash;
       var payloadCandidateHashPresent = !!requestCandidateHash;
       var computedCandidateHash = stageBatchCandidateHash_(previewCandidateIds);
       var cacheHashMatchesCandidateIds = !cachedCandidateHashPresent || previewCandidateHash === computedCandidateHash;
       var payloadHashMatchesCache = !cachedCandidateHashPresent || requestCandidateHash === previewCandidateHash;
+      if (!previewIntegrityFingerprint || previewIntegrityFingerprint !== populationIntegrityGate.integrityFingerprint) {
+        clearStageBatchPreviewCache_(adminEmail);
+        return stageBatchPopulationIntegrityBlockedResult_(
+          "send_stage_batch",
+          requestId,
+          populationIntegrityGate,
+          previewIntegrityFingerprint ? "POPULATION_RECONCILIATION_FAILED" : "POPULATION_INTEGRITY_UNPROVEN",
+          previewIntegrityFingerprint
+            ? "Canonical population integrity changed after preview. Refresh and preview the Stage Batch again."
+            : "The Stage Batch preview did not bind canonical population integrity."
+        );
+      }
       function buildPreviewParityDecision_(rejectionSubtype, blockCode, blockReason) {
         return {
           blockCode: clean_(blockCode || "PREVIEW_STALE"),
@@ -1329,6 +1467,8 @@ function admin_sendStageBatch(payload) {
         offsetMode: "PRODUCTION_STATEFUL",
         alreadySentExcluded: 0,
         failedExcluded: 0,
+        populationIntegrity: populationIntegrityGate.populationIntegrity,
+        integrityFingerprint: populationIntegrityGate.integrityFingerprint,
         attempted: 0,
         sent: 0,
         blocked: 0,

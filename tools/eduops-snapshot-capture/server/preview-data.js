@@ -1,8 +1,11 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const crypto = require("node:crypto");
 
 const CONTRACT_VERSION = "EDUOPS_SHADOW_V1";
 const PROFILE_VERSION = "FODE_SHADOW_V1";
+const POPULATION_INTEGRITY_SCHEMA_VERSION = "CANONICAL_POPULATION_INTEGRITY_V1";
+const UNSAFE_DUPLICATE_INTEGRITY_SCENARIO = "unsafe-duplicate-integrity";
 const SNAPSHOT_ID = "FODE-PREVIEW-SNAPSHOT-001";
 const CHANGED_SNAPSHOT_ID = "FODE-PREVIEW-SNAPSHOT-002";
 const PRODUCT_SNAPSHOT_IDS = { FODE: SNAPSHOT_ID, KIA: "KIA-PREVIEW-SNAPSHOT-001", MLC: "MLC-PREVIEW-SNAPSHOT-001" };
@@ -59,6 +62,7 @@ const SCENARIOS = [
   ["timeout-10s", "Timeout - over 10 seconds", "Workload call exceeds the client timeout and exposes retry."],
   ["stale-snapshot", "Stale snapshot", "A prior expected snapshot is rejected without silent rebasing."],
   ["conflicting-authority", "Conflicting authority", "Rows are visible but no confident READY state is presented."],
+  [UNSAFE_DUPLICATE_INTEGRITY_SCENARIO, "Unsafe duplicate ApplicantID integrity", "Deterministic duplicate ApplicantID evidence blocks Batch catalogue, preview and execution authority."],
   ["source-unavailable", "Source unavailable", "Workload is unavailable with no false confidence."],
   ["empty-escalated-scope", "Empty Escalated scope", "Non-zero Actionability total with zero scoped matches is explicit."],
   ["pinned-ownership-scope", "Pinned ownership scope", "Pinned Escalated scope persists across Actionability."],
@@ -312,6 +316,26 @@ function generatedRows(size = 200) {
 
 function rowsForScenario(scenarioId) {
   const rows = generatedRows(scenarioId === "large-workload" ? 360 : 200);
+  if (scenarioId === UNSAFE_DUPLICATE_INTEGRITY_SCENARIO) {
+    rows.push(row({
+      index: 1002,
+      applicantId: "FODE-26-002985",
+      rowNumber: 92985,
+      name: "Duplicate Jackson Integrity Fixture",
+      email: "duplicate.jackson@example.test",
+      phone: "+675 7000 92985",
+      actionabilityState: "READY",
+      worklistKey: "DOCUMENT_REVIEW",
+      worklistLabel: "Document review",
+      nextAction: "Reconcile duplicate ApplicantID evidence",
+      actionOwner: "OFFICER",
+      urgencyLevel: "CRITICAL",
+      documentState: "REVIEW_REQUIRED",
+      financeState: "NOT_YET_PAYMENT_APPLICABLE",
+      contactabilityState: "EMAIL_AVAILABLE",
+      recommendedMessageType: "DOCUMENT_REVIEW_REQUIRED"
+    }));
+  }
   if (scenarioId === "contactability-failure") {
     rows.unshift(row({
       index: 1001,
@@ -333,6 +357,102 @@ function rowsForScenario(scenarioId) {
     }));
   }
   return rows;
+}
+
+function populationIntegrityForRows(rows) {
+  const sourceRows = Array.isArray(rows) ? rows : [];
+  const applicantRows = new Map();
+  const missingOrInvalidApplicantIds = [];
+  let populationCount = 0;
+  sourceRows.forEach((rowItem, index) => {
+    const applicantId = String(rowItem && rowItem.applicantId || "").trim();
+    const rowNumber = Number(rowItem && rowItem.rowNumber) || index + 2;
+    if (!applicantId) {
+      missingOrInvalidApplicantIds.push({ rowNumber, reasonCode: "MISSING_APPLICANT_ID" });
+      return;
+    }
+    populationCount += 1;
+    if (!applicantRows.has(applicantId)) applicantRows.set(applicantId, []);
+    applicantRows.get(applicantId).push(rowNumber);
+  });
+  const duplicateRowReferencesAll = Array.from(applicantRows.entries())
+    .filter((entry) => entry[1].length > 1)
+    .map((entry) => ({ applicantId: entry[0], rowNumbers: entry[1].slice().sort((left, right) => left - right) }))
+    .sort((left, right) => left.applicantId.localeCompare(right.applicantId));
+  const evidenceLimit = 25;
+  const duplicateRowReferences = duplicateRowReferencesAll.slice(0, evidenceLimit);
+  const boundedMissing = missingOrInvalidApplicantIds.slice(0, evidenceLimit);
+  const duplicateApplicantIds = duplicateRowReferences.map((item) => item.applicantId);
+  const unsafe = duplicateRowReferencesAll.length > 0 || missingOrInvalidApplicantIds.length > 0;
+  const blockCode = duplicateRowReferencesAll.length ? "DUPLICATE_APPLICANT_ID" : missingOrInvalidApplicantIds.length ? "MISSING_APPLICANT_ID" : "";
+  const duplicateReason = duplicateRowReferences.length
+    ? `Duplicate ApplicantID ${duplicateRowReferences[0].applicantId} occurs on rows ${duplicateRowReferences[0].rowNumbers.join(" and ")}.`
+    : "";
+  const missingReason = boundedMissing.length
+    ? `Missing ApplicantID evidence occurs on row ${boundedMissing[0].rowNumber}.`
+    : "";
+  const blockReason = [duplicateReason, missingReason].filter(Boolean).join(" ") + (unsafe ? " Batch authority is blocked until population identity is reconciled." : "");
+  const reconciliationFindings = duplicateRowReferences.map((item) => ({
+    code: "DUPLICATE_APPLICANT_ID",
+    applicantId: item.applicantId,
+    rowNumbers: item.rowNumbers.slice(),
+    reason: `Duplicate ApplicantID ${item.applicantId} occurs on rows ${item.rowNumbers.join(" and ")}.`
+  })).concat(boundedMissing.map((item) => ({
+    code: item.reasonCode,
+    rowNumber: item.rowNumber,
+    reason: `ApplicantID is missing on row ${item.rowNumber}.`
+  })));
+  const fingerprintSource = JSON.stringify({
+    scannedRowCount: sourceRows.length,
+    populationCount,
+    distinctApplicantIdCount: applicantRows.size,
+    duplicateRowReferences: duplicateRowReferencesAll,
+    missingOrInvalidApplicantIds
+  });
+  return {
+    schemaVersion: POPULATION_INTEGRITY_SCHEMA_VERSION,
+    status: unsafe ? "FAIL" : "PASS",
+    authoritySafeToBatch: !unsafe,
+    blockCode,
+    blockReason,
+    populationCount,
+    scannedRowCount: sourceRows.length,
+    distinctApplicantIdCount: applicantRows.size,
+    duplicateApplicantIdCount: duplicateRowReferencesAll.length,
+    missingOrInvalidApplicantIdCount: missingOrInvalidApplicantIds.length,
+    duplicateApplicantIds,
+    duplicateRowReferences,
+    missingOrInvalidApplicantIds: boundedMissing,
+    reconciliationFindings,
+    evidenceTruncated: duplicateRowReferencesAll.length > evidenceLimit || missingOrInvalidApplicantIds.length > evidenceLimit,
+    integrityFingerprint: `sha256:${crypto.createHash("sha256").update(fingerprintSource).digest("hex")}`
+  };
+}
+
+function populationRowsForContext(context, product) {
+  if (context && context.mode === "snapshot") {
+    const rows = snapshotRows(context.snapshot);
+    return Array.isArray(rows) ? rows : [];
+  }
+  return rowsForProduct(product, context && context.scenarioId || "normal-authoritative");
+}
+
+function populationIntegrityBlockResponse(integrity, details) {
+  const reason = integrity && integrity.blockReason || "Canonical population integrity is unsafe for Batch operations.";
+  return {
+    ok: false,
+    readOnly: true,
+    state: "BLOCKED",
+    statusLabel: "Blocked",
+    executable: false,
+    code: integrity && integrity.blockCode || "POPULATION_INTEGRITY_UNSAFE",
+    blockCode: integrity && integrity.blockCode || "POPULATION_INTEGRITY_UNSAFE",
+    blockReason: reason,
+    message: reason,
+    authoritySource: "Canonical Population Integrity",
+    populationIntegrity: integrity,
+    ...(details || {})
+  };
 }
 
 function getDelayMs(scenarioId, overrideMs) {
@@ -575,13 +695,14 @@ function fixtureWorkbenchAction(operation, label, available, reason, options) {
   };
 }
 
-function fixtureOperationAvailability() {
+function fixtureOperationAvailability(_populationIntegrity) {
   return {
     BATCH_COMMUNICATION: {
       operation: "BATCH_COMMUNICATION",
       available: true,
-      reason: "Preview fixture permits governed batch communication preview.",
-      authoritySource: "Communication Authority"
+      reason: "Preview fixture exposes the feature-only operation flag so the production client population-integrity gate is exercised independently.",
+      blockCode: "",
+      authoritySource: "Preview fixture feature availability"
     }
   };
 }
@@ -732,7 +853,18 @@ function snapshotWorkload(context, payload) {
   var rel = reliability(metadata.sourceReliability || "AUTHORITATIVE", "Fresh FODE snapshot fixture captured from read-only EduOps DTOs.");
   var actionabilityCounts = snapshotActionabilityCounts(snapshot);
   var worklistKeyCounts = snapshotWorklistCounts(snapshot, query.actionabilityState);
-  var reconciliationProjection = snapshot.reconciliation || reconciliation(rows, filtered, pageRows, query, metadata.snapshotId);
+  var populationIntegrity = populationIntegrityForRows(rows);
+  var queryBinding = fixtureQueryBinding(query, metadata.snapshotId, populationIntegrity);
+  var reconciliationProjection = Object.assign(
+    {},
+    snapshot.reconciliation || reconciliation(rows, filtered, pageRows, query, metadata.snapshotId, populationIntegrity),
+    {
+      integrityState: populationIntegrity.status,
+      populationIntegrity: populationIntegrity,
+      queryBinding: queryBinding,
+      queryFingerprint: queryBinding.queryFingerprint
+    }
+  );
   var response = {
     ok: true,
     readOnly: true,
@@ -764,9 +896,11 @@ function snapshotWorkload(context, payload) {
     actionabilityCounts: actionabilityCounts,
     worklistKeyCounts: worklistKeyCounts,
     metricCounts: metricCounts(filtered),
+    populationIntegrity: populationIntegrity,
+    queryBinding: queryBinding,
     reconciliation: reconciliationProjection,
     presentation: fixtureWorkloadPresentation(rows, filtered, pageRows, rel, reconciliationProjection, actionabilityCounts, worklistKeyCounts),
-    operationAvailability: fixtureOperationAvailability(),
+    operationAvailability: fixtureOperationAvailability(populationIntegrity),
     rows: pageRows.map(function (rowItem) { return { ...rowItem, snapshotId: metadata.snapshotId, sourceReliability: rel }; })
   };
   response.timings = timings(response, context.serverDurationMs || 0);
@@ -800,14 +934,18 @@ function queryOperationalWorkload(context, payload) {
     return staleResponse(query, currentSnapshotId);
   }
   let rows = rowsForProduct(query.product, scenarioId);
+  const populationIntegrity = populationIntegrityForRows(rows);
   const rel = scenarioId === "conflicting-authority"
     ? reliability("CONFLICTING", "Preview scenario reports conflicting source authorities.")
+    : populationIntegrity.authoritySafeToBatch !== true
+      ? reliability("CONFLICTING", populationIntegrity.blockReason)
     : reliability("AUTHORITATIVE", "Preview fixture authority is deterministic.");
   if (scenarioId === "conflicting-authority") {
     rows = rows.map((item) => ({ ...item, actionabilityState: item.actionabilityState === "READY" ? "UNKNOWN" : item.actionabilityState, actionabilityLabel: item.actionabilityState === "READY" ? "Unknown" : item.actionabilityLabel, selectable: false, selectBlockReason: "Source conflict prevents confident readiness.", sourceReliability: rel }));
   }
   const actionabilityCounts = { ...STATE_COUNTS };
   if (scenarioId === "large-workload") actionabilityCounts.READY = 134;
+  if (scenarioId === UNSAFE_DUPLICATE_INTEGRITY_SCENARIO) actionabilityCounts.READY += 1;
   const filtered = filterRows(rows, query);
   const sorted = sortRows(filtered, query.sort);
   const totalMatched = sorted.length;
@@ -815,7 +953,14 @@ function queryOperationalWorkload(context, payload) {
   const page = Math.min(query.page, totalPages);
   const pageRows = sorted.slice((page - 1) * query.pageSize, page * query.pageSize).map((item) => ({ ...item, sourceReliability: rel, snapshotId: currentSnapshotId }));
   const worklistKeyCounts = worklistCounts(rows, query.actionabilityState);
-  const reconciliationProjection = reconciliation(rows, filtered, pageRows, query, currentSnapshotId);
+  const queryBinding = fixtureQueryBinding(query, currentSnapshotId, populationIntegrity);
+  const reconciliationProjection = Object.assign(
+    reconciliation(rows, filtered, pageRows, query, currentSnapshotId, populationIntegrity),
+    {
+      queryBinding,
+      queryFingerprint: queryBinding.queryFingerprint
+    }
+  );
   const response = {
     ok: true,
     readOnly: true,
@@ -842,8 +987,11 @@ function queryOperationalWorkload(context, payload) {
     actionabilityCounts,
     worklistKeyCounts,
     metricCounts: metricCounts(filtered),
+    populationIntegrity,
+    queryBinding,
     reconciliation: reconciliationProjection,
     presentation: fixtureWorkloadPresentation(rows, filtered, pageRows, rel, reconciliationProjection, actionabilityCounts, worklistKeyCounts),
+    operationAvailability: fixtureOperationAvailability(populationIntegrity),
     rows: pageRows
   };
   response.timings = timings(response, context.serverDurationMs || 0);
@@ -906,7 +1054,21 @@ function metricCounts(rows) {
   }, { eligibleNow: 0, coolingOff: 0, awaitingApplicant: 0, awaitingPayment: 0, reviewRequired: 0, blocked: 0, unknown: 0, complete: 0 });
 }
 
-function reconciliation(allRows, matchedRows, pageRows, query, snapshotId) {
+function fixtureQueryBinding(query, snapshotId, populationIntegrity) {
+  const canonicalQuery = JSON.parse(JSON.stringify(query || {}));
+  return {
+    schemaVersion: "EDUOPS_QUERY_BINDING_V1",
+    authority: "SERVER_AUTHORED",
+    product: canonicalQuery.product || "FODE",
+    snapshotId: snapshotId || "",
+    snapshotAsOf: SNAPSHOT_AS_OF,
+    integrityFingerprint: populationIntegrity && populationIntegrity.integrityFingerprint || "",
+    query: canonicalQuery,
+    queryFingerprint: JSON.stringify(canonicalQuery)
+  };
+}
+
+function reconciliation(allRows, matchedRows, pageRows, query, snapshotId, populationIntegrity) {
   const matched = new Set(matchedRows.map((rowItem) => rowItem.applicantId));
   const page = new Set(pageRows.map((rowItem) => rowItem.applicantId));
   const hiddenReasons = allRows.filter((rowItem) => !matched.has(rowItem.applicantId)).slice(0, 50).map((rowItem) => ({
@@ -918,6 +1080,7 @@ function reconciliation(allRows, matchedRows, pageRows, query, snapshotId) {
     worklistKey: rowItem.worklistKey,
     selectable: rowItem.selectable
   }));
+  const integrity = populationIntegrity || populationIntegrityForRows(allRows);
   return {
     schemaVersion: "EDUOPS_RECONCILIATION_V1",
     authoritySource: "Preview fixture Population Ledger + Actionability Resolver",
@@ -938,7 +1101,8 @@ function reconciliation(allRows, matchedRows, pageRows, query, snapshotId) {
     nextOperatorAction: pageRows[0] ? pageRows[0].nextAction : "",
     snapshotId,
     asOf: SNAPSHOT_AS_OF,
-    integrityState: "PASS",
+    integrityState: integrity.status,
+    populationIntegrity: integrity,
     queryFingerprint: JSON.stringify(query),
     arithmetic: "canonicalPopulation = totalMatched + hiddenFromCurrentView",
     hiddenReasonRows: hiddenReasons,
@@ -1387,6 +1551,14 @@ function batchCommunicationCatalogue(context, payload) {
   }
   const supplied = p.selection && typeof p.selection === "object" ? p.selection : {};
   const allRows = rowsForProduct(product, context.scenarioId || "normal-authoritative");
+  const populationIntegrity = populationIntegrityForRows(allRows);
+  if (populationIntegrity.authoritySafeToBatch !== true) {
+    return populationIntegrityBlockResponse(populationIntegrity, {
+      operation: "BATCH_COMMUNICATION",
+      product,
+      snapshotId
+    });
+  }
   const rowLookup = new Map(allRows.map((rowItem) => [rowItem.applicantId, rowItem]));
   const excluded = new Set(Array.isArray(supplied.excludedApplicantIds) ? supplied.excludedApplicantIds : []);
   let selectedApplicantIds = Array.isArray(supplied.selectedApplicantIds) ? supplied.selectedApplicantIds.slice() : [];
@@ -1487,6 +1659,16 @@ function previewCommand(context, payload) {
   if (context.scenarioId === "capability-denied") return { ok: false, code: "CAPABILITY_DENIED", message: `${definition[0]} is required.` };
   const currentSnapshot = context.mode === "snapshot" ? context.snapshot && context.snapshot.metadata && context.snapshot.metadata.snapshotId : productSnapshotId(p.product);
   if (!p.snapshotId || p.snapshotId !== currentSnapshot) return { ok: false, code: "STALE_SNAPSHOT", message: "The command is not bound to the current product snapshot." };
+  if (operation === "BATCH_COMMUNICATION") {
+    const populationIntegrity = populationIntegrityForRows(populationRowsForContext(context, p.product));
+    if (populationIntegrity.authoritySafeToBatch !== true) {
+      return populationIntegrityBlockResponse(populationIntegrity, {
+        operation,
+        product: productCode(p.product),
+        snapshotId: currentSnapshot
+      });
+    }
+  }
   const selection = p.selection && typeof p.selection === "object" ? p.selection : null;
   if (selection && definition[1] !== true) return { ok: false, code: "BATCH_NOT_ALLOWED", message: "This operation is individual-only." };
   if (selection && selection.queryFingerprint !== p.queryFingerprint) return { ok: false, code: "QUERY_BINDING_MISMATCH", message: "The selection query changed after selection." };
@@ -1569,6 +1751,17 @@ function executeCommand(context, payload) {
   const preview = previewStore.previews.get(String(p.previewId || ""));
   if (!preview) return { ok: false, code: "PREVIEW_EXPIRED_OR_UNKNOWN", message: "The preview is unavailable." };
   if (Date.parse(preview.expiresAt) <= Date.now()) return { ok: false, code: "PREVIEW_EXPIRED", message: "The preview expired before execution." };
+  if (preview.operation === "BATCH_COMMUNICATION") {
+    const populationIntegrity = populationIntegrityForRows(populationRowsForContext(context, preview.product));
+    if (populationIntegrity.authoritySafeToBatch !== true) {
+      return populationIntegrityBlockResponse(populationIntegrity, {
+        operation: preview.operation,
+        product: preview.product,
+        snapshotId: preview.snapshotId,
+        previewId: preview.previewId
+      });
+    }
+  }
   if (preview.dualApprovalRequired === true && !preview.request.approvalId) return { ok: false, code: "DUAL_APPROVAL_REQUIRED", message: "Independent approval is required for this operation." };
   if (preview.idempotencyKey !== p.idempotencyKey) return { ok: false, code: "IDEMPOTENCY_CONTEXT_MISMATCH", message: "The confirmation does not match the preview." };
   if (context.scenarioId === "stale-command-preview") return { ok: false, code: "STALE_SNAPSHOT", message: "The source snapshot changed after preview." };

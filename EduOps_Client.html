@@ -68,7 +68,8 @@
       else app.closeConfirm(true);
     });
   }
-  function applyBootstrap(access, profile) {
+  function applyBootstrap(access, profile, generation) {
+    if (!app.isCurrentBootstrapGeneration(generation)) return false;
     if (!access || access.schemaVersion !== "EDUOPS_ACCESS_PROJECTION_V1") throw new Error("Authoritative access decision was not returned. Refresh or retry before continuing.");
     if (!profile || profile.schemaVersion !== "EDUOPS_PROFILE_V2") throw new Error("Authoritative workspace profile decision was not returned. Refresh or retry before continuing.");
     app.state.access = access;
@@ -105,6 +106,7 @@
     if (appsScriptTarget) appsScriptTarget.textContent = runtime.appsScriptVersion ? "Apps Script @" + runtime.appsScriptVersion : (runtime.appsScriptVersionReason || "Apps Script version unavailable from runtime authority.");
     var mode = byId("eduopsMode");
     if (mode) mode.textContent = app.isPreview() ? "Local development" : "FODE Operations";
+    return true;
   }
   function bindOnce() {
     if (bound) return;
@@ -119,34 +121,67 @@
     var initialUrl = location.protocol === "about:" ? undefined : location.pathname + location.search + "#workload";
     history.replaceState({ eduopsRoute: "workload" }, "", initialUrl);
   }
-  function bootstrapFailure(phase, error) {
+  function bootstrapFailure(phase, error, generation) {
+    if (!app.isCurrentBootstrapGeneration(generation)) return;
     var state = error && error.code === "TIMEOUT" ? "TIMEOUT" : phase;
-    app.setBootstrapState(state, error && error.message || error);
+    app.setBootstrapState(state, error && error.message || error, generation);
     if (app.renderBootstrapError) app.renderBootstrapError(state, error);
   }
   function startBootstrap() {
-    app.setBootstrapState("BOOT_START", "Starting EduOps with a clean client state.");
-    app.setBootstrapState("ASSETS_READY", "Shared client assets loaded.");
+    var generation = app.beginBootstrapGeneration();
+    function current() { return app.isCurrentBootstrapGeneration(generation); }
+    function requireCurrent() {
+      if (current()) return;
+      var error = new Error("A newer bootstrap generation replaced this attempt.");
+      error.code = "STALE_BOOTSTRAP_GENERATION";
+      throw error;
+    }
+    app.state.access = null;
+    app.state.profile = null;
+    app.invalidateWorkloadProjection("Bootstrap source is being re-established.");
+    app.setBootstrapState("BOOT_START", "Starting EduOps with a clean client state.", generation);
+    app.setBootstrapState("ASSETS_READY", "Shared client assets loaded.", generation);
     return app.withBootstrapTimeout(app.waitForTransport(), "TRANSPORT_READY").then(function () {
-      app.setBootstrapState("TRANSPORT_READY", "EduOps transport is ready.");
+      app.setBootstrapState("TRANSPORT_READY", "EduOps transport is ready.", generation);
       return app.withBootstrapTimeout(app.call("eduops_getAccessProjection", {}), "ACCESS_READY");
     }).then(function (access) {
-      app.state.access = access;
-      app.setBootstrapState("ACCESS_READY", "Operator access projection resolved.");
+      requireCurrent();
+      app.setBootstrapState("ACCESS_READY", "Operator access projection resolved.", generation);
       return app.withBootstrapTimeout(app.call("eduops_getProfile", {}), "PROFILE_READY").then(function (profile) {
-        applyBootstrap(access, profile);
-        app.setBootstrapState("PROFILE_READY", "Product profile and feature projection resolved.");
+        requireCurrent();
+        applyBootstrap(access, profile, generation);
+        app.setBootstrapState("PROFILE_READY", "Product profile and feature projection resolved.", generation);
       });
     }).then(function () {
-      return app.withBootstrapTimeout(app.requestWorkload({ refreshSnapshot: true }), "WORKLOAD_READY");
+      requireCurrent();
+      return app.withBootstrapTimeout(app.requestWorkload({ refreshSnapshot: true, bootstrapGeneration: generation }), "WORKLOAD_READY");
     }).then(function (result) {
-      if (!result || result.error || !result.response || result.response.ok === false) {
-        throw result && result.error || new Error(result && result.response && (result.response.message || result.response.code) || "The first workload did not complete.");
+      requireCurrent();
+      var workloadState = app.state.workloadRequest || {};
+      var acceptedCurrentWorkload = !!result
+        && result.accepted === true
+        && result.outcome === "COMPLETE"
+        && Number(result.bootstrapGeneration || 0) === generation
+        && Number(result.generation || 0) === Number(workloadState.latestGeneration || 0)
+        && Number(result.generation || 0) === Number(workloadState.acceptedGeneration || 0)
+        && String(result.fingerprint || "") === String(workloadState.requestedFingerprint || "")
+        && String(result.fingerprint || "") === String(workloadState.acceptedFingerprint || "")
+        && app.hasCurrentWorkload();
+      if (!acceptedCurrentWorkload || result.error || !result.response || result.response.ok === false) {
+        var workloadError = result && result.error || new Error(result && result.response && (result.response.message || result.response.code) || "The first workload did not establish the current accepted generation.");
+        workloadError.code = workloadError.code || "STALE_BOOTSTRAP_WORKLOAD";
+        throw workloadError;
       }
+      app.setBootstrapState("SOURCE_READY", "Authoritative product source resolved.", generation);
+      app.setBootstrapState("WORKLOAD_READY", "The first workload completed with " + (result.response.rows || []).length + " visible row(s).", generation);
+      app.setBootstrapState("INTERACTIVE", "EduOps is ready. Source and workload are current.", generation);
+      return result;
     }).catch(function (error) {
-      var current = app.bootstrapMachine && app.bootstrapMachine.state || "BOOT_START";
-      var phase = current === "TRANSPORT_READY" ? "ACCESS_ERROR" : current === "ACCESS_READY" ? "PROFILE_ERROR" : current === "PROFILE_READY" ? "WORKLOAD_ERROR" : current === "ASSETS_READY" ? "TRANSPORT_ERROR" : "SOURCE_ERROR";
-      bootstrapFailure(phase, error);
+      if (error && error.code === "STALE_BOOTSTRAP_GENERATION") return { outcome: "DISCARDED_STALE_BOOTSTRAP" };
+      var currentState = app.bootstrapMachine && app.bootstrapMachine.state || "BOOT_START";
+      var phase = currentState === "TRANSPORT_READY" ? "ACCESS_ERROR" : currentState === "ACCESS_READY" ? "PROFILE_ERROR" : currentState === "PROFILE_READY" ? "WORKLOAD_ERROR" : currentState === "ASSETS_READY" ? "TRANSPORT_ERROR" : "SOURCE_ERROR";
+      bootstrapFailure(phase, error, generation);
+      return { outcome: "BOOTSTRAP_ERROR", error: error };
     });
   }
   function start() {
@@ -158,6 +193,10 @@
     app.state.snapshotId = "";
     app.state.selected = {};
     app.state.page = 1;
+    if (!app.bootstrapMachine || app.bootstrapMachine.state !== "INTERACTIVE") {
+      startBootstrap();
+      return;
+    }
     app.requestWorkload({ refreshSnapshot: true });
   });
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);

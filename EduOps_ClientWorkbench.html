@@ -5,6 +5,7 @@
   var app = window.EduOpsApp;
   var dom = {};
   var CUSTOM_EMAIL_MESSAGE_TYPE = "custom_email";
+  var workbenchRequestSequence = 0;
   function byId(id) { return document.getElementById(id); }
   function ensureDom() {
     if (dom.root) return;
@@ -20,6 +21,59 @@
 
   function row() { return app.state.workbench && app.state.workbench.exactAuthorityProjection || {}; }
   function identity() { return app.state.workbench && app.state.workbench.identity || {}; }
+  function expectedWorkloadRow(applicantId) {
+    return (app.state.workload && app.state.workload.rows || []).filter(function (item) { return item.applicantId === applicantId; })[0] || null;
+  }
+  function expectedSessionApplicantId(session) {
+    var active = session || app.state.workSession;
+    return active && active.pendingTransition && active.pendingTransition.applicantId
+      || active && active.applicantIds && active.applicantIds[active.index]
+      || "";
+  }
+  function originatingWorkloadCurrent(request) {
+    var current = app.state.workloadRequest || {};
+    return !!request
+      && Number(request.originatingWorkloadLatestGeneration || 0) === Number(current.latestGeneration || 0)
+      && Number(request.originatingWorkloadAcceptedGeneration || 0) === Number(current.acceptedGeneration || 0)
+      && String(request.originatingWorkloadRequestedFingerprint || "") === String(current.requestedFingerprint || "")
+      && String(request.originatingWorkloadAcceptedFingerprint || "") === String(current.acceptedFingerprint || "");
+  }
+  function workbenchIdentityToken() {
+    var current = identity();
+    var request = app.state.workbenchRequest || {};
+    return {
+      generation: Number(request.acceptedGeneration || 0),
+      applicantId: current.applicantId || "",
+      rowNumber: Number(current.rowNumber || 0),
+      snapshotId: app.state.workbench && app.state.workbench.snapshotId || "",
+      originatingWorkloadLatestGeneration: Number(request.originatingWorkloadLatestGeneration || 0),
+      originatingWorkloadAcceptedGeneration: Number(request.originatingWorkloadAcceptedGeneration || 0),
+      originatingWorkloadRequestedFingerprint: request.originatingWorkloadRequestedFingerprint || "",
+      originatingWorkloadAcceptedFingerprint: request.originatingWorkloadAcceptedFingerprint || "",
+      workSessionApplicantId: request.workSessionApplicantId || ""
+    };
+  }
+  function workbenchTokenCurrent(token) {
+    var current = identity();
+    var request = app.state.workbenchRequest || {};
+    return !!token
+      && request.phase === "SUCCESS"
+      && Number(token.generation) === Number(request.acceptedGeneration || 0)
+      && Number(token.generation) === Number(request.latestGeneration || 0)
+      && String(token.applicantId) === String(current.applicantId || "")
+      && Number(token.rowNumber || 0) === Number(current.rowNumber || 0)
+      && String(token.snapshotId || "") === String(app.state.workbench && app.state.workbench.snapshotId || "")
+      && originatingWorkloadCurrent(token);
+  }
+  function acceptedWorkbenchCurrent() {
+    if (!app.state.workbench || !workbenchTokenCurrent(workbenchIdentityToken())) return false;
+    var session = app.state.workSession;
+    if (!session) return true;
+    var expected = expectedSessionApplicantId(session);
+    return !session.pendingTransition
+      && String(expected) === String(identity().applicantId || "")
+      && String(session.activeApplicantId || "") === String(expected);
+  }
   function displayValue(value) {
     if (!value || typeof value !== "object") return value;
     if (value.label && typeof value.label !== "object") return value.label;
@@ -40,7 +94,7 @@
   }
   function commandEnabled(operation, capability) {
     var decision = actionDecision(operation);
-    return !!decision && decision.available === true;
+    return acceptedWorkbenchCurrent() && !!decision && decision.available === true;
   }
   function disabledReason(operation, capability) {
     var decision = actionDecision(operation);
@@ -52,7 +106,7 @@
   }
   function communicationEnabled() {
     var decision = actionDecision("SEND_INDIVIDUAL_COMMUNICATION");
-    return !!decision && decision.available === true && selectedCommunicationTemplate().selectable === true;
+    return acceptedWorkbenchCurrent() && !!decision && decision.available === true && selectedCommunicationTemplate().selectable === true;
   }
   function communicationDisabledReason() {
     var template = selectedCommunicationTemplate();
@@ -82,10 +136,22 @@
   function cohortIndex() { return cohortRows().findIndex(function (item) { return item.applicantId === identity().applicantId; }); }
   function updateApplicantNavigation() {
     var index = cohortIndex();
-    byId("eduopsWorkbenchPrevious").disabled = index <= 0;
-    byId("eduopsWorkbenchNext").disabled = index < 0 || index >= cohortRows().length - 1;
+    var session = app.state.workSession;
+    var current = acceptedWorkbenchCurrent();
+    if (session) {
+      byId("eduopsWorkbenchPrevious").disabled = !current || session.index <= 0;
+      byId("eduopsWorkbenchNext").disabled = !current || session.index >= session.applicantIds.length - 1;
+      return;
+    }
+    byId("eduopsWorkbenchPrevious").disabled = !current || index <= 0;
+    byId("eduopsWorkbenchNext").disabled = !current || index < 0 || index >= cohortRows().length - 1;
   }
   function navigateApplicant(delta, source) {
+    if (!acceptedWorkbenchCurrent()) return;
+    if (app.state.workSession) {
+      if (typeof app.navigateWorkSession === "function") app.navigateWorkSession(delta, null, source);
+      return;
+    }
     var index = cohortIndex();
     var target = cohortRows()[index + delta];
     if (target) app.openWorkbench(target.applicantId, source, app.state.activeTab);
@@ -139,15 +205,18 @@
   }
   function loadManifest() {
     if (app.state.documentManifest) return Promise.resolve(app.state.documentManifest);
+    var token = workbenchIdentityToken();
+    var payload = { applicantId: token.applicantId, rowNumber: token.rowNumber, expectedSnapshotId: token.snapshotId };
     dom.panel.innerHTML = '<div class="eduops-loading-state"><strong>Loading exact document manifest</strong><span>' + app.esc(identity().applicantId) + ' / ' + app.esc(app.state.workbench.snapshotId) + '</span></div>';
-    return app.call("eduops_getDocumentManifest", { applicantId: identity().applicantId, rowNumber: identity().rowNumber, expectedSnapshotId: app.state.workbench.snapshotId }).then(function (result) {
+    return app.call("eduops_getDocumentManifest", payload).then(function (result) {
+      if (!workbenchTokenCurrent(token)) return { outcome: "DISCARDED_STALE_WORKBENCH" };
       app.state.documentManifest = result;
       var gallery = result && result.documentGallery;
       app.state.selectedDocumentIndex = Math.min(app.state.selectedDocumentIndex, Math.max(0, (gallery && gallery.documents || []).length - 1));
       renderPanel();
       if (gallery && (gallery.documents || []).length) loadRendition(app.state.selectedDocumentIndex, true);
       return result;
-    }).catch(function (error) { dom.panel.innerHTML = '<div class="eduops-error-state"><strong>Document manifest unavailable</strong><span>' + app.esc(error.message || error) + '</span></div>'; });
+    }).catch(function (error) { if (workbenchTokenCurrent(token)) dom.panel.innerHTML = '<div class="eduops-error-state"><strong>Document manifest unavailable</strong><span>' + app.esc(error.message || error) + '</span></div>'; });
   }
   function loadRendition(index, prefetchAdjacent) {
     var files = documentFiles();
@@ -155,15 +224,21 @@
     if (!file) return;
     app.state.selectedDocumentIndex = index;
     renderPanel();
+    var token = workbenchIdentityToken();
     var renditionKey = file.documentKey + "|" + String((activeEvidence(file) || {}).itemIndex || 0);
     if (app.state.documentRenditions[renditionKey]) return;
-    app.call("eduops_getDocumentRendition", documentPayload(file)).then(function (result) {
+    var payload = documentPayload(file);
+    app.call("eduops_getDocumentRendition", payload).then(function (result) {
+      if (!workbenchTokenCurrent(token)) return;
       app.state.documentRenditions[renditionKey] = result;
       renderPanel();
       if (prefetchAdjacent && files[index + 1] && !app.state.documentRenditions[files[index + 1].documentKey]) {
-        app.call("eduops_getDocumentRendition", documentPayload(files[index + 1])).then(function (adjacent) { app.state.documentRenditions[files[index + 1].documentKey] = adjacent; });
+        var adjacent = files[index + 1];
+        var adjacentKey = adjacent.documentKey + "|" + String((activeEvidence(adjacent) || {}).itemIndex || 0);
+        var adjacentPayload = documentPayload(adjacent);
+        app.call("eduops_getDocumentRendition", adjacentPayload).then(function (adjacentResult) { if (workbenchTokenCurrent(token)) app.state.documentRenditions[adjacentKey] = adjacentResult; });
       }
-    }).catch(function (error) { app.state.documentRenditions[renditionKey] = { ok: false, error: String(error.message || error) }; renderPanel(); });
+    }).catch(function (error) { if (workbenchTokenCurrent(token)) { app.state.documentRenditions[renditionKey] = { ok: false, error: String(error.message || error) }; renderPanel(); } });
   }
   function renditionHtml(file) {
     var renditionKey = file.documentKey + "|" + String((activeEvidence(file) || {}).itemIndex || 0);
@@ -237,7 +312,10 @@
   function communicationTemplateById(templateId, messageType) {
     var list = communicationTemplates(app.state.workbench.communications || {});
     for (var i = 0; i < list.length; i++) {
-      if (list[i].templateId === templateId || list[i].messageType === messageType) return list[i];
+      if (list[i].templateId === templateId) return list[i];
+    }
+    for (var j = 0; j < list.length; j++) {
+      if (list[j].messageType === messageType) return list[j];
     }
     return null;
   }
@@ -303,18 +381,22 @@
     return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-12"><header><div><h2>Applicant operation history</h2><p>Versioned receipts and source provenance for this exact identity.</p></div></header><div id="eduopsOperationHistory" class="eduops-loading-state">Loading operation history...</div></section></div>';
   }
   function loadHistory() {
-    app.call("eduops_getOperationHistory", { applicantId: identity().applicantId, expectedSnapshotId: app.state.workbench.snapshotId }).then(function (result) {
+    var token = workbenchIdentityToken();
+    app.call("eduops_getOperationHistory", { applicantId: token.applicantId, expectedSnapshotId: token.snapshotId }).then(function (result) {
+      if (!workbenchTokenCurrent(token)) return;
       var target = byId("eduopsOperationHistory");
       if (!target) return;
       target.innerHTML = historyListHtml(result, false);
-    }).catch(function (error) { var target = byId("eduopsOperationHistory"); if (target) target.textContent = "History unavailable: " + (error.message || error); });
+    }).catch(function (error) { if (!workbenchTokenCurrent(token)) return; var target = byId("eduopsOperationHistory"); if (target) target.textContent = "History unavailable: " + (error.message || error); });
   }
   function loadCommunicationHistory() {
-    app.call("eduops_getOperationHistory", { applicantId: identity().applicantId, expectedSnapshotId: app.state.workbench.snapshotId }).then(function (result) {
+    var token = workbenchIdentityToken();
+    app.call("eduops_getOperationHistory", { applicantId: token.applicantId, expectedSnapshotId: token.snapshotId }).then(function (result) {
+      if (!workbenchTokenCurrent(token)) return;
       var target = byId("eduopsCommunicationHistory");
       if (!target) return;
       target.innerHTML = historyListHtml(result, true);
-    }).catch(function (error) { var target = byId("eduopsCommunicationHistory"); if (target) target.textContent = "Communication history unavailable: " + (error.message || error); });
+    }).catch(function (error) { if (!workbenchTokenCurrent(token)) return; var target = byId("eduopsCommunicationHistory"); if (target) target.textContent = "Communication history unavailable: " + (error.message || error); });
   }
   function renderPanel() {
     if (!app.state.workbench) return;
@@ -328,24 +410,104 @@
     else if (app.state.activeTab === "contactability") dom.panel.innerHTML = renderContactability();
   }
 
-  app.openWorkbench = function (applicantId, source, tab) {
+  function requestWorkbench(applicantId, source, tab, options) {
     ensureDom();
-    if (app.state.workbench && app.state.dirty) return app.requestWorkbenchLeave(function () { app.openWorkbench(applicantId, source, tab); }, source);
+    var opts = options || {};
+    var generation = ++workbenchRequestSequence;
+    var expected = expectedWorkloadRow(applicantId);
+    var expectedRowNumber = Number(opts.expectedRowNumber || expected && expected.rowNumber || 0);
+    var session = app.state.workSession;
+    var sessionApplicantId = opts.sessionApplicantId || expectedSessionApplicantId(session);
+    var workloadState = app.state.workloadRequest || {};
+    var workloadIdentity = {
+      originatingWorkloadLatestGeneration: Number(workloadState.latestGeneration || 0),
+      originatingWorkloadAcceptedGeneration: Number(workloadState.acceptedGeneration || 0),
+      originatingWorkloadRequestedFingerprint: workloadState.requestedFingerprint || "",
+      originatingWorkloadAcceptedFingerprint: workloadState.acceptedFingerprint || ""
+    };
+    app.state.workbenchRequest.latestGeneration = generation;
+    app.state.workbenchRequest.phase = "LOADING";
+    app.state.workbenchRequest.expectedApplicantId = applicantId;
+    app.state.workbenchRequest.expectedRowNumber = expectedRowNumber;
+    app.state.workbenchRequest.originatingWorkloadLatestGeneration = workloadIdentity.originatingWorkloadLatestGeneration;
+    app.state.workbenchRequest.originatingWorkloadAcceptedGeneration = workloadIdentity.originatingWorkloadAcceptedGeneration;
+    app.state.workbenchRequest.originatingWorkloadRequestedFingerprint = workloadIdentity.originatingWorkloadRequestedFingerprint;
+    app.state.workbenchRequest.originatingWorkloadAcceptedFingerprint = workloadIdentity.originatingWorkloadAcceptedFingerprint;
+    app.state.workbenchRequest.workSessionApplicantId = sessionApplicantId;
+    if (session && String(applicantId) !== String(sessionApplicantId)) {
+      app.state.workbenchRequest.phase = "BLOCKED_SESSION_IDENTITY";
+      app.invalidateOperationAuthority("Requested applicant did not match the active Work Session identity.");
+      updateApplicantNavigation();
+      renderPanel();
+      if (typeof app.renderWorkSession === "function") app.renderWorkSession();
+      app.setInteractionState("BLOCKED", "Work Session expects " + sessionApplicantId + ". Direct opening of " + applicantId + " was blocked.");
+      return Promise.resolve({ accepted: false, outcome: "BLOCKED_WORK_SESSION_IDENTITY" });
+    }
+    if (workloadIdentity.originatingWorkloadLatestGeneration !== workloadIdentity.originatingWorkloadAcceptedGeneration
+        || workloadIdentity.originatingWorkloadRequestedFingerprint !== workloadIdentity.originatingWorkloadAcceptedFingerprint) {
+      app.state.workbenchRequest.phase = "BLOCKED_WORKLOAD_IDENTITY";
+      app.invalidateOperationAuthority("The originating workload is not a current accepted generation.");
+      updateApplicantNavigation();
+      renderPanel();
+      app.setInteractionState("BLOCKED", "Wait for the current workload generation before opening an applicant.");
+      return Promise.resolve({ accepted: false, outcome: "BLOCKED_WORKLOAD_IDENTITY" });
+    }
+    app.invalidateOperationAuthority("A newer applicant Workbench request is pending.");
     app.state.returnContext = app.state.workbench ? app.state.returnContext : app.snapshotReturnContext();
+    app.state.workbench = null;
+    app.state.operationAvailability = {};
+    app.state.documentManifest = null;
+    app.state.documentRenditions = {};
+    app.state.documentDraft = {};
+    app.state.communicationDraft = null;
     dom.root.hidden = false;
     dom.root.setAttribute("aria-hidden", "false");
     dom.panel.innerHTML = '<div class="eduops-loading-state"><strong>Opening exact applicant Workbench</strong><span>' + app.esc(applicantId) + ' / ' + app.esc(app.state.snapshotId) + '</span></div>';
+    byId("eduopsWorkbenchPrevious").disabled = true;
+    byId("eduopsWorkbenchNext").disabled = true;
     app.setInteractionState("LOADING", "Opening exact applicant " + applicantId + ".");
-    app.call("eduops_getApplicantWorkbench", { product: app.state.product, applicantId: applicantId, expectedSnapshotId: app.state.snapshotId, returnContext: app.state.returnContext }).then(function (result) {
+    var payload = { product: app.state.product, applicantId: applicantId, expectedSnapshotId: app.state.snapshotId, returnContext: app.state.returnContext };
+    if (expectedRowNumber) payload.rowNumber = expectedRowNumber;
+    return app.call("eduops_getApplicantWorkbench", payload).then(function (result) {
+      if (generation !== app.state.workbenchRequest.latestGeneration || applicantId !== app.state.workbenchRequest.expectedApplicantId) return { accepted: false, outcome: "DISCARDED_STALE_WORKBENCH" };
+      if (!originatingWorkloadCurrent(workloadIdentity)) {
+        app.state.workbenchRequest.phase = "DISCARDED_WORKLOAD_IDENTITY";
+        app.invalidateOperationAuthority("The originating workload generation changed before the applicant response completed.");
+        updateApplicantNavigation();
+        app.setInteractionState("BLOCKED", "Applicant response discarded because its originating workload is no longer current.");
+        return { accepted: false, outcome: "DISCARDED_STALE_WORKLOAD_IDENTITY" };
+      }
+      if (sessionApplicantId) {
+        var activeSession = app.state.workSession;
+        var activeSessionApplicantId = expectedSessionApplicantId(activeSession);
+        if (!activeSession
+            || String(applicantId) !== String(sessionApplicantId)
+            || String(activeSessionApplicantId) !== String(sessionApplicantId)) {
+          app.state.workbenchRequest.phase = "DISCARDED_WORK_SESSION_IDENTITY";
+          return { accepted: false, outcome: "DISCARDED_STALE_WORK_SESSION" };
+        }
+      }
       if (!result || result.schemaVersion !== "EDUOPS_APPLICANT_WORKBENCH_V2") throw new Error(app.authorityUnavailable("applicant workbench"));
+      var resultIdentity = result.identity || {};
+      if (String(result.snapshotId || "") !== String(payload.expectedSnapshotId || "")) throw new Error("Applicant Workbench snapshot did not match the requested workload snapshot.");
+      if (result.product && String(result.product) !== String(payload.product)) throw new Error("Applicant Workbench product did not match the requested product.");
+      if (String(resultIdentity.applicantId || "") !== String(applicantId)) throw new Error("Applicant Workbench identity did not match the requested applicant.");
+      if (expectedRowNumber && Number(resultIdentity.rowNumber || 0) !== expectedRowNumber) throw new Error("Applicant Workbench row identity did not match the requested row.");
+      if (typeof opts.onBeforeAccept === "function" && opts.onBeforeAccept(result) !== true) {
+        app.state.workbenchRequest.phase = "DISCARDED_WORK_SESSION_IDENTITY";
+        return { accepted: false, outcome: "DISCARDED_STALE_WORK_SESSION" };
+      }
       app.state.workbench = result;
+      if (opts.receipt) app.state.workbench.lastReceipt = opts.receipt;
       app.state.operationAvailability = result.operationAvailability || {};
       app.state.activeTab = tab || "overview";
       app.state.documentManifest = null;
       app.state.documentRenditions = {};
       app.state.documentDraft = {};
       app.state.dirty = false;
-      app.pushRoute("workbench=" + encodeURIComponent(result.applicantId));
+      app.state.workbenchRequest.acceptedGeneration = generation;
+      app.state.workbenchRequest.phase = "SUCCESS";
+      if (!opts.suppressRoute) app.pushRoute("workbench=" + encodeURIComponent(resultIdentity.applicantId));
       dom.title.textContent = result.identity.displayName || result.applicantId;
       dom.subtitle.textContent = result.identity.applicantId + " / exact row " + result.identity.rowNumber;
       dom.context.textContent = result.product + " Individual Workbench";
@@ -354,12 +516,39 @@
       renderPanel();
       if (typeof app.renderWorkSession === "function") app.renderWorkSession();
       app.setInteractionState("SUCCESS", (result.identity.displayName || result.applicantId) + " Workbench opened.");
-      byId("eduopsCloseWorkbench").focus();
-    }).catch(function (error) { dom.panel.innerHTML = '<div class="eduops-error-state"><strong>Workbench unavailable</strong><span>' + app.esc(error.message || error) + '</span></div>'; app.setInteractionState("ERROR", "Workbench failed to open: " + (error.message || error)); });
+      if (!opts.suppressFocus) byId("eduopsCloseWorkbench").focus();
+      return { accepted: true, result: result };
+    }).catch(function (error) {
+      if (generation !== app.state.workbenchRequest.latestGeneration) return { accepted: false, outcome: "DISCARDED_STALE_WORKBENCH", error: error };
+      if (!originatingWorkloadCurrent(workloadIdentity)) {
+        app.state.workbenchRequest.phase = "DISCARDED_WORKLOAD_IDENTITY";
+        return { accepted: false, outcome: "DISCARDED_STALE_WORKLOAD_IDENTITY", error: error };
+      }
+      if (sessionApplicantId) {
+        var currentSession = app.state.workSession;
+        if (!currentSession || String(expectedSessionApplicantId(currentSession)) !== String(sessionApplicantId)) {
+          app.state.workbenchRequest.phase = "DISCARDED_WORK_SESSION_IDENTITY";
+          return { accepted: false, outcome: "DISCARDED_STALE_WORK_SESSION", error: error };
+        }
+      }
+      app.state.workbench = null;
+      app.state.workbenchRequest.phase = "FAILURE";
+      dom.panel.innerHTML = '<div class="eduops-error-state"><strong>Workbench unavailable</strong><span>' + app.esc(error.message || error) + '</span></div>';
+      app.setInteractionState("ERROR", "Workbench failed to open: " + (error.message || error));
+      throw error;
+    });
+  }
+  app.openWorkbench = function (applicantId, source, tab, options) {
+    ensureDom();
+    if (app.state.workbench && app.state.dirty) return app.requestWorkbenchLeave(function () { return app.openWorkbench(applicantId, source, tab, options); }, source);
+    return requestWorkbench(applicantId, source, tab, options);
   };
   app.closeWorkbench = function (source, fromHistory) {
     if (app.state.dirty) return app.requestWorkbenchLeave(function () { app.closeWorkbench(source, fromHistory); }, source);
     ensureDom();
+    if (app.state.workbench && app.state.workbench.lastReceipt && app.state.workbench.receiptFreshnessSatisfied !== true && app.invalidateWorkloadProjection) app.invalidateWorkloadProjection("An operation receipt changed applicant authority.");
+    app.state.workbenchRequest.latestGeneration = ++workbenchRequestSequence;
+    app.state.workbenchRequest.phase = "CLOSED";
     dom.root.hidden = true;
     dom.root.setAttribute("aria-hidden", "true");
     app.state.workbench = null;
@@ -373,36 +562,48 @@
     app.state.pendingLeave = leave;
     app.openConfirm({ title: "Unsaved Workbench changes", html: '<p>Your draft changes for <strong>' + app.esc(identity().applicantId) + '</strong> have not been executed.</p><p>Stay to continue editing, or discard the local draft and leave.</p>', cancelLabel: "Stay and continue editing", proceedLabel: "Discard changes and leave", source: source, onProceed: function () { app.state.dirty = false; var next = app.state.pendingLeave; app.state.pendingLeave = null; app.closeConfirm(false); if (next) next(); } });
   };
+  function closeWorkbenchOutsideFreshWorkload() {
+    app.state.workbenchRequest.latestGeneration = ++workbenchRequestSequence;
+    app.state.workbenchRequest.phase = "APPLICANT_OUTSIDE_FRESH_WORKLOAD";
+    dom.root.hidden = true;
+    dom.root.setAttribute("aria-hidden", "true");
+    app.state.workbench = null;
+    app.state.documentManifest = null;
+    app.state.documentRenditions = {};
+    app.state.documentDraft = {};
+    app.state.communicationDraft = null;
+    app.state.dirty = false;
+    app.replaceRoute("workload");
+    app.setInteractionState("SUCCESS", "The applicant is no longer in the refreshed workload. Current workload rows are shown.");
+    return { accepted: false, outcome: "APPLICANT_OUTSIDE_FRESH_WORKLOAD" };
+  }
+  function refreshWorkloadThenWorkbench(applicantId, tab, options) {
+    var returnContext = app.state.returnContext || app.snapshotReturnContext();
+    return app.restoreReturnContext(returnContext).then(function () {
+      if (!app.hasCurrentWorkload || !app.hasCurrentWorkload()) throw new Error("The refreshed workload generation was not accepted.");
+      var freshRow = expectedWorkloadRow(applicantId);
+      if (!freshRow) return closeWorkbenchOutsideFreshWorkload();
+      app.state.returnContext = app.snapshotReturnContext();
+      var opts = Object.assign({}, options || {}, { expectedRowNumber: Number(freshRow.rowNumber || 0), suppressRoute: true, suppressFocus: true });
+      return requestWorkbench(applicantId, null, tab, opts);
+    });
+  }
   function refreshWorkbenchAfterReceipt(receipt) {
     if (!app.state.workbench) return Promise.resolve(receipt);
     var previousTab = app.state.activeTab;
     var applicantId = identity().applicantId;
-    return app.call("eduops_getApplicantWorkbench", { product: app.state.product, applicantId: applicantId, expectedSnapshotId: app.state.snapshotId || app.state.workbench.snapshotId, returnContext: app.state.returnContext }).then(function (result) {
-      if (!result || result.schemaVersion !== "EDUOPS_APPLICANT_WORKBENCH_V2") throw new Error(app.authorityUnavailable("applicant workbench"));
-      app.state.workbench = result;
-      app.state.workbench.lastReceipt = receipt;
-      app.state.operationAvailability = result.operationAvailability || {};
-      app.state.activeTab = previousTab;
-      app.state.documentManifest = null;
-      app.state.documentRenditions = {};
-      app.state.documentDraft = {};
-      app.state.communicationDraft = null;
-      app.state.dirty = false;
-      dom.title.textContent = result.identity.displayName || result.applicantId;
-      dom.subtitle.textContent = result.identity.applicantId + " / exact row " + result.identity.rowNumber;
-      authorityHeader();
-      updateApplicantNavigation();
-      renderPanel();
+    if (app.invalidateWorkloadProjection) app.invalidateWorkloadProjection("An operation receipt changed applicant authority.");
+    return refreshWorkloadThenWorkbench(applicantId, previousTab, { receipt: receipt }).then(function (outcome) {
+      if (outcome && outcome.outcome === "APPLICANT_OUTSIDE_FRESH_WORKLOAD") return receipt;
+      if (!outcome || outcome.accepted !== true) throw new Error("The refreshed applicant Workbench was superseded.");
+      if (app.state.workbench) app.state.workbench.receiptFreshnessSatisfied = true;
       return receipt;
     });
   }
 
-  function refreshWorkbenchAfterTemplateSave(saveResult, subject, body) {
-    var applicantId = identity().applicantId;
-    return app.call("eduops_getApplicantWorkbench", { product: app.state.product, applicantId: applicantId, expectedSnapshotId: app.state.snapshotId || app.state.workbench.snapshotId, returnContext: app.state.returnContext }).then(function (result) {
-      if (!result || result.schemaVersion !== "EDUOPS_APPLICANT_WORKBENCH_V2") throw new Error(app.authorityUnavailable("applicant workbench"));
-      app.state.workbench = result;
-      app.state.operationAvailability = result.operationAvailability || {};
+  function refreshWorkbenchAfterTemplateSave(applicantId, saveResult, subject, body) {
+    return refreshWorkloadThenWorkbench(applicantId, "communications").then(function (outcome) {
+      if (!outcome || outcome.accepted !== true) throw new Error("The refreshed applicant Workbench was superseded.");
       app.state.activeTab = "communications";
       app.state.communicationDraft = null;
       var saved = communicationTemplateById(saveResult.templateId, saveResult.parentMessageType);
@@ -439,12 +640,18 @@
     return {};
   }
   function previewCommand(operation, source) {
+    if (!acceptedWorkbenchCurrent()) {
+      app.setInteractionState("BLOCKED", "The applicant Workbench is not current. Reopen the applicant before previewing an operation.");
+      return;
+    }
+    var identityToken = workbenchIdentityToken();
     app.invalidateOperationAuthority("A new operation preview was requested.");
     var manifest = app.state.documentManifest;
     var file = manifest && documentFiles()[app.state.selectedDocumentIndex];
     var payload = { operation: operation, product: app.state.product, applicantId: identity().applicantId, rowKey: app.state.workbench.rowKey, snapshotId: app.state.workbench.snapshotId, idempotencyKey: app.idempotencyKey(operation, identity().applicantId), document: file ? documentPayload(file) : null, draft: commandDraft(operation, source, file) };
     var token = app.beginControlAction(source, "Creating preview...", "Validating the requested operation for " + payload.applicantId + ".");
     app.call("eduops_previewCommand", payload).then(function (preview) {
+      if (!workbenchTokenCurrent(identityToken)) return;
       app.state.commandPreview = preview;
       app.state.commandIdempotencyKey = payload.idempotencyKey;
       app.state.commandExecutable = preview && preview.executable === true;
@@ -472,8 +679,18 @@
         cancelLabel: "Return without action",
         source: source,
         onProceed: function () {
+          if (!workbenchTokenCurrent(identityToken)) {
+            app.invalidateOperationAuthority("Applicant identity changed after preview.");
+            app.closeConfirm(false);
+            app.setInteractionState("BLOCKED", "Applicant identity changed. Generate a new preview for the current applicant.");
+            return;
+          }
           var executeToken = app.beginControlAction(byId("eduopsConfirmProceed"), "Executing...", "Executing the confirmed operation once.");
           app.call("eduops_executeCommand", app.commandExecutionPayload(preview, payload.idempotencyKey)).then(function (receipt) {
+            if (!workbenchTokenCurrent(identityToken)) {
+              if (app.invalidateWorkloadProjection) app.invalidateWorkloadProjection("An operation receipt changed applicant authority.", { preserveWorkbenchAuthority: true });
+              return app.restoreReturnContext(app.state.returnContext).then(function () { return receipt; }, function () { return receipt; });
+            }
             var outcome = app.upper(receipt && receipt.outcome || "");
             var receiptState = outcome === "BLOCKED" || outcome === "MANUAL_REVIEW_REQUIRED" || outcome === "FAILED" ? "BLOCKED" : "SUCCESS";
             app.finishControlAction(executeToken, receiptState, "Receipt " + receipt.receiptId + " returned: " + receipt.outcome + ". Refreshing authoritative applicant state.");
@@ -481,18 +698,21 @@
             app.invalidateOperationAuthority("Operation receipt returned.");
             app.toast("Receipt " + receipt.receiptId + " returned: " + receipt.outcome);
             return refreshWorkbenchAfterReceipt(receipt).catch(function (refreshError) {
-              app.state.workbench.lastReceipt = receipt;
-              renderPanel();
+              if (app.state.workbench) {
+                app.state.workbench.lastReceipt = receipt;
+                renderPanel();
+              }
               app.toast("Receipt returned, but authoritative refresh failed: " + (refreshError.message || refreshError));
             });
           }).catch(function (error) {
+            if (!workbenchTokenCurrent(identityToken)) return;
             app.finishControlAction(executeToken, "BLOCKED", "Operation blocked: " + (error.message || error));
             app.invalidateOperationAuthority("Operation execution was blocked.");
             app.toast("Operation blocked: " + (error.message || error));
           });
         }
       });
-    }).catch(function (error) { app.invalidateOperationAuthority("Operation preview failed."); app.finishControlAction(token, "BLOCKED", "Preview blocked: " + (error.message || error)); app.toast("Preview blocked: " + (error.message || error)); });
+    }).catch(function (error) { if (!workbenchTokenCurrent(identityToken)) return; app.invalidateOperationAuthority("Operation preview failed."); app.finishControlAction(token, "BLOCKED", "Preview blocked: " + (error.message || error)); app.toast("Preview blocked: " + (error.message || error)); });
   }
 
   app.bindWorkbench = function () {
@@ -511,9 +731,9 @@
       var move = event.target.closest("[data-document-move]");
       if (move) { loadRendition(app.state.selectedDocumentIndex + Number(move.getAttribute("data-document-move")), true); return; }
       var original = event.target.closest("[data-open-original]");
-      if (original) { var file = documentFiles()[app.state.selectedDocumentIndex]; var originalToken = app.beginControlAction(original, "Authorising...", "Authorising the separate canonical original action."); app.call("eduops_getDocumentFileAction", documentPayload(file)).then(function (result) { var url = result.url || result.openUrl || result.portalUrl || ""; app.finishControlAction(originalToken, url ? "SUCCESS" : "BLOCKED", url ? "Canonical original action opened in a separate tab." : (result.message || "Open Original returned no reusable URL.")); if (url) window.open(url, "_blank", "noopener,noreferrer"); else app.toast(result.message || "Open Original action returned without a reusable URL."); }).catch(function (error) { app.finishControlAction(originalToken, "BLOCKED", "Open Original blocked: " + (error.message || error)); app.toast("Open Original blocked: " + (error.message || error)); }); return; }
+      if (original) { var file = documentFiles()[app.state.selectedDocumentIndex]; var originalIdentityToken = workbenchIdentityToken(); var originalToken = app.beginControlAction(original, "Authorising...", "Authorising the separate canonical original action."); app.call("eduops_getDocumentFileAction", documentPayload(file)).then(function (result) { if (!workbenchTokenCurrent(originalIdentityToken)) return; var url = result.url || result.openUrl || result.portalUrl || ""; app.finishControlAction(originalToken, url ? "SUCCESS" : "BLOCKED", url ? "Canonical original action opened in a separate tab." : (result.message || "Open Original returned no reusable URL.")); if (url) window.open(url, "_blank", "noopener,noreferrer"); else app.toast(result.message || "Open Original action returned without a reusable URL."); }).catch(function (error) { if (!workbenchTokenCurrent(originalIdentityToken)) return; app.finishControlAction(originalToken, "BLOCKED", "Open Original blocked: " + (error.message || error)); app.toast("Open Original blocked: " + (error.message || error)); }); return; }
       var download = event.target.closest("[data-download-original]");
-      if (download) { var downloadFile = documentFiles()[app.state.selectedDocumentIndex]; var downloadToken = app.beginControlAction(download, "Authorising...", "Authorising the original download action."); app.call("eduops_getDocumentFileAction", documentPayload(downloadFile)).then(function (result) { var url = result.downloadUrl || ""; var reason = result.downloadUnavailableReason || result.message || result.error || "Download Original returned no reusable URL."; app.finishControlAction(downloadToken, url ? "SUCCESS" : "BLOCKED", url ? "Original download opened in a separate tab." : reason); if (url) window.open(url, "_blank", "noopener,noreferrer"); else app.toast(reason); }).catch(function (error) { app.finishControlAction(downloadToken, "BLOCKED", "Download Original blocked: " + (error.message || error)); app.toast("Download Original blocked: " + (error.message || error)); }); return; }
+      if (download) { var downloadFile = documentFiles()[app.state.selectedDocumentIndex]; var downloadIdentityToken = workbenchIdentityToken(); var downloadToken = app.beginControlAction(download, "Authorising...", "Authorising the original download action."); app.call("eduops_getDocumentFileAction", documentPayload(downloadFile)).then(function (result) { if (!workbenchTokenCurrent(downloadIdentityToken)) return; var url = result.downloadUrl || ""; var reason = result.downloadUnavailableReason || result.message || result.error || "Download Original returned no reusable URL."; app.finishControlAction(downloadToken, url ? "SUCCESS" : "BLOCKED", url ? "Original download opened in a separate tab." : reason); if (url) window.open(url, "_blank", "noopener,noreferrer"); else app.toast(reason); }).catch(function (error) { if (!workbenchTokenCurrent(downloadIdentityToken)) return; app.finishControlAction(downloadToken, "BLOCKED", "Download Original blocked: " + (error.message || error)); app.toast("Download Original blocked: " + (error.message || error)); }); return; }
       var evidenceButton = event.target.closest("[data-document-evidence]");
       if (evidenceButton) { var evidenceFile = documentFiles()[app.state.selectedDocumentIndex]; if (evidenceFile) { evidenceFile.activeEvidenceIndex = Number(evidenceButton.getAttribute("data-document-evidence") || 0); loadRendition(app.state.selectedDocumentIndex, false); } return; }
       var command = event.target.closest("[data-preview-command]");
@@ -530,6 +750,9 @@
         var selected = selectedCommunicationTemplate();
         comm.subject = byId("eduopsCommSubject").value;
         comm.body = byId("eduopsCommBody").value;
+        var saveIdentityToken = workbenchIdentityToken();
+        var savedSubject = comm.subject;
+        var savedBody = comm.body;
         var token = app.beginControlAction(saveTemplate, "Saving...", "Saving a reusable template variant.");
         app.call("admin_saveReusableCommunicationTemplate", {
           parentMessageType: selected.messageType || comm.messageType,
@@ -539,14 +762,26 @@
           bodyTemplate: comm.body,
           selectedSendEnabled: true
         }).then(function (result) {
-          if (!result || result.ok !== true || result.active !== true || result.readBackVerified !== true) throw new Error("REUSABLE_TEMPLATE_READBACK_FAILED");
-          return refreshWorkbenchAfterTemplateSave(result, comm.subject, comm.body).then(function () {
+          var saveWasCurrent = workbenchTokenCurrent(saveIdentityToken);
+          if (!result || result.ok !== true || result.active !== true || result.readBackVerified !== true) {
+            if (!saveWasCurrent) return { stale: true };
+            throw new Error("REUSABLE_TEMPLATE_READBACK_FAILED");
+          }
+          app.invalidateOperationAuthority("A reusable communication template changed global authority.");
+          if (app.invalidateWorkloadProjection) app.invalidateWorkloadProjection("A reusable communication template changed applicant authority.");
+          if (!saveWasCurrent) return { stale: true };
+          return refreshWorkbenchAfterTemplateSave(saveIdentityToken.applicantId, result, savedSubject, savedBody).then(function () {
             var message = "Reusable template saved and selected: " + result.templateId + " v" + result.versionId;
             app.invalidateOperationAuthority(message + ". A new authority preview is required.");
             app.finishControlAction(token, "SUCCESS", message);
             app.toast(message);
+            return { stale: false };
           });
+        }, function (error) {
+          if (!workbenchTokenCurrent(saveIdentityToken)) return { stale: true };
+          throw error;
         }).catch(function (error) {
+          if (app.state.workbench && String(identity().applicantId || "") !== String(saveIdentityToken.applicantId || "")) return;
           app.finishControlAction(token, "BLOCKED", "Reusable template save blocked: " + (error.message || error));
         });
         return;
@@ -588,5 +823,7 @@
     });
   };
   app.renderWorkbenchPanel = renderPanel;
+  app.hasCurrentWorkbenchIdentity = acceptedWorkbenchCurrent;
+  app.updateWorkbenchNavigation = updateApplicantNavigation;
 })();
 </script>

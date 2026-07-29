@@ -16,6 +16,19 @@
   function activeState() {
     return app.state.actionabilityState || "READY";
   }
+  function renderUnavailable(message, className) {
+    var buckets = byId("eduopsOperationsPrimaryBuckets");
+    var packages = byId("eduopsOperationsActionPackages");
+    var loading = className === "eduops-operations-workspace-empty";
+    var context = byId("eduopsOperationsWorkspaceContext");
+    var heading = byId("eduopsOperationsWorkspaceHeading");
+    var snapshot = byId("eduopsOperationsWorkspaceSnapshot");
+    if (context) context.textContent = loading ? "Loading workload" : "Workload unavailable";
+    if (heading) heading.textContent = loading ? "Reconciling authoritative Operations workspace" : "Authoritative Operations workspace unavailable";
+    if (snapshot) snapshot.textContent = loading ? "Snapshot pending" : "Snapshot unavailable";
+    if (buckets) buckets.innerHTML = "";
+    if (packages) packages.innerHTML = '<div class="' + className + '"><strong>' + app.esc(message) + '</strong><span>Applicant actions remain unavailable until the requested workload is current.</span></div>';
+  }
   function bucketButton(item) {
     var active = item.code === activeState();
     var shortLabels = { READY: "Ready", COOLING_OFF: "Cooling off", AWAITING_APPLICANT: "Applicant", AWAITING_PAYMENT: "Payment", REVIEW_REQUIRED: "Review", BLOCKED: "Blocked", UNKNOWN: "Classify", COMPLETE: "Complete" };
@@ -65,6 +78,14 @@
     if (bucketTarget) bucketTarget.innerHTML = buckets.map(bucketButton).join("");
     var packages = cockpit.actionPackages.filter(function (item) { return !item.actionabilityState || item.actionabilityState === activeState(); });
     byId("eduopsOperationsActionPackages").innerHTML = packages.map(packageCard).join("") || '<div class="eduops-operations-workspace-empty"><strong>No work packages in this state.</strong><span>The backend returned no granular packages for the selected authoritative bucket.</span></div>';
+  };
+
+  app.renderEduOpsOperationsPending = function (context) {
+    renderUnavailable("Loading " + (context || "requested workload") + ".", "eduops-operations-workspace-empty");
+  };
+
+  app.renderEduOpsOperationsError = function (error) {
+    renderUnavailable(error && error.message || "The requested workload could not be loaded.", "eduops-operations-workspace-error");
   };
 
   function bind() {

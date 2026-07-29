@@ -45,6 +45,26 @@ function eduops_getAccessProjection() {
   };
 }
 
+function eduopsWorkloadOperationAvailability_(populationIntegrity) {
+  var availability = eduopsOperationAvailability_();
+  var gate = typeof canonicalPopulationIntegrityGate_ === "function"
+    ? canonicalPopulationIntegrityGate_(populationIntegrity)
+    : {
+        ok: false,
+        blockCode: "POPULATION_INTEGRITY_UNPROVEN",
+        blockReason: "Canonical population integrity authority is unavailable."
+      };
+  if (gate.ok !== true) {
+    availability.BATCH_COMMUNICATION = {
+      available: false,
+      reasonCode: eduopsClean_(gate.blockCode || "POPULATION_INTEGRITY_UNPROVEN"),
+      reason: eduopsClean_(gate.blockReason || "Canonical population integrity is absent or incomplete. Batch authority is unavailable."),
+      authoritySource: "Canonical Population Integrity"
+    };
+  }
+  return availability;
+}
+
 function eduopsRuntimeProjection_(snapshotId, snapshotAsOf) {
   var cfg = typeof CONFIG === "object" && CONFIG ? CONFIG : {};
   var appsScriptVersion = eduopsClean_(cfg.APPS_SCRIPT_VERSION || "");
@@ -147,10 +167,12 @@ function eduops_queryOperationalWorkload(payload) {
   var metricCounts = eduopsMetricCounts_(filtered);
   var reconciliation = eduopsReconciliationForRows_(allRows, filtered, pageRows, query, snapshotId, {
     totalRows: resolved.totalRows,
-    generatedAt: resolved.snapshotAsOf
+    generatedAt: resolved.snapshotAsOf,
+    populationIntegrity: resolved.populationIntegrity
   });
   var queryBinding = eduopsWorkloadQueryBinding_(query, snapshotId, {
-    generatedAt: resolved.snapshotAsOf
+    generatedAt: resolved.snapshotAsOf,
+    populationIntegrity: resolved.populationIntegrity
   });
   var workloadCompositionMs = filterMs + (Date.now() - composeRemainderStarted);
   var response = {
@@ -181,11 +203,12 @@ function eduops_queryOperationalWorkload(payload) {
     actionabilityCounts: actionabilityCounts,
     worklistKeyCounts: worklistKeyCounts,
     metricCounts: metricCounts,
-    operationAvailability: eduopsOperationAvailability_(),
+    operationAvailability: eduopsWorkloadOperationAvailability_(resolved.populationIntegrity),
     batchTemplateOptions: [],
     batchTemplateAuthority: "EXACT_COHORT_EVALUATION_REQUIRED",
     queryBinding: queryBinding,
     reconciliation: reconciliation,
+    populationIntegrity: eduopsClone_(resolved.populationIntegrity),
     cockpit: eduopsCockpitProjection_(allRows, snapshotId, resolved.snapshotAsOf),
     presentation: eduopsWorkloadPresentation_(allRows, filtered, pageRows, query, reliability, reconciliation, actionabilityCounts, worklistKeyCounts),
     rows: rows
@@ -1461,6 +1484,26 @@ function eduopsReconciliationForRows_(allRows, matchedRows, pageRows, query, sna
   pageRows.forEach(function (row) {
     if (row.ageDays !== "" && (oldestVisible === "" || Number(row.ageDays) > Number(oldestVisible))) oldestVisible = Number(row.ageDays);
   });
+  var populationIntegrity = snapshot && snapshot.populationIntegrity && typeof snapshot.populationIntegrity === "object"
+    ? eduopsClone_(snapshot.populationIntegrity)
+    : {
+        schemaVersion: "CANONICAL_POPULATION_INTEGRITY_V1",
+        status: "UNPROVEN",
+        authoritySafeToBatch: false,
+        blockCode: "POPULATION_INTEGRITY_UNPROVEN",
+        blockReason: "Canonical population integrity was not returned for this workload.",
+        populationCount: Number(snapshot && snapshot.totalRows || allRows.length),
+        scannedRowCount: 0,
+        distinctApplicantIdCount: 0,
+        duplicateApplicantIdCount: 0,
+        duplicateApplicantIds: [],
+        duplicateRowReferences: [],
+        missingOrInvalidApplicantIdCount: 0,
+        missingOrInvalidApplicantIds: [],
+        reconciliationFindings: [],
+        evidenceTruncated: false,
+        integrityFingerprint: ""
+      };
   return {
     schemaVersion: "EDUOPS_RECONCILIATION_V1",
     authoritySource: "Population Ledger + Actionability Resolver",
@@ -1481,7 +1524,8 @@ function eduopsReconciliationForRows_(allRows, matchedRows, pageRows, query, sna
     nextOperatorAction: pageRows[0] ? pageRows[0].nextAction : "",
     snapshotId: snapshotId,
     asOf: eduopsClean_(snapshot && snapshot.generatedAt || ""),
-    integrityState: "PASS",
+    integrityState: eduopsClean_(populationIntegrity.status || "UNPROVEN").toUpperCase() || "UNPROVEN",
+    populationIntegrity: populationIntegrity,
     queryFingerprint: eduopsWorkloadQueryFingerprint_(query),
     queryBinding: eduopsWorkloadQueryBinding_(query, snapshotId, snapshot),
     arithmetic: {
@@ -1535,12 +1579,16 @@ function eduopsOptionalUpper_(value) {
 
 function eduopsWorkloadQueryBinding_(query, snapshotId, snapshot) {
   var canonicalQuery = eduopsCanonicalWorkloadQueryForBinding_(query);
+  var populationIntegrity = snapshot && snapshot.populationIntegrity && typeof snapshot.populationIntegrity === "object"
+    ? snapshot.populationIntegrity
+    : {};
   return {
     schemaVersion: "EDUOPS_QUERY_BINDING_V1",
     authority: "SERVER_AUTHORED",
     product: canonicalQuery.product,
     snapshotId: eduopsClean_(snapshotId || ""),
     snapshotAsOf: eduopsClean_(snapshot && snapshot.generatedAt || snapshot && snapshot.snapshotAsOf || ""),
+    integrityFingerprint: eduopsClean_(populationIntegrity.integrityFingerprint || ""),
     query: canonicalQuery,
     queryFingerprint: eduopsWorkloadQueryFingerprint_(canonicalQuery)
   };

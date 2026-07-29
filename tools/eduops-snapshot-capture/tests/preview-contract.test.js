@@ -93,6 +93,7 @@ const access = previewData.handleRpc("eduops_getAccessProjection", { scenarioId:
 assert.deepEqual(access.rpcAllowlist.write, ["eduops_executeCommand"], "Preview write surface must contain only the shared guarded command endpoint");
 assert.ok(access.rpcAllowlist.read.includes("eduops_previewCommand"));
 assert.equal(access.featureFlags.BOOKS_ACTION, false, "Books must remain disabled in Preview acceptance");
+assert.ok(previewData.listScenarios().some((item) => item.id === "unsafe-duplicate-integrity"), "Preview scenarios must expose deterministic duplicate-integrity evidence");
 
 const mutationTerms = ["GmailApp", "MailApp", "DriveApp", "SpreadsheetApp", "UrlFetchApp", "clasp push", "clasp deploy"];
 for (const term of mutationTerms) assert.doesNotMatch(previewTransport + previewDataSource + previewServer, new RegExp(term, "i"), `Preview source must not expose live dependency ${term}`);
@@ -111,6 +112,29 @@ assert.equal(workload.ok, true);
 assert.equal(workload.snapshotId, previewData.SNAPSHOT_ID);
 assert.equal(workload.timings.serverRpcMs, 123);
 assert.ok(workload.rows.some((row) => row.applicantId === "FODE-26-002985"), "Jackson exact fixture must be present");
+assert.equal(workload.populationIntegrity.schemaVersion, "CANONICAL_POPULATION_INTEGRITY_V1");
+assert.equal(workload.populationIntegrity.status, "PASS", "Normal Preview population integrity must pass");
+assert.equal(workload.populationIntegrity.authoritySafeToBatch, true);
+assert.equal(workload.queryBinding.integrityFingerprint, workload.populationIntegrity.integrityFingerprint, "Preview workload query binding must carry the active canonical population fingerprint");
+assert.equal(workload.reconciliation.integrityState, "PASS");
+assert.deepEqual(workload.reconciliation.populationIntegrity, workload.populationIntegrity, "Reconciliation must preserve the exact population-integrity contract");
+assert.equal(workload.operationAvailability.BATCH_COMMUNICATION.available, true);
+
+const unsafeContext = { scenarioId: "unsafe-duplicate-integrity", serverDurationMs: 0 };
+const unsafeWorkload = previewData.handleRpc("eduops_queryOperationalWorkload", unsafeContext, { actionabilityState: "READY", page: 1, pageSize: 25 }, repoRoot);
+assert.equal(unsafeWorkload.ok, true);
+assert.equal(unsafeWorkload.populationIntegrity.status, "FAIL");
+assert.equal(unsafeWorkload.populationIntegrity.authoritySafeToBatch, false);
+assert.equal(unsafeWorkload.populationIntegrity.blockCode, "DUPLICATE_APPLICANT_ID");
+assert.equal(unsafeWorkload.queryBinding.integrityFingerprint, unsafeWorkload.populationIntegrity.integrityFingerprint);
+assert.deepEqual(unsafeWorkload.populationIntegrity.duplicateApplicantIds, ["FODE-26-002985"]);
+assert.deepEqual(unsafeWorkload.populationIntegrity.duplicateRowReferences, [{
+  applicantId: "FODE-26-002985",
+  rowNumbers: [2985, 92985]
+}]);
+assert.equal(unsafeWorkload.reconciliation.integrityState, "FAIL");
+assert.deepEqual(unsafeWorkload.reconciliation.populationIntegrity, unsafeWorkload.populationIntegrity);
+assert.equal(unsafeWorkload.operationAvailability.BATCH_COMMUNICATION.available, true, "Unsafe fixture keeps feature availability permissive so the production client integrity gate—not a fixture shortcut—must disable Batch");
 
 const kiaWorkload = previewData.handleRpc("eduops_queryOperationalWorkload", context, { product: "KIA", actionabilityState: "READY", page: 1, pageSize: 25 }, repoRoot);
 const mlcWorkload = previewData.handleRpc("eduops_queryOperationalWorkload", context, { product: "MLC", actionabilityState: "READY", page: 1, pageSize: 25 }, repoRoot);
@@ -153,6 +177,21 @@ const selection = { product: "FODE", snapshotId: previewData.SNAPSHOT_ID, queryF
 const batch = previewData.handleRpc("eduops_previewCommand", context, { operation: "BATCH_COMMUNICATION", product: "FODE", snapshotId: previewData.SNAPSHOT_ID, queryFingerprint: "query-1", selection, idempotencyKey: "contract-batch-1", draft: { messageType: "docs_missing" } }, repoRoot);
 assert.equal(batch.state, "READY");
 assert.equal(batch.partitions[0].memberCount, 2);
+const unsafeCatalogue = previewData.handleRpc("eduops_getBatchCommunicationCatalogue", unsafeContext, { operation: "BATCH_COMMUNICATION", product: "FODE", snapshotId: previewData.SNAPSHOT_ID, queryFingerprint: "query-1", selection, executionLimit: 25 }, repoRoot);
+assert.equal(unsafeCatalogue.ok, false);
+assert.equal(unsafeCatalogue.code, "DUPLICATE_APPLICANT_ID");
+assert.equal(unsafeCatalogue.executable, false);
+assert.equal(unsafeCatalogue.populationIntegrity.authoritySafeToBatch, false);
+const unsafeBatchPreview = previewData.handleRpc("eduops_previewCommand", unsafeContext, { operation: "BATCH_COMMUNICATION", product: "FODE", snapshotId: previewData.SNAPSHOT_ID, queryFingerprint: "query-1", selection, idempotencyKey: "contract-batch-unsafe", draft: { messageType: "docs_missing" } }, repoRoot);
+assert.equal(unsafeBatchPreview.ok, false);
+assert.equal(unsafeBatchPreview.code, "DUPLICATE_APPLICANT_ID");
+assert.equal(unsafeBatchPreview.executable, false);
+assert.equal(unsafeBatchPreview.previewId, undefined, "Unsafe population integrity must not mint a command preview");
+const unsafeBatchExecution = previewData.handleRpc("eduops_executeCommand", unsafeContext, { previewId: batch.previewId, idempotencyKey: batch.idempotencyKey, confirmation: true }, repoRoot);
+assert.equal(unsafeBatchExecution.ok, false);
+assert.equal(unsafeBatchExecution.code, "DUPLICATE_APPLICANT_ID");
+assert.equal(unsafeBatchExecution.executable, false);
+assert.equal(unsafeBatchExecution.receiptId, undefined, "Execution revalidation must not mint a receipt under unsafe integrity");
 const wrongQuery = previewData.handleRpc("eduops_previewCommand", context, { operation: "BATCH_COMMUNICATION", product: "FODE", snapshotId: previewData.SNAPSHOT_ID, queryFingerprint: "changed", selection, idempotencyKey: "contract-batch-2", draft: { messageType: "docs_missing" } }, repoRoot);
 assert.equal(wrongQuery.code, "QUERY_BINDING_MISMATCH");
 const unprovenBatch = previewData.handleRpc("eduops_previewCommand", context, { operation: "BATCH_ASSIGNMENT", product: "FODE", snapshotId: previewData.SNAPSHOT_ID, queryFingerprint: "query-1", selection, idempotencyKey: "contract-batch-unproven" }, repoRoot);

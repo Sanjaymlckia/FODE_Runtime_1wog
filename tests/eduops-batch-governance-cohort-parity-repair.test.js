@@ -23,6 +23,7 @@ for (const operation of ["DOCUMENT_REVIEW", "FINANCE_EVIDENCE_DECISION", "SEND_I
 }
 assert.match(sources.flags, /function eduopsOperationAvailability_[\s\S]*available:[\s\S]*authoritySource/, "backend must project explicit operation availability");
 assert.match(sources.workload, /operationAvailability:\s*eduopsOperationAvailability_\(\)/, "backend profile must expose explicit operation availability");
+assert.match(sources.workload, /function eduopsWorkloadOperationAvailability_[\s\S]*canonicalPopulationIntegrityGate_[\s\S]*operationAvailability:\s*eduopsWorkloadOperationAvailability_\(resolved\.populationIntegrity\)/, "operational workload must make Batch availability fail closed through the canonical population integrity gate");
 assert.match(sources.workbench, /return app\.operationAvailable\(operation\)/, "Workbench must consume backend-projected operation availability");
 assert.doesNotMatch(sources.workbench, /\^\(DOCUMENT_REVIEW|FINANCE_EVIDENCE_DECISION\|SEND_INDIVIDUAL_COMMUNICATION/, "Workbench must not default released operations locally");
 assert.match(sources.flags, /PORTAL_ACCESS: false[\s\S]*BOOKS_ACTION: false/, "Portal and Books must remain unavailable");
@@ -35,7 +36,7 @@ assert.match(sources.commands, /eduopsCommandRequiresDualApproval_[\s\S]*definit
 
 assert.match(sources.batch, /data-batch-template/, "Batch modal must expose canonical template selection");
 assert.doesNotMatch(sources.batch, /first\.recommendedMessageType/, "Batch message type must not inherit from the first selected row");
-assert.match(sources.batch, /draft:\s*\{\s*messageType:\s*batch\.messageType\s*\}/, "Batch preview must send the operator-selected canonical message type");
+assert.match(sources.batch, /draft:\s*\{\s*templateId:\s*requestToken\.templateId,\s*messageType:\s*requestToken\.messageType\s*\}/, "Batch preview must send the accepted operator-selected canonical template and message type");
 assert.match(sources.workload, /communicationTemplateGalleryMetadata_[\s\S]*isCommunicationTypeBatchSafe_/, "Batch template options must come from canonical Communication Authority metadata");
 
 assert.match(sources.html, /eduopsSelectAllMatching/, "Workload must provide Select all matching query");

@@ -4022,18 +4022,28 @@ function incrementInvalidPortalAttempt_(applicantId) {
   return next;
 }
 
-function findRowByApplicantId_(sheet, applicantId) {
+function findApplicantRowNumbersByApplicantId_(sheet, applicantId, limitOpt) {
   var headerMap = getHeaderIndexMap_(sheet);
   var idCol = headerMap[SCHEMA.APPLICANT_ID];
   if (!idCol) throw new Error("Missing header: " + SCHEMA.APPLICANT_ID);
   var lastRow = sheet.getLastRow();
-  if (lastRow < 2) return null;
+  if (lastRow < 2) return [];
   var idNorm = clean_(applicantId);
+  if (!idNorm) return [];
   var idVals = sheet.getRange(2, idCol, lastRow - 1, 1).getValues();
+  var limit = Math.max(2, Math.floor(Number(limitOpt || 25)));
+  var matches = [];
   for (var r = 0; r < idVals.length; r++) {
-    if (clean_(idVals[r][0]) === idNorm) return r + 2;
+    if (clean_(idVals[r][0]) !== idNorm) continue;
+    matches.push(r + 2);
+    if (matches.length >= limit) break;
   }
-  return null;
+  return matches;
+}
+
+function findRowByApplicantId_(sheet, applicantId) {
+  var matches = findApplicantRowNumbersByApplicantId_(sheet, applicantId, 2);
+  return matches.length === 1 ? matches[0] : null;
 }
 
 function findRowByIdEmail_(sheet, applicantId, parentEmailLower) {
@@ -9210,7 +9220,18 @@ function resolveApplicantMessageContext_(applicantId, messageType, opts) {
   if (capabilityBlock) return block(capabilityBlock.blockCode, capabilityBlock.blockReason);
 
   var sheet = mustGetDataSheet_(getWorkingSpreadsheet_());
-  var rowNumber = findRowByApplicantId_(sheet, applicantId);
+  var identityEvidenceLimit = typeof CANONICAL_POPULATION_INTEGRITY_EVIDENCE_LIMIT !== "undefined"
+    ? CANONICAL_POPULATION_INTEGRITY_EVIDENCE_LIMIT
+    : 25;
+  var matchingRowNumbers = findApplicantRowNumbersByApplicantId_(sheet, applicantId, identityEvidenceLimit);
+  if (matchingRowNumbers.length > 1) {
+    context.duplicateRowReferences = [{
+      applicantId: clean_(applicantId || ""),
+      rowNumbers: matchingRowNumbers.slice()
+    }];
+    return block("DUPLICATE_APPLICANT_ID", "ApplicantID occurs on more than one source row. Reconcile the identity before communication.");
+  }
+  var rowNumber = matchingRowNumbers.length === 1 ? matchingRowNumbers[0] : null;
   if (!rowNumber) return block("APPLICANT_NOT_FOUND");
 
   var rowObj = getRowObject_(sheet, rowNumber);
@@ -10528,6 +10549,49 @@ function automatedStageRunnerFinalize_(summary) {
   return out;
 }
 
+function communicationPopulationIntegrityGateForBatch_(snapshotOpt) {
+  if (typeof canonicalPopulationIntegritySnapshot_ !== "function" || typeof canonicalPopulationIntegrityGate_ !== "function") {
+    return {
+      ok: false,
+      blockCode: "POPULATION_INTEGRITY_UNPROVEN",
+      blockReason: "Canonical population integrity authority is unavailable.",
+      populationIntegrity: {
+        schemaVersion: "CANONICAL_POPULATION_INTEGRITY_V1",
+        status: "UNPROVEN",
+        authoritySafeToBatch: false,
+        blockCode: "POPULATION_INTEGRITY_UNPROVEN",
+        blockReason: "Canonical population integrity authority is unavailable.",
+        integrityFingerprint: ""
+      },
+      integrityFingerprint: "",
+      snapshot: null
+    };
+  }
+  var snapshot = snapshotOpt && typeof snapshotOpt === "object"
+    ? snapshotOpt
+    : canonicalPopulationIntegritySnapshot_();
+  var gate = canonicalPopulationIntegrityGate_(snapshot);
+  gate.integrityFingerprint = clean_(gate.populationIntegrity && gate.populationIntegrity.integrityFingerprint || "");
+  gate.snapshot = snapshot;
+  return gate;
+}
+
+function communicationPopulationIntegrityBlockedBatchResult_(action, gate, extra) {
+  var integrityGate = gate && typeof gate === "object" ? gate : communicationPopulationIntegrityGateForBatch_(null);
+  return Object.assign({
+    ok: false,
+    action: clean_(action || "batch"),
+    result: "BLOCKED",
+    reason: clean_(integrityGate.blockCode || "POPULATION_RECONCILIATION_FAILED"),
+    blockCode: clean_(integrityGate.blockCode || "POPULATION_RECONCILIATION_FAILED"),
+    blockReason: clean_(integrityGate.blockReason || "Canonical population reconciliation did not pass."),
+    populationIntegrity: integrityGate.populationIntegrity,
+    integrityFingerprint: clean_(integrityGate.integrityFingerprint || ""),
+    attempted: 0,
+    sent: 0
+  }, extra && typeof extra === "object" ? extra : {});
+}
+
 function runAutomatedStageBatchChunk_(opts) {
   var options = opts && typeof opts === "object" ? opts : {};
   var now = new Date();
@@ -10568,6 +10632,19 @@ function runAutomatedStageBatchChunk_(opts) {
       messageType: clean_(gate.messageType || ""),
       source: clean_(options.source || "MANUAL")
     });
+  }
+  var populationIntegrityGate = communicationPopulationIntegrityGateForBatch_(null);
+  if (!populationIntegrityGate.ok) {
+    return automatedStageRunnerFinalize_(communicationPopulationIntegrityBlockedBatchResult_(
+      "automated_stage_batch",
+      populationIntegrityGate,
+      {
+        requestId: requestId,
+        stage: clean_(gate.stage || ""),
+        messageType: clean_(gate.messageType || ""),
+        source: clean_(options.source || "MANUAL")
+      }
+    ));
   }
   var allowance = getRemainingDailySendAllowance_(now);
   if (!(allowance.remaining > 0)) {
@@ -10645,7 +10722,10 @@ function runAutomatedStageBatchChunk_(opts) {
     portalSecretLookup: portalSecretLookup && portalSecretLookup.ok ? portalSecretLookup : null,
     cooldownLookup: cooldownLookup && cooldownLookup.ok ? cooldownLookup : null,
     previewEarlyStop: true,
-    previewEligibleBuffer: 0
+    previewEligibleBuffer: 0,
+    populationIntegritySnapshot: populationIntegrityGate.snapshot,
+    sourceSheet: populationIntegrityGate.snapshot && populationIntegrityGate.snapshot._internalSheet,
+    sourceValues: populationIntegrityGate.snapshot && populationIntegrityGate.snapshot._internalData
   });
   var elapsedAfterCollectMs = new Date().getTime() - startedAtMs;
   if (elapsedAfterCollectMs >= timeoutLimitMs) {
@@ -11491,6 +11571,30 @@ function planApplicantBatch_(filterType, limit, opts) {
       blockReason: communicationBlockReason_("ROLE_BLOCKED", "")
     };
   }
+  var populationIntegrityGate = communicationPopulationIntegrityGateForBatch_(
+    options._trustedPopulationIntegritySnapshot || null
+  );
+  if (!populationIntegrityGate.ok) {
+    return communicationPopulationIntegrityBlockedBatchResult_(
+      "plan_applicant_batch",
+      populationIntegrityGate,
+      {
+        eligible: 0,
+        blocked: Number(populationIntegrityGate.populationIntegrity && populationIntegrityGate.populationIntegrity.populationCount || 0),
+        selected: 0,
+        sampleRecipients: [],
+        candidates: [],
+        blockCounts: (function () {
+          var counts = {};
+          counts[populationIntegrityGate.blockCode] = Number(populationIntegrityGate.populationIntegrity && populationIntegrityGate.populationIntegrity.populationCount || 0);
+          return counts;
+        })(),
+        limit: Math.max(1, Math.floor(Number(limit || 20))),
+        filterType: normalizedFilter,
+        debugId: debugId
+      }
+    );
+  }
   var batchLimit = Math.max(1, Math.floor(Number(limit || 20)));
   var ctx = campaignGetContext_();
   var headers = ctx.headers;
@@ -11562,6 +11666,20 @@ function testCampaignPing() {
 }
 
 function campaign_prepareLegacyRows_() {
+  var populationIntegrityGate = communicationPopulationIntegrityGateForBatch_(null);
+  if (!populationIntegrityGate.ok) {
+    return communicationPopulationIntegrityBlockedBatchResult_(
+      "campaign_prepare_legacy_rows",
+      populationIntegrityGate,
+      {
+        scanned: 0,
+        prepared: 0,
+        keptReady: 0,
+        skippedMissingSecret: 0,
+        skippedIneligible: Number(populationIntegrityGate.populationIntegrity && populationIntegrityGate.populationIntegrity.populationCount || 0)
+      }
+    );
+  }
   var ctx = campaignGetContext_();
   var sh = ctx.sheet;
   var headers = ctx.headers;
@@ -11621,6 +11739,27 @@ function campaign_sendLegacyBatch_(limit, opts) {
   var batchLimit = Math.max(1, Math.floor(Number(limit || CONFIG.CAMPAIGN_BATCH_SIZE_DEFAULT || 50)));
   var batchLabel = clean_(options.batchLabel || "") || campaignBatchLabel_(new Date());
   var mergedOpts = Object.assign({}, options, { batchLabel: batchLabel });
+  var populationIntegrityGate = communicationPopulationIntegrityGateForBatch_(null);
+  if (!populationIntegrityGate.ok) {
+    return communicationPopulationIntegrityBlockedBatchResult_(
+      "campaign_send_legacy_batch",
+      populationIntegrityGate,
+      {
+        dryRun: dryRun,
+        requestedApplicantId: requestedId,
+        requestedLimit: batchLimit,
+        batchLabel: batchLabel,
+        selected: 0,
+        dryRunCount: 0,
+        skippedIneligible: Number(populationIntegrityGate.populationIntegrity && populationIntegrityGate.populationIntegrity.populationCount || 0),
+        skippedMissingSecret: 0,
+        skippedNoStatus: 0,
+        sendFailed: 0,
+        preview: [],
+        skipped: []
+      }
+    );
+  }
 
   if (requestedId) {
     var single = dryRun
@@ -11653,7 +11792,9 @@ function campaign_sendLegacyBatch_(limit, opts) {
     };
   }
 
-  var plan = planApplicantBatch_("legacy_invite_eligible", batchLimit, mergedOpts);
+  var plan = planApplicantBatch_("legacy_invite_eligible", batchLimit, Object.assign({}, mergedOpts, {
+    _trustedPopulationIntegritySnapshot: populationIntegrityGate.snapshot
+  }));
   var sent = 0;
   var dryRunCount = 0;
   var sendFailed = 0;
@@ -12319,6 +12460,18 @@ function campaign_processBounces_() {
 
 function campaign_sendLegacyFollowups_(limit) {
   var batchLimit = Math.max(1, Math.floor(Number(limit || CONFIG.CAMPAIGN_BATCH_SIZE_DEFAULT || 50)));
+  var populationIntegrityGate = communicationPopulationIntegrityGateForBatch_(null);
+  if (!populationIntegrityGate.ok) {
+    return communicationPopulationIntegrityBlockedBatchResult_(
+      "campaign_send_legacy_followups",
+      populationIntegrityGate,
+      {
+        selected: 0,
+        batchLabel: "",
+        skipped: []
+      }
+    );
+  }
   var ctx = campaignGetContext_();
   var headers = ctx.headers;
   var now = new Date();
