@@ -125,7 +125,7 @@ const commandContext = {
 };
 vm.createContext(commandContext);
 vm.runInContext(`${canonicalPopulation}\n${commands}\nthis.revalidate = eduopsRevalidateCommandForExecution_;`, commandContext, { filename: "EduOps_Commands.js" });
-const access = { capabilities: { CAN_OPEN_REVIEW_WORKSPACE: true, CAN_RUN_BATCH_COMMUNICATIONS: true } };
+const access = { capabilities: { CAN_OPEN_REVIEW_WORKSPACE: true, CAN_EDIT_CONTACT_DETAILS: true, CAN_RUN_BATCH_COMMUNICATIONS: true } };
 const individualPreview = { operation: "CONTACTABILITY_CORRECTION", applicantId: "FODE-1", snapshotId: "SNAP-1", selectedApplicantIds: [], request: { operation: "CONTACTABILITY_CORRECTION", applicantId: "FODE-1", rowKey: "FODE:FODE-1:2", snapshotId: "SNAP-1", draft: { email: "new@example.test", reason: "Correction" } } };
 assert.equal(commandContext.revalidate(individualPreview, access).operation, "CONTACTABILITY_CORRECTION", "operator intent is revalidated without becoming authorisation");
 commandContext.eduopsResolveFodeSnapshot_ = () => ({ snapshotId: "SNAP-2", rows: [] });

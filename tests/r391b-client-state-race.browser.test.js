@@ -509,7 +509,7 @@ function fixtureHtml() {
         snapshotId: payload.snapshotId,
         executable: true,
         expiresAt: "2099-01-01T00:00:00.000Z",
-        requiredCapability: "CAN_OPEN_REVIEW_WORKSPACE",
+        requiredCapability: "CAN_EDIT_CONTACT_DETAILS",
         risk: "MEDIUM",
         summary: "Fixture individual preview"
       };

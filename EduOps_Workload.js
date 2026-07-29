@@ -372,9 +372,9 @@ function eduopsWorkbenchActionAuthority_(workbench, capabilityProjection, operat
   });
   return {
     DOCUMENT_REVIEW: decision("DOCUMENT_REVIEW", "CAN_SAVE_DOCUMENT_STATUSES", workbench.documents && workbench.documents.available === true, "Authoritative document state was not returned. Refresh or retry before continuing.", documentOptions),
-    FINANCE_EVIDENCE_DECISION: decision("FINANCE_EVIDENCE_DECISION", "CAN_VERIFY_PAYMENT", workbench.finance && workbench.finance.available === true && workbench.finance.paymentEvidencePresent === true, "Authoritative finance evidence decision was not returned. Refresh or retry before continuing.", [{ code: "VERIFIED", label: "Payment verified", authoritySource: "Finance authority" }]),
+    FINANCE_EVIDENCE_DECISION: decision("FINANCE_EVIDENCE_DECISION", "CAN_VERIFY_PAYMENT", workbench.finance && workbench.finance.available === true && workbench.finance.paymentEvidencePresent === true, "Authoritative finance evidence decision was not returned. Refresh or retry before continuing.", [{ code: "VERIFIED", label: "Payment evidence verified", authoritySource: "Finance evidence authority" }]),
     SEND_INDIVIDUAL_COMMUNICATION: decision("SEND_INDIVIDUAL_COMMUNICATION", "CAN_SEND_INDIVIDUAL_EMAIL", workbench.communications && workbench.communications.schemaVersion === "EDUOPS_COMMUNICATION_SUMMARY_V1" && workbench.communications.blockCode !== "COMMUNICATION_AUTHORITY_UNAVAILABLE", "Authoritative communication decision was not returned. Refresh or retry before continuing."),
-    CONTACTABILITY_CORRECTION: decision("CONTACTABILITY_CORRECTION", "CAN_OPEN_REVIEW_WORKSPACE", workbench.contactability && workbench.contactability.available === true, "Authoritative contactability decision was not returned. Refresh or retry before continuing."),
+    CONTACTABILITY_CORRECTION: decision("CONTACTABILITY_CORRECTION", "CAN_EDIT_CONTACT_DETAILS", workbench.contactability && workbench.contactability.available === true, "Authoritative contactability decision was not returned. Refresh or retry before continuing."),
     PORTAL_ACCESS: decision("PORTAL_ACCESS", "CAN_MANAGE_PORTAL_ACCESS", false, "Authoritative portal-access decision was not returned. Refresh or retry before continuing.", [], "BACKEND_CONTRACT_MISSING")
   };
 }
@@ -1109,11 +1109,11 @@ function eduopsFilterRows_(rows, query, reliability) {
     if (filters.owner && eduopsClean_(row.actionOwner || "") !== eduopsClean_(filters.owner)) return false;
     if (filters.urgency && eduopsUpper_(row.urgencyLevel || "") !== eduopsUpper_(filters.urgency)) return false;
     if (filters.primaryRoute && eduopsClean_(eduopsPrimaryRouteForRow_(row)) !== eduopsClean_(filters.primaryRoute)) return false;
-    if (filters.documentState && eduopsUpper_(row.documentState || "") !== eduopsUpper_(filters.documentState)) return false;
-    if (filters.financeState && eduopsUpper_(row.canonicalFinanceState || "") !== eduopsUpper_(filters.financeState)) return false;
-    if (filters.contactabilityState && eduopsUpper_(row.contactabilityState || "") !== eduopsUpper_(filters.contactabilityState)) return false;
-    if (filters.communicationState && eduopsClean_(row.recommendedMessageType || "") !== eduopsClean_(filters.communicationState)) return false;
-    if (filters.blockKind && eduopsClean_(row.blockerCode || "") !== eduopsClean_(filters.blockKind)) return false;
+    if (filters.documentState && eduopsUpper_(eduopsRowAuthorityField_(row, "documentState") || "") !== eduopsUpper_(filters.documentState)) return false;
+    if (filters.financeState && eduopsUpper_(eduopsRowAuthorityField_(row, "financeState") || "") !== eduopsUpper_(filters.financeState)) return false;
+    if (filters.contactabilityState && eduopsUpper_(eduopsRowAuthorityField_(row, "contactabilityState") || "") !== eduopsUpper_(filters.contactabilityState)) return false;
+    if (filters.communicationState && eduopsClean_(eduopsRowAuthorityField_(row, "communicationState") || "") !== eduopsClean_(filters.communicationState)) return false;
+    if (filters.blockKind && eduopsClean_(eduopsRowAuthorityField_(row, "blockKind") || "") !== eduopsClean_(filters.blockKind)) return false;
     if (filters.cooling === "ACTIVE" && !eduopsClean_(row.coolingOffUntil || "")) return false;
     if (filters.cooling === "NONE" && eduopsClean_(row.coolingOffUntil || "")) return false;
     var search = eduopsClean_(filters.search || "");
@@ -1330,6 +1330,30 @@ function eduopsUniqueFilterOptions_(rows, field, authoritySource) {
   return Object.keys(seen).sort().map(function (code) { return seen[code]; });
 }
 
+function eduopsRowAuthorityField_(row, field) {
+  var source = row || {};
+  var authority = source.authorityState || {};
+  var map = {
+    documentState: authority.documentState,
+    canonicalFinanceState: authority.canonicalFinanceState,
+    financeState: authority.canonicalFinanceState,
+    contactabilityState: authority.contactabilityState,
+    communicationState: source.recommendedMessageType,
+    blockKind: source.reasonCode || source.blockerCode
+  };
+  return Object.prototype.hasOwnProperty.call(map, field) ? map[field] : source[field];
+}
+
+function eduopsUniqueAuthorityFilterOptions_(rows, field, authoritySource) {
+  var seen = {};
+  (Array.isArray(rows) ? rows : []).forEach(function (row) {
+    var code = eduopsClean_(eduopsRowAuthorityField_(row, field) || "");
+    if (!code || seen[code]) return;
+    seen[code] = eduopsCodePresentation_(code, eduopsHumanize_(code), "", authoritySource);
+  });
+  return Object.keys(seen).sort().map(function (code) { return seen[code]; });
+}
+
 function eduopsWorklistPresentation_(counts, rows) {
   var labels = {};
   (Array.isArray(rows) ? rows : []).forEach(function (row) {
@@ -1378,7 +1402,7 @@ function eduopsWorkloadPresentation_(allRows, matchedRows, pageRows, query, reli
     metrics: [
       { code: "CANONICAL_POPULATION", label: "Canonical population", value: Number(reconciliation.canonicalPopulation || 0), authoritySource: "Population Ledger" },
       { code: "ELIGIBLE_NOW", label: "Eligible now", value: Number(reconciliation.metricCounts && reconciliation.metricCounts.eligibleNow || 0), authoritySource: "Actionability Resolver" },
-      { code: "MATCHING_LATER_PAGES", label: "Matching on later pages", value: Number(reconciliation.matchingOnLaterPages || 0), authoritySource: "EduOps workload query service" },
+      { code: "MATCHED_OUTSIDE_CURRENT_PAGE", label: "Matched outside current page", value: Number(reconciliation.matchedOutsideCurrentPage || reconciliation.matchingOnLaterPages || 0), authoritySource: "EduOps workload query service" },
       { code: "OUTSIDE_CURRENT_VIEW", label: "Outside current view", value: Number(reconciliation.hiddenFromCurrentView || 0), authoritySource: "Population Ledger" },
       { code: "OLDEST_MATCHED", label: "Oldest matched", value: reconciliation.oldestMatchedAgeDays === "" ? "-" : String(reconciliation.oldestMatchedAgeDays) + " days", authoritySource: "Actionability Resolver" }
     ],
@@ -1386,10 +1410,10 @@ function eduopsWorkloadPresentation_(allRows, matchedRows, pageRows, query, reli
       owner: eduopsUniqueFilterOptions_(allRows, "actionOwner", "Actionability Resolver"),
       urgency: eduopsUniqueFilterOptions_(allRows, "urgencyLevel", "Actionability Resolver"),
       primaryRoute: eduopsUniqueFilterOptions_(routeRows, "primaryRoute", "Actionability Resolver"),
-      documentState: eduopsUniqueFilterOptions_(allRows, "documentState", "Document authority"),
-      financeState: eduopsUniqueFilterOptions_(allRows, "canonicalFinanceState", "Finance authority"),
-      contactabilityState: eduopsUniqueFilterOptions_(allRows, "contactabilityState", "Contactability authority"),
-      communicationState: eduopsUniqueFilterOptions_(allRows, "recommendedMessageType", "Communication Authority"),
+      documentState: eduopsUniqueAuthorityFilterOptions_(allRows, "documentState", "Document authority"),
+      financeState: eduopsUniqueAuthorityFilterOptions_(allRows, "canonicalFinanceState", "Finance authority"),
+      contactabilityState: eduopsUniqueAuthorityFilterOptions_(allRows, "contactabilityState", "Contactability authority"),
+      communicationState: eduopsUniqueAuthorityFilterOptions_(allRows, "communicationState", "Communication Authority"),
       cooling: [eduopsCodePresentation_("ACTIVE", "Cooling-off active", "", "Actionability Resolver"), eduopsCodePresentation_("NONE", "No cooling-off", "", "Actionability Resolver")],
       blockKind: eduopsUniqueFilterOptions_(allRows, "reasonCode", "Actionability Resolver")
     },
@@ -1404,8 +1428,21 @@ function eduopsWorkloadPresentation_(allRows, matchedRows, pageRows, query, reli
       population: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "Population Ledger", available: true, reconciliation: eduopsClone_(reconciliation) },
       health: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "EduOps runtime projection", available: true, reliability: eduopsStatePresentation_(reliability && reliability.state || "UNAVAILABLE") }
     },
-    evaluatedCohort: { totalMatched: matchedRows.length, visiblePageCount: pageRows.length, snapshotId: reconciliation.snapshotId, snapshotAsOf: reconciliation.asOf },
-    selection: { totalMatched: matchedRows.length, visibleSelectable: pageRows.filter(function (row) { return row.selectable === true; }).length, visibleBlocked: pageRows.filter(function (row) { return row.selectable !== true; }).length, totalAuthoritySelectable: Number(reconciliation.totalAuthoritySelectable || 0), authoritySource: "Actionability Resolver" }
+    evaluatedCohort: { totalMatched: matchedRows.length, displayedPageCount: pageRows.length, visiblePageCount: pageRows.length, snapshotId: reconciliation.snapshotId, snapshotAsOf: reconciliation.asOf },
+    selection: {
+      totalMatched: matchedRows.length,
+      displayedPageCount: pageRows.length,
+      batchSelectableOnPage: pageRows.filter(function (row) { return row.selectable === true; }).length,
+      batchUnavailableOnPage: pageRows.filter(function (row) { return row.selectable !== true; }).length,
+      batchSelectableMatched: Number(reconciliation.batchSelectableMatched || reconciliation.totalAuthoritySelectable || 0),
+      batchBlockedMatched: Number(reconciliation.batchBlockedMatched || reconciliation.totalAuthorityBlocked || 0),
+      visibleSelectable: pageRows.filter(function (row) { return row.selectable === true; }).length,
+      visibleBlocked: pageRows.filter(function (row) { return row.selectable !== true; }).length,
+      totalAuthoritySelectable: Number(reconciliation.totalAuthoritySelectable || 0),
+      totalAuthorityBlocked: Number(reconciliation.totalAuthorityBlocked || 0),
+      compatibilityFields: ["visibleSelectable", "visibleBlocked", "totalAuthoritySelectable", "totalAuthorityBlocked"],
+      authoritySource: "Actionability Resolver"
+    }
   };
 }
 
@@ -1484,6 +1521,14 @@ function eduopsReconciliationForRows_(allRows, matchedRows, pageRows, query, sna
   pageRows.forEach(function (row) {
     if (row.ageDays !== "" && (oldestVisible === "" || Number(row.ageDays) > Number(oldestVisible))) oldestVisible = Number(row.ageDays);
   });
+  var effectivePage = Math.max(1, Math.floor(Number(query.page || 1)));
+  var effectivePageSize = Math.max(1, Math.floor(Number(query.pageSize || 25)));
+  var pageStartIndex = pageRows.length ? ((effectivePage - 1) * effectivePageSize) : 0;
+  var beforeCurrentPage = Math.max(0, Math.min(pageStartIndex, matchedRows.length));
+  var afterCurrentPage = Math.max(0, matchedRows.length - beforeCurrentPage - pageRows.length);
+  var matchedOutsideCurrentPage = beforeCurrentPage + afterCurrentPage;
+  var batchSelectableMatched = matchedRows.filter(function (row) { return row.selectable === true; }).length;
+  var batchBlockedMatched = matchedRows.filter(function (row) { return row.selectable !== true; }).length;
   var populationIntegrity = snapshot && snapshot.populationIntegrity && typeof snapshot.populationIntegrity === "object"
     ? eduopsClone_(snapshot.populationIntegrity)
     : {
@@ -1510,14 +1555,21 @@ function eduopsReconciliationForRows_(allRows, matchedRows, pageRows, query, sna
     canonicalPopulation: Number(snapshot && snapshot.totalRows || allRows.length),
     totalMatched: matchedRows.length,
     visiblePageCount: pageRows.length,
-    visiblePageRange: pageRows.length ? (((query.page - 1) * query.pageSize + 1) + "-" + ((query.page - 1) * query.pageSize + pageRows.length)) : "0",
+    displayedPageCount: pageRows.length,
+    effectivePage: effectivePage,
+    visiblePageRange: pageRows.length ? ((pageStartIndex + 1) + "-" + (pageStartIndex + pageRows.length)) : "0",
     returnedWindow: pageRows.length,
     eligibleOutsideCurrentWindow: Math.max(0, matchedRows.filter(function (row) { return row.selectable === true && !pageIds[row.applicantId]; }).length),
-    matchingOnLaterPages: Math.max(0, matchedRows.length - pageRows.length),
+    matchedOutsideCurrentPage: matchedOutsideCurrentPage,
+    matchedBeforeCurrentPage: beforeCurrentPage,
+    matchedAfterCurrentPage: afterCurrentPage,
+    matchingOnLaterPages: matchedOutsideCurrentPage,
     hiddenFromCurrentView: hiddenReasons.length,
     excludedFromOperation: matchedRows.filter(function (row) { return row.selectable !== true; }).length,
-    totalAuthoritySelectable: matchedRows.filter(function (row) { return row.selectable === true; }).length,
-    totalAuthorityBlocked: matchedRows.filter(function (row) { return row.selectable !== true; }).length,
+    batchSelectableMatched: batchSelectableMatched,
+    batchBlockedMatched: batchBlockedMatched,
+    totalAuthoritySelectable: batchSelectableMatched,
+    totalAuthorityBlocked: batchBlockedMatched,
     metricCounts: eduopsMetricCounts_(matchedRows),
     oldestVisibleAgeDays: oldestVisible,
     oldestMatchedAgeDays: eduopsOldestAge_(matchedRows),
@@ -1530,7 +1582,8 @@ function eduopsReconciliationForRows_(allRows, matchedRows, pageRows, query, sna
     queryBinding: eduopsWorkloadQueryBinding_(query, snapshotId, snapshot),
     arithmetic: {
       population: "canonicalPopulation = totalMatched + hiddenFromCurrentView",
-      matched: "totalMatched = visiblePageCount + matchingOnLaterPages"
+      matched: "totalMatched = visiblePageCount + matchedOutsideCurrentPage",
+      compatibility: "matchingOnLaterPages is retained as an alias for matchedOutsideCurrentPage"
     },
     hiddenReasonGroups: eduopsHiddenReasonGroups_(hiddenReasons),
     hiddenReasonPage: eduopsHiddenReasonPage_(hiddenReasons, 1, 50, snapshotId, eduopsWorkloadQueryFingerprint_(query)),

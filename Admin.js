@@ -2003,7 +2003,7 @@ function admin_updateParentEmailCorrected(payload) {
   return withEnvelope_("admin_updateParentEmailCorrected", function (dbgId) {
     var operatorEmail = getCallerEmail_();
     if (!isAdmin_(operatorEmail)) return err_("ACCESS_DENIED", "Access denied", dbgId);
-    requireOperationsAdmin_(operatorEmail);
+    requireAdminCapability_(operatorEmail, "CAN_EDIT_CONTACT_DETAILS", "Contact detail edit capability is required.");
     if (!(CONFIG && CONFIG.SUPERADMIN_ALLOW_EMAIL_OVERRIDE_POST_DOCS_VERIFIED === true)) {
       return err_("FEATURE_DISABLED", "Email override is disabled by config.", dbgId);
     }
@@ -2943,7 +2943,7 @@ function actionabilityPreviewUrgency_(owner, nextAction, dateInfo, suppressor, c
     return { level: "ESCALATED", reason: "Applicant action is blocked by contactability issue." };
   }
   if (suppressor === "MANUAL_REVIEW_REQUIRED") {
-    return { level: "ESCALATED", reason: "Two successful communication cycles are complete; manual review is required." };
+    return { level: "ESCALATED", reason: "Compatibility communication cadence requires manual review." };
   }
   if (cooldownActive) return { level: "NORMAL", reason: "Communication cooldown or next-action date is still active." };
   var ageDays = Number(dateInfo && dateInfo.ageDays);
@@ -3012,7 +3012,7 @@ function resolveActionabilityState_(facts) {
   }
   if (suppressor === "MANUAL_REVIEW_REQUIRED") {
     out.actionabilityState = "REVIEW_REQUIRED";
-    out.selectBlockReason = "Two successful communication cycles are complete. Manual review is required before another send.";
+    out.selectBlockReason = "Compatibility communication cadence requires manual review before another send.";
     out.recommendedAction = "REVIEW_COMMUNICATION";
     out.reasonCode = "MANUAL_REVIEW_REQUIRED";
     return out;
@@ -3341,7 +3341,14 @@ function actionabilityWorklistProjection_(row) {
     return {
       worklistKey: "COMMUNICATION_REVIEW",
       worklistLabel: "Communication Review",
-      worklistReason: "Two successful send cycles are complete"
+      worklistReason: "Compatibility communication cadence requires manual review"
+    };
+  }
+  if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") {
+    return {
+      worklistKey: "CONTACTABILITY_EXCEPTION",
+      worklistLabel: "Contactability Exception",
+      worklistReason: "Electronic contact is unavailable; manual contactability review is required"
     };
   }
   if (nextAction === "SEND_PAYMENT_REMINDER") {

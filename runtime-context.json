@@ -31,16 +31,16 @@
           "deploymentId": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ",
           "url": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec",
           "whoamiUrl": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami",
-          "expectedRuntime": "r391",
-          "expectedDeploy": 391,
-          "expectedAppsScriptVersion": 427,
+          "expectedRuntime": "r392",
+          "expectedDeploy": 392,
+          "expectedAppsScriptVersion": 428,
           "lastRelease": {
-            "runtimeIdentity": "r391 / 391",
-            "appsScriptVersion": 427,
-            "deploymentPin": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @427",
-            "description": "R391B critical correctness repair",
+            "runtimeIdentity": "r392 / 392",
+            "appsScriptVersion": 428,
+            "deploymentPin": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @428",
+            "description": "R391C classification, routing, Finance, DTO and capability semantic repair",
             "commitRefs": [
-              "6bbbfdd09ec8b491b7fa480481fd57fae00dcaba"
+              "R391C closure commit"
             ]
           }
         },
@@ -200,6 +200,14 @@
           "student": "@247 / r217 / 217",
           "production": "untouched",
           "validation": "77 / 77 test files PASS; 6,821 assertions"
+        },
+        "R391C": {
+          "status": "accepted-staging",
+          "admin": "@428 / r392 / 392",
+          "student": "@247 / r217 / 217",
+          "production": "untouched",
+          "summary": "Classification, routing, Finance, DTO and capability semantic repair. Contactability exceptions route explicitly, Finance evidence wording is bounded, DTO selection authority is clarified, contact editing uses CAN_EDIT_CONTACT_DETAILS and Batch send remains prohibited.",
+          "validation": "78 / 78 test files PASS; 6,848 assertions"
         }
       },
       "currentOperationalState": {
@@ -216,7 +224,7 @@
           "acting against an applicant where population integrity is duplicated, ambiguous or unproven",
           "beginning R390B2 before prerequisite semantic and architecture repairs are accepted"
         ],
-        "nextPass": "R391C after R391B-GOV acceptance",
+        "nextPass": "R391D/E Operations Workspace and Workbench density/readability refinement after R391C closure",
         "deferred": "R390B2 durable Communication Event Ledger is not ready to begin."
       },
       "featureFlags": {

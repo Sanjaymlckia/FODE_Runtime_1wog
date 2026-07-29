@@ -54,7 +54,7 @@
     }).join("") || '<div class="eduops-operations-context-empty">No granular work packages returned for this state.</div>';
     dom.eduopsOperationsToolbarState.textContent = selectedState && selectedState.label || app.authorityUnavailable("actionability");
     dom.eduopsOperationsToolbarPackage.textContent = selectedWorklist && selectedWorklist.label || activePackage && activePackage.label || "All work types";
-    dom.eduopsOperationsQueueContext.innerHTML = '<span class="eduops-eyebrow">Operational context</span><h2>' + app.esc(selectedWorklist && selectedWorklist.label || activePackage && activePackage.label || "All work types") + '</h2><dl><div><dt>Matched</dt><dd>' + Number(response.totalMatched || 0) + '</dd></div><div><dt>Authority</dt><dd>' + app.esc(activePackage && activePackage.authoritySource || "Actionability Resolver") + '</dd></div><div><dt>Communication</dt><dd>' + app.esc(activePackage && activePackage.recommendedCommunication && activePackage.recommendedCommunication.label || "No single recommendation") + '</dd></div></dl><div class="eduops-operations-package-panel-control" role="group" aria-label="Package panel"><span>Package panel</span><button type="button" class="active">Compact</button><button type="button" data-eduops-operations-focus-packages>Expanded</button><button type="button" data-eduops-operations-hide-packages>Hidden</button></div><div class="eduops-operations-context-package-list">' + packageList + '</div>';
+    dom.eduopsOperationsQueueContext.innerHTML = '<span class="eduops-eyebrow">Operational context</span><h2>' + app.esc(selectedWorklist && selectedWorklist.label || activePackage && activePackage.label || "All work types") + '</h2><dl><div><dt>Matched</dt><dd>' + Number(response.totalMatched || 0) + '</dd></div><div><dt>Authority</dt><dd>' + app.esc(activePackage && activePackage.authoritySource || "Actionability Resolver") + '</dd></div><div><dt>Communication</dt><dd>' + app.esc(activePackage && activePackage.recommendedCommunication && activePackage.recommendedCommunication.label || "No single recommendation") + '</dd></div></dl><div class="eduops-operations-package-panel-control" role="group" aria-label="Package actions"><span>Package actions</span><button type="button" class="active" disabled>Current summary</button><button type="button" data-eduops-operations-focus-packages>Open workspace packages</button></div><div class="eduops-operations-context-package-list">' + packageList + '</div>';
   }
   function neutralizeQueueContext(state, message) {
     var loading = state === "LOADING";
@@ -168,7 +168,7 @@
 
   function selectionCount(response) {
     if (app.state.selectionMode === "ALL_ELIGIBLE_MATCHING_QUERY") {
-      return Math.max(0, Number(response && response.reconciliation && response.reconciliation.totalAuthoritySelectable || 0) - excludedCount());
+      return Math.max(0, Number(response && response.reconciliation && (response.reconciliation.batchSelectableMatched || response.reconciliation.totalAuthoritySelectable) || 0) - excludedCount());
     }
     return Object.keys(app.state.selected).filter(function (key) { return app.state.selected[key] === true && app.state.selectionExcluded[key] !== true; }).length;
   }
@@ -205,11 +205,12 @@
     response = response || {};
     var count = selectionCount(response);
     var summary = response.presentation && response.presentation.selection || {};
-    var selectable = Number(summary.visibleSelectable || 0);
-    var blocked = Number(summary.visibleBlocked || 0);
+    var displayed = Number(summary.displayedPageCount || response.reconciliation && response.reconciliation.displayedPageCount || response.rows && response.rows.length || 0);
+    var selectable = Number(summary.batchSelectableOnPage || summary.visibleSelectable || 0);
+    var blocked = Number(summary.batchUnavailableOnPage || summary.visibleBlocked || 0);
     var mode = app.state.selectionMode === "ALL_ELIGIBLE_MATCHING_QUERY" ? "all eligible matching current query" : "explicit selected applicants";
-    dom.eduopsSelectionSummary.textContent = Number(summary.totalMatched || 0) + " matched / " + selectable + " selectable on this page / " + blocked + " unavailable. Operator selection intent " + count + " in " + mode + " / " + excludedCount() + " excluded. Execution authority is evaluated only in Batch Operations.";
-    if (dom.eduopsQueueCompactStats) dom.eduopsQueueCompactStats.textContent = Number(summary.totalMatched || 0) + " matched · " + selectable + " visible · " + count + " selected · " + excludedCount() + " excluded";
+    dom.eduopsSelectionSummary.textContent = Number(summary.totalMatched || 0) + " matched / " + displayed + " displayed on this page / " + selectable + " Batch-selectable / " + blocked + " Batch-unavailable. Operator selection intent " + count + " in " + mode + " / " + excludedCount() + " excluded. Execution authority is evaluated only in Batch Operations.";
+    if (dom.eduopsQueueCompactStats) dom.eduopsQueueCompactStats.textContent = Number(summary.totalMatched || 0) + " matched · " + displayed + " displayed · " + selectable + " Batch-selectable · " + count + " selected";
     var workloadCurrent = app.hasCurrentWorkload && app.hasCurrentWorkload() && app.state.workloadRequest.selectionValid === true;
     var batchAuthorityCurrent = workloadCurrent && app.state.workloadRequest.batchAuthorityValid === true;
     var batchAvailable = batchAuthorityCurrent && app.operationAvailable("BATCH_COMMUNICATION");
@@ -627,7 +628,7 @@
           ["accounts", "Unique active applicants", summary.activeFinanceWork, "ACTIONABLE"],
           ["accounts", "Payment pending", summary.paymentPending, "PAYMENT_PENDING"],
           ["accounts", "Payment to verify", summary.paymentToVerify, "PAYMENT_TO_VERIFY"],
-          ["accounts", "Payment verified", summary.paidVerified, "PAID_VERIFIED"],
+          ["accounts", "Paid state verified", summary.paidVerified, "PAID_VERIFIED"],
           ["accounts", "Not yet applicable", summary.notYetPaymentApplicable, "NOT_YET_PAYMENT_APPLICABLE"],
           ["reconciliation", "Finance exceptions", summary.financeExceptions, "EXCEPTIONS"]
         ];
@@ -1258,8 +1259,8 @@
         }
         var r = response.reconciliation || {};
         var page = response.hiddenReasonPage || r.hiddenReasonPage || {};
-        var rows = [["Canonical population", r.canonicalPopulation], ["Matched workload", r.totalMatched], ["Visible page", r.visiblePageCount], ["Matching on later pages", r.matchingOnLaterPages], ["Outside current view", r.hiddenFromCurrentView], ["Authority-blocked in current view", r.totalAuthorityBlocked]];
-        var arithmetic = '<div class="eduops-module-status" data-module-state="READ-ONLY"><strong>Count arithmetic</strong><span>Population = matched workload + outside current view. Matched workload = visible page + matching on later pages.</span></div>';
+        var rows = [["Canonical population", r.canonicalPopulation], ["Matched workload", r.totalMatched], ["Displayed page", r.displayedPageCount || r.visiblePageCount], ["Matched outside current page", r.matchedOutsideCurrentPage || r.matchingOnLaterPages], ["Outside current view", r.hiddenFromCurrentView], ["Batch-blocked matched", r.batchBlockedMatched || r.totalAuthorityBlocked]];
+        var arithmetic = '<div class="eduops-module-status" data-module-state="READ-ONLY"><strong>Count arithmetic</strong><span>Population = matched workload + outside current view. Matched workload = displayed page + matched outside current page. Batch-blocked is selection authority only.</span></div>';
         var hidden = (page.rows || []).map(function (item) { return '<li><strong>' + app.esc(item.displayName || item.applicantId) + '</strong><span>' + app.esc(item.applicantId) + ' - ' + app.esc(item.reason || app.authorityUnavailable("hidden-record reason")) + '</span></li>'; }).join("");
         var pager = page.totalPages > 1 ? '<div class="eduops-action-row"><button class="eduops-button eduops-button-secondary" type="button" data-hidden-page="' + Math.max(1, Number(page.page || 1) - 1) + '"' + (Number(page.page || 1) <= 1 ? " disabled" : "") + '>Previous hidden reasons</button><span>Page ' + Number(page.page || 1) + ' of ' + Number(page.totalPages || 1) + '</span><button class="eduops-button eduops-button-secondary" type="button" data-hidden-page="' + Math.min(Number(page.totalPages || 1), Number(page.page || 1) + 1) + '"' + (Number(page.page || 1) >= Number(page.totalPages || 1) ? " disabled" : "") + '>Next hidden reasons</button></div>' : "";
         dom.eduopsReportContent.innerHTML = reportHtml("Authoritative workload composition", "Counts use one product snapshot and non-overlapping categories.", rows) + arithmetic + (hidden ? '<details class="eduops-disclosure" open><summary>Exact hidden reasons (' + Number(page.totalHidden || 0) + ')</summary>' + pager + '<ul class="eduops-audit-list">' + hidden + '</ul>' + pager + '</details>' : '<div class="eduops-empty-state"><strong>No hidden records returned</strong><span>The current view is fully reconciled.</span></div>');

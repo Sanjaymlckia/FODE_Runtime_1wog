@@ -7259,7 +7259,7 @@ function communicationBlockReason_(code, messageType) {
     PORTAL_ALREADY_SUBMITTED: "The portal has already been submitted for this applicant.",
     MISSING_PORTAL_SECRET: "No active portal link is available for this applicant.",
     COOLDOWN_ACTIVE: "A recent message of this type was already sent. Try again later.",
-    MANUAL_REVIEW_REQUIRED: "Two successful communication cycles are complete. Manual review is required before another send.",
+    MANUAL_REVIEW_REQUIRED: "Compatibility communication cadence requires manual review before another send.",
     ALREADY_PROCESSED_FOR_OPERATION: "This exact communication operation was already processed.",
     IDEMPOTENT_REPLAY: "The original communication receipt was replayed without another send.",
     ROLE_BLOCKED: "Your role is not allowed to perform this action.",

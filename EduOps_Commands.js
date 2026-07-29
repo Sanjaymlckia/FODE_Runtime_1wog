@@ -2,7 +2,7 @@ var EDUOPS_COMMAND_DEFINITIONS = {
   DOCUMENT_REVIEW: { capability: "CAN_SAVE_DOCUMENT_STATUSES", batchSafe: false, risk: "STANDARD", publicLabel: "Document review" },
   FINANCE_EVIDENCE_DECISION: { capability: "CAN_VERIFY_PAYMENT", batchSafe: false, risk: "HIGH", publicLabel: "Finance evidence decision" },
   SEND_INDIVIDUAL_COMMUNICATION: { capability: "CAN_SEND_INDIVIDUAL_EMAIL", batchSafe: false, risk: "HIGH", publicLabel: "Individual communication" },
-  CONTACTABILITY_CORRECTION: { capability: "CAN_OPEN_REVIEW_WORKSPACE", batchSafe: false, risk: "STANDARD", publicLabel: "Contactability correction" },
+  CONTACTABILITY_CORRECTION: { capability: "CAN_EDIT_CONTACT_DETAILS", batchSafe: false, risk: "STANDARD", publicLabel: "Contactability correction" },
   PORTAL_ACCESS: { capability: "CAN_MANAGE_PORTAL_ACCESS", batchSafe: false, risk: "HIGH", dualApproval: true, publicLabel: "Portal access" },
   BATCH_COMMUNICATION: { capability: "CAN_RUN_BATCH_COMMUNICATIONS", batchSafe: true, risk: "HIGH", publicLabel: "Batch communication" }
 };

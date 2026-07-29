@@ -8,6 +8,7 @@ function adminCapabilityCatalog_() {
     "CAN_REVIEW_DOCUMENTS",
     "CAN_SAVE_DOCUMENT_STATUSES",
     "CAN_EDIT_APPLICANT_COMMUNICATION",
+    "CAN_EDIT_CONTACT_DETAILS",
     "CAN_PREVIEW_APPLICANT_COMMUNICATION",
     "CAN_SEND_INDIVIDUAL_EMAIL",
     "CAN_SEND_INDIVIDUAL_WHATSAPP",
@@ -54,6 +55,7 @@ function adminCapabilityRoleDefaults_(role) {
   }
   if (normalizedRole === "SUPER" || normalizedRole === "OPERATIONS") {
     defaults.CAN_RUN_BATCH_COMMUNICATIONS = true;
+    defaults.CAN_EDIT_CONTACT_DETAILS = true;
     defaults.CAN_GENERATE_STANDARD_INVOICE = true;
   }
   if (normalizedRole === "SUPER") {
@@ -166,6 +168,7 @@ function getAdminRole_(email) {
 
 function adminCapabilityBlockCode_(capability) {
   var map = {
+    CAN_EDIT_CONTACT_DETAILS: "CONTACT_DETAILS_EDIT_CAPABILITY_REQUIRED",
     CAN_PREVIEW_APPLICANT_COMMUNICATION: "APPLICANT_COMMUNICATION_PREVIEW_CAPABILITY_REQUIRED",
     CAN_SEND_INDIVIDUAL_EMAIL: "INDIVIDUAL_EMAIL_CAPABILITY_REQUIRED",
     CAN_SEND_INDIVIDUAL_WHATSAPP: "INDIVIDUAL_WHATSAPP_CAPABILITY_REQUIRED",
@@ -199,6 +202,7 @@ function adminCapabilityBlockCode_(capability) {
 
 function adminCapabilityBlockReason_(capability) {
   var map = {
+    CAN_EDIT_CONTACT_DETAILS: "Contact detail edit capability is required.",
     CAN_PREVIEW_APPLICANT_COMMUNICATION: "Applicant communication preview capability is required.",
     CAN_SEND_INDIVIDUAL_EMAIL: "Individual applicant email capability is required before send.",
     CAN_SEND_INDIVIDUAL_WHATSAPP: "Individual applicant WhatsApp capability is required before send.",
