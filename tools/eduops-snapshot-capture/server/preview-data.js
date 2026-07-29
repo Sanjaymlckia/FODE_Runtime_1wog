@@ -205,6 +205,7 @@ function exactRows() {
 
 function row(input) {
   const scope = input.workScope || scopeFor(input);
+  const selectable = input.selectable !== false;
   return {
     rowKey: `FODE:${input.applicantId}:${input.rowNumber}`,
     rowNumber: input.rowNumber,
@@ -228,8 +229,16 @@ function row(input) {
       unassignedReason: scope === "UNASSIGNED" ? "No current operator owner in fixture projection" : ""
     },
     nextAction: input.nextAction,
-    selectable: input.selectable !== false,
+    selectable,
     selectBlockReason: input.selectBlockReason || "",
+    authorityDecision: {
+      schemaVersion: "EDUOPS_ROW_AUTHORITY_DECISION_V1",
+      authoritySource: "Actionability Resolver",
+      actionAvailable: selectable === true,
+      stale: false,
+      reasonCode: input.blockerCode || (selectable ? "PREVIEW_FIXTURE_ACTION_AVAILABLE" : "PREVIEW_FIXTURE_ACTION_BLOCKED"),
+      reason: input.blockerReason || input.selectBlockReason || input.nextAction || "Preview fixture authority."
+    },
     blockerCode: input.blockerCode || "",
     blockerReason: input.blockerReason || input.selectBlockReason || "",
     urgencyLevel: input.urgencyLevel || "NORMAL",
@@ -237,6 +246,7 @@ function row(input) {
     coolingOffUntil: input.coolingOffUntil || "",
     recommendedMessageType: input.recommendedMessageType || "",
     communicationAuthoritySummary: input.communicationAuthoritySummary || "Read-only preview communication authority",
+    presentation: fixtureRowPresentation(input),
     canonicalLifecycle: {
       baseState: input.actionabilityState,
       lifecycleStage: input.actionabilityState,
@@ -382,6 +392,327 @@ function snapshotWorklistCounts(snapshot, state) {
   return worklistCounts(rows, state);
 }
 
+function fixtureClean(value) {
+  return String(value == null ? "" : value).trim();
+}
+
+function fixtureHumanize(value) {
+  return fixtureClean(value).replace(/[_-]+/g, " ").replace(/\b\w/g, function (letter) { return letter.toUpperCase(); });
+}
+
+function fixtureAuthorityUnavailable(domain, authoritySource) {
+  return {
+    schemaVersion: "EDUOPS_AUTHORITY_DECISION_V1",
+    authoritySource: fixtureClean(authoritySource),
+    available: false,
+    stale: false,
+    reasonCode: "BACKEND_CONTRACT_MISSING",
+    reason: "Authoritative " + fixtureClean(domain || "authority") + " decision was not returned. Refresh or retry before continuing."
+  };
+}
+
+function fixtureCodePresentation(code, label, reason, authoritySource) {
+  var value = fixtureClean(code);
+  var publicLabel = fixtureClean(label);
+  if (!value || !publicLabel) return fixtureAuthorityUnavailable("state presentation", authoritySource);
+  return {
+    schemaVersion: "EDUOPS_CODE_PRESENTATION_V1",
+    authoritySource: fixtureClean(authoritySource || "Authoritative backend service"),
+    code: value,
+    label: publicLabel,
+    reason: fixtureClean(reason),
+    available: true,
+    stale: false
+  };
+}
+
+function fixtureStatePresentation(state) {
+  var key = fixtureClean(state || "UNKNOWN").toUpperCase();
+  var catalogue = {
+    READY: ["Ready for action", "Authorised work can proceed now.", "ready"],
+    COOLING_OFF: ["Recently contacted - waiting period", "A known action is time-gated.", "warn"],
+    AWAITING_APPLICANT: ["Waiting for applicant", "Applicant input or evidence is required.", "warn"],
+    AWAITING_PAYMENT: ["Waiting for payment", "Payment or evidence is outstanding.", "warn"],
+    REVIEW_REQUIRED: ["Needs review", "An internal decision is required.", "warn"],
+    BLOCKED: ["Blocked - intervention required", "A known blocker prevents progress.", "blocked"],
+    UNKNOWN: ["Classification required", "Authority cannot classify this record safely.", "blocked"],
+    COMPLETE: ["Completed records", "No current operator action is required.", "ready"],
+    AUTHORITATIVE: ["Authoritative", "The authority projection is current.", "ready"],
+    DERIVED: ["Derived projection", "This display is derived by an authoritative backend service.", "muted"],
+    STALE: ["Source changed", "Refresh or revalidate before acting.", "warn"],
+    CONFLICTING: ["Authority conflict", "Conflicting facts prevent safe action.", "blocked"],
+    UNAVAILABLE: ["Source unavailable", "The authority projection could not be returned.", "blocked"]
+  };
+  var item = catalogue[key];
+  if (!item) return fixtureAuthorityUnavailable("state presentation", "EduOps backend presentation service");
+  return {
+    schemaVersion: "EDUOPS_STATE_PRESENTATION_V1",
+    authoritySource: "EduOps backend presentation service",
+    code: key,
+    label: item[0],
+    reason: item[1],
+    tone: item[2],
+    available: true,
+    stale: false
+  };
+}
+
+function fixtureUniqueFilterOptions(rows, field, authoritySource) {
+  var seen = {};
+  (Array.isArray(rows) ? rows : []).forEach(function (rowItem) {
+    var code = fixtureClean(rowItem && rowItem[field]);
+    if (!code || seen[code]) return;
+    seen[code] = fixtureCodePresentation(code, fixtureHumanize(code), "", authoritySource);
+  });
+  return Object.keys(seen).sort().map(function (code) { return seen[code]; });
+}
+
+function fixtureDistribution(rows, getter, authoritySource) {
+  var counts = {};
+  (Array.isArray(rows) ? rows : []).forEach(function (rowItem) {
+    var code = fixtureClean(getter(rowItem));
+    if (code) counts[code] = Number(counts[code] || 0) + 1;
+  });
+  return Object.keys(counts).sort().map(function (code) {
+    var item = fixtureCodePresentation(code, fixtureHumanize(code), "", authoritySource);
+    item.count = counts[code];
+    return item;
+  });
+}
+
+function fixtureActionabilityPresentation(counts) {
+  return ["READY", "COOLING_OFF", "AWAITING_APPLICANT", "AWAITING_PAYMENT", "REVIEW_REQUIRED", "BLOCKED", "UNKNOWN", "COMPLETE"].map(function (code) {
+    var item = fixtureStatePresentation(code);
+    item.count = Number(counts && counts[code] || 0);
+    return item;
+  });
+}
+
+function fixtureWorklistPresentation(counts, rows) {
+  var labels = {};
+  (Array.isArray(rows) ? rows : []).forEach(function (rowItem) {
+    var key = fixtureClean(rowItem && rowItem.worklistKey);
+    if (key && !labels[key]) labels[key] = fixtureClean(rowItem.worklistLabel) || fixtureHumanize(key);
+  });
+  var total = Object.keys(counts || {}).reduce(function (sum, key) { return sum + Number(counts[key] || 0); }, 0);
+  var out = [{
+    schemaVersion: "EDUOPS_CODE_PRESENTATION_V1",
+    authoritySource: "Actionability Resolver",
+    code: "",
+    label: "All work types",
+    reason: "All worklist types in the selected Actionability state.",
+    available: true,
+    stale: false,
+    count: total
+  }];
+  Object.keys(counts || {}).sort().forEach(function (key) {
+    var item = fixtureCodePresentation(key, labels[key] || fixtureHumanize(key), "", "Actionability Resolver");
+    item.count = Number(counts[key] || 0);
+    out.push(item);
+  });
+  return out;
+}
+
+function fixtureWorkScopePresentation() {
+  return [
+    ["MY", "My Work"], ["TEAM", "Team Work"], ["UNASSIGNED", "Unassigned"],
+    ["ESCALATED", "Escalated"], ["ALL_AUTHORISED", "All Authorised Work"]
+  ].map(function (item) {
+    return fixtureCodePresentation(item[0], item[1], "Operator query scope projected by the backend.", "EduOps workload query service");
+  });
+}
+
+function fixtureRowPresentation(input) {
+  var actionability = input.actionabilityState || "UNKNOWN";
+  return {
+    lifecycle: fixtureCodePresentation(input.actionabilityState, STATE_LABELS[input.actionabilityState] || fixtureHumanize(input.actionabilityState), "Preview fixture lifecycle authority.", "Canonical Lifecycle Resolver"),
+    actionability: fixtureStatePresentation(actionability),
+    worklist: fixtureCodePresentation(input.worklistKey || "", input.worklistLabel || fixtureHumanize(input.worklistKey), "Preview fixture worklist authority.", "Actionability Resolver"),
+    owner: fixtureCodePresentation(input.actionOwner || "", fixtureHumanize(input.actionOwner), "Preview fixture owner authority.", "Actionability Resolver"),
+    route: fixtureCodePresentation(input.primaryRoute || routeFor(input.nextAction), input.primaryRoute || routeFor(input.nextAction), "Preview fixture route authority.", "Actionability Resolver"),
+    nextAction: fixtureCodePresentation(input.nextAction || "", input.nextAction || "Review authoritative fixture", "Preview fixture next-action authority.", "Actionability Resolver"),
+    finance: fixtureCodePresentation(input.financeState || "UNKNOWN", fixtureHumanize(input.financeState || "UNKNOWN"), "Preview fixture Finance authority.", "Finance authority"),
+    documents: fixtureCodePresentation(input.documentState || "UNKNOWN", fixtureHumanize(input.documentState || "UNKNOWN"), "Preview fixture Document authority.", "Document authority"),
+    contactability: fixtureCodePresentation(input.contactabilityState || "UNKNOWN", fixtureHumanize(input.contactabilityState || "UNKNOWN"), "Preview fixture Contactability authority.", "Contactability authority"),
+    reliability: fixtureStatePresentation("AUTHORITATIVE")
+  };
+}
+
+function fixtureSearchHandoff(rowItem, snapshotId) {
+  return {
+    schemaVersion: "OPSEDU_SEARCH_HANDOFF_V1",
+    authoritySource: "Preview fixture search handoff",
+    applicantId: rowItem.applicantId,
+    product: rowItem.product || productCode(rowItem.applicantId && String(rowItem.applicantId).split("-")[0]) || "FODE",
+    snapshotId: snapshotId || rowItem.snapshotId || SNAPSHOT_ID,
+    queueBinding: {
+      product: rowItem.product || "FODE",
+      actionabilityState: rowItem.actionabilityState,
+      worklistKey: rowItem.worklistKey || "",
+      workScope: rowItem.returnContext && rowItem.returnContext.workScope || "ALL_AUTHORISED",
+      filters: { search: rowItem.applicantId },
+      sort: { key: "urgency", direction: "asc" },
+      page: 1,
+      pageSize: 25,
+      expectedSnapshotId: snapshotId || rowItem.snapshotId || SNAPSHOT_ID
+    },
+    actionPackageLabel: rowItem.worklistLabel || fixtureHumanize(rowItem.worklistKey),
+    openQueueLabel: "Open correct work package",
+    nextAction: rowItem.nextAction || "Review authoritative fixture",
+    targetTab: "overview"
+  };
+}
+
+function fixtureWorkbenchAction(operation, label, available, reason, options) {
+  return {
+    schemaVersion: "EDUOPS_WORKBENCH_ACTION_V1",
+    authoritySource: "Preview fixture operation authority",
+    operation: operation,
+    label: label,
+    available: available === true,
+    reason: reason || "Preview Lab is read-only.",
+    options: Array.isArray(options) ? options : []
+  };
+}
+
+function fixtureOperationAvailability() {
+  return {
+    BATCH_COMMUNICATION: {
+      operation: "BATCH_COMMUNICATION",
+      available: true,
+      reason: "Preview fixture permits governed batch communication preview.",
+      authoritySource: "Communication Authority"
+    }
+  };
+}
+
+function fixturePrimaryActionTarget(rowItem) {
+  return {
+    schemaVersion: "OPSEDU_PRIMARY_ACTION_TARGET_V1",
+    authoritySource: "Actionability Resolver",
+    available: true,
+    targetTab: rowItem.documentState === "REVIEW_REQUIRED" ? "documents" : rowItem.canonicalFinanceState === "PAID_VERIFIED" ? "finance" : "overview",
+    targetActionLabel: rowItem.nextAction || "Review applicant",
+    reason: "Preview fixture routes the exact applicant to its current authoritative work package."
+  };
+}
+
+function fixtureApplicantContextRibbon(rowItem) {
+  return {
+    schemaVersion: "OPSEDU_APPLICANT_CONTEXT_RIBBON_V1",
+    authoritySource: "Preview fixture applicant context",
+    items: [
+      { key: "route", label: "Route", displayValue: rowItem.primaryRoute || "Admissions Review", reason: "Preview route projection." },
+      { key: "owner", label: "Owner", displayValue: rowItem.actionOwner || "OFFICER", reason: "Preview owner projection." },
+      { key: "urgency", label: "Urgency", displayValue: rowItem.urgencyLevel || "NORMAL", reason: "Preview urgency projection." }
+    ]
+  };
+}
+
+function fixtureCommunicationSummary(rowItem) {
+  var messageType = rowItem.recommendedMessageType || "DOCUMENT_REVIEW_REQUIRED";
+  return {
+    schemaVersion: "EDUOPS_COMMUNICATION_SUMMARY_V1",
+    authoritySource: "Communication Authority",
+    recommendedMessageType: messageType,
+    operatorRecommendation: fixtureHumanize(messageType),
+    eligibility: "Preview communication available for read-only browser validation.",
+    coolingOffUntil: rowItem.coolingOffUntil || "",
+    latestCommunication: "2026-07-10T08:00:00.000Z",
+    deliveryState: "No active bounce",
+    suppressionState: "None",
+    effectiveEmail: rowItem.email,
+    draft: { recipient: rowItem.email },
+    communicationTemplatePanel: {
+      schemaVersion: "OPSEDU_COMMUNICATION_TEMPLATE_PANEL_V1",
+      authoritySource: "Communication Authority",
+      templates: [{
+        templateId: messageType,
+        messageType: messageType,
+        label: fixtureHumanize(messageType),
+        recommended: true,
+        selectable: true,
+        editable: true,
+        availability: "AVAILABLE",
+        availabilityLabel: "Available",
+        description: "Preview fixture communication template.",
+        subject: "Preview follow-up for " + rowItem.displayName,
+        body: "Preview-only communication body for browser validation.",
+        createdAt: SNAPSHOT_AS_OF,
+        authorityProjection: { Comm_Status: "ACTIONABLE" }
+      }]
+    }
+  };
+}
+
+function fixtureWorkloadPresentation(allRows, matchedRows, pageRows, reliabilityProjection, reconciliationProjection, actionabilityCounts, worklistKeyCounts) {
+  var reconciliationValue = reconciliationProjection || {};
+  var matched = Array.isArray(matchedRows) ? matchedRows : [];
+  var visible = Array.isArray(pageRows) ? pageRows : [];
+  var actionability = actionabilityCounts || {};
+  var lifecycleRows = Array.isArray(allRows) ? allRows : [];
+  var routeRows = lifecycleRows.map(function (rowItem) { return { primaryRoute: rowItem.primaryRoute }; });
+  return {
+    schemaVersion: "EDUOPS_WORKLOAD_PRESENTATION_V1",
+    authoritySource: "EduOps backend projection services",
+    actionabilityBuckets: fixtureActionabilityPresentation(actionability),
+    allActionability: {
+      code: "ALL",
+      label: "All authoritative records",
+      count: Object.keys(actionability).reduce(function (sum, key) { return sum + Number(actionability[key] || 0); }, 0),
+      authoritySource: "Actionability Resolver"
+    },
+    worklists: fixtureWorklistPresentation(worklistKeyCounts, lifecycleRows),
+    workScopes: fixtureWorkScopePresentation(),
+    reliability: fixtureStatePresentation(reliabilityProjection && reliabilityProjection.state || "UNAVAILABLE"),
+    metrics: [
+      { code: "CANONICAL_POPULATION", label: "Canonical population", value: Number(reconciliationValue.canonicalPopulation || 0), authoritySource: "Population Ledger" },
+      { code: "ELIGIBLE_NOW", label: "Eligible now", value: Number(reconciliationValue.metricCounts && reconciliationValue.metricCounts.eligibleNow || 0), authoritySource: "Actionability Resolver" },
+      { code: "MATCHING_LATER_PAGES", label: "Matching on later pages", value: Number(reconciliationValue.matchingOnLaterPages || Math.max(0, matched.length - visible.length)), authoritySource: "EduOps workload query service" },
+      { code: "OUTSIDE_CURRENT_VIEW", label: "Outside current view", value: Number(reconciliationValue.hiddenFromCurrentView || 0), authoritySource: "Population Ledger" },
+      { code: "OLDEST_MATCHED", label: "Oldest matched", value: reconciliationValue.oldestMatchedAgeDays === "" ? "-" : String(reconciliationValue.oldestMatchedAgeDays == null ? "-" : reconciliationValue.oldestMatchedAgeDays) + (reconciliationValue.oldestMatchedAgeDays == null ? "" : " days"), authoritySource: "Actionability Resolver" }
+    ],
+    filterOptions: {
+      owner: fixtureUniqueFilterOptions(lifecycleRows, "actionOwner", "Actionability Resolver"),
+      urgency: fixtureUniqueFilterOptions(lifecycleRows, "urgencyLevel", "Actionability Resolver"),
+      primaryRoute: fixtureUniqueFilterOptions(routeRows, "primaryRoute", "Actionability Resolver"),
+      documentState: fixtureUniqueFilterOptions(lifecycleRows, "documentState", "Document authority"),
+      financeState: fixtureUniqueFilterOptions(lifecycleRows, "canonicalFinanceState", "Finance authority"),
+      contactabilityState: fixtureUniqueFilterOptions(lifecycleRows, "contactabilityState", "Contactability authority"),
+      communicationState: fixtureUniqueFilterOptions(lifecycleRows, "recommendedMessageType", "Communication Authority"),
+      cooling: [
+        fixtureCodePresentation("ACTIVE", "Cooling-off active", "", "Actionability Resolver"),
+        fixtureCodePresentation("NONE", "No cooling-off", "", "Actionability Resolver")
+      ],
+      blockKind: fixtureUniqueFilterOptions(lifecycleRows, "blockerCode", "Actionability Resolver")
+    },
+    modules: {
+      overview: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "Population Ledger + Actionability Resolver", available: true, metrics: [] },
+      lifecycle: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "Canonical Lifecycle Resolver", available: true, distribution: fixtureDistribution(lifecycleRows, function (rowItem) { return rowItem.canonicalLifecycle && (rowItem.canonicalLifecycle.lifecycleStage || rowItem.canonicalLifecycle.baseState); }, "Canonical Lifecycle Resolver") },
+      finance: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "Finance authority", available: true, distribution: fixtureDistribution(lifecycleRows, function (rowItem) { return rowItem.canonicalFinanceState; }, "Finance authority") },
+      documents: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "Document authority", available: true, distribution: fixtureDistribution(lifecycleRows, function (rowItem) { return rowItem.documentState; }, "Document authority") },
+      communications: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "Communication Authority", available: true, distribution: fixtureDistribution(lifecycleRows, function (rowItem) { return rowItem.recommendedMessageType; }, "Communication Authority") },
+      contactability: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "Contactability authority", available: true, distribution: fixtureDistribution(lifecycleRows, function (rowItem) { return rowItem.contactabilityState; }, "Contactability authority") },
+      portal: fixtureAuthorityUnavailable("portal-access", "Portal Access Domain"),
+      population: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "Population Ledger", available: true, reconciliation: reconciliationValue },
+      health: { schemaVersion: "EDUOPS_MODULE_PROJECTION_V1", authoritySource: "EduOps runtime projection", available: true, reliability: fixtureStatePresentation(reliabilityProjection && reliabilityProjection.state || "UNAVAILABLE") }
+    },
+    evaluatedCohort: {
+      totalMatched: matched.length,
+      visiblePageCount: visible.length,
+      snapshotId: fixtureClean(reconciliationValue.snapshotId),
+      snapshotAsOf: fixtureClean(reconciliationValue.asOf)
+    },
+    selection: {
+      totalMatched: matched.length,
+      visibleSelectable: visible.filter(function (rowItem) { return rowItem.selectable === true; }).length,
+      visibleBlocked: visible.filter(function (rowItem) { return rowItem.selectable !== true; }).length,
+      totalAuthoritySelectable: Number(reconciliationValue.totalAuthoritySelectable == null ? matched.filter(function (rowItem) { return rowItem.selectable === true; }).length : reconciliationValue.totalAuthoritySelectable),
+      authoritySource: "Actionability Resolver"
+    }
+  };
+}
+
 function snapshotWorkload(context, payload) {
   var snapshot = context.snapshot;
   var valid = validateSnapshot(snapshot);
@@ -399,12 +730,21 @@ function snapshotWorkload(context, payload) {
   var page = Math.min(query.page, totalPages);
   var pageRows = sorted.slice((page - 1) * query.pageSize, page * query.pageSize);
   var rel = reliability(metadata.sourceReliability || "AUTHORITATIVE", "Fresh FODE snapshot fixture captured from read-only EduOps DTOs.");
+  var actionabilityCounts = snapshotActionabilityCounts(snapshot);
+  var worklistKeyCounts = snapshotWorklistCounts(snapshot, query.actionabilityState);
+  var reconciliationProjection = snapshot.reconciliation || reconciliation(rows, filtered, pageRows, query, metadata.snapshotId);
   var response = {
     ok: true,
     readOnly: true,
     contractVersion: metadata.contractVersion,
     product: "FODE",
     profileVersion: metadata.profileVersion || PROFILE_VERSION,
+    runtime: snapshot.accessProjection && snapshot.accessProjection.runtime || {
+      schemaVersion: "EDUOPS_RUNTIME_IDENTITY_V1",
+      runtimeIdentity: metadata.runtimeIdentity || "Captured runtime identity unavailable.",
+      snapshotId: metadata.snapshotId,
+      snapshotAsOf: metadata.sourceAsOf || metadata.capturedAt
+    },
     snapshotId: metadata.snapshotId,
     snapshotAsOf: metadata.sourceAsOf || metadata.capturedAt,
     snapshotCacheState: "LOCAL_CAPTURE",
@@ -421,10 +761,12 @@ function snapshotWorkload(context, payload) {
     pageSize: query.pageSize,
     totalMatched: totalMatched,
     totalPages: totalPages,
-    actionabilityCounts: snapshotActionabilityCounts(snapshot),
-    worklistKeyCounts: snapshotWorklistCounts(snapshot, query.actionabilityState),
+    actionabilityCounts: actionabilityCounts,
+    worklistKeyCounts: worklistKeyCounts,
     metricCounts: metricCounts(filtered),
-    reconciliation: snapshot.reconciliation || reconciliation(rows, filtered, pageRows, query, metadata.snapshotId),
+    reconciliation: reconciliationProjection,
+    presentation: fixtureWorkloadPresentation(rows, filtered, pageRows, rel, reconciliationProjection, actionabilityCounts, worklistKeyCounts),
+    operationAvailability: fixtureOperationAvailability(),
     rows: pageRows.map(function (rowItem) { return { ...rowItem, snapshotId: metadata.snapshotId, sourceReliability: rel }; })
   };
   response.timings = timings(response, context.serverDurationMs || 0);
@@ -472,12 +814,15 @@ function queryOperationalWorkload(context, payload) {
   const totalPages = Math.max(1, Math.ceil(totalMatched / query.pageSize));
   const page = Math.min(query.page, totalPages);
   const pageRows = sorted.slice((page - 1) * query.pageSize, page * query.pageSize).map((item) => ({ ...item, sourceReliability: rel, snapshotId: currentSnapshotId }));
+  const worklistKeyCounts = worklistCounts(rows, query.actionabilityState);
+  const reconciliationProjection = reconciliation(rows, filtered, pageRows, query, currentSnapshotId);
   const response = {
     ok: true,
     readOnly: true,
     contractVersion: CONTRACT_VERSION,
     product: query.product,
     profileVersion: PROFILE_VERSION,
+    runtime: getAccessProjection().runtime,
     snapshotId: currentSnapshotId,
     snapshotAsOf: SNAPSHOT_AS_OF,
     snapshotCacheState: "PREVIEW",
@@ -495,9 +840,10 @@ function queryOperationalWorkload(context, payload) {
     totalMatched,
     totalPages,
     actionabilityCounts,
-    worklistKeyCounts: worklistCounts(rows, query.actionabilityState),
+    worklistKeyCounts,
     metricCounts: metricCounts(filtered),
-    reconciliation: reconciliation(rows, filtered, pageRows, query, currentSnapshotId),
+    reconciliation: reconciliationProjection,
+    presentation: fixtureWorkloadPresentation(rows, filtered, pageRows, rel, reconciliationProjection, actionabilityCounts, worklistKeyCounts),
     rows: pageRows
   };
   response.timings = timings(response, context.serverDurationMs || 0);
@@ -573,14 +919,19 @@ function reconciliation(allRows, matchedRows, pageRows, query, snapshotId) {
     selectable: rowItem.selectable
   }));
   return {
+    schemaVersion: "EDUOPS_RECONCILIATION_V1",
+    authoritySource: "Preview fixture Population Ledger + Actionability Resolver",
     canonicalPopulation: allRows.length,
     totalMatched: matchedRows.length,
     visiblePageCount: pageRows.length,
     visiblePageRange: pageRows.length ? `${((query.page - 1) * query.pageSize) + 1}-${((query.page - 1) * query.pageSize) + pageRows.length}` : "0",
     returnedWindow: pageRows.length,
+    matchingOnLaterPages: Math.max(0, matchedRows.length - pageRows.length),
     eligibleOutsideCurrentWindow: matchedRows.filter((rowItem) => rowItem.selectable && !page.has(rowItem.applicantId)).length,
     hiddenFromCurrentView: hiddenReasons.length,
     excludedFromOperation: matchedRows.filter((rowItem) => !rowItem.selectable).length,
+    totalAuthoritySelectable: matchedRows.filter((rowItem) => rowItem.selectable).length,
+    totalAuthorityBlocked: matchedRows.filter((rowItem) => !rowItem.selectable).length,
     metricCounts: metricCounts(matchedRows),
     oldestVisibleAgeDays: 14,
     oldestMatchedAgeDays: 29,
@@ -588,7 +939,9 @@ function reconciliation(allRows, matchedRows, pageRows, query, snapshotId) {
     snapshotId,
     asOf: SNAPSHOT_AS_OF,
     integrityState: "PASS",
+    queryFingerprint: JSON.stringify(query),
     arithmetic: "canonicalPopulation = totalMatched + hiddenFromCurrentView",
+    hiddenReasonRows: hiddenReasons,
     hiddenReasons
   };
 }
@@ -622,6 +975,8 @@ function timings(response, serverDurationMs) {
 }
 
 function staleResponse(query, snapshotId) {
+  var staleReliability = reliability("STALE", "The requested preview workload snapshot no longer matches the current fixture authority snapshot.");
+  var staleReconciliation = { integrityState: "STALE", hiddenReasons: [], snapshotId: snapshotId, asOf: SNAPSHOT_AS_OF, canonicalPopulation: 0, metricCounts: metricCounts([]) };
   return {
     ok: true,
     readOnly: true,
@@ -644,7 +999,8 @@ function staleResponse(query, snapshotId) {
     actionabilityCounts: { ...STATE_COUNTS },
     worklistKeyCounts: {},
     metricCounts: metricCounts([]),
-    reconciliation: { integrityState: "STALE", hiddenReasons: [], snapshotId },
+    reconciliation: staleReconciliation,
+    presentation: fixtureWorkloadPresentation([], [], [], staleReliability, staleReconciliation, { ...STATE_COUNTS }, {}),
     rows: [],
     timings: { serverRpcMs: 0, canonicalSnapshotResolutionMs: 1, workloadCompositionMs: 1, sortingPagingMs: 1, responseBytes: 0 }
   };
@@ -676,7 +1032,7 @@ function searchApplicants(context, payload) {
     var snapshotMatches = snapshotRows(context.snapshot).filter(function (rowItem) {
       return [rowItem.applicantId, rowItem.displayName, rowItem.email, rowItem.phone].join(" ").toLowerCase().indexOf(snapshotNeedle) >= 0;
     });
-    return { ok: true, readOnly: true, product: "FODE", query: p.query || "", snapshotId: metadata.snapshotId, totalMatches: snapshotMatches.length, matches: snapshotMatches.slice(0, Number(p.limit || 12)), timings: { searchMs: 4 } };
+    return { ok: true, readOnly: true, product: "FODE", query: p.query || "", snapshotId: metadata.snapshotId, totalMatches: snapshotMatches.length, matches: snapshotMatches.slice(0, Number(p.limit || 12)).map(function (rowItem) { return Object.assign({}, rowItem, { searchHandoff: fixtureSearchHandoff(rowItem, metadata.snapshotId) }); }), timings: { searchMs: 4 } };
   }
   const snapshotId = productSnapshotId(product);
   if (p.expectedSnapshotId && p.expectedSnapshotId !== snapshotId) {
@@ -684,7 +1040,7 @@ function searchApplicants(context, payload) {
   }
   const query = String(p.query || "").toLowerCase();
   const rows = rowsForProduct(product, context.scenarioId).filter((rowItem) => [rowItem.applicantId, rowItem.displayName, rowItem.email, rowItem.phone].join(" ").toLowerCase().includes(query));
-  return { ok: true, readOnly: true, product, query: p.query || "", snapshotId, totalMatches: rows.length, matches: rows.slice(0, Number(p.limit || 12)), timings: { searchMs: 4 } };
+  return { ok: true, readOnly: true, product, query: p.query || "", snapshotId, totalMatches: rows.length, matches: rows.slice(0, Number(p.limit || 12)).map((rowItem) => Object.assign({}, rowItem, { searchHandoff: fixtureSearchHandoff(rowItem, snapshotId) })), timings: { searchMs: 4 } };
 }
 
 function getApplicantWorkbench(context, payload) {
@@ -707,6 +1063,8 @@ function getApplicantWorkbench(context, payload) {
   const found = allRows.find((rowItem) => rowItem.applicantId === p.applicantId);
   if (!found) return { ok: false, readOnly: true, code: "APPLICANT_NOT_FOUND", applicantId: p.applicantId };
   return {
+    schemaVersion: "EDUOPS_APPLICANT_WORKBENCH_V2",
+    authoritySource: "Preview fixture applicant workbench",
     ok: true,
     readOnly: true,
     product,
@@ -720,17 +1078,41 @@ function getApplicantWorkbench(context, payload) {
       email: found.email,
       phone: found.phone
     },
-    exactAuthorityProjection: found,
+    exactAuthorityProjection: Object.assign({}, found, {
+      authorityDecision: {
+        schemaVersion: "EDUOPS_ROW_AUTHORITY_DECISION_V1",
+        authoritySource: "Actionability Resolver",
+        actionAvailable: found.selectable === true,
+        stale: false,
+        reasonCode: found.blockerCode || "PREVIEW_FIXTURE_AUTHORITY",
+        reason: found.blockerReason || found.nextAction || "Preview fixture authority."
+      }
+    }),
     applicantDetail: { ok: true, applicantId: found.applicantId, displayName: found.displayName, rowNumber: found.rowNumber, readOnly: true },
-    documents: { state: found.documentState, verified: found.documentState === "VERIFIED", requiredComplete: found.documentState === "VERIFIED", uploadedRequiredCount: 2, requiredCount: 3, missingRequiredDocuments: found.documentState === "VERIFIED" ? [] : ["Proof of identity"], actions: [readOnlyAction("Save document statuses", "CAN_SAVE_DOCUMENT_STATUSES")] },
-    finance: { state: found.canonicalFinanceState, paymentApplicable: found.canonicalFinanceState !== "NOT_YET_PAYMENT_APPLICABLE", paymentEvidencePresent: found.canonicalFinanceState === "PAID_VERIFIED" || found.applicantId === "FODE-26-002959", paymentVerified: found.canonicalFinanceState === "PAID_VERIFIED", owner: found.actionOwner, blocker: "", nextAction: found.nextAction, invoiceReadiness: "Preview only", booksMatch: "Informational fixture", actions: [readOnlyAction("Verify payment", "CAN_VERIFY_PAYMENT")] },
-    communications: { recommendedMessageType: found.recommendedMessageType || "docs_missing", eligibility: found.communicationAuthoritySummary, coolingOffUntil: found.coolingOffUntil, latestCommunication: "2026-07-10T08:00:00.000Z", deliveryState: "No active bounce", suppressionState: "None", actions: [readOnlyAction("Send individual email", "CAN_SEND_INDIVIDUAL_EMAIL")] },
-    portal: { state: found.portalState, submitted: found.portalState === "SUBMITTED", accessState: "Open", locked: false, tokenState: "Authoritative token retained server-side", expiresAt: "2026-08-15T00:00:00.000Z", actions: [readOnlyAction("Manage portal access", "CAN_MANAGE_PORTAL_ACCESS")] },
-    contactability: { state: found.contactabilityState, effectiveEmail: found.email, emailSource: "Deterministic applicant fixture", phone: found.phone, hasValidEmail: !!found.email && found.contactabilityState !== "EMAIL_SUPPRESSED", hasPhoneFallback: !!found.phone, suppressionState: found.contactabilityState === "EMAIL_SUPPRESSED" ? "Suppressed" : "None", actions: [readOnlyAction("Correct contact details", "CAN_EDIT_CONTACT_DETAILS")] },
+    documents: { schemaVersion: "EDUOPS_DOCUMENT_AUTHORITY_V1", available: true, state: found.documentState, verified: found.documentState === "VERIFIED", requiredComplete: found.documentState === "VERIFIED", uploadedRequiredCount: 2, requiredCount: 3, missingRequiredDocuments: found.documentState === "VERIFIED" ? [] : ["Proof of identity"], presentation: fixtureCodePresentation(found.documentState, fixtureHumanize(found.documentState), "Preview fixture Document authority.", "Document authority"), actions: [readOnlyAction("Save document statuses", "CAN_SAVE_DOCUMENT_STATUSES")] },
+    finance: { schemaVersion: "EDUOPS_FINANCE_AUTHORITY_V1", available: true, state: found.canonicalFinanceState, paymentApplicable: found.canonicalFinanceState !== "NOT_YET_PAYMENT_APPLICABLE", paymentEvidencePresent: found.canonicalFinanceState === "PAID_VERIFIED" || found.applicantId === "FODE-26-002959", paymentVerified: found.canonicalFinanceState === "PAID_VERIFIED", owner: found.actionOwner, blocker: "", reason: "Preview fixture Finance authority.", nextAction: found.nextAction, nextActionDate: "2026-07-15T00:00:00.000Z", invoiceReadiness: "Preview only", booksMatch: "Informational fixture", presentation: fixtureCodePresentation(found.canonicalFinanceState, fixtureHumanize(found.canonicalFinanceState), "Preview fixture Finance authority.", "Finance authority"), actions: [readOnlyAction("Verify payment", "CAN_VERIFY_PAYMENT")] },
+    communications: fixtureCommunicationSummary(found),
+    portal: { schemaVersion: "EDUOPS_PORTAL_AUTHORITY_V1", available: true, state: found.portalState, submitted: found.portalState === "SUBMITTED", accessState: "Open", locked: false, tokenState: "Authoritative token retained server-side", expiresAt: "2026-08-15T00:00:00.000Z", reason: "Portal access authority is read-only in Preview Lab.", presentation: fixtureCodePresentation(found.portalState, fixtureHumanize(found.portalState), "Preview fixture Portal authority.", "Portal Access Domain"), actions: [readOnlyAction("Manage portal access", "CAN_MANAGE_PORTAL_ACCESS")] },
+    contactability: { schemaVersion: "EDUOPS_CONTACTABILITY_AUTHORITY_V1", available: true, state: found.contactabilityState, effectiveEmail: found.email, emailSource: "Deterministic applicant fixture", phone: found.phone, hasValidEmail: !!found.email && found.contactabilityState !== "EMAIL_SUPPRESSED", hasPhoneFallback: !!found.phone, suppressionState: found.contactabilityState === "EMAIL_SUPPRESSED" ? "Suppressed" : "None", reason: "Preview fixture Contactability authority.", presentation: fixtureCodePresentation(found.contactabilityState, fixtureHumanize(found.contactabilityState), "Preview fixture Contactability authority.", "Contactability authority"), actions: [readOnlyAction("Correct contact details", "CAN_EDIT_CONTACT_DETAILS")] },
     auditSummary: { preview: true, source: "Deterministic Preview Lab fixture", applicantId: found.applicantId },
     sourceReliability: found.sourceReliability,
     capabilities: { readOnly: false, role: "PREVIEW_ADMIN", capabilities: PREVIEW_CAPABILITIES, enforcement: "Preview transport simulates guarded contracts without live dependencies.", pass2Actions: [readOnlyAction("Run batch communications", "CAN_RUN_BATCH_COMMUNICATIONS")] },
     featureFlags: PREVIEW_FLAGS,
+    operationAvailability: fixtureOperationAvailability(),
+    actions: {
+      DOCUMENT_REVIEW: fixtureWorkbenchAction("DOCUMENT_REVIEW", "Document review", true, "Preview fixture permits read-only document decision preview.", [
+        fixtureCodePresentation("VERIFIED", "Verified", "Document evidence is acceptable.", "Document authority"),
+        fixtureCodePresentation("REJECTED", "Rejected", "Document evidence needs correction.", "Document authority")
+      ]),
+      FINANCE_EVIDENCE_DECISION: fixtureWorkbenchAction("FINANCE_EVIDENCE_DECISION", "Finance evidence decision", true, "Preview fixture permits Finance decision preview.", [
+        fixtureCodePresentation("VERIFIED", "Verified", "Payment evidence is acceptable.", "Finance authority"),
+        fixtureCodePresentation("REJECTED", "Rejected", "Payment evidence needs correction.", "Finance authority")
+      ]),
+      SEND_INDIVIDUAL_COMMUNICATION: fixtureWorkbenchAction("SEND_INDIVIDUAL_COMMUNICATION", "Send individual communication", true, "Preview fixture permits communication preview only."),
+      CONTACTABILITY_CORRECTION: fixtureWorkbenchAction("CONTACTABILITY_CORRECTION", "Contactability correction", true, "Preview fixture permits contactability correction preview.")
+    },
+    primaryActionTarget: fixturePrimaryActionTarget(found),
+    applicantContextRibbon: fixtureApplicantContextRibbon(found),
     returnContext: found.returnContext,
     timings: { applicantMs: 5 }
   };
@@ -777,7 +1159,18 @@ function documentManifest(context, payload) {
     warnings: unavailable ? [{ code: "RENDITION_UNAVAILABLE", message: "PNG rendition is unavailable in this scenario." }] : []
   };
   file.documentKey = [applicantId, String(wb.identity.rowNumber), file.sourceField, String(file.itemIndex)].join("|");
+  file.documentType = "Identity evidence";
+  file.status = "REVIEW_REQUIRED";
+  file.statusPresentation = fixtureCodePresentation("REVIEW_REQUIRED", "Review required", "Preview fixture document status.", "Document authority");
+  file.availableDecisions = [
+    fixtureCodePresentation("VERIFIED", "Verified", "Document evidence is acceptable.", "Document authority"),
+    fixtureCodePresentation("REJECTED", "Rejected", "Document evidence needs correction.", "Document authority")
+  ];
+  file.evidenceCount = 1;
+  file.evidenceFiles = [Object.assign({}, file, { itemIndex: 0, activeEvidenceIndex: 0 })];
   return {
+    schemaVersion: "EDUOPS_DOCUMENT_MANIFEST_V2",
+    authoritySource: "Preview fixture document authority",
     ok: true,
     readOnly: true,
     applicantId,
@@ -788,6 +1181,19 @@ function documentManifest(context, payload) {
     folderUrl: "",
     source: "preview-fixture",
     files: [file],
+    documentGallery: {
+      schemaVersion: "OPSEDU_DOCUMENT_GALLERY_V1",
+      authoritySource: "Preview fixture document authority",
+      documents: [file]
+    },
+    actionAuthority: {
+      schemaVersion: "EDUOPS_WORKBENCH_ACTION_V1",
+      authoritySource: "Preview fixture document authority",
+      operation: "DOCUMENT_REVIEW",
+      available: true,
+      reason: "Preview fixture permits document decision preview only.",
+      options: file.availableDecisions
+    },
     missingExpected: [],
     warnings: file.warnings,
     renditionRule: "canonical original -> server-derived PNG rendition -> separate signed Open Original action",
@@ -887,9 +1293,36 @@ function documentFileAction(context, payload) {
 }
 
 function reconciliationRpc(context, payload) {
-  const workload = queryOperationalWorkload(context, payload || {});
+  const p = payload && typeof payload === "object" ? payload : {};
+  const workload = queryOperationalWorkload(context, p);
   if (workload.ok === false) return { ...workload, readOnly: true, product: workload.product || "FODE", hiddenReasons: [] };
-  return { ok: true, readOnly: true, product: workload.product || "FODE", snapshotId: workload.snapshotId, reconciliation: workload.reconciliation, hiddenReasons: workload.reconciliation && workload.reconciliation.hiddenReasons || [] };
+  const hiddenReasons = workload.reconciliation && workload.reconciliation.hiddenReasonRows || [];
+  const page = Math.max(1, Math.floor(Number(p.hiddenPage || 1)));
+  const pageSize = Math.max(1, Math.min(100, Math.floor(Number(p.hiddenPageSize || 50))));
+  const totalPages = Math.max(1, Math.ceil(hiddenReasons.length / pageSize));
+  const boundedPage = Math.min(page, totalPages);
+  const hiddenReasonPage = {
+    schemaVersion: "EDUOPS_HIDDEN_REASON_PAGE_V1",
+    authoritySource: "Preview fixture Population Ledger + Actionability Resolver",
+    snapshotId: workload.snapshotId,
+    queryFingerprint: workload.reconciliation.queryFingerprint,
+    page: boundedPage,
+    pageSize,
+    totalHidden: hiddenReasons.length,
+    totalPages,
+    rows: hiddenReasons.slice((boundedPage - 1) * pageSize, boundedPage * pageSize)
+  };
+  return {
+    ok: true,
+    readOnly: true,
+    schemaVersion: "EDUOPS_RECONCILIATION_RESPONSE_V1",
+    authoritySource: "Preview fixture Population Ledger + Actionability Resolver",
+    product: workload.product || "FODE",
+    snapshotId: workload.snapshotId,
+    reconciliation: workload.reconciliation,
+    hiddenReasons: hiddenReasonPage.rows,
+    hiddenReasonPage
+  };
 }
 
 function parityDiagnostics(context, payload) {
@@ -942,6 +1375,108 @@ function commandDefinition(operation) {
   return definitions[String(operation || "").toUpperCase()] || null;
 }
 
+function batchCommunicationCatalogue(context, payload) {
+  const p = payload && typeof payload === "object" ? payload : {};
+  if (String(p.operation || "").toUpperCase() !== "BATCH_COMMUNICATION") {
+    return { ok: false, readOnly: true, code: "UNSUPPORTED_OPERATION", message: "The Batch catalogue supports BATCH_COMMUNICATION only." };
+  }
+  const product = productCode(p.product);
+  const snapshotId = productSnapshotId(product);
+  if (!p.snapshotId || p.snapshotId !== snapshotId) {
+    return { ok: false, readOnly: true, code: "STALE_SNAPSHOT", message: "The Batch catalogue is not bound to the current product snapshot." };
+  }
+  const supplied = p.selection && typeof p.selection === "object" ? p.selection : {};
+  const allRows = rowsForProduct(product, context.scenarioId || "normal-authoritative");
+  const rowLookup = new Map(allRows.map((rowItem) => [rowItem.applicantId, rowItem]));
+  const excluded = new Set(Array.isArray(supplied.excludedApplicantIds) ? supplied.excludedApplicantIds : []);
+  let selectedApplicantIds = Array.isArray(supplied.selectedApplicantIds) ? supplied.selectedApplicantIds.slice() : [];
+  if (!selectedApplicantIds.length && supplied.selectionMode === "ALL_ELIGIBLE_MATCHING_QUERY") {
+    selectedApplicantIds = allRows.filter((rowItem) => rowItem.selectable === true).map((rowItem) => rowItem.applicantId);
+  }
+  selectedApplicantIds = selectedApplicantIds.filter((applicantId) => rowLookup.has(applicantId) && !excluded.has(applicantId));
+  const executionLimit = Math.max(1, Math.min(50, Number(p.executionLimit || supplied.executionLimit || 0)));
+  const executionApplicantIds = selectedApplicantIds.slice(0, executionLimit);
+  const templateId = executionApplicantIds.map((applicantId) => rowLookup.get(applicantId).recommendedMessageType).find(Boolean) || "DOCUMENT_REVIEW_REQUIRED";
+  const templateLabel = fixtureHumanize(templateId);
+  function recipient(applicantId, included) {
+    const rowItem = rowLookup.get(applicantId);
+    return {
+      applicantId,
+      name: rowItem.displayName,
+      email: rowItem.email,
+      actionability: rowItem.actionabilityState,
+      lifecycle: rowItem.canonicalLifecycle.lifecycleStage,
+      finance: rowItem.canonicalFinanceState,
+      documentState: rowItem.documentState,
+      coolingOffUntil: rowItem.coolingOffUntil,
+      authorityDecision: included ? "INCLUDED" : "NOT_EVALUATED",
+      authorityDecisionLabel: included ? "Included by Communication Authority" : "Outside evaluated execution cohort",
+      included,
+      reasonCode: included ? "" : "OUTSIDE_EXECUTION_LIMIT",
+      reason: included ? "Preview fixture Communication Authority permits this recipient." : "Recipient remains outside the selected execution limit.",
+      authoritySource: "Communication Authority",
+      templateId,
+      templateLabel,
+      presentation: rowItem.presentation
+    };
+  }
+  const evaluatedRecipients = executionApplicantIds.map((applicantId) => recipient(applicantId, true));
+  const selectionBinding = {
+    ...supplied,
+    product,
+    snapshotId,
+    queryFingerprint: String(p.queryFingerprint || supplied.queryFingerprint || ""),
+    selectedApplicantIds,
+    excludedApplicantIds: Array.from(excluded),
+    executionApplicantIds,
+    executionLimit,
+    masterCohortSize: selectedApplicantIds.length,
+    executionCohortSize: executionApplicantIds.length,
+    remainingAfterExecution: Math.max(0, selectedApplicantIds.length - executionApplicantIds.length),
+    excludedCount: excluded.size,
+    blockedCount: 0
+  };
+  return {
+    ok: true,
+    readOnly: true,
+    schemaVersion: "EDUOPS_BATCH_COMMUNICATION_CATALOGUE_V1",
+    state: "READY",
+    statusLabel: "Cohort revalidated",
+    executable: evaluatedRecipients.length > 0,
+    authoritySource: "Communication Authority",
+    snapshotId,
+    selectionBinding,
+    masterCohortSize: selectedApplicantIds.length,
+    evaluatedCohortSize: executionApplicantIds.length,
+    executionLimit,
+    remainingAfterEvaluation: Math.max(0, selectedApplicantIds.length - executionApplicantIds.length),
+    excludedCount: excluded.size,
+    blockedCount: 0,
+    masterRecipients: selectedApplicantIds.map((applicantId) => recipient(applicantId, executionApplicantIds.includes(applicantId))),
+    templates: [{
+      templateId,
+      label: templateLabel,
+      description: "Deterministic Preview Lab communication.",
+      availabilityState: "AVAILABLE_FOR_ALL",
+      selectable: evaluatedRecipients.length > 0,
+      availabilityLabel: "Available for " + evaluatedRecipients.length + " of " + evaluatedRecipients.length,
+      recommended: true,
+      availableRecipientCount: evaluatedRecipients.length,
+      unavailableRecipientCount: 0,
+      reasonCode: "",
+      reason: "Available for every applicant in the evaluated execution cohort.",
+      editable: false,
+      editingReason: "Batch Communication Authority uses canonical server-rendered copy; editing is not permitted.",
+      customisable: false,
+      retired: false,
+      authoritySource: "Communication Authority",
+      evaluatedSnapshot: snapshotId,
+      evaluatedCohortBinding: selectionBinding.queryFingerprint || snapshotId,
+      recipients: evaluatedRecipients
+    }]
+  };
+}
+
 function previewCommand(context, payload) {
   const p = payload && typeof payload === "object" ? payload : {};
   const operation = String(p.operation || "").toUpperCase();
@@ -988,6 +1523,42 @@ function previewCommand(context, payload) {
     request: JSON.parse(JSON.stringify(p)),
     contextFingerprint: JSON.stringify({ operation, product: p.product || "FODE", snapshotId: currentSnapshot, queryFingerprint: p.queryFingerprint || "", applicantId: p.applicantId || "", selectedApplicantIds: selected, document: p.document || null, draft: p.draft || null, approvalId: p.approvalId || "" })
   };
+  if (operation === "BATCH_COMMUNICATION") {
+    const templateId = String(p.draft && p.draft.messageType || "DOCUMENT_REVIEW_REQUIRED");
+    const templateLabel = fixtureHumanize(templateId);
+    const rowLookup = new Map(rowsForProduct(p.product, context.scenarioId || "normal-authoritative").map((rowItem) => [rowItem.applicantId, rowItem]));
+    preview.executable = selected.length > 0;
+    preview.statusLabel = preview.executable ? "Ready" : "Blocked";
+    preview.statusReason = preview.executable ? "Communication Authority authorised the deterministic preview cohort." : "No recipient is authorised.";
+    preview.operationLabel = "Batch communication";
+    preview.masterCohortSize = selected.length;
+    preview.executionCohortSize = selected.length;
+    preview.remainingAfterExecution = 0;
+    preview.selectionBinding = selection;
+    preview.selectedTemplate = {
+      templateId,
+      label: templateLabel,
+      editable: false,
+      editingReason: "Batch Communication Authority uses canonical server-rendered copy; editing is not permitted."
+    };
+    preview.subject = "Preview-only " + templateLabel;
+    preview.body = "Deterministic Preview Lab communication body. No live message is sent.";
+    preview.recipients = selected.map((applicantId) => {
+      const rowItem = rowLookup.get(applicantId) || {};
+      return {
+        applicantId,
+        name: rowItem.displayName || "",
+        email: rowItem.email || "",
+        included: true,
+        authorityDecision: "INCLUDED",
+        authorityDecisionLabel: "Included by Communication Authority",
+        reason: "Preview fixture Communication Authority permits this recipient.",
+        templateId,
+        templateLabel,
+        presentation: rowItem.presentation || {}
+      };
+    });
+  }
   previewStore.previews.set(id, preview);
   return preview;
 }
@@ -1024,6 +1595,14 @@ function executeCommand(context, payload) {
     selectedApplicantIds: preview.selectedApplicantIds,
     at: nowIso(),
     outcome: completeCount === applicantOutcomes.length ? "COMPLETE" : completeCount ? "PARTIAL" : "BLOCKED",
+    publicLabel: "Versioned authoritative receipt",
+    communication: null,
+    sentCount: completeCount,
+    completeCount,
+    blockedCount: applicantOutcomes.length - completeCount,
+    failedCount: 0,
+    reconciliationRequiredCount: 0,
+    unresolvedCount: 0,
     applicantOutcomes
   };
   previewStore.receipts.set(p.idempotencyKey, { contextFingerprint: preview.contextFingerprint, receipt });
@@ -1033,14 +1612,37 @@ function executeCommand(context, payload) {
 
 function getAccessProjection() {
   return {
+    schemaVersion: "EDUOPS_ACCESS_PROJECTION_V1",
+    authoritySource: "Admin access and capability authority",
     ok: true,
     readOnly: true,
     product: "FODE",
     contractVersion: CONTRACT_VERSION,
     profileVersion: PROFILE_VERSION,
-    runtime: { version: "r352-preview", deployVersion: 352 },
+    runtime: {
+      schemaVersion: "EDUOPS_RUNTIME_IDENTITY_V1",
+      authoritySource: "FODE runtime configuration",
+      operationalClassification: "FODE Admin staging operations",
+      deploymentRole: "ADMIN_STAGING",
+      environment: "Admin staging",
+      version: "r352-preview",
+      deployVersion: 352,
+      runtimeIdentity: "r352-preview / 352",
+      deploymentIdSafe: "preview",
+      deploymentIdentity: "preview",
+      sourceIdentity: "local-preview-fixture",
+      appsScriptVersion: "",
+      appsScriptVersionAvailable: false,
+      appsScriptVersionReason: "Local deterministic Preview Lab fixture.",
+      snapshotId: SNAPSHOT_ID,
+      snapshotAsOf: SNAPSHOT_AS_OF,
+      dataAuthority: "FODE deterministic Preview Lab fixture"
+    },
     user: { email: "preview.owner@example.test", role: "PREVIEW_ADMIN", capabilities: PREVIEW_CAPABILITIES },
+    environment: "Admin staging",
+    deployment: { adminDeploymentIdSafe: "preview", studentDeploymentIdSafe: "preview-student" },
     featureFlags: PREVIEW_FLAGS,
+    operationAvailability: fixtureOperationAvailability(),
     rpcAllowlist: { read: [
       "eduops_getAccessProjection",
       "eduops_getProfile",
@@ -1053,6 +1655,7 @@ function getAccessProjection() {
       "eduops_getReconciliation",
       "eduops_getParityDiagnostics",
       "eduops_getOperationHistory",
+      "eduops_getBatchCommunicationCatalogue",
       "eduops_previewCommand"
     ], write: ["eduops_executeCommand"] }
   };
@@ -1060,16 +1663,26 @@ function getAccessProjection() {
 
 function getProfile() {
   return {
+    schemaVersion: "EDUOPS_PROFILE_V2",
+    authoritySource: "EduOps backend profile service",
     ok: true,
     readOnly: true,
     product: "FODE",
     label: "FODE",
     description: "Preview Lab over deterministic EduOps Pass 1 contracts.",
+    products: [
+      { code: "FODE", label: "FODE", name: "FODE Operations", mode: "LIVE_OPERATIONS", default: true },
+      { code: "KIA", label: "KIA", name: "KIA Admissions", mode: "DEMONSTRATION_READ_ONLY", readOnlyReason: "KIA demonstration profile - no live operational actions." },
+      { code: "MLC", label: "MLC", name: "MLC Admissions and Training", mode: "DEMONSTRATION_READ_ONLY", readOnlyReason: "MLC demonstration profile - no live operational actions." }
+    ],
     contractVersion: CONTRACT_VERSION,
     profileVersion: PROFILE_VERSION,
-    actionabilityStates: Object.keys(STATE_LABELS),
-    workScopes: ["MY", "TEAM", "UNASSIGNED", "ESCALATED", "ALL_AUTHORISED"],
+    defaultQuery: { product: "FODE", actionabilityState: "READY", worklistKey: "", workScope: "ALL_AUTHORISED", filters: { search: "" }, sort: { key: "urgency", direction: "asc" }, page: 1, pageSize: 25 },
+    actionabilityStates: fixtureActionabilityPresentation({}),
+    workScopes: fixtureWorkScopePresentation(),
     featureFlags: PREVIEW_FLAGS,
+    operationAvailability: fixtureOperationAvailability(),
+    batchPolicy: { schemaVersion: "EDUOPS_BATCH_POLICY_V1", authoritySource: "Communication Authority", allowedExecutionLimits: [10, 25, 50], executionCap: 50 },
     commandContractVersion: "EDUOPS_COMMAND_PREVIEW_V1",
     receiptContractVersion: "EDUOPS_RECEIPT_V1"
   };
@@ -1087,6 +1700,7 @@ function handleRpc(name, context, payload, rootDir) {
   if (name === "eduops_getReconciliation") return reconciliationRpc(context, payload);
   if (name === "eduops_getParityDiagnostics") return parityDiagnostics(context, payload);
   if (name === "eduops_getOperationHistory") return operationHistory(payload);
+  if (name === "eduops_getBatchCommunicationCatalogue") return batchCommunicationCatalogue(context, payload);
   if (name === "eduops_previewCommand") return previewCommand(context, payload);
   if (name === "eduops_executeCommand") return executeCommand(context, payload);
   return { ok: false, readOnly: true, code: "UNKNOWN_RPC", message: `Preview transport does not implement ${name}` };

@@ -27,10 +27,8 @@
     var all = presentation.allActionability || {};
     dom.eduopsHistoryNav.innerHTML = '<button type="button" data-state="COMPLETE"' + (app.state.actionabilityState === "COMPLETE" ? ' aria-current="page"' : '') + '><span>' + app.esc(complete && complete.label || app.authorityUnavailable("actionability")) + '</span><small>' + Number(complete && complete.count || 0) + '</small></button><button type="button" data-state="ALL"><span>' + app.esc(all.label || app.authorityUnavailable("actionability")) + '</span><small>' + Number(all.count || 0) + '</small></button>';
   }
-  function renderKpis(presentation) {
-    dom.eduopsKpis.innerHTML = (presentation.actionabilityBuckets || []).map(function (item) {
-      return '<button type="button" class="eduops-kpi-card" role="listitem" data-state="' + app.esc(item.code) + '" data-state-summary="' + app.esc(item.code) + '" aria-pressed="' + (app.state.actionabilityState === item.code ? "true" : "false") + '"><span class="eduops-kpi-label">' + app.esc(item.label) + '</span><strong class="eduops-kpi-value">' + Number(item.count || 0) + '</strong><small class="eduops-kpi-caption">' + app.esc(item.reason) + '</small></button>';
-    }).join("");
+  function clearLegacyKpis() {
+    dom.eduopsKpis.innerHTML = "";
   }
   function renderMetrics(presentation) {
     dom.eduopsMetrics.innerHTML = (presentation.metrics || []).map(function (item) { return '<div class="eduops-metric"><span>' + app.esc(item.label) + '</span><strong>' + app.esc(item.value) + '</strong></div>'; }).join("");
@@ -253,7 +251,7 @@
     }
     if (app.bootstrapMachine && app.bootstrapMachine.state !== "INTERACTIVE") app.setBootstrapState("SOURCE_READY", "Authoritative product source resolved.");
     renderNavigation(presentation);
-    renderKpis(presentation);
+    clearLegacyKpis();
     renderMetrics(presentation);
     renderReliability(presentation);
     renderWorklists(presentation);
@@ -1318,15 +1316,6 @@
       if (stateButton && (stateButton.closest("#eduopsActionNav") || stateButton.closest("#eduopsHistoryNav"))) {
         var requested = stateButton.getAttribute("data-state");
         app.state.actionabilityState = requested;
-        app.state.worklistKey = "";
-        if (!app.state.workScopePinned) app.state.workScope = "ALL_AUTHORISED";
-        app.clearSelection();
-        app.requestWorkload({ resetPage: true });
-        return;
-      }
-      var summaryState = event.target.closest("[data-state-summary]");
-      if (summaryState) {
-        app.state.actionabilityState = summaryState.getAttribute("data-state-summary");
         app.state.worklistKey = "";
         if (!app.state.workScopePinned) app.state.workScope = "ALL_AUTHORISED";
         app.clearSelection();

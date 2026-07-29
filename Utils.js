@@ -2918,6 +2918,16 @@ function buildSendIdempotencyKey_(row, templateType, recipient, context) {
   var stableIdentity = applicantId || formId || safeStr_(ctx.identity || "UNKNOWN");
   var normalizedTemplate = safeStr_(templateType || ctx.templateType || ctx.messageType || ctx.logLabel || ctx.action || "UNKNOWN").toLowerCase();
   var normalizedRecipient = normalizeSendRecipient_(recipient || ctx.recipient || ctx.effectiveEmail || rowObj.Parent_Email_Corrected || rowObj.Parent_Email || "");
+  var operationId = safeStr_(ctx.operationId || "");
+  if (operationId) {
+    return [
+      "EMAIL_OPERATION",
+      operationId,
+      stableIdentity || "UNKNOWN",
+      normalizedTemplate || "unknown",
+      normalizedRecipient || "no_recipient"
+    ].join("::");
+  }
   var normalizedContext = safeStr_(ctx.batchId || ctx.batchLabel || ctx.sendSource || ctx.source || ctx.scope || "DEFAULT").toLowerCase();
   return ["EMAIL", stableIdentity || "UNKNOWN", normalizedTemplate || "unknown", normalizedRecipient || "no_recipient", normalizedContext || "default"].join("::");
 }

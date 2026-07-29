@@ -1180,6 +1180,7 @@ function eduopsActionPackageDescriptor_(row) {
     DOCUMENT_REVIEW: { label: "Document review required", shortLabel: "Document review", ownerDomain: "Documents", sortPriority: 30, mutationBoundary: "Review Workspace + Document authority" },
     PAYMENT_REVIEW: { label: "Finance verification required", shortLabel: "Finance verification", ownerDomain: "Finance", sortPriority: 40, mutationBoundary: "Finance authority" },
     CONTACTABILITY_EXCEPTION: { label: "Contact issues", shortLabel: "Contact issues", ownerDomain: "Contactability", sortPriority: 50, mutationBoundary: "Review Workspace + Contactability authority" },
+    COMMUNICATION_REVIEW: { label: "Communication review required", shortLabel: "Communication review", ownerDomain: "Management", sortPriority: 55, mutationBoundary: "Communication Authority" },
     ENROLMENT_COMPLETION: { label: "Ready for acceptance / classroom handoff", shortLabel: "Acceptance handoff", ownerDomain: "Academic Administration", sortPriority: 60, mutationBoundary: "Review Workspace + Canonical Lifecycle Resolver" }
   };
   if (worklistKey === "DOCUMENT_FOLLOW_UP" && state === "REVIEW_REQUIRED") {

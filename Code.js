@@ -7249,6 +7249,9 @@ function communicationBlockReason_(code, messageType) {
     PORTAL_ALREADY_SUBMITTED: "The portal has already been submitted for this applicant.",
     MISSING_PORTAL_SECRET: "No active portal link is available for this applicant.",
     COOLDOWN_ACTIVE: "A recent message of this type was already sent. Try again later.",
+    MANUAL_REVIEW_REQUIRED: "Two successful communication cycles are complete. Manual review is required before another send.",
+    ALREADY_PROCESSED_FOR_OPERATION: "This exact communication operation was already processed.",
+    IDEMPOTENT_REPLAY: "The original communication receipt was replayed without another send.",
     ROLE_BLOCKED: "Your role is not allowed to perform this action.",
     UNKNOWN_MESSAGE_TYPE: "Unsupported message type.",
     APPLICANT_NOT_FOUND: "Applicant not found.",
@@ -8469,8 +8472,102 @@ function buildFdAcknowledgementEmailBody_(context) {
   ].join("\n");
 }
 
-function deriveCommunicationState_(rowObj, messageType, opts) {
+function communicationActualContactEvidence_(rowObj) {
   var row = rowObj || {};
+  var emailStatus = normalizeEmailStatus_(row.Email_Status || "");
+  var verification = clean_(row.Email_Verification_Status || "").toUpperCase();
+  var lastResult = clean_(row.Last_Contact_Result || "").toUpperCase();
+  var deliveryStatus = clean_(row.Last_Delivery_Status || "").toUpperCase();
+  var deliveryHealth = clean_(row.Delivery_Health || "").toUpperCase().replace(/[_-]+/g, " ");
+  var bounceReason = clean_(row.Email_Bounce_Reason || row.Bounce_Reason || "");
+  var normalizedBounceReason = bounceReason.toUpperCase();
+  var bounceFlag = isCampaignBounceFlagTrue_(row.Email_Bounce_Flag);
+  var doNotContact = emailStatus === "DO_NOT_CONTACT"
+    || /^(YES|TRUE|1|DO_NOT_CONTACT)$/i.test(clean_(row.Do_Not_Contact || row.DO_NOT_CONTACT || ""));
+  var permanentDeliveryFailure = deliveryHealth === "PERMANENT FAILURE"
+    || deliveryHealth === "HARD BOUNCE";
+  var hardBounceReason = !!normalizedBounceReason
+    && !/TEMPORARY|TRANSIENT|SOFT BOUNCE|RATE LIMIT|QUOTA|TRY AGAIN/.test(normalizedBounceReason)
+    && /PERMANENT|HARD BOUNCE|INVALID (?:EMAIL|RECIPIENT|ADDRESS)|NO SUCH (?:USER|ADDRESS)|USER UNKNOWN|RECIPIENT UNKNOWN|ADDRESS (?:NOT FOUND|REJECTED)|MAILBOX (?:DISABLED|UNAVAILABLE)|\b5\d\d\b/.test(normalizedBounceReason);
+  var bounced = bounceFlag
+    || emailStatus === "BOUNCED"
+    || verification === "BOUNCED"
+    || lastResult === "BOUNCED"
+    || deliveryStatus === "BOUNCED"
+    || permanentDeliveryFailure
+    || hardBounceReason;
+  var invalid = verification === "INVALID";
+  var failed = lastResult === "FAILED"
+    || deliveryStatus === "FAILED"
+    || !!clean_(row.Last_Email_Error || "");
+  return {
+    blocked: doNotContact || bounced || invalid || failed,
+    doNotContact: doNotContact,
+    bounced: bounced,
+    invalid: invalid,
+    failed: failed,
+    reason: doNotContact ? "DO_NOT_CONTACT" : (bounced ? (bounceReason || deliveryHealth || "BOUNCED") : (invalid ? "INVALID_EMAIL" : (failed ? "FAILED" : "")))
+  };
+}
+
+function communicationCompatibilityReadRow_(rowObj) {
+  var source = rowObj || {};
+  var row = Object.assign({}, source);
+  var evidence = communicationActualContactEvidence_(source);
+  var emailStatus = normalizeEmailStatus_(source.Email_Status || "");
+  var verification = clean_(source.Email_Verification_Status || "").toUpperCase();
+  var lastResult = clean_(source.Last_Contact_Result || "").toUpperCase();
+  var priorSuccessEvidence = !!clean_(source.Email_Last_Sent_At || "")
+    || !!clean_(source.Last_Contacted_At || "")
+    || lastResult === "SENT";
+  var ignoredLegacySuppression = emailStatus === "SUPPRESSED"
+    || verification === "SUPPRESSED"
+    || lastResult === "SUPPRESSED";
+  if (emailStatus === "SUPPRESSED") {
+    row.Email_Status = evidence.doNotContact ? "DO_NOT_CONTACT" : (evidence.bounced ? "BOUNCED" : (priorSuccessEvidence ? "SENT" : ""));
+  }
+  if (verification === "SUPPRESSED") {
+    row.Email_Verification_Status = evidence.bounced ? "BOUNCED" : "";
+  }
+  if (lastResult === "SUPPRESSED") {
+    row.Last_Contact_Result = evidence.bounced ? "BOUNCED" : (priorSuccessEvidence ? "SENT" : "");
+  }
+  row._communicationCompatibilitySuppressionIgnored = ignoredLegacySuppression && !evidence.blocked;
+  row._communicationActualContactEvidence = evidence;
+  return row;
+}
+
+function communicationCadenceState_(rowObj, nowMs) {
+  var row = rowObj && rowObj._communicationActualContactEvidence
+    ? rowObj
+    : (typeof communicationCompatibilityReadRow_ === "function"
+      ? communicationCompatibilityReadRow_(rowObj || {})
+      : (rowObj || {}));
+  var nowValue = Number(nowMs || new Date().getTime());
+  var attemptCount = Math.max(0, campaignAttemptCount_(row));
+  var hasPriorSuccess = normalizeEmailStatus_(row.Email_Status || "") === "SENT"
+    || clean_(row.Last_Contact_Result || "").toUpperCase() === "SENT"
+    || !!clean_(row.Email_Last_Sent_At || "");
+  var successfulSendCount = hasPriorSuccess ? Math.max(1, attemptCount) : 0;
+  var nextActionAtMs = parseTime_(row.Email_Next_Action_Date || "");
+  var cooldownActive = successfulSendCount > 0 && nextActionAtMs > nowValue;
+  var manualReviewRequired = successfulSendCount >= 2 && !cooldownActive;
+  var cooldownCycle = "FIRST_SEND_ELIGIBLE";
+  if (successfulSendCount === 1) cooldownCycle = cooldownActive ? "FIRST_SEND_COOLDOWN" : "SECOND_SEND_ELIGIBLE";
+  if (successfulSendCount >= 2) cooldownCycle = cooldownActive ? "SECOND_SEND_COOLDOWN" : "MANUAL_REVIEW_REQUIRED";
+  return {
+    successfulSendCount: successfulSendCount,
+    nextActionAtMs: nextActionAtMs,
+    cooldownActive: cooldownActive,
+    manualReviewRequired: manualReviewRequired,
+    cooldownCycle: cooldownCycle
+  };
+}
+
+function deriveCommunicationState_(rowObj, messageType, opts) {
+  var row = typeof communicationCompatibilityReadRow_ === "function"
+    ? communicationCompatibilityReadRow_(rowObj || {})
+    : (rowObj || {});
   var options = opts && typeof opts === "object" ? opts : {};
   var normalizedType = normalizeApplicantMessageType_(messageType || "");
   var applicantId = clean_(row.ApplicantID || options.applicantId || "");
@@ -8489,8 +8586,13 @@ function deriveCommunicationState_(rowObj, messageType, opts) {
       cooldownLastSentAt = getLastCommunicationSentAt_(applicantId, normalizedType);
     }
   }
-  var cooldownExpiresAtMs = cooldownLastSentAt ? parseTime_(cooldownLastSentAt) + communicationCooldownMs_() : 0;
   var nowMs = Number(options.nowMs || new Date().getTime());
+  var cadenceState = communicationCadenceState_(row, nowMs);
+  var cacheCooldownExpiresAtMs = cooldownLastSentAt ? parseTime_(cooldownLastSentAt) + communicationCooldownMs_() : 0;
+  var cooldownExpiresAtMs = Math.max(cacheCooldownExpiresAtMs, Number(cadenceState.nextActionAtMs || 0));
+  var contactEvidence = row._communicationActualContactEvidence || (typeof communicationActualContactEvidence_ === "function"
+    ? communicationActualContactEvidence_(row)
+    : { blocked: false, doNotContact: false, bounced: isCampaignBounceFlagTrue_(row.Email_Bounce_Flag), invalid: false, failed: false, reason: "" });
   var baseState = {
     applicantId: applicantId,
     effectiveEmail: clean_(effectiveEmail || ""),
@@ -8498,20 +8600,23 @@ function deriveCommunicationState_(rowObj, messageType, opts) {
     hasValidEffectiveEmail: isValidEffectiveEmail_(effectiveEmail),
     emailStatus: emailStatus,
     portalSubmittedActive: isCampaignPortalSubmittedActive_(row),
-    bounceFlag: isCampaignBounceFlagTrue_(row.Email_Bounce_Flag),
-    bounceReason: clean_(row.Email_Bounce_Reason || ""),
+    bounceFlag: contactEvidence.bounced === true,
+    bounceReason: clean_(contactEvidence.reason || row.Email_Bounce_Reason || row.Bounce_Reason || row.Delivery_Health || ""),
     docsVerified: computeDocVerificationStatus_(row) === "Verified" || clean_(row.Docs_Verified || "") === "Yes",
     paymentVerified: isCanonicalPaymentVerified_(row),
     docsMissing: communicationDocsMissing_(row),
     paymentOutstanding: communicationPaymentOutstanding_(row),
     requiresPortalUrl: communicationRequiresPortalUrl_(normalizedType),
-    attemptCount: campaignAttemptCount_(row),
-    nextActionAtMs: parseTime_(row.Email_Next_Action_Date || ""),
+    attemptCount: cadenceState.successfulSendCount,
+    successfulSendCount: cadenceState.successfulSendCount,
+    nextActionAtMs: cadenceState.nextActionAtMs,
     emailLastSentAt: clean_(row.Email_Last_Sent_At || ""),
     lastContactType: lastContactType,
     lastContactResult: lastContactResult,
     lastContactBatch: lastContactBatch,
-    lastContactedAt: lastContactedAt
+    lastContactedAt: lastContactedAt,
+    actualContactEvidence: contactEvidence,
+    compatibilitySuppressionIgnored: row._communicationCompatibilitySuppressionIgnored === true
   };
   return {
     applicantId: applicantId,
@@ -8520,6 +8625,9 @@ function deriveCommunicationState_(rowObj, messageType, opts) {
     cooldownLastSentAt: cooldownLastSentAt,
     cooldownActive: !!(cooldownExpiresAtMs && cooldownExpiresAtMs > nowMs),
     cooldownExpiresAtMs: cooldownExpiresAtMs,
+    cooldownCycle: cadenceState.cooldownCycle,
+    manualReviewRequired: cadenceState.manualReviewRequired,
+    successfulSendCount: cadenceState.successfulSendCount,
     lastContactMatchesScopedType: !!(normalizedType && baseState.lastContactType === normalizedType),
     lastContactWasSent: baseState.lastContactResult === "SENT",
     lastContactWasFailed: baseState.lastContactResult === "FAILED",
@@ -8882,7 +8990,9 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
     : null;
   var normalizedType = variantSelector ? variantSelector.parentMessageType : normalizeApplicantMessageType_(messageType);
   var actor = communicationGetActorInfo_(options);
-  var row = rowObj || {};
+  var row = typeof communicationCompatibilityReadRow_ === "function"
+    ? communicationCompatibilityReadRow_(rowObj || {})
+    : (rowObj || {});
   var previewMetrics = options.previewMetrics && typeof options.previewMetrics === "object" ? options.previewMetrics : null;
   var portalSecretLookup = options.portalSecretLookup && typeof options.portalSecretLookup === "object" ? options.portalSecretLookup : null;
   var cooldownLookup = options.cooldownLookup && typeof options.cooldownLookup === "object" ? options.cooldownLookup : null;
@@ -8933,7 +9043,16 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
     applicantState: "",
     rowNumber: Number(rowNumber || 0),
     sheet: sheet || null,
-    batchLabel: clean_(options.batchLabel || "")
+    batchLabel: clean_(options.batchLabel || ""),
+    operationId: clean_(options.operationId || ""),
+    previewId: clean_(options.previewId || ""),
+    receiptId: clean_(options.receiptId || ""),
+    commandType: clean_(options.commandType || ""),
+    actor: clean_(options.actor || actor.email || actor.role || ""),
+    stateFingerprint: clean_(options.stateFingerprint || ""),
+    cooldownCycle: clean_(options.cooldownCycle || communicationState.cooldownCycle || ""),
+    idempotencyKey: clean_(options.idempotencyKey || ""),
+    successfulSendCount: Number(communicationState.successfulSendCount || 0)
   };
 
   function finalize(outcome) {
@@ -8987,7 +9106,14 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
   if (requiresValidEmail && !baseState.hasEffectiveEmail) return block("NO_EFFECTIVE_EMAIL");
   if (requiresValidEmail && baseState.hasValidEffectiveEmail !== true) return block("INVALID_EMAIL", "Applicant does not have a valid email address.");
   if (baseState.bounceFlag) return block("BOUNCED", clean_(baseState.bounceReason || "") || communicationBlockReason_("BOUNCED", normalizedType));
-  if (context.emailStatus === "DO_NOT_CONTACT") return block("DO_NOT_CONTACT");
+  if (baseState.actualContactEvidence && baseState.actualContactEvidence.invalid) return block("INVALID_EMAIL");
+  if (baseState.actualContactEvidence && baseState.actualContactEvidence.failed) {
+    return block("BOUNCED", clean_(row.Last_Email_Error || row.Last_Delivery_Status || "") || communicationBlockReason_("BOUNCED", normalizedType));
+  }
+  if (context.emailStatus === "DO_NOT_CONTACT"
+    || baseState.actualContactEvidence && baseState.actualContactEvidence.doNotContact === true) {
+    return block("DO_NOT_CONTACT");
+  }
   if (communicationState.cooldownActive) return block("COOLDOWN_ACTIVE");
   if ((isPortalCommunicationMessageType_(normalizedType) || normalizedType === "reminder") && context.portalSubmittedActive) {
     return block("PORTAL_ALREADY_SUBMITTED");
@@ -9035,6 +9161,7 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
     if (baseState.paymentVerified === true) return block("PAYMENT_ALREADY_RESOLVED");
     if (communicationQuoteEligible_(row) !== true) return block("QUOTE_NOT_READY");
   }
+  if (communicationState.manualReviewRequired) return block("MANUAL_REVIEW_REQUIRED");
 
   context.eligible = true;
   context.sendableNow = true;
@@ -9606,7 +9733,7 @@ function recordApplicantContactOutcome_(context, outcome, extra) {
     Last_Contact_By: actorEmail,
     Last_Contact_Result: clean_(outcome || ""),
     Last_Contact_Batch: clean_(more.batchLabel || ctx.batchLabel || ""),
-    Last_Contact_DebugId: clean_(ctx.debugId || more.debugId || "")
+    Last_Contact_DebugId: clean_(ctx.operationId || more.operationId || ctx.debugId || more.debugId || "")
   };
   var subject = clean_(more.subject || "");
   if (subject) updates.Last_Contact_Subject = subject;
@@ -9742,7 +9869,7 @@ function markApplicantEmailPipelineState_(context, state, extra) {
     Email_Status: status,
     Email_Attempt_Count: Math.max(0, currentAttempt + (more.incrementAttempt === false ? 0 : 1))
   };
-  if (status === "SEND_ATTEMPT" || status === "SENT") patch.Email_Last_Sent_At = nowIso;
+  if (status === "SENT") patch.Email_Last_Sent_At = nowIso;
   if (status === "FAILED" || status === "FALLBACK_PENDING") patch.Email_Next_Action_Date = nowIso;
   applyPatch_(ctx.sheet, ctx.rowNumber, patch);
   try {
@@ -9759,35 +9886,59 @@ function markApplicantEmailPipelineState_(context, state, extra) {
 function computeEmailIdempotencyKey_(context, opts) {
   var ctx = context && typeof context === "object" ? context : {};
   var options = opts && typeof opts === "object" ? opts : {};
+  var suppliedKey = clean_(options.idempotencyKey || ctx.idempotencyKey || "");
+  if (suppliedKey) return suppliedKey;
   return buildSendIdempotencyKey_(ctx.rowObj || {}, clean_(ctx.messageType || options.messageType || ""), clean_(ctx.effectiveEmail || options.recipient || ""), {
     applicantId: clean_(ctx.applicantId || options.applicantId || ""),
     batchId: clean_(options.batchId || options.batchLabel || ctx.batchLabel || ""),
     batchLabel: clean_(options.batchLabel || ctx.batchLabel || ""),
     sendSource: clean_(options.sendSource || ctx.sendSource || ""),
-    recipient: clean_(ctx.effectiveEmail || options.recipient || "")
+    recipient: clean_(ctx.effectiveEmail || options.recipient || ""),
+    operationId: clean_(options.operationId || ctx.operationId || ""),
+    previewId: clean_(options.previewId || ctx.previewId || ""),
+    receiptId: clean_(options.receiptId || ctx.receiptId || ""),
+    cooldownCycle: clean_(options.cooldownCycle || ctx.cooldownCycle || "")
   });
 }
 
 function wasEmailAlreadyProcessed_(context, idempotencyKey) {
   var ctx = context && typeof context === "object" ? context : {};
   var messageType = clean_(ctx.messageType || "").toLowerCase();
+  var sendSource = clean_(ctx.sendSource || "").toUpperCase();
   var row = ctx.rowObj || {};
   var emailStatus = clean_(row.Email_Status || ctx.emailStatus || "").toUpperCase();
   var lastContactType = clean_(row.Last_Contact_Type || "").toLowerCase();
   var lastContactResult = clean_(row.Last_Contact_Result || "").toUpperCase();
   var lastContactBatch = clean_(row.Last_Contact_Batch || "");
+  var lastContactOperationId = clean_(row.Last_Contact_DebugId || "");
   var batchId = clean_(ctx.batchLabel || "");
-  var durableMatch = !!(messageType && lastContactType === messageType && lastContactResult === "SENT");
-  if (messageType !== "fd_acknowledgement" && batchId && lastContactBatch && batchId !== lastContactBatch) durableMatch = false;
+  var operationId = clean_(ctx.operationId || "");
+  var sameMessageDurableSuccess = !!(messageType && lastContactType === messageType && lastContactResult === "SENT");
+  var exactOperationMatch = !!(operationId && sameMessageDurableSuccess && lastContactOperationId === operationId);
+  var stageLegacyMatch = !!(sameMessageDurableSuccess && (sendSource === "ADMIN_STAGE_BATCH" || sendSource === "AUTOMATED_STAGE_RUNNER"));
+  if (stageLegacyMatch && batchId && lastContactBatch && batchId !== lastContactBatch) stageLegacyMatch = false;
+  var acknowledgementLegacyMatch = messageType === "fd_acknowledgement" && sameMessageDurableSuccess;
+  var durableMatch = exactOperationMatch || stageLegacyMatch || acknowledgementLegacyMatch;
   var legacyInviteSent = isPortalCommunicationMessageType_(messageType) && emailStatus === "SENT";
   var cacheState = getCommunicationCooldownState_(ctx.applicantId || "", messageType);
   var cacheMatch = !!(cacheState && clean_(cacheState.idempotencyKey || "") === clean_(idempotencyKey || ""));
+  var originalOutcome = cacheMatch
+    ? clean_(cacheState.result || "")
+    : (durableMatch || (messageType === "fd_acknowledgement" && legacyInviteSent) ? "SENT" : "");
   return {
     ok: true,
-    alreadyProcessed: durableMatch || legacyInviteSent || cacheMatch,
+    alreadyProcessed: durableMatch || cacheMatch || (messageType === "fd_acknowledgement" && legacyInviteSent),
     durableMatch: durableMatch,
+    exactOperationMatch: exactOperationMatch,
+    stageLegacyMatch: stageLegacyMatch,
+    sameMessageDurableSuccess: sameMessageDurableSuccess,
     legacyInviteSent: legacyInviteSent,
     cacheMatch: cacheMatch,
+    cacheState: cacheMatch ? cacheState : null,
+    originalOutcome: originalOutcome,
+    originalGmailAccepted: cacheMatch ? cacheState.gmailAccepted === true : durableMatch,
+    originalRowPatchConfirmed: cacheMatch ? cacheState.rowPatchConfirmed === true : durableMatch,
+    originalCommunicationRecorded: cacheMatch ? cacheState.communicationRecorded === true : durableMatch,
     idempotencyKey: clean_(idempotencyKey || "")
   };
 }
@@ -9829,6 +9980,7 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
   var ctx = context || {};
   var message = builtMessage || {};
   var options = opts && typeof opts === "object" ? opts : {};
+  ctx.sendSource = clean_(options.sendSource || ctx.sendSource || "");
   var actorEmail = clean_(options.actorEmail || ctx.actorEmail || (typeof getCallerEmail_ === "function" ? getCallerEmail_() : "") || "");
   var manualProbe = options.manualSingleSendProbe === true;
   if (!manualProbe && (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true)) {
@@ -9904,6 +10056,7 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
     };
   }
   var idempotencyKey = computeEmailIdempotencyKey_(ctx, options);
+  ctx.idempotencyKey = idempotencyKey;
   if (manualProbe) {
     var recipientCount = countEmailRecipients_(ctx.effectiveEmail);
     logManualSendProbe_("MANUAL_SEND_PROBE_BEGIN", ctx, idempotencyKey, {
@@ -9931,14 +10084,37 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
       };
     }
   }
-  var dispatchMessageType = clean_(ctx.messageType || "").toLowerCase();
   var processed = wasEmailAlreadyProcessed_(ctx, idempotencyKey);
   if (processed.alreadyProcessed) {
+    if (processed.stageLegacyMatch === true && processed.exactOperationMatch !== true) {
+      recordEmailProcessingResult_(ctx, idempotencyKey, {
+        label: "EMAIL_STAGE_PRIOR_SUCCESS_BLOCK",
+        result: "BLOCKED",
+        blockCode: "ALREADY_PROCESSED"
+      });
+      return {
+        ok: false,
+        eligible: false,
+        result: "BLOCKED",
+        gmailAttempted: false,
+        gmailAccepted: true,
+        rowPatchConfirmed: true,
+        communicationRecorded: true,
+        blockCode: "ALREADY_PROCESSED",
+        blockReason: "This Stage Batch email action has already been processed for the current durable state.",
+        applicantId: clean_(ctx.applicantId || ""),
+        messageType: clean_(ctx.messageType || ""),
+        effectiveEmail: clean_(ctx.effectiveEmail || ""),
+        subject: clean_(message.subject || ""),
+        idempotencyKey: idempotencyKey,
+        debugId: clean_(ctx.debugId || options.debugId || newDebugId_())
+      };
+    }
     if (manualProbe) {
       logManualSendProbe_("MANUAL_SEND_PROBE_REPLAY_BLOCK", ctx, idempotencyKey, {
         sendDecision: "BLOCK",
-        result: "BLOCKED",
-        blockCode: "ALREADY_PROCESSED",
+        result: "IDEMPOTENT_REPLAY",
+        blockCode: "ALREADY_PROCESSED_FOR_OPERATION",
         durableMatch: processed.durableMatch === true,
         cacheMatch: processed.cacheMatch === true,
         legacyInviteSent: processed.legacyInviteSent === true
@@ -9947,64 +10123,51 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
         applicantId: clean_(ctx.applicantId || ""),
         messageType: clean_(ctx.messageType || ""),
         recipient: clean_(ctx.effectiveEmail || ""),
-        result: "BLOCKED",
-        blockCode: "ALREADY_PROCESSED",
+        result: "IDEMPOTENT_REPLAY",
+        blockCode: "ALREADY_PROCESSED_FOR_OPERATION",
         sentAt: new Date().toISOString(),
         idempotencyKey: idempotencyKey
       });
     }
     recordEmailProcessingResult_(ctx, idempotencyKey, {
-      label: "EMAIL_IDEMPOTENCY_SUPPRESSED",
-      result: "BLOCKED",
-      blockCode: "ALREADY_PROCESSED"
-    });
-    if (dispatchMessageType === "fd_acknowledgement") {
-      recordApplicantContactOutcome_(ctx, "DUPLICATE", {
-        actorEmail: actorEmail,
-        batchLabel: clean_(options.batchLabel || ctx.batchLabel || ""),
-        subject: "Duplicate fd_acknowledgement suppressed"
-      });
-      return {
-        ok: true,
-        result: "DUPLICATE",
-        blockCode: "ALREADY_PROCESSED",
-        blockReason: "Duplicate fd_acknowledgement suppressed.",
-        applicantId: clean_(ctx.applicantId || ""),
-        messageType: clean_(ctx.messageType || ""),
-        effectiveEmail: clean_(ctx.effectiveEmail || ""),
-        subject: clean_(message.subject || ""),
-        debugId: clean_(ctx.debugId || options.debugId || newDebugId_())
-      };
-    }
-    markApplicantEmailPipelineState_(ctx, "SUPPRESSED", {
-      incrementAttempt: false
-    });
-    recordApplicantContactOutcome_(ctx, "SUPPRESSED", {
-      actorEmail: actorEmail,
-      batchLabel: clean_(options.batchLabel || ctx.batchLabel || ""),
-      subject: clean_(message.subject || "")
+      label: "EMAIL_IDEMPOTENT_REPLAY",
+      result: "IDEMPOTENT_REPLAY",
+      blockCode: "ALREADY_PROCESSED_FOR_OPERATION"
     });
     return {
-      ok: false,
-      result: "BLOCKED",
-      blockCode: "ALREADY_PROCESSED",
-      blockReason: "This email action has already been processed for the current durable state.",
+      ok: true,
+      eligible: true,
+      result: "IDEMPOTENT_REPLAY",
+      replayOutcome: "IDEMPOTENT_REPLAY",
+      originalOutcome: clean_(processed.originalOutcome || "SENT"),
+      idempotentReplay: true,
+      gmailAttempted: false,
+      gmailAccepted: processed.originalGmailAccepted === true,
+      rowPatchConfirmed: processed.originalRowPatchConfirmed === true,
+      communicationRecorded: processed.originalCommunicationRecorded === true,
+      blockCode: clean_(processed.originalOutcome || "") === "RECONCILIATION_REQUIRED" ? "POST_SEND_PERSISTENCE_INCOMPLETE" : "ALREADY_PROCESSED_FOR_OPERATION",
+      blockReason: clean_(processed.originalOutcome || "") === "RECONCILIATION_REQUIRED"
+        ? "Gmail accepted the original operation but durable row or communication evidence was not fully confirmed."
+        : communicationBlockReason_("ALREADY_PROCESSED_FOR_OPERATION", ctx.messageType),
       applicantId: clean_(ctx.applicantId || ""),
       messageType: clean_(ctx.messageType || ""),
       effectiveEmail: clean_(ctx.effectiveEmail || ""),
       subject: clean_(message.subject || ""),
+      operationId: clean_(ctx.operationId || options.operationId || ""),
+      previewId: clean_(ctx.previewId || options.previewId || ""),
+      receiptId: clean_(ctx.receiptId || options.receiptId || ""),
+      commandType: clean_(ctx.commandType || options.commandType || ""),
+      actor: clean_(ctx.actor || actorEmail || ""),
+      stateFingerprint: clean_(ctx.stateFingerprint || options.stateFingerprint || ""),
+      cooldownCycle: clean_(ctx.cooldownCycle || options.cooldownCycle || ""),
+      idempotencyKey: idempotencyKey,
       debugId: clean_(ctx.debugId || options.debugId || newDebugId_())
     };
   }
   var requestId = clean_(ctx.debugId || options.debugId || newDebugId_());
   var batchId = clean_(options.batchLabel || ctx.batchLabel || "");
   markApplicantEmailPipelineState_(ctx, "SEND_ATTEMPT", {
-    incrementAttempt: true
-  });
-  recordApplicantContactOutcome_(ctx, "SEND_ATTEMPT", {
-    actorEmail: actorEmail,
-    batchLabel: clean_(options.batchLabel || ctx.batchLabel || ""),
-    subject: clean_(message.subject || "")
+    incrementAttempt: false
   });
   var sendRes = campaignSendEmailGmail_(ctx.effectiveEmail, message.subject, message.body, {
     applicantId: clean_(ctx.applicantId || ""),
@@ -10062,12 +10225,34 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
       messageType: clean_(ctx.messageType || ""),
       effectiveEmail: clean_(ctx.effectiveEmail || ""),
       subject: clean_(message.subject || ""),
+      operationId: clean_(ctx.operationId || options.operationId || ""),
+      previewId: clean_(ctx.previewId || options.previewId || ""),
+      receiptId: clean_(ctx.receiptId || options.receiptId || ""),
+      commandType: clean_(ctx.commandType || options.commandType || ""),
+      actor: clean_(ctx.actor || actorEmail || ""),
+      stateFingerprint: clean_(ctx.stateFingerprint || options.stateFingerprint || ""),
+      cooldownCycle: clean_(ctx.cooldownCycle || options.cooldownCycle || ""),
+      idempotencyKey: idempotencyKey,
       debugId: requestId
     };
   }
+  var now = new Date();
+  setCommunicationCooldownState_(ctx.applicantId, ctx.messageType, {
+    sentAt: now.toISOString(),
+    source: "email_dispatch_gmail_accepted",
+    idempotencyKey: idempotencyKey,
+    batchLabel: batchId,
+    result: "RECONCILIATION_REQUIRED",
+    gmailAccepted: true,
+    rowPatchConfirmed: false,
+    communicationRecorded: false,
+    operationId: clean_(ctx.operationId || options.operationId || ""),
+    previewId: clean_(ctx.previewId || options.previewId || ""),
+    receiptId: clean_(ctx.receiptId || options.receiptId || "")
+  }, Math.ceil(communicationCooldownMs_() / 1000));
   try {
-    var now = new Date();
-    var nextAttempt = Math.max(1, campaignAttemptCount_(ctx.rowObj));
+    var currentSuccessfulSendCount = Math.max(campaignAttemptCount_(ctx.rowObj), Number(ctx.successfulSendCount || 0));
+    var nextAttempt = Math.max(1, currentSuccessfulSendCount + 1);
     var patch = {
       Email_Status: "SENT",
       Email_Last_Sent_At: now.toISOString(),
@@ -10095,7 +10280,13 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
       source: "email_dispatch",
       idempotencyKey: idempotencyKey,
       batchLabel: batchId,
-      result: "SENT"
+      result: "SENT",
+      gmailAccepted: true,
+      rowPatchConfirmed: true,
+      communicationRecorded: true,
+      operationId: clean_(ctx.operationId || options.operationId || ""),
+      previewId: clean_(ctx.previewId || options.previewId || ""),
+      receiptId: clean_(ctx.receiptId || options.receiptId || "")
     }, Math.ceil(communicationCooldownMs_() / 1000));
     recordEmailProcessingResult_(ctx, idempotencyKey, {
       label: "EMAIL_PROCESSING_RESULT",
@@ -10140,6 +10331,15 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
       bcc: clean_(options.bcc || ""),
       sentAt: now.toISOString(),
       rowNumber: Number(ctx.rowNumber || 0),
+      operationId: clean_(ctx.operationId || options.operationId || ""),
+      previewId: clean_(ctx.previewId || options.previewId || ""),
+      receiptId: clean_(ctx.receiptId || options.receiptId || ""),
+      commandType: clean_(ctx.commandType || options.commandType || ""),
+      actor: clean_(ctx.actor || actorEmail || ""),
+      stateFingerprint: clean_(ctx.stateFingerprint || options.stateFingerprint || ""),
+      cooldownCycle: clean_(ctx.cooldownCycle || options.cooldownCycle || ""),
+      idempotencyKey: idempotencyKey,
+      idempotentReplay: false,
       debugId: clean_(ctx.debugId || options.debugId || newDebugId_()),
       blockCode: "",
       blockReason: ""
@@ -10164,6 +10364,15 @@ function dispatchApplicantMessage_(context, builtMessage, opts) {
       messageType: clean_(ctx.messageType || ""),
       effectiveEmail: clean_(ctx.effectiveEmail || ""),
       subject: clean_(message.subject || ""),
+      operationId: clean_(ctx.operationId || options.operationId || ""),
+      previewId: clean_(ctx.previewId || options.previewId || ""),
+      receiptId: clean_(ctx.receiptId || options.receiptId || ""),
+      commandType: clean_(ctx.commandType || options.commandType || ""),
+      actor: clean_(ctx.actor || actorEmail || ""),
+      stateFingerprint: clean_(ctx.stateFingerprint || options.stateFingerprint || ""),
+      cooldownCycle: clean_(ctx.cooldownCycle || options.cooldownCycle || ""),
+      idempotencyKey: idempotencyKey,
+      idempotentReplay: false,
       debugId: requestId,
       blockCode: "POST_SEND_PERSISTENCE_INCOMPLETE",
       blockReason: "Gmail accepted the message but durable row or communication evidence was not fully confirmed."
@@ -10870,6 +11079,14 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
       portalLinkHydrated: context.requiresPortalUrl === true && !!clean_(context.portalUrl || ""),
       unresolvedToken: clean_(context.unresolvedToken || ""),
       effectiveEmail: clean_(context.effectiveEmail || ""),
+      operationId: clean_(context.operationId || ""),
+      previewId: clean_(context.previewId || ""),
+      receiptId: clean_(context.receiptId || ""),
+      commandType: clean_(context.commandType || ""),
+      actor: clean_(context.actor || context.actorEmail || ""),
+      stateFingerprint: clean_(context.stateFingerprint || ""),
+      cooldownCycle: clean_(context.cooldownCycle || ""),
+      idempotencyKey: clean_(context.idempotencyKey || ""),
       debugId: clean_(context.debugId || newDebugId_())
     };
     campaignLog_("COMM_PREVIEW", {
@@ -10978,6 +11195,14 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
     bcc: ccBcc.bcc,
     portalLinkRequired: context.requiresPortalUrl === true,
     portalLinkHydrated: !!clean_(context.portalUrl || ""),
+    operationId: clean_(context.operationId || ""),
+    previewId: clean_(context.previewId || ""),
+    receiptId: clean_(context.receiptId || ""),
+    commandType: clean_(context.commandType || ""),
+    actor: clean_(context.actor || context.actorEmail || ""),
+    stateFingerprint: clean_(context.stateFingerprint || ""),
+    cooldownCycle: clean_(context.cooldownCycle || ""),
+    idempotencyKey: clean_(context.idempotencyKey || ""),
     debugId: clean_(context.debugId || newDebugId_())
   };
   campaignLog_("COMM_PREVIEW", {
@@ -11049,6 +11274,41 @@ function sendApplicantMessage_(applicantId, messageType, opts) {
     };
   }
   var context = resolveApplicantMessageContext_(applicantId, messageType, Object.assign({}, options, { action: "send" }));
+  if (clean_(context.operationId || "")) {
+    var replayIdempotencyKey = computeEmailIdempotencyKey_(context, options);
+    var replayState = wasEmailAlreadyProcessed_(context, replayIdempotencyKey);
+    if (replayState.alreadyProcessed) {
+      return {
+        ok: true,
+        action: "send",
+        eligible: true,
+        result: "IDEMPOTENT_REPLAY",
+        replayOutcome: "IDEMPOTENT_REPLAY",
+        originalOutcome: clean_(replayState.originalOutcome || "SENT"),
+        idempotentReplay: true,
+        gmailAttempted: false,
+        gmailAccepted: replayState.originalGmailAccepted === true,
+        rowPatchConfirmed: replayState.originalRowPatchConfirmed === true,
+        communicationRecorded: replayState.originalCommunicationRecorded === true,
+        blockCode: clean_(replayState.originalOutcome || "") === "RECONCILIATION_REQUIRED" ? "POST_SEND_PERSISTENCE_INCOMPLETE" : "ALREADY_PROCESSED_FOR_OPERATION",
+        blockReason: clean_(replayState.originalOutcome || "") === "RECONCILIATION_REQUIRED"
+          ? "Gmail accepted the original operation but durable row or communication evidence was not fully confirmed."
+          : communicationBlockReason_("ALREADY_PROCESSED_FOR_OPERATION", context.messageType),
+        applicantId: clean_(context.applicantId || applicantId || ""),
+        messageType: clean_(context.messageType || messageType || ""),
+        effectiveEmail: clean_(context.effectiveEmail || ""),
+        operationId: clean_(context.operationId || ""),
+        previewId: clean_(context.previewId || ""),
+        receiptId: clean_(context.receiptId || ""),
+        commandType: clean_(context.commandType || ""),
+        actor: clean_(context.actor || context.actorEmail || ""),
+        stateFingerprint: clean_(context.stateFingerprint || ""),
+        cooldownCycle: clean_(context.cooldownCycle || ""),
+        idempotencyKey: replayIdempotencyKey,
+        debugId: clean_(context.debugId || newDebugId_())
+      };
+    }
+  }
   if (!context.eligible) {
     if (!hasPriorSuccessfulMessageSend_(context)) {
       recordApplicantContactOutcome_(context, "BLOCKED", {

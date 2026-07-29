@@ -64,6 +64,7 @@ assert.match(sources.commands, /admin_sendApplicantMessage/, "Individual communi
 
 assert.match(sources.batch, /title:\s*batch\.preview\.summary[\s\S]*proceedLabel:\s*batch\.preview\.summary/, "Batch confirmation must repeat the exact canonical template and recipient count");
 assert.doesNotMatch(sources.batch, /Confirm batch communication|Send confirmed batch/, "Generic batch wording must not obscure exact execution scope");
-assert.match(sources.workbench, /preview\.executable === true[\s\S]*app\.openConfirm\([\s\S]*confirmation: true/, "Individual and applicant mutations must require an executable backend preview and one explicit confirmation");
+assert.match(sources.workbench, /preview\.executable === true[\s\S]*app\.openConfirm\([\s\S]*app\.commandExecutionPayload\(preview/, "Individual and applicant mutations must consume the executable backend preview identity");
+assert.match(sources.core, /app\.commandExecutionPayload[\s\S]*confirmation:\s*true/, "The identity-preserving execute payload must retain one explicit confirmation");
 
 console.log("PASS EduOps batch governance and full-release surface repair contracts");

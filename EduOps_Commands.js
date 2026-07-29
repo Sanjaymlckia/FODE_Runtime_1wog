@@ -24,6 +24,53 @@ function eduopsPreviewCacheKey_(previewId) {
   return "EDUOPS_PREVIEW_" + eduopsClean_(previewId).replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 100);
 }
 
+function eduopsCommandIdentityPayload_(preview) {
+  var source = preview && typeof preview === "object" ? preview : {};
+  return {
+    operationId: eduopsClean_(source.operationId || ""),
+    previewId: eduopsClean_(source.previewId || ""),
+    receiptId: eduopsClean_(source.receiptId || ""),
+    applicantId: eduopsClean_(source.applicantId || ""),
+    messageType: eduopsClean_(source.messageType || source.executionAuthority && source.executionAuthority.messageType || ""),
+    commandType: eduopsClean_(source.commandType || source.operation || ""),
+    actor: eduopsClean_(source.actor || ""),
+    actorEmail: eduopsClean_(source.actor || ""),
+    stateFingerprint: eduopsClean_(source.stateFingerprint || ""),
+    cooldownCycle: eduopsClean_(source.cooldownCycle || ""),
+    idempotencyKey: eduopsClean_(source.idempotencyKey || "")
+  };
+}
+
+function eduopsCommandCooldownCycle_(definition, applicantId, selection, messageType, snapshotId) {
+  var target = selection
+    ? eduopsClean_(selection.queryFingerprint || selection.snapshotId || "COHORT")
+    : eduopsClean_(applicantId || "APPLICANT");
+  return eduopsHashCanonicalValue_({
+    commandType: definition && definition.operation || "",
+    target: target,
+    messageType: eduopsClean_(messageType || ""),
+    snapshotId: eduopsClean_(snapshotId || "")
+  }, "EDUOPS-CYCLE");
+}
+
+function eduopsValidateEchoedCommandIdentity_(payload, preview) {
+  var supplied = payload && typeof payload === "object" ? payload : {};
+  var expected = eduopsCommandIdentityPayload_(preview);
+  [
+    ["operationId", "OPERATION_IDENTITY_MISMATCH"],
+    ["receiptId", "RECEIPT_IDENTITY_MISMATCH"],
+    ["stateFingerprint", "STATE_FINGERPRINT_MISMATCH"],
+    ["cooldownCycle", "COOLDOWN_CYCLE_MISMATCH"],
+    ["commandType", "COMMAND_TYPE_MISMATCH"],
+    ["messageType", "MESSAGE_TYPE_MISMATCH"]
+  ].forEach(function (entry) {
+    var field = entry[0];
+    if (Object.prototype.hasOwnProperty.call(supplied, field) && eduopsClean_(supplied[field] || "") !== expected[field]) {
+      throw new Error(entry[1]);
+    }
+  });
+}
+
 function eduopsCommandRequiresDualApproval_(definition, request) {
   if (definition.dualApproval === true) return true;
   return false;
@@ -346,10 +393,11 @@ function eduops_getBatchCommunicationCatalogue(payload) {
   };
 }
 
-function eduopsAuthorityPreview_(definition, request, applicantId, selection, communicationTemplate) {
+function eduopsAuthorityPreview_(definition, request, applicantId, selection, communicationTemplate, operationIdentity) {
   var draft = request.draft || {};
+  var identity = operationIdentity && typeof operationIdentity === "object" ? operationIdentity : {};
   if (definition.operation === "SEND_INDIVIDUAL_COMMUNICATION") {
-    return admin_previewApplicantMessage({
+    return admin_previewApplicantMessage(Object.assign({}, identity, {
       applicantId: applicantId,
       messageType: communicationTemplate.internalTemplateId,
       templateId: communicationTemplate.templateId,
@@ -360,10 +408,10 @@ function eduopsAuthorityPreview_(definition, request, applicantId, selection, co
       subject: draft.subject,
       body: draft.body,
       sourceView: "eduops"
-    });
+    }));
   }
   if (definition.operation === "BATCH_COMMUNICATION") {
-    return admin_previewSelectedApplicantBatch({
+    return admin_previewSelectedApplicantBatch(Object.assign({}, identity, {
       applicantIds: selection.executionApplicantIds,
       excludedApplicantIds: [],
       messageType: communicationTemplate.internalTemplateId,
@@ -371,7 +419,7 @@ function eduopsAuthorityPreview_(definition, request, applicantId, selection, co
       templateVersionId: communicationTemplate.templateVersionId,
       sourceLabel: "EduOps " + selection.selectionMode + " execution cohort",
       sourceType: "eduops"
-    });
+    }));
   }
   return { ok: true, result: "PREVIEW", code: "AUTHORITY_CONTEXT_VALIDATED" };
 }
@@ -415,8 +463,30 @@ function eduopsRevalidateCommandForExecution_(preview, access) {
   if (definition.operation === "FINANCE_EVIDENCE_DECISION" && eduopsUpper_(request.draft && request.draft.decision || "", "") !== "VERIFIED") throw new Error("UNSUPPORTED_FINANCE_DECISION: no dedicated rejection authority is proven");
   var communicationTemplate = null;
   if (definition.operation === "SEND_INDIVIDUAL_COMMUNICATION" || definition.operation === "BATCH_COMMUNICATION") communicationTemplate = eduopsResolveCommunicationTemplate_(request.draft && (request.draft.templateId || request.draft.messageType));
-  var authorityResult = eduopsAuthorityPreview_(definition, request, applicantId, selection, communicationTemplate);
-  if (!eduopsAuthorityPreviewReady_(authorityResult)) throw new Error("AUTHORITY_REVALIDATION_BLOCKED");
+  var authorityResult = eduopsAuthorityPreview_(
+    definition,
+    request,
+    applicantId,
+    selection,
+    communicationTemplate,
+    eduopsCommandIdentityPayload_(preview)
+  );
+  if (!eduopsAuthorityPreviewReady_(authorityResult)) {
+    preview.authorityPreview = eduopsClone_(authorityResult);
+    preview.executionAuthority = communicationTemplate ? {
+      messageType: communicationTemplate.parentMessageType || communicationTemplate.internalTemplateId,
+      templateId: communicationTemplate.templateId,
+      templateVersionId: communicationTemplate.templateVersionId || "1"
+    } : null;
+    preview.state = "BLOCKED";
+    preview.executable = false;
+    preview.executionRevalidationBlocked = true;
+    preview.blockCode = eduopsClean_(authorityResult && (authorityResult.blockCode || authorityResult.code) || "AUTHORITY_REVALIDATION_BLOCKED");
+    preview.blockReason = eduopsClean_(authorityResult && (authorityResult.blockReason || authorityResult.message || authorityResult.error) || "Communication Authority blocked execution during final revalidation.");
+    preview.statusLabel = "Blocked during final revalidation";
+    preview.statusReason = preview.blockReason;
+    return preview;
+  }
   if (selection) {
     var lookup = {};
     current.rows.forEach(function (row) { lookup[row.applicantId] = row; });
@@ -425,7 +495,11 @@ function eduopsRevalidateCommandForExecution_(preview, access) {
     if (!eduopsSameApplicantIds_(currentRecipients, previewRecipients)) throw new Error("RECIPIENT_AUTHORITY_CHANGED");
   }
   preview.authorityPreview = eduopsClone_(authorityResult);
-  preview.executionAuthority = communicationTemplate ? { messageType: communicationTemplate.internalTemplateId } : null;
+  preview.executionAuthority = communicationTemplate ? {
+    messageType: communicationTemplate.parentMessageType || communicationTemplate.internalTemplateId,
+    templateId: communicationTemplate.templateId,
+    templateVersionId: communicationTemplate.templateVersionId || "1"
+  } : null;
   return preview;
 }
 
@@ -468,7 +542,45 @@ function eduops_previewCommand(payload) {
   if (definition.operation === "FINANCE_EVIDENCE_DECISION" && eduopsUpper_(p.draft && p.draft.decision || "", "") !== "VERIFIED") {
     throw new Error("UNSUPPORTED_FINANCE_DECISION: no dedicated rejection authority is proven");
   }
-  var authorityPreview = eduopsAuthorityPreview_(definition, p, applicantId, selection, communicationTemplate);
+  var commandMessageType = communicationTemplate
+    ? eduopsClean_(communicationTemplate.parentMessageType || communicationTemplate.internalTemplateId || "")
+    : "";
+  var operationId = "EDUOPS-OPERATION-" + Utilities.getUuid();
+  var previewId = "EDUOPS-PREVIEW-" + Utilities.getUuid();
+  var receiptId = eduopsReceiptId_();
+  var selectedApplicantIds = selection ? selection.executionApplicantIds.slice() : [];
+  var stateFingerprint = eduopsStateFingerprint_({
+    commandType: definition.operation,
+    operation: definition.operation,
+    messageType: commandMessageType,
+    product: "FODE",
+    snapshotId: resolved.snapshotId,
+    queryFingerprint: selection ? selection.queryFingerprint : eduopsClean_(p.queryFingerprint || ""),
+    applicantId: applicantId,
+    selectedApplicantIds: selectedApplicantIds,
+    request: p
+  });
+  var cooldownCycle = eduopsCommandCooldownCycle_(
+    definition,
+    applicantId,
+    selection,
+    commandMessageType,
+    resolved.snapshotId
+  );
+  var operationIdentity = {
+    operationId: operationId,
+    previewId: previewId,
+    receiptId: receiptId,
+    applicantId: applicantId,
+    messageType: commandMessageType,
+    commandType: definition.operation,
+    actor: access.email,
+    actorEmail: access.email,
+    stateFingerprint: stateFingerprint,
+    cooldownCycle: cooldownCycle,
+    idempotencyKey: eduopsClean_(p.idempotencyKey || "")
+  };
+  var authorityPreview = eduopsAuthorityPreview_(definition, p, applicantId, selection, communicationTemplate, operationIdentity);
   var authorityReady = eduopsAuthorityPreviewReady_(authorityPreview) && (definition.operation !== "BATCH_COMMUNICATION" || Number(authorityPreview.eligible || authorityPreview.count || 0) > 0);
   var canonicalRecipientLookup = {};
   resolved.rows.forEach(function (row) { canonicalRecipientLookup[row.applicantId] = row; });
@@ -489,20 +601,29 @@ function eduops_previewCommand(payload) {
     portalLinkRequired: authorityPreview && authorityPreview.portalLinkRequired === true,
     portalLinkHydrated: authorityPreview && authorityPreview.portalLinkHydrated === true,
     schemaVersion: "EDUOPS_COMMAND_PREVIEW_V1",
-    previewId: "EDUOPS-PREVIEW-" + Utilities.getUuid(),
+    operationId: operationId,
+    previewId: previewId,
+    receiptId: receiptId,
     operation: definition.operation,
+    commandType: definition.operation,
+    messageType: commandMessageType,
     operationLabel: definition.publicLabel,
     product: "FODE",
     snapshotId: resolved.snapshotId,
     queryFingerprint: selection ? selection.queryFingerprint : eduopsClean_(p.queryFingerprint || ""),
     applicantId: applicantId,
-    selectedApplicantIds: selection ? selection.executionApplicantIds.slice() : [],
+    selectedApplicantIds: selectedApplicantIds,
     requiredCapability: definition.capability,
     risk: definition.risk,
     dualApprovalRequired: eduopsCommandRequiresDualApproval_(definition, p),
     idempotencyKey: eduopsClean_(p.idempotencyKey || ""),
     summary: selection ? "Send " + templateLabel + " to " + executionSize + " recipients" : eduopsHumanize_(definition.operation) + " for " + applicantId,
     actor: access.email,
+    stateFingerprint: stateFingerprint,
+    cooldownCycle: cooldownCycle,
+    idempotencyAuthority: "TRANSIENT_USER_CACHE",
+    idempotencyDurability: "TRANSIENT_CACHE_ONLY",
+    durableIdempotency: false,
     createdAt: new Date(now).toISOString(),
     expiresAt: new Date(now + 10 * 60 * 1000).toISOString(),
     request: eduopsClone_(p),
@@ -557,11 +678,12 @@ function eduops_executeCommand(payload) {
   var cached = CacheService.getUserCache().get(eduopsPreviewCacheKey_(p.previewId));
   if (!cached) throw new Error("PREVIEW_EXPIRED_OR_UNKNOWN");
   var preview = JSON.parse(cached);
+  eduopsValidateEchoedCommandIdentity_(p, preview);
   if (Date.parse(preview.expiresAt) <= Date.now()) throw new Error("PREVIEW_EXPIRED");
   if (preview.state !== "READY") throw new Error("PREVIEW_NOT_EXECUTABLE");
   if (eduopsClean_(p.idempotencyKey) !== eduopsClean_(preview.idempotencyKey)) throw new Error("IDEMPOTENCY_CONTEXT_MISMATCH");
   var contextFingerprint = eduopsIdempotencyContext_(preview);
-  var prior = eduopsReadIdempotentReceipt_(preview.idempotencyKey, contextFingerprint);
+  var prior = eduopsReadIdempotentReceipt_(preview.idempotencyKey, contextFingerprint, { markReplay: true });
   if (prior) return prior;
   var definition = eduopsCommandDefinition_(preview.operation);
   eduopsRequireFeature_(definition.operation);
@@ -570,10 +692,24 @@ function eduops_executeCommand(payload) {
   if (current.snapshotId !== preview.snapshotId) throw new Error("STALE_SNAPSHOT: source changed after preview");
   if (preview.dualApprovalRequired === true && !preview.request.approvalId) throw new Error("DUAL_APPROVAL_REQUIRED");
   return eduopsWithOperationLock_(preview.operation, preview.applicantId, function () {
-    var replay = eduopsReadIdempotentReceipt_(preview.idempotencyKey, contextFingerprint);
+    var replay = eduopsReadIdempotentReceipt_(preview.idempotencyKey, contextFingerprint, { markReplay: true });
     if (replay) return replay;
     preview = eduopsRevalidateCommandForExecution_(preview, access);
-    var authorityResult = eduopsDispatchCommand_(preview);
+    var authorityResult = preview.executionRevalidationBlocked === true
+      ? Object.assign({}, eduopsCommandIdentityPayload_(preview), {
+        ok: false,
+        result: "BLOCKED",
+        outcome: "BLOCKED",
+        blockCode: eduopsClean_(preview.blockCode || "AUTHORITY_REVALIDATION_BLOCKED"),
+        blockReason: eduopsClean_(preview.blockReason || "Communication Authority blocked execution during final revalidation."),
+        deliveryEvidence: {
+          gmailAttempted: false,
+          gmailAccepted: false,
+          rowPatchConfirmed: false,
+          communicationRecorded: false
+        }
+      })
+      : eduopsDispatchCommand_(preview);
     var receipt = eduopsBuildReceipt_(preview, authorityResult);
     return eduopsStoreIdempotentReceipt_(preview.idempotencyKey, receipt, contextFingerprint);
   });
@@ -582,9 +718,10 @@ function eduops_executeCommand(payload) {
 function eduopsDispatchCommand_(preview) {
   var request = preview.request || {};
   var draft = request.draft || {};
+  var operationIdentity = eduopsCommandIdentityPayload_(preview);
   if (preview.operation === "BATCH_COMMUNICATION") {
     var batchAuthority = preview.authorityPreview || {};
-    return admin_sendSelectedApplicantBatch({
+    return admin_sendSelectedApplicantBatch(Object.assign({}, operationIdentity, {
       previewRequestId: batchAuthority.requestId,
       candidateHash: batchAuthority.candidateHash,
       messageType: preview.executionAuthority && preview.executionAuthority.messageType,
@@ -592,7 +729,7 @@ function eduopsDispatchCommand_(preview) {
       templateVersionId: preview.executionAuthority && preview.executionAuthority.templateVersionId,
       confirmSend: true,
       sourceView: "eduops"
-    });
+    }));
   }
   var identity = eduopsFodeApplicantRead_(preview.applicantId, {}, preview.snapshotId);
   var rowNumber = Number(identity && identity.identity && identity.identity.rowNumber || 0);
@@ -607,7 +744,7 @@ function eduopsDispatchCommand_(preview) {
     if (eduopsUpper_(draft.decision || "", "") !== "VERIFIED") throw new Error("UNSUPPORTED_FINANCE_DECISION: no dedicated rejection authority is proven");
     return admin_setPaymentVerified({ rowNumber: rowNumber, comment: draft.reason || "EduOps Finance verification" });
   }
-  if (preview.operation === "SEND_INDIVIDUAL_COMMUNICATION") return admin_sendApplicantMessage({ applicantId: preview.applicantId, messageType: preview.executionAuthority && preview.executionAuthority.messageType, templateId: preview.executionAuthority && preview.executionAuthority.templateId, templateVersionId: preview.executionAuthority && preview.executionAuthority.templateVersionId, recipient: draft.recipient, cc: draft.cc, bcc: draft.bcc, subject: draft.subject, body: draft.body, confirmManualSingleSend: true, sourceView: "eduops" });
+  if (preview.operation === "SEND_INDIVIDUAL_COMMUNICATION") return admin_sendApplicantMessage(Object.assign({}, operationIdentity, { applicantId: preview.applicantId, messageType: preview.executionAuthority && preview.executionAuthority.messageType, templateId: preview.executionAuthority && preview.executionAuthority.templateId, templateVersionId: preview.executionAuthority && preview.executionAuthority.templateVersionId, recipient: draft.recipient, cc: draft.cc, bcc: draft.bcc, subject: draft.subject, body: draft.body, confirmManualSingleSend: true, sourceView: "eduops" }));
   if (preview.operation === "CONTACTABILITY_CORRECTION") {
     if (!eduopsClean_(draft.email || "")) throw new Error("CORRECTED_EMAIL_REQUIRED");
     return admin_updateParentEmailCorrected({ applicantId: preview.applicantId, rowNumber: rowNumber, newEmail: draft.email, reason: draft.reason });

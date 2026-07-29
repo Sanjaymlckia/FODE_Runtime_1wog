@@ -77,6 +77,8 @@ vm.createContext(context);
 vm.runInContext([
   read("EduOps_Contracts.js"),
   read("EduOps_Workload.js"),
+  read("EduOps_Idempotency.js"),
+  read("EduOps_Receipts.js"),
   read("EduOps_Commands.js")
 ].join("\n"), context, { filename: "eduops-query-binding-runtime.vm.js" });
 

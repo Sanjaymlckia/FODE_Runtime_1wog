@@ -84,9 +84,14 @@ const receiptContext = {
   logAdminEvent_: () => {}
 };
 vm.createContext(receiptContext);
+vm.runInContext(extractFunction(receipts, "eduopsResultOutcome_"), receiptContext);
+vm.runInContext(extractFunction(receipts, "eduopsReceiptBlockingOutcome_"), receiptContext);
 vm.runInContext(extractFunction(receipts, "eduopsApplicantOutcomes_"), receiptContext);
+vm.runInContext(extractFunction(receipts, "eduopsPngTimestamp_"), receiptContext);
+vm.runInContext(extractFunction(receipts, "eduopsDeliveryEvidence_"), receiptContext);
 vm.runInContext(extractFunction(receipts, "eduopsBuildReceipt_"), receiptContext);
 const receipt = receiptContext.eduopsBuildReceipt_({
+  receiptId: "EDUOPS-RECEIPT-BATCH-TEST",
   previewId: "PREVIEW-1",
   operation: "BATCH_COMMUNICATION",
   selectedApplicantIds: ["FODE-1", "FODE-2", "FODE-3", "FODE-4", "FODE-5"],

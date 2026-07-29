@@ -112,7 +112,33 @@ async function noPageOverflow(page) {
       assert.equal(await page.locator("#eduopsOpenBatch").isEnabled(), true); assertions++;
       await page.locator("#eduopsOpenBatch").click();
       await page.waitForSelector("#eduopsBatchWorkspace:not([hidden])");
-      await page.locator('input[name="eduopsBatchOperation"][value="BATCH_COMMUNICATION"]').check();
+      assert.equal(await page.locator('input[name="eduopsBatchOperation"]').count(), 0, "Retired Batch operation radios must not be required"); assertions++;
+      assert.equal(await page.evaluate(() => window.EduOpsApp.state.batch.operation), "BATCH_COMMUNICATION", "Batch workspace must resolve the fixed authoritative operation"); assertions++;
+      const executionLimit = page.locator("[data-batch-execution-limit]");
+      assert.equal(await executionLimit.isVisible(), true, "Execution-limit control must be visible"); assertions++;
+      assert.equal(await executionLimit.isEnabled(), true, "Execution-limit control must be usable"); assertions++;
+      const selectedExecutionLimit = (await executionLimit.selectOption({ index: 1 }))[0] || "";
+      assert.notEqual(selectedExecutionLimit, "", "An authorised execution limit must be selectable"); assertions++;
+      await page.waitForFunction(() => {
+        const select = document.querySelector("[data-batch-template]");
+        return select && !select.disabled && Array.from(select.options).some((option) => option.value && !option.disabled);
+      });
+      const communication = page.locator("[data-batch-template]");
+      assert.equal(await communication.isVisible(), true, "Communication selector must be visible"); assertions++;
+      assert.equal(await communication.isEnabled(), true, "Communication selector must be usable"); assertions++;
+      const communicationValue = await communication.evaluate((select) => Array.from(select.options).find((option) => option.value && !option.disabled)?.value || "");
+      assert.notEqual(communicationValue, "", "An authoritative communication must be available"); assertions++;
+      await communication.selectOption(communicationValue);
+      assert.equal(await page.locator("[data-batch-preview]").isEnabled(), true, "Current Batch choices must enable preview"); assertions++;
+      assert.deepEqual(await page.evaluate(() => ({
+        operation: window.EduOpsApp.state.batch.operation,
+        executionLimit: String(window.EduOpsApp.state.batch.binding.executionLimit || ""),
+        communication: window.EduOpsApp.state.batch.messageType
+      })), {
+        operation: "BATCH_COMMUNICATION",
+        executionLimit: selectedExecutionLimit,
+        communication: communicationValue
+      }, "Batch preview state must preserve the fixed operation and explicit operator choices"); assertions++;
       await page.locator("[data-batch-preview]").click();
       await page.waitForSelector(".eduops-partition-card");
       assert.match(await page.locator("#eduopsBatchOperationStatus").innerText(), /Ready/); assertions++;
@@ -128,7 +154,27 @@ async function noPageOverflow(page) {
 
       await page.locator("#eduopsOpenReconciliation").click();
       await page.waitForSelector("#eduopsReportPanel:not([hidden])");
-      assert.match(await page.locator("#eduopsReportTitle").innerText(), /reconciliation/i); assertions++;
+      assert.equal(await page.locator("#eduopsReportPanel:not([hidden])").count(), 1, "Workload composition must use one report surface"); assertions++;
+      assert.equal(await page.locator("#eduopsReportTitle").innerText(), "Workload composition", "Accepted report title must remain exact"); assertions++;
+      await page.waitForFunction(() => document.querySelector("#eduopsReportContent")?.textContent.includes("Count arithmetic"));
+      assert.match(await page.locator("#eduopsReportContent").innerText(), /Authoritative workload composition/); assertions++;
+      assert.match(await page.locator("#eduopsReportContent").innerText(), /Population = matched workload \+ outside current view/); assertions++;
+      const compositionCounts = await page.locator("#eduopsReportContent .eduops-count-stack > div").evaluateAll((rows) => Object.fromEntries(rows.map((item) => [
+        item.querySelector("span")?.textContent.trim() || "",
+        item.querySelector("strong")?.textContent.trim() || ""
+      ])));
+      const expectedCompositionCounts = await page.evaluate(() => {
+        const reconciliation = window.EduOpsApp.state.workload.reconciliation;
+        return {
+          "Canonical population": String(reconciliation.canonicalPopulation),
+          "Matched workload": String(reconciliation.totalMatched),
+          "Visible page": String(reconciliation.visiblePageCount),
+          "Outside current view": String(reconciliation.hiddenFromCurrentView)
+        };
+      });
+      Object.keys(expectedCompositionCounts).forEach((label) => {
+        assert.equal(compositionCounts[label], expectedCompositionCounts[label], `${label} must match the canonical workload DTO`); assertions++;
+      });
       await page.keyboard.press("Escape");
       await page.waitForFunction(() => document.querySelector("#eduopsReportPanel")?.hidden === true);
       assert.equal(await noPageOverflow(page), true); assertions++;

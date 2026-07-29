@@ -202,6 +202,8 @@ assert.equal(projected.sendableNow, false, "Capability-aware projection must not
 assert.equal(projected.blockCode, "INDIVIDUAL_EMAIL_CAPABILITY_REQUIRED");
 assert.equal(projected.blockReason, "Individual applicant email capability is required before send.");
 
+const wrapperPreviewCache = new Map();
+let wrapperIdentitySequence = 0;
 const wrapperContext = {
   CONFIG,
   clean_: (value) => String(value == null ? "" : value).trim(),
@@ -225,17 +227,49 @@ const wrapperContext = {
     debugId
   }),
   runOpsSafeModeGate_: () => ({ ok: true, safeMode: false }),
+  CacheService: {
+    getUserCache: () => ({
+      get: key => wrapperPreviewCache.has(key) ? wrapperPreviewCache.get(key) : null,
+      put: (key, value) => wrapperPreviewCache.set(key, value)
+    })
+  },
+  LockService: {
+    getUserLock: () => ({
+      tryLock: () => true,
+      releaseLock() {}
+    })
+  },
+  newDebugId_: () => `DBG-ROLE-IDENTITY-${++wrapperIdentitySequence}`,
+  previewApplicantMessage_: (_applicantId, _messageType, opts) => ({
+    ok: true,
+    result: "PREVIEW",
+    effectiveEmail: "parent@example.test",
+    subject: opts.editedSubject || "Approved preview",
+    body: opts.editedBody || "Approved body"
+  }),
   sendApplicantMessage_: (_applicantId, _messageType, _opts) => ({ ok: true, result: "SENT", eligible: true }),
   parseOverrideFlag_: () => false,
   CONFIG: Object.assign({}, CONFIG, { OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE: "" })
 };
 vm.createContext(wrapperContext);
 vm.runInContext([
+  extractFunction(selectedApplicantSource, "adminCommunicationOperationIdentity_"),
+  extractFunction(selectedApplicantSource, "adminIndividualCommunicationPreviewCacheKey_"),
+  extractFunction(selectedApplicantSource, "adminWriteIndividualCommunicationPreview_"),
+  extractFunction(selectedApplicantSource, "adminReadIndividualCommunicationPreview_"),
+  extractFunction(selectedApplicantSource, "adminIndividualCommunicationPreviewMatches_"),
+  extractFunction(selectedApplicantSource, "adminBindIndividualCommunicationPreview_"),
+  extractFunction(selectedApplicantSource, "adminCommunicationWithIdentity_"),
+  extractFunction(selectedApplicantSource, "withAdminIndividualCommunicationLock_"),
   extractFunction(selectedApplicantSource, "admin_previewApplicantMessage"),
   extractFunction(selectedApplicantSource, "admin_sendApplicantMessage")
 ].join("\n\n"), wrapperContext);
 
 wrapperContext.__email = "enquiries@kundu.ac";
+wrapperContext.admin_previewApplicantMessage({
+  applicantId: "FODE-26-TEST-ROLE",
+  messageType: "docs_missing"
+});
 const verifierSend = wrapperContext.admin_sendApplicantMessage({
   applicantId: "FODE-26-TEST-ROLE",
   messageType: "docs_missing",
@@ -244,6 +278,10 @@ const verifierSend = wrapperContext.admin_sendApplicantMessage({
 assert.equal(verifierSend.result, "SENT", "Configured verifier must be able to send an individually reviewed applicant email");
 
 wrapperContext.__email = "operations@minervacenters.com";
+wrapperContext.admin_previewApplicantMessage({
+  applicantId: "FODE-26-TEST-ROLE",
+  messageType: "payment_followup"
+});
 const secondOperationsSend = wrapperContext.admin_sendApplicantMessage({
   applicantId: "FODE-26-TEST-ROLE",
   messageType: "payment_followup",

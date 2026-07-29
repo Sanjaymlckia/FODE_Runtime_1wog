@@ -1,3 +1,164 @@
+function adminCommunicationOperationIdentity_(payload, applicantId, messageType, actorEmail, debugId) {
+  var p = payload && typeof payload === "object" ? payload : {};
+  var suppliedIdentity = [p.operationId, p.previewId, p.receiptId].map(function (value) { return clean_(value || ""); });
+  var suppliedIdentityCount = suppliedIdentity.filter(function (value) { return !!value; }).length;
+  var expectedCommandType = clean_(applicantId || "").toUpperCase() === "COHORT"
+    ? "BATCH_COMMUNICATION"
+    : "SEND_INDIVIDUAL_COMMUNICATION";
+  var serverActor = clean_(actorEmail || "");
+  if ((suppliedIdentityCount > 0 && suppliedIdentityCount !== suppliedIdentity.length)
+    || (clean_(p.commandType || "") && clean_(p.commandType || "") !== expectedCommandType)
+    || (clean_(p.actor || "") && clean_(p.actor || "").toLowerCase() !== serverActor.toLowerCase())) {
+    return {
+      ok: false,
+      blockCode: "COMMUNICATION_IDENTITY_MISMATCH",
+      blockReason: "Communication operation identity does not match the authenticated endpoint context."
+    };
+  }
+  var generatedSeed = suppliedIdentityCount ? "" : clean_(newDebugId_());
+  var operationId = clean_(p.operationId || ("COMM-OPERATION-" + generatedSeed));
+  var previewId = clean_(p.previewId || ("COMM-PREVIEW-" + generatedSeed));
+  var receiptId = clean_(p.receiptId || ("COMM-RECEIPT-" + generatedSeed));
+  var commandType = expectedCommandType;
+  var stateFingerprint = clean_(p.stateFingerprint || [
+    commandType,
+    clean_(applicantId || ""),
+    clean_(messageType || ""),
+    clean_(p.recipient || "")
+  ].join("::"));
+  return {
+    ok: true,
+    operationId: operationId,
+    previewId: previewId,
+    receiptId: receiptId,
+    applicantId: clean_(applicantId || ""),
+    messageType: clean_(messageType || ""),
+    commandType: commandType,
+    actor: serverActor,
+    stateFingerprint: stateFingerprint,
+    cooldownCycle: clean_(p.cooldownCycle || ""),
+    idempotencyKey: clean_(p.idempotencyKey || ["EMAIL_OPERATION", operationId, clean_(applicantId || "UNKNOWN"), clean_(messageType || "unknown").toLowerCase()].join("::"))
+  };
+}
+
+function adminIndividualCommunicationPreviewCacheKey_(applicantId, messageType) {
+  var applicantKey = clean_(applicantId || "").replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 80);
+  var messageKey = clean_(messageType || "").toLowerCase().replace(/[^a-z0-9_-]/g, "_").slice(0, 80);
+  return "ADMIN_INDIVIDUAL_COMM_PREVIEW::" + applicantKey + "::" + messageKey;
+}
+
+function adminWriteIndividualCommunicationPreview_(applicantId, messageType, identity, request, previewResult) {
+  var p = request && typeof request === "object" ? request : {};
+  var result = previewResult && typeof previewResult === "object" ? previewResult : {};
+  var approved = {
+    identity: {
+      operationId: clean_(identity && identity.operationId || ""),
+      previewId: clean_(identity && identity.previewId || ""),
+      receiptId: clean_(identity && identity.receiptId || ""),
+      commandType: clean_(identity && identity.commandType || ""),
+      actor: clean_(identity && identity.actor || ""),
+      stateFingerprint: clean_(identity && identity.stateFingerprint || ""),
+      cooldownCycle: clean_(identity && identity.cooldownCycle || ""),
+      idempotencyKey: clean_(identity && identity.idempotencyKey || "")
+    },
+    applicantId: clean_(applicantId || ""),
+    messageType: clean_(messageType || ""),
+    templateId: clean_(p.templateId || messageType || ""),
+    templateVersionId: clean_(p.templateVersionId || ""),
+    recipient: clean_(result.effectiveEmail || p.recipient || ""),
+    subject: String(result.subject || p.subject || ""),
+    body: String(result.body || p.body || ""),
+    cc: clean_(result.cc || p.cc || ""),
+    bcc: clean_(result.bcc || p.bcc || ""),
+    authorityOverride: p.authorityOverride === true,
+    authorityOverrideReason: clean_(p.authorityOverrideReason || ""),
+    createdAt: new Date().toISOString()
+  };
+  CacheService.getUserCache().put(
+    adminIndividualCommunicationPreviewCacheKey_(applicantId, messageType),
+    JSON.stringify(approved),
+    600
+  );
+  return approved;
+}
+
+function adminReadIndividualCommunicationPreview_(applicantId, messageType) {
+  try {
+    var raw = CacheService.getUserCache().get(adminIndividualCommunicationPreviewCacheKey_(applicantId, messageType));
+    if (!raw) return null;
+    var parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch (_previewReadErr) {
+    return null;
+  }
+}
+
+function adminIndividualCommunicationPreviewMatches_(approved, payload, identityFieldsSupplied) {
+  var cached = approved && typeof approved === "object" ? approved : null;
+  var p = payload && typeof payload === "object" ? payload : {};
+  if (!cached || !cached.identity) return { ok: false, code: "PREVIEW_REQUIRED", reason: "A matching server-approved communication preview is required before send." };
+  var identityMismatch = (identityFieldsSupplied || []).some(function (field) {
+    return clean_(p[field] || "") && clean_(p[field] || "") !== clean_(cached.identity[field] || "");
+  });
+  if (identityMismatch) return { ok: false, code: "COMMUNICATION_IDENTITY_MISMATCH", reason: "Send identity does not match the latest server-approved preview." };
+  var contentMismatch = [
+    ["recipient", clean_],
+    ["subject", String],
+    ["body", String],
+    ["cc", clean_],
+    ["bcc", clean_],
+    ["templateId", clean_],
+    ["templateVersionId", clean_]
+  ].some(function (entry) {
+    var field = entry[0];
+    var normalize = entry[1];
+    if (!Object.prototype.hasOwnProperty.call(p, field)) return false;
+    return normalize(p[field] || "") !== normalize(cached[field] || "");
+  });
+  if (contentMismatch) return { ok: false, code: "PREVIEW_STALE", reason: "Recipient, template, or message content changed after preview. Preview the final communication again." };
+  if ((Object.prototype.hasOwnProperty.call(p, "authorityOverride") && (p.authorityOverride === true) !== (cached.authorityOverride === true))
+    || (Object.prototype.hasOwnProperty.call(p, "authorityOverrideReason") && clean_(p.authorityOverrideReason || "") !== clean_(cached.authorityOverrideReason || ""))) {
+    return { ok: false, code: "PREVIEW_STALE", reason: "Communication authority override context changed after preview." };
+  }
+  return { ok: true };
+}
+
+function adminBindIndividualCommunicationPreview_(approved, payload) {
+  var cached = approved && typeof approved === "object" ? approved : {};
+  var p = payload && typeof payload === "object" ? payload : {};
+  return Object.assign({}, p, cached.identity || {}, {
+    recipient: clean_(cached.recipient || ""),
+    subject: String(cached.subject || ""),
+    body: String(cached.body || ""),
+    cc: clean_(cached.cc || ""),
+    bcc: clean_(cached.bcc || ""),
+    templateId: clean_(cached.templateId || ""),
+    templateVersionId: clean_(cached.templateVersionId || ""),
+    authorityOverride: cached.authorityOverride === true,
+    authorityOverrideReason: clean_(cached.authorityOverrideReason || "")
+  });
+}
+
+function adminCommunicationWithIdentity_(result, identity) {
+  var out = result && typeof result === "object" ? result : {};
+  var source = identity && typeof identity === "object" ? identity : {};
+  [
+    "operationId",
+    "previewId",
+    "receiptId",
+    "applicantId",
+    "messageType",
+    "commandType",
+    "actor",
+    "stateFingerprint",
+    "cooldownCycle",
+    "idempotencyKey"
+  ].forEach(function (field) {
+    if (!clean_(out[field] || "")) out[field] = clean_(source[field] || "");
+  });
+  return out;
+}
+
 function admin_previewApplicantMessage(payload) {
   return withEnvelope_("admin_previewApplicantMessage", function (dbgId) {
     var adminEmail = getCallerEmail_();
@@ -14,6 +175,9 @@ function admin_previewApplicantMessage(payload) {
       ? communicationResolvedMessageTypeForRequest_(requestedType, { templateId: clean_(p.templateId || requestedType), templateVersionId: clean_(p.templateVersionId || "") })
       : normalizeApplicantMessageType_(requestedType);
     var actor = resolveAdminCommActor_(p);
+    actor.actorEmail = clean_(adminEmail || actor.actorEmail || "");
+    var identity = adminCommunicationOperationIdentity_(p, applicantId, messageType, actor.actorEmail, dbgId);
+    if (identity.ok !== true) return adminCommBlockedResult_("preview", identity.blockCode, dbgId, { blockReason: identity.blockReason });
     if (!applicantId) return adminCommBlockedResult_("preview", "MISSING_APPLICANT_ID", dbgId, { blockReason: "Applicant ID is required." });
     if (!messageType) {
       return adminCommBlockedResult_("preview", "UNSUPPORTED_MESSAGE_TYPE", dbgId, {
@@ -33,11 +197,23 @@ function admin_previewApplicantMessage(payload) {
       cc: clean_(p.cc || ""),
       bcc: clean_(p.bcc || ""),
       authorityOverride: p.authorityOverride === true,
-      authorityOverrideReason: clean_(p.authorityOverrideReason || "")
+      authorityOverrideReason: clean_(p.authorityOverrideReason || ""),
+      operationId: identity.operationId,
+      previewId: identity.previewId,
+      receiptId: identity.receiptId,
+      commandType: identity.commandType,
+      actor: identity.actor,
+      stateFingerprint: identity.stateFingerprint,
+      cooldownCycle: identity.cooldownCycle,
+      idempotencyKey: identity.idempotencyKey
     };
     if (Object.prototype.hasOwnProperty.call(p, "subject") && clean_(p.subject || "")) previewOptions.editedSubject = String(p.subject || "");
     if (Object.prototype.hasOwnProperty.call(p, "body") && clean_(p.body || "")) previewOptions.editedBody = String(p.body || "");
-    return previewApplicantMessage_(applicantId, messageType, previewOptions);
+    var previewResult = adminCommunicationWithIdentity_(previewApplicantMessage_(applicantId, messageType, previewOptions), identity);
+    if (previewResult && previewResult.ok === true && clean_(previewResult.result || "").toUpperCase() === "PREVIEW") {
+      adminWriteIndividualCommunicationPreview_(applicantId, messageType, identity, p, previewResult);
+    }
+    return previewResult;
   });
 }
 
@@ -61,6 +237,7 @@ function admin_sendApplicantMessage(payload) {
       ? communicationResolvedMessageTypeForRequest_(requestedType, { templateId: clean_(p.templateId || requestedType), templateVersionId: clean_(p.templateVersionId || "") })
       : normalizeApplicantMessageType_(requestedType);
     var actor = resolveAdminCommActor_(p);
+    actor.actorEmail = clean_(adminEmail || actor.actorEmail || "");
     if (Array.isArray(p.applicantIds) || Array.isArray(p.recipients) || Array.isArray(p.messages)) {
       return adminCommBlockedResult_("send", "BULK_NOT_ALLOWED", dbgId, {
         blockReason: "Manual single-send probe accepts one applicant only."
@@ -99,23 +276,50 @@ function admin_sendApplicantMessage(payload) {
     var opsRecipientOverride = opsGate && opsGate.safeMode === true
       ? clean_(CONFIG.OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE || "")
       : "";
-    var sendOptions = {
-      actorEmail: actor.actorEmail,
-      actorRole: actor.actorRole,
-      batchLabel: clean_(p.batchLabel || ""),
-      debugId: clean_(p.debugId || dbgId),
-      manualSingleSendProbe: true,
-      editedRecipient: opsRecipientOverride || clean_(p.recipient || ""),
-      templateId: clean_(p.templateId || requestedType),
-      templateVersionId: clean_(p.templateVersionId || ""),
-      cc: clean_(p.cc || ""),
-      bcc: clean_(p.bcc || ""),
-      authorityOverride: p.authorityOverride === true,
-      authorityOverrideReason: clean_(p.authorityOverrideReason || "")
-    };
-    if (Object.prototype.hasOwnProperty.call(p, "subject")) sendOptions.editedSubject = String(p.subject || "");
-    if (Object.prototype.hasOwnProperty.call(p, "body")) sendOptions.editedBody = String(p.body || "");
-    var sendResult = sendApplicantMessage_(applicantId, messageType, sendOptions);
+    var identityFields = ["operationId", "previewId", "receiptId", "commandType", "actor", "stateFingerprint", "cooldownCycle", "idempotencyKey"];
+    var sendResult = withAdminIndividualCommunicationLock_(adminEmail, dbgId, function () {
+      var approvedPreview = adminReadIndividualCommunicationPreview_(applicantId, messageType);
+      var previewMatch = adminIndividualCommunicationPreviewMatches_(approvedPreview, p, identityFields);
+      if (previewMatch.ok !== true) {
+        return adminCommBlockedResult_("send", previewMatch.code, dbgId, {
+          applicantId: applicantId,
+          messageType: requestedType,
+          blockReason: previewMatch.reason
+        });
+      }
+      var boundPayload = adminBindIndividualCommunicationPreview_(approvedPreview, p);
+      var identity = adminCommunicationOperationIdentity_(boundPayload, applicantId, messageType, actor.actorEmail, dbgId);
+      if (identity.ok !== true) return adminCommBlockedResult_("send", identity.blockCode, dbgId, { blockReason: identity.blockReason });
+      var sendOptions = {
+        actorEmail: actor.actorEmail,
+        actorRole: actor.actorRole,
+        batchLabel: clean_(boundPayload.batchLabel || ""),
+        debugId: clean_(boundPayload.debugId || dbgId),
+        manualSingleSendProbe: true,
+        editedRecipient: opsRecipientOverride || clean_(boundPayload.recipient || ""),
+        templateId: clean_(boundPayload.templateId || requestedType),
+        templateVersionId: clean_(boundPayload.templateVersionId || ""),
+        cc: clean_(boundPayload.cc || ""),
+        bcc: clean_(boundPayload.bcc || ""),
+        authorityOverride: boundPayload.authorityOverride === true,
+        authorityOverrideReason: clean_(boundPayload.authorityOverrideReason || ""),
+        operationId: identity.operationId,
+        previewId: identity.previewId,
+        receiptId: identity.receiptId,
+        commandType: identity.commandType,
+        actor: identity.actor,
+        stateFingerprint: identity.stateFingerprint,
+        cooldownCycle: identity.cooldownCycle,
+        idempotencyKey: identity.idempotencyKey
+      };
+      if (Object.prototype.hasOwnProperty.call(boundPayload, "subject") && clean_(boundPayload.subject || "")) {
+        sendOptions.editedSubject = String(boundPayload.subject || "");
+      }
+      if (Object.prototype.hasOwnProperty.call(boundPayload, "body") && clean_(boundPayload.body || "")) {
+        sendOptions.editedBody = String(boundPayload.body || "");
+      }
+      return adminCommunicationWithIdentity_(sendApplicantMessage_(applicantId, messageType, sendOptions), identity);
+    });
     if (opsGate && opsGate.safeMode === true) {
       logOpsSafeModeEvent_(String(sendResult && sendResult.result || "").toUpperCase() === "SENT"
         ? "OPS_SAFE_MODE_ACTION_COMPLETED"
@@ -131,6 +335,23 @@ function admin_sendApplicantMessage(payload) {
     }
     return sendResult;
   });
+}
+
+function withAdminIndividualCommunicationLock_(adminEmail, dbgId, callback) {
+  var lock = null;
+  try {
+    lock = LockService.getUserLock();
+    if (!lock.tryLock(30000)) {
+      return adminCommBlockedResult_("send", "COMMUNICATION_SEND_IN_PROGRESS", dbgId, {
+        blockReason: "Another communication send is in progress for this operator. Wait for it to finish before retrying."
+      });
+    }
+    return callback();
+  } finally {
+    try {
+      if (lock) lock.releaseLock();
+    } catch (_releaseErr) {}
+  }
 }
 
 function selectedApplicantBatchLimit_() {
@@ -184,13 +405,15 @@ function selectedBatchApplicantOutcome_(applicantId, sendResult, errorOpt) {
   var communicationRecorded = result.communicationRecorded === true || resultType === "SENT";
   var outcome = "FAILED";
   if (resultType === "SENT" && gmailAccepted && rowPatchConfirmed && communicationRecorded) outcome = "SENT";
+  else if (resultType === "IDEMPOTENT_REPLAY" || resultType === "ALREADY_PROCESSED_FOR_OPERATION") outcome = "IDEMPOTENT_REPLAY";
   else if (resultType === "BLOCKED" || resultType === "DUPLICATE") outcome = "BLOCKED";
   else if (resultType === "RECONCILIATION_REQUIRED" || gmailAccepted) outcome = "RECONCILIATION_REQUIRED";
   else if (errorMessage) outcome = "FAILED";
   return {
     applicantId: clean_(applicantId || result.applicantId || ""),
     outcome: outcome,
-    blockCode: outcome === "BLOCKED" ? (blockCode || "BLOCKED") : "",
+    blockCode: outcome === "BLOCKED" || outcome === "IDEMPOTENT_REPLAY" ? (blockCode || (outcome === "IDEMPOTENT_REPLAY" ? "ALREADY_PROCESSED_FOR_OPERATION" : "BLOCKED")) : "",
+    blockReason: clean_(result.blockReason || result.reason || result.error || errorMessage || ""),
     reason: clean_(result.blockReason || result.reason || result.error || errorMessage || ""),
     gmailAttempted: result.gmailAttempted === true || gmailAccepted || resultType === "FAILED",
     gmailAccepted: gmailAccepted,
@@ -206,6 +429,7 @@ function selectedBatchOutcomeTotals_(out) {
   var outcomes = Array.isArray(out && out.applicantOutcomes) ? out.applicantOutcomes : [];
   out.attempted = outcomes.length;
   out.sent = outcomes.filter(function (item) { return item.outcome === "SENT"; }).length;
+  out.replayed = outcomes.filter(function (item) { return item.outcome === "IDEMPOTENT_REPLAY"; }).length;
   out.blocked = outcomes.filter(function (item) { return item.outcome === "BLOCKED"; }).length;
   out.failed = outcomes.filter(function (item) { return item.outcome === "FAILED"; }).length;
   out.reconciliationRequired = outcomes.filter(function (item) { return item.outcome === "RECONCILIATION_REQUIRED"; }).length;
@@ -216,7 +440,8 @@ function selectedBatchOutcomeTotals_(out) {
       out.blockedByReason[code] = Number(out.blockedByReason[code] || 0) + 1;
     }
   });
-  out.result = out.reconciliationRequired ? "RECONCILIATION_REQUIRED" : (out.sent && (out.blocked || out.failed) ? "PARTIAL" : (out.sent && !out.blocked && !out.failed ? "COMPLETE" : (out.blocked && !out.sent && !out.failed ? "BLOCKED" : "PARTIAL")));
+  var completed = out.sent + out.replayed;
+  out.result = out.reconciliationRequired ? "RECONCILIATION_REQUIRED" : (completed && (out.blocked || out.failed) ? "PARTIAL" : (completed && !out.blocked && !out.failed ? "COMPLETE" : (out.blocked && !completed && !out.failed ? "BLOCKED" : "PARTIAL")));
   return out;
 }
 
@@ -352,7 +577,23 @@ function admin_previewSelectedApplicantBatch(payload) {
     var excluded = {};
     normalizeSelectedApplicantBatchIds_(p.excludedApplicantIds || [], selectedApplicantBatchInputLimit_()).forEach(function (id) { excluded[id] = true; });
     var actor = resolveAdminCommActor_(p);
+    actor.actorEmail = clean_(adminEmail || actor.actorEmail || "");
     var requestId = clean_(dbgId || newDebugId_());
+    var hasOperationIdentity = [p.operationId, p.previewId, p.receiptId].some(function (value) { return !!clean_(value || ""); });
+    var operationIdentity = hasOperationIdentity
+      ? adminCommunicationOperationIdentity_(p, "COHORT", messageType, actor.actorEmail, requestId)
+      : null;
+    if (operationIdentity && operationIdentity.ok !== true) {
+      return selectedApplicantBatchResponse_({
+        ok: false,
+        result: "BLOCKED",
+        blockCode: operationIdentity.blockCode,
+        blockReason: operationIdentity.blockReason,
+        requestId: requestId,
+        messageType: requestedType,
+        sourceLabel: sourceLabel
+      });
+    }
     if (!messageType) {
       return selectedApplicantBatchResponse_({
         ok: false,
@@ -411,7 +652,7 @@ function admin_previewSelectedApplicantBatch(payload) {
         recipients.push({ applicantId: applicantId, name: "", email: "", status: "Excluded", included: false, reason: "Applicant record not found." });
         return;
       }
-      var context = resolveApplicantMessageContextFromRow_(rowObj, Number(rowObj._rowNumber || 0), sh, messageType, {
+      var context = resolveApplicantMessageContextFromRow_(rowObj, Number(rowObj._rowNumber || 0), sh, messageType, Object.assign({
         action: "selectedBatchPreview",
         actorEmail: actor.actorEmail,
         actorRole: actor.actorRole,
@@ -420,7 +661,7 @@ function admin_previewSelectedApplicantBatch(payload) {
         templateId: clean_(p.templateId || requestedType),
         templateVersionId: clean_(p.templateVersionId || ""),
         batchLabel: "SELECTED_BATCH_PREVIEW::" + requestId
-      });
+      }, operationIdentity || {}));
       if (context && context.eligible === true) {
         var built = buildApplicantMessage_(context);
         var renderedSubject = communicationRenderTemplateText_(built.subject || "", context);
@@ -499,8 +740,9 @@ function admin_previewSelectedApplicantBatch(payload) {
         elapsedMs: elapsedMs
       }
     });
+    if (operationIdentity) adminCommunicationWithIdentity_(out, operationIdentity);
     if (eligibleIds.length) {
-      writeSelectedApplicantBatchPreviewCache_(adminEmail, {
+      writeSelectedApplicantBatchPreviewCache_(adminEmail, adminCommunicationWithIdentity_({
         requestId: requestId,
         sourceLabel: sourceLabel,
         messageType: messageType,
@@ -515,7 +757,7 @@ function admin_previewSelectedApplicantBatch(payload) {
         candidateCount: eligibleIds.length,
         candidateHash: candidateHash,
         writtenAt: new Date().toISOString()
-      });
+      }, operationIdentity || {}));
     } else {
       clearSelectedApplicantBatchPreviewCache_(adminEmail);
     }
@@ -553,7 +795,10 @@ function admin_sendSelectedApplicantBatch(payload) {
     var requestedTemplateId = clean_(p.templateId || requestedType || "");
     var cachedTemplateId = clean_(preview && preview.templateId || "");
     var candidateIds = Array.isArray(preview && preview.candidateIds) ? normalizeSelectedApplicantBatchIds_(preview.candidateIds) : [];
-    if (!preview || !previewRequestId || previewRequestId !== cachedRequestId || !candidateHash || candidateHash !== cachedHash || cachedMessageType !== messageType || cachedTemplateId !== requestedTemplateId || !candidateIds.length) {
+    var identityMismatch = ["operationId", "previewId", "receiptId", "commandType", "actor", "stateFingerprint", "cooldownCycle", "idempotencyKey"].some(function (field) {
+      return clean_(p[field] || "") && clean_(p[field] || "") !== clean_(preview && preview[field] || "");
+    });
+    if (!preview || !previewRequestId || previewRequestId !== cachedRequestId || !candidateHash || candidateHash !== cachedHash || cachedMessageType !== messageType || cachedTemplateId !== requestedTemplateId || !candidateIds.length || identityMismatch) {
       return adminCommBlockedResult_("send_selected_batch", "PREVIEW_REQUIRED", dbgId, {
         blockReason: "A matching selected-batch preview is required before send.",
         previewRequestId: previewRequestId,
@@ -563,8 +808,17 @@ function admin_sendSelectedApplicantBatch(payload) {
       });
     }
     var actor = resolveAdminCommActor_(p);
+    actor.actorEmail = clean_(adminEmail || actor.actorEmail || "");
     var requestId = clean_(dbgId || newDebugId_());
     var batchLabel = "SELECTED_BATCH_SEND::" + requestId;
+    var operationIdentity = clean_(preview.operationId || "")
+      ? adminCommunicationOperationIdentity_(preview, "COHORT", messageType, actor.actorEmail, requestId)
+      : null;
+    if (operationIdentity && operationIdentity.ok !== true) {
+      return adminCommBlockedResult_("send_selected_batch", operationIdentity.blockCode, dbgId, {
+        blockReason: operationIdentity.blockReason
+      });
+    }
     var out = {
       ok: true,
       action: "send_selected_batch",
@@ -581,6 +835,7 @@ function admin_sendSelectedApplicantBatch(payload) {
       candidateHash: candidateHash,
       attempted: 0,
       sent: 0,
+      replayed: 0,
       skipped: 0,
       failed: 0,
       blocked: 0,
@@ -590,9 +845,10 @@ function admin_sendSelectedApplicantBatch(payload) {
       sentApplicantIdsSample: [],
       batchId: batchLabel
     };
+    if (operationIdentity) adminCommunicationWithIdentity_(out, operationIdentity);
     candidateIds.forEach(function (applicantId) {
       try {
-        var sendResult = sendApplicantMessage_(applicantId, messageType, {
+        var sendResult = sendApplicantMessage_(applicantId, messageType, Object.assign({
           actorEmail: actor.actorEmail,
           actorRole: actor.actorRole,
           batchLabel: batchLabel,
@@ -601,7 +857,7 @@ function admin_sendSelectedApplicantBatch(payload) {
           templateVersionId: clean_(p.templateVersionId || preview.templateVersionId || ""),
           sendSource: "ADMIN_SELECTED_BATCH",
           unattended: false
-        });
+        }, operationIdentity || {}));
         var outcome = selectedBatchApplicantOutcome_(applicantId, sendResult, null);
         out.applicantOutcomes.push(outcome);
         if (outcome.outcome === "SENT" && out.sentApplicantIdsSample.length < 10) out.sentApplicantIdsSample.push(applicantId);

@@ -377,6 +377,8 @@ function admin_getApplicantDetail(payload) {
       Email_Verification_Status: idx.Email_Verification_Status ? clean_(row[idx.Email_Verification_Status - 1]) : "",
       Email_Bounce_Flag: idx.Email_Bounce_Flag ? clean_(row[idx.Email_Bounce_Flag - 1]) : "",
       Email_Bounce_Reason: idx.Email_Bounce_Reason ? clean_(row[idx.Email_Bounce_Reason - 1]) : "",
+      Do_Not_Contact: idx.Do_Not_Contact ? clean_(row[idx.Do_Not_Contact - 1]) : "",
+      DO_NOT_CONTACT: idx.DO_NOT_CONTACT ? clean_(row[idx.DO_NOT_CONTACT - 1]) : "",
       Last_Delivery_Status: idx.Last_Delivery_Status ? clean_(row[idx.Last_Delivery_Status - 1]) : "",
       Last_Bounce_Date: idx.Last_Bounce_Date ? clean_(row[idx.Last_Bounce_Date - 1]) : "",
       Bounce_Reason: idx.Bounce_Reason ? clean_(row[idx.Bounce_Reason - 1]) : "",
@@ -428,6 +430,22 @@ function admin_getApplicantDetail(payload) {
       PortalTokenExpired: tokenExpired,
       PortalTokenMaxAgeDays: Number(CONFIG.PORTAL_TOKEN_MAX_AGE_DAYS || 0)
     };
+    var detailCommunicationRaw = {
+      Email_Status: clean_(detailObj.Email_Status || ""),
+      Email_Verification_Status: clean_(detailObj.Email_Verification_Status || ""),
+      Last_Contact_Result: clean_(detailObj.Last_Contact_Result || "")
+    };
+    var detailCommunicationView = typeof communicationCompatibilityReadRow_ === "function"
+      ? communicationCompatibilityReadRow_(detailObj)
+      : detailObj;
+    detailObj.Email_Status_Raw = detailCommunicationRaw.Email_Status;
+    detailObj.Email_Verification_Status_Raw = detailCommunicationRaw.Email_Verification_Status;
+    detailObj.Last_Contact_Result_Raw = detailCommunicationRaw.Last_Contact_Result;
+    detailObj.Email_Status = clean_(detailCommunicationView.Email_Status || "");
+    detailObj.Email_Verification_Status = clean_(detailCommunicationView.Email_Verification_Status || "");
+    detailObj.Last_Contact_Result = clean_(detailCommunicationView.Last_Contact_Result || "");
+    detailObj._communicationCompatibilitySuppressionIgnored = detailCommunicationView._communicationCompatibilitySuppressionIgnored === true;
+    detailObj._communicationActualContactEvidence = detailCommunicationView._communicationActualContactEvidence || null;
 
     var map = CONFIG.DOC_FIELDS || [];
     detailObj._docs = map.map(function (m) {
@@ -2560,6 +2578,7 @@ function actionabilityWorkloadExplanationForRow_(row) {
   if (reason === "NO_EFFECTIVE_EMAIL" || reason === "EMAIL_BLOCKED_OR_BOUNCED" || suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") {
     return "Contactability exception";
   }
+  if (reason === "MANUAL_REVIEW_REQUIRED" || suppressor === "MANUAL_REVIEW_REQUIRED") return "Manual communication review";
   if (state === "COOLING_OFF" || reason === "COOLDOWN_ACTIVE") return "Cooling-off";
   if (isSameLocalDate_(r.lastRelevantDate || "", new Date()) && uploaded > 0 && required > uploaded) return "Document received today";
   if (next === "REVIEW_DOCUMENTS" || reason === "OFFICER_ACTION_PENDING") return "Ready for academic review";
@@ -2672,6 +2691,9 @@ function buildOperationalDashboardMetrics_() {
   out.emailResponseTraffic = out.communicationsActivity;
   for (var r = 1; r < values.length; r++) {
     var rowObj = campaignRowObjectFromValues_(headers, values[r]);
+    if (typeof communicationCompatibilityReadRow_ === "function") {
+      rowObj = communicationCompatibilityReadRow_(rowObj);
+    }
     if (!clean_(rowObj.ApplicantID || "")) continue;
     if (isSameLocalDate_(rowObj.Timestamp || rowObj.timestamp || rowObj.adapter_timestamp || rowObj.Created_At || rowObj.PortalTokenIssuedAt || "", now)) out.formsReceivedToday++;
     var pipeline = deriveOperationalPipelineStage_(rowObj);
@@ -2920,6 +2942,9 @@ function actionabilityPreviewUrgency_(owner, nextAction, dateInfo, suppressor, c
   if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") {
     return { level: "ESCALATED", reason: "Applicant action is blocked by contactability issue." };
   }
+  if (suppressor === "MANUAL_REVIEW_REQUIRED") {
+    return { level: "ESCALATED", reason: "Two successful communication cycles are complete; manual review is required." };
+  }
   if (cooldownActive) return { level: "NORMAL", reason: "Communication cooldown or next-action date is still active." };
   var ageDays = Number(dateInfo && dateInfo.ageDays);
   if (Number.isFinite(ageDays)) {
@@ -2985,6 +3010,13 @@ function resolveActionabilityState_(facts) {
     out.reasonCode = "COOLDOWN_ACTIVE";
     return out;
   }
+  if (suppressor === "MANUAL_REVIEW_REQUIRED") {
+    out.actionabilityState = "REVIEW_REQUIRED";
+    out.selectBlockReason = "Two successful communication cycles are complete. Manual review is required before another send.";
+    out.recommendedAction = "REVIEW_COMMUNICATION";
+    out.reasonCode = "MANUAL_REVIEW_REQUIRED";
+    return out;
+  }
   if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") {
     out.actionabilityState = "REVIEW_REQUIRED";
     out.selectBlockReason = "Contactability Gate must be resolved before batch communication.";
@@ -3048,7 +3080,9 @@ function resolveActionabilityState_(facts) {
 }
 
 function buildActionabilityPreviewRow_(rowObj, rowNumber) {
-  var row = rowObj || {};
+  var row = typeof communicationCompatibilityReadRow_ === "function"
+    ? communicationCompatibilityReadRow_(rowObj || {})
+    : (rowObj || {});
   var applicantId = clean_(row.ApplicantID || "");
   var firstName = clean_(row.First_Name || "");
   var lastName = clean_(row.Last_Name || "");
@@ -3087,8 +3121,16 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
   var documentState = adminOpsDocumentStateFromRow_(row);
   var dateInfo = actionabilityPreviewDateInfo_(row);
   var lastContactAgeDays = actionabilityPreviewLastContactAgeDays_(row);
+  var cadenceState = typeof communicationCadenceState_ === "function"
+    ? communicationCadenceState_(row, Date.now())
+    : {
+      cooldownActive: parseTime_(row.Email_Next_Action_Date || "") > Date.now(),
+      manualReviewRequired: false,
+      cooldownCycle: ""
+    };
   var nextActionTs = parseTime_(row.Email_Next_Action_Date || "");
-  var cooldownActive = nextActionTs > Date.now();
+  var cooldownActive = cadenceState.cooldownActive === true;
+  var manualReviewRequired = cadenceState.manualReviewRequired === true;
   var postDocsMissingSentCoolingOff = cooldownActive
     && clean_(row.Last_Contact_Type || "").toLowerCase() === "docs_missing"
     && clean_(row.Last_Contact_Result || "").toUpperCase() === "SENT";
@@ -3143,7 +3185,10 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     explanation = "Document and payment authorities appear satisfied; enrollment/admin completion is next.";
   }
 
-  if (suppressor === "COOLDOWN_ACTIVE") recommendedMessageType = "";
+  if (!suppressor && owner === "APPLICANT" && manualReviewRequired) {
+    suppressor = "MANUAL_REVIEW_REQUIRED";
+  }
+  if (suppressor === "COOLDOWN_ACTIVE" || suppressor === "MANUAL_REVIEW_REQUIRED") recommendedMessageType = "";
   var urgency = actionabilityPreviewUrgency_(owner, nextAction, dateInfo, suppressor, cooldownActive);
   if (isUncontactable) {
     urgency = { level: "UNCONTACTABLE", reason: "No valid email or phone fallback is available." };
@@ -3161,6 +3206,9 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     canonicalLifecycle && canonicalLifecycle.recommendedMessageType,
     recommendedMessageType
   );
+  if (suppressor === "MANUAL_REVIEW_REQUIRED") {
+    authoritativeRecommendedMessageType = "";
+  }
   var communicationProgress = actionabilityWorkloadExplanationForRow_({
     actionabilityState: actionabilityState.actionabilityState,
     reasonCode: actionabilityState.reasonCode,
@@ -3176,6 +3224,7 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
   });
   var worklistProjection = actionabilityWorklistProjection_({
     nextAction: nextAction,
+    suppressor: suppressor,
     authorityState: {
       paymentEvidencePresent: paymentEvidencePresent,
       paymentVerified: paymentVerified,
@@ -3248,7 +3297,10 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
       canonicalFinanceState: clean_(canonicalFinanceState.financeState || "UNKNOWN"),
       hasValidEmail: !!hasValidEmail,
       hasPhoneFallback: !!hasPhoneFallback,
-      contactabilityState: isUncontactable ? "UNCONTACTABLE" : (hasValidEmail ? "EMAIL_AVAILABLE" : "PHONE_FALLBACK_AVAILABLE")
+      contactabilityState: isUncontactable ? "UNCONTACTABLE" : (hasValidEmail ? "EMAIL_AVAILABLE" : "PHONE_FALLBACK_AVAILABLE"),
+      communicationCooldownCycle: clean_(cadenceState.cooldownCycle || ""),
+      communicationSuccessfulSendCount: Number(cadenceState.successfulSendCount || 0),
+      communicationManualReviewRequired: manualReviewRequired
     }
   };
 }
@@ -3270,6 +3322,7 @@ function actionabilityWorkloadGroupKey_(row) {
   if (owner === "NONE" || nextAction === "NO_ACTION") return "COMPLETE";
   if (urgency === "DORMANT") return "DORMANT";
   if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "CONTACTABILITY";
+  if (suppressor === "MANUAL_REVIEW_REQUIRED") return "MANAGEMENT";
   if (nextAction === "SEND_PAYMENT_REMINDER" || nextAction === "VERIFY_PAYMENT") return "FINANCE";
   if (owner === "APPLICANT") return "APPLICANT";
   if (owner === "OFFICER") return "ADMISSIONS";
@@ -3282,7 +3335,15 @@ function actionabilityWorkloadGroupKey_(row) {
 function actionabilityWorklistProjection_(row) {
   var r = row || {};
   var nextAction = clean_(r.nextAction || "").toUpperCase();
+  var suppressor = clean_(r.suppressor || "").toUpperCase();
   var authority = r.authorityState || {};
+  if (suppressor === "MANUAL_REVIEW_REQUIRED") {
+    return {
+      worklistKey: "COMMUNICATION_REVIEW",
+      worklistLabel: "Communication Review",
+      worklistReason: "Two successful send cycles are complete"
+    };
+  }
   if (nextAction === "SEND_PAYMENT_REMINDER") {
     return {
       worklistKey: "PAYMENT_FOLLOW_UP",
@@ -4327,7 +4388,11 @@ function adminOpsDroppedIneligibleReason_(rowObj) {
 }
 
 function adminOpsHasEmailIssue_(rowObj) {
-  var row = rowObj || {};
+  var row = typeof communicationCompatibilityReadRow_ === "function"
+    ? communicationCompatibilityReadRow_(rowObj || {})
+    : (rowObj || {});
+  var actualEvidence = row._communicationActualContactEvidence;
+  if (actualEvidence && typeof actualEvidence === "object") return actualEvidence.blocked === true;
   var emailStatus = clean_(row.Email_Status || "").toUpperCase();
   var verification = clean_(row.Email_Verification_Status || "").toUpperCase();
   var lastResult = clean_(row.Last_Contact_Result || "").toUpperCase();
@@ -4336,18 +4401,16 @@ function adminOpsHasEmailIssue_(rowObj) {
     || !!adminOpsFirstNonBlank_(
       row.Email_Bounce_Reason,
       row.Last_Email_Error,
-      (/^(BOUNCED|SUPPRESSED|DO_NOT_CONTACT)$/i.test(clean_(row.Email_Status || "")) ? row.Email_Status : ""),
-      (/^(BOUNCED|SUPPRESSED|INVALID)$/i.test(clean_(row.Email_Verification_Status || "")) ? row.Email_Verification_Status : ""),
-      (/^(BOUNCED|SUPPRESSED|FAILED|BLOCKED)$/i.test(clean_(row.Last_Contact_Result || "")) ? row.Last_Contact_Result : "")
+      (/^(BOUNCED|DO_NOT_CONTACT)$/i.test(clean_(row.Email_Status || "")) ? row.Email_Status : ""),
+      (/^(BOUNCED|INVALID)$/i.test(clean_(row.Email_Verification_Status || "")) ? row.Email_Verification_Status : ""),
+      (/^(BOUNCED|FAILED)$/i.test(clean_(row.Last_Contact_Result || "")) ? row.Last_Contact_Result : "")
     )
     || emailStatus === "BOUNCED"
-    || emailStatus === "SUPPRESSED"
     || emailStatus === "DO_NOT_CONTACT"
     || verification === "BOUNCED"
     || verification === "INVALID"
-    || verification === "SUPPRESSED"
     || lastResult === "BOUNCED"
-    || lastResult === "SUPPRESSED";
+    || lastResult === "FAILED";
 }
 
 function adminOpsDocumentStateFromRow_(rowObj) {

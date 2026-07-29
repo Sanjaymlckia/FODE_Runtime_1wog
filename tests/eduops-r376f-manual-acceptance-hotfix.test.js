@@ -25,7 +25,7 @@ const code = read("Code.js");
 assert.match(core, /app\.clean = function \(value\) \{ return String\(value == null \? "" : value\)\.trim\(\); \};/, "shared client normalizer must exist");
 assert.equal((workbench.match(/app\.clean\(/g) || []).length, 2, "Documents tab may use the one shared client normalizer");
 assert.match(core, /app\.formatPngDate = function[\s\S]*Pacific\/Port_Moresby[\s\S]*formatToParts/, "shared PNG-local date formatter must be deterministic");
-assert.match(workbench, /formatPngDate\(receipt\.at\)[\s\S]*formatPngDate\(preview\.expiresAt\)/, "receipt and preview dates must use the shared formatter");
+assert.match(workbench, /receipt\.occurredAtPng\s*\|\|\s*app\.formatPngDate\(occurredAt\)[\s\S]*formatPngDate\(preview\.expiresAt\)/, "receipt and preview dates must use the receipt PNG timestamp or shared formatter");
 
 assert.match(code, /function resolveExistingStudentPortalAuthority_[\s\S]*available:[\s\S]*applicantId:[\s\S]*portalUrl:[\s\S]*tokenState:[\s\S]*reasonCode:[\s\S]*reason:/, "portal provider must return the bounded authority DTO");
 assert.match(code, /resolveExistingStudentPortalAuthority_\(context\.applicantId/, "communication context must use the shared portal provider");

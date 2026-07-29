@@ -385,7 +385,7 @@ assert.match(sendSource, /hasUnresolvedActionRequiredPlaceholder_/, "Send gate m
 assert.match(codeSource, /computeEmailIdempotencyKey_/, "Existing idempotency path must remain");
 assert.match(codeSource, /communicationCooldownMs_/, "Existing cooldown path must remain");
 assert.match(adminPreviewSource, /hasOwnProperty\.call\(p, "subject"\)/, "Preview wrapper must not pass implicit blank subject over generated templates");
-assert.match(adminSendSource, /hasOwnProperty\.call\(p, "subject"\)/, "Send wrapper must not pass implicit blank subject over generated templates");
+assert.match(adminSendSource, /hasOwnProperty\.call\(boundPayload, "subject"\)/, "Send wrapper must not pass implicit blank subject over generated templates");
 
 const templateFunctionNames = [
   "buildApplicantFullName_",

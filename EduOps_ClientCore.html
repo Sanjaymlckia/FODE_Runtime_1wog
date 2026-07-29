@@ -257,6 +257,18 @@
   app.idempotencyKey = function (operation, applicantId) {
     return ["EDUOPS", operation, applicantId || "COHORT", Date.now(), Math.random().toString(36).slice(2, 10)].join("::");
   };
+  app.commandExecutionPayload = function (preview, idempotencyKey) {
+    var source = preview && typeof preview === "object" ? preview : {};
+    var payload = {
+      previewId: String(source.previewId || ""),
+      idempotencyKey: String(idempotencyKey || source.idempotencyKey || ""),
+      confirmation: true
+    };
+    ["operationId", "receiptId", "stateFingerprint", "cooldownCycle", "commandType", "messageType"].forEach(function (field) {
+      if (source[field] !== null && source[field] !== undefined && String(source[field]) !== "") payload[field] = String(source[field]);
+    });
+    return payload;
+  };
 
   function activeTransport() {
     return window.EDUOPS_TRANSPORT || window.EduOpsTransport || null;
@@ -530,6 +542,28 @@
     };
   };
 
+  function restoreReturnFocus(ctx) {
+    setTimeout(function () {
+      window.scrollTo(0, Number(ctx.scrollY || 0));
+      var focus = ctx.focusId ? document.getElementById(ctx.focusId) : null;
+      if (focus) focus.focus();
+    }, 0);
+  }
+  function currentWorkloadMatchesReturnContext(ctx) {
+    var workload = app.state.workload;
+    if (!ctx || !workload || !Array.isArray(workload.rows) || !workload.rows.length) return false;
+    var snapshotId = ctx.snapshotId || app.state.snapshotId || "";
+    if (snapshotId && workload.snapshotId && String(workload.snapshotId) !== String(snapshotId)) return false;
+    return String(workload.product || app.state.product || "") === String(ctx.product || app.state.product || "")
+      && String(workload.actionabilityState || "") === String(ctx.actionabilityState || "")
+      && String(workload.worklistKey || "") === String(ctx.worklistKey || "")
+      && String(workload.workScope || "") === String(ctx.workScope || "")
+      && Number(workload.page || 1) === Number(ctx.page || 1)
+      && Number(workload.pageSize || 25) === Number(ctx.pageSize || 25)
+      && JSON.stringify(workload.filters || {}) === JSON.stringify(ctx.filters || {})
+      && JSON.stringify(workload.sort || {}) === JSON.stringify(ctx.sort || {});
+  }
+
   app.restoreReturnContext = function (context) {
     var ctx = context || app.state.returnContext;
     if (!ctx) return app.requestWorkload();
@@ -543,12 +577,14 @@
     app.state.page = Number(ctx.page || 1);
     app.state.pageSize = Number(ctx.pageSize || 25);
     app.state.snapshotId = ctx.snapshotId || app.state.snapshotId;
+    if (currentWorkloadMatchesReturnContext(ctx)) {
+      if (app.state.workload.operationAvailability) app.state.operationAvailability = app.state.workload.operationAvailability;
+      if (app.renderWorkload) app.renderWorkload(app.state.workload, 0);
+      restoreReturnFocus(ctx);
+      return Promise.resolve(app.state.workload);
+    }
     return app.requestWorkload().then(function () {
-      setTimeout(function () {
-        window.scrollTo(0, Number(ctx.scrollY || 0));
-        var focus = ctx.focusId ? document.getElementById(ctx.focusId) : null;
-        if (focus) focus.focus();
-      }, 0);
+      restoreReturnFocus(ctx);
     });
   };
 

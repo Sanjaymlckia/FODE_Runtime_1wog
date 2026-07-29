@@ -7158,8 +7158,8 @@
       if (!effectiveEmail) return "Effective email is missing.";
       if (String(d.Email_Status || "").trim() === "DO_NOT_CONTACT") return "This applicant is marked Do Not Contact.";
       if (isCommBounceFlagTrue_(d.Email_Bounce_Flag)) return "Email suppressed: previous bounce detected. Correct email before sending.";
-      if (/^(BOUNCED|SUPPRESSED)$/i.test(String(d.Email_Verification_Status || "").trim())) return "Email suppressed: verification status is " + String(d.Email_Verification_Status || "").trim() + ".";
-      if (/^(BOUNCED|SUPPRESSED)$/i.test(String(d.Last_Contact_Result || "").trim())) return "Email suppressed: last contact result is " + String(d.Last_Contact_Result || "").trim() + ".";
+      if (/^BOUNCED$/i.test(String(d.Email_Verification_Status || "").trim())) return "Email blocked: verification status is bounced.";
+      if (/^(BOUNCED|FAILED)$/i.test(String(d.Last_Contact_Result || "").trim())) return "Email blocked: last contact result is " + String(d.Last_Contact_Result || "").trim() + ".";
       if ((selectedType === "legacy_invite" || selectedType === "reminder") && commPortalSubmittedActive_(d)) return "Portal already submitted for this applicant.";
       return "";
     }
@@ -7184,11 +7184,13 @@
           alternativePath: phone ? "Use approved phone/WhatsApp fallback while email is blocked." : "Collect alternate contact details."
         };
       }
-      var verification = String(d.Email_Verification_Status || d.Last_Contact_Result || "").trim().toUpperCase();
-      if (/^(BOUNCED|SUPPRESSED)$/.test(verification)) {
+      var verification = String(d.Email_Verification_Status || "").trim().toUpperCase();
+      var lastContactResult = String(d.Last_Contact_Result || "").trim().toUpperCase();
+      if (verification === "BOUNCED" || /^(BOUNCED|FAILED)$/.test(lastContactResult)) {
+        var blockedStatus = verification === "BOUNCED" ? verification : lastContactResult;
         return {
           active: true,
-          reason: "Email status is " + verification + ".",
+          reason: "Email status is " + blockedStatus + ".",
           recommendedAction: "Resolve the email status before email preview/send.",
           alternativePath: phone ? "Use approved phone/WhatsApp fallback." : "Collect alternate contact details."
         };
@@ -7593,10 +7595,16 @@
         return;
       }
       var resultType = String(res.result || "").trim().toUpperCase();
+      var isIdempotentReplay = resultType === "IDEMPOTENT_REPLAY" || resultType === "ALREADY_PROCESSED_FOR_OPERATION" || res.idempotentReplay === true;
+      var isReconciliationRequired = resultType === "RECONCILIATION_REQUIRED";
+      var isManualReviewRequired = resultType === "MANUAL_REVIEW_REQUIRED" || String(res.blockCode || "").trim().toUpperCase() === "MANUAL_REVIEW_REQUIRED";
       var cls = "commResultBox";
       var title = "Result";
-      if (resultType === "BLOCKED") { cls += " warn"; title = "Action blocked"; }
+      if (isManualReviewRequired) { cls += " warn"; title = "Manual review required"; }
+      else if (isReconciliationRequired) { cls += " warn"; title = "Reconciliation required"; }
+      else if (resultType === "BLOCKED") { cls += " warn"; title = "Action blocked"; }
       else if (resultType === "SENT") { cls += " ok"; title = "Send complete"; }
+      else if (isIdempotentReplay) { cls += " ok"; title = "Already processed"; }
       else if (resultType === "FAILED") { cls += " err"; title = "Send failed"; }
       else { title = "Preview"; }
       var parts = [];
@@ -7626,6 +7634,22 @@
       if (resultType === "SENT") {
         parts.push('<div style="margin-top:6px;">Message sent successfully.</div>');
         if (res.subject) parts.push('<div style="margin-top:6px;"><strong>Subject:</strong> ' + esc(res.subject) + '</div>');
+      }
+      if (isIdempotentReplay) {
+        parts.push('<div style="margin-top:6px;">This exact operation was already processed; no email was resent.</div>');
+        if (res.originalOutcome || res.replayOutcome) parts.push('<div style="margin-top:6px;"><strong>Original outcome:</strong> ' + esc(res.originalOutcome || res.replayOutcome) + '</div>');
+        if (res.receiptId) parts.push('<div style="margin-top:6px;"><strong>Receipt ID:</strong> ' + esc(res.receiptId) + '</div>');
+        if (res.operationId) parts.push('<div style="margin-top:6px;"><strong>Operation ID:</strong> ' + esc(res.operationId) + '</div>');
+      }
+      if (isReconciliationRequired) {
+        parts.push('<div style="margin-top:6px;">Gmail accepted the message, but persistence is incomplete. Do not retry until the operation is reconciled.</div>');
+        if (res.blockCode || res.code) parts.push('<div style="margin-top:6px;"><strong>Code:</strong> ' + esc(res.blockCode || res.code) + '</div>');
+        if (res.blockReason || res.error) parts.push('<div style="margin-top:6px;"><strong>Reason:</strong> ' + esc(res.blockReason || res.error) + '</div>');
+      }
+      if (isManualReviewRequired && resultType !== "BLOCKED") {
+        parts.push('<div style="margin-top:6px;">Automated follow-up is closed for this communication cycle. Continue only through manual communication review.</div>');
+        if (res.blockCode) parts.push('<div style="margin-top:6px;"><strong>Code:</strong> ' + esc(res.blockCode) + '</div>');
+        if (res.blockReason) parts.push('<div style="margin-top:6px;"><strong>Reason:</strong> ' + esc(res.blockReason) + '</div>');
       }
       if (resultType === "FAILED") {
         var detail = String(res.error || res.message || res.blockReason || res.code || "Send failed.").trim();
@@ -8492,6 +8516,10 @@
       var previewReady = communicationsState.previewApplicantId === applicantId && communicationsState.previewMessageType === messageType && communicationsState.result && String(communicationsState.result.result || "").toUpperCase() === "PREVIEW";
       if (!previewReady) return;
       var payload = { applicantId: applicantId, messageType: messageType, confirmManualSingleSend: true };
+      ["operationId", "previewId", "receiptId", "commandType", "actor", "stateFingerprint", "cooldownCycle", "idempotencyKey"].forEach(function(field){
+        var value = communicationsState.result && communicationsState.result[field];
+        if (value !== null && value !== undefined && String(value).trim()) payload[field] = String(value);
+      });
       Object.assign(payload, getCommAuthorityOverridePayload_());
       if (IS_OPERATIONS_ADMIN) {
         payload.sourceSurface = "ops";

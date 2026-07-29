@@ -90,8 +90,9 @@ async function waitWorkload(page) {
   await page.waitForFunction(() => {
     const app = document.querySelector("#eduopsApp");
     const rows = document.querySelectorAll("#eduopsWorklistRows tr");
+    const emptyState = document.querySelector("#eduopsEmptyState");
     const range = document.querySelector("#eduopsVisibleRange")?.textContent || "";
-    return app?.getAttribute("aria-busy") === "false" && rows.length > 0 && !/Loading|Queued/.test(range);
+    return app?.getAttribute("aria-busy") === "false" && (rows.length > 0 || emptyState?.hidden === false) && !/Loading|Queued/.test(range);
   }, null, { timeout: 12000 });
 }
 
@@ -134,8 +135,16 @@ async function runVisibleSmoke(page, includeBootstrapFailureRecovery) {
     controls.push(name);
   }
 
-  await click(page.locator("#eduopsSafetyDetails"), "View authority controls", () => waitReport(page, "System Health"));
-  await closeReport(page);
+  assert.equal(await page.locator("#eduopsSafetyDetails").count(), 0, "Retired safety-details control must not be restored");
+  assert.equal(await page.locator("#eduopsPreviewLab .eduops-preview-title").isVisible(), true, "Preview Lab status must be visible");
+  assert.match(await page.locator("#eduopsPreviewLab .eduops-preview-title").innerText(), /Simulated data.*no live operations/i);
+  assert.doesNotMatch(await page.locator("#eduopsRuntimeIdentity").innerText(), /loading|unavailable/i, "Runtime identity must resolve during clean start");
+  assert.doesNotMatch(await page.locator("#eduopsSnapshotShort").innerText(), /loading|unavailable/i, "Snapshot identity must resolve during clean start");
+  controls.push("Preview safety and runtime status");
+  await click(page.locator(".eduops-operations-secondary-controls > summary"), "Open search and authority status", async () => {
+    assert.equal(await page.locator("#eduopsReliabilityBanner").isVisible(), true);
+    assert.match(await page.locator("#eduopsReliabilityBanner").innerText(), /Authoritative/i);
+  });
   await click(page.locator("#eduopsRefreshAuthority"), "Refresh source", () => waitWorkload(page));
   await select(page.locator("#eduopsProductSwitcher"), "KIA", "Product KIA", () => waitWorkload(page));
   await select(page.locator("#eduopsProductSwitcher"), "FODE", "Product FODE", () => waitWorkload(page));
@@ -151,10 +160,10 @@ async function runVisibleSmoke(page, includeBootstrapFailureRecovery) {
   }
   await click(page.locator('[data-work-scope="ESCALATED"]'), "Escalated scope", () => waitWorkload(page));
   await click(page.locator('[data-work-scope="ALL_AUTHORISED"]'), "All Authorised scope", () => waitWorkload(page));
-  await click(page.locator("#eduopsRefreshSnapshot"), "Refresh workload", () => waitWorkload(page));
+  assert.equal(await page.locator("#eduopsRefreshSnapshot").isVisible(), false, "Hidden legacy workload refresh must not be treated as an operator control");
 
   await fill(page.locator("#eduopsGlobalSearch"), "Waffi", "Global applicant search", () => page.waitForFunction(() => document.querySelector("#eduopsGlobalSearchResults")?.textContent.includes("Keziah Waffi")));
-  await fill(page.locator("#eduopsGlobalSearch"), "", "Clear global applicant search", () => page.waitForFunction(() => document.querySelector("#eduopsGlobalSearchResults")?.textContent.includes("Search the active product")));
+  await fill(page.locator("#eduopsGlobalSearch"), "", "Clear global applicant search", () => page.waitForFunction(() => document.querySelector("#eduopsGlobalSearchResults")?.textContent.includes("Find any applicant by name, ApplicantID, email or phone.")));
   await fill(page.locator("#eduopsSearch"), "Jackson", "Workload search", () => page.waitForFunction(() => document.querySelector("#eduopsWorklistRows")?.textContent.includes("Jackson Numa")));
   await click(page.locator("#eduopsToggleFilters"), "More filters", async () => assert.equal(await page.locator("#eduopsAdvancedFilters").isVisible(), true));
   await click(page.locator("#eduopsClearFilters"), "Clear filters after search", () => waitWorkload(page));
@@ -172,8 +181,8 @@ async function runVisibleSmoke(page, includeBootstrapFailureRecovery) {
   await select(page.locator("#eduopsSort"), "name:asc", "Sort by applicant name", () => waitWorkload(page));
   await click(page.locator("#eduopsToggleFilters"), "Close filters", async () => assert.equal(await page.locator("#eduopsAdvancedFilters").isVisible(), false));
 
-  await click(page.locator("#eduopsSelectVisible"), "Select visible", async () => assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /selected/i));
-  await click(page.locator("#eduopsClearSelection"), "Clear selection", async () => assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /0 selected/i));
+  await click(page.locator("#eduopsSelectVisible"), "Select visible", async () => assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /Operator selection intent [1-9]\d*/i));
+  await click(page.locator("#eduopsClearSelection"), "Clear selection", async () => assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /Operator selection intent 0 .*\/ 0 excluded/i));
   await click(page.locator("#eduopsWorklistRows [data-open-applicant]"), "Open applicant", async () => {
     await page.waitForSelector("#eduopsWorkbench:not([hidden])");
     await page.waitForFunction(() => location.hash.startsWith("#workbench="));
@@ -189,11 +198,11 @@ async function runVisibleSmoke(page, includeBootstrapFailureRecovery) {
 
   await click(page.locator("#eduopsStartSession"), "Start Work Session", () => page.waitForSelector("#eduopsSessionBar:not([hidden])"));
   await click(page.locator("[data-session-exit]"), "Exit Work Session", () => page.waitForFunction(() => document.querySelector("#eduopsWorkbench")?.hidden === true));
-  await click(page.locator("#eduopsOpenReconciliation"), "Open reconciliation", () => waitReport(page, "reconciliation"));
+  await click(page.locator("#eduopsOpenReconciliation"), "Open workload composition", () => waitReport(page, "Workload composition"));
   await closeReport(page);
 
   const reports = [
-    ["finance", "Finance Operations"],
+    ["finance", "Finance"],
     ["communications", "Communications"],
     ["portal", "Portal"],
     ["contactability", "Contactability"],
@@ -217,12 +226,13 @@ async function runVisibleSmoke(page, includeBootstrapFailureRecovery) {
     await select(page.locator("#eduopsPreviewScenario"), "source-unavailable", "Select source unavailable", () => page.waitForFunction(() => /source authority is unavailable/i.test(document.querySelector("#eduopsWorklistRows")?.textContent || "")));
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => /_ERROR$|TIMEOUT/.test(document.querySelector("#eduopsApp")?.getAttribute("data-bootstrap-state") || ""), null, { timeout: 12000 });
-    assert.match(await page.locator("#eduopsReliabilityBanner").innerText(), /Authority source unavailable/i);
+    assert.equal(await page.locator("#eduopsWorklistRows .eduops-error-state").isVisible(), true);
+    assert.match(await page.locator("#eduopsWorklistRows .eduops-error-state").innerText(), /Workload could not be loaded[\s\S]*Preview source authority is unavailable/i);
     assert.notEqual(await page.locator("#eduopsSnapshotShort").innerText(), "Snapshot loading");
-    assert.equal(await page.locator("#eduopsRefreshSnapshot").isDisabled(), true);
-    assert.equal(await page.locator("#eduopsRefreshAuthority").isEnabled(), true);
+    assert.equal(await page.locator("#eduopsRefreshSnapshot").isVisible(), false);
+    assert.equal(await page.locator("#eduopsWorklistRows .eduops-error-state [data-retry-bootstrap]").isEnabled(), true);
     const eventCount = await page.evaluate(() => window.__EDUOPS_BOOTSTRAP_DIAGNOSTICS__.events.length);
-    await click(page.locator("[data-retry-bootstrap]"), "Retry unavailable source", () => page.waitForFunction((count) => window.__EDUOPS_BOOTSTRAP_DIAGNOSTICS__.events.length > count && /_ERROR$|TIMEOUT/.test(window.__EDUOPS_BOOTSTRAP_DIAGNOSTICS__.state), eventCount));
+    await click(page.locator("#eduopsWorklistRows .eduops-error-state [data-retry-bootstrap]"), "Retry unavailable source", () => page.waitForFunction((count) => window.__EDUOPS_BOOTSTRAP_DIAGNOSTICS__.events.length > count && /_ERROR$|TIMEOUT/.test(window.__EDUOPS_BOOTSTRAP_DIAGNOSTICS__.state), eventCount));
     await click(page.locator("#eduopsPreviewToggle"), "Open technical controls for recovery", async () => assert.equal(await page.locator("#eduopsPreviewTechnicalBody").isVisible(), true));
     await select(page.locator("#eduopsPreviewScenario"), "normal-authoritative", "Restore authoritative scenario", async () => {
       await page.waitForFunction(() => document.querySelector("#eduopsApp")?.getAttribute("data-bootstrap-state") === "INTERACTIVE", null, { timeout: 12000 });
