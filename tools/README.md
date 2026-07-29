@@ -1,6 +1,12 @@
 # FODE Release Tooling
 
-These scripts are staged gates. They are not a one-click release system.
+These scripts are staged gates. Normal Admin staging releases now use the R392A manifest-bound pipeline:
+
+1. `tools\Invoke-FodeAdminRelease.ps1`
+2. owner evidence review and acceptance
+3. `tools\Complete-FodeReleaseCommit.ps1`
+
+Lower-level helpers remain available for diagnostics and recovery, but the consolidated pipeline is the default path for routine Admin staging release work.
 
 ## Runtime Engineering Platform
 
@@ -177,6 +183,53 @@ Apps Script:
 - never run `clasp push`, create an Apps Script version, or repin a deployment unless an active release CIS explicitly authorizes it.
 
 ## Scripts
+
+### `Invoke-FodeAdminRelease.ps1`
+
+Primary governed Admin staging release command:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-FodeAdminRelease.ps1 `
+  -ReleaseClass BackendSemantic `
+  -ExpectedAdminRuntime r392 `
+  -ExpectedAdminDeploy 392 `
+  -ExpectedStudentRuntime r217 `
+  -ExpectedStudentDeploy 217
+```
+
+Release classes:
+
+- `DocsOnly`: documentation, governance, local tooling metadata and tests. No runtime identity bump, `clasp push`, Apps Script version or deployment repin.
+- `ClientOnly`: active Admin client/browser-side code. Uses Fast Gate by default with runtime identity handling, Apps Script push, repeated remote readback, version, Admin-only repin and runtime verification.
+- `BackendSemantic`: server logic, DTOs, routing, classification, Finance, capability or authority semantics. Uses Fast Gate plus affected-domain regressions by default.
+- `HighRiskAuthority`: communication send authority, Batch/bulk authority, applicant mutation, population integrity, identity authority, settlement authority, deployment authority or durable communication architecture. Requires additional authority/prohibition tests and manual acceptance.
+
+The command detects the minimum class from changed files, selects Fast Gate or Full Gate, rejects risk and gate downgrades, writes a release manifest, runs class-specific validation, protects Student and Production, and stops after Admin staging verification.
+
+Fast Gate is the normal bounded Admin release gate. Full Gate runs the complete repository suite only for Production, `HighRiskAuthority`, shared framework/release-infrastructure changes, incomplete dependency mapping, broad cross-domain changes, test-selection changes, scheduled health validation, explicit operator request, or Fast Gate failure indicating wider risk.
+
+Dry run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-FodeAdminRelease.ps1 -ReleaseClass BackendSemantic -DryRun
+```
+
+Dry run performs validation, classification, manifest preview, identity proposal, test-plan selection, deployment-target validation and evidence preview. It does not edit `Config.js`, run `clasp push`, create Apps Script versions, repin deployments, stage, commit, push or mutate live systems.
+
+### `Complete-FodeReleaseCommit.ps1`
+
+Manifest-bound closure command after owner acceptance:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Complete-FodeReleaseCommit.ps1 `
+  -CommitMessage "fix: repair bounded release"
+```
+
+It loads the accepted manifest, verifies the diff hash, rejects post-acceptance drift, confirms runtime identity, stages only manifest-approved files, prints the staged files and diff summary, runs `git diff --cached --check`, commits once, pushes, verifies `HEAD == origin/main`, verifies ahead/behind `0 / 0`, and verifies a clean working tree.
+
+Evidence reports are written under `docs/audits/releases/`. Manifests are written under `.release-proof/admin-release/`.
+
+Detailed operator documentation: `docs/tooling/Admin_Release_Pipeline.md`.
 
 ### `preflight.ps1`
 

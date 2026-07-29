@@ -176,7 +176,41 @@
           "benchmark"
         ],
         "rollbackPreference": "deployment-repin-first",
-        "tagRecommendationPattern": "{project}-r{deploy}-{purpose}"
+        "tagRecommendationPattern": "{project}-r{deploy}-{purpose}",
+        "adminReleasePipeline": {
+          "primaryCommand": "tools\\Invoke-FodeAdminRelease.ps1",
+          "closureCommand": "tools\\Complete-FodeReleaseCommit.ps1",
+          "manifestPath": ".release-proof\\admin-release",
+          "evidencePath": "docs\\audits\\releases",
+          "ownerAcceptanceBoundary": "main pipeline stops after verified Admin staging release; final Git commit and push require owner acceptance",
+          "releaseClasses": [
+            "DocsOnly",
+            "ClientOnly",
+            "BackendSemantic",
+            "HighRiskAuthority"
+          ],
+          "testGates": [
+            "FastGate",
+            "FullGate"
+          ],
+          "defaultGateByClass": {
+            "DocsOnly": "FastGate",
+            "ClientOnly": "FastGate",
+            "BackendSemantic": "FastGate",
+            "HighRiskAuthority": "FullGate"
+          },
+          "fullGateEscalation": [
+            "Production release",
+            "HighRiskAuthority release",
+            "shared framework or release infrastructure change",
+            "dependency mapping incomplete or uncertain",
+            "broad cross-domain change",
+            "test-selection logic change",
+            "scheduled repository health validation",
+            "explicit operator request",
+            "Fast Gate failure indicates wider regression risk"
+          ]
+        }
       },
       "acceptedRepairs": {
         "R390B1": {

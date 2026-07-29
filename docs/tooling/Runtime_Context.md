@@ -9,13 +9,13 @@ Runtime files such as `Config.js` still own project runtime behavior. REP contex
 Current FODE baseline recorded by `runtime-context.json`:
 
 - Repository: `D:\Repos\FODE_Runtime_1wog`
-- Git baseline: `6bbbfdd09ec8b491b7fa480481fd57fae00dcaba`
-- Admin staging: `@427 / r391 / 391`
+- Git baseline: `2ebe8bfd76e71763ef708bd28cbe51eb5c73ef2b`
+- Admin staging: `@428 / r392 / 392`
 - Student: `@247 / r217 / 217`
 - Production: untouched
-- Accepted repairs: `R390B1`, `R391A` audit, `R391B`
+- Accepted repairs: `R390B1`, `R391A` audit, `R391B`, `R391C`
 - Current restriction: Batch send prohibited
-- Next implementation pass after governance acceptance: `R391C`
+- Next implementation pass after R392A tooling acceptance: `R391D/E`
 
 `runtime-context.json` is source-controlled tooling context. It records expected identities and governance state; it does not prove live runtime state by itself. Live `whoami` remains runtime truth before any release acceptance or deployment-dependent claim.
 
@@ -46,6 +46,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\rep-validate-context
 ```
 
 The validator is read-only. It checks context shape, active project selection, repository path, branch, Apps Script source authority, deployment target shape, acceptance profiles, and mutation-default safety.
+
+## Admin Release Pipeline
+
+R392A consolidates normal Admin staging releases into:
+
+1. `tools\Invoke-FodeAdminRelease.ps1`
+2. owner evidence review and acceptance
+3. `tools\Complete-FodeReleaseCommit.ps1`
+
+The pipeline uses `runtime-context.json` for repository, Apps Script project, Admin deployment, Student deployment, Production no-touch status, evidence roots and expected identities. Runtime context is still not live proof; Admin and Student `whoami` remain runtime truth after any deployment-dependent action.
 
 ## Adding a Project
 

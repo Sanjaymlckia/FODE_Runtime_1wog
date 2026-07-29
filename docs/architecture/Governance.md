@@ -1,7 +1,7 @@
 # Architecture Governance
 
-Status: R391B-GOV runtime governance refresh
-Scope: documentation governance only; no runtime release
+Status: R392A release-pipeline governance update
+Scope: tooling, test and documentation governance; no application runtime behaviour change
 
 ## Current Accepted Runtime Baseline
 
@@ -10,9 +10,9 @@ This document records governance state only. It does not change Apps Script sour
 | Surface | Accepted state |
 | --- | --- |
 | Local repository | `D:\Repos\FODE_Runtime_1wog` |
-| Git baseline | `6bbbfdd09ec8b491b7fa480481fd57fae00dcaba` |
-| Git alignment | `HEAD == origin/main`, ahead/behind `0 / 0`, clean working tree at R391B acceptance |
-| Admin staging | `@427 / r391 / 391` |
+| Git baseline | `2ebe8bfd76e71763ef708bd28cbe51eb5c73ef2b` |
+| Git alignment | `HEAD == origin/main`, ahead/behind `0 / 0`, clean working tree at R392A start |
+| Admin staging | `@428 / r392 / 392` |
 | Student | `@247 / r217 / 217` |
 | Production | Untouched |
 
@@ -25,6 +25,8 @@ This document records governance state only. It does not change Apps Script sour
 `R391B Critical Correctness Repair` is accepted at Admin staging `@427 / r391 / 391`. Workbench responses are request-generation-bound. Work Session responses are request-generation- and applicant-bound. Stale workload, Workbench and bootstrap responses cannot render. Applicant identity must match the active session before a response is accepted. Rows and empty-state rendering are mutually exclusive. Post-mutation and receipt responses require authoritative refresh. Duplicate or unproven population integrity blocks ambiguous individual actions and all Batch paths. Full validation passed: `77 / 77` test files and `6,821` assertions.
 
 The temporary Work Session restriction imposed after R391A is lifted. Work Session navigation and direct Workbench workflows are restored under the R391B identity and generation gates.
+
+`R391C Classification, Routing, Finance, DTO and Capability Semantic Repair` is accepted at Admin staging `@428 / r392 / 392`. It preserves R390B1 and R391B safety controls, keeps Finance read-only, keeps Batch send prohibited, distinguishes contactability/routing/Finance/DTO/capability semantics, and leaves Student `@247 / r217 / 217` and Production untouched.
 
 ## Current Operational Restrictions
 
@@ -47,12 +49,23 @@ Batch send remains prohibited pending bulk-authority consolidation and later dur
 
 ## Recommended Programme
 
-1. R391B-GOV - governance refresh and baseline reconciliation.
-2. R391C - classification, routing, Finance, DTO and capability semantic repair.
-3. R391D/E - Operations Workspace and Workbench density/readability refinement.
-4. R391G/H - test, architecture and communication-ownership consolidation.
-5. R391J - final governance reconciliation, only if still required.
-6. R390B2 - durable Communication Event Ledger.
+1. R392A - Admin release pipeline consolidation.
+2. R391D/E - Operations Workspace and Workbench density/readability refinement.
+3. R391G/H - test, architecture and communication-ownership consolidation.
+4. R391J - final governance reconciliation, only if still required.
+5. R390B2 - durable Communication Event Ledger.
+
+## Admin Release Pipeline Governance
+
+Normal Admin staging releases use:
+
+1. `tools\Invoke-FodeAdminRelease.ps1`
+2. owner evidence review and acceptance
+3. `tools\Complete-FodeReleaseCommit.ps1`
+
+The pipeline must classify file risk conservatively, select a proportionate Fast Gate or Full Gate, reject risk and gate downgrades, generate a manifest before remote mutation, preserve runtime identity validation, preserve repeated Apps Script API Config readback before version creation, repin only the Admin deployment, verify Admin and Student `whoami`, stop before Git commit, and bind final closure to the accepted manifest.
+
+`DocsOnly` must not bump runtime identity or run `clasp push`, create an Apps Script version, or repin deployments. `ClientOnly` and `BackendSemantic` use Fast Gate by default; Full Gate is required only on escalation. `HighRiskAuthority` is required for communication send authority, Batch/bulk authority, applicant mutation, population integrity, identity authority, settlement authority, deployment authority and durable communication architecture, and always uses Full Gate.
 
 ## Source Preservation Rule
 
@@ -146,7 +159,7 @@ Current documented authority baseline:
 | Local Git repository | `D:\Repos\FODE_Runtime_1wog` | `AGENTS.md`, active workspace path | Mutate only files allowed by active CIS. |
 | GitHub repository | `https://github.com/Sanjaymlckia/FODE_Runtime_1wog.git` | `.git/config` | Commit/push only when explicitly authorized. |
 | Apps Script project | `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90` | `.clasp.json` | No push/version/repin without release CIS and remote-source gate. |
-| Admin staging deployment | `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ`, accepted `@427 / r391 / 391` | `Config.js`, `LIVE_URLS.md`, live `whoami` | Repin/browser accept only after live `whoami` proof. |
+| Admin staging deployment | `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ`, accepted `@428 / r392 / 392` | `Config.js`, `LIVE_URLS.md`, live `whoami` | Repin/browser accept only after live `whoami` proof. |
 | Student staging deployment | `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv`, accepted `@247 / r217 / 217` | `Config.js`, `LIVE_URLS.md`, live `whoami` | No Student action unless separately authorized. |
 | Production deployment | Unknown / not proven | `audits/fode_runtime_dr_backup_audit_v01.md` | Read-only until exact deployment ID and environment are proven. |
 | Runtime spreadsheet - staging | `1YFgLtUExz__fzQ4zTNoIyGTu-nrnasS7dIaShNPl7Cs`, tab `FODE_Data` | `Config.js` | No Sheet mutation unless CIS authorizes exact row/tab operation. |
