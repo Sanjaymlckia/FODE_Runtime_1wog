@@ -29,6 +29,7 @@ function fixtureHtml() {
   const transport = String.raw`<script>
   (function () {
     "use strict";
+    window.EDUOPS_HISTORY_TIMEOUT_MS = 80;
     var state = {
       sequence: 0,
       deferBudget: {},
@@ -40,7 +41,8 @@ function fixtureHtml() {
       rowOffset: 0,
       populationIntegrity: null,
       searchMatches: [],
-      savedTemplate: null
+      savedTemplate: null,
+      lastReceipt: null
     };
 
     function currentSnapshotId() {
@@ -541,7 +543,14 @@ function fixtureHtml() {
         return JSON.parse(JSON.stringify(state.savedTemplate));
       }
       if (name === "eduops_getOperationHistory") {
-        return { ok: true, schemaVersion: "EDUOPS_OPERATION_HISTORY_V1", receipts: [], communicationReceipts: [] };
+        var receipts = state.lastReceipt ? [JSON.parse(JSON.stringify(state.lastReceipt))] : [];
+        return {
+          ok: true,
+          schemaVersion: "EDUOPS_OPERATION_HISTORY_V1",
+          applicantId: String(payload && payload.applicantId || ""),
+          receipts: receipts,
+          communicationReceipts: receipts.filter(function (receipt) { return receipt.eventType === "COMMUNICATION"; })
+        };
       }
       if (name === "eduops_searchApplicants") return { ok: true, matches: JSON.parse(JSON.stringify(state.searchMatches || [])) };
       return { ok: true };
@@ -578,6 +587,9 @@ function fixtureHtml() {
       resolveAuto: function (id) { var item = take(id); item.resolve(automatic(item.name, item.payload)); },
       resolveValue: function (id, value) {
         var item = take(id);
+        if (item.name === "eduops_executeCommand" && value && value.receiptId) {
+          state.lastReceipt = JSON.parse(JSON.stringify(value));
+        }
         if (item.name === "admin_saveReusableCommunicationTemplate" && value && value.ok === true) {
           state.savedTemplate = Object.assign({}, value, {
             subjectTemplate: item.payload.subjectTemplate || "",
@@ -2029,6 +2041,96 @@ async function run() {
       assert.equal(finalState.state, "INTERACTIVE");
       assert.equal(finalState.acceptedGeneration, finalState.generation);
       assert.equal(finalState.workloadAccepted, finalState.workloadLatest);
+    });
+
+    await scenario("Audit history clears empty, failure, and stale terminal states", async (page) => {
+      await openWorkbench(page, "A");
+      await page.evaluate(() => {
+        const app = window.EduOpsApp;
+        app.state.activeTab = "audit";
+        app.renderWorkbenchPanel();
+      });
+      await page.waitForFunction(() => document.querySelector("#eduopsOperationHistory")?.getAttribute("data-history-state") === "SUCCESS");
+      assert.match(await page.locator("#eduopsOperationHistory").innerText(), /No operation receipts returned/);
+
+      await page.evaluate(() => {
+        window.__rpcControl.defer("eduops_getOperationHistory", 1);
+        window.EduOpsApp.renderWorkbenchPanel();
+      });
+      await page.waitForFunction(() => window.__rpcControl.pending("eduops_getOperationHistory").length === 1);
+      let pending = (await page.evaluate(() => window.__rpcControl.pending("eduops_getOperationHistory")))[0];
+      await page.evaluate((id) => window.__rpcControl.reject(id, "Forced history failure"), pending.id);
+      await page.waitForFunction(() => document.querySelector("#eduopsOperationHistory")?.getAttribute("data-history-state") === "ERROR");
+      assert.match(await page.locator("#eduopsOperationHistory").innerText(), /Forced history failure/);
+
+      await page.evaluate(() => {
+        window.__rpcControl.defer("eduops_getOperationHistory", 1);
+        window.EduOpsApp.renderWorkbenchPanel();
+      });
+      await page.waitForFunction(() => window.__rpcControl.pending("eduops_getOperationHistory").length === 1);
+      pending = (await page.evaluate(() => window.__rpcControl.pending("eduops_getOperationHistory")))[0];
+      await page.evaluate(() => { window.EduOpsApp.state.workloadRequest.latestGeneration += 1; });
+      await resolveDeferred(page, pending);
+      await page.waitForFunction(() => document.querySelector("#eduopsOperationHistory")?.getAttribute("data-history-state") === "SUPERSEDED");
+      assert.match(await page.locator("#eduopsOperationHistory").innerText(), /request superseded/i);
+      assert.doesNotMatch(await page.locator("#eduopsOperationHistory").innerText(), /Loading operation history/);
+    });
+
+    await scenario("Audit history timeout clears a never-settled loader", async (page) => {
+      await openWorkbench(page, "A");
+      await page.evaluate(() => {
+        window.__rpcControl.defer("eduops_getOperationHistory", 1);
+        const app = window.EduOpsApp;
+        app.state.activeTab = "audit";
+        app.renderWorkbenchPanel();
+      });
+      await page.waitForFunction(() => document.querySelector("#eduopsOperationHistory")?.getAttribute("data-history-state") === "TIMEOUT");
+      assert.match(await page.locator("#eduopsOperationHistory").innerText(), /timed out/i);
+      assert.doesNotMatch(await page.locator("#eduopsOperationHistory").innerText(), /Loading operation history/);
+    });
+
+    await scenario("Blocked individual communication remains explicit and enters Audit history", async (page) => {
+      await openEditableCommunication(page, "A");
+      await page.locator("[data-preview-command='SEND_INDIVIDUAL_COMMUNICATION']").click();
+      await page.waitForFunction(() => !!window.EduOpsApp.state.confirm && window.EduOpsApp.state.commandExecutable === true);
+      await page.evaluate(() => {
+        window.__rpcControl.defer("eduops_executeCommand", 1);
+        window.EduOpsApp.state.confirm.onProceed();
+      });
+      await page.waitForFunction(() => window.__rpcControl.pending("eduops_executeCommand").length === 1);
+      const pending = (await page.evaluate(() => window.__rpcControl.pending("eduops_executeCommand")))[0];
+      await resolveDeferred(page, pending, {
+        ok: false,
+        schemaVersion: "EDUOPS_RECEIPT_V1",
+        receiptId: "RECEIPT-BLOCKED",
+        operationId: "OP-BLOCKED",
+        previewId: "PREVIEW-BLOCKED",
+        commandType: "SEND_INDIVIDUAL_COMMUNICATION",
+        operation: "SEND_INDIVIDUAL_COMMUNICATION",
+        eventType: "COMMUNICATION",
+        outcome: "BLOCKED",
+        blockCode: "COOLDOWN_ACTIVE",
+        blockReason: "Fixture cooldown authority blocked final execution.",
+        applicantOutcomes: []
+      });
+      await page.waitForSelector("[data-communication-receipt-outcome='BLOCKED']");
+      const notice = await page.locator("[data-communication-receipt-outcome='BLOCKED']").innerText();
+      assert.match(notice, /Communication was not sent/);
+      assert.match(notice, /COOLDOWN_ACTIVE/);
+      assert.match(notice, /Fixture cooldown authority blocked final execution/);
+      assert.match(notice, /OP-BLOCKED/);
+      assert.match(notice, /PREVIEW-BLOCKED/);
+      assert.match(notice, /RECEIPT-BLOCKED/);
+      assert.match(notice, /Recommended message/);
+      assert.match(notice, /Action currently permitted/);
+
+      await page.locator("[data-workbench-tab='audit']").click();
+      await page.waitForFunction(() => document.querySelector("#eduopsOperationHistory")?.getAttribute("data-history-state") === "SUCCESS");
+      const history = await page.locator("#eduopsOperationHistory").innerText();
+      assert.match(history, /RECEIPT-BLOCKED/);
+      assert.match(history, /COOLDOWN_ACTIVE/);
+      assert.match(history, /Fixture cooldown authority blocked final execution/);
+      assert.doesNotMatch(history, /SENT|COMPLETE/);
     });
 
     await scenario("Applicant-scoped manifest callback is generation-bound", async (page) => {

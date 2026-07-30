@@ -128,4 +128,91 @@
   .eduops-operations-action-packages { gap: 3px; }
   .eduops-operations-split-workspace { grid-template-columns: clamp(220px, 18vw, 250px) minmax(0, 1fr); }
 }
+
+/* R391D/E scan-density layer: display-only refinements for active Operations Workspace chrome. */
+.eduops-operations-workspace {
+  min-height: 68px;
+  max-height: 82px;
+  border-radius: 7px;
+}
+.eduops-operations-ribbon-row {
+  grid-template-columns: minmax(610px, 1fr) 1px minmax(300px, .32fr);
+  align-items: stretch;
+}
+.eduops-operations-primary-bucket {
+  min-height: 36px;
+  padding: 3px 6px;
+  border-radius: 4px;
+}
+.eduops-operations-primary-bucket:focus-visible,
+.eduops-operations-action-card .eduops-button:focus-visible,
+.eduops-operations-package-panel-control button:focus-visible,
+.eduops-operations-context-package-list button:focus-visible {
+  outline: 2px solid #0e62aa;
+  outline-offset: 2px;
+}
+.eduops-operations-primary-bucket strong { font-size: 14px; }
+.eduops-operations-primary-bucket small { font-size: 9px; }
+.eduops-operations-action-card {
+  min-height: 36px;
+  max-height: 46px;
+  border-left-width: 3px;
+  border-radius: 4px;
+  box-shadow: none;
+}
+.eduops-operations-action-card h3 {
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+}
+.eduops-operations-action-card-top strong { font-size: 14px; }
+.eduops-operations-action-card .eduops-button {
+  min-height: 23px;
+  max-width: 92px;
+}
+.eduops-operations-queue-toolbar {
+  min-height: 30px;
+  padding: 3px 6px;
+  border-radius: 5px 5px 0 0;
+}
+.eduops-operations-queue-context {
+  gap: 4px;
+  padding: 6px;
+  border-radius: 6px;
+}
+.eduops-operations-queue-context h2 { font-size: 14px; }
+.eduops-operations-queue-context dl div {
+  grid-template-columns: 78px minmax(0, 1fr);
+  padding: 3px 5px;
+}
+.eduops-operations-package-panel-control {
+  gap: 3px;
+  margin: 3px 0;
+}
+.eduops-operations-package-panel-control button {
+  min-height: 21px;
+  border-radius: 3px;
+}
+.eduops-operations-context-package-list button {
+  min-height: 23px;
+  border-radius: 4px;
+}
+@media (max-width: 1366px) and (max-height: 800px) {
+  .eduops-operations-workspace {
+    min-height: 64px;
+    max-height: 76px;
+  }
+  .eduops-operations-ribbon-row {
+    grid-template-columns: minmax(500px, 1fr) 1px minmax(265px, .3fr);
+  }
+  .eduops-operations-primary-bucket {
+    min-height: 34px;
+    padding-inline: 4px;
+  }
+  .eduops-operations-action-card {
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    min-height: 34px;
+    padding: 4px 5px;
+  }
+}
 </style>

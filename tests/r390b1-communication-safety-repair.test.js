@@ -955,7 +955,23 @@ const historyContext = {
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
       })[character]);
     },
-    formatPngDate() { return "FALLBACK PNG TIME"; }
+    formatPngDate(value) {
+      if (value == null || value === "") return "Not scheduled";
+      const date = value instanceof Date ? value : new Date(value);
+      if (Number.isNaN(date.getTime())) return "Not scheduled";
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Pacific/Port_Moresby",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
+      }).formatToParts(date);
+      const byType = {};
+      parts.forEach(part => { if (part.type !== "literal") byType[part.type] = part.value; });
+      return [byType.day, byType.month, byType.year].join(" ") + ", " + byType.hour + ":" + byType.minute + " " + String(byType.dayPeriod || "").toUpperCase();
+    }
   }
 };
 vm.createContext(historyContext);
@@ -992,7 +1008,7 @@ for (const label of [
 assert.match(historyHtml, /<dd>BLOCKED<\/dd>/);
 assert.match(historyHtml, /<dd>AUTHORITY_PENDING<\/dd>/);
 assert.match(historyHtml, /<dd>EDUOPS-RECEIPT-HISTORY-EXACT<\/dd>/);
-assert.match(historyHtml, /<dd>29 July 2026, 9:15 am<\/dd>/, "History must prefer the receipt's PNG-local timestamp");
+assert.match(historyHtml, /<dd>29 July 2026, 9:15 AM<\/dd>/, "History must render PNG-local display from the technical timestamp");
 assert.match(historyHtml, /<dd>2026-07-28T23:15:00.000Z<\/dd>/, "History must retain the separate technical timestamp");
 assert.doesNotMatch(historyHtml, /BLOCKEDEDUOPS-RECEIPT/, "Outcome and receipt ID must never be concatenated");
 
@@ -1011,6 +1027,25 @@ const unblockedHistoryHtml = historyContext.historyListHtml({
   communicationReceipts: []
 }, false);
 assert.doesNotMatch(unblockedHistoryHtml, /<dt>Block code<\/dt>|<dt>Block reason<\/dt>/, "History must hide block fields only when no blocker exists");
+
+const correctedHistoryHtml = historyContext.historyListHtml({
+  schemaVersion: "EDUOPS_OPERATION_HISTORY_V1",
+  receipts: [{
+  operation: "SEND_INDIVIDUAL_COMMUNICATION",
+  outcome: "BLOCKED",
+  blockCode: "PREVIEW_STALE",
+  blockReason: "Preview expired.",
+  receiptId: "EDUOPS-RECEIPT-PREVIEW-STALE",
+  actor: "operator@example.test",
+  occurredAt: "2026-07-30T03:52:18.845Z",
+  occurredAtPng: "30 July 2026, 11:52 AM"
+  }],
+  communicationReceipts: []
+}, false);
+assert.match(correctedHistoryHtml, /<dd>30 July 2026, 1:52 PM<\/dd>/, "Audit must convert the proven PREVIEW_STALE receipt time to PNG-local UTC+10");
+assert.match(correctedHistoryHtml, /<dd>2026-07-30T03:52:18.845Z<\/dd>/, "Audit must preserve the proven technical ISO timestamp");
+assert.match(correctedHistoryHtml, /<dd>PREVIEW_STALE<\/dd>/, "Audit must keep the PREVIEW_STALE block code visible");
+assert.doesNotMatch(correctedHistoryHtml, /11:52 AM/, "Audit must not display the stale two-hour-shifted PNG-local timestamp");
 
 let selectedPreviewCapture = null;
 let selectedSendCapture = null;

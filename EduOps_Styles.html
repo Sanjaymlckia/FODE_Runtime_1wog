@@ -2728,4 +2728,299 @@ body.eduops-confirm-open { overflow: hidden; }
   .eduops-col-route { display: none; }
 }
 
+/* R391D/E client readability layer: display-only density refinements for active EduOps surfaces. */
+:root {
+  --eduops-r391de-gap: 8px;
+  --eduops-r391de-tight-gap: 5px;
+  --eduops-r391de-panel-pad: 10px;
+  --eduops-r391de-row-min: 40px;
+}
+.eduops-filter-toolbar {
+  align-items: center;
+  gap: var(--eduops-r391de-tight-gap);
+  padding: 4px 7px;
+}
+.eduops-filter-toolbar .eduops-search input {
+  min-height: 32px;
+  font-size: 15px;
+}
+.eduops-filter-toolbar .eduops-inline-control select,
+.eduops-filter-toolbar .eduops-filter-button {
+  min-height: 30px;
+  font-size: 12px;
+}
+.eduops-search input:focus-visible,
+.eduops-filter-toolbar select:focus-visible,
+.eduops-filter-button:focus-visible,
+.eduops-workbench-tabs button:focus-visible,
+.eduops-document-gallery button:focus-visible,
+.eduops-row-open:focus-visible {
+  outline: 2px solid #0e62aa;
+  outline-offset: 2px;
+}
+.eduops-selection-bar {
+  padding: 4px 7px;
+}
+.eduops-selection-summary,
+.eduops-queue-compact-stats {
+  line-height: 1.25;
+}
+.eduops-table-shell {
+  gap: 4px;
+}
+.eduops-table-scroller {
+  min-height: 220px;
+  padding-bottom: 2px;
+}
+.eduops-pagination {
+  position: relative;
+  z-index: 7;
+  flex: 0 0 auto;
+  background: #fff;
+  border-top: 1px solid var(--eduops-line);
+}
+.eduops-page-size {
+  max-width: 150px;
+  justify-self: end;
+}
+.eduops-page-size select {
+  width: auto;
+  min-width: 68px;
+}
+.eduops-work-table th {
+  height: 24px;
+  padding: 3px 6px;
+}
+.eduops-work-table td {
+  height: var(--eduops-r391de-row-min);
+  padding: 4px 6px;
+  line-height: 1.25;
+}
+.eduops-applicant-link strong,
+.eduops-col-issue strong,
+.eduops-col-next-action strong,
+.eduops-col-row-status strong {
+  font-size: 12px;
+  line-height: 1.2;
+}
+.eduops-applicant-link span,
+.eduops-col-issue span,
+.eduops-col-next-action span,
+.eduops-col-row-status span {
+  font-size: 11px;
+  line-height: 1.2;
+}
+.eduops-row-detail summary {
+  min-height: 20px;
+  padding: 1px 0;
+}
+.eduops-authority-header {
+  grid-template-columns: repeat(5, minmax(115px, 1fr));
+}
+.eduops-authority-item {
+  padding: 7px 9px;
+}
+.eduops-authority-item span { font-size: 10px; }
+.eduops-authority-item strong {
+  margin-top: 2px;
+  font-size: 12px;
+}
+.eduops-workbench-tabs {
+  min-height: 40px;
+  gap: 2px;
+  padding: 5px 12px 0;
+}
+.eduops-workbench-tabs button {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 4px 4px 0 0;
+}
+.eduops-workbench-panel,
+.eduops-batch-panel {
+  padding: 10px 12px 16px;
+}
+.eduops-panel-grid {
+  gap: var(--eduops-r391de-gap);
+  max-width: 1580px;
+}
+.eduops-panel-card {
+  padding: var(--eduops-r391de-panel-pad);
+  border-radius: 6px;
+  box-shadow: none;
+}
+.eduops-panel-card > header {
+  gap: 8px;
+  margin-bottom: 7px;
+}
+.eduops-panel-card h2 {
+  font-size: 16px;
+  line-height: 1.15;
+}
+.eduops-panel-card header p,
+.eduops-explanation,
+.eduops-action-reason {
+  font-size: 12px;
+  line-height: 1.35;
+}
+.eduops-definition-list {
+  gap: 1px;
+}
+.eduops-definition-list > div {
+  padding: 6px 8px;
+}
+.eduops-definition-list dt {
+  font-size: 11px;
+}
+.eduops-definition-list dd {
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.25;
+}
+.eduops-document-workspace {
+  grid-template-columns: minmax(210px, 260px) minmax(0, 1fr);
+  gap: var(--eduops-r391de-gap);
+  max-width: 1560px;
+}
+.eduops-document-gallery {
+  gap: 5px;
+  padding: 8px;
+}
+.eduops-document-gallery button {
+  min-height: 48px;
+  padding: 7px;
+}
+.eduops-document-gallery button[aria-current="true"] {
+  border-width: 2px;
+  padding: 6px;
+}
+.eduops-document-card {
+  grid-template-columns: 48px minmax(0, 1fr);
+}
+.eduops-document-card .eduops-doc-thumb {
+  min-height: 42px;
+  padding: 5px;
+  font-size: 10px;
+}
+.eduops-document-stage {
+  padding: 10px;
+}
+.eduops-document-stage > header {
+  align-items: center;
+}
+.eduops-document-detail-strip .eduops-definition-list {
+  margin-top: 7px;
+}
+.eduops-document-preview {
+  min-height: clamp(260px, 38vh, 430px);
+  margin: 9px 0;
+  padding: 8px;
+}
+.eduops-document-preview img {
+  max-height: clamp(260px, 50vh, 560px);
+}
+.eduops-document-controls {
+  grid-template-columns: minmax(170px, .36fr) minmax(260px, 1fr);
+  gap: 8px;
+}
+.eduops-document-evidence-actions,
+.eduops-document-command-actions,
+.eduops-document-step-actions {
+  gap: 5px;
+}
+.eduops-template-gallery {
+  gap: 6px;
+}
+.eduops-template-card button {
+  padding: 7px 8px;
+}
+.eduops-communications-workbench-grid .eduops-span-4 {
+  grid-column: span 5;
+}
+.eduops-communications-workbench-grid .eduops-span-8 {
+  grid-column: span 7;
+}
+.eduops-communication-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.eduops-communication-form .eduops-field-wide {
+  grid-column: span 2;
+}
+#eduopsCommBody {
+  min-height: 220px;
+}
+.eduops-history-card .eduops-audit-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.eduops-audit-list li {
+  padding: 8px;
+}
+.eduops-finance-workbench-grid .eduops-definition-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.eduops-finance-overview-grid,
+.eduops-finance-reason-grid {
+  gap: 6px;
+  margin: 7px 0;
+}
+.eduops-finance-overview-grid button,
+.eduops-finance-reason {
+  min-height: 56px;
+  padding: 8px;
+}
+.eduops-finance-controls,
+.eduops-finance-search {
+  gap: 6px;
+  margin: 7px 0;
+}
+@media (max-width: 1500px) {
+  .eduops-authority-header { grid-template-columns: repeat(4, minmax(115px, 1fr)); }
+  .eduops-history-card .eduops-audit-list { grid-template-columns: 1fr; }
+}
+@media (max-width: 1200px) {
+  .eduops-document-workspace { grid-template-columns: 1fr; }
+  .eduops-document-gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .eduops-communications-workbench-grid .eduops-span-4,
+  .eduops-communications-workbench-grid .eduops-span-8 {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 900px) {
+  .eduops-filter-toolbar .eduops-search input { font-size: 15px; }
+  .eduops-authority-header { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .eduops-document-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .eduops-communication-form { grid-template-columns: 1fr; }
+  .eduops-communication-form .eduops-field-wide { grid-column: auto; }
+  .eduops-finance-workbench-grid .eduops-definition-list { grid-template-columns: 1fr; }
+}
+@media (max-width: 1366px) and (max-height: 800px) {
+  :root {
+    --eduops-r391de-gap: 6px;
+    --eduops-r391de-panel-pad: 8px;
+    --eduops-r391de-row-min: 38px;
+  }
+  .eduops-table-scroller { min-height: 245px; }
+  .eduops-workbench-tabs {
+    min-height: 36px;
+    padding-top: 4px;
+  }
+  .eduops-workbench-tabs button {
+    min-height: 31px;
+    padding: 5px 8px;
+  }
+  .eduops-workbench-panel,
+  .eduops-batch-panel {
+    padding: 8px 10px 12px;
+  }
+  .eduops-document-preview {
+    min-height: clamp(230px, 34vh, 360px);
+  }
+  #eduopsCommBody {
+    min-height: 180px;
+  }
+}
+
 </style>

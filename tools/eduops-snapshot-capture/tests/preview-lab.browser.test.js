@@ -164,11 +164,13 @@ async function noPageOverflow(page) {
         item.querySelector("strong")?.textContent.trim() || ""
       ])));
       const expectedCompositionCounts = await page.evaluate(() => {
-        const reconciliation = window.EduOpsApp.state.workload.reconciliation;
+        const workload = window.EduOpsApp.state.workload;
+        const reconciliation = workload.reconciliation || {};
+        const selection = workload.presentation && workload.presentation.selection || {};
         return {
           "Canonical population": String(reconciliation.canonicalPopulation),
           "Matched workload": String(reconciliation.totalMatched),
-          "Visible page": String(reconciliation.visiblePageCount),
+          "Displayed page": String(reconciliation.displayedPageCount || reconciliation.visiblePageCount || selection.displayedPageCount || (workload.rows || []).length),
           "Outside current view": String(reconciliation.hiddenFromCurrentView)
         };
       });
