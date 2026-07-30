@@ -79,9 +79,7 @@ const protectedRpcs = [
   "admin_previewApplicantMessage",
   "admin_sendApplicantMessage",
   "admin_previewStageBatch",
-  "admin_sendStageBatch",
   "admin_previewSelectedApplicantBatch",
-  "admin_sendSelectedApplicantBatch",
   "admin_getCapabilityGrantMatrix",
   "admin_getCanonicalFinanceWorklist",
   "admin_createTemporaryCapabilityGrant",
@@ -94,6 +92,10 @@ const protectedRpcs = [
 for (const name of protectedRpcs) {
   assert.ok(rpc.calls.includes(name), `Protected AdminUI RPC must remain visible: ${name}`);
 }
+
+["admin_sendStageBatch", "admin_sendSelectedApplicantBatch"].forEach((name) => {
+  assert.ok(!rpc.calls.includes(name), `Retired AdminUI bulk-send RPC must not remain callable: ${name}`);
+});
 
 assert.doesNotMatch(adminUi, /console\.log\([^)]*(rawValue|fileId|folderId|PortalTokenSecret)/i, "AdminUI console logging must not expose raw file/folder/token details");
 assert.match(adminUi, /withFailureHandler\(function\(err\)/, "AdminUI RPC calls must keep failure handlers");

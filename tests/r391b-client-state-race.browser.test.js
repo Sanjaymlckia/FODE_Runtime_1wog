@@ -1293,7 +1293,7 @@ async function run() {
       assert.equal(state.step, "partitions");
     });
 
-    await scenario("G Batch execution rejects mutated accepted preview identity", async (page) => {
+    await scenario("G Batch prohibition blocks mutated accepted preview without execution", async (page) => {
       await openBatchWithApplicant(page, "A");
       await page.evaluate(() => {
         const limit = document.querySelector("[data-batch-execution-limit]");
@@ -1308,26 +1308,18 @@ async function run() {
         document.querySelector("[data-batch-preview]").click();
       });
       await page.waitForFunction(() => window.EduOpsApp.state.batch?.step === "partitions");
-      const before = await page.evaluate(() => window.__rpcControl.count("eduops_executeCommand"));
-      const state = await page.evaluate(() => {
-        const app = window.EduOpsApp;
-        app.state.batch.binding.executionLimit = 2;
+      await page.evaluate(() => {
         document.querySelector("[data-batch-continue]").click();
         document.querySelector("[data-batch-confirm]").click();
-        document.querySelector("[data-batch-execute]").click();
-        return {
-          executeCalls: window.__rpcControl.count("eduops_executeCommand"),
-          blockCode: app.state.batch?.confirmationDiagnostic?.blockCode,
-          commandExecutable: app.state.commandExecutable,
-          acceptedIdentity: app.state.batch?.acceptedPreviewIdentity || null,
-          confirmOpen: !!app.state.confirm
-        };
       });
-      assert.equal(state.executeCalls, before);
-      assert.equal(state.blockCode, "BATCH_CONFIRMATION_IDENTITY_MISMATCH");
-      assert.equal(state.commandExecutable, false);
-      assert.equal(state.acceptedIdentity, null);
-      assert.equal(state.confirmOpen, false);
+      const state = await page.evaluate(() => ({
+        executeDisabled: document.querySelector("[data-batch-execute]")?.disabled === true,
+        executeCalls: window.__rpcControl.count("eduops_executeCommand"),
+        receipt: window.EduOpsApp.state.batch?.receipt || null
+      }));
+      assert.equal(state.executeDisabled, true);
+      assert.equal(state.executeCalls, 0);
+      assert.equal(state.receipt, null);
     });
 
     await scenario("I population integrity exact contract disables only Batch authority", async (page) => {
@@ -1872,56 +1864,25 @@ async function run() {
       assert.equal(state.acceptedIdentity, null);
     });
 
-    await scenario("I Batch close before late receipt refreshes workload without stale render", async (page) => {
+    await scenario("I Batch close after prohibition leaves no stale receipt path", async (page) => {
       const pageErrors = [];
       page.on("pageerror", (error) => pageErrors.push(error.message));
       await openBatchWithApplicant(page, "A");
-      await page.evaluate(() => {
-        const limit = document.querySelector("[data-batch-execution-limit]");
-        limit.value = "1";
-        limit.dispatchEvent(new Event("change", { bubbles: true }));
-      });
-      await page.waitForFunction(() => !!window.EduOpsApp.state.batch?.catalogue);
-      await page.evaluate(() => {
-        const template = document.querySelector("[data-batch-template]");
-        template.value = "T1";
-        template.dispatchEvent(new Event("change", { bubbles: true }));
-        document.querySelector("[data-batch-preview]").click();
-      });
-      await page.waitForFunction(() => window.EduOpsApp.state.batch?.step === "partitions");
-      await page.evaluate(() => {
-        document.querySelector("[data-batch-continue]").click();
-        document.querySelector("[data-batch-confirm]").click();
-        document.querySelector("[data-batch-execute]").click();
-        window.__rpcControl.defer("eduops_executeCommand", 1);
-        window.EduOpsApp.state.confirm.onProceed();
-      });
-      await page.waitForFunction(() => window.__rpcControl.pending("eduops_executeCommand").length === 1);
-      const pending = (await page.evaluate(() => window.__rpcControl.pending("eduops_executeCommand")))[0];
-      const before = await page.evaluate(async () => {
-        const count = window.__rpcControl.count("eduops_queryOperationalWorkload");
-        await window.EduOpsApp.closeBatch();
-        return count;
-      });
-      await resolveDeferred(page, pending, { ok: true, receiptId: "BATCH-LATE-RECEIPT", outcome: "COMPLETE", applicantOutcomes: [] });
-      await page.waitForFunction((count) =>
-        window.__rpcControl.count("eduops_queryOperationalWorkload") === count + 1
-        && window.EduOpsApp.hasCurrentWorkload()
-      , before);
+      const before = await page.evaluate(() => window.__rpcControl.count("eduops_executeCommand"));
+      await page.evaluate(() => window.EduOpsApp.closeBatch());
+      await flushUi(page);
       const state = await page.evaluate(() => ({
         batch: window.EduOpsApp.state.batch,
-        workloadCalls: window.__rpcControl.count("eduops_queryOperationalWorkload"),
-        rows: (window.EduOpsApp.state.workload?.rows || []).map((row) => row.applicantId),
+        executeCalls: window.__rpcControl.count("eduops_executeCommand"),
         confirm: window.EduOpsApp.state.confirm
       }));
       assert.equal(state.batch, null);
-      assert.equal(state.workloadCalls, before + 1);
-      assert.deepEqual(state.rows, ["A", "B", "C"]);
+      assert.equal(state.executeCalls, before);
       assert.equal(state.confirm, null);
       assert.deepEqual(pageErrors, []);
     });
 
-    await scenario("I accepted Batch receipt freshness prevents a second close refresh", async (page) => {
+    await scenario("I prohibited Batch never fabricates a receipt", async (page) => {
       await openBatchWithApplicant(page, "A");
       await page.evaluate(() => {
         const limit = document.querySelector("[data-batch-execution-limit]");
@@ -1939,28 +1900,15 @@ async function run() {
       await page.evaluate(() => {
         document.querySelector("[data-batch-continue]").click();
         document.querySelector("[data-batch-confirm]").click();
-        document.querySelector("[data-batch-execute]").click();
-        window.__rpcControl.defer("eduops_executeCommand", 1);
-        window.EduOpsApp.state.confirm.onProceed();
       });
-      await page.waitForFunction(() => window.__rpcControl.pending("eduops_executeCommand").length === 1);
-      const pending = (await page.evaluate(() => window.__rpcControl.pending("eduops_executeCommand")))[0];
-      await resolveDeferred(page, pending, { ok: true, receiptId: "BATCH-CURRENT-RECEIPT", outcome: "COMPLETE", applicantOutcomes: [] });
-      await page.waitForFunction(() =>
-        window.EduOpsApp.state.batch?.receiptFreshnessSatisfied === true
-        && window.EduOpsApp.hasCurrentWorkload()
-      );
-      const beforeClose = await page.evaluate(() => window.__rpcControl.count("eduops_queryOperationalWorkload"));
-      await page.evaluate(() => window.EduOpsApp.closeBatch());
-      await flushUi(page);
       const state = await page.evaluate(() => ({
-        workloadCalls: window.__rpcControl.count("eduops_queryOperationalWorkload"),
-        batch: window.EduOpsApp.state.batch,
-        current: window.EduOpsApp.hasCurrentWorkload()
+        executeDisabled: document.querySelector("[data-batch-execute]")?.disabled === true,
+        executeCalls: window.__rpcControl.count("eduops_executeCommand"),
+        receipt: window.EduOpsApp.state.batch?.receipt || null
       }));
-      assert.equal(state.workloadCalls, beforeClose);
-      assert.equal(state.batch, null);
-      assert.equal(state.current, true);
+      assert.equal(state.executeDisabled, true);
+      assert.equal(state.executeCalls, 0);
+      assert.equal(state.receipt, null);
     });
 
     await scenario("H bootstrap retry generation", async (page) => {

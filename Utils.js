@@ -2882,11 +2882,50 @@ function isManualSingleSendProbeEnabled_() {
     && CONFIG.ENABLE_MANUAL_SINGLE_SENDS === true;
 }
 
+function bulkCommunicationProhibitionAuthority_(pathType) {
+  var path = safeStr_(pathType || "STAGE_BATCH").toUpperCase();
+  var legacy = path === "LEGACY";
+  var trigger = path === "TRIGGER";
+  return {
+    available: false,
+    permitted: false,
+    blockCode: legacy
+      ? "LEGACY_BULK_PATH_RETIRED"
+      : (trigger ? "TRIGGER_BULK_PATH_PROHIBITED" : "BATCH_SEND_PROHIBITED"),
+    blockReason: legacy
+      ? "This communication path is retired. Use Stage Batch after durable bulk authority is implemented."
+      : (trigger
+        ? "Scheduled and trigger-based bulk communication is prohibited pending durable per-recipient communication authority."
+        : "Bulk communication remains disabled pending durable per-recipient communication authority."),
+    requiredFutureAuthority: "STAGE_BATCH_DURABLE_LEDGER",
+    pathType: path
+  };
+}
+
+function bulkCommunicationProhibitionResult_(action, pathType, extra) {
+  var authority = bulkCommunicationProhibitionAuthority_(pathType);
+  return Object.assign({
+    ok: false,
+    action: safeStr_(action || "bulk_communication"),
+    result: "BLOCKED",
+    outcome: "SEND_BLOCKED",
+    available: authority.available,
+    permitted: authority.permitted,
+    blockCode: authority.blockCode,
+    blockReason: authority.blockReason,
+    requiredFutureAuthority: authority.requiredFutureAuthority,
+    gmailPathEntered: false,
+    recipientsSent: 0
+  }, extra && typeof extra === "object" ? extra : {});
+}
+
 function isBatchSendEnabled_() {
+  var authority = bulkCommunicationProhibitionAuthority_("STAGE_BATCH");
   return CONFIG
     && CONFIG.SYSTEM_STABILIZATION_MODE !== true
     && CONFIG.ENABLE_BATCH_SENDS === true
-    && CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS === true;
+    && CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS === true
+    && authority.permitted === true;
 }
 
 function isBatchPreviewModeEnabled_() {
@@ -2894,11 +2933,13 @@ function isBatchPreviewModeEnabled_() {
 }
 
 function isTriggerSendEnabled_() {
+  var authority = bulkCommunicationProhibitionAuthority_("TRIGGER");
   return CONFIG
     && CONFIG.SYSTEM_STABILIZATION_MODE !== true
     && CONFIG.ENABLE_TRIGGER_SENDS === true
     && CONFIG.ENABLE_TRIGGER_EMAIL_SENDS === true
-    && CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS === true;
+    && CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS === true
+    && authority.permitted === true;
 }
 
 function normalizeSendRecipient_(recipient) {

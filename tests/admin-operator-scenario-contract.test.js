@@ -56,12 +56,12 @@ mustMatch(functionSource("openBatchCommunicationFromSelection_"), /No authoritat
 mustNotMatch(functionSource("openBatchCommunicationFromSelection_"), /batchCommRecommendedFromRows_/, "Batch communication scenario must not infer one template from a mixed owner bucket");
 mustMatch(adminUi, /Selected template[\s\S]*Recommended/, "Batch communication scenario must highlight the recommended template");
 mustMatch(adminUi, /Recipient count/, "Batch communication scenario must show recipient count");
-mustMatch(adminUi, /id="btnStandaloneBatchCommPreview"[\s\S]*>Generate Preview<\/button>[\s\S]*id="btnStandaloneBatchCommSend"[\s\S]*onclick="requestBatchCommunicationConfirmation_\(\)"[\s\S]*>Review Send<\/button>/, "Batch communication scenario must expose generate preview and in-app confirmation flow");
+mustMatch(adminUi, /id="btnStandaloneBatchCommPreview"[\s\S]*>Generate Preview<\/button>[\s\S]*id="btnStandaloneBatchCommSend"[^>]*disabled>Bulk send prohibited<\/button>/, "Batch communication scenario must preserve preview while disabling bulk send");
 mustNotMatch(adminUi, /Batch Communication Handoff|Batch Reminder Handoff/, "Batch communication scenario must not stop at a handoff panel");
 mustNotMatch(adminUi, /Open first eligible in Review/, "Batch communication scenario must not route multi-applicant cohorts through Review");
 mustNotMatch(adminUi, /function actionabilityBatchCommunication_[\s\S]{0,700}admin_sendApplicantMessage/, "Batch modal must not create a single-applicant send path");
 mustMatch(adminUi, /admin_previewSelectedApplicantBatch/, "Selected cohorts must use the selected batch preview wrapper");
-mustMatch(adminUi, /admin_sendSelectedApplicantBatch/, "Selected cohorts must use the selected batch send wrapper");
+mustNotMatch(adminUi, /admin_sendSelectedApplicantBatch/, "Selected cohorts must not retain a client-side bulk send RPC");
 mustNotMatch(adminUi, /function sendBatchCommunicationModal_[\s\S]*admin_sendApplicantMessage/, "Batch modal must not route through the single-applicant Review RPC");
 mustMatch(adminUi, /onclick="openBatchCommunicationFromStage_\(\)">Open Batch Communication/, "Stage cohort scenario must open the Batch Communication modal as the primary path");
 mustNotMatch(adminUi, /Confirm in Batch Modal/, "Stage batch scenario must not expose a competing inline confirmation path");
@@ -70,19 +70,17 @@ mustNotMatch(adminUi, /id="(?:opsStageBatchLimit|stageBatchLimit)"[^>]*value="50
 mustMatch(adminUi, /ids\.length === 1[\s\S]*Single applicant selected[\s\S]*Review Workspace communication flow/, "Single applicant scenario must route operators to the single-recipient Review path");
 mustMatch(adminUi, /!ids\.length[\s\S]*Select at least two applicants/, "No-cohort scenario must provide clear guidance instead of opening an empty batch modal");
 mustMatch(adminUi, /Recipients[\s\S]*Valid email[\s\S]*Blocked[\s\S]*Missing email[\s\S]*Excluded/, "Batch modal must reconcile recipient readiness counts");
-["Preview required", "Ready to Send", "Sending", "Completed", "Failed / Partial"].forEach((label) => {
+["Preview required", "Bulk send prohibited"].forEach((label) => {
   mustMatch(adminUi, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `Batch modal must expose send lifecycle state: ${label}`);
 });
 mustMatch(adminUi, /id="standaloneBatchCommConfirm"/, "Batch modal must render an in-app confirmation panel");
-mustMatch(adminUi, /batchCommWorkflow[\s\S]*Template[\s\S]*Preview[\s\S]*Recipients[\s\S]*Confirm[\s\S]*Send/, "Batch modal must show the workflow checklist");
+mustMatch(adminUi, /batchCommWorkflow[\s\S]*Template[\s\S]*Preview[\s\S]*Recipients[\s\S]*Confirm[\s\S]*Bulk disabled/, "Batch modal must show the prohibited bulk workflow");
 mustMatch(adminUi, /commTemplateOtherBanner[\s\S]*Other option/, "Batch modal must mark non-recommended templates as other options");
 mustMatch(adminUi, /Excluded \/ Blocked/, "Batch modal summary must expose exclusions and blocked records");
-mustMatch(adminUi, /This action will immediately send[\s\S]*emails[\s\S]*<strong>Template<\/strong>[\s\S]*<strong>Recipients<\/strong>[\s\S]*<strong>Cap<\/strong>[\s\S]*<strong>Authority<\/strong>/, "Batch modal confirmation must name template, recipient count, cap, and authority");
-mustMatch(adminUi, /Send ' \+ esc\(recipients\) \+ ' Emails/, "Batch modal confirmation button must use the exact send count");
+mustMatch(adminUi, /Bulk Send Prohibited[\s\S]*batchCommSendProhibitedReason_\(\)/, "Batch modal confirmation panel must explain the prohibition");
+mustNotMatch(adminUi, /Send ' \+ esc\(recipients\) \+ ' Emails/, "Batch modal must not render an executable send control");
 mustNotMatch(functionSource("sendBatchCommunicationModal_"), /window\.confirm/, "Batch modal must not use browser-native confirmation");
-mustMatch(functionSource("batchCommCanSend_"), /sendResult[\s\S]*ok !== false[\s\S]*return false/, "Batch modal must disable repeat sends after completion");
-mustMatch(functionSource("handleBatchCommSendResult_"), /previewStale = true[\s\S]*refreshActionabilityAfterBatchSend_\("send_success"\)/, "Batch modal must invalidate preview and delegate post-send worklist refresh through the shared helper");
-mustMatch(functionSource("refreshActionabilityAfterBatchSend_"), /loadActionabilityPreview_\(\{[\s\S]*force: true/, "Post-send batch refresh helper must force a server-derived actionability reload");
+mustMatch(functionSource("batchCommCanSend_"), /return false/, "Batch modal must keep bulk send disabled");
 mustMatch(adminUi, /Technical Diagnostics/, "Batch modal diagnostics must remain available but separated");
 
 mustMatch(adminUi, /function commContactabilityGate_/, "Contactability Gate scenario must be first-class");

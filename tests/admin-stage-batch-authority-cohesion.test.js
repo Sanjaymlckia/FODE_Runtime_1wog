@@ -54,7 +54,8 @@ assert.match(preview, /communicationCohorts:\s*cohort\.communicationCohorts \|\|
 assert.match(preview, /else if \(!discoverOnly\) \{\s*writeStageBatchPreviewCache_/s, "Stage Batch preview must skip cache writes during read-only cohort discovery");
 
 assert.match(send, /messageType = normalizeApplicantMessageType_\(p\.messageType \|\| ""\) \|\| getBatchMessageTypeForStage_\(stage\);/, "Stage Batch send must honor the explicit authoritative cohort message type");
-assert.match(send, /cachedMessageType !== messageType/, "Stage Batch send parity must reject mismatched message-type sends");
+assert.match(send, /stageBatchPopulationIntegrityGate_[\s\S]*bulkCommunicationProhibitionResult_/, "Stage Batch send must prove population integrity before the terminal bulk prohibition");
+assert.doesNotMatch(send, /readStageBatchPreviewCache_|sendApplicantMessage_/, "Stage Batch send must not consume cached preview or enter recipient delivery while prohibited");
 
 assert.match(previewResponse, /communicationCohorts:/, "Stage Batch preview response must expose communication cohorts");
 assert.match(cohortList, /label:\s*clean_\(item\.label \|\| stageBatchCommunicationCohortLabel_\(key\) \|\| key\)/, "Stage Batch communication cohorts must expose operator-readable labels");

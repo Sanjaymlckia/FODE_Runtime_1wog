@@ -36,7 +36,8 @@ assert.match(workbench, /Portal link required:/, "operator blocked-preview statu
 assert.match(workbench, /not hydrated/, "operator blocked-preview status must show failed hydration state");
 assert.match(workbench, /Unresolved:/, "operator blocked-preview status must show unresolved-token diagnostics");
 assert.match(selected, /var renderedSubject = communicationRenderTemplateText_\(built\.subject[\s\S]*var renderedBody = communicationRenderFinalBody_\(context, built\.body/, "selected batch preview must display final-rendered recipient body");
-assert.match(batch, /formatPngDate\(preview\.expiresAt\)[\s\S]*Expiry \(ISO\)[\s\S]*formatPngDate\(batch\.preview\.expiresAt\)/, "batch preview and confirmation dates must use PNG-local display with ISO diagnostics");
+assert.match(batch, /formatPngDate\(preview\.expiresAt\)[\s\S]*Expiry \(ISO\)/, "batch preview must use PNG-local expiry display with ISO diagnostics");
+assert.doesNotMatch(batch, /eduops_executeCommand/, "retired Batch confirmation must not retain an executable RPC path");
 
 const ctx = {
   clean_: value => String(value == null ? "" : value).trim(),

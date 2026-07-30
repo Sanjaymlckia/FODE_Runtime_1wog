@@ -63,7 +63,9 @@ assert.doesNotMatch(eduopsRuntime, /GmailApp|MailApp|sendEmail\s*\(/, "EduOps cl
 assert.match(sources.commands, /admin_previewSelectedApplicantBatch[\s\S]*admin_sendSelectedApplicantBatch/, "Batch communication must stay routed through Communication Authority preview and send");
 assert.match(sources.commands, /admin_sendApplicantMessage/, "Individual communication must stay routed through Communication Authority send");
 
-assert.match(sources.batch, /title:\s*batch\.preview\.summary[\s\S]*proceedLabel:\s*batch\.preview\.summary/, "Batch confirmation must repeat the exact canonical template and recipient count");
+assert.match(sources.batch, /BATCH_SEND_PROHIBITED/, "Batch execution must stop at the explicit prohibition before confirmation or dispatch");
+assert.match(sources.batch, /batchSendProhibitedReason\(/, "Batch execution prohibition must provide the operator reason");
+assert.doesNotMatch(sources.batch, /eduops_executeCommand/, "EduOps Batch client must not retain an execution RPC");
 assert.doesNotMatch(sources.batch, /Confirm batch communication|Send confirmed batch/, "Generic batch wording must not obscure exact execution scope");
 assert.match(sources.workbench, /preview\.executable === true[\s\S]*app\.openConfirm\([\s\S]*app\.commandExecutionPayload\(preview/, "Individual and applicant mutations must consume the executable backend preview identity");
 assert.match(sources.core, /app\.commandExecutionPayload[\s\S]*confirmation:\s*true/, "The identity-preserving execute payload must retain one explicit confirmation");

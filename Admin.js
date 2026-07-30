@@ -4992,22 +4992,10 @@ function admin_campaignSendLegacyBatch(payload) {
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
     requireSuperAdmin_(adminEmail);
     var p = payload || {};
-    if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true) {
-      var blockCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "PRODUCTION_EMAIL_SENDS_DISABLED";
-      if (isSystemStabilizationModeActive_()) logOperationalBlock_("SYSTEM_STABILIZATION_MODE_ACTIVE", {
-        action: "campaign_send_legacy_batch",
-        actorEmail: clean_(adminEmail || "")
-      });
-      logOperationalBlock_("EMAIL_SEND_BLOCKED", {
-        action: "campaign_send_legacy_batch",
-        blockCode: blockCode,
-        actorEmail: clean_(adminEmail || "")
-      });
-      return adminCommBlockedResult_("campaign_send_legacy_batch", blockCode, "", {
-        blockReason: "Legacy campaign sends are disabled during stabilization."
-      });
-    }
-    return campaign_sendLegacyBatch_(p.limit, p);
+    return bulkCommunicationProhibitionResult_("campaign_send_legacy_batch", "LEGACY", {
+      actorEmail: clean_(adminEmail || ""),
+      requestedLimit: Number(p.limit || 0)
+    });
   });
 }
 
@@ -5443,22 +5431,10 @@ function admin_campaignSendLegacyFollowups(payload) {
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
     requireSuperAdmin_(adminEmail);
     var p = payload || {};
-    if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_PRODUCTION_EMAIL_SENDS !== true) {
-      var blockCode = isSystemStabilizationModeActive_() ? "SYSTEM_STABILIZATION_MODE_ACTIVE" : "PRODUCTION_EMAIL_SENDS_DISABLED";
-      if (isSystemStabilizationModeActive_()) logOperationalBlock_("SYSTEM_STABILIZATION_MODE_ACTIVE", {
-        action: "campaign_send_legacy_followups",
-        actorEmail: clean_(adminEmail || "")
-      });
-      logOperationalBlock_("EMAIL_SEND_BLOCKED", {
-        action: "campaign_send_legacy_followups",
-        blockCode: blockCode,
-        actorEmail: clean_(adminEmail || "")
-      });
-      return adminCommBlockedResult_("campaign_send_legacy_followups", blockCode, "", {
-        blockReason: "Legacy campaign follow-up sends are disabled during stabilization."
-      });
-    }
-    return campaign_sendLegacyFollowups_(p.limit);
+    return bulkCommunicationProhibitionResult_("campaign_send_legacy_followups", "LEGACY", {
+      actorEmail: clean_(adminEmail || ""),
+      requestedLimit: Number(p.limit || 0)
+    });
   });
 }
 

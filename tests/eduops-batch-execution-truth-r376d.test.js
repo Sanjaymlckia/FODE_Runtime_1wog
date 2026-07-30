@@ -17,6 +17,7 @@ function extractFunction(source, name) {
 }
 
 const selected = read("Admin_SelectedApplicantCommunications.js");
+const selectedBatchSend = extractFunction(selected, "admin_sendSelectedApplicantBatch");
 const receipts = read("EduOps_Receipts.js");
 const code = read("Code.js");
 const batch = read("EduOps_ClientBatch.html");
@@ -106,15 +107,13 @@ assert.equal(receipt.unresolvedCount, 0);
 assert.equal(receipt.outcome, "PARTIAL");
 assert.equal(receipt.applicantOutcomes.length, 5);
 
-assert.match(selected, /try\s*\{[\s\S]*sendApplicantMessage_\(applicantId, messageType[\s\S]*catch \(recipientErr\)/, "recipient exceptions must be isolated inside the selected-batch loop");
-assert.match(selected, /applicantOutcomes:[\s\S]*selectedBatchOutcomeTotals_\(out\)[\s\S]*clearSelectedApplicantBatchPreviewCache_\(adminEmail\)/, "preview must be cleared after exact outcomes are accumulated");
+assert.match(selectedBatchSend, /selectedApplicantPopulationIntegrityGate_[\s\S]*bulkCommunicationProhibitionResult_/, "selected Batch must prove integrity before the shared prohibition");
+assert.doesNotMatch(selectedBatchSend, /sendApplicantMessage_\(/, "selected Batch must not retain a recipient loop while prohibited");
 assert.match(code, /result:\s*"RECONCILIATION_REQUIRED"[\s\S]*gmailAccepted:\s*true[\s\S]*rowPatchConfirmed:\s*false/, "Gmail success with persistence failure must require reconciliation");
 assert.match(receipts, /function eduops_recoverCommandReceipt[\s\S]*readOnly:\s*true[\s\S]*eduopsReadIdempotentReceipt_/, "recovery must read the existing idempotent receipt without executing sends");
-assert.match(batch, /Execution outcome not yet confirmed/, "client timeout must show unknown-outcome state");
-assert.match(batch, /Reconcile this batch before retrying/, "client timeout must warn against normal retry");
-assert.match(batch, /eduops_recoverCommandReceipt/, "client timeout must use read-only recovery");
+assert.match(batch, /BATCH_SEND_PROHIBITED/, "EduOps execution must return the terminal prohibition");
+assert.doesNotMatch(batch, /eduops_executeCommand/, "EduOps client must not retain a bulk execution RPC");
 assert.match(batch, /var steps = \["cohort", "partitions", "preview", "confirm", "receipt"\]/, "communication flow sequence must remain frozen");
-assert.match(batch, /recipientTable\(recipients, false\)[\s\S]*proceedLabel: batch\.preview\.summary[\s\S]*cancelLabel: "Return to preview"/, "confirmation modal workflow and labels must remain unchanged");
 assert.match(styles, /grid-template-rows:[^;]*minmax\(0, 1fr\)/, "confirmation modal must use a bounded header/body/footer grid");
 assert.match(styles, /max-height:\s*calc\(100vh - 48px\)/, "confirmation modal must fit inside the viewport");
 assert.match(styles, /#eduopsConfirmText[\s\S]*overflow-y:\s*auto/, "confirmation modal body must scroll internally");

@@ -597,7 +597,16 @@ function baseVmContext() {
     Error,
     JSON,
     isFinite,
-    clean_: (value) => String(value == null ? "" : value).trim()
+    clean_: (value) => String(value == null ? "" : value).trim(),
+    bulkCommunicationProhibitionResult_: (action, pathType, extra) => Object.assign({
+      ok: false,
+      action,
+      result: "BLOCKED",
+      outcome: "SEND_BLOCKED",
+      blockCode: pathType === "LEGACY" ? "LEGACY_BULK_PATH_RETIRED" : (pathType === "TRIGGER" ? "TRIGGER_BULK_PATH_PROHIBITED" : "BATCH_SEND_PROHIBITED"),
+      gmailPathEntered: false,
+      recipientsSent: 0
+    }, extra || {})
   };
 }
 
@@ -1012,7 +1021,7 @@ function createSelectedSendContext(snapshot, cachedPreview) {
   return { context, spies };
 }
 
-test("Selected Batch send blocks unsafe integrity and cached fingerprint changes inside its lock", () => {
+test("Selected Batch send checks integrity inside its lock before global bulk prohibition", () => {
   const payload = {
     confirmSend: true,
     messageType: "docs_missing",
@@ -1042,13 +1051,14 @@ test("Selected Batch send blocks unsafe integrity and cached fingerprint changes
   };
   const mismatchHarness = createSelectedSendContext(safeCurrent, cachedPreview);
   const mismatch = mismatchHarness.context.admin_sendSelectedApplicantBatch(payload);
-  assert.equal(mismatch.blockCode, "POPULATION_RECONCILIATION_FAILED");
-  assert.match(mismatch.blockReason, /changed after preview/i);
+  assert.equal(mismatch.blockCode, "BATCH_SEND_PROHIBITED");
+  assert.equal(mismatch.gmailPathEntered, false);
+  assert.equal(mismatch.recipientsSent, 0);
   assert.equal(mismatchHarness.spies.lock, 1);
   assert.equal(mismatchHarness.spies.unlock, 1);
-  assert.equal(mismatchHarness.spies.cacheRead, 1);
-  assert.equal(mismatchHarness.spies.cacheClear, 1);
-  assertNoRecipientSendOrPatch(mismatchHarness.spies, "Selected send cached fingerprint change");
+  assert.equal(mismatchHarness.spies.cacheRead, 0);
+  assert.equal(mismatchHarness.spies.cacheClear, 0);
+  assertNoRecipientSendOrPatch(mismatchHarness.spies, "Selected send prohibition");
 });
 
 function createStagePreviewContext(snapshot) {
@@ -1178,7 +1188,7 @@ function createStageSendContext(snapshot, cachedPreview) {
   return { context, spies };
 }
 
-test("Stage Batch send blocks unsafe integrity and cached fingerprint changes inside its lock", () => {
+test("Stage Batch send checks integrity inside its lock before global bulk prohibition", () => {
   const payload = {
     confirmSend: true,
     stage: "REMINDER_DUE",
@@ -1216,13 +1226,14 @@ test("Stage Batch send blocks unsafe integrity and cached fingerprint changes in
   };
   const mismatchHarness = createStageSendContext(safeCurrent, cachedPreview);
   const mismatch = mismatchHarness.context.admin_sendStageBatch(payload);
-  assert.equal(mismatch.blockCode, "POPULATION_RECONCILIATION_FAILED");
-  assert.match(mismatch.blockReason, /changed after preview/i);
+  assert.equal(mismatch.blockCode, "BATCH_SEND_PROHIBITED");
+  assert.equal(mismatch.gmailPathEntered, false);
+  assert.equal(mismatch.recipientsSent, 0);
   assert.equal(mismatchHarness.spies.lock, 1);
   assert.equal(mismatchHarness.spies.unlock, 1);
-  assert.equal(mismatchHarness.spies.cacheRead, 1);
-  assert.equal(mismatchHarness.spies.cacheClear, 1);
-  assertNoRecipientSendOrPatch(mismatchHarness.spies, "Stage send cached fingerprint change");
+  assert.equal(mismatchHarness.spies.cacheRead, 0);
+  assert.equal(mismatchHarness.spies.cacheClear, 0);
+  assertNoRecipientSendOrPatch(mismatchHarness.spies, "Stage send prohibition");
 });
 
 function createCodeBatchContext(snapshot) {
@@ -1343,7 +1354,7 @@ test("automated, planner and every legacy Batch path behaviorally fail closed be
   });
 });
 
-test("legacy Batch planner reuses the exact trusted population snapshot", () => {
+test("legacy Batch path checks canonical integrity then returns the retired-path block", () => {
   const safeSnapshot = {
     marker: "ONE-CANONICAL-SNAPSHOT",
     populationIntegrity: integrityFixture("PASS", "CPI-LEGACY-SAFE")
@@ -1360,14 +1371,15 @@ test("legacy Batch planner reuses the exact trusted population snapshot", () => 
     return canonicalGate(source);
   };
   const result = harness.context.campaign_sendLegacyBatch_(10, { dryRun: true });
-  assert.equal(result.ok, true);
-  assert.equal(result.selected, 0);
-  assert.equal(harness.spies.snapshot, 1, "outer legacy Batch and planner must use one source scan");
-  assert.equal(gateSources.length, 2, "outer send and planner must each validate integrity");
+  assert.equal(result.ok, false);
+  assert.equal(result.blockCode, "LEGACY_BULK_PATH_RETIRED");
+  assert.equal(result.gmailPathEntered, false);
+  assert.equal(result.recipientsSent, 0);
+  assert.equal(harness.spies.snapshot, 1, "legacy Batch must perform one integrity source scan");
+  assert.equal(gateSources.length, 1, "retired path must stop after its integrity gate");
   assert.equal(gateSources[0], safeSnapshot);
-  assert.equal(gateSources[1], safeSnapshot, "planner must validate the exact outer trusted snapshot");
-  assert.equal(harness.spies.scan, 1, "only the candidate scan may run after integrity is proven");
-  assertNoRecipientSendOrPatch(harness.spies, "legacy trusted-snapshot reuse");
+  assert.equal(harness.spies.scan, 0, "retired path must not scan candidates");
+  assertNoRecipientSendOrPatch(harness.spies, "legacy retired-path prohibition");
 });
 
 let failures = 0;

@@ -10924,60 +10924,18 @@ function runAutomatedStageBatchWithLock_(opts) {
   var options = opts && typeof opts === "object" ? opts : {};
   var requestId = clean_(options.requestId || newDebugId_());
   var source = clean_(options.source || "MANUAL");
-  if (isSystemStabilizationModeActive_() || CONFIG.ENABLE_AUTOMATED_STAGE_RUNNER !== true || CONFIG.ENABLE_TRIGGER_EMAIL_SENDS !== true) {
-    var reason = isSystemStabilizationModeActive_()
-      ? "SYSTEM_STABILIZATION_MODE_ACTIVE"
-      : (CONFIG.ENABLE_AUTOMATED_STAGE_RUNNER !== true ? "AUTO_STAGE_DISABLED" : "AUTO_STAGE_SENDS_DISABLED");
-    if (isSystemStabilizationModeActive_()) logOperationalBlock_("SYSTEM_STABILIZATION_MODE_ACTIVE", { action: "automated_stage_batch", requestId: requestId, source: source });
-    if (CONFIG.ENABLE_AUTOMATED_STAGE_RUNNER !== true) logOperationalBlock_("AUTO_STAGE_DISABLED", { action: "automated_stage_batch", requestId: requestId, source: source });
-    if (CONFIG.ENABLE_TRIGGER_EMAIL_SENDS !== true) logOperationalBlock_("AUTO_STAGE_SENDS_DISABLED", { action: "automated_stage_batch", requestId: requestId, source: source });
-    if (source === "TRIGGER") logOperationalBlock_("TRIGGER_SEND_BLOCKED", { action: "automated_stage_batch", requestId: requestId, blockCode: reason });
-    logOperationalBlock_("AUTO_STAGE_SAFE_NOOP", { action: "automated_stage_batch", requestId: requestId, source: source, blockCode: reason });
-    return {
-      ok: true,
-      action: "automated_stage_batch",
-      result: "SKIPPED",
-      reason: reason,
-      requestId: requestId,
-      source: source,
-      safeNoop: true,
-      sheetMutations: 0,
-      propertyMutations: 0,
-      emailsSent: 0
-    };
-  }
-  var lock = LockService.getScriptLock();
-  if (!lock.tryLock(1000)) {
-    return automatedStageRunnerFinalize_({
-      ok: true,
-      action: "automated_stage_batch",
-      result: "SKIPPED",
-      reason: "LOCK_UNAVAILABLE",
-      requestId: requestId,
-      stage: clean_(CONFIG.AUTOMATED_STAGE_RUNNER_STAGE || ""),
-      source: clean_(options.source || "MANUAL")
-    });
-  }
-  try {
-    return runAutomatedStageBatchChunk_(Object.assign({}, options, { requestId: requestId }));
-  } catch (err) {
-    automatedStageRunnerLog_("AUTO_STAGE_RUN_ERROR", {
-      requestId: requestId,
-      source: clean_(options.source || "MANUAL"),
-      error: String((err && err.message) || err || "Unknown automation error")
-    });
-    return automatedStageRunnerFinalize_({
-      ok: false,
-      action: "automated_stage_batch",
-      result: "ERROR",
-      reason: "RUNNER_EXCEPTION",
-      requestId: requestId,
-      source: clean_(options.source || "MANUAL"),
-      error: String((err && err.message) || err || "Unknown automation error")
-    });
-  } finally {
-    try { lock.releaseLock(); } catch (_err) {}
-  }
+  var prohibited = bulkCommunicationProhibitionResult_("automated_stage_batch", "TRIGGER", {
+    requestId: requestId,
+    source: source
+  });
+  automatedStageRunnerLog_("AUTO_STAGE_RUN_PROHIBITED", {
+    requestId: requestId,
+    source: source,
+    blockCode: prohibited.blockCode,
+    gmailPathEntered: false,
+    recipientsSent: 0
+  });
+  return prohibited;
 }
 
 function automatedStageBatchRunner() {
@@ -11302,6 +11260,26 @@ function previewApplicantMessage_(applicantId, messageType, opts) {
 
 function sendApplicantMessage_(applicantId, messageType, opts) {
   var options = opts && typeof opts === "object" ? opts : {};
+  if (
+    Array.isArray(applicantId)
+    || Array.isArray(options.applicantIds)
+    || Array.isArray(options.recipients)
+    || Array.isArray(options.messages)
+  ) {
+    return {
+      ok: false,
+      action: "send",
+      result: "BLOCKED",
+      outcome: "SEND_BLOCKED",
+      blockCode: "INVALID_BULK_REQUEST",
+      blockReason: "Individual communication accepts one applicant only.",
+      gmailPathEntered: false,
+      recipientsSent: 0,
+      applicantId: clean_(applicantId || ""),
+      messageType: clean_(messageType || ""),
+      debugId: clean_(options.debugId || newDebugId_())
+    };
+  }
   var manualProbe = options.manualSingleSendProbe === true;
   if (manualProbe && isManualSingleSendProbeEnabled_() !== true) {
     var manualDisabledRequestId = clean_(options.debugId || newDebugId_());
@@ -11760,96 +11738,15 @@ function campaign_sendLegacyBatch_(limit, opts) {
       }
     );
   }
-
-  if (requestedId) {
-    var single = dryRun
-      ? previewApplicantMessage_(requestedId, portalCommunicationMessageType_(), mergedOpts)
-      : sendApplicantMessage_(requestedId, portalCommunicationMessageType_(), mergedOpts);
-    return {
-      ok: true,
-      dryRun: dryRun,
-      requestedApplicantId: requestedId,
-      requestedLimit: batchLimit,
-      batchLabel: batchLabel,
-      selected: single.eligible || single.result === "sent" ? 1 : 1,
-      sent: single.result === "SENT" ? 1 : 0,
-      dryRunCount: dryRun && single.eligible ? 1 : 0,
-      skippedIneligible: (!single.eligible && single.blockCode) ? 1 : 0,
-      skippedMissingSecret: single.blockCode === "MISSING_PORTAL_SECRET" ? 1 : 0,
-      skippedNoStatus: 0,
-      sendFailed: single.result === "FAILED" ? 1 : 0,
-      preview: single.subject ? [{
-        applicantId: clean_(single.applicantId || requestedId),
-        effectiveEmail: clean_(single.effectiveEmail || ""),
-        subject: clean_(single.subject || ""),
-        portalUrl: clean_(single.portalUrl || ""),
-        batchLabel: batchLabel,
-        dryRun: dryRun
-      }] : [],
-      skipped: (!single.eligible && single.blockCode) || single.result === "FAILED"
-        ? [{ applicantId: clean_(single.applicantId || requestedId), rowNumber: Number(single.rowNumber || 0), reason: clean_(single.blockCode || single.code || single.error || "BLOCKED") }]
-        : []
-    };
-  }
-
-  var plan = planApplicantBatch_("legacy_invite_eligible", batchLimit, Object.assign({}, mergedOpts, {
-    _trustedPopulationIntegritySnapshot: populationIntegrityGate.snapshot
-  }));
-  var sent = 0;
-  var dryRunCount = 0;
-  var sendFailed = 0;
-  var previews = [];
-  var skipped = [];
-  var candidates = Array.isArray(plan.candidates) ? plan.candidates : [];
-  for (var i = 0; i < candidates.length; i++) {
-    var candidate = candidates[i];
-    if (!candidate.eligible) {
-      skipped.push({ applicantId: candidate.applicantId, rowNumber: candidate.rowNumber, reason: candidate.blockCode || "BLOCKED" });
-      continue;
-    }
-    if (dryRun) {
-      var preview = previewApplicantMessage_(candidate.applicantId, portalCommunicationMessageType_(), mergedOpts);
-      if (preview.eligible) {
-        dryRunCount++;
-        previews.push({
-          applicantId: preview.applicantId,
-          effectiveEmail: preview.effectiveEmail,
-          subject: preview.subject,
-          portalUrl: preview.portalUrl,
-          batchLabel: batchLabel,
-          dryRun: true
-        });
-      } else {
-        skipped.push({ applicantId: candidate.applicantId, rowNumber: candidate.rowNumber, reason: preview.blockCode || "BLOCKED" });
-      }
-      continue;
-    }
-    var sendResult = sendApplicantMessage_(candidate.applicantId, portalCommunicationMessageType_(), mergedOpts);
-    if (sendResult.result === "SENT") sent++;
-    else if (sendResult.result === "FAILED") {
-      sendFailed++;
-      skipped.push({ applicantId: candidate.applicantId, rowNumber: candidate.rowNumber, reason: sendResult.code || sendResult.error || "SEND_FAILED" });
-    } else if (sendResult.blockCode) {
-      skipped.push({ applicantId: candidate.applicantId, rowNumber: candidate.rowNumber, reason: sendResult.blockCode });
-    }
-  }
-  return {
-    ok: true,
+  var prohibited = bulkCommunicationProhibitionResult_("campaign_send_legacy_batch", "LEGACY", {
     dryRun: dryRun,
     requestedApplicantId: requestedId,
     requestedLimit: batchLimit,
-    batchLabel: batchLabel,
-    selected: Number(plan.selected || 0),
-    sent: sent,
-    dryRunCount: dryRunCount,
-    skippedIneligible: Number(plan.blocked || 0),
-    skippedMissingSecret: Number((plan.blockCounts && plan.blockCounts.MISSING_PORTAL_SECRET) || 0),
-    skippedNoStatus: 0,
-    sendFailed: sendFailed,
-    preview: previews,
-    skipped: skipped,
-    blockCounts: plan.blockCounts || {}
-  };
+    populationIntegrity: populationIntegrityGate.populationIntegrity,
+    integrityFingerprint: populationIntegrityGate.integrityFingerprint
+  });
+  campaignLog_("LEGACY_BULK_PATH_RETIRED", prohibited);
+  return prohibited;
 }
 
 function campaign_syncResponses_() {
@@ -12472,48 +12369,13 @@ function campaign_sendLegacyFollowups_(limit) {
       }
     );
   }
-  var ctx = campaignGetContext_();
-  var headers = ctx.headers;
-  var now = new Date();
-  var todayTs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  var batchLabel = campaignBatchLabel_(now);
-  var selected = 0;
-  var sent = 0;
-  var skipped = [];
-  for (var r = 1; r < ctx.values.length; r++) {
-    if (selected >= batchLimit) break;
-    var rowNumber = r + 1;
-    var rowObj = campaignRowObjectFromValues_(headers, ctx.values[r]);
-    var state = deriveCommunicationState_(rowObj, "reminder", {});
-    var baseState = state.base || {};
-    if (clean_(baseState.emailStatus || "") !== "SENT") continue;
-    if (baseState.portalSubmittedActive === true) {
-      skipped.push({ applicantId: clean_(state.applicantId || ""), rowNumber: rowNumber, reason: "PORTAL_ALREADY_SUBMITTED" });
-      continue;
-    }
-    if (baseState.bounceFlag === true) continue;
-    var nextActionTs = Number(baseState.nextActionAtMs || 0);
-    if (!(nextActionTs > 0) || nextActionTs > todayTs) continue;
-    var attemptCount = Number(baseState.attemptCount || 0);
-    if (attemptCount < 1 || attemptCount >= 3) continue;
-    selected++;
-    var sendRes = sendApplicantMessage_(clean_(state.applicantId || ""), "reminder", {
-      batchLabel: batchLabel,
-      sendSource: "CAMPAIGN_FOLLOWUP_WORKFLOW",
-      unattended: true
-    });
-    if (sendRes.result === "SENT") sent++;
-    else skipped.push({ applicantId: clean_(state.applicantId || ""), rowNumber: rowNumber, reason: clean_(sendRes.blockCode || sendRes.code || sendRes.error || "SEND_FAILED") });
-  }
-  var summary = {
-    ok: true,
-    selected: selected,
-    sent: sent,
-    batchLabel: batchLabel,
-    skipped: skipped
-  };
-  campaignLog_("CAMPAIGN_FOLLOWUP_SUMMARY", summary);
-  return summary;
+  var prohibited = bulkCommunicationProhibitionResult_("campaign_send_legacy_followups", "LEGACY", {
+    requestedLimit: batchLimit,
+    populationIntegrity: populationIntegrityGate.populationIntegrity,
+    integrityFingerprint: populationIntegrityGate.integrityFingerprint
+  });
+  campaignLog_("LEGACY_BULK_PATH_RETIRED", prohibited);
+  return prohibited;
 }
 
 function campaign_getLegacyEmailSummary_() {

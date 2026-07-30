@@ -1005,12 +1005,6 @@ function admin_sendSelectedApplicantBatch(payload) {
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
     requireOperationsAdmin_(adminEmail);
     var p = payload && typeof payload === "object" ? payload : {};
-    if (isBatchSendEnabled_() !== true) {
-      return adminCommBlockedResult_("send_selected_batch", "BATCH_SENDS_DISABLED_PREVIEW_ONLY_MODE", dbgId, { blockReason: "Batch sends are disabled in preview-only mode." });
-    }
-    if (p.confirmSend !== true) {
-      return adminCommBlockedResult_("send_selected_batch", "CONFIRM_REQUIRED", dbgId, { blockReason: "Explicit confirmation is required before selected batch send." });
-    }
     var requestedType = clean_(p.messageType || "");
     var messageType = typeof communicationResolvedMessageTypeForRequest_ === "function"
       ? communicationResolvedMessageTypeForRequest_(requestedType, { templateId: clean_(p.templateId || requestedType), templateVersionId: clean_(p.templateVersionId || "") })
@@ -1025,104 +1019,12 @@ function admin_sendSelectedApplicantBatch(payload) {
       clearSelectedApplicantBatchPreviewCache_(adminEmail);
       return selectedApplicantPopulationIntegrityBlockedResult_("send_selected_batch", dbgId, populationIntegrityGate);
     }
-    var preview = readSelectedApplicantBatchPreviewCache_(adminEmail);
-    var previewRequestId = clean_(p.previewRequestId || "");
-    var candidateHash = clean_(p.candidateHash || "");
-    var cachedHash = clean_(preview && preview.candidateHash || "");
-    var cachedRequestId = clean_(preview && preview.requestId || "");
-    var cachedMessageType = clean_(preview && preview.messageType || "");
-    var requestedTemplateId = clean_(p.templateId || requestedType || "");
-    var cachedTemplateId = clean_(preview && preview.templateId || "");
-    var cachedIntegrityFingerprint = clean_(preview && preview.integrityFingerprint || preview && preview.populationIntegrity && preview.populationIntegrity.integrityFingerprint || "");
-    var candidateIds = Array.isArray(preview && preview.candidateIds) ? normalizeSelectedApplicantBatchIds_(preview.candidateIds) : [];
-    var identityMismatch = ["operationId", "previewId", "receiptId", "commandType", "actor", "stateFingerprint", "cooldownCycle", "idempotencyKey"].some(function (field) {
-      return clean_(p[field] || "") && clean_(p[field] || "") !== clean_(preview && preview[field] || "");
-    });
-    if (!preview || !previewRequestId || previewRequestId !== cachedRequestId || !candidateHash || candidateHash !== cachedHash || cachedMessageType !== messageType || cachedTemplateId !== requestedTemplateId || !candidateIds.length || identityMismatch) {
-      return adminCommBlockedResult_("send_selected_batch", "PREVIEW_REQUIRED", dbgId, {
-        blockReason: "A matching selected-batch preview is required before send.",
-        previewRequestId: previewRequestId,
-        cachedRequestId: cachedRequestId,
-        candidateHashPresent: !!candidateHash,
-        cachedCandidateHashPresent: !!cachedHash
-      });
-    }
-    if (!cachedIntegrityFingerprint || cachedIntegrityFingerprint !== populationIntegrityGate.integrityFingerprint) {
-      clearSelectedApplicantBatchPreviewCache_(adminEmail);
-      return selectedApplicantPopulationIntegrityBlockedResult_(
-        "send_selected_batch",
-        dbgId,
-        populationIntegrityGate,
-        cachedIntegrityFingerprint ? "POPULATION_RECONCILIATION_FAILED" : "POPULATION_INTEGRITY_UNPROVEN",
-        cachedIntegrityFingerprint
-          ? "Canonical population integrity changed after preview. Refresh and preview the selected Batch again."
-          : "The selected Batch preview did not bind canonical population integrity."
-      );
-    }
-    var actor = resolveAdminCommActor_(p);
-    actor.actorEmail = clean_(adminEmail || actor.actorEmail || "");
-    var requestId = clean_(dbgId || newDebugId_());
-    var batchLabel = "SELECTED_BATCH_SEND::" + requestId;
-    var operationIdentity = clean_(preview.operationId || "")
-      ? adminCommunicationOperationIdentity_(preview, "COHORT", messageType, actor.actorEmail, requestId)
-      : null;
-    if (operationIdentity && operationIdentity.ok !== true) {
-      return adminCommBlockedResult_("send_selected_batch", operationIdentity.blockCode, dbgId, {
-        blockReason: operationIdentity.blockReason
-      });
-    }
-    var out = {
-      ok: true,
-      action: "send_selected_batch",
-      result: "COMPLETE",
-      requestId: requestId,
-      previewRequestId: previewRequestId,
-      sourceLabel: clean_(preview.sourceLabel || p.sourceLabel || "Selected applicants"),
+    return bulkCommunicationProhibitionResult_("send_selected_batch", "STAGE_BATCH", {
+      requestId: clean_(dbgId || ""),
       messageType: messageType,
-      selectedTotal: Number(preview.selectedTotal || candidateIds.length),
-      previewSendCap: Number(preview.previewSendCap || selectedApplicantBatchLimit_()),
-      willSendThisRun: candidateIds.length,
-      remainingAfterCap: Number(preview.remainingAfterCap || 0),
-      capApplied: preview.capApplied === true,
-      candidateHash: candidateHash,
       populationIntegrity: populationIntegrityGate.populationIntegrity,
-      integrityFingerprint: populationIntegrityGate.integrityFingerprint,
-      attempted: 0,
-      sent: 0,
-      replayed: 0,
-      skipped: 0,
-      failed: 0,
-      blocked: 0,
-      reconciliationRequired: 0,
-      blockedByReason: {},
-      applicantOutcomes: [],
-      sentApplicantIdsSample: [],
-      batchId: batchLabel
-    };
-    if (operationIdentity) adminCommunicationWithIdentity_(out, operationIdentity);
-    candidateIds.forEach(function (applicantId) {
-      try {
-        var sendResult = sendApplicantMessage_(applicantId, messageType, Object.assign({
-          actorEmail: actor.actorEmail,
-          actorRole: actor.actorRole,
-          batchLabel: batchLabel,
-          debugId: requestId,
-          templateId: requestedTemplateId,
-          templateVersionId: clean_(p.templateVersionId || preview.templateVersionId || ""),
-          sendSource: "ADMIN_SELECTED_BATCH",
-          unattended: false
-        }, operationIdentity || {}));
-        var outcome = selectedBatchApplicantOutcome_(applicantId, sendResult, null);
-        out.applicantOutcomes.push(outcome);
-        if (outcome.outcome === "SENT" && out.sentApplicantIdsSample.length < 10) out.sentApplicantIdsSample.push(applicantId);
-      } catch (recipientErr) {
-        out.applicantOutcomes.push(selectedBatchApplicantOutcome_(applicantId, null, recipientErr));
-      }
+      integrityFingerprint: populationIntegrityGate.integrityFingerprint
     });
-    selectedBatchOutcomeTotals_(out);
-    out.skipped = Math.max(0, Number(preview.candidateCount || candidateIds.length) - out.attempted);
-    clearSelectedApplicantBatchPreviewCache_(adminEmail);
-    return out;
     });
   });
 }

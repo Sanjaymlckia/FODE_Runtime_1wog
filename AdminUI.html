@@ -2146,7 +2146,7 @@
             <button id="btnOpsStageBatchSend" class="opsActionBtn live" type="button" data-ops-operational-write="1" data-ops-base-label="Batch modal confirmation only" onclick="openBatchCommunicationFromStage_()" style="display:none;" aria-hidden="true" tabindex="-1">Batch modal confirmation only</button>
             <button class="opsActionBtn" type="button" onclick="opsScrollTo_('opsLifecycleMap')">Choose Lifecycle Stage</button>
           </div>
-          <div class="opsInspectPanel" id="opsStageBatchInlineNote">Default batch size: 30. Larger batches may be restricted by send policy. Preview, confirmation, caps, and backend gates run inside the Batch Communication modal.</div>
+          <div class="opsInspectPanel" id="opsStageBatchInlineNote">Preview diagnostics are available. Bulk sending remains prohibited pending durable per-recipient communication authority.</div>
           <div class="opsInspectPanel" style="margin-top:10px;">Operations Workspace shows operator workload. Not all rows are currently mail-eligible. Stage batch details below are diagnostics; the modal is the primary operator path.</div>
           <div class="opsSectionHeader" style="margin-top:12px;"><div><h3 style="margin:0;font-size:15px;">Stage Batch Technical Diagnostics</h3><p style="margin:4px 0 0;">Diagnostics show mail eligibility for the selected stage after modal preview.</p></div><span class="opsStatusPill info">Collapsed technical evidence</span></div>
           <div id="opsStageBatchSummary" class="opsResultBox hidden" tabindex="-1" aria-live="polite"></div>
@@ -2653,8 +2653,8 @@
             <div class="opsChecklist">
               <div class="opsChecklistRow"><span>Payment verification</span><span class="opsStatusPill warn">Super Admin selected-applicant gate active</span></div>
               <div class="opsChecklistRow"><span>Payment creation</span><span class="opsStatusPill danger">Not implemented: backend missing</span></div>
-              <div class="opsChecklistRow"><span>Bulk processing</span><span class="opsStatusPill warn">Preview/send surface active with gates</span></div>
-              <div class="opsChecklistRow"><span>Bulk send</span><span class="opsStatusPill warn">Ready for controlled live test in next CIS</span></div>
+              <div class="opsChecklistRow"><span>Bulk processing</span><span class="opsStatusPill warn">Preview diagnostics active; execution prohibited</span></div>
+              <div class="opsChecklistRow"><span>Bulk send</span><span class="opsStatusPill danger">Bulk send prohibited</span></div>
               <div class="opsChecklistRow"><span>Autonomous workflows</span><span class="opsStatusPill danger">Not implemented: backend missing</span></div>
               <div class="opsChecklistRow"><span>Release actions</span><span class="opsStatusPill ok">Externalized</span></div>
               <div class="opsChecklistRow"><span>Classroom notify</span><span class="opsStatusPill warn">Super Admin preview gate active</span></div>
@@ -3082,7 +3082,7 @@
             <div id="standaloneBatchCommSummary"></div>
             <div class="batchCommActions" style="margin-top:10px;">
               <button id="btnStandaloneBatchCommPreview" class="btn small operatorControl operatorControlSecondary" type="button" onclick="previewBatchCommunicationModal_()">Generate Preview</button>
-              <button id="btnStandaloneBatchCommSend" class="btn small operatorControl operatorControlBatch" type="button" onclick="requestBatchCommunicationConfirmation_()" disabled>Review Send</button>
+              <button id="btnStandaloneBatchCommSend" class="btn small operatorControl operatorControlBatch" type="button" disabled>Bulk send prohibited</button>
             </div>
           </div>
         </div>
@@ -3983,12 +3983,13 @@
       return CAN_RUN_OPERATIONS_ACTIONS === true && (IS_SUPER === true ? readOpsMode_() === "super" : readOpsMode_() === "admin");
     }
     function stageBatchExecutionAllowed_(){
+      return false;
+    }
+    function stageBatchPreviewAllowed_(){
       return CAN_RUN_OPERATIONS_ACTIONS === true;
     }
     function stageBatchPolicyBlockReason_(){
-      return stageBatchExecutionAllowed_()
-        ? ""
-        : "Operations Admin or Super Admin authority is required for Stage Batch Mail.";
+      return "Bulk communication remains disabled pending durable per-recipient communication authority.";
     }
     function opsOperationalPolicyBlockReason_(){
       return readOpsMode_() === "operator"
@@ -4070,7 +4071,7 @@
         { id:"viewClassroom", label:"View classroom handover", source:"Context Menu", surface:"Classroom Handover", fn:"admin_previewOpsClassroomHandover", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:true, reason:"Preview logs existing handover review event." },
         { id:"notifyClassroom", label:"Notify classroom admin", source:"Classroom", surface:"Classroom Handover", fn:"admin_notifyOpsClassroomAdmin", role:"Super Admin/Governance", kind:"write", status:"enabled-gated", confirm:true, audit:true, reason:"Internal single-send only; preview and Safe Mode gate required." },
         { id:"bulkPreview", label:"Bulk email preview", source:"Bulk Tools", surface:"Communications", fn:"admin_previewStageBatch", role:"Operations Admin/Super Admin", kind:"bulk-read", status:"enabled-gated", confirm:false, audit:true, reason:"Server requires an authorized Operations/Super Admin and returns bounded eligible/blocked counts with replay summary." },
-        { id:"bulkSend", label:"Bulk email send", source:"Bulk Tools", surface:"Communications", fn:"admin_sendStageBatch", role:"Operations Admin/Super Admin", kind:"bulk-write", status:"enabled-gated", confirm:true, audit:true, reason:"Existing backend send gates, preview cache parity, explicit confirmation, caps, and idempotency remain required." },
+        { id:"bulkSend", label:"Bulk email send (prohibited)", source:"Bulk Tools", surface:"Communications", fn:"", role:"Operations Admin/Super Admin", kind:"bulk-write", status:"prohibited", confirm:false, audit:true, reason:"Bulk sending remains prohibited pending durable per-recipient communication authority." },
         { id:"whatsappExport", label:"WhatsApp CSV export", source:"Fallbacks / Exports", surface:"WhatsApp Fallback", fn:"admin_exportWhatsAppFallbackCsv", role:"Operations Admin/Super Admin", kind:"export", status:"enabled-gated", confirm:true, audit:true, reason:"Existing export is capped, authorized-role gated, logged, and does not send WhatsApp." },
         { id:"whatsappEmailCsv", label:"Email WhatsApp CSV", source:"Fallbacks / Super Admin", surface:"WhatsApp Fallback", fn:"admin_emailWhatsAppFallbackCsv", role:"Super Admin/Governance", kind:"export-send", status:"enabled-gated", confirm:true, audit:true, reason:"Emails cached CSV only to configured admin recipients after export confirmation." },
         { id:"copyApplicantId", label:"Copy ApplicantID", source:"Context Menu", surface:"Clipboard", fn:"navigator.clipboard.writeText", role:"Operator/Admin", kind:"read", status:"enabled", confirm:false, audit:false, reason:"No data mutation." },
@@ -9094,8 +9095,8 @@ function renderBatchPanel(){
   if (msgTypeEl) msgTypeEl.textContent = messageType || "-";
   if (sendableEl) sendableEl.textContent = selectedStage ? (sendable ? "YES" : "NO") : "-";
   var disabledReason = "";
-  var stageBatchAllowed = stageBatchExecutionAllowed_();
-  if (!stageBatchAllowed) disabledReason = stageBatchPolicyBlockReason_();
+   var stageBatchPreviewAllowed = stageBatchPreviewAllowed_();
+   if (!stageBatchPreviewAllowed) disabledReason = "Operations Admin or Super Admin authority is required for Stage Batch preview.";
   else if (!selectedStage) disabledReason = "Select a lifecycle stage to enable bulk preview.";
   else if (!sendable) disabledReason = batchState.disabledReason || "No batch message is supported for this stage.";
   batchState.disabledReason = disabledReason;
@@ -9121,18 +9122,18 @@ function renderBatchPanel(){
   var previewAvailability = selectedStage
     ? (disabledReason || (sendable ? "Available" : "Not available"))
     : "Select a lifecycle stage to enable bulk preview.";
-  var sendAvailability = selectedStage
-    ? (previewReady ? "Available after explicit confirmation and backend gates" : (disabledReason || "Preview required"))
-    : "-";
+   var sendAvailability = selectedStage
+     ? stageBatchPolicyBlockReason_()
+     : "-";
   if (eligibleEl) eligibleEl.textContent = eligibleText;
   if (blockedEl) blockedEl.textContent = blockedText;
   if (previewAvailabilityEl) previewAvailabilityEl.textContent = previewAvailability;
   if (sendAvailabilityEl) sendAvailabilityEl.textContent = sendAvailability;
-  if (awarenessEl) awarenessEl.textContent = stageBatchAllowed
-    ? "Preview available for authorized Admin/Super Admin. Send available only after valid preview and explicit confirmation. Backend re-checks caps, cooldown, idempotency, and recipient eligibility before sending."
-    : stageBatchPolicyBlockReason_();
-  if (previewBtn) {
-    previewBtn.disabled = !selectedStage || batchState.busy || !stageBatchAllowed;
+   if (awarenessEl) awarenessEl.textContent = stageBatchPreviewAllowed
+     ? "Preview is available for authorized Admin/Super Admin. Bulk sending remains prohibited pending durable per-recipient communication authority."
+     : "Operations Admin or Super Admin authority is required for Stage Batch preview.";
+   if (previewBtn) {
+     previewBtn.disabled = !selectedStage || batchState.busy || !stageBatchPreviewAllowed;
     previewBtn.textContent = batchState.busy && batchState.action === "preview" ? "Opening..." : "Open Batch Communication";
     previewBtn.title = previewBtn.disabled ? "Choose a lifecycle stage and confirm authority before opening batch communication." : "Open the Batch Communication modal. Preview and confirmation occur inside the modal.";
   }
@@ -9146,10 +9147,10 @@ function renderBatchPanel(){
   }
   if (noteEl) {
     if (batchState.busy && batchState.action === "preview") noteEl.textContent = "Loading the next eligible unsent cohort...";
-    else if (batchState.busy && batchState.action === "send") noteEl.textContent = "Sending the next eligible unsent cohort...";
-    else if (disabledReason) noteEl.textContent = disabledReason;
-    else if (previewReady) noteEl.textContent = "Ready in the Batch Communication modal. Preview cache is valid; stage, message type, count, caps, cooldown, idempotency, and backend gates are re-checked before send.";
-    else noteEl.textContent = "Default batch size: 30. Larger batches may be restricted by send policy. Open the modal to preview and confirm before send.";
+     else if (batchState.busy && batchState.action === "send") noteEl.textContent = stageBatchPolicyBlockReason_();
+     else if (disabledReason) noteEl.textContent = disabledReason;
+     else if (previewReady) noteEl.textContent = "Preview is current. Bulk sending remains prohibited pending durable per-recipient communication authority.";
+     else noteEl.textContent = "Open the modal to inspect the cohort. Bulk sending remains prohibited pending durable per-recipient communication authority.";
   }
   renderStageBatchSummary_(batchState.result);
   renderOpsCommunicationBulkBridge_();
@@ -9324,7 +9325,7 @@ function previewStageBatchUi_(){
   var stage = batchState.selectedStage;
   var limit = getStageBatchLimitUi_();
   var offset = getStageBatchOffsetUi_();
-  if (!stage || batchState.busy || !stageBatchExecutionAllowed_()) return;
+  if (!stage || batchState.busy || !stageBatchPreviewAllowed_()) return;
   batchState.previewRequestSeq = Number(batchState.previewRequestSeq || 0) + 1;
   var requestSeq = batchState.previewRequestSeq;
   var clientRequestId = "preview-client-" + String(Date.now()) + "-" + String(requestSeq);
@@ -9459,144 +9460,19 @@ function previewStageBatchUi_(){
     .admin_previewStageBatch({ stage: stage, limit: limit, offset: offset });
 }
 function sendStageBatchUi_(){
-  var stage = batchState.selectedStage;
-  var limit = getStageBatchLimitUi_();
-  var offset = getStageBatchOffsetUi_();
-  var messageType = batchState.messageType || "";
-  var previewReady = batchState.previewReady === true
-    && batchState.selectedStage === batchState.previewStage
-    && Number(batchState.previewLimit || 0) === limit
-    && Number(batchState.previewOffset || 0) === offset
-    && !!String(batchState.previewRequestId || "")
-    && !!String(batchState.previewCandidateHash || "")
-    && batchState.sendable === true;
-  if (!previewReady || batchState.busy || !stageBatchExecutionAllowed_()) {
-    console.log("STAGE_BATCH_SEND_GUARD_BLOCKED", {
-      stage: stage,
-      previewStage: batchState.previewStage,
-      stageMatch: batchState.selectedStage === batchState.previewStage,
-      limit: limit,
-      previewLimit: Number(batchState.previewLimit || 0),
-      limitMatch: Number(batchState.previewLimit || 0) === limit,
-      offset: offset,
-      previewOffset: Number(batchState.previewOffset || 0),
-      offsetMatch: Number(batchState.previewOffset || 0) === offset,
-      hasRequestId: !!String(batchState.previewRequestId || ""),
-      hasCandidateHash: !!String(batchState.previewCandidateHash || ""),
-      count: Number(batchState.previewEligible || 0),
-      countPositive: Number(batchState.previewEligible || 0) > 0,
-      sendable: batchState.sendable === true,
-      busy: batchState.busy === true,
-      operationsAuthorized: CAN_RUN_OPERATIONS_ACTIONS === true,
-      stageBatchAuthorized: stageBatchExecutionAllowed_() === true,
-      previewReady: previewReady === true
-    });
-    return;
-  }
-  var confirmText = "Controlled stage batch send\n\nStage: " + stage
-    + "\nMessage type: " + messageType
-    + "\nPreview request: " + String(batchState.previewRequestId || "")
-    + "\nPreview candidate hash present: " + (!!String(batchState.previewCandidateHash || "") ? "YES" : "NO")
-    + "\nExact preview count: " + String(Number(batchState.previewEligible || 0))
-    + "\nSend cap: " + String(limit)
-    + "\n\nProceed only under an approved live-test CIS. Existing backend Config gates, preview cache parity, and idempotency still apply.";
-  if (!window.confirm(confirmText)) return;
-  batchState.sendRequestSeq = Number(batchState.sendRequestSeq || 0) + 1;
-  var requestSeq = batchState.sendRequestSeq;
-  var clientRequestId = "send-client-" + String(Date.now()) + "-" + String(requestSeq);
-  var requestStartedAtMs = Date.now();
-  var timeoutMs = 180000;
-  console.log("[StageBatchSend] start", { requestId: clientRequestId, stage: stage, limit: limit, offset: offset, timeoutMs: timeoutMs, messageType: messageType });
-  batchState.sendActiveSeq = requestSeq;
-  batchState.sendClientRequestId = clientRequestId;
-  batchState.busy = true;
   batchState.action = "send";
+  batchState.busy = false;
+  batchState.result = {
+    ok: false,
+    result: "BLOCKED",
+    outcome: "SEND_BLOCKED",
+    action: "send_stage_batch",
+    blockCode: "BATCH_SEND_PROHIBITED",
+    blockReason: stageBatchPolicyBlockReason_(),
+    gmailPathEntered: false,
+    recipientsSent: 0
+  };
   renderBatchPanel();
-  var timeoutHandle = window.setTimeout(function(){
-    if (batchState.sendActiveSeq !== requestSeq) {
-      console.log("[StageBatchSend] stale_ignored", { requestId: clientRequestId, source: "timeout" });
-      return;
-    }
-    batchState.sendActiveSeq = 0;
-    batchState.busy = false;
-    var clientElapsedMs = Date.now() - requestStartedAtMs;
-    resetBatchPreviewState_(false);
-    batchState.action = "send";
-    batchState.result = {
-      ok: false,
-      path: "timeout",
-      action: "send_stage_batch",
-      message: "Stage batch send timed out before server response.",
-      error: "Stage batch send timed out before server response.",
-      clientElapsedMs: clientElapsedMs,
-      requestId: clientRequestId,
-      stage: stage,
-      messageType: messageType,
-      sendLimit: limit,
-      requestedOffset: offset,
-      offsetIgnored: offset > 0
-    };
-    console.log("[StageBatchSend] terminal", { requestId: clientRequestId, path: "timeout", clientElapsedMs: clientElapsedMs });
-    renderBatchPanel();
-  }, timeoutMs);
-  google.script.run
-    .withSuccessHandler(function(res){
-      console.log("[StageBatchSend] success_callback", { requestId: clientRequestId });
-      window.clearTimeout(timeoutHandle);
-      if (batchState.sendActiveSeq !== requestSeq) {
-        console.log("[StageBatchSend] stale_ignored", { requestId: clientRequestId, source: "success_callback" });
-        return;
-      }
-      batchState.sendActiveSeq = 0;
-      batchState.busy = false;
-      var clientElapsedMs = Date.now() - requestStartedAtMs;
-      var response = res && typeof res === "object" ? res : { ok: false, message: "Invalid send response.", debugId: "", requestId: clientRequestId };
-      response.clientElapsedMs = clientElapsedMs;
-      if (!response.requestId) response.requestId = clientRequestId;
-      if (response.ok === false && String(response.action || "") === "send_stage_batch") {
-        console.log("[StageBatchSend] blocked_response", response);
-      }
-      batchState.result = response;
-      resetBatchPreviewState_(true);
-      console.log("[StageBatchSend] terminal", { requestId: String(response.requestId || clientRequestId), path: response.ok === true ? "success" : "error", clientElapsedMs: clientElapsedMs });
-      renderBatchPanel();
-      if (batchState.result && batchState.result.ok === true) {
-        loadStageDashboard({ force: 1 });
-        loadReviewQueues({ force: 1 });
-        if (selectedStageFilter) search();
-      }
-    })
-    .withFailureHandler(function(err){
-      console.log("[StageBatchSend] failure_callback", { requestId: clientRequestId, error: String((err && err.message) || err || "Server failure") });
-      window.clearTimeout(timeoutHandle);
-      if (batchState.sendActiveSeq !== requestSeq) {
-        console.log("[StageBatchSend] stale_ignored", { requestId: clientRequestId, source: "failure_callback" });
-        return;
-      }
-      batchState.sendActiveSeq = 0;
-      batchState.busy = false;
-      var clientElapsedMs = Date.now() - requestStartedAtMs;
-      resetBatchPreviewState_(false);
-      batchState.action = "send";
-      batchState.result = {
-        ok: false,
-        path: "error",
-        action: "send_stage_batch",
-        message: String((err && err.message) || err || "Server failure"),
-        error: String((err && err.message) || err || "Server failure"),
-        clientElapsedMs: clientElapsedMs,
-        requestId: clientRequestId,
-        stage: stage,
-        messageType: messageType,
-        sendLimit: limit,
-        requestedOffset: offset,
-        offsetIgnored: offset > 0,
-        debugId: ""
-      };
-      console.log("[StageBatchSend] terminal", { requestId: clientRequestId, path: "error", reason: "failure_callback", clientElapsedMs: clientElapsedMs });
-      renderBatchPanel();
-    })
-    .admin_sendStageBatch({ stage: stage, limit: limit, offset: offset, previewRequestId: String(batchState.previewRequestId || ""), candidateHash: String(batchState.previewCandidateHash || ""), confirmSend: true });
 }
 function renderStageDashboard_(items, emptyMessage){
       stageDashboardState = Array.isArray(items) ? items.slice() : [];
@@ -11384,12 +11260,11 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function batchCommCanSend_(){
-      var preview = batchCommState.preview || null;
-      if (batchCommState.sendResult && batchCommState.sendResult.ok !== false) return false;
-      if (!preview || preview.ok !== true) return false;
-      if (batchCommState.previewStale === true) return false;
-      if (!String(preview.requestId || "").trim() || !String(preview.candidateHash || "").trim()) return false;
-      return Number(preview.count || preview.eligible || preview.candidateCount || 0) > 0;
+      return false;
+    }
+
+    function batchCommSendProhibitedReason_(){
+      return "Bulk communication remains disabled pending durable per-recipient communication authority.";
     }
 
     function batchCommAfterActionHtml_(result){
@@ -11576,10 +11451,11 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function batchCommStateLabel_(){
-      if (batchCommState.busy && batchCommState.action === "send") return { text: "Sending", cls: "warn" };
-      if (batchCommState.sendResult && batchCommState.sendResult.ok === false) return { text: "Failed / Partial", cls: "fail" };
-      if (batchCommState.sendResult) return { text: "Completed", cls: "ready" };
-      if (batchCommCanSend_()) return { text: "Ready to Send", cls: "ready" };
+      if (batchCommState.sendResult && batchCommState.sendResult.blockCode === "BATCH_SEND_PROHIBITED") return { text: "Bulk send prohibited", cls: "warn" };
+      if (batchCommState.busy && batchCommState.action === "send") return { text: "Bulk send prohibited", cls: "warn" };
+      if (batchCommState.sendResult && batchCommState.sendResult.ok === false) return { text: "Blocked", cls: "warn" };
+      if (batchCommCanSend_()) return { text: "Ready", cls: "ready" };
+      if (batchCommState.preview && batchCommState.preview.ok === true) return { text: "Bulk send prohibited", cls: "warn" };
       if (batchCommState.previewStale === true) return { text: "Preview required after exclusions", cls: "warn" };
       return { text: "Preview required", cls: "warn" };
     }
@@ -11663,31 +11539,14 @@ function renderStageDashboard_(items, emptyMessage){
         + step("Preview", hasPreview, hasTemplate && !hasPreview)
         + step("Recipients", hasRecipients, hasPreview && !hasRecipients)
         + step("Confirm", confirming || sent, hasPreview && !confirming && !sent)
-        + step("Send", sent, confirming)
+        + step("Bulk disabled", sent, confirming)
         + '</div>';
     }
 
     function batchCommConfirmHtml_(preview, counts){
       if (batchCommState.confirmOpen !== true) return "";
-      var meta = getCommTemplateMeta_(batchCommState.selectedMessageType) || {};
-      var authoritySummary = batchCommAuthoritySummary_(preview);
-      var recipients = Number((counts && counts.willSendThisRun) || (preview && (preview.willSendThisRun || preview.count || preview.eligible || preview.candidateCount)) || 0);
-      var cap = Number((counts && counts.previewSendCap) || (preview && preview.previewSendCap) || 0);
-      return '<h4>Confirm Batch Send</h4>'
-        + '<div class="batchCommStateNote warn">This action will immediately send ' + esc(recipients) + ' emails.</div>'
-        + '<div class="batchCommSummaryGrid">'
-        + '<div class="batchCommSummaryItem"><strong>Template</strong><span>' + esc(meta.label || batchCommState.selectedMessageType || "Not selected") + '</span></div>'
-        + '<div class="batchCommSummaryItem"><strong>Recipients</strong><span>' + esc(recipients) + '</span></div>'
-        + '<div class="batchCommSummaryItem"><strong>Cap</strong><span>' + esc(cap || "Policy") + '</span></div>'
-        + '<div class="batchCommSummaryItem"><strong>Authority</strong><span>' + esc(authoritySummary.label || "Pending preview") + '</span></div>'
-        + '<div class="batchCommSummaryItem"><strong>Excluded</strong><span>' + esc(Number(counts.excluded || 0)) + '</span></div>'
-        + '<div class="batchCommSummaryItem"><strong>Source</strong><span>' + esc(batchCommSourceSummary_()) + '</span></div>'
-        + '</div>'
-        + batchCommReasonSummaryHtml_(preview, counts)
-        + '<div class="batchCommActions" style="margin-top:10px;">'
-        + '<button class="btn small operatorControl operatorControlBatch" type="button" onclick="sendBatchCommunicationModal_()">Send ' + esc(recipients) + ' Emails</button>'
-        + '<button class="btn small operatorControl operatorControlSecondary" type="button" onclick="cancelBatchCommunicationConfirmation_()">Cancel</button>'
-        + '</div>';
+      return '<h4>Bulk Send Prohibited</h4>'
+        + '<div class="batchCommStateNote warn">' + esc(batchCommSendProhibitedReason_()) + '</div>';
     }
 
     function renderBatchCommunicationModal_(){
@@ -11759,8 +11618,8 @@ function renderStageDashboard_(items, emptyMessage){
           + '<div class="batchCommSummaryItem"><strong>Remaining after cap</strong><span>' + esc(counts.remainingAfterCap) + '</span></div>'
           + '<div class="batchCommSummaryItem"><strong>Excluded / Blocked</strong><span>' + esc(Number(counts.excluded || 0)) + ' / ' + esc(Number(counts.blocked || 0)) + '</span></div>'
           + '<div class="batchCommSummaryItem"><strong>Source</strong><span>' + esc(batchCommSourceSummary_()) + '</span></div>'
-          + '<div class="batchCommSummaryItem"><strong>Estimated send</strong><span>' + esc(eligible) + '</span></div>'
-          + '<div class="batchCommSummaryItem"><strong>Readiness</strong><span>' + esc(batchCommCanSend_() ? "Ready to Send | Authority: " + authoritySummary.label : "Preview required or no eligible recipients") + '</span></div>'
+          + '<div class="batchCommSummaryItem"><strong>Eligible recipients</strong><span>' + esc(eligible) + '</span></div>'
+          + '<div class="batchCommSummaryItem"><strong>Readiness</strong><span>' + esc(batchCommSendProhibitedReason_()) + '</span></div>'
           + '<div class="batchCommSummaryItem"><strong>Communication Authority</strong><span>' + esc(authoritySummary.label) + '</span></div>'
           + '<div class="batchCommSummaryItem"><strong>Lifecycle Mismatches</strong><span>' + esc(Number(authoritySummary.mismatchCount || 0)) + '</span></div>'
           + '</div>'
@@ -12019,34 +11878,19 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function sendBatchCommunicationModal_(){
-      if (batchCommState.busy || !batchCommCanSend_()) return;
-      if (batchCommState.confirmOpen !== true) {
-        requestBatchCommunicationConfirmation_();
-        return;
-      }
-      var preview = batchCommState.preview || {};
-      batchCommState.requestSeq++;
-      var seq = batchCommState.requestSeq;
-      batchCommState.confirmOpen = false;
-      setBatchCommBusy_(true, "send");
-      var payload = {
-        messageType: batchCommState.selectedMessageType,
-        sourceLabel: batchCommSourceSummary_(),
-        previewRequestId: String(preview.requestId || ""),
-        candidateHash: String(preview.candidateHash || ""),
-        confirmSend: true
+      if (batchCommState.busy) return;
+      batchCommState.sendResult = {
+        ok: false,
+        result: "BLOCKED",
+        outcome: "SEND_BLOCKED",
+        blockCode: "BATCH_SEND_PROHIBITED",
+        blockReason: batchCommSendProhibitedReason_(),
+        gmailPathEntered: false,
+        recipientsSent: 0
       };
-      var runner = google.script.run
-        .withSuccessHandler(function(res){ handleBatchCommSendResult_(seq, res); })
-        .withFailureHandler(function(err){ handleBatchCommSendFailure_(seq, err); });
-      if (batchCommState.sourceType === "stage") {
-        payload.stage = batchCommState.stage;
-        payload.limit = getStageBatchLimitUi_();
-        payload.offset = getStageBatchOffsetUi_();
-        runner.admin_sendStageBatch(payload);
-      } else {
-        runner.admin_sendSelectedApplicantBatch(payload);
-      }
+      batchCommState.confirmOpen = false;
+      renderBatchCommunicationModal_();
+      return;
     }
 
     function handleBatchCommSendResult_(seq, res){

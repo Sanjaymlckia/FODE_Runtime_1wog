@@ -353,8 +353,11 @@ async function assertAuthorityInvalidated(page, label) {
     await page.locator("[data-batch-confirm]").click();
     assert.match(await page.locator("#eduopsBatchOperationStatus").innerText(), /Preview ready/);
     assert.equal(await page.locator("#eduopsBatchExecutionStatus").innerText(), "Execution: No execution performed");
-    assert.match(await page.locator("[data-batch-execute]").innerText(), /Send Missing Documents Follow-up to 10 recipients/);
+    const bulkExecute = page.locator("[data-batch-execute]");
+    assert.equal(await bulkExecute.innerText(), "Bulk send prohibited");
+    assert.equal(await bulkExecute.isDisabled(), true, "bulk execution control must be disabled");
     assert.equal(await page.evaluate(() => window.__executeCalls), 0, "browser acceptance must not send");
+    assert.equal(await page.evaluate(() => window.__rpcCalls.filter((entry) => ["eduops_executeCommand", "admin_sendStageBatch", "admin_sendSelectedApplicantBatch"].includes(entry.name)).length), 0, "bulk execution RPCs must remain unreachable from the active client surface");
 
     await page.locator("[data-batch-back]").click();
     await page.locator("[data-batch-back]").click();
