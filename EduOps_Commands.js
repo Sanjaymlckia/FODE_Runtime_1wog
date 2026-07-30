@@ -882,6 +882,18 @@ function eduops_executeCommand(payload) {
   });
 }
 
+function eduopsIndividualCommunicationApprovedPayload_(preview) {
+  var source = preview && typeof preview === "object" ? preview : {};
+  var authority = source.authorityPreview && typeof source.authorityPreview === "object" ? source.authorityPreview : {};
+  return {
+    recipient: eduopsClean_(authority.effectiveEmail || authority.recipient || ""),
+    cc: eduopsClean_(source.cc || authority.cc || ""),
+    bcc: eduopsClean_(source.bcc || authority.bcc || ""),
+    subject: String(source.subject || authority.subject || ""),
+    body: String(source.body || authority.body || "")
+  };
+}
+
 function eduopsDispatchCommand_(preview) {
   var request = preview.request || {};
   var draft = request.draft || {};
@@ -911,7 +923,22 @@ function eduopsDispatchCommand_(preview) {
     if (eduopsUpper_(draft.decision || "", "") !== "VERIFIED") throw new Error("UNSUPPORTED_FINANCE_DECISION: no dedicated rejection authority is proven");
     return admin_setPaymentVerified({ rowNumber: rowNumber, comment: draft.reason || "EduOps Finance verification" });
   }
-  if (preview.operation === "SEND_INDIVIDUAL_COMMUNICATION") return admin_sendApplicantMessage(Object.assign({}, operationIdentity, { applicantId: preview.applicantId, messageType: preview.executionAuthority && preview.executionAuthority.messageType, templateId: preview.executionAuthority && preview.executionAuthority.templateId, templateVersionId: preview.executionAuthority && preview.executionAuthority.templateVersionId, recipient: draft.recipient, cc: draft.cc, bcc: draft.bcc, subject: draft.subject, body: draft.body, confirmManualSingleSend: true, sourceView: "eduops" }));
+  if (preview.operation === "SEND_INDIVIDUAL_COMMUNICATION") {
+    var approvedCommunication = eduopsIndividualCommunicationApprovedPayload_(preview);
+    return admin_sendApplicantMessage(Object.assign({}, operationIdentity, {
+      applicantId: preview.applicantId,
+      messageType: preview.executionAuthority && preview.executionAuthority.messageType,
+      templateId: preview.executionAuthority && preview.executionAuthority.templateId,
+      templateVersionId: preview.executionAuthority && preview.executionAuthority.templateVersionId,
+      recipient: approvedCommunication.recipient,
+      cc: approvedCommunication.cc,
+      bcc: approvedCommunication.bcc,
+      subject: approvedCommunication.subject,
+      body: approvedCommunication.body,
+      confirmManualSingleSend: true,
+      sourceView: "eduops"
+    }));
+  }
   if (preview.operation === "CONTACTABILITY_CORRECTION") {
     if (!eduopsClean_(draft.email || "")) throw new Error("CORRECTED_EMAIL_REQUIRED");
     return admin_updateParentEmailCorrected({ applicantId: preview.applicantId, rowNumber: rowNumber, newEmail: draft.email, reason: draft.reason });

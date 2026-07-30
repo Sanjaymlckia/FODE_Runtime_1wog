@@ -115,10 +115,14 @@ for (const field of ["operationId", "previewId", "receiptId", "stateFingerprint"
 }
 assert.match(dispatchSource, /var operationIdentity\s*=\s*eduopsCommandIdentityPayload_\(preview\)/, "Individual dispatch must derive the approved operation identity");
 assert.match(dispatchSource, /admin_sendApplicantMessage\(Object\.assign\(\{\},\s*operationIdentity,/, "Individual dispatch must pass the approved operation identity");
+assert.match(dispatchSource, /eduopsIndividualCommunicationApprovedPayload_\(preview\)/, "Individual dispatch must use the immutable preview-approved communication payload");
+assert.doesNotMatch(dispatchSource, /recipient:\s*draft\.recipient|subject:\s*draft\.subject|body:\s*draft\.body|cc:\s*draft\.cc|bcc:\s*draft\.bcc/, "Individual dispatch must not rebuild final communication content from mutable draft fields");
 const priorReadIndex = executeSource.indexOf("eduopsReadIdempotentReceipt_");
 const dispatchIndex = executeSource.indexOf("eduopsDispatchCommand_");
 assert.ok(priorReadIndex >= 0 && dispatchIndex > priorReadIndex, "Exact replay must be resolved before dispatch");
 assert.match(executeSource.slice(priorReadIndex, dispatchIndex), /if \(prior\) return prior;/, "Exact replay must return the original receipt without dispatch");
+const expiryCheckIndex = executeSource.indexOf("Date.parse(preview.expiresAt) <= Date.now()");
+assert.ok(expiryCheckIndex >= 0 && expiryCheckIndex < dispatchIndex, "Expired previews must be blocked before the Gmail dispatch path");
 assert.doesNotMatch(codeSource, /markApplicantEmailPipelineState_\(ctx,\s*"SUPPRESSED"/, "Idempotent replay must not overwrite Email_Status with SUPPRESSED");
 assert.doesNotMatch(codeSource, /recordApplicantContactOutcome_\(ctx,\s*"SUPPRESSED"/, "Idempotent replay must not overwrite successful contact history with SUPPRESSED");
 
@@ -178,6 +182,41 @@ const fingerprintChanged = idempotencyContext.eduopsStateFingerprint_({
 assert.match(fingerprintA, /^EDUOPS-STATE-/, "State fingerprint must have the bounded public prefix");
 assert.equal(fingerprintB, fingerprintA, "Equivalent approved state must have a deterministic fingerprint");
 assert.notEqual(fingerprintChanged, fingerprintA, "Changed approved content must receive a new state fingerprint");
+
+const commandPayloadContext = {
+  eduopsClean_: clean
+};
+vm.createContext(commandPayloadContext);
+vm.runInContext(extractFunction(commandsSource, "eduopsIndividualCommunicationApprovedPayload_"), commandPayloadContext);
+const approvedDispatchPayload = commandPayloadContext.eduopsIndividualCommunicationApprovedPayload_({
+  request: {
+    draft: {
+      recipient: "draft@example.test",
+      cc: "draft-cc@example.test",
+      bcc: "draft-bcc@example.test",
+      subject: "Draft subject",
+      body: "Raw draft body with {{portal_url}}"
+    }
+  },
+  authorityPreview: {
+    effectiveEmail: "parent@example.test",
+    cc: "",
+    bcc: "",
+    subject: "Missing documents",
+    body: "Open the secure applicant portal.\nhttps://portal.example.test/FODE-FINGERPRINT"
+  },
+  subject: "Missing documents",
+  body: "Open the secure applicant portal.\nhttps://portal.example.test/FODE-FINGERPRINT",
+  cc: "",
+  bcc: ""
+});
+assert.equal(JSON.stringify(approvedDispatchPayload), JSON.stringify({
+  recipient: "parent@example.test",
+  cc: "",
+  bcc: "",
+  subject: "Missing documents",
+  body: "Open the secure applicant portal.\nhttps://portal.example.test/FODE-FINGERPRINT"
+}), "Final operation must bind to immutable preview-approved canonical payload, not mutable draft/display fields");
 
 const originalReceipt = {
   receiptId: "EDUOPS-RECEIPT-R390B1-EXACT",
@@ -1116,6 +1155,7 @@ const selectedContext = {
 vm.createContext(selectedContext);
 vm.runInContext(extractFunction(selectedSource, "adminCommunicationOperationIdentity_"), selectedContext);
 vm.runInContext(extractFunction(selectedSource, "adminIndividualCommunicationPreviewCacheKey_"), selectedContext);
+vm.runInContext(extractFunction(selectedSource, "adminCanonicalIndividualCommunicationPayload_"), selectedContext);
 vm.runInContext(extractFunction(selectedSource, "adminWriteIndividualCommunicationPreview_"), selectedContext);
 vm.runInContext(extractFunction(selectedSource, "adminReadIndividualCommunicationPreview_"), selectedContext);
 vm.runInContext(extractFunction(selectedSource, "adminIndividualCommunicationPreviewMatches_"), selectedContext);
@@ -1124,6 +1164,26 @@ vm.runInContext(extractFunction(selectedSource, "adminCommunicationWithIdentity_
 vm.runInContext(extractFunction(selectedSource, "withAdminIndividualCommunicationLock_"), selectedContext);
 vm.runInContext(extractFunction(selectedSource, "admin_previewApplicantMessage"), selectedContext);
 vm.runInContext(extractFunction(selectedSource, "admin_sendApplicantMessage"), selectedContext);
+const canonicalPreview = selectedContext.adminCanonicalIndividualCommunicationPayload_({
+  recipient: " parent@example.test ",
+  subject: "Missing documents\r\n",
+  body: "Line one\r\nLine two\rLine three",
+  cc: " ",
+  bcc: "",
+  templateId: " docs_missing ",
+  templateVersionId: " 1 "
+});
+assert.equal(JSON.stringify(canonicalPreview), JSON.stringify({
+  recipient: "parent@example.test",
+  subject: "Missing documents\n",
+  body: "Line one\nLine two\nLine three",
+  cc: "",
+  bcc: "",
+  templateId: "docs_missing",
+  templateVersionId: "1",
+  authorityOverride: false,
+  authorityOverrideReason: ""
+}), "Preview fingerprint inputs must be canonicalized once with stable line endings and empty CC/BCC");
 const followUpIdentityA = selectedContext.adminCommunicationOperationIdentity_({}, "FODE-SELECTED-R390B1", "docs_missing", "operator@example.test", "DBG-FOLLOW-UP-A");
 const followUpIdentityB = selectedContext.adminCommunicationOperationIdentity_({}, "FODE-SELECTED-R390B1", "docs_missing", "operator@example.test", "DBG-FOLLOW-UP-B");
 assert.notEqual(followUpIdentityA.operationId, followUpIdentityB.operationId, "A later eligible follow-up must receive a new operation identity");
@@ -1162,6 +1222,108 @@ const repeatedClientDebugB = selectedContext.admin_previewApplicantMessage({
 });
 assert.notEqual(repeatedClientDebugA.operationId, repeatedClientDebugB.operationId, "Repeated client debug IDs must not reuse operation identity");
 assert.notEqual(repeatedClientDebugA.receiptId, repeatedClientDebugB.receiptId, "Every new preview must receive a unique receipt ID");
+
+const fingerprintIdentity = selectedContext.adminCommunicationOperationIdentity_({
+  operationId: "EDUOPS-OPERATION-FINGERPRINT",
+  previewId: "EDUOPS-PREVIEW-FINGERPRINT",
+  receiptId: "EDUOPS-RECEIPT-FINGERPRINT",
+  commandType: "SEND_INDIVIDUAL_COMMUNICATION",
+  actor: "operator@example.test",
+  stateFingerprint: "EDUOPS-STATE-FINGERPRINT",
+  cooldownCycle: "R391DE-CYCLE",
+  idempotencyKey: "EDUOPS-IDEMPOTENCY-FINGERPRINT"
+}, "FODE-FINGERPRINT", "docs_missing", "operator@example.test", "DBG-FINGERPRINT");
+const fingerprintApproved = selectedContext.adminWriteIndividualCommunicationPreview_(
+  "FODE-FINGERPRINT",
+  "docs_missing",
+  fingerprintIdentity,
+  {
+    templateId: "docs_missing",
+    templateVersionId: "1",
+    recipient: "parent@example.test",
+    cc: "",
+    bcc: "",
+    subject: "Missing documents",
+    body: "Open the secure applicant portal.\r\nhttps://portal.example.test/FODE-FINGERPRINT"
+  },
+  {
+    effectiveEmail: "parent@example.test",
+    cc: "",
+    bcc: "",
+    subject: "Missing documents",
+    body: "Open the secure applicant portal.\nhttps://portal.example.test/FODE-FINGERPRINT"
+  }
+);
+assert.equal(selectedContext.adminIndividualCommunicationPreviewMatches_(fingerprintApproved, {
+  recipient: "parent@example.test",
+  cc: "",
+  bcc: "",
+  templateId: "docs_missing",
+  templateVersionId: "1",
+  subject: "Missing documents",
+  body: "Open the secure applicant portal.\r\nhttps://portal.example.test/FODE-FINGERPRINT"
+}).ok, true, "Unchanged preview payload must pass fingerprint validation before expiry");
+assert.equal(selectedContext.adminIndividualCommunicationPreviewMatches_(fingerprintApproved, {
+  recipient: "parent@example.test",
+  cc: "  ",
+  bcc: "",
+  templateId: "docs_missing",
+  templateVersionId: "1",
+  subject: "Missing documents",
+  body: "Open the secure applicant portal.\r\nhttps://portal.example.test/FODE-FINGERPRINT"
+}).ok, true, "Empty CC/BCC canonicalization must be stable");
+assert.equal(selectedContext.adminIndividualCommunicationPreviewMatches_(fingerprintApproved, {
+  recipient: "parent@example.test",
+  templateId: "docs_missing",
+  templateVersionId: "1",
+  subject: "Missing documents",
+  body: "Open the secure applicant portal.\r\nhttps://portal.example.test/FODE-FINGERPRINT"
+}).ok, true, "Hydrated portal content must remain stable across CRLF/LF readback");
+for (const [field, value] of [
+  ["recipient", "changed@example.test"],
+  ["templateId", "payment_followup"],
+  ["subject", "Changed subject"],
+  ["body", "Changed body"]
+]) {
+  const operation = {
+    recipient: "parent@example.test",
+    cc: "",
+    bcc: "",
+    templateId: "docs_missing",
+    templateVersionId: "1",
+    subject: "Missing documents",
+    body: "Open the secure applicant portal.\nhttps://portal.example.test/FODE-FINGERPRINT"
+  };
+  operation[field] = value;
+  const mismatch = selectedContext.adminIndividualCommunicationPreviewMatches_(fingerprintApproved, operation);
+  assert.equal(mismatch.ok, false, `Changed ${field} must be blocked`);
+  assert.equal(mismatch.code, "PREVIEW_STALE");
+  assert.equal(mismatch.mismatchedField, field);
+}
+selectedPreviewCapture = null;
+selectedSendCapture = null;
+selectedContext.admin_previewApplicantMessage({
+  applicantId: "FODE-FINGERPRINT-BLOCK",
+  messageType: "docs_missing",
+  templateId: "docs_missing",
+  recipient: "parent@example.test",
+  subject: "Missing documents",
+  body: "Open the secure applicant portal.\nhttps://portal.example.test/FODE-FINGERPRINT-BLOCK"
+});
+const blockedFingerprintSend = selectedContext.admin_sendApplicantMessage({
+  applicantId: "FODE-FINGERPRINT-BLOCK",
+  messageType: "docs_missing",
+  templateId: "docs_missing",
+  recipient: "changed@example.test",
+  subject: "Missing documents",
+  body: "Open the secure applicant portal.\nhttps://portal.example.test/FODE-FINGERPRINT-BLOCK",
+  confirmManualSingleSend: true
+});
+assert.equal(blockedFingerprintSend.blockCode, "PREVIEW_STALE", "Changed recipient after preview must block at preview validation");
+assert.equal(blockedFingerprintSend.mismatchedField, "recipient", "Blocked send must expose the exact mismatched fingerprint input");
+assert.equal(selectedSendCapture, null, "Preview validation failure must not enter the Gmail-capable send implementation");
+individualLockEvents.length = 0;
+individualCacheReadsWhileLocked = 0;
 
 const opsIdentitylessPreview = selectedContext.admin_previewApplicantMessage({
   applicantId: "FODE-OPS-IDENTITYLESS",

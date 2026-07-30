@@ -80,6 +80,6 @@ assert.match(workbench, /Version saved '\s*\+ app\.esc\(versionDate\)/, "templat
 assert.match(workbench, /Template version created \(ISO\)/, "raw template version timestamp must remain technical-only");
 assert.match(workbench, /Preview expires '\s*\+ app\.esc\(app\.formatPngDate\(preview\.expiresAt\)/, "preview expiry must be human-readable");
 assert.match(workbench, /Expiry \(ISO\)/, "raw preview expiry must be labelled as ISO technical detail");
-assert.match(workbench, /receipt\.occurredAtPng\s*\|\|\s*app\.formatPngDate\(occurredAt\)/, "receipt history timestamps must use the canonical PNG-local timestamp or shared formatter");
+assert.match(workbench, /var occurredAtPng\s*=\s*occurredAt\s*\?\s*app\.formatPngDate\(occurredAt\)\s*:\s*\(receipt\.occurredAtPng\s*\|\|\s*app\.authorityUnavailable\("receipt timestamp"\)\)/, "receipt history timestamps must derive PNG-local display from the immutable technical ISO timestamp");
 
 console.log("PASS R376H conditional applicant summary and Workbench date display");

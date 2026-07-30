@@ -47,9 +47,76 @@ function adminIndividualCommunicationPreviewCacheKey_(applicantId, messageType) 
   return "ADMIN_INDIVIDUAL_COMM_PREVIEW::" + applicantKey + "::" + messageKey;
 }
 
+function adminCanonicalIndividualCommunicationPayload_(value) {
+  var source = value && typeof value === "object" ? value : {};
+  function text(field) {
+    return String(source[field] == null ? "" : source[field]).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  }
+  return {
+    recipient: clean_(source.recipient || source.effectiveEmail || ""),
+    subject: text("subject"),
+    body: text("body"),
+    cc: clean_(source.cc || ""),
+    bcc: clean_(source.bcc || ""),
+    templateId: clean_(source.templateId || ""),
+    templateVersionId: clean_(source.templateVersionId || ""),
+    authorityOverride: source.authorityOverride === true,
+    authorityOverrideReason: clean_(source.authorityOverrideReason || "")
+  };
+}
+
+function adminCanonicalIndividualCommunicationPayloadFallback_(value) {
+  if (typeof adminCanonicalIndividualCommunicationPayload_ === "function") {
+    return adminCanonicalIndividualCommunicationPayload_(value);
+  }
+  var source = value && typeof value === "object" ? value : {};
+  function text(field) {
+    return String(source[field] == null ? "" : source[field]).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  }
+  return {
+    recipient: clean_(source.recipient || source.effectiveEmail || ""),
+    subject: text("subject"),
+    body: text("body"),
+    cc: clean_(source.cc || ""),
+    bcc: clean_(source.bcc || ""),
+    templateId: clean_(source.templateId || ""),
+    templateVersionId: clean_(source.templateVersionId || ""),
+    authorityOverride: source.authorityOverride === true,
+    authorityOverrideReason: clean_(source.authorityOverrideReason || "")
+  };
+}
+
 function adminWriteIndividualCommunicationPreview_(applicantId, messageType, identity, request, previewResult) {
   var p = request && typeof request === "object" ? request : {};
   var result = previewResult && typeof previewResult === "object" ? previewResult : {};
+  var canonicalize = typeof adminCanonicalIndividualCommunicationPayloadFallback_ === "function"
+    ? adminCanonicalIndividualCommunicationPayloadFallback_
+    : function (value) {
+      var source = value && typeof value === "object" ? value : {};
+      function text(field) {
+        return String(source[field] == null ? "" : source[field]).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+      }
+      return {
+        recipient: clean_(source.recipient || source.effectiveEmail || ""),
+        subject: text("subject"),
+        body: text("body"),
+        cc: clean_(source.cc || ""),
+        bcc: clean_(source.bcc || ""),
+        templateId: clean_(source.templateId || ""),
+        templateVersionId: clean_(source.templateVersionId || ""),
+        authorityOverride: source.authorityOverride === true,
+        authorityOverrideReason: clean_(source.authorityOverrideReason || "")
+      };
+    };
+  var canonical = canonicalize(Object.assign({}, p, {
+    recipient: result.effectiveEmail || p.recipient || "",
+    subject: result.subject || p.subject || "",
+    body: result.body || p.body || "",
+    cc: result.cc || p.cc || "",
+    bcc: result.bcc || p.bcc || "",
+    templateId: p.templateId || messageType || "",
+    templateVersionId: p.templateVersionId || ""
+  }));
   var approved = {
     identity: {
       operationId: clean_(identity && identity.operationId || ""),
@@ -63,15 +130,15 @@ function adminWriteIndividualCommunicationPreview_(applicantId, messageType, ide
     },
     applicantId: clean_(applicantId || ""),
     messageType: clean_(messageType || ""),
-    templateId: clean_(p.templateId || messageType || ""),
-    templateVersionId: clean_(p.templateVersionId || ""),
-    recipient: clean_(result.effectiveEmail || p.recipient || ""),
-    subject: String(result.subject || p.subject || ""),
-    body: String(result.body || p.body || ""),
-    cc: clean_(result.cc || p.cc || ""),
-    bcc: clean_(result.bcc || p.bcc || ""),
-    authorityOverride: p.authorityOverride === true,
-    authorityOverrideReason: clean_(p.authorityOverrideReason || ""),
+    templateId: canonical.templateId,
+    templateVersionId: canonical.templateVersionId,
+    recipient: canonical.recipient,
+    subject: canonical.subject,
+    body: canonical.body,
+    cc: canonical.cc,
+    bcc: canonical.bcc,
+    authorityOverride: canonical.authorityOverride,
+    authorityOverrideReason: canonical.authorityOverrideReason,
     createdAt: new Date().toISOString()
   };
   CacheService.getUserCache().put(
@@ -101,24 +168,69 @@ function adminIndividualCommunicationPreviewMatches_(approved, payload, identity
     return clean_(p[field] || "") && clean_(p[field] || "") !== clean_(cached.identity[field] || "");
   });
   if (identityMismatch) return { ok: false, code: "COMMUNICATION_IDENTITY_MISMATCH", reason: "Send identity does not match the latest server-approved preview." };
-  var contentMismatch = [
-    ["recipient", clean_],
-    ["subject", String],
-    ["body", String],
-    ["cc", clean_],
-    ["bcc", clean_],
-    ["templateId", clean_],
-    ["templateVersionId", clean_]
-  ].some(function (entry) {
-    var field = entry[0];
-    var normalize = entry[1];
+  var canonicalize = typeof adminCanonicalIndividualCommunicationPayloadFallback_ === "function"
+    ? adminCanonicalIndividualCommunicationPayloadFallback_
+    : function (value) {
+      var source = value && typeof value === "object" ? value : {};
+      function text(field) {
+        return String(source[field] == null ? "" : source[field]).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+      }
+      return {
+        recipient: clean_(source.recipient || source.effectiveEmail || ""),
+        subject: text("subject"),
+        body: text("body"),
+        cc: clean_(source.cc || ""),
+        bcc: clean_(source.bcc || ""),
+        templateId: clean_(source.templateId || ""),
+        templateVersionId: clean_(source.templateVersionId || ""),
+        authorityOverride: source.authorityOverride === true,
+        authorityOverrideReason: clean_(source.authorityOverrideReason || "")
+      };
+    };
+  var cachedCanonical = canonicalize(cached);
+  var payloadCanonical = canonicalize(p);
+  var contentMismatchField = "";
+  [
+    "recipient",
+    "subject",
+    "body",
+    "cc",
+    "bcc",
+    "templateId",
+    "templateVersionId"
+  ].some(function (field) {
     if (!Object.prototype.hasOwnProperty.call(p, field)) return false;
-    return normalize(p[field] || "") !== normalize(cached[field] || "");
+    if (payloadCanonical[field] !== cachedCanonical[field]) {
+      contentMismatchField = field;
+      return true;
+    }
+    return false;
   });
-  if (contentMismatch) return { ok: false, code: "PREVIEW_STALE", reason: "Recipient, template, or message content changed after preview. Preview the final communication again." };
-  if ((Object.prototype.hasOwnProperty.call(p, "authorityOverride") && (p.authorityOverride === true) !== (cached.authorityOverride === true))
-    || (Object.prototype.hasOwnProperty.call(p, "authorityOverrideReason") && clean_(p.authorityOverrideReason || "") !== clean_(cached.authorityOverrideReason || ""))) {
-    return { ok: false, code: "PREVIEW_STALE", reason: "Communication authority override context changed after preview." };
+  if (contentMismatchField) {
+    return {
+      ok: false,
+      code: "PREVIEW_STALE",
+      reason: "Recipient, template, or message content changed after preview. Preview the final communication again.",
+      mismatchedField: contentMismatchField,
+      previewCanonicalValue: cachedCanonical[contentMismatchField],
+      operationCanonicalValue: payloadCanonical[contentMismatchField]
+    };
+  }
+  var overrideMismatchField = "";
+  if (Object.prototype.hasOwnProperty.call(p, "authorityOverride") && payloadCanonical.authorityOverride !== cachedCanonical.authorityOverride) {
+    overrideMismatchField = "authorityOverride";
+  } else if (Object.prototype.hasOwnProperty.call(p, "authorityOverrideReason") && payloadCanonical.authorityOverrideReason !== cachedCanonical.authorityOverrideReason) {
+    overrideMismatchField = "authorityOverrideReason";
+  }
+  if (overrideMismatchField) {
+    return {
+      ok: false,
+      code: "PREVIEW_STALE",
+      reason: "Communication authority override context changed after preview.",
+      mismatchedField: overrideMismatchField,
+      previewCanonicalValue: cachedCanonical[overrideMismatchField],
+      operationCanonicalValue: payloadCanonical[overrideMismatchField]
+    };
   }
   return { ok: true };
 }
@@ -126,16 +238,36 @@ function adminIndividualCommunicationPreviewMatches_(approved, payload, identity
 function adminBindIndividualCommunicationPreview_(approved, payload) {
   var cached = approved && typeof approved === "object" ? approved : {};
   var p = payload && typeof payload === "object" ? payload : {};
+  var canonicalize = typeof adminCanonicalIndividualCommunicationPayloadFallback_ === "function"
+    ? adminCanonicalIndividualCommunicationPayloadFallback_
+    : function (value) {
+      var source = value && typeof value === "object" ? value : {};
+      function text(field) {
+        return String(source[field] == null ? "" : source[field]).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+      }
+      return {
+        recipient: clean_(source.recipient || source.effectiveEmail || ""),
+        subject: text("subject"),
+        body: text("body"),
+        cc: clean_(source.cc || ""),
+        bcc: clean_(source.bcc || ""),
+        templateId: clean_(source.templateId || ""),
+        templateVersionId: clean_(source.templateVersionId || ""),
+        authorityOverride: source.authorityOverride === true,
+        authorityOverrideReason: clean_(source.authorityOverrideReason || "")
+      };
+    };
+  var canonical = canonicalize(cached);
   return Object.assign({}, p, cached.identity || {}, {
-    recipient: clean_(cached.recipient || ""),
-    subject: String(cached.subject || ""),
-    body: String(cached.body || ""),
-    cc: clean_(cached.cc || ""),
-    bcc: clean_(cached.bcc || ""),
-    templateId: clean_(cached.templateId || ""),
-    templateVersionId: clean_(cached.templateVersionId || ""),
-    authorityOverride: cached.authorityOverride === true,
-    authorityOverrideReason: clean_(cached.authorityOverrideReason || "")
+    recipient: canonical.recipient,
+    subject: canonical.subject,
+    body: canonical.body,
+    cc: canonical.cc,
+    bcc: canonical.bcc,
+    templateId: canonical.templateId,
+    templateVersionId: canonical.templateVersionId,
+    authorityOverride: canonical.authorityOverride,
+    authorityOverrideReason: canonical.authorityOverrideReason
   });
 }
 
@@ -284,7 +416,10 @@ function admin_sendApplicantMessage(payload) {
         return adminCommBlockedResult_("send", previewMatch.code, dbgId, {
           applicantId: applicantId,
           messageType: requestedType,
-          blockReason: previewMatch.reason
+          blockReason: previewMatch.reason,
+          mismatchedField: clean_(previewMatch.mismatchedField || ""),
+          previewCanonicalValue: previewMatch.previewCanonicalValue,
+          operationCanonicalValue: previewMatch.operationCanonicalValue
         });
       }
       var boundPayload = adminBindIndividualCommunicationPreview_(approvedPreview, p);
