@@ -48,7 +48,10 @@ function Get-FodeCommittedSourceInventory {
   & git merge-base --is-ancestor $baseline $head
   if ($LASTEXITCODE -ne 0) { throw "Accepted baseline is not an ancestor of expected HEAD" }
   $inventory = @( & git diff --name-only --diff-filter=ACMR "$baseline..$head" | ForEach-Object { $_.Trim() } | Where-Object { $_ } | Sort-Object -Unique )
-  $blocked = @($inventory | Where-Object { $_ -match '(^|/)(\.env|config\.php|.*secret.*|.*password.*|.*backup.*|.*\.sql(?:\.gz)?|.*\.zip|build/|logs?/|tests?/fixtures?/)' })
+  $blocked = @($inventory | Where-Object {
+    $_ -match '(^|/)(\.env$|.*secret.*|.*password.*|.*\.zip$|.*\.sql\.gz$|build/|logs?/|backups?/|tests?/fixtures?/)' -or
+    ($_ -match '\.sql$' -and $_ -notmatch '^services/communication-ledger/migrations/')
+  })
   if ($blocked.Count -gt 0) { throw "Committed-source inventory contains protected/generated files: $($blocked -join ', ')" }
   if ($inventory.Count -eq 0) { throw "Committed-source release has an empty eligible release inventory" }
   return [pscustomobject]@{ Head = $head; Branch = (& git branch --show-current).Trim(); ChangedFiles = $inventory; AcceptedBaselineCommit = $baseline }

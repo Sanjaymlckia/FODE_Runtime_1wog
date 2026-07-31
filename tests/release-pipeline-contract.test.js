@@ -68,6 +68,7 @@ assert.match(invoke, /Get-FodeCommittedSourceInventory/, "Committed-source inven
 assert.match(invoke, /merge-base --is-ancestor/, "Committed-source baseline ancestry is verified");
 assert.match(invoke, /Committed-source release requires a clean working tree and index/, "Committed-source dirty state is rejected");
 assert.match(invoke, /empty eligible release inventory/, "Committed-source empty inventory is rejected");
+assert.match(invoke, /services\/communication-ledger\/migrations\//, "Ledger migrations remain eligible deployment source");
 assert.match(invoke, /origin\/main.*ExpectedHead|HEAD is not equal to origin\/main/, "Committed-source remote alignment is enforced");
 assert.match(invoke, /changed = @\(\$changed \+ "Config\.js"/, "Committed-source mode adds exactly one runtime identity change");
 assert.match(invoke, /Student protected:/, "Student deployment remains protected");
