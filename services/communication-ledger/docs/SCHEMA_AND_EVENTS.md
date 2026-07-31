@@ -1,0 +1,7 @@
+# Schema, event taxonomy, and cohort rules
+
+All migrations explicitly use `ENGINE=InnoDB`, `utf8mb4`, and `utf8mb4_unicode_ci`. They define identities, foreign keys, and lookup indexes for applicant, cohort, provider message, events, operations, and receipts. Apply with `php scripts/migrate.php --plan` first; the runner records each ordered filename once. MariaDB DDL can implicitly commit, so migration files are intentionally single-purpose and the runner stops on the first failure.
+
+Supported event values: `PREVIEW_CREATED`, `PREVIEW_EXPIRED`, `OPERATION_AUTHORIZED`, `SEND_BLOCKED`, `SEND_STARTED`, `SEND_ACCEPTED`, `SEND_FAILED_TRANSIENT`, `SEND_FAILED_PERMANENT`, `SEND_UNCERTAIN`, `IDEMPOTENT_REPLAY`, `DELIVERY_CONFIRMED`, `BOUNCED_TRANSIENT`, `BOUNCED_PERMANENT`, `BOUNCE_UNCLASSIFIED`, `OPEN_SIGNAL_RECORDED`, `READ_RECEIPT_RECEIVED`, `REPLY_RECEIVED`, `PORTAL_LINK_OPENED`, `DOCUMENT_UPLOADED`, `PAYMENT_EVIDENCE_SUBMITTED`, `REQUIRED_ACTION_COMPLETED`, and `CONTACTABILITY_REVIEW_REQUIRED`. Source and confidence are retained; unknown remains unknown. No tracking pixel or mailbox polling is included.
+
+Cohorts bind an immutable fingerprint, population snapshot, policy, expiry, and per-recipient canonical payload. A changed recipient list/order, applicant, snapshot, template, subject/body, or expiry invalidates authority. Future resume must skip only durable success, retry only transient failure, and halt on uncertainty. **Batch execution remains prohibited.**

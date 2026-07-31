@@ -25,3 +25,11 @@ prototypes/*.zip
 # Windows / Google Drive folder metadata
 desktop.ini
 **/desktop.ini
+
+# Communication-ledger protected configuration and generated operator artifacts
+services/communication-ledger/config/config.php
+services/communication-ledger/.env
+services/communication-ledger/logs/
+services/communication-ledger/backups/
+services/communication-ledger/build/
+services/communication-ledger/restore-work/

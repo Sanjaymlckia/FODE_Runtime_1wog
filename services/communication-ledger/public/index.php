@@ -1,0 +1,4 @@
+<?php declare(strict_types=1);
+spl_autoload_register(function(string $class): void { $prefix='Fode\\CommunicationLedger\\'; if(str_starts_with($class,$prefix)) { $file=__DIR__.'/src/'.str_replace('\\','/',substr($class,strlen($prefix))).'.php'; if(is_file($file)) require $file; } });
+use Fode\CommunicationLedger\Config\Config; use Fode\CommunicationLedger\Database\Connection; use Fode\CommunicationLedger\Ledger\Repository; use Fode\CommunicationLedger\Http\App;
+try { $config=Config::load(getenv('LEDGER_CONFIG_FILE') ?: dirname(__DIR__).'/communication-ledger-config.php'); (new App($config,new Repository(Connection::open($config))))->run(); } catch (Throwable) { http_response_code(503); header('Content-Type: application/json; charset=utf-8'); echo '{"available":false,"error":"SERVICE_UNAVAILABLE"}'; }

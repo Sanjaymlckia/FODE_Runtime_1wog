@@ -1,0 +1,1 @@
+<?php require __DIR__.'/bootstrap.php'; $db=ledger_db(); echo json_encode(['available'=>true,'schemaVersion'=>$db->query('SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1')->fetchColumn(),'utcTimestamp'=>gmdate('c')]).PHP_EOL;
