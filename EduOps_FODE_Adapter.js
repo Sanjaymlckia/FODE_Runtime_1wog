@@ -659,6 +659,7 @@ function eduopsPortalSummary_(portalAuthority) {
     schemaVersion: "EDUOPS_PORTAL_AUTHORITY_V1",
     authoritySource: hasContract ? "Portal Access Domain" : "",
     available: portal.available === true,
+    portalUrl: portal.available === true ? eduopsClean_(portal.portalUrl || "") : "",
     reasonCode: hasContract ? eduopsClean_(portal.reasonCode || "PORTAL_STATE_RETURNED") : "BACKEND_CONTRACT_MISSING",
     reason: hasContract ? eduopsClean_(portal.reason || "Portal Access Domain state returned.") : "Authoritative portal-access decision was not returned. Refresh or retry before continuing.",
     submitted: false,

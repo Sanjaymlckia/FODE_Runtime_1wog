@@ -379,7 +379,7 @@
   function renderPortal() {
     var portal = app.state.workbench.portal || {};
     if (portal.schemaVersion !== "EDUOPS_PORTAL_AUTHORITY_V1" || portal.available !== true) return '<div class="eduops-error-state"><strong>' + app.esc(app.authorityUnavailable("portal-access")) + '</strong><span>' + app.esc(portal.reason || "BACKEND_CONTRACT_MISSING") + '</span><button class="eduops-button eduops-button-secondary" type="button" data-portal-communications>Open Communications</button></div>';
-    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-12"><header><div><h2>Portal Access Domain</h2><p>Read-only authoritative access projection. No portal mutation contract is active.</p></div></header>' + definition([["Access state", portal.accessState], ["Token state", portal.tokenState], ["Expires", app.formatPngDate(portal.expiresAt)], ["Reason", portal.reason]]) + '<details class="eduops-technical-details"><summary>Technical details</summary>' + definition([["Expiry (ISO)", portal.expiresAt]]) + '</details><p class="eduops-action-reason">' + app.esc(app.authorityUnavailable("portal-access operation")) + '</p></section></div>';
+    return '<div class="eduops-panel-grid"><section class="eduops-panel-card eduops-span-12"><header><div><h2>Portal Access Domain</h2><p>Read-only authoritative access projection for this exact applicant.</p></div></header>' + definition([["Access state", portal.accessState], ["Token state", portal.tokenState], ["Expires", app.formatPngDate(portal.expiresAt)], ["Reason", portal.reason]]) + '<details class="eduops-technical-details"><summary>Technical details</summary>' + definition([["Expiry (ISO)", portal.expiresAt]]) + '</details><div class="eduops-action-row"><button class="eduops-button eduops-button-primary" type="button" data-portal-open' + (portal.portalUrl ? '' : ' disabled') + '>Open Student Portal</button></div><p class="eduops-action-reason">' + app.esc(portal.portalUrl ? "Opens the existing applicant-bound Student portal in a separate tab." : app.authorityUnavailable("portal-access operation")) + '</p></section></div>';
   }
   function renderContactability() {
     var contact = app.state.workbench.contactability || {};
@@ -823,6 +823,14 @@
       if (correction) { app.state.activeTab = "communications"; app.state.communicationDraft = null; renderPanel(); app.setInteractionState("SUCCESS", "Communications opened. Choose the server-recommended or another available communication explicitly."); return; }
       var portalComm = event.target.closest("[data-portal-communications]");
       if (portalComm) { app.state.activeTab = "communications"; app.state.communicationDraft = null; renderPanel(); app.setInteractionState("SUCCESS", "Communications opened. Choose an available communication explicitly. No message has been sent."); return; }
+      var portalOpen = event.target.closest("[data-portal-open]");
+      if (portalOpen) {
+        var portalUrl = app.state.workbench && app.state.workbench.portal && app.state.workbench.portal.portalUrl || "";
+        if (!portalUrl) { app.toast("Student portal is unavailable for this applicant."); return; }
+        window.open(portalUrl, "_blank", "noopener,noreferrer");
+        app.setInteractionState("SUCCESS", "Existing applicant-bound Student portal opened. No data was changed.");
+        return;
+      }
       var template = event.target.closest("[data-communication-template]");
       if (template) { app.invalidateOperationAuthority("Communication changed. Revalidation is required."); applyCommunicationTemplate(communicationTemplateById(template.getAttribute("data-communication-template"), template.getAttribute("data-message-type"))); renderPanel(); app.setInteractionState("SUCCESS", template.textContent.trim().replace(/\s+/g, " ") + " selected."); return; }
       var saveTemplate = event.target.closest("[data-save-reusable-template]");

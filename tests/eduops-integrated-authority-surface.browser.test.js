@@ -198,6 +198,37 @@ async function assertAuthorityInvalidated(page, label) {
     assert(compactLayout.visibleRows >= 6, `at least six useful applicant rows must be visible at 100% zoom (got ${compactLayout.visibleRows})`);
     await compactPage.close();
 
+    for (const viewport of [{ width: 1536, height: 728 }, { width: 1150, height: 660 }, { width: 1024, height: 768 }, { width: 1280, height: 800 }]) {
+      const responsivePage = await browser.newPage({ viewport });
+      await responsivePage.setContent(fixtureHtml(), { waitUntil: "domcontentloaded" });
+      await settled(responsivePage);
+      const geometry = await responsivePage.evaluate(() => {
+        const ids = ["eduopsOperationsToolbarState", "eduopsOperationsToolbarPackage", "eduopsStartSession"];
+        const nodes = ids.map((id) => document.getElementById(id));
+        const queueElement = document.querySelector('[data-eduops-layout-region="queue-controls"]');
+        const packageButton = queueElement.querySelector('[data-eduops-operations-focus-packages]');
+        const controls = nodes.concat(packageButton).filter(Boolean).map((element) => ({ id: element.id || "package-button", rect: element.getBoundingClientRect() }));
+        const queue = queueElement.getBoundingClientRect();
+        const filters = document.querySelector('[data-eduops-layout-region="filters"]').getBoundingClientRect();
+        const intersects = (a, b) => a.left < b.right - 0.5 && a.right > b.left + 0.5 && a.top < b.bottom - 0.5 && a.bottom > b.top + 0.5;
+        const collisions = [];
+        controls.forEach((a, index) => controls.slice(index + 1).forEach((b) => { if (intersects(a.rect, b.rect)) collisions.push(`${a.id}:${b.id}`); }));
+        return {
+          controlCount: controls.length,
+          collisions,
+          queueFilterCollision: intersects(queue, filters),
+          controlsInsideToolbar: controls.every((item) => item.rect.left >= queue.left - 0.5 && item.rect.right <= queue.right + 0.5 && item.rect.top >= queue.top - 0.5 && item.rect.bottom <= queue.bottom + 0.5),
+          queueVisible: queue.top < window.innerHeight
+        };
+      });
+      assert.equal(geometry.controlCount, 4, `all four queue controls must exist at ${viewport.width}x${viewport.height}`);
+      assert.deepEqual(geometry.collisions, [], `queue controls must not overlap at ${viewport.width}x${viewport.height}`);
+      assert.equal(geometry.queueFilterCollision, false, `queue and filter regions must remain independent at ${viewport.width}x${viewport.height}`);
+      assert.equal(geometry.controlsInsideToolbar, true, `queue controls must remain inside their declared grid at ${viewport.width}x${viewport.height}`);
+      assert.equal(geometry.queueVisible, true, `queue must remain visible at ${viewport.width}x${viewport.height}`);
+      await responsivePage.close();
+    }
+
     assert.equal(await page.locator("#eduopsOperationalClassification").innerText(), "FODE live production operations");
     assert.equal(await page.locator("#eduopsRuntimeIdentity").innerText(), "r362 / 362");
     assert.equal(await page.locator("#eduopsAppsScriptIdentity").innerText(), "Apps Script @397");
