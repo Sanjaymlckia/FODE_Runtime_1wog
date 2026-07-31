@@ -1,5 +1,7 @@
 **/*
 !Admin.js
+!CommunicationLedgerClient.js
+!CommunicationLedgerContract.js
 !Admin_AccessControl.js
 !Admin_AcademicAuthority.js
 !Admin_CapabilityGrants.js

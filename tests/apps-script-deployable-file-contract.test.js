@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const crypto = require("node:crypto");
 
 const expected = [
-  "Admin.js", "Admin_AccessControl.js", "Admin_AcademicAuthority.js", "Admin_CapabilityGrants.js", "Admin_CanonicalFinance.js", "Admin_CanonicalPopulation.js",
+  "Admin.js", "Admin_AccessControl.js", "Admin_AcademicAuthority.js", "Admin_CapabilityGrants.js", "Admin_CanonicalFinance.js", "Admin_CanonicalPopulation.js", "CommunicationLedgerClient.js", "CommunicationLedgerContract.js",
   "Admin_DocumentGallery.js", "Admin_DocumentServices.js", "Admin_LifecycleAuthority.js", "Admin_PaymentAuthority.js", "Admin_ReviewQueues.js",
   "Admin_ReviewStatusAuthority.js", "Admin_RowFacts.js", "Admin_SelectedApplicantCommunications.js", "Admin_StageBatchCommunications.js",
   "Admin_WhatsAppFallback.js", "Admin_OperationalIntegrationAuthority.js", "AdminUI.html", "AdminUI_OperatorNext.html", "AdminUI_OpsApplicantQueue.html", "AdminUI_OpsCommunications.html",
@@ -14,7 +14,7 @@ const expected = [
 ].sort();
 const actual = fs.readFileSync(".claspignore", "utf8").split(/\r?\n/).map((line) => line.trim()).filter((line) => /^![^*]/.test(line)).map((line) => line.slice(1).replace(/\\/g, "/")).sort();
 assert.deepEqual(actual, expected, "Deployable Apps Script filename set must match the explicit 46-file contract");
-assert.equal(actual.length, 46);
+assert.equal(actual.length, 48);
 for (const file of actual) assert.equal(fs.existsSync(file), true, `Deployable runtime file is missing: ${file}`);
 assert.ok(!actual.some((file) => /^(tests|docs|\.release-proof)\//.test(file)), "Tests, docs, and release evidence must remain excluded");
 assert.ok(!actual.some((file) => /OPS\.js|OldWorkbench|OperatorDashboard/i.test(file)), "Retired standalone OPS source must not be reintroduced");
