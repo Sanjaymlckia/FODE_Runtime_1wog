@@ -8,7 +8,7 @@
 - Runtime before: r397 / 397
 - Runtime after: r398 / 398
 - Selected gate: Full
-- Git commit status: Not committed or pushed - awaiting final owner acceptance
+- Git commit status: Committed and pushed in the governed closure commits.
 
 ## Changed Files
 - `Config.js`
