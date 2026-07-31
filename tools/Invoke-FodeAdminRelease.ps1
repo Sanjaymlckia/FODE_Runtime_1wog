@@ -13,6 +13,8 @@ param(
   [switch]$DependencyMappingIncomplete,
   [switch]$ScheduledFullValidation,
   [switch]$DryRun,
+  [switch]$CommittedSourceRelease,
+  [string]$AcceptedBaselineCommit = "",
   [switch]$MockRemote,
   [string]$EvidenceRoot = "docs\audits\releases",
   [string]$ManifestRoot = ".release-proof\admin-release"
@@ -30,11 +32,43 @@ function Invoke-FodeCheckedCommand {
   Write-Host "PASS: $Name" -ForegroundColor Green
 }
 
+function Get-FodeCommittedSourceInventory {
+  param(
+    [string]$ExpectedHead,
+    [string]$AcceptedBaselineCommit
+  )
+  if (!$ExpectedHead -or !$AcceptedBaselineCommit) {
+    throw "Committed-source mode requires ExpectedHead and AcceptedBaselineCommit"
+  }
+  $head = (& git rev-parse HEAD).Trim()
+  if ($head -ne $ExpectedHead) { throw "Committed-source expected HEAD mismatch: $head" }
+  if ((& git status --porcelain).Count -gt 0) { throw "Committed-source release requires a clean working tree and index" }
+  $baseline = (& git rev-parse --verify "$AcceptedBaselineCommit^{commit}").Trim()
+  if ($LASTEXITCODE -ne 0 -or !$baseline) { throw "Invalid accepted baseline commit: $AcceptedBaselineCommit" }
+  & git merge-base --is-ancestor $baseline $head
+  if ($LASTEXITCODE -ne 0) { throw "Accepted baseline is not an ancestor of expected HEAD" }
+  $inventory = @( & git diff --name-only --diff-filter=ACMR "$baseline..$head" | ForEach-Object { $_.Trim() } | Where-Object { $_ } | Sort-Object -Unique )
+  $blocked = @($inventory | Where-Object { $_ -match '(^|/)(\.env|config\.php|.*secret.*|.*password.*|.*backup.*|.*\.sql(?:\.gz)?|.*\.zip|build/|logs?/|tests?/fixtures?/)' })
+  if ($blocked.Count -gt 0) { throw "Committed-source inventory contains protected/generated files: $($blocked -join ', ')" }
+  if ($inventory.Count -eq 0) { throw "Committed-source release has an empty eligible release inventory" }
+  return [pscustomobject]@{ Head = $head; Branch = (& git branch --show-current).Trim(); ChangedFiles = $inventory; AcceptedBaselineCommit = $baseline }
+}
+
 try {
   $project = Get-FodeContext
   $allowed = @($AllowedChangedFiles | ForEach-Object { $_ -split "," } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
   $baseline = Assert-FodeRepositoryPreflight -ExpectedRepo ([string]$project.repository.path) -ExpectedHead $ExpectedHead -AllowedChangedFiles $allowed
   $changed = @($baseline.ChangedFiles)
+  if ($CommittedSourceRelease) {
+    if ((& git branch --show-current).Trim() -ne "main") { throw "Committed-source release requires branch main" }
+    if ((& git rev-parse origin/main).Trim() -ne $ExpectedHead) { throw "Committed-source HEAD is not equal to origin/main" }
+    $counts = (& git rev-list --left-right --count HEAD...origin/main).Trim()
+    if ($counts -notin @("0`t0", "0 0")) { throw "Committed-source release requires 0/0 ahead/behind" }
+    $baseline = Get-FodeCommittedSourceInventory -ExpectedHead $ExpectedHead -AcceptedBaselineCommit $AcceptedBaselineCommit
+    $changed = @($baseline.ChangedFiles)
+    Write-Host "Committed-source inventory baseline: $($baseline.AcceptedBaselineCommit)"
+    Write-Host "Committed-source inventory files: $($changed.Count)"
+  }
   if ($changed.Count -eq 0) { throw "No release changes detected" }
 
   $classification = Get-FodeMinimumReleaseClass -Files $changed
@@ -84,7 +118,11 @@ try {
     Write-Host "Proposed runtime identity: $($runtimeAfter.Runtime) / $($runtimeAfter.Deploy)" -ForegroundColor Yellow
     Update-FodeConfigIdentity -Runtime $runtimeAfter.Runtime -Deploy $runtimeAfter.Deploy
     Invoke-FodeCheckedCommand "node --check Config.js" { & node --check Config.js }
-    $changed = @(Get-FodeChangedFiles)
+    if ($CommittedSourceRelease) {
+      $changed = @($changed + "Config.js" | Sort-Object -Unique)
+    } else {
+      $changed = @(Get-FodeChangedFiles)
+    }
     $classification.Risks = @($classification.Risks + [pscustomobject]@{ File = "Config.js"; Class = $ReleaseClass; Reason = "runtime identity bump bound to $ReleaseClass release manifest" } | Sort-Object File -Unique)
   }
 

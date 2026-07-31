@@ -62,6 +62,16 @@ assert.match(invoke, /ValidateSet\("DocsOnly", "ClientOnly", "BackendSemantic", 
 assert.match(invoke, /Detected minimum release class/, "Detected class is printed");
 assert.match(invoke, /Assert-FodeReleaseClassAllowed/, "Risk downgrade rejection is enforced");
 assert.match(invoke, /\[switch\]\$DryRun/, "Dry-run mode exists");
+assert.match(invoke, /\[switch\]\$CommittedSourceRelease/, "Committed-source mode is explicit");
+assert.match(invoke, /\[string\]\$AcceptedBaselineCommit/, "Committed-source mode requires an accepted baseline");
+assert.match(invoke, /Get-FodeCommittedSourceInventory/, "Committed-source inventory derivation is centralized");
+assert.match(invoke, /merge-base --is-ancestor/, "Committed-source baseline ancestry is verified");
+assert.match(invoke, /Committed-source release requires a clean working tree and index/, "Committed-source dirty state is rejected");
+assert.match(invoke, /empty eligible release inventory/, "Committed-source empty inventory is rejected");
+assert.match(invoke, /origin\/main.*ExpectedHead|HEAD is not equal to origin\/main/, "Committed-source remote alignment is enforced");
+assert.match(invoke, /changed = @\(\$changed \+ "Config\.js"/, "Committed-source mode adds exactly one runtime identity change");
+assert.match(invoke, /Student protected:/, "Student deployment remains protected");
+assert.match(invoke, /Production:/, "Production deployment remains protected");
 assert.match(invoke, /\[string\]\$Gate = "Auto"/, "Operator can request Auto/Fast/Full gate");
 assert.match(invoke, /No Config\.js edit, clasp push, Apps Script version, deployment repin, git stage, commit, push/, "Dry-run no-mutation guarantee is printed");
 const dryRunBlock = invoke.match(/if \(\$DryRun\) \{[\s\S]*?exit 0[\s\S]*?\}/);
