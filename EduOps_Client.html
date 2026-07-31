@@ -143,15 +143,19 @@
     app.setBootstrapState("ASSETS_READY", "Shared client assets loaded.", generation);
     return app.withBootstrapTimeout(app.waitForTransport(), "TRANSPORT_READY").then(function () {
       app.setBootstrapState("TRANSPORT_READY", "EduOps transport is ready.", generation);
-      return app.withBootstrapTimeout(app.call("eduops_getAccessProjection", {}), "ACCESS_READY");
-    }).then(function (access) {
+      // Both server-enforced read projections are independent. Start them together,
+      // then accept them together for this bootstrap generation.
+      return Promise.all([
+        app.withBootstrapTimeout(app.call("eduops_getAccessProjection", {}), "ACCESS_READY"),
+        app.withBootstrapTimeout(app.call("eduops_getProfile", {}), "PROFILE_READY")
+      ]);
+    }).then(function (projections) {
       requireCurrent();
+      var access = projections[0];
+      var profile = projections[1];
       app.setBootstrapState("ACCESS_READY", "Operator access projection resolved.", generation);
-      return app.withBootstrapTimeout(app.call("eduops_getProfile", {}), "PROFILE_READY").then(function (profile) {
-        requireCurrent();
-        applyBootstrap(access, profile, generation);
-        app.setBootstrapState("PROFILE_READY", "Product profile and feature projection resolved.", generation);
-      });
+      applyBootstrap(access, profile, generation);
+      app.setBootstrapState("PROFILE_READY", "Product profile and feature projection resolved.", generation);
     }).then(function () {
       requireCurrent();
       return app.withBootstrapTimeout(app.requestWorkload({ refreshSnapshot: true, bootstrapGeneration: generation }), "WORKLOAD_READY");

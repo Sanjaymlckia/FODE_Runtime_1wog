@@ -66,7 +66,7 @@
     </section>
 
     <div class="eduops-shell">
-      <aside class="eduops-rail" aria-label="Operations navigation">
+      <aside class="eduops-rail" data-eduops-layout-region="navigation" aria-label="Operations navigation">
         <div class="eduops-rail-heading">
           <span>Actionability</span>
           <button id="eduopsRailCollapse" class="eduops-icon-button" type="button" aria-label="Collapse navigation" aria-expanded="true">
@@ -130,7 +130,7 @@
               <span id="eduopsOperationsWorkspaceSnapshot" class="eduops-operations-workspace-snapshot">Authoritative work packages loading</span>
             </div>
           </header>
-          <div class="eduops-operations-ribbon-row" aria-label="Ops ribbon">
+          <div class="eduops-operations-ribbon-row" data-eduops-layout-region="status" aria-label="Ops ribbon">
             <div id="eduopsOperationsPrimaryBuckets" class="eduops-operations-primary-buckets" aria-label="Primary actionability buckets"></div>
             <div class="eduops-operations-ribbon-divider" aria-hidden="true"></div>
             <div id="eduopsOperationsActionPackages" class="eduops-operations-action-packages" aria-live="polite">
@@ -139,8 +139,8 @@
           </div>
         </section>
 
-        <div class="eduops-operations-split-workspace">
-          <aside class="eduops-operations-context-pane" aria-label="Operational context">
+        <div class="eduops-operations-split-workspace eduops-operations-layout">
+          <aside class="eduops-operations-context-pane" data-eduops-layout-region="work-session" aria-label="Operational context">
             <section id="eduopsOperationsQueueContext" class="eduops-operations-queue-context">
               <span class="eduops-eyebrow">Operational context</span>
               <h2>Loading active queue</h2>
@@ -181,15 +181,15 @@
             </details>
           </aside>
 
-          <section class="eduops-operations-queue-pane" aria-label="Applicant action queue">
-            <div class="eduops-operations-queue-toolbar">
+          <section class="eduops-operations-queue-pane" data-eduops-layout-region="queue" aria-label="Applicant action queue">
+            <div class="eduops-operations-queue-toolbar" data-eduops-layout-region="queue-controls">
               <span id="eduopsOperationsToolbarState">State loading</span>
               <strong id="eduopsOperationsToolbarPackage">Package loading</strong>
               <button class="eduops-button eduops-button-secondary" type="button" data-eduops-operations-focus-packages>Show work packages</button>
               <button id="eduopsStartSession" class="eduops-button eduops-button-quiet" type="button">Start Work Session</button>
             </div>
 
-        <section id="eduopsWorklist" class="eduops-workspace" aria-labelledby="eduopsWorklistTitle" tabindex="-1">
+        <section id="eduopsWorklist" class="eduops-workspace" data-eduops-layout-region="worklist" aria-labelledby="eduopsWorklistTitle" tabindex="-1">
           <header class="eduops-workspace-header">
             <div>
               <span class="eduops-eyebrow">Current workload</span>
@@ -216,7 +216,7 @@
             </div>
           </div>
 
-          <div class="eduops-filter-toolbar" aria-label="Workload filters">
+          <div class="eduops-filter-toolbar" data-eduops-layout-region="filters" aria-label="Workload filters">
             <label class="eduops-search" for="eduopsSearch">
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
               <span class="eduops-visually-hidden">Search applicants</span>

@@ -1919,23 +1919,22 @@ async function run() {
         window.__bootstrapNewer = window.EduOpsApp.retryBootstrap();
       });
       await page.waitForFunction(() => window.__rpcControl.pending("eduops_getAccessProjection").length === 2);
+      await page.waitForFunction(() => window.__rpcControl.pending("eduops_getProfile").length === 2);
       const access = await page.evaluate(() => window.__rpcControl.pending("eduops_getAccessProjection"));
+      const profiles = await page.evaluate(() => window.__rpcControl.pending("eduops_getProfile"));
       const olderAccess = access[0];
       const newerAccess = access[1];
+      const olderProfile = profiles[0];
+      const newerProfile = profiles[1];
       const gen2Access = await page.evaluate(() => window.__rpcControl.makeAccess("GEN2"));
-      await resolveDeferred(page, newerAccess, gen2Access);
-      await page.waitForFunction(() => window.__rpcControl.pending("eduops_getProfile").length === 1);
-      let profiles = await page.evaluate(() => window.__rpcControl.pending("eduops_getProfile"));
       const gen2Profile = await page.evaluate(() => window.__rpcControl.makeProfile("GEN2", "REVIEW_REQUIRED"));
-      await resolveDeferred(page, profiles[0], gen2Profile);
+      await resolveDeferred(page, newerAccess, gen2Access);
+      await resolveDeferred(page, newerProfile, gen2Profile);
       await page.waitForFunction(() => window.EduOpsApp.state.profile?.fixtureLabel === "GEN2");
       const gen1Access = await page.evaluate(() => window.__rpcControl.makeAccess("GEN1"));
       await resolveDeferred(page, olderAccess, gen1Access);
-      profiles = await page.evaluate(() => window.__rpcControl.pending("eduops_getProfile"));
-      if (profiles.length) {
-        const gen1Profile = await page.evaluate(() => window.__rpcControl.makeProfile("GEN1", "READY"));
-        await resolveDeferred(page, profiles[0], gen1Profile);
-      }
+      const gen1Profile = await page.evaluate(() => window.__rpcControl.makeProfile("GEN1", "READY"));
+      await resolveDeferred(page, olderProfile, gen1Profile);
       await flushUi(page);
       const finalState = await page.evaluate(() => ({
         access: window.EduOpsApp.state.access?.fixtureLabel,

@@ -230,4 +230,53 @@
   .eduops-operations-queue-context p { font-size: 11px; }
   .eduops-operations-context-pane { gap: 4px; }
 }
+
+/*
+ * R398 Operations Workspace composition layer.
+ * Placement is intentionally declarative: move the work-session or queue by
+ * changing grid-template-areas here, never by changing IDs, bindings, or RPCs.
+ */
+.eduops-operations-layout {
+  --eduops-ops-region-gap: 5px;
+  --eduops-ops-work-session-width: clamp(220px, 18vw, 250px);
+  --eduops-ops-queue-toolbar-height: 28px;
+  --eduops-ops-control-height: 24px;
+  --eduops-ops-row-min-height: 46px;
+  --eduops-ops-font-body: 14px;
+  --eduops-ops-font-meta: 11px;
+  display: grid;
+  grid-template-columns: var(--eduops-ops-work-session-width) minmax(0, 1fr);
+  grid-template-areas: "work-session queue";
+  gap: var(--eduops-ops-region-gap);
+}
+
+.eduops-operations-layout > [data-eduops-layout-region="work-session"] { grid-area: work-session; }
+.eduops-operations-layout > [data-eduops-layout-region="queue"] {
+  grid-area: queue;
+  display: grid;
+  grid-template-rows: var(--eduops-ops-queue-toolbar-height) minmax(0, 1fr);
+  grid-template-areas:
+    "queue-controls"
+    "worklist";
+  gap: 0;
+}
+.eduops-operations-layout [data-eduops-layout-region="queue-controls"] {
+  grid-area: queue-controls;
+  min-height: var(--eduops-ops-queue-toolbar-height);
+}
+.eduops-operations-layout [data-eduops-layout-region="worklist"] { grid-area: worklist; }
+.eduops-operations-layout [data-eduops-layout-region="filters"] { font-size: var(--eduops-ops-font-body); }
+.eduops-operations-layout .eduops-work-table td { min-height: var(--eduops-ops-row-min-height); }
+.eduops-operations-layout .eduops-operations-queue-toolbar .eduops-button {
+  min-height: var(--eduops-ops-control-height);
+  font-size: var(--eduops-ops-font-meta);
+}
+
+@media (min-width: 1367px), (min-height: 801px) {
+  .eduops-operations-layout {
+    --eduops-ops-region-gap: 6px;
+    --eduops-ops-work-session-width: clamp(230px, 18vw, 280px);
+    --eduops-ops-queue-toolbar-height: 30px;
+  }
+}
 </style>
