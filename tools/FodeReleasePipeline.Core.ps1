@@ -140,11 +140,12 @@ function Get-FodeContext {
 
 function Assert-FodeRepositoryPreflight {
   param(
-    [string]$ExpectedRepo = "D:\Repos\FODE_Runtime_1wog",
+    [string]$ExpectedRepo = "",
     [string]$ExpectedHead = "",
     [string[]]$AllowedChangedFiles = @()
   )
   $root = (& git rev-parse --show-toplevel).Trim()
+  if (!$ExpectedRepo) { $ExpectedRepo = $root }
   if (([System.IO.Path]::GetFullPath($root)).TrimEnd("\") -ne ([System.IO.Path]::GetFullPath($ExpectedRepo)).TrimEnd("\")) {
     throw "Authoritative repo mismatch: $root"
   }

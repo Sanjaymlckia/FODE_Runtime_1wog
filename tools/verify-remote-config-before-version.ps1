@@ -1,5 +1,5 @@
 param(
-  [string]$RepoRoot = "D:\Repos\FODE_Runtime_1wog",
+  [string]$RepoRoot = "",
   [string]$ExpectedScriptId = "",
   [string[]]$RequiredCodeMarkers = @(),
   [string[]]$RequiredAdminUiMarkers = @(),
@@ -112,6 +112,10 @@ function Get-ClaspToken {
 }
 
 try {
+  if (!$RepoRoot) {
+    $RepoRoot = (& git rev-parse --show-toplevel).Trim()
+    if ($LASTEXITCODE -ne 0 -or !$RepoRoot) { Fail-And-Exit "unable to resolve repository root from git" }
+  }
   $repoRootResolved = Normalize-Path $RepoRoot
   $cwdResolved = Normalize-Path (Get-Location).Path
   if ($cwdResolved -ne $repoRootResolved) {

@@ -30,6 +30,8 @@ assert.ok(rank.ClientOnly < rank.HighRiskAuthority, "risk downgrade fixture");
 
 assert.match(core, /Risk downgrade rejected/, "Core rejects risk downgrades");
 assert.match(core, /Pre-existing staged files are not supported/, "Preflight rejects unsupported staged files");
+assert.match(core, /\$ExpectedRepo = ""/, "Repository preflight does not require a fixed drive-letter default");
+assert.match(core, /if \(!\$ExpectedRepo\) \{ \$ExpectedRepo = \$root \}/, "Repository preflight derives authority from Git root");
 assert.match(core, /Unexpected changed files/, "Preflight rejects unexpected files");
 assert.match(core, /Student deployment target rejected/, "Student target rejected");
 assert.match(core, /Production deployment target rejected/, "Production target rejected");
@@ -79,6 +81,9 @@ const dryRunBlock = invoke.match(/if \(\$DryRun\) \{[\s\S]*?exit 0[\s\S]*?\}/);
 assert.ok(dryRunBlock, "Dry-run block exists");
 assert.doesNotMatch(dryRunBlock[0], /Update-FodeConfigIdentity|clasp\.cmd|git add|git commit|git push|deploy --deploymentId/, "Dry-run block performs no local or remote mutation");
 assert.match(invoke, /remote Config readback 1[\s\S]*remote Config readback 2/, "Repeated remote Config readback preserved");
+const remoteVerify = fs.readFileSync("tools/verify-remote-config-before-version.ps1", "utf8");
+assert.match(remoteVerify, /\$RepoRoot = ""/, "Remote verification does not require a fixed drive-letter default");
+assert.match(remoteVerify, /git rev-parse --show-toplevel/, "Remote verification derives repository authority from Git root");
 assert.match(invoke, /Assert-FodeVersionCreationAllowed[\s\S]*clasp\.cmd version/, "Duplicate-version guard runs before version creation");
 assert.match(invoke, /clasp\.cmd push[\s\S]*verify-remote-config-before-version\.ps1[\s\S]*clasp\.cmd version[\s\S]*deploy --deploymentId/, "Remote sequence order is preserved");
 assert.match(invoke, /verify-runtime\.ps1/, "Runtime whoami verification retained");
