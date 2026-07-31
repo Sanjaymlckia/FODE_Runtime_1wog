@@ -23,7 +23,7 @@
 ## Test Selection
 - Gate: Full
 - Escalation reasons: HighRiskAuthority release; explicit operator Full Gate request
-- Tests intentionally not run: 
+- Tests intentionally not run:
 - Residual risk: Full repository suite selected.
 
 ## Safety
