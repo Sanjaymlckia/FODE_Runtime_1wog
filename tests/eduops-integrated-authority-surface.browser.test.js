@@ -158,6 +158,36 @@ async function assertAuthorityInvalidated(page, label) {
     await page.setContent(fixtureHtml(), { waitUntil: "domcontentloaded" });
     await settled(page);
 
+    const compactPage = await browser.newPage({ viewport: { width: 1150, height: 660 } });
+    await compactPage.setContent(fixtureHtml(), { waitUntil: "domcontentloaded" });
+    await settled(compactPage);
+    const compactLayout = await compactPage.evaluate(() => {
+      const viewportHeight = window.innerHeight;
+      const topbar = document.querySelector(".eduops-topbar").getBoundingClientRect();
+      const search = document.querySelector(".eduops-global-search-strip").getBoundingClientRect();
+      const workspace = document.querySelector("#eduopsOperationsWorkspace").getBoundingClientRect();
+      const queue = document.querySelector(".eduops-operations-queue-pane").getBoundingClientRect();
+      const rows = Array.from(document.querySelectorAll("#eduopsWorklistRows [data-applicant-row]"));
+      const visibleRows = rows.filter((row) => {
+        const rect = row.getBoundingClientRect();
+        return rect.top >= queue.top && rect.bottom <= viewportHeight && rect.bottom > rect.top;
+      }).length;
+      return {
+        topbarBottom: topbar.bottom,
+        searchTop: search.top,
+        searchBottom: search.bottom,
+        workspaceTop: workspace.top,
+        queueTop: queue.top,
+        visibleRows,
+        queueVisibleInViewport: queue.top < viewportHeight
+      };
+    });
+    assert.equal(compactLayout.topbarBottom <= compactLayout.searchTop + 1, true, "compact header must not overlap the global search strip");
+    assert.equal(compactLayout.searchBottom <= compactLayout.workspaceTop + 1, true, "global search strip must not overlap the operations workspace");
+    assert.equal(compactLayout.queueVisibleInViewport, true, "action queue must begin inside the first viewport at 1150x660");
+    assert(compactLayout.visibleRows >= 6, `at least six useful applicant rows must be visible at 100% zoom (got ${compactLayout.visibleRows})`);
+    await compactPage.close();
+
     assert.equal(await page.locator("#eduopsOperationalClassification").innerText(), "FODE live production operations");
     assert.equal(await page.locator("#eduopsRuntimeIdentity").innerText(), "r362 / 362");
     assert.equal(await page.locator("#eduopsAppsScriptIdentity").innerText(), "Apps Script @397");

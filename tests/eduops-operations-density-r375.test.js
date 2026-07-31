@@ -49,12 +49,22 @@ function testCommunicationReasonCompaction() {
   assert.doesNotMatch(batch + workbench, /GmailApp|MailApp|sendEmail\(/, "density release must not introduce direct send bypasses");
 }
 
+function testClientTimingInstrumentation() {
+  const core = read("EduOps_ClientCore.html");
+  assert.match(core, /recordClientTiming\(name, startedAt, result, error\)/, "shared RPC wrapper must record bounded client timings");
+  assert.match(core, /serverMs:\s*isFinite\(serverMs\) \? serverMs : null/, "timing evidence must retain server-reported duration separately when present");
+  assert.match(core, /window\.__EDUOPS_TIMINGS__/, "timings must be retained in a bounded diagnostic buffer");
+  assert.match(core, /timingCategoryByRpc[\s\S]*canonical workload[\s\S]*applicant detail\/workbench[\s\S]*history\/audit/, "timing categories must cover the measured operator journey");
+  assert.match(core, /EDUOPS_TIMING_DEBUG !== true/, "timing instrumentation must remain silent unless explicitly enabled");
+}
+
 [
   testProductSurfacePreserved,
   testDensityCssLayer,
   testComponentCompaction,
   testReadableDueLabels,
-  testCommunicationReasonCompaction
+  testCommunicationReasonCompaction,
+  testClientTimingInstrumentation
 ].forEach((test) => test());
 
 console.log("eduops-operations-density-r375: PASS");

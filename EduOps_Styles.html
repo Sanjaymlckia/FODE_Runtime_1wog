@@ -3021,6 +3021,60 @@ body.eduops-confirm-open { overflow: hidden; }
   #eduopsCommBody {
     min-height: 180px;
   }
+
+  /* Keep the queue actionable in the first viewport at 100% zoom. */
+  .eduops-workspace { min-height: 0; padding: 2px 5px 4px; }
+  .eduops-workspace-header { display: none; }
+  .eduops-worklist-key-band,
+  .eduops-work-scope-band,
+  .eduops-filter-toolbar,
+  .eduops-selection-bar { gap: 4px; padding: 2px 5px; }
+  .eduops-worklist-key-band { display: none; }
+  .eduops-scope-controls { min-width: 0; height: 26px; flex-wrap: nowrap; overflow-x: auto; }
+  .eduops-work-scope-band { min-height: 30px; overflow: hidden; }
+  .eduops-worklist-key-band button,
+  .eduops-work-scope-band button { min-height: 23px; padding: 2px 6px; font-size: 11px; }
+  .eduops-filter-toolbar { grid-template-columns: minmax(190px, 1fr) 100px 100px 110px auto; height: 30px; min-height: 30px; overflow: hidden; }
+  .eduops-filter-toolbar .eduops-inline-control { display: grid; }
+  .eduops-filter-toolbar .eduops-search input { min-height: 27px; }
+  .eduops-selection-bar { align-items: center; flex-direction: row; }
+  .eduops-selection-actions { flex-wrap: nowrap; gap: 3px; width: auto; overflow-x: auto; white-space: nowrap; }
+  .eduops-selection-summary { flex: 0 0 auto; width: auto; }
+  .eduops-selection-actions .eduops-button { min-height: 23px; padding: 2px 6px; font-size: 11px; }
+  .eduops-selection-summary,
+  .eduops-action-reason { font-size: 9px; line-height: 1.1; }
+  .eduops-table-scroller { min-height: 220px; }
+  .eduops-work-table td { height: 38px; padding: 2px 5px; }
+  .eduops-work-table td > strong { font-size: 12px; }
+  .eduops-work-table td > span,
+  .eduops-applicant-link span { font-size: 10px; }
+  .eduops-row-detail { display: block; max-height: 16px; overflow: hidden; font-size: 9px; line-height: 1; }
+  .eduops-row-detail[open] { max-height: 120px; overflow: auto; }
+}
+
+/* R398 compact operator header: keep identity, profile and status bounded at 100% zoom. */
+@media (max-width: 1200px) and (min-width: 901px) {
+  .eduops-topbar {
+    grid-template-columns: 205px minmax(0, 1fr);
+    height: auto;
+    min-height: 58px;
+  }
+  .eduops-topbar-tools {
+    min-width: 0;
+    height: auto;
+    min-height: 58px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px 9px;
+    padding: 6px 9px;
+  }
+  .eduops-release-identity { max-width: 185px; }
+  .eduops-release-identity > span,
+  .eduops-release-identity small { font-size: 10px; }
+  .eduops-release-badge { min-height: 24px; padding: 3px 6px; font-size: 11px; }
+  .eduops-profile-control { grid-template-columns: auto 86px; font-size: 11px; }
+  .eduops-profile-control select { min-height: 30px; padding: 4px 22px 4px 7px; }
+  .eduops-shell { height: calc(100vh - 97px - 6px); }
 }
 
 </style>

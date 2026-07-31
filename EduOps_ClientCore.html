@@ -329,20 +329,65 @@
     return window.EDUOPS_TRANSPORT || window.EduOpsTransport || null;
   }
 
+  var timingCategoryByRpc = {
+    eduops_getAccessProjection: "shell/bootstrap",
+    eduops_getProfile: "shell/bootstrap",
+    eduops_queryOperationalWorkload: "canonical workload",
+    eduops_getApplicantWorkbench: "applicant detail/workbench + communications-derived/templates",
+    eduops_getOperationHistory: "history/audit",
+    eduops_getDocumentManifest: "workbench",
+    eduops_getDocumentRendition: "workbench",
+    eduops_getBatchCommunicationCatalogue: "communications-derived/templates",
+    eduops_previewCommand: "communications-derived",
+    eduops_getCommunicationHistory: "history/audit"
+  };
+
+  function recordClientTiming(name, startedAt, result, error) {
+    if (window.EDUOPS_TIMING_DEBUG !== true && window.__EDUOPS_TIMINGS_ENABLED__ !== true) return;
+    var elapsedMs = Math.max(0, Date.now() - startedAt);
+    var serverMs = result && result.timings && Number(result.timings.serverRpcMs);
+    var entry = {
+      category: timingCategoryByRpc[name] || "rpc",
+      rpc: name,
+      clientMs: elapsedMs,
+      serverMs: isFinite(serverMs) ? serverMs : null,
+      outcome: error ? "ERROR" : "SUCCESS"
+    };
+    var timings = window.__EDUOPS_TIMINGS__ = Array.isArray(window.__EDUOPS_TIMINGS__) ? window.__EDUOPS_TIMINGS__ : [];
+    timings.push(entry);
+    if (timings.length > 100) timings.splice(0, timings.length - 100);
+    if (window.EDUOPS_TIMING_DEBUG === true && window.console && console.debug) console.debug("EduOps timing", entry);
+  }
+
   app.call = function (name, payload) {
     if (!app.readRpcAllowlist[name] && !app.writeRpcAllowlist[name]) {
       return Promise.reject(new Error("EduOps RPC is not allowlisted: " + name));
     }
+    var startedAt = Date.now();
     var transport = activeTransport();
-    if (transport) {
-      if (typeof transport.call === "function") return transport.call(name, payload || {});
-      if (typeof transport[name] === "function") return transport[name](payload || {});
-      return Promise.reject(new Error("EduOps transport does not implement: " + name));
+    var request;
+    try {
+      if (transport) {
+        if (typeof transport.call === "function") request = transport.call(name, payload || {});
+        else if (typeof transport[name] === "function") request = transport[name](payload || {});
+        else request = Promise.reject(new Error("EduOps transport does not implement: " + name));
+      } else {
+        request = new Promise(function (resolve, reject) {
+          if (!window.google || !google.script || !google.script.run) return reject(new Error("EduOps Apps Script transport is unavailable"));
+          var runner = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+          runner[name](payload || {});
+        });
+      }
+    } catch (error) {
+      recordClientTiming(name, startedAt, null, error);
+      return Promise.reject(error);
     }
-    return new Promise(function (resolve, reject) {
-      if (!window.google || !google.script || !google.script.run) return reject(new Error("EduOps Apps Script transport is unavailable"));
-      var runner = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
-      runner[name](payload || {});
+    return Promise.resolve(request).then(function (result) {
+      recordClientTiming(name, startedAt, result, null);
+      return result;
+    }, function (error) {
+      recordClientTiming(name, startedAt, null, error);
+      throw error;
     });
   };
 

@@ -215,4 +215,19 @@
     padding: 4px 5px;
   }
 }
+
+/* R398 first-viewport queue: keep the actionable table dominant without hiding state. */
+@media (max-width: 1366px) and (max-height: 800px) {
+  .eduops-operations-workspace { min-height: 48px; max-height: 54px; padding: 2px 5px 3px; }
+  .eduops-operations-primary-bucket { min-height: 28px; padding-block: 2px; }
+  .eduops-operations-action-card { min-height: 28px; max-height: 34px; padding-block: 2px; }
+  .eduops-operations-split-workspace { margin-top: 3px; gap: 5px; }
+  .eduops-operations-queue-toolbar { min-height: 28px; padding: 2px 5px; }
+  .eduops-operations-queue-toolbar span { font-size: 11px; }
+  .eduops-operations-queue-toolbar strong { font-size: 13px; }
+  .eduops-operations-queue-toolbar .eduops-button { min-height: 24px; padding: 2px 6px; font-size: 11px; }
+  .eduops-operations-queue-context { padding: 5px; }
+  .eduops-operations-queue-context p { font-size: 11px; }
+  .eduops-operations-context-pane { gap: 4px; }
+}
 </style>
