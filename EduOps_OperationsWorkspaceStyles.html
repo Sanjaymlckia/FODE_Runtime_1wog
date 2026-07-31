@@ -279,4 +279,66 @@
     --eduops-ops-queue-toolbar-height: 30px;
   }
 }
+
+/* R399 workload composition: two visible operator rows, secondary controls on demand. */
+.eduops-operations-layout {
+  --eduops-r399-row-gap: 4px;
+  --eduops-r399-control-height: 30px;
+  --eduops-r399-toolbar-height: 32px;
+  --eduops-r399-row-density: 40px;
+  --eduops-r399-font: 13px;
+  --eduops-r399-meta-font: 11px;
+}
+.eduops-operations-layout [data-eduops-layout-region="worklist"] {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: var(--eduops-r399-row-gap);
+}
+.eduops-operations-layout .eduops-workspace-header,
+.eduops-operations-layout .eduops-worklist-key-band,
+.eduops-operations-layout .eduops-work-scope-band { display: none; }
+.eduops-operations-layout .eduops-filter-toolbar {
+  position: static;
+  z-index: auto;
+  display: grid;
+  flex: 0 0 var(--eduops-r399-control-height);
+  min-height: var(--eduops-r399-control-height);
+  align-items: center;
+  gap: var(--eduops-r399-row-gap);
+  padding: 2px 5px;
+  font-size: var(--eduops-r399-font);
+}
+.eduops-operations-layout .eduops-filter-toolbar .eduops-search input,
+.eduops-operations-layout .eduops-filter-toolbar .eduops-inline-control select,
+.eduops-operations-layout .eduops-filter-toolbar .eduops-filter-button {
+  min-height: var(--eduops-r399-control-height);
+  font-size: var(--eduops-r399-font);
+}
+.eduops-operations-layout .eduops-filter-chips:empty { display: none; }
+.eduops-operations-layout [data-eduops-layout-region="selection-controls"] {
+  flex: 0 0 auto;
+  margin: 0;
+}
+.eduops-operations-layout [data-eduops-layout-region="selection-controls"] > summary {
+  padding: 3px 6px;
+  color: #48616a;
+  font-size: var(--eduops-r399-meta-font);
+}
+.eduops-operations-layout .eduops-selection-bar { padding: 4px 6px; }
+.eduops-operations-layout .eduops-table-shell { min-height: 0; }
+.eduops-operations-layout .eduops-work-table td { height: var(--eduops-r399-row-density); }
+.eduops-operations-layout .eduops-work-table td > strong { font-size: var(--eduops-r399-font); }
+.eduops-operations-layout .eduops-work-table td > span { font-size: var(--eduops-r399-meta-font); }
+
+@media (max-width: 1366px) and (max-height: 800px) {
+  .eduops-operations-layout {
+    --eduops-r399-control-height: 28px;
+    --eduops-r399-toolbar-height: 30px;
+    --eduops-r399-row-density: 38px;
+  }
+  .eduops-operations-layout .eduops-filter-toolbar {
+    grid-template-columns: minmax(180px, 1fr) minmax(100px, .35fr) minmax(100px, .35fr) minmax(105px, .35fr) auto;
+  }
+}
 </style>

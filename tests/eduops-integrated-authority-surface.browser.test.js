@@ -168,6 +168,10 @@ async function assertAuthorityInvalidated(page, label) {
       const workspace = document.querySelector("#eduopsOperationsWorkspace").getBoundingClientRect();
       const queue = document.querySelector(".eduops-operations-queue-pane").getBoundingClientRect();
       const rows = Array.from(document.querySelectorAll("#eduopsWorklistRows [data-applicant-row]"));
+      const primaryRows = [
+        document.querySelector('[data-eduops-layout-region="queue-controls"]'),
+        document.querySelector('[data-eduops-layout-region="filters"]')
+      ].filter((element) => element && element.getBoundingClientRect().height > 0);
       const visibleRows = rows.filter((row) => {
         const rect = row.getBoundingClientRect();
         return rect.top >= queue.top && rect.bottom <= viewportHeight && rect.bottom > rect.top;
@@ -179,12 +183,18 @@ async function assertAuthorityInvalidated(page, label) {
         workspaceTop: workspace.top,
         queueTop: queue.top,
         visibleRows,
+        visibleControlRows: primaryRows.length,
+        selectionCollapsed: document.querySelector("#eduopsSelectionControls")?.open !== true,
+        contextHasRepeatedCounts: /Matched|Communication|Authority/.test(document.querySelector("#eduopsOperationsQueueContext")?.textContent || ""),
         queueVisibleInViewport: queue.top < viewportHeight
       };
     });
     assert.equal(compactLayout.topbarBottom <= compactLayout.searchTop + 1, true, "compact header must not overlap the global search strip");
     assert.equal(compactLayout.searchBottom <= compactLayout.workspaceTop + 1, true, "global search strip must not overlap the operations workspace");
     assert.equal(compactLayout.queueVisibleInViewport, true, "action queue must begin inside the first viewport at 1150x660");
+    assert(compactLayout.visibleControlRows <= 2, `no more than two primary workload control rows may precede the table (got ${compactLayout.visibleControlRows})`);
+    assert.equal(compactLayout.selectionCollapsed, true, "selection and Batch controls must remain available on demand, not consume the primary control rows");
+    assert.equal(compactLayout.contextHasRepeatedCounts, false, "secondary context must not repeat top-ribbon counts or authority explanations");
     assert(compactLayout.visibleRows >= 6, `at least six useful applicant rows must be visible at 100% zoom (got ${compactLayout.visibleRows})`);
     await compactPage.close();
 
@@ -322,6 +332,7 @@ async function assertAuthorityInvalidated(page, label) {
     await settled(page);
 
     const firstCheckbox = page.locator("#eduopsWorklistRows [data-select-applicant]").first();
+    await page.locator("#eduopsSelectionControls").evaluate((element) => { element.open = true; });
     await seedExecutableAuthority(page);
     await firstCheckbox.check();
     await assertAuthorityInvalidated(page, "select");

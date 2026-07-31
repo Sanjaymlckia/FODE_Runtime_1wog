@@ -186,7 +186,7 @@
               <span id="eduopsOperationsToolbarState">State loading</span>
               <strong id="eduopsOperationsToolbarPackage">Package loading</strong>
               <button class="eduops-button eduops-button-secondary" type="button" data-eduops-operations-focus-packages>Show work packages</button>
-              <button id="eduopsStartSession" class="eduops-button eduops-button-quiet" type="button">Start Work Session</button>
+              <button id="eduopsStartSession" data-eduops-layout-region="session-controls" class="eduops-button eduops-button-quiet" type="button">Start Work Session</button>
             </div>
 
         <section id="eduopsWorklist" class="eduops-workspace" data-eduops-layout-region="worklist" aria-labelledby="eduopsWorklistTitle" tabindex="-1">
@@ -200,12 +200,12 @@
             <div class="eduops-workspace-actions" aria-hidden="true"></div>
           </header>
 
-          <div class="eduops-worklist-key-band">
+          <div class="eduops-worklist-key-band" data-eduops-layout-region="work-type" aria-hidden="true">
             <span class="eduops-band-label">Worklist type</span>
             <div id="eduopsWorklistKeys" class="eduops-worklist-keys" role="tablist" aria-label="Worklist types"></div>
           </div>
 
-          <div class="eduops-work-scope-band">
+          <div class="eduops-work-scope-band" data-eduops-layout-region="scope-controls" aria-hidden="true">
             <span class="eduops-band-label">Work scope</span>
             <div class="eduops-scope-controls" role="group" aria-label="Work ownership scope">
               <button type="button" data-work-scope="MY">My Work</button>
@@ -241,6 +241,8 @@
 
           <div id="eduopsFilterChips" class="eduops-filter-chips" aria-live="polite"></div>
 
+          <details id="eduopsSelectionControls" class="eduops-operations-secondary-controls" data-eduops-layout-region="selection-controls">
+            <summary>Selection and Batch controls</summary>
           <div class="eduops-selection-bar" aria-label="Cohort selection controls">
             <div class="eduops-selection-actions">
               <span class="eduops-band-label">Actions</span>
@@ -254,6 +256,7 @@
             </div>
             <div id="eduopsSelectionSummary" class="eduops-selection-summary" aria-live="polite">No applicants selected.</div>
           </div>
+          </details>
 
           <div class="eduops-table-shell">
             <div id="eduopsTableScroller" class="eduops-table-scroller">

@@ -28,8 +28,10 @@ function testComponentCompaction() {
   assert.match(components, /eduopsQueueCompactStats\.textContent/, "queue compact stats must update after authoritative workload selection");
   assert.match(components, /matched · /, "queue compact stats must be terse");
   assert.match(components, /<summary>▾ Details<\/summary>/, "row expansion affordance must be compact");
-  assert.match(components, /title="' \+ app\.esc\(item\.packageId\)/, "technical package IDs may remain in diagnostic title only");
-  assert.doesNotMatch(components, /<span>' \+ app\.esc\(item\.packageId\)/, "package card visible label must not be the routine technical package ID");
+  assert.match(components, /The top ribbon is the authoritative queue summary/, "secondary queue context must point operators to the single authoritative ribbon");
+  const contextRenderer = components.match(/function renderQueueContext[\s\S]*?\n  }\r?\n  function neutralizeQueueContext/);
+  assert(contextRenderer, "queue context renderer must remain a bounded component");
+  assert.doesNotMatch(contextRenderer[0], /<dl>[\s\S]*Matched[\s\S]*Communication/, "secondary queue context must not repeat workload counts and communications guidance");
 }
 
 function testReadableDueLabels() {

@@ -51,10 +51,12 @@ async function settled(page) {
     await settled(page);
 
     for (const state of states) {
-      await page.locator('[data-work-scope="ESCALATED"]').click();
+      await page.evaluate(() => { window.EduOpsApp.state.workScope = "ESCALATED"; return window.EduOpsApp.requestWorkload({ resetPage: true }); });
+      await settled(page);
+      assert.equal((await page.evaluate(() => window.__workloadCalls.at(-1))).workScope, "ESCALATED", "backend must continue accepting the legacy Escalated scope binding while the primary control is simplified");
       await page.locator(`${state === "COMPLETE" ? "#eduopsHistoryNav" : "#eduopsActionNav"} button[data-state="${state}"]`).click();
       await settled(page);
-      assert.equal(await page.locator('[data-work-scope="ALL_AUTHORISED"]').getAttribute("aria-pressed"), "true", `${state} must reset unpinned ownership scope`);
+      assert.equal(await page.evaluate(() => window.EduOpsApp.state.workScope), "ALL_AUTHORISED", `${state} must reset unpinned ownership scope`);
       const payload = await page.evaluate(() => window.__workloadCalls.at(-1));
       assert.equal(payload.actionabilityState, state);
       assert.equal(payload.workScope, "ALL_AUTHORISED");
@@ -85,6 +87,7 @@ async function settled(page) {
     await page.locator("[data-retry-workload]").click();
     await settled(page);
 
+    await page.locator("#eduopsSelectionControls").evaluate((element) => { element.open = true; });
     await page.locator("#eduopsWorklistRows [data-select-applicant]").first().check();
     assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /Operator selection intent 1/);
     await page.locator("#eduopsSearch").fill("no-match");

@@ -49,12 +49,9 @@
     var cockpit = response && response.cockpit || {};
     var packages = (cockpit.actionPackages || []).filter(function (item) { return !item.actionabilityState || item.actionabilityState === app.state.actionabilityState; });
     var activePackage = packages.filter(function (item) { return item.worklistKey === app.state.worklistKey || (!app.state.worklistKey && !item.worklistKey); })[0] || packages[0] || null;
-    var packageList = packages.map(function (item) {
-      return '<button type="button" data-eduops-operations-package="' + app.esc(item.packageId) + '"' + (item.disabled ? " disabled" : "") + ' title="' + app.esc(item.packageId) + '"><span>' + app.esc(item.label) + '</span><strong>' + Number(item.count || 0) + '</strong><small>' + app.esc(item.ownerDomain || "Authority") + '</small></button>';
-    }).join("") || '<div class="eduops-operations-context-empty">No granular work packages returned for this state.</div>';
     dom.eduopsOperationsToolbarState.textContent = selectedState && selectedState.label || app.authorityUnavailable("actionability");
     dom.eduopsOperationsToolbarPackage.textContent = selectedWorklist && selectedWorklist.label || activePackage && activePackage.label || "All work types";
-    dom.eduopsOperationsQueueContext.innerHTML = '<span class="eduops-eyebrow">Operational context</span><h2>' + app.esc(selectedWorklist && selectedWorklist.label || activePackage && activePackage.label || "All work types") + '</h2><dl><div><dt>Matched</dt><dd>' + Number(response.totalMatched || 0) + '</dd></div><div><dt>Authority</dt><dd>' + app.esc(activePackage && activePackage.authoritySource || "Actionability Resolver") + '</dd></div><div><dt>Communication</dt><dd>' + app.esc(activePackage && activePackage.recommendedCommunication && activePackage.recommendedCommunication.label || "No single recommendation") + '</dd></div></dl><div class="eduops-operations-package-panel-control" role="group" aria-label="Package actions"><span>Package actions</span><button type="button" class="active" disabled>Current summary</button><button type="button" data-eduops-operations-focus-packages>Open workspace packages</button></div><div class="eduops-operations-context-package-list">' + packageList + '</div>';
+    dom.eduopsOperationsQueueContext.innerHTML = '<span class="eduops-eyebrow">Secondary context</span><h2>' + app.esc(selectedWorklist && selectedWorklist.label || activePackage && activePackage.label || "All work types") + '</h2><p>The top ribbon is the authoritative queue summary. Use it to change work type.</p><div class="eduops-operations-package-panel-control" role="group" aria-label="Package actions"><span class="eduops-visually-hidden">Current summary</span><button type="button" data-eduops-operations-focus-packages>Open workspace packages</button></div>';
   }
   function neutralizeQueueContext(state, message) {
     var loading = state === "LOADING";
@@ -326,7 +323,7 @@
     dom.eduopsSelectedStateLabel.textContent = selectedState && selectedState.label || app.authorityUnavailable("actionability");
     dom.eduopsSelectedWorklistLabel.textContent = selectedWorklist && selectedWorklist.label || app.authorityUnavailable("worklist");
     dom.eduopsSearch.placeholder = "Search within " + (selectedWorklist && selectedWorklist.label || selectedState && selectedState.label || "current workload");
-    dom.eduopsWorklistReason.textContent = response.totalMatched + " matched. " + (selectedScope && selectedScope.label || app.authorityUnavailable("work scope")) + ". Request completed in " + clientMs + " ms; server " + Number(response.timings && response.timings.serverRpcMs || 0) + " ms.";
+    dom.eduopsWorklistReason.textContent = response.totalMatched + " matched. " + (selectedScope && selectedScope.label || app.authorityUnavailable("work scope")) + ".";
     dom.eduopsTopContext.textContent = (selectedState && selectedState.label || app.authorityUnavailable("actionability")) + " / " + (selectedWorklist && selectedWorklist.label || app.authorityUnavailable("worklist"));
     var runtime = response.runtime || {};
     var snapshotId = runtime.snapshotId || response.snapshotId || "";
