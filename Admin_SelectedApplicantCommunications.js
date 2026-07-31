@@ -409,8 +409,10 @@ function admin_sendApplicantMessage(payload) {
       ? clean_(CONFIG.OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE || "")
       : "";
     var identityFields = ["operationId", "previewId", "receiptId", "commandType", "actor", "stateFingerprint", "cooldownCycle", "idempotencyKey"];
+    var approvedPreviewForShadow = null;
     var sendResult = withAdminIndividualCommunicationLock_(adminEmail, dbgId, function () {
       var approvedPreview = adminReadIndividualCommunicationPreview_(applicantId, messageType);
+      approvedPreviewForShadow = approvedPreview;
       var previewMatch = adminIndividualCommunicationPreviewMatches_(approvedPreview, p, identityFields);
       if (previewMatch.ok !== true) {
         return adminCommBlockedResult_("send", previewMatch.code, dbgId, {
@@ -455,6 +457,22 @@ function admin_sendApplicantMessage(payload) {
       }
       return adminCommunicationWithIdentity_(sendApplicantMessage_(applicantId, messageType, sendOptions), identity);
     });
+    try {
+      sendResult.shadow = typeof fodeLedgerShadowRecord_ === "function"
+        ? fodeLedgerShadowRecord_(sendResult, approvedPreviewForShadow, {})
+        : { operationId: clean_(sendResult && sendResult.operationId || ""), shadowState: "shadow_pending", code: "SHADOW_HELPER_UNAVAILABLE", enabled: false, externalDeliveryInvoked: false };
+    } catch (shadowError) {
+      sendResult.shadow = {
+        operationId: clean_(sendResult && sendResult.operationId || ""),
+        contractVersion: "1.0",
+        shadowState: "shadow_failed",
+        code: "SHADOW_ORCHESTRATION_FAILED",
+        enabled: true,
+        externalDeliveryInvoked: false,
+        reconciliationRequired: sendResult && sendResult.gmailAccepted === true,
+        diagnostics: { operationId: clean_(sendResult && sendResult.operationId || ""), code: "SHADOW_ORCHESTRATION_FAILED", error: "redacted" }
+      };
+    }
     if (opsGate && opsGate.safeMode === true) {
       logOpsSafeModeEvent_(String(sendResult && sendResult.result || "").toUpperCase() === "SENT"
         ? "OPS_SAFE_MODE_ACTION_COMPLETED"

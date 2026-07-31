@@ -31,11 +31,12 @@ foreach ($file in $phpFiles) {
 }
 Invoke-GateStep 'PHP communication-ledger regression suite' { & $Php 'services\communication-ledger\tests\run.php' }
 
-foreach ($file in @('CommunicationLedgerContract.js', 'CommunicationLedgerClient.js', 'tests\r390c-communication-ledger-client.test.js')) {
+foreach ($file in @('CommunicationLedgerContract.js', 'CommunicationLedgerClient.js', 'CommunicationLedgerShadow.js', 'Admin_SelectedApplicantCommunications.js', 'tests\r390c-communication-ledger-client.test.js', 'tests\r390d-communication-ledger-shadow.test.js')) {
   Invoke-GateStep "Node syntax $file" { & node --check $file }
 }
 foreach ($test in @(
   'tests\r390c-communication-ledger-client.test.js',
+  'tests\r390d-communication-ledger-shadow.test.js',
   'tests\apps-script-deployable-file-contract.test.js',
   'tests\r390b1-communication-safety-repair.test.js',
   'tests\release-pipeline-contract.test.js',
@@ -49,12 +50,17 @@ $allowed = @(
   '.claspignore',
   'CommunicationLedgerClient.js',
   'CommunicationLedgerContract.js',
+  'CommunicationLedgerShadow.js',
+  'Admin_SelectedApplicantCommunications.js',
   'services/communication-ledger/config/config.example.php',
   'services/communication-ledger/docs/CONTRACT.md',
+  'services/communication-ledger/docs/SHADOW_INTEGRATION.md',
   'services/communication-ledger/src/Config/Config.php',
   'services/communication-ledger/src/Http/App.php',
+  'services/communication-ledger/src/Ledger/Repository.php',
   'tests/apps-script-deployable-file-contract.test.js',
   'tests/r390c-communication-ledger-client.test.js',
+  'tests/r390d-communication-ledger-shadow.test.js',
   'tools/r390c-fast-gate.ps1'
 )
 $changed = @((git diff --name-only HEAD) + (git ls-files --others --exclude-standard)) | ForEach-Object { $_.Replace('\', '/') } | Sort-Object -Unique
