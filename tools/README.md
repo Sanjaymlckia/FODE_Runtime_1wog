@@ -34,7 +34,7 @@ These tools resolve project constants from context. Do not duplicate Sheet IDs, 
 
 Active Codex working repo:
 
-`D:\Repos\FODE_Runtime_1wog`
+`C:\Repos\FODE_Runtime_1wog`
 
 The old Google Drive synced copy at `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime_1wog` is archive/reference only.
 

@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $Help = $false
-$RepoRoot = "D:\Repos\FODE_Runtime_1wog"
+$RepoRoot = "C:\Repos\FODE_Runtime_1wog"
 $ExpectedScriptId = ""
 $RemoteCheckRoot = ""
 $Markers = @()

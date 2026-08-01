@@ -22,6 +22,9 @@ prototypes/*.zip
 **/browser-profile*/
 **/chrome-*-profile*/
 
+# Governed FODE session operational state
+.codex/state/
+
 # Windows / Google Drive folder metadata
 desktop.ini
 **/desktop.ini

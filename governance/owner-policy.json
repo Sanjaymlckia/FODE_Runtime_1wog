@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "policyName": "FODE durable owner controls",
+  "controls": [
+    "Production mutations prohibited unless explicitly authorized.",
+    "Batch communication prohibited.",
+    "Gmail, Drive, Classroom, Zoho and database writes prohibited unless explicitly authorized.",
+    "No commit, push or deployment without task-specific authority.",
+    "No destructive Git cleanup.",
+    "Do not infer owner acceptance.",
+    "External actions require governed evidence.",
+    "Observed evidence outranks generated checkpoints."
+  ],
+  "sensitiveData": "Do not store secrets, tokens, credentials, secure links, applicant data or personal data."
+}

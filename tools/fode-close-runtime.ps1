@@ -14,7 +14,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$Repo = "D:\Repos\FODE_Runtime_1wog"
+$Repo = "C:\Repos\FODE_Runtime_1wog"
 $ExpectedVersion = "r$DeployVersion"
 
 Write-Host "FODE runtime/identity close gate" -ForegroundColor Cyan

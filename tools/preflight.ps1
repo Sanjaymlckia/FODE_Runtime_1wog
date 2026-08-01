@@ -1,5 +1,5 @@
 param(
-  [string]$ExpectedRoot = "D:\Repos\FODE_Runtime_1wog",
+  [string]$ExpectedRoot = "C:\Repos\FODE_Runtime_1wog",
   [int]$ExpectedDailySendCap = 0,
   [string]$ExpectedAutomatedStageRunner = "",
   [string]$ExpectedCrmPipeline = "",

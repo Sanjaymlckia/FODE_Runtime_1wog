@@ -1,0 +1,4 @@
+interface:
+  display_name: "FODE governed session"
+  short_description: "Orient, recover, checkpoint, and close FODE sessions safely."
+  default_prompt: "Run governed FODE orientation before inspecting or editing repository work."
