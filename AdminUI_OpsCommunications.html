@@ -844,6 +844,25 @@
         })
         .admin_sendApplicantMessage(payload);
     }
+    function opsTestCommAFixturePayload_(){
+      return { applicantId:"FODE-26-TEST-011", messageType:"docs_missing" };
+    }
+    function opsPreviewTestCommAFixture_(){
+      var resultId = "opsTestCommAFixtureResult";
+      setOpsResult_(resultId, { result:"GUIDANCE", applicantId:"FODE-26-TEST-011", message:"Loading fixture preview..." }, "TEST_COMM_A Preview");
+      google.script.run
+        .withSuccessHandler(function(out){ setOpsResult_(resultId, out || { result:"FAILED", blockReason:"Invalid fixture preview response." }, "TEST_COMM_A Preview"); })
+        .withFailureHandler(function(err){ setOpsResult_(resultId, { result:"FAILED", blockReason:String((err && err.message) || err || "Fixture preview failed.") }, "TEST_COMM_A Preview Failed"); })
+        .admin_previewFixtureCommunication(opsTestCommAFixturePayload_());
+    }
+    function opsPrepareTestCommAFixture_(){
+      var resultId = "opsTestCommAFixtureResult";
+      setOpsResult_(resultId, { result:"GUIDANCE", applicantId:"FODE-26-TEST-011", message:"Loading durable PRE_SEND_PREPARED proof..." }, "TEST_COMM_A Ledger Proof");
+      google.script.run
+        .withSuccessHandler(function(out){ setOpsResult_(resultId, out || { result:"FAILED", blockReason:"Invalid fixture ledger response." }, "TEST_COMM_A Ledger Proof"); })
+        .withFailureHandler(function(err){ setOpsResult_(resultId, { result:"FAILED", blockReason:String((err && err.message) || err || "Fixture ledger proof failed.") }, "TEST_COMM_A Ledger Proof Failed"); })
+        .admin_prepareFixtureCommunication(opsTestCommAFixturePayload_());
+    }
     function opsRenderCommunicationTimeline_(){
       var d = opsApplicantDetailCache || {};
       setOpsResult_("opsCommunicationResult", {

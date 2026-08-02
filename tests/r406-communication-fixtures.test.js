@@ -59,6 +59,10 @@ for (const ui of [adminUi]) {
   assert.doesNotMatch(ui, /LEDGER_API_SIGNING_SECRET|fixture-secret|portal-secret/i);
 }
 assert.match(opsCommunicationsUi, /communicationResultAuditHtml_\(auditResult\)/);
+assert.match(opsCommunicationsUi, /admin_previewFixtureCommunication/);
+assert.match(opsCommunicationsUi, /admin_prepareFixtureCommunication/);
+assert.match(adminUi, /data-r407-fixture-proof="TEST_COMM_A"/);
+assert.match(adminUi, /Prepare ledger proof only/);
 assert.doesNotMatch(opsCommunicationsUi, /LEDGER_API_SIGNING_SECRET|fixture-secret|portal-secret/i);
 
 function createContext(fixture) {
@@ -67,6 +71,14 @@ function createContext(fixture) {
   let prepareCalls = 0;
   const clean = value => String(value == null ? "" : value).trim();
   const context = {
+    FODE_R407_TEST_COMM_A_FIXTURE: {
+      applicantId: "FODE-26-TEST-011",
+      marker: "TEST_COMM_A",
+      messageType: "docs_missing",
+      recipient: "sanjay@minervacenters.com",
+      nonOperationalMarker: "REGRESSION_FIXTURE_DO_NOT_PROCESS",
+      type: "Regression Fixture"
+    },
     CONFIG: { OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE: "" },
     clean_: clean,
     safeStr_: clean,
@@ -83,6 +95,21 @@ function createContext(fixture) {
     newDebugId_: () => `LOCAL-${fixture.fixtureId}`,
     normalizeApplicantMessageType_: value => clean(value),
     resolveAdminCommActor_: () => ({ actorEmail: "operator@example.test", actorRole: "ADMIN" }),
+    resolveApplicantMessageContext_: () => ({
+      ok: true,
+      eligible: true,
+      effectiveEmail: "sanjay@minervacenters.com",
+      rowObj: {
+        ApplicantID: "FODE-26-TEST-011",
+        First_Name: "TEST_COMM_A",
+        Type: "Regression Fixture",
+        Home_Address: "REGRESSION_FIXTURE_DO_NOT_PROCESS",
+        Parent_Email: "sanjay@minervacenters.com",
+        Parent_Email_Corrected: "sanjay@minervacenters.com",
+        Student_Email_Internal: "",
+        CRM_Email: ""
+      }
+    }),
     runOpsSafeModeGate_: () => ({ ok: true, safeMode: false }),
     logOpsSafeModeEvent_: () => {},
     withEnvelope_: (_name, callback) => callback(`DBG-${fixture.fixtureId}`),
@@ -108,7 +135,7 @@ function createContext(fixture) {
       prepareCalls += 1;
       if (fixture.mode === "ledger_disabled") return { ok: false, status: "REJECTED", code: "LEDGER_DISABLED" };
       if (fixture.mode === "replay" && prepareCalls > 1) return { ok: true, finalized: true, status: "SENT", communicationId: `COMM-${fixture.fixtureId}` };
-      return { ok: true, prepared: true, status: "PREPARED", communicationId: `COMM-${fixture.fixtureId}`, operationId: identity.operationId, previewId: identity.previewId, receiptId: identity.receiptId };
+      return { ok: true, prepared: true, status: "PREPARED", communicationId: `COMM-${fixture.fixtureId}`, commandId: `CMD-${fixture.fixtureId}`, eventId: `EVT-${fixture.fixtureId}`, operationId: identity.operationId, previewId: identity.previewId, receiptId: identity.receiptId, ledgerEnvironment: "staging" };
     },
     fodeLedgerFinalizeIndividual_: (_identity, _applicantId, payload) => ({ ok: true, status: "SENT", communicationId: payload.communicationId })
   };
@@ -124,8 +151,12 @@ function createContext(fixture) {
     "adminBindIndividualCommunicationPreview_",
     "adminCommunicationWithIdentity_",
     "withAdminIndividualCommunicationLock_",
+    "adminFixtureCommunicationGuard_",
+    "adminFixtureProofResult_",
     "admin_previewApplicantMessage",
-    "admin_sendApplicantMessage"
+    "admin_sendApplicantMessage",
+    "admin_previewFixtureCommunication",
+    "admin_prepareFixtureCommunication"
   ].forEach(name => vm.runInContext(extractFunction(source, name), context));
   return { context, cache, get sendCalls() { return sendCalls; }, get prepareCalls() { return prepareCalls; } };
 }
@@ -139,6 +170,31 @@ assert.equal(aPreview.recipientSource, "FIXTURE_LOCKED");
 assert.equal(aSend.result, "SENT");
 assert.equal(a.sendCalls, 1);
 assert.equal(a.prepareCalls, 1);
+
+const fixtureRoute = createContext(FIXTURES[0]);
+const fixturePreview = fixtureRoute.context.admin_previewFixtureCommunication({ applicantId: "FODE-26-TEST-011", messageType: "docs_missing" });
+assert.equal(fixturePreview.result, "PREVIEW");
+assert.equal(fixturePreview.fixtureProof.fixtureMarker, "TEST_COMM_A");
+assert.equal(fixturePreview.fixtureProof.nonOperational, true);
+assert.equal(fixturePreview.fixtureProof.excludedFromNormalQueues, true);
+assert.equal(fixturePreview.fixtureProof.recipient, "sanjay@minervacenters.com");
+assert.equal(fixturePreview.fixtureProof.alternateRecipientFields.Student_Email_Internal, "");
+assert.equal(fixturePreview.gmailInvoked, false);
+assert.equal(fixtureRoute.prepareCalls, 0);
+const fixturePrepared = fixtureRoute.context.admin_prepareFixtureCommunication({ applicantId: "FODE-26-TEST-011", messageType: "docs_missing" });
+assert.equal(fixturePrepared.result, "PRE_SEND_PREPARED");
+assert.equal(fixturePrepared.ledgerState, "PRE_SEND_PREPARED");
+assert.equal(fixturePrepared.ledgerEnvironment, "staging");
+assert.ok(fixturePrepared.commandId && fixturePrepared.operationId && fixturePrepared.previewId && fixturePrepared.receiptId && fixturePrepared.communicationId && fixturePrepared.eventId);
+assert.equal(fixturePrepared.gmailInvoked, false);
+assert.equal(fixturePrepared.finalizeInvoked, false);
+
+const nonFixture = createContext(FIXTURES[0]);
+const nonFixtureBlocked = nonFixture.context.admin_previewFixtureCommunication({ applicantId: "FODE-26-TEST-001", messageType: "docs_missing" });
+assert.equal(nonFixtureBlocked.blockCode, "FIXTURE_ONLY_ROUTE");
+const recipientOverride = createContext(FIXTURES[0]);
+const recipientBlocked = recipientOverride.context.admin_previewFixtureCommunication({ applicantId: "FODE-26-TEST-011", messageType: "docs_missing", recipient: "other@example.test" });
+assert.equal(recipientBlocked.blockCode, "FIXTURE_RECIPIENT_OVERRIDE");
 
 const b = createContext(FIXTURES[1]);
 const bPayload = { applicantId: FIXTURES[1].applicantId, messageType: "docs_missing" };

@@ -152,7 +152,8 @@ function fodeLedgerResponseCorrelationMismatches_(request, response, fields) {
 function fodeLedgerPrepareIndividual_(identity, applicantId, payload, authorityContext, options) {
   identity = identity || {}; payload = payload || {}; authorityContext = authorityContext || {};
   var ready = fodeLedgerRequiredClient_(options);
-  if (ready.ok !== true) return ready;
+  var ledgerEnvironment = String(ready.config && ready.config.environment || "").toLowerCase().trim();
+  if (ready.ok !== true) return Object.assign({}, ready, { ledgerEnvironment: ledgerEnvironment });
   var requestedAt = String(payload.ledgerRequestTimestamp || payload.createdAt || new Date().toISOString()).replace(/\.\d{3}Z$/, "Z");
   var request = {
     commandType: "COMMUNICATION_PREPARE",
@@ -171,11 +172,11 @@ function fodeLedgerPrepareIndividual_(identity, applicantId, payload, authorityC
   var result = ready.client.sendCommand(request);
   var response = result.response || {};
   var correlationMismatches = fodeLedgerResponseCorrelationMismatches_(request, response, ["commandId", "operationId", "applicantId", "previewId", "receiptId", "communicationId"]);
-  if ((result.status === "ACCEPTED" || result.status === "REPLAY") && correlationMismatches.length) return { ok: false, status: "REJECTED", code: "LEDGER_CORRELATION_MISMATCH", correlationMismatches: correlationMismatches, operationId: request.operationId, previewId: request.previewId, receiptId: request.receiptId, idempotencyKey: request.idempotencyKey };
-  if (result.status === "REPLAY" && response.status === "SENT") return { ok: true, replay: true, finalized: true, status: "SENT", response: response, operationId: request.operationId, previewId: request.previewId, receiptId: request.receiptId, idempotencyKey: request.idempotencyKey };
-  if (result.status !== "ACCEPTED" && result.status !== "REPLAY") return { ok: false, status: result.status || "REJECTED", code: result.code || "LEDGER_REJECTED", uncertain: result.uncertain === true, operationId: request.operationId, previewId: request.previewId, receiptId: request.receiptId, idempotencyKey: request.idempotencyKey };
-  if (response.status !== "PREPARED") return { ok: false, status: response.status || "DELIVERY_UNKNOWN", code: "LEDGER_STATE_NOT_PREPARED", uncertain: response.status === "DELIVERY_UNKNOWN", operationId: request.operationId, previewId: request.previewId, receiptId: request.receiptId, idempotencyKey: request.idempotencyKey };
-  return { ok: true, prepared: true, replay: result.status === "REPLAY", response: response, commandId: request.commandId, communicationId: response.communicationId, operationId: request.operationId, previewId: request.previewId, receiptId: request.receiptId, idempotencyKey: request.idempotencyKey };
+  if ((result.status === "ACCEPTED" || result.status === "REPLAY") && correlationMismatches.length) return { ok: false, status: "REJECTED", code: "LEDGER_CORRELATION_MISMATCH", correlationMismatches: correlationMismatches, operationId: request.operationId, previewId: request.previewId, receiptId: request.receiptId, idempotencyKey: request.idempotencyKey, ledgerEnvironment: ledgerEnvironment };
+  if (result.status === "REPLAY" && response.status === "SENT") return { ok: true, replay: true, finalized: true, status: "SENT", response: response, operationId: request.operationId, previewId: request.previewId, receiptId: request.receiptId, idempotencyKey: request.idempotencyKey, ledgerEnvironment: ledgerEnvironment };
+  if (result.status !== "ACCEPTED" && result.status !== "REPLAY") return { ok: false, status: result.status || "REJECTED", code: result.code || "LEDGER_REJECTED", uncertain: result.uncertain === true, operationId: request.operationId, previewId: request.previewId, receiptId: request.receiptId, idempotencyKey: request.idempotencyKey, ledgerEnvironment: ledgerEnvironment };
+  if (response.status !== "PREPARED") return { ok: false, status: response.status || "DELIVERY_UNKNOWN", code: "LEDGER_STATE_NOT_PREPARED", uncertain: response.status === "DELIVERY_UNKNOWN", operationId: request.operationId, previewId: request.previewId, receiptId: request.receiptId, idempotencyKey: request.idempotencyKey, ledgerEnvironment: ledgerEnvironment };
+  return { ok: true, prepared: true, replay: result.status === "REPLAY", response: response, commandId: request.commandId, eventId: response.eventId, communicationId: response.communicationId, operationId: request.operationId, previewId: request.previewId, receiptId: request.receiptId, idempotencyKey: request.idempotencyKey, ledgerEnvironment: ledgerEnvironment };
 }
 
 function fodeLedgerFinalizeIndividual_(identity, applicantId, payload, authorityContext, legacyResult, options) {

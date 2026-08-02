@@ -2338,6 +2338,21 @@
             <div id="opsCommunicationResult" class="opsResultBox hidden"></div>
           </div>
         </div>
+        <div class="opsCard" style="margin-top:14px;" data-r407-fixture-proof="TEST_COMM_A">
+          <div class="opsSectionHeader"><div><h3>TEST_COMM_A Fixture Proof</h3><p>Admin staging only: exact non-operational fixture, preview and durable ledger prepare evidence. This panel has no send action.</p></div><span class="opsStatusPill warn">No Gmail</span></div>
+          <div class="opsInfoGrid">
+            <div><strong>ApplicantID</strong><br>FODE-26-TEST-011</div>
+            <div><strong>Message type</strong><br>docs_missing</div>
+            <div><strong>Recipient</strong><br>sanjay@minervacenters.com</div>
+            <div><strong>Marker</strong><br>TEST_COMM_A / REGRESSION_FIXTURE_DO_NOT_PROCESS</div>
+          </div>
+          <div class="opsActionRow" style="margin-top:12px;">
+            <button class="opsActionBtn live" type="button" onclick="opsPreviewTestCommAFixture_()">Preview TEST_COMM_A</button>
+            <button class="opsActionBtn" type="button" onclick="opsPrepareTestCommAFixture_()">Prepare ledger proof only</button>
+          </div>
+          <p class="opsControlNote">The prepare-only action is separately gated by the server fixture identity check and never invokes Gmail or finalization.</p>
+          <div id="opsTestCommAFixtureResult" class="opsResultBox hidden"></div>
+        </div>
         <div class="opsCard" style="margin-top:14px;">
           <div class="opsSectionHeader"><div><h3>Template Quick Look</h3><p>Secondary reference under the selected queue/action context.</p></div><span class="opsStatusPill info">Demoted reference</span></div>
           <div class="opsTemplateGrid" id="opsTemplateBrowser"></div>

@@ -291,6 +291,185 @@ function adminCommunicationWithIdentity_(result, identity) {
   return out;
 }
 
+var FODE_R407_TEST_COMM_A_FIXTURE = {
+  applicantId: "FODE-26-TEST-011",
+  marker: "TEST_COMM_A",
+  messageType: "docs_missing",
+  recipient: "sanjay@minervacenters.com",
+  nonOperationalMarker: "REGRESSION_FIXTURE_DO_NOT_PROCESS",
+  type: "Regression Fixture"
+};
+
+function adminFixtureCommunicationGuard_(payload, action) {
+  var p = payload && typeof payload === "object" ? payload : {};
+  var fixture = FODE_R407_TEST_COMM_A_FIXTURE;
+  var applicantId = clean_(p.applicantId || "");
+  var messageType = clean_(p.messageType || "").toLowerCase();
+  if (applicantId !== fixture.applicantId || messageType !== fixture.messageType) {
+    return { ok: false, code: "FIXTURE_ONLY_ROUTE", reason: "This route accepts only the approved TEST_COMM_A fixture and docs_missing." };
+  }
+  if (Array.isArray(p.applicantIds) || Array.isArray(p.recipients) || Array.isArray(p.messages)) {
+    return { ok: false, code: "FIXTURE_BULK_NOT_ALLOWED", reason: "The fixture proof route accepts one exact ApplicantID only." };
+  }
+  var suppliedRecipient = clean_(p.recipient || p.effectiveEmail || "");
+  if (suppliedRecipient && suppliedRecipient.toLowerCase() !== fixture.recipient) {
+    return { ok: false, code: "FIXTURE_RECIPIENT_OVERRIDE", reason: "The fixture recipient is locked to sanjay@minervacenters.com." };
+  }
+  if (clean_(p.cc || "") || clean_(p.bcc || "") || clean_(p.subject || "") || clean_(p.body || "") || clean_(p.templateId || "") || clean_(p.templateVersionId || "")) {
+    return { ok: false, code: "FIXTURE_CONTENT_OVERRIDE", reason: "Fixture proof uses the server-resolved docs_missing communication without content overrides." };
+  }
+  var actor = resolveAdminCommActor_(p);
+  actor.actorEmail = clean_(getCallerEmail_() || actor.actorEmail || "");
+  var context = resolveApplicantMessageContext_(fixture.applicantId, fixture.messageType, {
+    action: "preview",
+    actorEmail: actor.actorEmail,
+    actorRole: actor.actorRole,
+    debugId: clean_(p.debugId || newDebugId_())
+  });
+  var row = context && context.rowObj && typeof context.rowObj === "object" ? context.rowObj : {};
+  var markerFields = Object.keys(row).filter(function (field) { return clean_(row[field] || "") === fixture.marker; });
+  var nonOperationalFields = Object.keys(row).filter(function (field) { return clean_(row[field] || "") === fixture.nonOperationalMarker; });
+  var alternateFields = ["Student_Email_Internal", "CRM_Email", "Student_Email", "Alternate_Email", "Alt_Email", "Parent_Email_2", "Guardian_Email"];
+  var alternateRecipients = {};
+  var alternateNonBlank = false;
+  alternateFields.forEach(function (field) {
+    var value = clean_(row[field] || "");
+    alternateRecipients[field] = value;
+    if (value) alternateNonBlank = true;
+  });
+  var primaryRecipient = clean_(row.Parent_Email_Corrected || row.Parent_Email || "");
+  var valid = context && context.ok === true
+    && clean_(row.ApplicantID || "") === fixture.applicantId
+    && clean_(row.Type || row.Record_Type || "") === fixture.type
+    && markerFields.length > 0
+    && nonOperationalFields.length > 0
+    && primaryRecipient.toLowerCase() === fixture.recipient
+    && clean_(context.effectiveEmail || "").toLowerCase() === fixture.recipient
+    && alternateNonBlank === false;
+  if (!valid) {
+    return {
+      ok: false,
+      code: "FIXTURE_IDENTITY_NOT_PROVEN",
+      reason: "The exact fixture identity, non-operational marker, or recipient isolation could not be proven from the server row.",
+      applicantId: fixture.applicantId,
+      messageType: fixture.messageType,
+      contextBlockCode: clean_(context && context.blockCode || "")
+    };
+  }
+  return {
+    ok: true,
+    applicantId: fixture.applicantId,
+    messageType: fixture.messageType,
+    fixtureMarker: fixture.marker,
+    fixtureMarkerFields: markerFields,
+    type: fixture.type,
+    nonOperational: true,
+    nonOperationalMarker: fixture.nonOperationalMarker,
+    nonOperationalMarkerFields: nonOperationalFields,
+    excludedFromNormalQueues: true,
+    batchEligible: false,
+    stageBatchEligible: false,
+    studentProductionEligible: false,
+    recipient: fixture.recipient,
+    recipientSource: "FIXTURE_LOCKED",
+    recipientRole: "PARENT_EMAIL_CORRECTED_OR_PARENT_EMAIL",
+    alternateRecipientFields: alternateRecipients,
+    operationId: "",
+    previewId: "",
+    receiptId: "",
+    communicationId: "",
+    ledgerEnvironment: "",
+    ledgerState: "",
+    ledgerEventType: "",
+    action: clean_(action || "proof"),
+    context: context
+  };
+}
+
+function adminFixtureProofResult_(guard, result, extra) {
+  var out = result && typeof result === "object" ? result : {};
+  var proof = Object.assign({}, guard || {});
+  delete proof.context;
+  Object.keys(extra || {}).forEach(function (field) {
+    proof[field] = extra[field];
+    if (!Object.prototype.hasOwnProperty.call(out, field)) out[field] = extra[field];
+  });
+  out.fixtureProof = proof;
+  return out;
+}
+
+function admin_previewFixtureCommunication(payload) {
+  return withEnvelope_("admin_previewFixtureCommunication", function (dbgId) {
+    var adminEmail = getCallerEmail_();
+    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    if (!adminHasCapability_(adminEmail, "CAN_PREVIEW_APPLICANT_COMMUNICATION")) {
+      return adminCommBlockedResult_("fixture_preview", adminCapabilityBlockCode_("CAN_PREVIEW_APPLICANT_COMMUNICATION"), dbgId, { blockReason: adminCapabilityBlockReason_("CAN_PREVIEW_APPLICANT_COMMUNICATION") });
+    }
+    var guard = adminFixtureCommunicationGuard_(payload, "preview");
+    if (guard.ok !== true) return adminCommBlockedResult_("fixture_preview", guard.code, dbgId, { blockReason: guard.reason, applicantId: guard.applicantId, messageType: guard.messageType });
+    var preview = admin_previewApplicantMessage({ applicantId: guard.applicantId, messageType: guard.messageType });
+    return adminFixtureProofResult_(guard, preview, {
+      route: "R407_FIXTURE_PREVIEW",
+      gmailInvoked: false,
+      prepareInvoked: false,
+      finalizeInvoked: false,
+      result: preview && preview.result || "BLOCKED"
+    });
+  });
+}
+
+function admin_prepareFixtureCommunication(payload) {
+  return withEnvelope_("admin_prepareFixtureCommunication", function (dbgId) {
+    var adminEmail = getCallerEmail_();
+    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    if (!adminHasCapability_(adminEmail, "CAN_PREVIEW_APPLICANT_COMMUNICATION")) {
+      return adminCommBlockedResult_("fixture_prepare", adminCapabilityBlockCode_("CAN_PREVIEW_APPLICANT_COMMUNICATION"), dbgId, { blockReason: adminCapabilityBlockReason_("CAN_PREVIEW_APPLICANT_COMMUNICATION") });
+    }
+    var guard = adminFixtureCommunicationGuard_(payload, "prepare");
+    if (guard.ok !== true) return adminCommBlockedResult_("fixture_prepare", guard.code, dbgId, { blockReason: guard.reason, applicantId: guard.applicantId, messageType: guard.messageType });
+    var approved = adminReadIndividualCommunicationPreview_(guard.applicantId, guard.messageType);
+    if (!approved) return adminCommBlockedResult_("fixture_prepare", "PREVIEW_REQUIRED", dbgId, { blockReason: "Run the fixture preview route before prepare-only ledger proof." });
+    var identity = approved.identity || {};
+    var previewMatch = adminIndividualCommunicationPreviewMatches_(approved, { applicantId: guard.applicantId, messageType: guard.messageType }, ["operationId", "previewId", "receiptId"]);
+    if (previewMatch.ok !== true) return adminCommBlockedResult_("fixture_prepare", previewMatch.code, dbgId, { blockReason: previewMatch.reason });
+    if (typeof fodeLedgerPrepareIndividual_ !== "function") return adminCommBlockedResult_("fixture_prepare", "LEDGER_REQUIRED_HELPER_UNAVAILABLE", dbgId, { blockReason: "Durable communication ledger preparation is required before proof." });
+    var payloadForLedger = Object.assign({}, approved, {
+      applicantId: guard.applicantId,
+      messageType: guard.messageType,
+      communicationStatus: "PREPARED",
+      operationStatus: "PREPARED",
+      previewStatus: "PREPARED",
+      ledgerRequestTimestamp: new Date().toISOString()
+    });
+    var prepared = fodeLedgerPrepareIndividual_(identity, guard.applicantId, payloadForLedger, {
+      source: "R407_FIXTURE_PROOF",
+      contractVersion: "1.0",
+      externalDeliveryAuthority: "GMAIL_AFTER_SEPARATE_AUTHORIZATION",
+      actor: clean_(identity.actor || adminEmail),
+      stateFingerprint: clean_(identity.stateFingerprint || "")
+    }, {});
+    var correlation = adminCommunicationWithIdentity_(prepared, identity);
+    correlation.commandId = clean_(correlation.commandId || prepared.commandId || prepared.response && prepared.response.commandId || "");
+    correlation.eventId = clean_(correlation.eventId || prepared.eventId || prepared.response && prepared.response.eventId || "");
+    correlation.communicationId = clean_(correlation.communicationId || prepared.communicationId || prepared.response && prepared.response.communicationId || "");
+    var environment = clean_(prepared.ledgerEnvironment || prepared.response && prepared.response.ledgerEnvironment || "").toLowerCase();
+    if (prepared.ok !== true || prepared.prepared !== true || prepared.status !== "PREPARED" || !environment || !correlation.commandId || !correlation.eventId || !correlation.communicationId) {
+      return adminFixtureProofResult_(guard, Object.assign({}, correlation, { ok: false, result: "BLOCKED", blockCode: clean_(prepared.code || "LEDGER_PREPARE_PROOF_INCOMPLETE"), blockReason: "Durable PRE_SEND_PREPARED evidence or non-secret ledger environment was not returned; Gmail was not invoked." }), { route: "R407_FIXTURE_PREPARE", gmailInvoked: false, finalizeInvoked: false });
+    }
+    return adminFixtureProofResult_(guard, Object.assign({}, correlation, {
+      ok: true,
+      result: "PRE_SEND_PREPARED",
+      ledgerStatus: "PREPARED",
+      ledgerState: "PRE_SEND_PREPARED",
+      ledgerEventType: "PRE_SEND_PREPARED",
+      ledgerEnvironment: environment,
+      prepareOnly: true,
+      gmailInvoked: false,
+      finalizeInvoked: false
+    }), { route: "R407_FIXTURE_PREPARE", gmailInvoked: false, finalizeInvoked: false });
+  });
+}
+
 function admin_previewApplicantMessage(payload) {
   return withEnvelope_("admin_previewApplicantMessage", function (dbgId) {
     var adminEmail = getCallerEmail_();
