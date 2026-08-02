@@ -11,7 +11,6 @@ Complete the platform-wide local toolchain and disaster-recovery capability outs
 - Durable authenticated SSH access for staging backup operations.
 - Reliable materialisation of authenticated Drive/Sheet exports to the approved backup root.
 - Complete protected H1 backup under separate production authority.
-- Trusted server293 host-key confirmation and public-key registration.
 
 ## Completed local capability evidence
 
@@ -20,7 +19,7 @@ Complete the platform-wide local toolchain and disaster-recovery capability outs
 - All 18 communications-ledger PHP files lint successfully and the fixture suite passes 30 assertions.
 - Playwright tooling and browser binaries remain under `D:\FODE_Tooling\Playwright`; browser evidence remains under `D:\FODE_Test_Evidence`.
 - MariaDB 11.4.10 portable tooling is installed at `D:\FODE_Tooling\MariaDB\11.4.10`; a loopback-only fixture on port `33307` passed synthetic dump/restore and PHP PDO checks, then dropped its local databases and shut down with no listener remaining. No hosted or staging database was changed.
-- The dedicated `fode-server293-ed25519` key exists in the protected user SSH directory. Reverse DNS resolves to `server293-4.web-hosting.com`, but no trusted host-key fingerprint is recorded yet; profile creation, connection and public-key registration remain blocked until the owner confirms the expected fingerprint.
+- The dedicated `fode-server293-ed25519` key is configured through the bounded `server293` profile in the protected user SSH directory. Reverse DNS resolves to `server293-4.web-hosting.com`; the owner-confirmed ED25519 host key `SHA256:f0L7kSpyzMQPWb0ZKVHw5/H1HPoxGJLgqCxDtDfoMuw` is trusted with strict host-key checking, and a non-mutating SSH identity check returned `kundghlt`. Public-key registration was completed by the owner through authenticated cPanel; Codex made no remote configuration change.
 
 ## R401 evidence boundary
 

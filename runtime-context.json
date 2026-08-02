@@ -303,6 +303,18 @@
             "automaticStartup": false,
             "windowsService": false
           },
+          "ssh": {
+            "profile": "server293",
+            "host": "162.0.235.12",
+            "reverseDns": "server293-4.web-hosting.com",
+            "user": "kundghlt",
+            "port": 21098,
+            "identityFile": "C:\\Users\\Sonal\\.ssh\\fode-server293-ed25519",
+            "knownHostsFile": "C:\\Users\\Sonal\\.ssh\\known_hosts",
+            "hostKeyFingerprint": "SHA256:f0L7kSpyzMQPWb0ZKVHw5/H1HPoxGJLgqCxDtDfoMuw",
+            "strictHostKeyChecking": true,
+            "status": "verified-nonmutating-identity"
+          },
           "playwright": "D:\\FODE_Tooling\\Playwright",
           "browserEvidence": "D:\\FODE_Test_Evidence",
           "loopbackOnly": true

@@ -34,6 +34,13 @@ assert.equal(project.governance.toolchain.loopbackOnly, true);
 assert.equal(project.governance.toolchain.mariadb.status, "installed-local-loopback-fixture-verified");
 assert.equal(project.governance.toolchain.mariadb.automaticStartup, false);
 assert.equal(project.governance.toolchain.mariadb.windowsService, false);
+assert.equal(project.governance.toolchain.ssh.profile, "server293");
+assert.equal(project.governance.toolchain.ssh.host, "162.0.235.12");
+assert.equal(project.governance.toolchain.ssh.user, "kundghlt");
+assert.equal(project.governance.toolchain.ssh.port, 21098);
+assert.equal(project.governance.toolchain.ssh.hostKeyFingerprint, "SHA256:f0L7kSpyzMQPWb0ZKVHw5/H1HPoxGJLgqCxDtDfoMuw");
+assert.equal(project.governance.toolchain.ssh.strictHostKeyChecking, true);
+assert.equal(project.governance.toolchain.ssh.status, "verified-nonmutating-identity");
 
 const activePathFiles = [
   "tools/fode.ps1",
