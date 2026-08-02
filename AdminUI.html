@@ -4345,6 +4345,9 @@
       parts.push("</div>");
       return parts.join("");
     }
+    function fixtureCommunicationEvidenceText_(value){
+      return String(value == null ? "" : value).replace(/https?:\/\/[^\s<>"']*[?&]view=portal[^\s<>"']*/gi, "[SECURE PORTAL LINK REDACTED]");
+    }
     function setOpsResult_(id, result, title){
       var box = document.getElementById(id);
       if (!box) return;
@@ -4355,6 +4358,7 @@
         return;
       }
       var type = String(res.result || (res.ok === false ? "FAILED" : "INFO")).toUpperCase();
+      var isFixtureEvidence = id === "adminTestCommAFixtureResult" || id === "opsTestCommAFixtureResult";
       var cls = "opsResultBox";
       if (type === "SENT" || type === "PREVIEW" || type === "OPEN") cls += " ok";
       else if (type === "BLOCKED" || type === "EMPTY" || type === "GUIDANCE") cls += " warn";
@@ -4366,8 +4370,14 @@
       if (res.blockReason) parts.push("<div style='margin-top:6px;'><strong>Blocked reason:</strong> " + esc(res.blockReason) + "</div>");
       if (res.message) parts.push("<div style='margin-top:6px;'>" + esc(res.message) + "</div>");
       if (res.subject) parts.push("<div style='margin-top:8px;'><strong>Subject:</strong> " + esc(res.subject) + "</div>");
-      if (res.body) parts.push("<div class='opsPreviewBody'>" + esc(res.body) + "</div>");
-      if (id === "opsCommunicationResult") parts.push(communicationResultAuditHtml_(res));
+      if (isFixtureEvidence) {
+        parts.push("<div style='margin-top:6px;'><strong>Template source:</strong> " + esc(communicationResultField_(res, "templateSource", "Not supplied by response")) + "</div>");
+        parts.push("<div style='margin-top:3px;'><strong>Template version:</strong> " + esc(communicationResultField_(res, "templateVersionId", "Not supplied by response")) + "</div>");
+        parts.push("<div style='margin-top:3px;'><strong>Ledger environment:</strong> " + esc(communicationResultField_(res, "ledgerEnvironment", "Not supplied by response")) + "</div>");
+        parts.push("<div style='margin-top:3px;'><strong>Ledger status:</strong> " + esc(communicationResultField_(res, "ledgerStatus", communicationResultField_(res, "ledgerState", "Not supplied by response"))) + "</div>");
+      }
+      if (res.body) parts.push("<div class='opsPreviewBody'>" + esc(isFixtureEvidence ? fixtureCommunicationEvidenceText_(res.body) : res.body) + "</div>");
+      if (id === "opsCommunicationResult" || isFixtureEvidence) parts.push(communicationResultAuditHtml_(res));
       if (res.debugId) parts.push("<div class='muted' style='margin-top:8px;font-size:12px;'>Debug ID: " + esc(res.debugId) + "</div>");
       box.className = cls;
       box.innerHTML = parts.join("");

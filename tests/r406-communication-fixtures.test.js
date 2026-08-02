@@ -73,6 +73,13 @@ assert.match(opsCommunicationsUi, /opsTestCommAFixtureResultId_/);
 assert.match(adminUi, /Reconcile fixture authority/);
 assert.match(adminUi, /Send exactly once/);
 assert.match(adminUi, /Verify no-send replay/);
+assert.match(adminUi, /function fixtureCommunicationEvidenceText_\(value\)/);
+assert.match(adminUi, /\[SECURE PORTAL LINK REDACTED\]/);
+assert.match(adminUi, /id === "adminTestCommAFixtureResult" \|\| id === "opsTestCommAFixtureResult"/);
+assert.match(adminUi, /id === "opsCommunicationResult" \|\| isFixtureEvidence/);
+assert.match(adminUi, /Template source:/);
+assert.match(adminUi, /Template version:/);
+assert.match(adminUi, /Ledger environment:/);
 assert.doesNotMatch(opsCommunicationsUi, /LEDGER_API_SIGNING_SECRET|fixture-secret|portal-secret/i);
 
 assert.match(utilsSource, /function getWorkingDataMode_\(\)/);
