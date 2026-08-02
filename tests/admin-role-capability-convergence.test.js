@@ -248,6 +248,8 @@ const wrapperContext = {
     body: opts.editedBody || "Approved body"
   }),
   sendApplicantMessage_: (_applicantId, _messageType, _opts) => ({ ok: true, result: "SENT", eligible: true }),
+  fodeLedgerPrepareIndividual_: identity => ({ ok: true, prepared: true, status: "PREPARED", response: { status: "PREPARED" }, operationId: identity.operationId, previewId: identity.previewId, receiptId: identity.receiptId }),
+  fodeLedgerFinalizeIndividual_: identity => ({ ok: true, status: "SENT", operationId: identity.operationId, previewId: identity.previewId, receiptId: identity.receiptId }),
   parseOverrideFlag_: () => false,
   CONFIG: Object.assign({}, CONFIG, { OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE: "" })
 };

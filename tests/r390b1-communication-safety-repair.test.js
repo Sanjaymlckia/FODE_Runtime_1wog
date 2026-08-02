@@ -1150,6 +1150,8 @@ const selectedContext = {
     selectedSendCapture = { applicantId, messageType, options };
     return { ok: true, result: "SENT" };
   },
+  fodeLedgerPrepareIndividual_: identity => ({ ok: true, prepared: true, status: "PREPARED", response: { status: "PREPARED" }, operationId: identity.operationId, previewId: identity.previewId, receiptId: identity.receiptId }),
+  fodeLedgerFinalizeIndividual_: identity => ({ ok: true, status: "SENT", operationId: identity.operationId, previewId: identity.previewId, receiptId: identity.receiptId }),
   withEnvelope_: (_name, callback) => callback("DBG-R390B1")
 };
 vm.createContext(selectedContext);

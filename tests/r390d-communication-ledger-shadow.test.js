@@ -24,7 +24,8 @@ vm.runInContext(read("CommunicationLedgerShadow.js"), context);
 const preview = {
   identity: { operationId: "op_shadow_001", previewId: "preview_shadow_001", receiptId: "receipt_shadow_001", idempotencyKey: "idem_shadow_001" },
   applicantId: "FODE-26-003001", recipient: "applicant@example.test", subject: "Fixture subject",
-  body: "Fixture body https://portal.example.test/token/never-send", templateId: "docs_missing", templateVersionId: "v1"
+  body: "Fixture body https://portal.example.test/token/never-send", templateId: "docs_missing", templateVersionId: "v1",
+  createdAt: "2026-07-31T00:00:00.000Z"
 };
 function legacy(result, extra) { return Object.assign({ operationId: "op_shadow_001", previewId: "preview_shadow_001", receiptId: "receipt_shadow_001", applicantId: "FODE-26-003001", result, gmailAccepted: result === "SENT", gmailAttempted: result === "SENT", rowPatchConfirmed: result === "SENT", communicationRecorded: result === "SENT" }, extra || {}); }
 function clientResult(status, response, extra) { return Object.assign({ status, response, attempts: 1 }, extra || {}); }
@@ -44,10 +45,14 @@ let calls = 0;
 const stable = run(legacy("SENT"), clientResult("ACCEPTED", { operationId: "op_shadow_001", applicantId: "FODE-26-003001", previewId: "preview_shadow_001", receiptId: "receipt_shadow_001", channel: "EMAIL", legacyOutcome: "SENT", technicalTimestamp: "2026-07-31T00:00:00Z" }), { client: { sendCommand: request => { calls++; assert.equal(request.operationId, "op_shadow_001"); assert.equal(request.commandId, "shadow_cmd_op_shadow_001"); return clientResult(calls === 1 ? "ACCEPTED" : "REPLAY", { operationId: "op_shadow_001", applicantId: "FODE-26-003001", previewId: "preview_shadow_001", receiptId: "receipt_shadow_001", channel: "EMAIL", legacyOutcome: "SENT", technicalTimestamp: "2026-07-31T00:00:00Z" }); } } });
 const replay = run(legacy("SENT"), clientResult("REPLAY", { operationId: "op_shadow_001", applicantId: "FODE-26-003001", previewId: "preview_shadow_001", receiptId: "receipt_shadow_001", channel: "EMAIL", legacyOutcome: "SENT", technicalTimestamp: "2026-07-31T00:00:00Z" }), { client: { sendCommand: request => { calls++; assert.equal(request.operationId, "op_shadow_001"); return clientResult("REPLAY", { operationId: "op_shadow_001", applicantId: "FODE-26-003001", previewId: "preview_shadow_001", receiptId: "receipt_shadow_001", channel: "EMAIL", legacyOutcome: "SENT", technicalTimestamp: "2026-07-31T00:00:00Z" }); } } });
 assert.equal(stable.shadowState, "shadow_reconciled"); assert.equal(replay.shadowState, "shadow_replayed"); assert.equal(calls, 2);
+const stableTimestampA = run(legacy("SENT"), clientResult("ACCEPTED", { operationId: "op_shadow_001", applicantId: "FODE-26-003001", previewId: "preview_shadow_001", receiptId: "receipt_shadow_001", channel: "EMAIL", legacyOutcome: "SENT", technicalTimestamp: "2026-07-31T00:00:00Z" }), { nowMs: Date.parse("2026-07-31T00:01:00Z") });
+const stableTimestampB = run(legacy("SENT"), clientResult("ACCEPTED", { operationId: "op_shadow_001", applicantId: "FODE-26-003001", previewId: "preview_shadow_001", receiptId: "receipt_shadow_001", channel: "EMAIL", legacyOutcome: "SENT", technicalTimestamp: "2026-07-31T00:00:00Z" }), { nowMs: Date.parse("2026-07-31T00:02:00Z") });
+assert.equal(stableTimestampA.reconciliationRequired, false);
+assert.equal(stableTimestampB.reconciliationRequired, false);
 assert.equal(JSON.stringify(stable).includes("portal.example.test"), false);
 assert.equal(JSON.stringify(stable).includes("fixture-secret"), false);
 assert.match(read("CommunicationLedgerShadow.js"), /externalDeliveryInvoked: false/);
 assert.doesNotMatch(read("CommunicationLedgerShadow.js"), /portal-secret|fixture-secret|COMMUNICATION_LEDGER_SHADOW_SIGNING_SECRET\s*:\s*['\"]/i);
-assert.match(read("Admin_SelectedApplicantCommunications.js"), /fodeLedgerShadowRecord_/);
+assert.doesNotMatch(read("Admin_SelectedApplicantCommunications.js"), /fodeLedgerShadowRecord_\(sendResult/);
 assert.doesNotMatch(read("Admin_SelectedApplicantCommunications.js"), /sendApplicantMessage_\([^\n]*shadow/);
 console.log("PASS R390D shadow fixtures: suppressed, rejected, accepted, replay, conflict, timeout, unavailable, malformed reconciliation, stable identity, no duplicate shadow call, and redaction");
