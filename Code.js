@@ -3374,13 +3374,8 @@ function normalizeWebAppUrl_(url) {
 
 function isAdminDeploymentRequest_() {
   try {
-    var current = normalizeWebAppUrl_(ScriptApp.getService().getUrl() || "");
-    var adminBase = normalizeWebAppUrl_(CONFIG.WEBAPP_URL_ADMIN || CONFIG.WEBAPP_URL || "");
-
-    // normalize domain-specific paths
-    current = current.replace("/a/macros/", "/macros/");
-    adminBase = adminBase.replace("/a/macros/", "/macros/");
-
+    var current = canonicalExecBase_(ScriptApp.getService().getUrl() || "");
+    var adminBase = canonicalExecBase_(CONFIG.DEPLOYMENT_ID_ADMIN || CONFIG.WEBAPP_URL_ADMIN || CONFIG.WEBAPP_URL || "");
     return !!(current && adminBase && current === adminBase);
   } catch (e) {
     Logger.log("ADMIN_URL_MATCH_FAIL " + (e.message || e));

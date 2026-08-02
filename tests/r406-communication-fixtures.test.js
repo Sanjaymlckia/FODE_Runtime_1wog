@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const vm = require("node:vm");
 const adminUi = fs.readFileSync("AdminUI.html", "utf8");
 const opsCommunicationsUi = fs.readFileSync("AdminUI_OpsCommunications.html", "utf8");
+const codeSource = fs.readFileSync("Code.js", "utf8");
 const utilsSource = fs.readFileSync("Utils.js", "utf8");
 const configSource = fs.readFileSync("Config.js", "utf8");
 
@@ -86,6 +87,36 @@ assert.equal(modeContext.getWorkingSpreadsheetId_(), "STAGING-ID");
 modeContext.isAdminDeploymentRequest_ = () => false;
 assert.equal(modeContext.getWorkingDataMode_(), "PROD");
 assert.equal(modeContext.getWorkingSpreadsheetId_(), "PROD-ID");
+
+const adminDeploymentId = "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ";
+const adminIdentityContext = {
+  CONFIG: {
+    DATA_MODE: "PROD",
+    DEPLOYMENT_ID_ADMIN: adminDeploymentId,
+    WEBAPP_URL_ADMIN: `https://script.google.com/macros/s/${adminDeploymentId}/exec`,
+    SPREADSHEET_ID_STAGING: "STAGING-ID",
+    SPREADSHEET_ID_PROD: "PROD-ID"
+  },
+  clean_: value => String(value == null ? "" : value).trim(),
+  Logger: { log: () => {} },
+  ScriptApp: { getService: () => ({ getUrl: () => `https://script.google.com/a/macros/minervacenters.com/s/${adminDeploymentId}/exec` }) }
+};
+vm.createContext(adminIdentityContext);
+[
+  extractFunction(utilsSource, "buildExecUrlFromDeploymentId_"),
+  extractFunction(utilsSource, "extractDeploymentIdFromExecUrl_"),
+  extractFunction(utilsSource, "canonicalExecBase_"),
+  extractFunction(codeSource, "isAdminDeploymentRequest_"),
+  extractFunction(utilsSource, "getWorkingDataMode_"),
+  extractFunction(utilsSource, "getWorkingSpreadsheetId_")
+].forEach(fn => vm.runInContext(fn, adminIdentityContext));
+assert.equal(adminIdentityContext.isAdminDeploymentRequest_(), true, "Domain-scoped Admin service URL must classify as Admin");
+assert.equal(adminIdentityContext.getWorkingDataMode_(), "STAGING");
+assert.equal(adminIdentityContext.getWorkingSpreadsheetId_(), "STAGING-ID");
+adminIdentityContext.ScriptApp = { getService: () => ({ getUrl: () => "https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec" }) };
+assert.equal(adminIdentityContext.isAdminDeploymentRequest_(), false, "Non-Admin deployment URL must not classify as Admin");
+assert.equal(adminIdentityContext.getWorkingDataMode_(), "PROD");
+assert.equal(adminIdentityContext.getWorkingSpreadsheetId_(), "PROD-ID");
 
 function createContext(fixture) {
   const cache = new Map();
