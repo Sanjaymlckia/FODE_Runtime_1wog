@@ -2755,6 +2755,22 @@
       <div id="actionabilityContextMenu" class="actionabilityContextMenu" role="menu" aria-label="Current Worklist context actions"></div>
     </div>
 
+    <section class="legacyPanelBlock" data-r407-fixture-proof-admin="TEST_COMM_A">
+      <h3>TEST_COMM_A Fixture Proof — Admin staging</h3>
+      <div class="muted" style="margin-bottom:10px;">Exact non-operational fixture route. Preview and prepare-only ledger evidence are available here; this control has no Gmail send, finalize, or replay action.</div>
+      <div class="commMeta">
+        <div class="box"><div class="k">ApplicantID</div><div class="v">FODE-26-TEST-011</div></div>
+        <div class="box"><div class="k">Message type</div><div class="v">docs_missing</div></div>
+        <div class="box"><div class="k">Recipient</div><div class="v">sanjay@minervacenters.com</div></div>
+        <div class="box"><div class="k">Marker</div><div class="v">TEST_COMM_A / REGRESSION_FIXTURE_DO_NOT_PROCESS</div></div>
+      </div>
+      <div class="row" style="margin-top:10px;align-items:center;gap:8px;">
+        <button class="btn small" type="button" onclick="opsPreviewTestCommAFixture_()">Preview TEST_COMM_A</button>
+        <button class="btn small" type="button" onclick="opsPrepareTestCommAFixture_()">Prepare ledger proof only</button>
+      </div>
+      <div id="adminTestCommAFixtureResult" class="sendSummary hidden" style="margin-top:8px;"></div>
+    </section>
+
     <details id="reviewQueuesPanel" class="card queue-panel secondarySurfacePanel secondaryOperationalPanel">
       <summary>Compatibility: Review Queues</summary>
       <div class="secondarySurfaceBody">

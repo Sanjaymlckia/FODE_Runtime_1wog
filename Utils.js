@@ -2727,20 +2727,25 @@ function getHeaderIndexMap_(sheet) {
   return map;
 }
 
+function getWorkingDataMode_() {
+  var configuredMode = clean_(CONFIG.DATA_MODE || "STAGING").toUpperCase();
+  if (configuredMode === "PROD"
+    && typeof isAdminDeploymentRequest_ === "function"
+    && isAdminDeploymentRequest_() === true) {
+    return "STAGING";
+  }
+  return configuredMode === "PROD" || configuredMode === "STAGING" ? configuredMode : "STAGING";
+}
+
 function getWorkingSpreadsheetId_() {
-  var mode = clean_(CONFIG.DATA_MODE || "STAGING").toUpperCase();
+  var mode = getWorkingDataMode_();
   if (mode === "PROD") return clean_(CONFIG.SHEET_ID_PROD || CONFIG.SPREADSHEET_ID_PROD || CONFIG.SHEET_ID || "");
   return clean_(CONFIG.SPREADSHEET_ID_STAGING || CONFIG.SHEET_ID_STAGING || CONFIG.SHEET_ID || "");
 }
 
 function getWorkingSpreadsheet_() {
   var dbgId = (typeof newDebugId_ === "function") ? newDebugId_() : ("DBG-" + Utilities.getUuid().slice(0, 8));
-  var rawMode = (CONFIG && CONFIG.DATA_MODE !== undefined) ? String(CONFIG.DATA_MODE) : "STAGING";
-  var mode = clean_(rawMode).toUpperCase();
-  if (mode !== "PROD" && mode !== "STAGING") {
-    Logger.log("GET_WORKING_SS_BAD_MODE " + dbgId + " rawMode=" + rawMode + " -> default STAGING");
-    mode = "STAGING";
-  }
+  var mode = getWorkingDataMode_();
 
   var spreadsheetId = (mode === "PROD")
     ? clean_(CONFIG.SPREADSHEET_ID_PROD || "")

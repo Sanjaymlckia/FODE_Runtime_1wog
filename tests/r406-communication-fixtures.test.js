@@ -3,6 +3,8 @@ const fs = require("node:fs");
 const vm = require("node:vm");
 const adminUi = fs.readFileSync("AdminUI.html", "utf8");
 const opsCommunicationsUi = fs.readFileSync("AdminUI_OpsCommunications.html", "utf8");
+const utilsSource = fs.readFileSync("Utils.js", "utf8");
+const configSource = fs.readFileSync("Config.js", "utf8");
 
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}`);
@@ -62,8 +64,28 @@ assert.match(opsCommunicationsUi, /communicationResultAuditHtml_\(auditResult\)/
 assert.match(opsCommunicationsUi, /admin_previewFixtureCommunication/);
 assert.match(opsCommunicationsUi, /admin_prepareFixtureCommunication/);
 assert.match(adminUi, /data-r407-fixture-proof="TEST_COMM_A"/);
+assert.match(adminUi, /data-r407-fixture-proof-admin="TEST_COMM_A"/);
+assert.match(adminUi, /adminTestCommAFixtureResult/);
+assert.match(opsCommunicationsUi, /opsTestCommAFixtureResultId_/);
 assert.match(adminUi, /Prepare ledger proof only/);
 assert.doesNotMatch(opsCommunicationsUi, /LEDGER_API_SIGNING_SECRET|fixture-secret|portal-secret/i);
+
+assert.match(utilsSource, /function getWorkingDataMode_\(\)/);
+assert.match(utilsSource, /isAdminDeploymentRequest_\(\) === true/);
+assert.match(configSource, /DATA_MODE: "PROD"/);
+const modeContext = {
+  CONFIG: { DATA_MODE: "PROD", SPREADSHEET_ID_STAGING: "STAGING-ID", SPREADSHEET_ID_PROD: "PROD-ID" },
+  clean_: value => String(value == null ? "" : value).trim(),
+  isAdminDeploymentRequest_: () => true
+};
+vm.createContext(modeContext);
+vm.runInContext(extractFunction(utilsSource, "getWorkingDataMode_"), modeContext);
+vm.runInContext(extractFunction(utilsSource, "getWorkingSpreadsheetId_"), modeContext);
+assert.equal(modeContext.getWorkingDataMode_(), "STAGING");
+assert.equal(modeContext.getWorkingSpreadsheetId_(), "STAGING-ID");
+modeContext.isAdminDeploymentRequest_ = () => false;
+assert.equal(modeContext.getWorkingDataMode_(), "PROD");
+assert.equal(modeContext.getWorkingSpreadsheetId_(), "PROD-ID");
 
 function createContext(fixture) {
   const cache = new Map();
