@@ -72,7 +72,7 @@ The arrow between Canonical Lifecycle and Actionability represents fact mutation
 
 ## Current Runtime Truth
 
-As of the accepted R391B baseline, Admin staging is `@427 / r391 / 391`, Student remains `@247 / r217 / 217`, and Production is untouched. The active local repository is `D:\Repos\FODE_Runtime_1wog` at Git baseline `6bbbfdd09ec8b491b7fa480481fd57fae00dcaba`.
+As of the accepted R391B baseline, Admin staging is `@427 / r391 / 391`, Student remains `@247 / r217 / 217`, and Production is untouched. The active local repository is `C:\Repos\FODE_Runtime_1wog` at Git baseline `6bbbfdd09ec8b491b7fa480481fd57fae00dcaba`.
 
 Operations Workspace and direct Workbench review are supported Admin workflows. The temporary Work Session restriction imposed after R391A is lifted because R391B made Workbench responses request-generation-bound and Work Session responses request-generation- and applicant-bound.
 
@@ -169,7 +169,7 @@ Archived local synced path:
 
 Active local working path:
 
-`D:\Repos\FODE_Runtime_1wog`
+`C:\Repos\FODE_Runtime_1wog`
 
 The E: Google Drive copy is archive/reference only. GitHub remains review authority.
 

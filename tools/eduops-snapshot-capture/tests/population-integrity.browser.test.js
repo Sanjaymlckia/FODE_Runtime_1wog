@@ -1,8 +1,8 @@
 const assert = require("node:assert/strict");
 const { start } = require("../server/server");
 
-const playwrightModule = process.env.FODE_PLAYWRIGHT_MODULE || "F:/Playwright/fode-secure-link-diagnostic/node_modules/playwright";
-const { chromium } = require(playwrightModule);
+const { playwrightModule } = require("../../fode-playwright-path");
+const { chromium } = require(playwrightModule());
 
 (async () => {
   const service = await start(0);

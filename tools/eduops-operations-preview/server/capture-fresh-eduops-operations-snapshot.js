@@ -7,9 +7,9 @@ const {
   closeAdminContext
 } = require("../../auth-fode-admin-playwright");
 const { buildSnapshot, writeSnapshotFiles } = require("./snapshot-adapter");
+const { playwrightModule } = require("../../fode-playwright-path");
 
-const playwrightModule = process.env.FODE_PLAYWRIGHT_MODULE || "F:/Playwright/fode-secure-link-diagnostic/node_modules/playwright";
-const { chromium } = require(playwrightModule);
+const { chromium } = require(playwrightModule());
 
 const previewRoot = path.resolve(__dirname, "..");
 const defaultAdminUrl = "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=eduops";

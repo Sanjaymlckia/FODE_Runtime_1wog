@@ -1,10 +1,8 @@
 const fs = require("node:fs");
 const assert = require("node:assert/strict");
 
-const playwrightModule =
-  process.env.FODE_PLAYWRIGHT_MODULE ||
-  "F:/Playwright/fode-secure-link-diagnostic/node_modules/playwright";
-const { chromium } = require(playwrightModule);
+const { playwrightModule } = require("../tools/fode-playwright-path");
+const { chromium } = require(playwrightModule());
 
 const CLIENT_FILES = [
   "EduOps_ClientCore.html",

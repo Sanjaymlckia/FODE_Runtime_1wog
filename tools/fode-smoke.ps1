@@ -109,10 +109,8 @@ foreach ($item in $profiles) {
     }
     Write-Host "RUN: operations -> $($existing[0])"
     $startedAt = Get-Date
-    Push-Location -LiteralPath $playwrightRoot
-    & npx.cmd playwright test $existing[0] --project=chromium
+    & npx.cmd --prefix $playwrightRoot playwright test $existing[0] --project=chromium
     $exitCode = $LASTEXITCODE
-    Pop-Location
     if ($exitCode -ne 0) {
       Fail-Smoke "operations smoke failed ($exitCode)"
     } else {

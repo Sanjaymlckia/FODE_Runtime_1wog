@@ -27,7 +27,8 @@ const dryRun = cp.execFileSync("node", ["tools/eduops-snapshot-capture/server/ca
 const dryRunJson = JSON.parse(dryRun);
 assert.equal(dryRunJson.ok, true);
 assert.equal(dryRunJson.readOnly, true);
-assert.ok(dryRunJson.outputRoot.replace(/\\/g, "/").endsWith("tools/eduops-snapshot-capture/evidence/generated/snapshots"));
+assert.ok(dryRunJson.outputRoot.replace(/\\/g, "/").endsWith("D:/FODE_Test_Evidence/eduops-snapshot-capture/generated/snapshots"));
+assert.doesNotMatch(dryRunJson.outputRoot.replace(/\\/g, "/"), /C:\/Repos\/FODE_Runtime_1wog/i);
 
 const operationsReadme = read("tools/eduops-operations-preview/README.md");
 const operationsServer = read("tools/eduops-operations-preview/server/server.js");

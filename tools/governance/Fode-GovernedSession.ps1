@@ -1,16 +1,19 @@
 [CmdletBinding()]
 param(
-  [ValidateSet('Orient','Status','Checkpoint','RecordDecision','Close')]
+  [ValidateSet('Orient','Status','Checkpoint','RecordDecision','TransferOwnership','Close')]
   [string]$Action = 'Orient',
   [string]$TaskId = '',
   [string]$TaskLabel = '',
   [string]$Decision = '',
+  [string]$OwnerDecision = '',
   [string]$Scope = '',
   [string]$RelatedTask = '',
   [string]$EvidenceSource = '',
   [string]$PendingDecision = '',
   [string]$PendingAcceptance = '',
   [string]$NextSafeAction = '',
+  [string]$SessionId = '',
+  [string]$OwnerLease = '',
   [switch]$Supersede,
   [string]$StateRoot = ''
 )
@@ -21,7 +24,7 @@ $policyPath = Join-Path $repoRoot 'governance\owner-policy.json'
 if ([string]::IsNullOrWhiteSpace($StateRoot)) { $StateRoot = Join-Path $repoRoot '.codex\state\fode-governance' }
 $statePath = Join-Path $StateRoot 'current.json'
 $eventsPath = Join-Path $StateRoot 'events.json'
-$sessionId = [guid]::NewGuid().ToString('N')
+$newSessionId = [guid]::NewGuid().ToString('N')
 
 function Redact([string]$Value) {
   if ($null -eq $Value) { return '' }
@@ -78,6 +81,55 @@ function PolicyHash {
   return (Get-FileHash -LiteralPath $policyPath -Algorithm SHA256).Hash
 }
 
+function Hash-Text([string]$Value) {
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    return ([Convert]::ToHexString($sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Value)))).ToLowerInvariant()
+  } finally { $sha.Dispose() }
+}
+
+function New-OwnerLease {
+  return [guid]::NewGuid().ToString('N')
+}
+
+function Add-Or-Set([object]$Object, [string]$Name, [object]$Value) {
+  $Object | Add-Member -NotePropertyName $Name -NotePropertyValue $Value -Force
+}
+
+function Require-OwnerLease([object]$State) {
+  $leaseHashProperty = $State.PSObject.Properties['ownershipLeaseHash']
+  if ($null -eq $leaseHashProperty -or [string]::IsNullOrWhiteSpace([string]$leaseHashProperty.Value)) { return }
+  if ([string]::IsNullOrWhiteSpace($OwnerLease)) { Fail 'An ownership lease is required for this governed session' 'CONCURRENT_SESSION_DETECTED' }
+  if ((Hash-Text $OwnerLease) -ne [string]$leaseHashProperty.Value) { Fail 'The supplied ownership lease is no longer valid' 'CONCURRENT_SESSION_DETECTED' }
+}
+
+function Clone-State([object]$State) {
+  return ($State | ConvertTo-Json -Depth 32 | ConvertFrom-Json)
+}
+
+function Existing-Events {
+  $existing = Read-JsonFile $eventsPath
+  if ($null -eq $existing) { return @() }
+  return @($existing)
+}
+
+function Commit-Transfer([object]$PreviousState, [object]$NextState, [object[]]$NextEvents) {
+  $oldEvents = Existing-Events
+  $oldStateJson = $PreviousState | ConvertTo-Json -Depth 32
+  $oldEventsJson = $oldEvents | ConvertTo-Json -Depth 32
+  try {
+    Write-Atomic $eventsPath $NextEvents
+    Write-Atomic $statePath $NextState
+  } catch {
+    try {
+      $oldEvents | ConvertFrom-Json | Out-Null
+      Write-Atomic $eventsPath ($oldEvents | ConvertFrom-Json)
+      Write-Atomic $statePath ($oldStateJson | ConvertFrom-Json)
+    } catch { Fail 'Ownership transfer failed and rollback could not be verified' }
+    Fail 'Ownership transfer failed; previous governed state was restored'
+  }
+}
+
 function Save-Event([object]$State, [string]$Kind) {
   $existingEvents = Read-JsonFile $eventsPath
   $events = @()
@@ -101,6 +153,7 @@ function Output-State([object]$State, [string]$Message = '') {
     observed = $observed
     message = (Redact $Message)
   }
+  if ($script:outputOwnerLease) { $result.ownerLease = $script:outputOwnerLease }
   $result | ConvertTo-Json -Depth 16
   if (!$result.ok -and $Action -in @('Orient','Checkpoint','RecordDecision','Close')) { exit 2 }
 }
@@ -116,6 +169,15 @@ if ($Action -eq 'Orient') {
   $state = $null
   $message = 'Fresh governed orientation completed.'
   if ($previous -and $previous.status -eq 'open') {
+    if ($Supersede.IsPresent -eq $false -and $previous.PSObject.Properties['ownershipLeaseHash']) {
+      Require-OwnerLease $previous
+      $previous.lastCheckpointAt = (Get-Date).ToUniversalTime().ToString('o')
+      $previous.observed = $observed
+      $previous.governedState = $(if($observed.clean){'GOVERNED_SESSION_RECOVERED'}else{'READ_ONLY_RECONCILIATION'})
+      Save-Event $previous 'oriented'
+      Output-State $previous 'Existing governed session oriented under the active ownership lease.'
+      exit 0
+    }
     $age = ((Get-Date).ToUniversalTime() - (Get-Item -LiteralPath $statePath).LastWriteTimeUtc).TotalMinutes
     if (($age -lt 30) -and ($Supersede.IsPresent -eq $false)) { Fail 'An active governed session owns this worktree' 'CONCURRENT_SESSION_DETECTED' }
     $previous.status = 'interrupted'
@@ -124,18 +186,69 @@ if ($Action -eq 'Orient') {
     Save-Event $previous 'interrupted'
     $message = 'Prior open session was classified as interrupted; state was reconstructed from current evidence.'
   }
+  $newLease = New-OwnerLease
   $state = [ordered]@{
-    sessionId = $sessionId; openedAt = (Get-Date).ToUniversalTime().ToString('o'); lastCheckpointAt = (Get-Date).ToUniversalTime().ToString('o'); closedAt = $null; status = 'open'
+    sessionId = $newSessionId; openedAt = (Get-Date).ToUniversalTime().ToString('o'); lastCheckpointAt = (Get-Date).ToUniversalTime().ToString('o'); closedAt = $null; status = 'open'
     baselineHead = $observed.head; branch = $observed.branch; taskId = (Redact $TaskId); taskLabel = (Redact $TaskLabel); governedState = $(if($observed.clean){ if($previous){'GOVERNED_SESSION_RECOVERED'}else{'GOVERNED_SESSION_READY'} } else {'READ_ONLY_RECONCILIATION'})
     pendingDecision = (Redact $PendingDecision); pendingAcceptance = (Redact $PendingAcceptance); nextSafeAction = (Redact $(if($NextSafeAction){$NextSafeAction}else{'Review governed state before editing.'})); continuingProhibitions = @((Read-JsonFile $policyPath).controls); policyHash = $policyHash; observed = $observed
+    ownershipGeneration = 1; ownershipBinding = 'generated-lease'; ownershipLeaseHash = (Hash-Text $newLease); ownershipTransfers = @()
   }
   Save-Event $state 'opened'
+  $script:outputOwnerLease = $newLease
   Output-State $state $message
   exit 0
 }
 
 if (!$previous -or $previous.status -ne 'open') { Fail 'No open governed session exists' 'GOVERNED_SESSION_STOP' }
 if ($previous.baselineHead -ne $observed.head -or $previous.branch -ne $observed.branch) { Fail 'Recorded session baseline conflicts with observed Git evidence' 'BASELINE_DRIFT' }
+
+if ($Action -eq 'TransferOwnership') {
+  if ([string]::IsNullOrWhiteSpace($SessionId) -or $SessionId -ne [string]$previous.sessionId) { Fail 'TransferOwnership requires the exact open session ID' 'OWNER_DECISION_REQUIRED' }
+  if ([string]::IsNullOrWhiteSpace($OwnerDecision) -or $OwnerDecision -ne 'TRANSFER_SESSION_OWNERSHIP') { Fail 'TransferOwnership requires OwnerDecision TRANSFER_SESSION_OWNERSHIP' 'OWNER_DECISION_REQUIRED' }
+  $oldGeneration = if ($previous.PSObject.Properties['ownershipGeneration']) { [int]$previous.ownershipGeneration } else { 0 }
+  $oldLeaseHash = if ($previous.PSObject.Properties['ownershipLeaseHash']) { [string]$previous.ownershipLeaseHash } else { '' }
+  $newGeneration = $oldGeneration + 1
+  $newLease = New-OwnerLease
+  $now = (Get-Date).ToUniversalTime().ToString('o')
+  $audit = [ordered]@{
+    decision = 'TRANSFER_SESSION_OWNERSHIP'
+    scope = 'in-place governed session ownership transfer'
+    sessionId = [string]$previous.sessionId
+    timestamp = $now
+    formerOwnershipGeneration = $oldGeneration
+    formerLeaseHash = $oldLeaseHash
+    newOwnershipGeneration = $newGeneration
+    newLeaseHash = (Hash-Text $newLease)
+    binding = 'generated-lease'
+    evidenceSource = 'Explicit owner decision'
+  }
+  $next = Clone-State $previous
+  Add-Or-Set $next 'ownershipGeneration' $newGeneration
+  Add-Or-Set $next 'ownershipBinding' 'generated-lease'
+  Add-Or-Set $next 'ownershipLeaseHash' (Hash-Text $newLease)
+  $history = @()
+  if ($next.PSObject.Properties['ownershipTransfers']) { $history = @($next.ownershipTransfers) }
+  $history += [pscustomobject]$audit
+  Add-Or-Set $next 'ownershipTransfers' $history
+  Add-Or-Set $next 'lastDecision' ([pscustomobject]@{
+    decision = 'TRANSFER_SESSION_OWNERSHIP'
+    scope = 'in-place governed session ownership transfer'
+    relatedTask = [string]$previous.taskLabel
+    timestamp = $now
+    evidenceSource = 'Explicit owner decision'
+    continuingRestrictions = @($previous.continuingProhibitions)
+  })
+  $next.lastCheckpointAt = $now
+  $next.observed = $observed
+  $events = Existing-Events
+  $events += [pscustomobject]@{ kind = 'ownership-transferred'; at = $now; sessionId = [string]$previous.sessionId; governedState = [string]$next.governedState; formerOwnershipGeneration = $oldGeneration; newOwnershipGeneration = $newGeneration; formerLeaseHash = $oldLeaseHash; newLeaseHash = [string]$next.ownershipLeaseHash }
+  Commit-Transfer $previous $next $events
+  $script:outputOwnerLease = $newLease
+  Output-State $next 'Owner-approved in-place session ownership transfer completed.'
+  exit 0
+}
+
+if ($Action -in @('Checkpoint','RecordDecision','Close')) { Require-OwnerLease $previous }
 
 if ($Action -eq 'RecordDecision') {
   if ([string]::IsNullOrWhiteSpace($Decision) -or [string]::IsNullOrWhiteSpace($Scope) -or [string]::IsNullOrWhiteSpace($RelatedTask)) { Fail 'RecordDecision requires Decision, Scope and RelatedTask' 'OWNER_DECISION_REQUIRED' }

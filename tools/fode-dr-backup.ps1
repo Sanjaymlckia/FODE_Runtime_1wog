@@ -1,6 +1,6 @@
 param(
   [string]$RepoRoot = "C:\Repos\FODE_Runtime_1wog",
-  [string]$BackupRoot = "F:\FODE_DR_Backup",
+  [string]$BackupRoot = "D:\FODE_DR_Backup\R401_745b698_20260801",
   [ValidateSet("Plan", "RepoSnapshot", "AppsScriptManifest", "SheetExportPlan", "DriveInventoryPlan", "ApplicantDocumentInventoryPlan", "ArchivePlaywrightReports")]
   [string]$Mode = "Plan",
   [switch]$Execute,
@@ -34,16 +34,68 @@ function Git-Text {
   }
 }
 
+function Resolve-ApprovedBackupRoot {
+  param([string]$Path, [string]$AuthoritativeRepo)
+  if ([string]::IsNullOrWhiteSpace($Path)) { Fail-Dr "BackupRoot is empty or ambiguous." }
+  try { $resolved = [System.IO.Path]::GetFullPath($Path).TrimEnd("\") } catch { Fail-Dr "BackupRoot cannot be resolved: $Path" }
+  if ($resolved -match '^(?i)F:\\') { Fail-Dr "The obsolete F: backup target is rejected: $resolved" }
+  $repoPrefix = $AuthoritativeRepo.TrimEnd("\") + "\"
+  if ($resolved.Equals($AuthoritativeRepo, [System.StringComparison]::OrdinalIgnoreCase) -or $resolved.StartsWith($repoPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+    Fail-Dr "BackupRoot must not be inside the authoritative repository: $resolved"
+  }
+  if ([System.IO.Path]::GetPathRoot($resolved) -ne "D:\") { Fail-Dr "BackupRoot must be on the approved D: volume: $resolved" }
+  if (!(Test-Path -LiteralPath "D:\" -PathType Container)) { Fail-Dr "Approved D: backup volume is unavailable." }
+  $approved = "D:\FODE_DR_Backup\R401_745b698_20260801"
+  if (!$resolved.Equals($approved, [System.StringComparison]::OrdinalIgnoreCase) -and !$resolved.StartsWith($approved + "\", [System.StringComparison]::OrdinalIgnoreCase)) {
+    Fail-Dr "BackupRoot is outside the approved R401 backup target: $resolved"
+  }
+  return $resolved
+}
+
 $repoResolved = [System.IO.Path]::GetFullPath($RepoRoot).TrimEnd("\")
 if (!(Test-Path -LiteralPath $repoResolved -PathType Container)) {
   Fail-Dr "RepoRoot not found: $repoResolved"
 }
-$backupResolved = [System.IO.Path]::GetFullPath($BackupRoot).TrimEnd("\")
-Ensure-Dir $backupResolved
-Ensure-Dir (Join-Path $backupResolved "logs")
-
+$backupResolved = Resolve-ApprovedBackupRoot -Path $BackupRoot -AuthoritativeRepo $repoResolved
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $logPath = Join-Path $backupResolved "logs\fode_dr_backup_$timestamp.log"
+
+if ($Mode -match "Plan$") {
+  Write-Host "FODE DR backup tool"
+  Write-Host "Mode: $Mode"
+  Write-Host "Execute: $Execute"
+  Write-Host "RepoRoot: $repoResolved"
+  Write-Host "BackupRoot: $backupResolved"
+  if ($Mode -eq "Plan") {
+    Write-Host "Available modes:"
+    Write-Host "- RepoSnapshot: create timestamped ZIP of repo source when -Execute is supplied."
+    Write-Host "- AppsScriptManifest: write deployment/source metadata manifest when -Execute is supplied."
+    Write-Host "- SheetExportPlan: print required Sheet exports; does not export."
+    Write-Host "- DriveInventoryPlan: print required Drive inventory fields; does not read/copy Drive."
+    Write-Host "- ApplicantDocumentInventoryPlan: print applicant document inventory schema; does not read/copy Drive."
+    Write-Host "- ArchivePlaywrightReports: copy one explicit report folder when -Execute and -PlaywrightReportPath are supplied."
+  } elseif ($Mode -eq "SheetExportPlan") {
+    Write-Host "Sheet export plan only. No Sheets API calls are made."
+    Write-Host "- Export production/staging main spreadsheet tabs to XLSX/CSV."
+    Write-Host "- Export portal log spreadsheet."
+    Write-Host "- Export portal secrets spreadsheet to protected/encrypted storage only."
+    Write-Host "- Keep daily 30 days, weekly 12 weeks, monthly 24 months."
+  } elseif ($Mode -eq "DriveInventoryPlan") {
+    Write-Host "Drive inventory plan only. No Drive API calls are made."
+    Write-Host "- Inventory applicant root/year folders."
+    Write-Host "- Record applicant folder ID, name, webViewLink, file count, source original count, FODE_PREVIEW count, missing preview count."
+    Write-Host "- Do not copy files in this mode."
+  } elseif ($Mode -eq "ApplicantDocumentInventoryPlan") {
+    Write-Host "Applicant document inventory plan only. No Drive or Sheet calls are made."
+    Write-Host "- Schema: ApplicantID, Folder_Url, sourceField, itemIndex, fileName, mimeType, sizeBytes, modifiedTime, previewExists, statusField, commentField."
+    Write-Host "- Use configured DOC_FIELDS only."
+    Write-Host "- Validate file belongs to applicant folder before reporting."
+  }
+  exit 0
+}
+
+Ensure-Dir $backupResolved
+Ensure-Dir (Join-Path $backupResolved "logs")
 
 function Write-Log {
   param([string]$Message)
@@ -55,17 +107,6 @@ Write-Log "Mode: $Mode"
 Write-Log "Execute: $Execute"
 Write-Log "RepoRoot: $repoResolved"
 Write-Log "BackupRoot: $backupResolved"
-
-if ($Mode -eq "Plan") {
-  Write-Log "Available modes:"
-  Write-Log "- RepoSnapshot: create timestamped ZIP of repo source when -Execute is supplied."
-  Write-Log "- AppsScriptManifest: write deployment/source metadata manifest when -Execute is supplied."
-  Write-Log "- SheetExportPlan: print required Sheet exports; does not export."
-  Write-Log "- DriveInventoryPlan: print required Drive inventory fields; does not read/copy Drive."
-  Write-Log "- ApplicantDocumentInventoryPlan: print applicant document inventory schema; does not read/copy Drive."
-  Write-Log "- ArchivePlaywrightReports: copy one explicit report folder when -Execute and -PlaywrightReportPath are supplied."
-  exit 0
-}
 
 if (!$Execute -and $Mode -notmatch "Plan$") {
   Write-Log "DRY RUN ONLY. Add -Execute to perform local file operations for supported modes."
@@ -112,37 +153,12 @@ if ($Mode -eq "AppsScriptManifest") {
   exit 0
 }
 
-if ($Mode -eq "SheetExportPlan") {
-  Write-Log "Sheet export plan only. No Sheets API calls are made."
-  Write-Log "- Export production/staging main spreadsheet tabs to XLSX/CSV."
-  Write-Log "- Export portal log spreadsheet."
-  Write-Log "- Export portal secrets spreadsheet to protected/encrypted storage only."
-  Write-Log "- Keep daily 30 days, weekly 12 weeks, monthly 24 months."
-  exit 0
-}
-
-if ($Mode -eq "DriveInventoryPlan") {
-  Write-Log "Drive inventory plan only. No Drive API calls are made."
-  Write-Log "- Inventory applicant root/year folders."
-  Write-Log "- Record applicant folder ID, name, webViewLink, file count, source original count, FODE_PREVIEW count, missing preview count."
-  Write-Log "- Do not copy files in this mode."
-  exit 0
-}
-
-if ($Mode -eq "ApplicantDocumentInventoryPlan") {
-  Write-Log "Applicant document inventory plan only. No Drive or Sheet calls are made."
-  Write-Log "- Schema: ApplicantID, Folder_Url, sourceField, itemIndex, fileName, mimeType, sizeBytes, modifiedTime, previewExists, statusField, commentField."
-  Write-Log "- Use configured DOC_FIELDS only."
-  Write-Log "- Validate file belongs to applicant folder before reporting."
-  exit 0
-}
-
 if ($Mode -eq "ArchivePlaywrightReports") {
   if (!$PlaywrightReportPath) { Fail-Dr "PlaywrightReportPath is required for ArchivePlaywrightReports" }
   $source = [System.IO.Path]::GetFullPath($PlaywrightReportPath).TrimEnd("\")
   if (!(Test-Path -LiteralPath $source -PathType Container)) { Fail-Dr "Report folder not found: $source" }
-  if (!$source.StartsWith("F:\Playwright\fode-secure-link-diagnostic\reports", [System.StringComparison]::OrdinalIgnoreCase)) {
-    Fail-Dr "Report path must be under F:\Playwright\fode-secure-link-diagnostic\reports"
+  if (!$source.StartsWith("D:\FODE_Test_Evidence", [System.StringComparison]::OrdinalIgnoreCase)) {
+    Fail-Dr "Report path must be under D:\FODE_Test_Evidence"
   }
   $targetDir = Join-Path $backupResolved "playwright_acceptance_reports"
   Ensure-Dir $targetDir

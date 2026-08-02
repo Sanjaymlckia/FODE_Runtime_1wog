@@ -1,8 +1,8 @@
 const assert = require("node:assert/strict");
 const { start } = require("../server/server");
 
-const playwrightModule = process.env.FODE_PLAYWRIGHT_MODULE || "F:/Playwright/fode-secure-link-diagnostic/node_modules/playwright";
-const { chromium } = require(playwrightModule);
+const { playwrightModule } = require("../../fode-playwright-path");
+const { chromium } = require(playwrightModule());
 const viewports = [{ width: 1920, height: 1080 }, { width: 1440, height: 900 }, { width: 1366, height: 768 }];
 
 async function waitWorkload(page) {

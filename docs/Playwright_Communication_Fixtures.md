@@ -52,7 +52,7 @@ When replacing a fixture:
 
 ## Release Engineer Use
 
-Before release acceptance, run from `F:\Playwright\fode-secure-link-diagnostic`:
+Before release acceptance, run from `D:\FODE_Tooling\Playwright\fode-secure-link-diagnostic`:
 
 ```powershell
 npm run test:comm-authority-fixtures

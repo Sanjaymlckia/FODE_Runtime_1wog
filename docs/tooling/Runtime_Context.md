@@ -8,7 +8,7 @@ Runtime files such as `Config.js` still own project runtime behavior. REP contex
 
 Current FODE baseline recorded by `runtime-context.json`:
 
-- Repository: `D:\Repos\FODE_Runtime_1wog`
+- Repository: `C:\Repos\FODE_Runtime_1wog`
 - Git baseline: `2ebe8bfd76e71763ef708bd28cbe51eb5c73ef2b`
 - Admin staging: `@428 / r392 / 392`
 - Student: `@247 / r217 / 217`

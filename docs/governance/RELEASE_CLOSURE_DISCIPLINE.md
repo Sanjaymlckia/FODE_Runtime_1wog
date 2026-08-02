@@ -50,6 +50,10 @@ Action: must not block release closure.
 - Do not expand acceptance criteria after implementation begins unless the issue is a true `BLOCKER`.
 - Closure occurs against approved scope only.
 
+## Proportionate Platform DR Rule
+
+Platform-wide MariaDB restore, authoritative Drive reconstruction, and protected production-workbook backup are release blockers only when the active CIS changes the data model, changes production data, authorizes a destructive operation, or is a scheduled platform DR validation. For a bounded code-only staging release with no such change, incomplete DR work is a separate `FOLLOW-UP` or `BLOCKED` capability item and must not be relabelled `PASS` or used to expand the release scope.
+
 ## Required CURRENT_TASK.md Section
 
 Every active release task must include this standing section or preserve the current repo-local equivalent:

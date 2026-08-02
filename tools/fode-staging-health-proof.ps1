@@ -8,7 +8,7 @@ param(
   [Parameter(Mandatory = $true)]
   [int]$ExpectedDeploy,
 
-  [string]$ReportRoot = "F:\Playwright\fode-secure-link-diagnostic\reports",
+  [string]$ReportRoot = "D:\FODE_Test_Evidence\R401",
 
   [ValidateSet("health", "hydration60", "operator", "all")]
   [string]$Mode = "all",
@@ -21,7 +21,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$PlaywrightRoot = "F:\Playwright\fode-secure-link-diagnostic"
+$PlaywrightRoot = if ($env:FODE_PLAYWRIGHT_ROOT) { $env:FODE_PLAYWRIGHT_ROOT } else { "D:\FODE_Tooling\Playwright" }
 $ModeSpecs = [ordered]@{
   health = "specs/fode-legacy-admin-health.spec.ts"
   hydration60 = "specs/fode-admin-hydration60.spec.ts"
@@ -42,7 +42,16 @@ function Get-NewReportFolders {
 }
 
 if (!(Test-Path -LiteralPath $PlaywrightRoot -PathType Container)) {
-  Fail-Proof "F: Playwright folder not found: $PlaywrightRoot"
+  Fail-Proof "D: Playwright folder not found: $PlaywrightRoot"
+}
+if (!(Test-Path -LiteralPath "D:\" -PathType Container)) {
+  Fail-Proof "D: external tooling drive is unavailable"
+}
+if ($PlaywrightRoot -notmatch '^D:\\') {
+  Fail-Proof "Playwright tooling must resolve under D:"
+}
+if ($ReportRoot -notmatch '^D:\\FODE_Test_Evidence(?:\\|$)') {
+  Fail-Proof "Browser evidence must resolve under D:\FODE_Test_Evidence"
 }
 foreach ($required in @("package.json", "playwright.config.ts", "auth\admin-storage-state.json")) {
   $path = Join-Path $PlaywrightRoot $required
@@ -83,7 +92,7 @@ try {
   foreach ($selectedMode in $selectedModes) {
     $spec = $ModeSpecs[$selectedMode]
     Write-Host "RUN: $selectedMode -> $spec"
-    & npx.cmd playwright test $spec --project=chromium --timeout=("$($TimeoutSeconds * 1000)")
+    & npx.cmd --prefix $PlaywrightRoot playwright test $specPath --project=chromium --timeout=("$($TimeoutSeconds * 1000)")
     if ($LASTEXITCODE -ne 0) {
       Fail-Proof "$selectedMode proof failed with exit code $LASTEXITCODE"
     }

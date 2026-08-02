@@ -15,7 +15,7 @@ Archived local synced path:
 
 Active Codex working repo:
 
-`D:\Repos\FODE_Runtime_1wog`
+`C:\Repos\FODE_Runtime_1wog`
 
 GitHub remains review authority. The archived Google Drive copy is not active source authority.
 

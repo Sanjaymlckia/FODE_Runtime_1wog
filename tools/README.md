@@ -40,9 +40,9 @@ The old Google Drive synced copy at `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime
 
 GitHub remains review authority.
 
-Do not run Apps Script source push, version creation, or deployment repin from the D: clone until `.clasp.json`, `Config.js`, and Apps Script project authority are verified from the D: clone in the active release CIS.
+Do not run Apps Script source push, version creation, or deployment repin from any clone other than `C:\Repos\FODE_Runtime_1wog` until `.clasp.json`, `Config.js`, and Apps Script project authority are verified in the active release CIS.
 
-Tool defaults now target the active D: repo. Historical audit paths may still mention E: as evidence; do not treat those historical paths as active source authority.
+Tool defaults target the active C: repo. Historical audit paths may still mention older workstation locations as evidence; do not treat those historical paths as active source authority.
 
 ## Tracks
 
@@ -328,25 +328,28 @@ It does not deploy, repin, send, preview, edit Sheets, or mutate Drive. Operator
 
 The shared communication smoke assertion uses stable message-type values and verifies current approved labels. It no longer depends on the obsolete `/invite/` text fragment.
 
-The F: Playwright lane is currently an external, non-Git proof dependency. The wrapper relies on:
+The D: Playwright lane is currently an external, non-Git proof dependency. The wrapper relies on:
 
-- `F:\Playwright\fode-secure-link-diagnostic\specs\fode-legacy-admin-health.spec.ts` for reachability/build health;
-- `F:\Playwright\fode-secure-link-diagnostic\specs\fode-admin-hydration60.spec.ts` for the 60-second hydration gate;
-- `F:\Playwright\fode-secure-link-diagnostic\specs\fode-admin-communication-smoke.spec.ts` for the read-only selected-applicant communication surface.
+- `D:\FODE_Tooling\Playwright\fode-secure-link-diagnostic\specs\fode-legacy-admin-health.spec.ts` for reachability/build health;
+- `D:\FODE_Tooling\Playwright\fode-secure-link-diagnostic\specs\fode-admin-hydration60.spec.ts` for the 60-second hydration gate;
+- `D:\FODE_Tooling\Playwright\fode-secure-link-diagnostic\specs\fode-admin-communication-smoke.spec.ts` for the read-only selected-applicant communication surface.
 
-These external specs and their auth state are not copied into the FODE runtime repository. Reports, screenshots, traces, and test output remain on F:. Back up or place the F: Playwright project under separate version control before treating it as durable release infrastructure.
+These external specs and their auth state are not copied into the FODE runtime repository. Reports, screenshots, traces, and test output remain under `D:\FODE_Test_Evidence\R401`. Back up or place the D: Playwright project under separate version control before treating it as durable release infrastructure.
 
 ### `fode-dr-manifest.ps1`
 
-Track L disaster recovery scaffold and manifest generator. It creates the F: recovery workspace and writes local recovery manifests/checklists:
+Track L disaster recovery scaffold and manifest generator. It creates the approved D: recovery workspace and writes local recovery manifests/checklists:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\fode-dr-manifest.ps1 -IncludeClaspDeployments
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\fode-dr-manifest.ps1 `
+  -RepoRoot "C:\Repos\FODE_Runtime_1wog" `
+  -BackupRoot "D:\FODE_DR_Backup\R401_745b698_20260801" `
+  -IncludeClaspDeployments
 ```
 
 Default target:
 
-`F:\FODE_DR_Backup`
+`D:\FODE_DR_Backup\R401_745b698_20260801`
 
 Created folders:
 
@@ -363,9 +366,9 @@ Created folders:
 
 Outputs:
 
-- `F:\FODE_DR_Backup\manifests\fode_runtime_recovery_manifest_v01.json`
-- `F:\FODE_DR_Backup\manifests\fode_runtime_recovery_manifest_v01.md`
-- `F:\FODE_DR_Backup\manifests\restore_checklist_v01.md`
+- `D:\FODE_DR_Backup\R401_745b698_20260801\manifests\fode_runtime_recovery_manifest_v01.json`
+- `D:\FODE_DR_Backup\R401_745b698_20260801\manifests\fode_runtime_recovery_manifest_v01.md`
+- `D:\FODE_DR_Backup\R401_745b698_20260801\manifests\restore_checklist_v01.md`
 
 The script reads local repo/config metadata and optionally `clasp deployments`. It does not deploy, repin, create Apps Script versions, export Sheets, copy Drive files, send email, or touch production/Student/OPS.
 
@@ -374,7 +377,10 @@ The script reads local repo/config metadata and optionally `clasp deployments`. 
 Track L DR backup operations wrapper. It is dry-run by default:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\fode-dr-backup.ps1 -Mode Plan
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\fode-dr-backup.ps1 `
+  -RepoRoot "C:\Repos\FODE_Runtime_1wog" `
+  -BackupRoot "D:\FODE_DR_Backup\R401_745b698_20260801" `
+  -Mode Plan
 ```
 
 Supported modes:
@@ -392,7 +398,7 @@ This script intentionally does not implement live Sheet export or Drive inventor
 
 Track L release evidence recorder. After an accepted runtime release, it creates timestamped JSON and Markdown proof records under:
 
-`F:\FODE_DR_Backup\release_proofs`
+`D:\FODE_DR_Backup\R401_745b698_20260801\release_proofs`
 
 Plan mode shows the output paths and values without creating files:
 
@@ -416,10 +422,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\fode-release-record.
   -AppsScriptVersion "301" `
   -ReleaseClassification "Track H" `
   -AcceptanceStatus "PASS" `
-  -HealthProofPath "F:\Playwright\fode-secure-link-diagnostic\reports\..."
+  -HealthProofPath "D:\FODE_Test_Evidence\R401\..."
 ```
 
-The recorder reuses `F:\FODE_DR_Backup\manifests\fode_runtime_recovery_manifest_v01.json` when present and accepts explicit overrides. It does not call Apps Script, Google Drive, or Google Sheets APIs. It does not deploy, repin, create Apps Script versions, export Sheets, copy Drive files, send email, or touch production/Student/OPS.
+The recorder reuses `D:\FODE_DR_Backup\R401_745b698_20260801\manifests\fode_runtime_recovery_manifest_v01.json` when present and accepts explicit overrides. It does not call Apps Script, Google Drive, or Google Sheets APIs. It does not deploy, repin, create Apps Script versions, export Sheets, copy Drive files, send email, or touch production/Student/OPS.
 
 ## Approval Gates
 

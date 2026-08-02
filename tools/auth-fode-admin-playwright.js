@@ -1,8 +1,8 @@
 const path = require("node:path");
 const fs = require("node:fs");
+const { toolingRoot, playwrightModule } = require("./fode-playwright-path");
 
-const localAppData = process.env.LOCALAPPDATA || path.join(process.env.USERPROFILE || "C:\\Users\\Public", "AppData", "Local");
-const DEFAULT_PROFILE_DIR = path.join(localAppData, "FODE_Playwright", "admin-staging-profile");
+const DEFAULT_PROFILE_DIR = path.join(toolingRoot(), "profiles", "admin-staging-profile");
 
 class AuthRequiredError extends Error {
   constructor(message, meta) {
@@ -84,8 +84,7 @@ async function closeAdminContext(session) {
 }
 
 function loadPlaywright() {
-  const candidate = process.env.FODE_PLAYWRIGHT_MODULE || "F:\\Playwright\\fode-secure-link-diagnostic\\node_modules\\playwright";
-  return require(candidate);
+  return require(playwrightModule());
 }
 
 async function findRpcFrame(page) {

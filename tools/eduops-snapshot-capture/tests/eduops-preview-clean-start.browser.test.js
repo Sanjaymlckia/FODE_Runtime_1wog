@@ -5,8 +5,8 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 
-const playwrightModule = process.env.FODE_PLAYWRIGHT_MODULE || "F:/Playwright/fode-secure-link-diagnostic/node_modules/playwright";
-const { chromium } = require(playwrightModule);
+const { playwrightModule } = require("../../fode-playwright-path");
+const { chromium } = require(playwrightModule());
 
 const previewRoot = path.resolve(__dirname, "..");
 const repoRoot = path.resolve(previewRoot, "..", "..");

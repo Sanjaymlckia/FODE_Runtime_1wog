@@ -1,5 +1,13 @@
 # Current Task
 
+## R401 Proportionate DR Scope Correction
+
+- `R401` is a bounded Student portal responsive repair with associated governance/path corrections.
+- Platform-wide MariaDB restore, authoritative Drive reconstruction, and protected production-workbook backup were removed from the R401 release path by owner decision.
+- Partial DR evidence remains preserved under `D:\FODE_DR_Backup\R401_745b698_20260801`; it is not claimed as a DR `PASS`.
+- Outstanding capability task: `FODE_LOCAL_TOOLCHAIN_AND_DR_READINESS` (`FOLLOW-UP`).
+- The capability task becomes a mandatory release gate only for database/schema migrations, production data changes, destructive operations, or scheduled platform DR validation.
+
 ## Active CIS
 
 - `CIS r212: Extract Applicant Queue UI`.

@@ -3,8 +3,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { start } = require("../server/server");
 
-const playwrightModule = process.env.FODE_PLAYWRIGHT_MODULE || "F:/Playwright/fode-secure-link-diagnostic/node_modules/playwright";
-const { chromium } = require(playwrightModule);
+const { playwrightModule } = require("../../fode-playwright-path");
+const { chromium } = require(playwrightModule());
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
 const runId = `owner-review-recovery-${new Date().toISOString().replace(/[:.]/g, "-")}`;
 const evidenceRoot = path.join(repoRoot, "tools", "eduops-preview", "evidence", runId);

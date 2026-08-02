@@ -7,8 +7,8 @@ const previewRoot = path.resolve(__dirname, "..");
 const evidenceDir = path.join(previewRoot, "evidence", "r368a");
 fs.mkdirSync(evidenceDir, { recursive: true });
 
-const playwrightModule = process.env.FODE_PLAYWRIGHT_MODULE || "F:/Playwright/fode-secure-link-diagnostic/node_modules/playwright";
-const { chromium } = require(playwrightModule);
+const { playwrightModule } = require("../../fode-playwright-path");
+const { chromium } = require(playwrightModule());
 const port = Number(process.env.EDUOPS_OPERATIONS_PREVIEW_PORT || 4183);
 const baseUrl = `http://127.0.0.1:${port}/`;
 

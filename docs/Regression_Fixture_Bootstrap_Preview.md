@@ -382,7 +382,7 @@ $env:FODE_COMM_AUTHORITY_APPLICANT_F="<TEST_COMM_F ApplicantID>"
 Then run from the Playwright sandbox:
 
 ```powershell
-Set-Location -LiteralPath "F:\Playwright\fode-secure-link-diagnostic"
+Set-Location -LiteralPath "D:\FODE_Tooling\Playwright\fode-secure-link-diagnostic"
 npm run test:comm-authority-fixtures
 ```
 

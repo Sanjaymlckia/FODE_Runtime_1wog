@@ -20,7 +20,7 @@ Secret-bearing Script Properties and raw workbook exports must remain private an
 1. Verify Admin `whoami` and Student `whoami` from `runtime-context.json`.
 2. Verify the repository is clean and synchronized with `origin/main`.
 3. Create the private server-side workbook/Script Properties backup through the Super-only confirmed backup RPC.
-4. Create a Git bundle under `F:\FODE_DR_Backup\architecture_v1\<timestamp>`.
+4. Create a Git bundle under `D:\FODE_DR_Backup\R401_745b698_20260801\git\<timestamp>`.
 5. Copy sanitized acceptance, release, runtime, and remote-source evidence into the same closure folder.
 6. Generate hashes and a manifest without embedding secret values.
 7. Run the restoration-confidence checks below.

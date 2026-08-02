@@ -6,6 +6,12 @@ This document complements `AGENTS.md` and `docs/governance/RELEASE_CLOSURE_DISCI
 
 Every CIS must state its work class, release track, allowed files, forbidden actions, acceptance evidence, and whether a runtime release is authorized.
 
+## Proportionate DR Gate Selection
+
+Disaster-recovery evidence is selected by release risk, not applied as a universal gate. A bounded code-only staging release with no data-model or production change, destructive operation, or applicant-data mutation requires source preservation, Git rollback protection, release identity, and staging acceptance; it does not require a full MariaDB restore drill, authoritative Drive reconstruction, or protected production-workbook backup. Those exercises are mandatory for database/schema migrations, production data changes, destructive operations, and scheduled platform DR validation.
+
+If platform DR work is not required by the active CIS, preserve any partial evidence and record the outstanding capability work as `FOLLOW-UP` or `BLOCKED`. Never convert an incomplete DR exercise into a false `PASS`, and never add it to closure criteria after implementation unless it is a true blocker for the approved release objective.
+
 - Use `Track L` for low-risk UI or documentation work, including documentation-only process hardening, whose approved scope does not alter live write authority, backend behavior, security, data contracts, or operational mutation logic.
 - Use `Track H` when scope includes backend or gate behavior, live-data mutation logic, security/portal identity, sends, Books/payment/classroom operations, schema, Script Properties, or comparable operational risk.
 - Documentation-only or audit-only work still declares `Track L` or `Track H` by risk and separately states `No runtime release` when no runtime artifact is to be deployed.

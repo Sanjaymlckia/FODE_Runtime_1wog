@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const assert = require("node:assert/strict");
-const playwrightModule = process.env.FODE_PLAYWRIGHT_MODULE || "F:/Playwright/fode-secure-link-diagnostic/node_modules/playwright";
-const { chromium } = require(playwrightModule);
+const { playwrightModule } = require("../tools/fode-playwright-path");
+const { chromium } = require(playwrightModule());
 
 const counts = { READY: 60, COOLING_OFF: 12, AWAITING_APPLICANT: 22, AWAITING_PAYMENT: 18, REVIEW_REQUIRED: 75, BLOCKED: 8, UNKNOWN: 4, COMPLETE: 1 };
 const states = Object.keys(counts);

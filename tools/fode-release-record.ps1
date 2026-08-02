@@ -1,5 +1,5 @@
 param(
-  [string]$BackupRoot = "F:\FODE_DR_Backup",
+  [string]$BackupRoot = "D:\FODE_DR_Backup\R401_745b698_20260801",
   [string]$ManifestPath = "",
   [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path,
   [string]$RuntimeVersion = "",
@@ -29,11 +29,32 @@ function Fail-ReleaseRecord {
   exit 1
 }
 
+function Resolve-ApprovedBackupRoot {
+  param([string]$Path, [string]$AuthoritativeRepo)
+  if ([string]::IsNullOrWhiteSpace($Path)) { Fail-ReleaseRecord "BackupRoot is empty or ambiguous." }
+  try { $resolved = [System.IO.Path]::GetFullPath($Path).TrimEnd("\") } catch { Fail-ReleaseRecord "BackupRoot cannot be resolved: $Path" }
+  if ($resolved -match '^(?i)F:\\') { Fail-ReleaseRecord "The obsolete F: backup target is rejected: $resolved" }
+  $repoPrefix = $AuthoritativeRepo.TrimEnd("\") + "\"
+  if ($resolved.Equals($AuthoritativeRepo, [System.StringComparison]::OrdinalIgnoreCase) -or $resolved.StartsWith($repoPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+    Fail-ReleaseRecord "BackupRoot must not be inside the authoritative repository: $resolved"
+  }
+  if ([System.IO.Path]::GetPathRoot($resolved) -ne "D:\") { Fail-ReleaseRecord "BackupRoot must be on the approved D: volume: $resolved" }
+  if (!(Test-Path -LiteralPath "D:\" -PathType Container)) { Fail-ReleaseRecord "Approved D: backup volume is unavailable." }
+  $approved = "D:\FODE_DR_Backup\R401_745b698_20260801"
+  if (!$resolved.Equals($approved, [System.StringComparison]::OrdinalIgnoreCase) -and !$resolved.StartsWith($approved + "\", [System.StringComparison]::OrdinalIgnoreCase)) {
+    Fail-ReleaseRecord "BackupRoot is outside the approved R401 backup target: $resolved"
+  }
+  return $resolved
+}
+
 function Unknown-IfBlank {
   param([string]$Value)
   if ([string]::IsNullOrWhiteSpace($Value)) { return "[UNKNOWN]" }
   return $Value
 }
+
+$RepoRoot = [System.IO.Path]::GetFullPath($RepoRoot).TrimEnd("\")
+$BackupRoot = Resolve-ApprovedBackupRoot -Path $BackupRoot -AuthoritativeRepo $RepoRoot
 
 function Git-Text {
   param([string[]]$GitArgs)

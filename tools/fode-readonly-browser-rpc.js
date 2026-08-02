@@ -6,6 +6,7 @@ const {
   launchAdminContext,
   closeAdminContext
 } = require("./auth-fode-admin-playwright");
+const { playwrightModule, evidencePath: resolveEvidencePath } = require("./fode-playwright-path");
 
 const READ_ONLY_RPC_ALLOWLIST = Object.freeze({
   "finance-summary": "admin_getCanonicalFinanceSummary",
@@ -55,18 +56,17 @@ function financeReadOnlyPayload(action, args) {
 }
 
 function evidencePath(repoRoot, action, requested) {
-  const proofRoot = path.resolve(repoRoot, ".release-proof");
-  const output = path.resolve(requested || path.join(proofRoot, `readonly-${action}.json`));
-  if (output !== proofRoot && !output.startsWith(proofRoot + path.sep)) throw new Error("Evidence output must remain under .release-proof.");
-  return output;
+  const proofRoot = resolveEvidencePath("R401", ".release-proof");
+  if (!requested) return path.join(proofRoot, `readonly-${action}.json`);
+  const resolvedRequested = path.resolve(requested);
+  if (resolvedRequested !== proofRoot && !resolvedRequested.startsWith(`${proofRoot}${path.sep}`)) {
+    throw new Error(`Requested evidence path must remain under .release-proof: ${resolvedRequested}`);
+  }
+  return resolvedRequested;
 }
 
 function loadPlaywright() {
-  const candidates = [process.env.FODE_PLAYWRIGHT_MODULE, "F:\\Playwright\\fode-secure-link-diagnostic\\node_modules\\playwright"].filter(Boolean);
-  for (const candidate of candidates) {
-    try { return require(candidate); } catch (_error) {}
-  }
-  throw new Error("Approved FODE Playwright module was not found.");
+  return require(playwrightModule());
 }
 
 async function findRpcFrame(page) {

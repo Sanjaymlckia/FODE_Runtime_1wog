@@ -2,11 +2,12 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { start } = require("./server/server");
 
-const playwrightModule = process.env.FODE_PLAYWRIGHT_MODULE || "F:/Playwright/fode-secure-link-diagnostic/node_modules/playwright";
-const { chromium } = require(playwrightModule);
+const { playwrightModule } = require("../fode-playwright-path");
+const { evidencePath: resolveEvidencePath } = require("../fode-playwright-path");
+const { chromium } = require(playwrightModule());
 const viewports = [{ width: 1920, height: 1080 }, { width: 1440, height: 900 }, { width: 1366, height: 768 }];
 const runId = `run-${new Date().toISOString().replace(/[:.]/g, "-")}`;
-const evidenceRoot = path.join(__dirname, "evidence", runId);
+const evidenceRoot = resolveEvidencePath("eduops-snapshot-capture", runId);
 const summary = { runId, createdAt: new Date().toISOString(), viewports, behaviouralStates: [], screenshots: [], consoleErrors: [], pageErrors: [], overflow: [], timings: [], pngIntegrity: [] };
 
 function ensureDir(dir) { fs.mkdirSync(dir, { recursive: true }); }

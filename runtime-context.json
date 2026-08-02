@@ -10,8 +10,8 @@
         "path": "C:\\Repos\\FODE_Runtime_1wog",
         "github": "https://github.com/Sanjaymlckia/FODE_Runtime_1wog.git",
         "branch": "main",
-        "acceptedBaseline": "27b569bfbdd30c5a1932b56682c085953bfaf448",
-        "baselineState": "HEAD == origin/main; ahead/behind 0 / 0; working tree clean"
+        "acceptedBaseline": "745b698654f0bffd560333cc8e29e174e511f4dd",
+        "baselineState": "HEAD == origin/main; ahead/behind 0 / 0; working tree contains only R401-authorized changes"
       },
       "appsScript": {
         "scriptId": "1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90",
@@ -66,8 +66,11 @@
         }
       },
       "playwright": {
-        "projectPath": "F:\\Playwright\\fode-secure-link-diagnostic",
-        "reportsPath": "F:\\Playwright\\fode-secure-link-diagnostic\\reports",
+        "projectPath": "D:\\FODE_Tooling\\Playwright",
+        "reportsPath": "D:\\FODE_Test_Evidence\\R401",
+        "toolingRoot": "D:\\FODE_Tooling\\Playwright",
+        "browsersPath": "D:\\FODE_Tooling\\Playwright\\browsers",
+        "evidenceRoot": "D:\\FODE_Test_Evidence",
         "suiteNames": [
           "health",
           "identity",
@@ -82,8 +85,8 @@
         ]
       },
       "evidence": {
-        "rootPath": "F:\\FODE_DR_Backup",
-        "releaseProofsPath": "F:\\FODE_DR_Backup\\release_proofs",
+        "rootPath": "D:\\FODE_DR_Backup\\R401_745b698_20260801",
+        "releaseProofsPath": "D:\\FODE_DR_Backup\\R401_745b698_20260801\\release_proofs",
         "namingPattern": "{timestamp}-{project}-{profile}-{runtime}-{status}"
       },
       "acceptanceProfiles": {

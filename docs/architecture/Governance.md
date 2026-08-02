@@ -9,7 +9,7 @@ This document records governance state only. It does not change Apps Script sour
 
 | Surface | Accepted state |
 | --- | --- |
-| Local repository | `D:\Repos\FODE_Runtime_1wog` |
+| Local repository | `C:\Repos\FODE_Runtime_1wog` |
 | Git baseline | `2ebe8bfd76e71763ef708bd28cbe51eb5c73ef2b` |
 | Git alignment | `HEAD == origin/main`, ahead/behind `0 / 0`, clean working tree at R392A start |
 | Admin staging | `@428 / r392 / 392` |
@@ -66,6 +66,17 @@ Normal Admin staging releases use:
 The pipeline must classify file risk conservatively, select a proportionate Fast Gate or Full Gate, reject risk and gate downgrades, generate a manifest before remote mutation, preserve runtime identity validation, preserve repeated Apps Script API Config readback before version creation, repin only the Admin deployment, verify Admin and Student `whoami`, stop before Git commit, and bind final closure to the accepted manifest.
 
 `DocsOnly` must not bump runtime identity or run `clasp push`, create an Apps Script version, or repin deployments. `ClientOnly` and `BackendSemantic` use Fast Gate by default; Full Gate is required only on escalation. `HighRiskAuthority` is required for communication send authority, Batch/bulk authority, applicant mutation, population integrity, identity authority, settlement authority, deployment authority and durable communication architecture, and always uses Full Gate.
+
+## Proportionate Disaster-Recovery Gate Policy
+
+Platform-wide disaster-recovery work is not a universal prerequisite for every release. The active CIS must classify the changed surface and require only the recovery evidence proportionate to the approved risk:
+
+| Release scope | DR requirement |
+|---|---|
+| Bounded code-only staging release with no data-model change, production change, destructive action, or applicant-data mutation | Preserve source, Git rollback, release identity, and staging acceptance evidence. Full MariaDB restore drills, authoritative Drive reconstruction, and protected production-workbook backups are follow-up capability work, not release blockers. |
+| Database/schema migration, production data change, destructive operation, or scheduled platform DR validation | Require the applicable MariaDB backup/restore, authoritative Sheet/Drive reconstruction, protected configuration backup, and isolated-restore evidence before closure. |
+
+An incomplete platform DR exercise must be recorded as `FOLLOW-UP` or `BLOCKED` against the DR capability task; it must not be reported as `PASS` and must not block a lower-risk release unless the active CIS explicitly makes that evidence a release invariant. The standing capability follow-up for the current readiness gap is `FODE_LOCAL_TOOLCHAIN_AND_DR_READINESS`.
 
 ## Source Preservation Rule
 
@@ -156,7 +167,7 @@ Current documented authority baseline:
 
 | Surface | Authoritative identity | Authority source | Mutation rule |
 | --- | --- | --- | --- |
-| Local Git repository | `D:\Repos\FODE_Runtime_1wog` | `AGENTS.md`, active workspace path | Mutate only files allowed by active CIS. |
+| Local Git repository | `C:\Repos\FODE_Runtime_1wog` | `AGENTS.md`, active workspace path | Mutate only files allowed by active CIS. |
 | GitHub repository | `https://github.com/Sanjaymlckia/FODE_Runtime_1wog.git` | `.git/config` | Commit/push only when explicitly authorized. |
 | Apps Script project | `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90` | `.clasp.json` | No push/version/repin without release CIS and remote-source gate. |
 | Admin staging deployment | `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ`, accepted `@428 / r392 / 392` | `Config.js`, `LIVE_URLS.md`, live `whoami` | Repin/browser accept only after live `whoami` proof. |
@@ -168,7 +179,7 @@ Current documented authority baseline:
 | Portal log spreadsheet | `1AQbkHUafLFxqHDqwH3dVHR8gTuOZYtyUPkheby5ejhU` | `Config.js`, Data Source Authority Register | Diagnostic/read-only unless exact write is authorized. |
 | Portal secrets spreadsheet | `1HEJPtSov-iE5YTpSWWZ89YLIQAw4Eju9DDMG46HkTRc` | `Config.js`, Data Source Authority Register | Sensitive; no broad reads or writes without security CIS. |
 | Runtime Drive root | `1vGD3DoOv1hlxYoTIfrNCZqAnrVKmghuB` | `Config.js` | No Drive create/copy/move/delete unless exact action is authorized. |
-| Playwright sandbox | `F:\Playwright\fode-secure-link-diagnostic` | fixture docs and harness source | Read-only browser evidence only; no arbitrary applicants or fallback rows. |
+| Playwright sandbox | `D:\FODE_Tooling\Playwright` | fixture docs and harness source | Read-only browser evidence only; no arbitrary applicants or fallback rows. Evidence is written under `D:\FODE_Test_Evidence\R401`. |
 | PowerShell tooling | `tools/*.ps1` under local repo | `tools/README.md` | Tool use must match CIS; no clasp push/version/repin unless authorized. |
 | Documentation authority | `docs/architecture/Governance.md` plus active `AGENTS.md` | This document and repo root instructions | Docs define process; they do not prove live runtime state. |
 

@@ -1924,8 +1924,8 @@ function renderPortalHtml_(opts) {
     : ((validationCodeSet.SUBJECTS_INVALID_FOR_GRADE || validationCodeSet.SUBJECT_LOCK_DOCS_VERIFIED)
         ? portalValidationMessageForCode_(validationCodes[0] || "SUBJECTS_INVALID_FOR_GRADE")
         : "");
-  var dobInputStyle = 'padding:8px;width:260px;' + (dobAttention ? 'border:2px solid #b30000;background:#fff7f7;' : '');
-  var examInputStyle = 'padding:8px;width:520px;';
+  var dobInputStyle = 'padding:8px;width:100%;max-width:260px;box-sizing:border-box;' + (dobAttention ? 'border:2px solid #b30000;background:#fff7f7;' : '');
+  var examInputStyle = 'padding:8px;width:100%;max-width:520px;box-sizing:border-box;';
   var subjectsBoxStyle = 'margin-top:8px;padding:12px;border:' + (subjectsAttention ? '2px solid #b30000' : '1px solid #eee') + ';border-radius:10px;' + (subjectsAttention ? 'background:#fff7f7;' : '');
 
   // exam site options
@@ -2123,8 +2123,8 @@ function renderPortalHtml_(opts) {
     + "</form>"
     + debugFooter
     + '<div class="footer-version" id="studentVersion" style="margin-top:16px;color:#666;font-size:12px;" title="Script ID: ' + esc_(buildScriptId) + '"></div>'
-    + '<div style="margin-top:8px;color:#000;">Script ID: ' + esc_(scriptId) + " | Deployment: " + esc_(deploymentId || "-") + " | View: portal</div>"
-    + '<div style="margin-top:8px;color:#666;font-size:12px;">URL: ' + esc_(actionUrlShort) + "</div>"
+    + '<div style="margin-top:8px;color:#000;overflow-wrap:anywhere;word-break:break-word;">Script ID: ' + esc_(scriptId) + " | Deployment: " + esc_(deploymentId || "-") + " | View: portal</div>"
+    + '<div style="margin-top:8px;color:#666;font-size:12px;overflow-wrap:anywhere;word-break:break-word;">URL: ' + esc_(actionUrlShort) + "</div>"
 
     + "<script>"
     + "console.log('PORTAL BUILD: ' + " + JSON.stringify(buildVersion) + ");"
@@ -2691,12 +2691,12 @@ function renderAllowlistSummary_(record, visibleFields) {
     }
 
     rows += "<tr>"
-      + "<td style='padding:6px 10px;border-bottom:1px solid #f0f0f0;vertical-align:top;width:34%;'><b>" + esc_(k) + "</b></td>"
-      + "<td style='padding:6px 10px;border-bottom:1px solid #f0f0f0;vertical-align:top;'>" + display + "</td>"
+      + "<td style='padding:6px 10px;border-bottom:1px solid #f0f0f0;vertical-align:top;width:34%;word-break:break-word;overflow-wrap:anywhere;'><b>" + esc_(k) + "</b></td>"
+      + "<td style='padding:6px 10px;border-bottom:1px solid #f0f0f0;vertical-align:top;word-break:break-word;overflow-wrap:anywhere;'>" + display + "</td>"
       + "</tr>";
   }
 
-  return "<table style='width:100%;border-collapse:collapse;font-size:13px;'>" + rows + "</table>";
+  return "<table style='width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;'>" + rows + "</table>";
 }
 
 function mapDocStatusForDisplay_(raw) {
@@ -2724,7 +2724,7 @@ function renderEditableFields_(record, editFields, dis) {
     var linkHtml = isUrl ? (" <a target='_blank' rel='noopener' href='" + esc_(val) + "'>Open</a>") : "";
     out += "<div style='margin:10px 0;'>"
       + "<label><b>" + esc_(h) + ":</b></label><br/>"
-      + "<input type='text' name='" + esc_(h) + "' value='" + esc_(val) + "' style='padding:8px;width:520px;' " + ro + " />"
+      + "<input type='text' name='" + esc_(h) + "' value='" + esc_(val) + "' style='padding:8px;width:100%;max-width:520px;box-sizing:border-box;' " + ro + " />"
       + linkHtml
       + "</div>";
   }

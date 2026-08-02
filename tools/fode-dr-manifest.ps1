@@ -1,6 +1,6 @@
 param(
   [string]$RepoRoot = "C:\Repos\FODE_Runtime_1wog",
-  [string]$BackupRoot = "F:\FODE_DR_Backup",
+  [string]$BackupRoot = "D:\FODE_DR_Backup\R401_745b698_20260801",
   [switch]$IncludeClaspDeployments
 )
 
@@ -50,15 +50,30 @@ function Git-Line {
   }
 }
 
+function Resolve-ApprovedBackupRoot {
+  param([string]$Path, [string]$AuthoritativeRepo)
+  if ([string]::IsNullOrWhiteSpace($Path)) { Fail-Dr "BackupRoot is empty or ambiguous." }
+  try { $resolved = [System.IO.Path]::GetFullPath($Path).TrimEnd("\") } catch { Fail-Dr "BackupRoot cannot be resolved: $Path" }
+  if ($resolved -match '^(?i)F:\\') { Fail-Dr "The obsolete F: backup target is rejected: $resolved" }
+  $repoPrefix = $AuthoritativeRepo.TrimEnd("\") + "\"
+  if ($resolved.Equals($AuthoritativeRepo, [System.StringComparison]::OrdinalIgnoreCase) -or $resolved.StartsWith($repoPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+    Fail-Dr "BackupRoot must not be inside the authoritative repository: $resolved"
+  }
+  if ([System.IO.Path]::GetPathRoot($resolved) -ne "D:\") { Fail-Dr "BackupRoot must be on the approved D: volume: $resolved" }
+  if (!(Test-Path -LiteralPath "D:\" -PathType Container)) { Fail-Dr "Approved D: backup volume is unavailable." }
+  $approved = "D:\FODE_DR_Backup\R401_745b698_20260801"
+  if (!$resolved.Equals($approved, [System.StringComparison]::OrdinalIgnoreCase) -and !$resolved.StartsWith($approved + "\", [System.StringComparison]::OrdinalIgnoreCase)) {
+    Fail-Dr "BackupRoot is outside the approved R401 backup target: $resolved"
+  }
+  return $resolved
+}
+
 $repoResolved = [System.IO.Path]::GetFullPath($RepoRoot).TrimEnd("\")
 if (!(Test-Path -LiteralPath $repoResolved -PathType Container)) {
   Fail-Dr "RepoRoot not found: $repoResolved"
 }
 
-$backupResolved = [System.IO.Path]::GetFullPath($BackupRoot).TrimEnd("\")
-if ($backupResolved.Length -lt 6 -or [System.IO.Path]::GetPathRoot($backupResolved) -eq $backupResolved) {
-  Fail-Dr "Unsafe BackupRoot: $backupResolved"
-}
+$backupResolved = Resolve-ApprovedBackupRoot -Path $BackupRoot -AuthoritativeRepo $repoResolved
 
 foreach ($folder in $Folders) {
   $path = Join-Path $backupResolved $folder
@@ -145,8 +160,8 @@ $manifest = [ordered]@{
   dependencies = [ordered]@{
     formDesigner = "External intake dependency; backup/export not proven by this manifest."
     googleFormsReplacement = "Flagged as future replacement path; not implemented in this manifest."
-    playwrightRoot = "F:\Playwright\fode-secure-link-diagnostic"
-    remoteProofFolder = "D:\Repos\_clasp_remote_check_FODE"
+    playwrightRoot = "D:\FODE_Tooling\Playwright"
+    remoteProofFolder = (Join-Path $backupResolved "remote_source_proof")
   }
   backupRoot = $backupResolved
   folders = $Folders
@@ -165,6 +180,7 @@ $manifestMdPath = Join-Path $backupResolved "manifests\fode_runtime_recovery_man
 $restorePath = Join-Path $backupResolved "manifests\restore_checklist_v01.md"
 $logPath = Join-Path $backupResolved "logs\fode_dr_manifest_last_run.log"
 $runtimeAllowlistMd = ($runtimeAllowlist | ForEach-Object { "- ``$_``" }) -join "`n"
+$remoteProofFolder = Join-Path $backupResolved "remote_source_proof"
 $boundariesMd = ($manifest.boundaries | ForEach-Object { "- $_" }) -join "`n"
 $repoBranch = [string]$manifest.repository.branch
 $repoCommit = [string]$manifest.repository.latestCommit
@@ -239,8 +255,8 @@ $runtimeAllowlistMd
 
 - FormDesigner: external intake dependency; backup/export not proven.
 - Google Forms replacement: future replacement path; not implemented here.
-- Playwright: F:\Playwright\fode-secure-link-diagnostic
-- Remote proof folder: D:\Repos\_clasp_remote_check_FODE
+- Playwright: D:\FODE_Tooling\Playwright
+- Remote proof folder: $remoteProofFolder
 
 ## Boundaries
 
@@ -262,7 +278,7 @@ $restore = @"
 9. Open Sheet backups and inspect FODE_Data, Webhook_Log, portal logs, and portal secrets.
 10. Verify applicant root folder and sampled applicant folder inventories.
 11. Confirm document originals exist for sampled applicants.
-12. Rerun F: Playwright health/hydration/operator proof.
+12. Rerun D: Playwright health/hydration/operator proof.
 13. Record the restore drill under restore_drills.
 
 Do not perform destructive restore against live production, Student, Sheets, Drive, or Apps Script without a separate approved recovery CIS.

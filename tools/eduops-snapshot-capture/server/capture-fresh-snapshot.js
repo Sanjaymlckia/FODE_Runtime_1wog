@@ -11,7 +11,8 @@ const {
 
 const previewRoot = path.resolve(__dirname, "..");
 const repoRoot = path.resolve(previewRoot, "..", "..");
-const generatedSnapshotRoot = path.join(previewRoot, "evidence", "generated", "snapshots");
+const { evidencePath: resolveEvidencePath, playwrightModule } = require("../../fode-playwright-path");
+const generatedSnapshotRoot = resolveEvidencePath("eduops-snapshot-capture", "generated", "snapshots");
 const defaultAdminUrl = "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=eduops";
 
 const RPC_ALLOWLIST = [
@@ -86,8 +87,7 @@ function validateCaptureUrl(captureUrl) {
 }
 
 function loadPlaywright() {
-  const playwrightModule = process.env.FODE_PLAYWRIGHT_MODULE || "F:/Playwright/fode-secure-link-diagnostic/node_modules/playwright";
-  return require(playwrightModule);
+  return require(playwrightModule());
 }
 
 function stableId(value) {
