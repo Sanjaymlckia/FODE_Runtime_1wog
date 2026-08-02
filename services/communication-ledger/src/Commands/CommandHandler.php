@@ -8,6 +8,11 @@ final class CommandHandler {
         if (!isset($request['applicantId']) && !isset($request['cohortId'])) throw new \InvalidArgumentException('Invalid command.');
         if (!is_array($request['payload']) || !is_array($request['authorityContext'])) throw new \InvalidArgumentException('Invalid command.');
         $key=$request['idempotencyKey'] ?? $request['commandId']; if (!is_string($key) || $key==='') throw new \InvalidArgumentException('Invalid command.');
+        if (in_array((string)$request['commandType'], ['COMMUNICATION_PREPARE','COMMUNICATION_FINALIZE'], true)) {
+            foreach (['applicantId','operationId','previewId','receiptId'] as $required) if (!is_string($request[$required] ?? null) || trim($request[$required]) === '') throw new \InvalidArgumentException('Invalid communication correlation.');
+            if ((string)$request['commandType'] === 'COMMUNICATION_PREPARE' && (!is_string($request['payload']['communicationId'] ?? null) || trim($request['payload']['communicationId']) === '')) throw new \InvalidArgumentException('Invalid communication correlation.');
+            if ((string)$request['commandType'] === 'COMMUNICATION_FINALIZE' && (!is_string($request['communicationId'] ?? null) || trim($request['communicationId']) === '')) throw new \InvalidArgumentException('Invalid communication correlation.');
+        }
         return $this->repository->command($request['commandId'],$key,$request);
     }
 }

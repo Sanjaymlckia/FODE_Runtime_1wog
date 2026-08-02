@@ -599,6 +599,12 @@
       var body = preview.body || preview.emailBody || preview.messageBody || payload.body || "";
       var status = previewReady ? "Preview loaded" : "Preview pending";
       var timestamp = previewReady ? (opsActionState.previewTimestamp || "Preview timestamp unavailable") : "Not previewed";
+      var auditResult = previewReady ? preview : {
+        result: (opsActionState.previewResult && opsActionState.previewResult.result) || "BLOCKED",
+        applicantId: opsApplicantId_(),
+        effectiveEmail: recipient,
+        blockReason: blockReason
+      };
       panel.innerHTML = [
         "<strong>Read-only preview audit</strong>",
         "<br><strong>ApplicantID:</strong> " + esc(opsApplicantId_()),
@@ -608,7 +614,8 @@
         "<br><strong>Preview status:</strong> " + esc(status + " / " + timestamp),
         "<br><strong>Body preview:</strong><div class='opsPreviewBody'>" + esc((body || "Preview/template will populate body").slice(0, 1200)) + "</div>",
         "<strong>Send authority:</strong> " + esc(IS_SUPER ? "Super Admin selected-applicant parity; existing supervisory policy applies" : (IS_OPERATIONS_ADMIN ? "Operations Admin; selected-record Safe Mode, preview, and confirmation gates apply" : "Role restricted for normal Admin")),
-        "<br><strong>Block reason:</strong> " + esc(blockReason || "Ready for send only after preview and confirmation")
+        "<br><strong>Block reason:</strong> " + esc(blockReason || "Ready for send only after preview and confirmation"),
+        communicationResultAuditHtml_(auditResult)
       ].join("");
     }
     function opsHydrateEmailCorrection_(){

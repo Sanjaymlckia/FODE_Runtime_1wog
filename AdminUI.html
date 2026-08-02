@@ -4261,6 +4261,53 @@
       if (stageBatchSurfaceVisible_(opsEl)) return opsEl;
       return legacyEl || opsEl || null;
     }
+    function communicationResultField_(result, field, fallback){
+      var res = result && typeof result === "object" ? result : {};
+      var ledger = res.ledgerResult && typeof res.ledgerResult === "object" ? res.ledgerResult : {};
+      var value = res[field];
+      if (value == null || String(value).trim() === "") value = ledger[field];
+      return value == null || String(value).trim() === "" ? fallback : String(value);
+    }
+    function communicationResultSendability_(result){
+      var res = result && typeof result === "object" ? result : {};
+      var type = String(res.result || "").trim().toUpperCase();
+      if (typeof res.sendable === "boolean") return res.sendable ? "YES" : "NO";
+      if (type === "BLOCKED" || type === "FAILED" || type === "RECONCILIATION_REQUIRED") return "NO";
+      if (type === "PREVIEW") return "PREVIEW ONLY — confirmation required";
+      if (type === "SENT" || type === "IDEMPOTENT_REPLAY" || res.idempotentReplay === true) return "COMPLETED";
+      return "UNKNOWN";
+    }
+    function communicationResultAuditHtml_(result){
+      var res = result && typeof result === "object" ? result : {};
+      var type = String(res.result || "").trim().toUpperCase();
+      var recipient = communicationResultField_(res, "effectiveEmail", "");
+      if (!recipient) recipient = communicationResultField_(res, "recipient", "Not supplied by response");
+      var source = communicationResultField_(res, "recipientSource", "Not supplied by response");
+      var role = communicationResultField_(res, "recipientRole", "Not supplied by response");
+      var ids = [
+        ["Command ID", "commandId"],
+        ["Operation ID", "operationId"],
+        ["Preview ID", "previewId"],
+        ["Receipt ID", "receiptId"],
+        ["Idempotency key", "idempotencyKey"],
+        ["Communication ID", "communicationId"],
+        ["Event ID", "eventId"]
+      ];
+      var parts = [
+        "<div class='commCorrelationAudit' style='margin-top:10px;'>",
+        "<div><strong>Final result:</strong> " + esc(type || "UNKNOWN") + "</div>",
+        "<div style='margin-top:4px;'><strong>Resolved To:</strong> " + esc(recipient) + "</div>",
+        "<div style='margin-top:4px;'><strong>Recipient source:</strong> " + esc(source) + "</div>",
+        "<div style='margin-top:4px;'><strong>Recipient role:</strong> " + esc(role) + "</div>",
+        "<div style='margin-top:4px;'><strong>Sendability:</strong> " + esc(communicationResultSendability_(res)) + "</div>",
+        "<div style='margin-top:6px;'><strong>Correlation IDs</strong></div>"
+      ];
+      ids.forEach(function(pair){
+        parts.push("<div style='margin-top:3px;'><strong>" + esc(pair[0]) + ":</strong> " + esc(communicationResultField_(res, pair[1], "Not supplied by response")) + "</div>");
+      });
+      parts.push("</div>");
+      return parts.join("");
+    }
     function setOpsResult_(id, result, title){
       var box = document.getElementById(id);
       if (!box) return;
@@ -4283,6 +4330,7 @@
       if (res.message) parts.push("<div style='margin-top:6px;'>" + esc(res.message) + "</div>");
       if (res.subject) parts.push("<div style='margin-top:8px;'><strong>Subject:</strong> " + esc(res.subject) + "</div>");
       if (res.body) parts.push("<div class='opsPreviewBody'>" + esc(res.body) + "</div>");
+      if (id === "opsCommunicationResult") parts.push(communicationResultAuditHtml_(res));
       if (res.debugId) parts.push("<div class='muted' style='margin-top:8px;font-size:12px;'>Debug ID: " + esc(res.debugId) + "</div>");
       box.className = cls;
       box.innerHTML = parts.join("");
@@ -7623,6 +7671,7 @@
         if (res.protectedCommunication === true) parts.push('<div style="margin-top:8px;"><strong>Protected communication:</strong> lifecycle authority gate active.</div>');
         if (res.debugId) parts.push('<div class="muted" style="margin-top:6px;font-size:12px;"><strong>Debug:</strong> ' + esc(res.debugId) + '</div>');
       }
+      parts.push(communicationResultAuditHtml_(res));
       if (resultType === 'PREVIEW') {
         var previewType = String(res.messageType || getSelectedCommMessageType_() || "");
         var previewMeta = getCommTemplateMeta_(previewType) || {};

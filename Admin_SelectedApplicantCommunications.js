@@ -409,10 +409,16 @@ function admin_sendApplicantMessage(payload) {
       ? clean_(CONFIG.OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE || "")
       : "";
     var identityFields = ["operationId", "previewId", "receiptId", "commandType", "actor", "stateFingerprint", "cooldownCycle", "idempotencyKey"];
-    var approvedPreviewForShadow = null;
+    function attachLedgerCorrelation_(result, identity, ledgerResult) {
+      var out = adminCommunicationWithIdentity_(result, identity);
+      var ledger = ledgerResult && typeof ledgerResult === "object" ? ledgerResult : {};
+      ["commandId", "communicationId", "eventId"].forEach(function (field) {
+        if (!clean_(out[field] || "")) out[field] = clean_(ledger[field] || (ledger.response && ledger.response[field]) || "");
+      });
+      return out;
+    }
     var sendResult = withAdminIndividualCommunicationLock_(adminEmail, dbgId, function () {
       var approvedPreview = adminReadIndividualCommunicationPreview_(applicantId, messageType);
-      approvedPreviewForShadow = approvedPreview;
       var previewMatch = adminIndividualCommunicationPreviewMatches_(approvedPreview, p, identityFields);
       if (previewMatch.ok !== true) {
         return adminCommBlockedResult_("send", previewMatch.code, dbgId, {
@@ -427,6 +433,16 @@ function admin_sendApplicantMessage(payload) {
       var boundPayload = adminBindIndividualCommunicationPreview_(approvedPreview, p);
       var identity = adminCommunicationOperationIdentity_(boundPayload, applicantId, messageType, actor.actorEmail, dbgId);
       if (identity.ok !== true) return adminCommBlockedResult_("send", identity.blockCode, dbgId, { blockReason: identity.blockReason });
+      if (!clean_(boundPayload.recipient || "")) {
+        return adminCommBlockedResult_("send", "MISSING_RECIPIENT", dbgId, {
+          applicantId: applicantId,
+          messageType: requestedType,
+          operationId: identity.operationId,
+          previewId: identity.previewId,
+          receiptId: identity.receiptId,
+          blockReason: "A resolved recipient is required before ledger preparation or Gmail."
+        });
+      }
       var sendOptions = {
         actorEmail: actor.actorEmail,
         actorRole: actor.actorRole,
@@ -455,24 +471,99 @@ function admin_sendApplicantMessage(payload) {
       if (Object.prototype.hasOwnProperty.call(boundPayload, "body") && clean_(boundPayload.body || "")) {
         sendOptions.editedBody = String(boundPayload.body || "");
       }
-      return adminCommunicationWithIdentity_(sendApplicantMessage_(applicantId, messageType, sendOptions), identity);
-    });
-    try {
-      sendResult.shadow = typeof fodeLedgerShadowRecord_ === "function"
-        ? fodeLedgerShadowRecord_(sendResult, approvedPreviewForShadow, {})
-        : { operationId: clean_(sendResult && sendResult.operationId || ""), shadowState: "shadow_pending", code: "SHADOW_HELPER_UNAVAILABLE", enabled: false, externalDeliveryInvoked: false };
-    } catch (shadowError) {
-      sendResult.shadow = {
-        operationId: clean_(sendResult && sendResult.operationId || ""),
+      var ledgerPayload = Object.assign({}, boundPayload, {
+        applicantId: applicantId,
+        messageType: messageType,
+        templateId: clean_(boundPayload.templateId || requestedType),
+        templateVersionId: clean_(boundPayload.templateVersionId || ""),
+        ledgerRequestTimestamp: clean_(boundPayload.ledgerRequestTimestamp || new Date().toISOString())
+      });
+      if (typeof fodeLedgerPrepareIndividual_ !== "function") {
+        return adminCommBlockedResult_("send", "LEDGER_REQUIRED_HELPER_UNAVAILABLE", dbgId, {
+          applicantId: applicantId,
+          messageType: requestedType,
+          operationId: identity.operationId,
+          previewId: identity.previewId,
+          receiptId: identity.receiptId,
+          blockReason: "Durable communication ledger preparation is required before Gmail."
+      });
+      }
+      var prepared = fodeLedgerPrepareIndividual_(identity, applicantId, ledgerPayload, {
+        source: "R402_REQUIRED_LEDGER",
         contractVersion: "1.0",
-        shadowState: "shadow_failed",
-        code: "SHADOW_ORCHESTRATION_FAILED",
-        enabled: true,
-        externalDeliveryInvoked: false,
-        reconciliationRequired: sendResult && sendResult.gmailAccepted === true,
-        diagnostics: { operationId: clean_(sendResult && sendResult.operationId || ""), code: "SHADOW_ORCHESTRATION_FAILED", error: "redacted" }
-      };
-    }
+        externalDeliveryAuthority: "GMAIL_AFTER_PREPARE",
+        actor: identity.actor,
+        stateFingerprint: identity.stateFingerprint
+      }, {});
+      if (prepared.ok !== true) {
+        return attachLedgerCorrelation_(adminCommBlockedResult_("send", clean_(prepared.code || "LEDGER_PREPARE_REJECTED"), dbgId, {
+          applicantId: applicantId,
+          messageType: requestedType,
+          operationId: identity.operationId,
+          previewId: identity.previewId,
+          receiptId: identity.receiptId,
+          ledgerStatus: clean_(prepared.status || "REJECTED"),
+          ledgerUncertain: prepared.uncertain === true,
+          blockReason: "Durable communication ledger preparation was not accepted; Gmail was not invoked."
+        }), identity, prepared);
+      }
+      ledgerPayload.communicationId = clean_(prepared.communicationId || "");
+      if (prepared.finalized === true || prepared.status === "SENT") {
+        return attachLedgerCorrelation_({
+          ok: true,
+          result: "IDEMPOTENT_REPLAY",
+          outcome: "IDEMPOTENT_REPLAY",
+          idempotentReplay: true,
+          gmailAttempted: false,
+          gmailAccepted: true,
+          ledgerStatus: "SENT",
+          ledgerReplay: true,
+          operationId: identity.operationId,
+          previewId: identity.previewId,
+          receiptId: identity.receiptId,
+          applicantId: applicantId,
+          messageType: messageType,
+          debugId: dbgId
+        }, identity, prepared);
+      }
+      var legacyResult = adminCommunicationWithIdentity_(sendApplicantMessage_(applicantId, messageType, sendOptions), identity);
+      if (typeof fodeLedgerFinalizeIndividual_ !== "function") {
+        legacyResult = attachLedgerCorrelation_(legacyResult, identity, prepared);
+        legacyResult.result = "RECONCILIATION_REQUIRED";
+        legacyResult.outcome = "RECONCILIATION_REQUIRED";
+        legacyResult.blockCode = "LEDGER_FINALIZE_HELPER_UNAVAILABLE";
+        legacyResult.blockReason = "Gmail result cannot be accepted without durable ledger finalization.";
+        legacyResult.ledgerStatus = "DELIVERY_UNKNOWN";
+        return legacyResult;
+      }
+      var finalized = fodeLedgerFinalizeIndividual_(identity, applicantId, ledgerPayload, {
+        source: "R402_REQUIRED_LEDGER",
+        contractVersion: "1.0",
+        externalDeliveryAuthority: "GMAIL_AFTER_PREPARE",
+        actor: identity.actor,
+        stateFingerprint: identity.stateFingerprint
+      }, legacyResult, {});
+      if (finalized.ok !== true) {
+        legacyResult = attachLedgerCorrelation_(legacyResult, identity, finalized);
+        legacyResult.result = "RECONCILIATION_REQUIRED";
+        legacyResult.outcome = "RECONCILIATION_REQUIRED";
+        legacyResult.blockCode = clean_(finalized.code || "LEDGER_FINALIZE_FAILED");
+        legacyResult.blockReason = "Gmail outcome requires durable ledger finalization before it can be reported as SENT.";
+        legacyResult.ledgerStatus = clean_(finalized.status || "DELIVERY_UNKNOWN");
+        legacyResult.reconciliationRequired = true;
+        return legacyResult;
+      }
+      legacyResult = attachLedgerCorrelation_(legacyResult, identity, finalized);
+      legacyResult.ledgerStatus = clean_(finalized.status || "");
+      legacyResult.ledgerReplay = finalized.replay === true;
+      legacyResult.ledgerFinalized = true;
+      if (finalized.status !== "SENT") {
+        legacyResult.result = "RECONCILIATION_REQUIRED";
+        legacyResult.outcome = "RECONCILIATION_REQUIRED";
+        legacyResult.reconciliationRequired = true;
+      }
+      return legacyResult;
+    });
     if (opsGate && opsGate.safeMode === true) {
       logOpsSafeModeEvent_(String(sendResult && sendResult.result || "").toUpperCase() === "SENT"
         ? "OPS_SAFE_MODE_ACTION_COMPLETED"
