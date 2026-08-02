@@ -10,8 +10,8 @@
         "path": "C:\\Repos\\FODE_Runtime_1wog",
         "github": "https://github.com/Sanjaymlckia/FODE_Runtime_1wog.git",
         "branch": "main",
-        "acceptedBaseline": "745b698654f0bffd560333cc8e29e174e511f4dd",
-        "baselineState": "HEAD == origin/main; ahead/behind 0 / 0; working tree contains only R401-authorized changes"
+        "acceptedBaseline": "133bbec0c7f0fcffda403cb9af7af06dfb26db36",
+        "baselineState": "HEAD == origin/main; ahead/behind 0 / 0; R401 closed and governance/toolchain completion in progress"
       },
       "appsScript": {
         "scriptId": "1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90",
@@ -33,7 +33,7 @@
           "whoamiUrl": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami",
           "expectedRuntime": "r400",
           "expectedDeploy": 400,
-          "expectedAppsScriptVersion": 428,
+          "expectedAppsScriptVersion": 436,
           "lastRelease": {
             "runtimeIdentity": "r392 / 392",
             "appsScriptVersion": 428,
@@ -48,9 +48,18 @@
           "deploymentId": "AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv",
           "url": "https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec",
           "whoamiUrl": "https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec?view=whoami",
-          "expectedRuntime": "r217",
-          "expectedDeploy": 217,
-          "expectedAppsScriptVersion": 247
+          "expectedRuntime": "r403",
+          "expectedDeploy": 403,
+          "expectedAppsScriptVersion": 439,
+          "lastRelease": {
+            "runtimeIdentity": "r403 / 403",
+            "appsScriptVersion": 439,
+            "deploymentPin": "AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv @439",
+            "description": "R401 bounded Student responsive repair and mobile overflow correction",
+            "commitRefs": [
+              "R401 closure commits"
+            ]
+          }
         },
         "production": {
           "deploymentId": null,
@@ -269,6 +278,64 @@
         "sheetMutationAllowedByDefault": false,
         "driveMutationAllowedByDefault": false,
         "productionMutationAllowedByDefault": false
+      },
+      "governance": {
+        "entryPoint": "tools\\fode.ps1",
+        "continueCommand": "tools\\fode.ps1 continue",
+        "doctorCommand": "tools\\fode.ps1 doctor",
+        "closeCommand": "tools\\fode.ps1 close",
+        "centralContract": "docs\\architecture\\Governance.md",
+        "releaseContract": "docs\\RELEASE_DISCIPLINE.md",
+        "sessionTool": "tools\\governance\\Fode-GovernedSession.ps1",
+        "readinessTask": "docs\\governance\\FODE_LOCAL_TOOLCHAIN_AND_DR_READINESS.md",
+        "proportionateDrRule": "Code-only staging releases do not require platform-wide DR restore gates.",
+        "toolchainRoot": "D:\\FODE_Tooling",
+        "toolchain": {
+          "python": "Python 3.13.14 via user PATH; py launcher resolves Python 3.14.6",
+          "php": "D:\\FODE_Tooling\\PHP\\8.1.34\\php.exe",
+          "phpIni": "D:\\FODE_Tooling\\PHP\\8.1.34\\php.ini",
+          "mariadb": {
+            "root": "D:\\FODE_Tooling\\MariaDB\\11.4.10",
+            "expectedVersion": "11.4.10",
+            "bindAddress": "127.0.0.1",
+            "status": "pending-owner-authorized-local-server-installation"
+          },
+          "playwright": "D:\\FODE_Tooling\\Playwright",
+          "browserEvidence": "D:\\FODE_Test_Evidence",
+          "loopbackOnly": true
+        }
+      },
+      "capabilityProfiles": {
+        "code-only": {
+          "required": ["git", "node", "powershell"],
+          "optional": ["D-external-storage"],
+          "drRequired": false,
+          "checkpointBoundary": "none"
+        },
+        "staging-release": {
+          "required": ["git", "node", "powershell", "clasp", "live-whoami"],
+          "optional": ["playwright", "D-evidence"],
+          "drRequired": false,
+          "checkpointBoundary": "owner-authorized release mutation"
+        },
+        "ledger": {
+          "required": ["php", "php-pdo", "php-pdo_mysql", "mariadb-client"],
+          "optional": ["mariadb-loopback-server", "ssh"],
+          "drRequired": false,
+          "checkpointBoundary": "hosted database or schema mutation"
+        },
+        "production": {
+          "required": ["git", "powershell", "live-whoami"],
+          "optional": ["D-evidence"],
+          "drRequired": true,
+          "checkpointBoundary": "owner checkpoint required"
+        },
+        "database-migration": {
+          "required": ["mariadb-client", "mariadb-loopback-server", "php"],
+          "optional": ["D-restore"],
+          "drRequired": true,
+          "checkpointBoundary": "owner checkpoint required"
+        }
       },
       "capabilityGrants": {
         "status": "ACTIVE_EMPTY",

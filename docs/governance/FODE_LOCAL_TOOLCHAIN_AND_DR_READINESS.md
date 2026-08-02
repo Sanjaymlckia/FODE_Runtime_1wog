@@ -1,6 +1,6 @@
 # FODE_LOCAL_TOOLCHAIN_AND_DR_READINESS
 
-Status: `FOLLOW-UP` after R401 scope correction; not an R401 release blocker
+Status: `IN PROGRESS` after R401 scope correction; not an R401 release blocker
 
 ## Purpose
 
@@ -10,9 +10,17 @@ Complete the platform-wide local toolchain and disaster-recovery capability outs
 
 - Durable authenticated SSH access for staging backup operations.
 - Matching MariaDB 11.4 local loopback restore environment.
-- PHP CLI and required ledger extensions.
 - Reliable materialisation of authenticated Drive/Sheet exports to the approved backup root.
 - Complete protected H1 backup under separate production authority.
+
+## Completed local capability evidence
+
+- Python 3.13.14 is on the user PATH; the `py` launcher resolves Python 3.14.6.
+- PHP 8.1.34 x64 CLI is at `D:\FODE_Tooling\PHP\8.1.34` with `pdo_mysql` enabled through the D: `php.ini`.
+- All 18 communications-ledger PHP files lint successfully and the fixture suite passes 30 assertions.
+- Playwright tooling and browser binaries remain under `D:\FODE_Tooling\Playwright`; browser evidence remains under `D:\FODE_Test_Evidence`.
+- MariaDB 11.4.10 portable provisioning is authorized by the capability plan but remains pending the separate local-server installation authority boundary; no hosted or staging database was changed.
+- The available SSH client has no durable project host profile; the current default resolution is not accepted as staging authentication evidence.
 
 ## R401 evidence boundary
 

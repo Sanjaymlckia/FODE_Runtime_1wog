@@ -28,6 +28,26 @@ REP tools:
 - `rep-acceptance-plan.ps1`: prints a profile-specific acceptance plan from context.
 - `rep-evidence-record.ps1`: plans or writes a standardized evidence record.
 
+## Convenience-first governance entrypoint
+
+The canonical backend entrypoint is `tools\fode.ps1`; it is the only routine
+Continue/Doctor/Close path for the FODE project. It loads `runtime-context.json`,
+checks the C: repository and approved D: storage, applies the capability profile,
+and delegates session ownership to `tools\governance\Fode-GovernedSession.ps1`.
+
+```powershell
+.\tools\fode.ps1 continue
+.\tools\fode.ps1 doctor -Profile code-only
+.\tools\fode.ps1 doctor -Profile staging-release
+.\tools\fode.ps1 close
+```
+
+`code-only` does not require the platform-wide DR restore capability. Production,
+database-migration, send, Batch, and destructive work remain checkpoint-bound and
+cannot be downgraded by a CIS. `doctor -Repair` repairs only approved local D:
+directories; it never installs software, changes credentials, or mutates hosted
+services.
+
 These tools resolve project constants from context. Do not duplicate Sheet IDs, deployment IDs, runtime URLs, whoami URLs, Playwright paths, or evidence roots in new workflow docs.
 
 ## Active Repository Authority
@@ -302,11 +322,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\verify-runtime.ps1 `
   -StudentExpectedRuntime "r217" -StudentExpectedDeploy 217
 ```
 
-Live whoami is runtime truth. `clasp deployments` is metadata only. If the Google wrapper hides inner whoami content from `Invoke-WebRequest`, use the authenticated F: Playwright proof.
+Live whoami is runtime truth. `clasp deployments` is metadata only. If the Google wrapper hides inner whoami content from `Invoke-WebRequest`, use the authenticated D: Playwright proof.
 
 ### `fode-staging-health-proof.ps1`
 
-Track L read-only wrapper for the authenticated F: Playwright proof lane. It supports:
+Track L read-only wrapper for the authenticated D: Playwright proof lane. It supports:
 
 - `health`: Admin reachability/build health;
 - `hydration60`: waits 60 seconds and requires cleared runtime loading, Review buttons, and no page/console errors;
@@ -322,7 +342,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\fode-staging-health-
   -Strict
 ```
 
-The wrapper fails closed on Playwright failure, identity mismatch, persistent `Runtime: loading...`, missing Review buttons, blocking page errors, or report content that records failure. It prints timestamped evidence paths under the configured F: report root.
+The wrapper fails closed on Playwright failure, identity mismatch, persistent `Runtime: loading...`, missing Review buttons, blocking page errors, or report content that records failure. It prints timestamped evidence paths under the configured D: report root.
 
 It does not deploy, repin, send, preview, edit Sheets, or mutate Drive. Operator acceptance remains human-reviewed.
 
@@ -390,7 +410,7 @@ Supported modes:
 - `SheetExportPlan`: prints Sheet export requirements; does not export.
 - `DriveInventoryPlan`: prints Drive inventory requirements; does not read/copy Drive.
 - `ApplicantDocumentInventoryPlan`: prints applicant document inventory schema; does not read/copy Drive.
-- `ArchivePlaywrightReports`: copies one explicit F: Playwright report folder only when `-Execute -PlaywrightReportPath ...` are supplied.
+- `ArchivePlaywrightReports`: copies one explicit D: Playwright report folder only when `-Execute -PlaywrightReportPath ...` are supplied.
 
 This script intentionally does not implement live Sheet export or Drive inventory execution yet. Those require a separate CIS because they touch live data services, even if read-only.
 

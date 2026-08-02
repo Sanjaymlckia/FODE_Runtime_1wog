@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
-const { chromium } = require('F:/Playwright/fode-secure-link-diagnostic/node_modules/playwright');
+const { playwrightModule } = require('../../tools/fode-playwright-path');
+const { chromium } = require(playwrightModule());
 
 const root = path.resolve(__dirname);
 const evidence = path.join(root, 'evidence', 'pass1-correction');

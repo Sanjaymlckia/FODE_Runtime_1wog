@@ -1,6 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const { chromium } = require("F:/Playwright/fode-secure-link-diagnostic/node_modules/playwright");
+const { playwrightModule } = require("../../tools/fode-playwright-path");
+const { chromium } = require(playwrightModule());
 
 const repo = path.resolve(__dirname, "..", "..");
 const evidence = path.join(__dirname, "evidence", "runtime-surface");

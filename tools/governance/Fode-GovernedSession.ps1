@@ -86,7 +86,7 @@ function PolicyHash {
 function Hash-Text([string]$Value) {
   $sha = [System.Security.Cryptography.SHA256]::Create()
   try {
-    return ([Convert]::ToHexString($sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Value)))).ToLowerInvariant()
+    return ([BitConverter]::ToString($sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Value))).Replace('-', '')).ToLowerInvariant()
   } finally { $sha.Dispose() }
 }
 

@@ -3,6 +3,20 @@
 Status: R392A release-pipeline governance update
 Scope: tooling, test and documentation governance; no application runtime behaviour change
 
+## Canonical Convenience-First Control Layer
+
+`tools\fode.ps1` is the canonical backend entrypoint for `continue`, `doctor`,
+and `close`. It loads `runtime-context.json`, verifies the authoritative C:
+repository and approved D: external paths, applies the relevant capability
+profile, and delegates governed-session ownership to
+`tools\governance\Fode-GovernedSession.ps1`.
+
+Routine inspection, local edits, tests, lint, read-only diagnostics and local
+prerequisite repair do not create owner checkpoints. Production, real sends,
+Batch, database/schema migration, destructive operations and material scope
+expansion remain explicit authority boundaries. A bounded code-only staging
+release does not inherit the platform-wide DR restore gate.
+
 ## Current Accepted Runtime Baseline
 
 This document records governance state only. It does not change Apps Script source, deployments, Sheet data, Gmail, Drive, Zoho, Classroom, portal state, role grants, applicant records, tests or runtime behavior.

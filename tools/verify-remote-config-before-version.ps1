@@ -170,7 +170,7 @@ try {
   if ($RequireHashMatch) {
     foreach ($file in $deployableFiles) {
       $appName = Convert-DeployablePathToAppsScriptName -PathText $file
-      $localText = (Get-Content -LiteralPath (Join-Path $repoRootResolved $file) -Raw).Replace("`r`n", "`n")
+      $localText = ([System.IO.File]::ReadAllText((Join-Path $repoRootResolved $file), [System.Text.Encoding]::UTF8)).Replace("`r`n", "`n")
       $remoteText = ([string]$remoteByName[$appName]).Replace("`r`n", "`n")
       $localHash = [System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($localText))).Replace("-", "")
       $remoteHash = [System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($remoteText))).Replace("-", "")

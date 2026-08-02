@@ -1,5 +1,17 @@
 # Runtime Context
 
+The canonical convenience-first commands are:
+
+```powershell
+.\tools\fode.ps1 continue
+.\tools\fode.ps1 doctor -Profile code-only
+.\tools\fode.ps1 close
+```
+
+They resolve the active project from `runtime-context.json`; callers should not
+restate repository, D: storage, deployment or evidence paths in routine CIS
+instructions. Use `doctor` for detailed capability diagnostics.
+
 ## Recommendation
 
 Use `runtime-context.json` as the single source of project tooling configuration.
