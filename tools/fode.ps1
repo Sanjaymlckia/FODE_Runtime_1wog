@@ -187,12 +187,12 @@ if ($Command -eq 'close') {
     Write-Output 'Close: BLOCKED until the current mission authorizes and records disposition of these files'
     exit 1
   }
-  $closeArgs = @('-Action', 'Close')
+  $closeArgs = @{ Action = 'Close' }
   $closeLease = $OwnerLease
   if (!$closeLease -and (Test-Path -LiteralPath $LeasePath -PathType Leaf)) { $closeLease = (Get-Content -LiteralPath $LeasePath -Raw).Trim() }
-  if ($closeLease) { $closeArgs += @('-OwnerLease', $closeLease) }
-  if ($ClearPendingAcceptance) { $closeArgs += '-ClearPendingAcceptance' }
-  if ($AcceptBaselineAdvance) { $closeArgs += '-AcceptBaselineAdvance' }
+  if ($closeLease) { $closeArgs.OwnerLease = $closeLease }
+  if ($ClearPendingAcceptance) { $closeArgs.ClearPendingAcceptance = $true }
+  if ($AcceptBaselineAdvance) { $closeArgs.AcceptBaselineAdvance = $true }
   $closeOutput = @(& $SessionTool @closeArgs 2>&1)
   $closeText = $closeOutput -join "`n"
   Write-Output $closeText
