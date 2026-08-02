@@ -31,7 +31,9 @@ assert.equal(project.capabilityProfiles["database-migration"].drRequired, true, 
 assert.match(project.governance.proportionateDrRule, /Code-only staging releases do not require/);
 assert.equal(project.governance.toolchainRoot, "D:\\FODE_Tooling");
 assert.equal(project.governance.toolchain.loopbackOnly, true);
-assert.equal(project.governance.toolchain.mariadb.status, "pending-owner-authorized-local-server-installation");
+assert.equal(project.governance.toolchain.mariadb.status, "installed-local-loopback-fixture-verified");
+assert.equal(project.governance.toolchain.mariadb.automaticStartup, false);
+assert.equal(project.governance.toolchain.mariadb.windowsService, false);
 
 const activePathFiles = [
   "tools/fode.ps1",

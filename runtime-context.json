@@ -298,7 +298,10 @@
             "root": "D:\\FODE_Tooling\\MariaDB\\11.4.10",
             "expectedVersion": "11.4.10",
             "bindAddress": "127.0.0.1",
-            "status": "pending-owner-authorized-local-server-installation"
+            "status": "installed-local-loopback-fixture-verified",
+            "fixturePort": 33307,
+            "automaticStartup": false,
+            "windowsService": false
           },
           "playwright": "D:\\FODE_Tooling\\Playwright",
           "browserEvidence": "D:\\FODE_Test_Evidence",

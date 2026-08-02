@@ -9,9 +9,9 @@ Complete the platform-wide local toolchain and disaster-recovery capability outs
 ## Outstanding capability work
 
 - Durable authenticated SSH access for staging backup operations.
-- Matching MariaDB 11.4 local loopback restore environment.
 - Reliable materialisation of authenticated Drive/Sheet exports to the approved backup root.
 - Complete protected H1 backup under separate production authority.
+- Trusted server293 host-key confirmation and public-key registration.
 
 ## Completed local capability evidence
 
@@ -19,8 +19,8 @@ Complete the platform-wide local toolchain and disaster-recovery capability outs
 - PHP 8.1.34 x64 CLI is at `D:\FODE_Tooling\PHP\8.1.34` with `pdo_mysql` enabled through the D: `php.ini`.
 - All 18 communications-ledger PHP files lint successfully and the fixture suite passes 30 assertions.
 - Playwright tooling and browser binaries remain under `D:\FODE_Tooling\Playwright`; browser evidence remains under `D:\FODE_Test_Evidence`.
-- MariaDB 11.4.10 portable provisioning is authorized by the capability plan but remains pending the separate local-server installation authority boundary; no hosted or staging database was changed.
-- The available SSH client has no durable project host profile; the current default resolution is not accepted as staging authentication evidence.
+- MariaDB 11.4.10 portable tooling is installed at `D:\FODE_Tooling\MariaDB\11.4.10`; a loopback-only fixture on port `33307` passed synthetic dump/restore and PHP PDO checks, then dropped its local databases and shut down with no listener remaining. No hosted or staging database was changed.
+- The dedicated `fode-server293-ed25519` key exists in the protected user SSH directory. Reverse DNS resolves to `server293-4.web-hosting.com`, but no trusted host-key fingerprint is recorded yet; profile creation, connection and public-key registration remain blocked until the owner confirms the expected fingerprint.
 
 ## R401 evidence boundary
 
