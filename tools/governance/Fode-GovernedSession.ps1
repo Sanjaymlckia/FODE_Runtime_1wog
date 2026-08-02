@@ -14,6 +14,8 @@ param(
   [string]$NextSafeAction = '',
   [string]$SessionId = '',
   [string]$OwnerLease = '',
+  [switch]$ClearPendingAcceptance,
+  [switch]$AcceptBaselineAdvance,
   [switch]$Supersede,
   [string]$StateRoot = ''
 )
@@ -200,7 +202,14 @@ if ($Action -eq 'Orient') {
 }
 
 if (!$previous -or $previous.status -ne 'open') { Fail 'No open governed session exists' 'GOVERNED_SESSION_STOP' }
-if ($previous.baselineHead -ne $observed.head -or $previous.branch -ne $observed.branch) { Fail 'Recorded session baseline conflicts with observed Git evidence' 'BASELINE_DRIFT' }
+if ($previous.baselineHead -ne $observed.head -or $previous.branch -ne $observed.branch) {
+  $authorizedCloseAdvance = $Action -eq 'Close' -and $AcceptBaselineAdvance.IsPresent -and $observed.clean -and $observed.head -eq $observed.originMain -and $observed.branch -eq 'main'
+  if (!$authorizedCloseAdvance) { Fail 'Recorded session baseline conflicts with observed Git evidence' 'BASELINE_DRIFT' }
+  $previous.baselineAdvancedFrom = $previous.baselineHead
+  $previous.baselineAdvanceReason = 'Owner-authorized release closure with HEAD aligned to origin/main'
+  $previous.baselineHead = $observed.head
+  $previous.branch = $observed.branch
+}
 
 if ($Action -eq 'TransferOwnership') {
   if ([string]::IsNullOrWhiteSpace($SessionId) -or $SessionId -ne [string]$previous.sessionId) { Fail 'TransferOwnership requires the exact open session ID' 'OWNER_DECISION_REQUIRED' }
@@ -268,6 +277,10 @@ if ($PendingAcceptance) { $previous.pendingAcceptance = Redact $PendingAcceptanc
 if ($NextSafeAction) { $previous.nextSafeAction = Redact $NextSafeAction }
 if ($Action -eq 'Checkpoint') { $previous.governedState = $(if($observed.clean){'GOVERNED_SESSION_READY'}else{'READ_ONLY_RECONCILIATION'}); Save-Event $previous 'checkpointed'; Output-State $previous 'Checkpoint persisted.'; exit 0 }
 if ($Action -eq 'Close') {
+  if ($ClearPendingAcceptance) {
+    $previous.pendingDecision = $null
+    $previous.pendingAcceptance = $null
+  }
   $previous.closedAt = (Get-Date).ToUniversalTime().ToString('o'); $previous.status = 'closed'
   if (!$observed.clean) { $previous.governedState = 'READ_ONLY_RECONCILIATION'; $previous.nextSafeAction = 'Review existing modifications; closure did not certify them.' }
   elseif ($previous.pendingDecision -or $previous.pendingAcceptance) { $previous.governedState = 'OWNER_DECISION_REQUIRED' }
