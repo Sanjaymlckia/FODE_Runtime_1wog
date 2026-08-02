@@ -114,9 +114,14 @@ function adminWriteIndividualCommunicationPreview_(applicantId, messageType, ide
     body: result.body || p.body || "",
     cc: result.cc || p.cc || "",
     bcc: result.bcc || p.bcc || "",
-    templateId: p.templateId || messageType || "",
-    templateVersionId: p.templateVersionId || ""
+    templateId: result.templateId || p.templateId || messageType || "",
+    templateVersionId: result.templateVersionId || p.templateVersionId || "",
+    templateSource: result.templateSource || p.templateSource || ""
   }));
+  var createdAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+  var payloadFingerprint = typeof fodeLedgerSha256Hex_ === "function" && typeof fodeLedgerCanonicalJson_ === "function"
+    ? fodeLedgerSha256Hex_(fodeLedgerCanonicalJson_(canonical))
+    : "";
   var approved = {
     identity: {
       operationId: clean_(identity && identity.operationId || ""),
@@ -132,6 +137,7 @@ function adminWriteIndividualCommunicationPreview_(applicantId, messageType, ide
     messageType: clean_(messageType || ""),
     templateId: canonical.templateId,
     templateVersionId: canonical.templateVersionId,
+    templateSource: clean_(result.templateSource || p.templateSource || ""),
     recipient: canonical.recipient,
     subject: canonical.subject,
     body: canonical.body,
@@ -139,14 +145,27 @@ function adminWriteIndividualCommunicationPreview_(applicantId, messageType, ide
     bcc: canonical.bcc,
     authorityOverride: canonical.authorityOverride,
     authorityOverrideReason: canonical.authorityOverrideReason,
-    createdAt: new Date().toISOString()
+    createdAt: createdAt,
+    ledgerRequestTimestamp: createdAt,
+    previewFingerprint: payloadFingerprint,
+    ledgerPrepared: false,
+    ledgerPrepareReplayProven: false
   };
+  var key = adminIndividualCommunicationPreviewCacheKey_(applicantId, messageType);
+  var ttlSeconds = 600;
+  CacheService.getUserCache().put(key, JSON.stringify(approved), ttlSeconds);
+  return approved;
+}
+
+function adminPersistIndividualCommunicationPreview_(approved) {
+  var record = approved && typeof approved === "object" ? approved : null;
+  if (!record || !clean_(record.applicantId || "") || !clean_(record.messageType || "")) return false;
   CacheService.getUserCache().put(
-    adminIndividualCommunicationPreviewCacheKey_(applicantId, messageType),
-    JSON.stringify(approved),
+    adminIndividualCommunicationPreviewCacheKey_(record.applicantId, record.messageType),
+    JSON.stringify(record),
     600
   );
-  return approved;
+  return true;
 }
 
 function adminReadIndividualCommunicationPreview_(applicantId, messageType) {
@@ -266,9 +285,53 @@ function adminBindIndividualCommunicationPreview_(approved, payload) {
     bcc: canonical.bcc,
     templateId: canonical.templateId,
     templateVersionId: canonical.templateVersionId,
+    templateSource: clean_(cached.templateSource || ""),
     authorityOverride: canonical.authorityOverride,
-    authorityOverrideReason: canonical.authorityOverrideReason
+    authorityOverrideReason: canonical.authorityOverrideReason,
+    ledgerRequestTimestamp: clean_(cached.ledgerRequestTimestamp || cached.createdAt || ""),
+    previewFingerprint: clean_(cached.previewFingerprint || "")
   });
+}
+
+function adminCanonicalIndividualLedgerPrepareContract_(approved, identity, applicantId, messageType) {
+  var cached = approved && typeof approved === "object" ? approved : {};
+  var operation = identity && typeof identity === "object" ? identity : {};
+  var canonical = adminCanonicalIndividualCommunicationPayloadFallback_(cached);
+  var timestamp = clean_(cached.ledgerRequestTimestamp || cached.createdAt || "").replace(/\.\d{3}Z$/, "Z");
+  var fingerprint = clean_(cached.previewFingerprint || "");
+  if (!fingerprint && typeof fodeLedgerSha256Hex_ === "function" && typeof fodeLedgerCanonicalJson_ === "function") {
+    fingerprint = fodeLedgerSha256Hex_(fodeLedgerCanonicalJson_(canonical));
+  }
+  return {
+    payload: {
+      applicantId: clean_(applicantId || cached.applicantId || ""),
+      messageType: clean_(messageType || cached.messageType || ""),
+      recipient: canonical.recipient,
+      subject: canonical.subject,
+      body: canonical.body,
+      cc: canonical.cc,
+      bcc: canonical.bcc,
+      templateId: canonical.templateId,
+      templateVersionId: canonical.templateVersionId,
+      templateSource: clean_(cached.templateSource || ""),
+      authorityOverride: canonical.authorityOverride,
+      authorityOverrideReason: canonical.authorityOverrideReason,
+      previewFingerprint: fingerprint,
+      ledgerRequestTimestamp: timestamp,
+      communicationStatus: "PREPARED",
+      operationStatus: "PREPARED",
+      previewStatus: "PREPARED"
+    },
+    authorityContext: {
+      source: "R402_REQUIRED_LEDGER",
+      contractVersion: "1.0",
+      externalDeliveryAuthority: "GMAIL_AFTER_PREPARE",
+      actor: clean_(operation.actor || ""),
+      stateFingerprint: clean_(operation.stateFingerprint || "")
+    },
+    previewFingerprint: fingerprint,
+    ledgerRequestTimestamp: timestamp
+  };
 }
 
 function adminCommunicationWithIdentity_(result, identity) {
@@ -418,6 +481,28 @@ function admin_previewFixtureCommunication(payload) {
   });
 }
 
+function admin_reconcileFixturePortalSecret(payload) {
+  return withEnvelope_("admin_reconcileFixturePortalSecret", function (dbgId) {
+    var adminEmail = getCallerEmail_();
+    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    if (!adminHasCapability_(adminEmail, "CAN_PREVIEW_APPLICANT_COMMUNICATION") || !adminHasCapability_(adminEmail, "CAN_SEND_INDIVIDUAL_EMAIL")) {
+      return adminCommBlockedResult_("fixture_secret_reconcile", "FIXTURE_RECONCILIATION_CAPABILITY_REQUIRED", dbgId, { blockReason: "Preview and individual-send capabilities are required for the fixture-only authority reconciliation." });
+    }
+    var guard = adminFixtureCommunicationGuard_(payload, "reconcile_portal_secret");
+    if (guard.ok !== true) return adminCommBlockedResult_("fixture_secret_reconcile", guard.code, dbgId, { blockReason: guard.reason, applicantId: guard.applicantId, messageType: guard.messageType });
+    if (typeof reconcileTestCommAPortalSecretAuthority_ !== "function") {
+      return adminCommBlockedResult_("fixture_secret_reconcile", "FIXTURE_RECONCILIATION_HELPER_UNAVAILABLE", dbgId, { blockReason: "The bounded staging fixture reconciliation helper is unavailable." });
+    }
+    var reconciled = reconcileTestCommAPortalSecretAuthority_(guard);
+    return adminFixtureProofResult_(guard, reconciled, {
+      route: "R407_FIXTURE_PORTAL_SECRET_RECONCILE",
+      gmailInvoked: false,
+      prepareInvoked: false,
+      finalizeInvoked: false
+    });
+  });
+}
+
 function admin_prepareFixtureCommunication(payload) {
   return withEnvelope_("admin_prepareFixtureCommunication", function (dbgId) {
     var adminEmail = getCallerEmail_();
@@ -433,21 +518,8 @@ function admin_prepareFixtureCommunication(payload) {
     var previewMatch = adminIndividualCommunicationPreviewMatches_(approved, { applicantId: guard.applicantId, messageType: guard.messageType }, ["operationId", "previewId", "receiptId"]);
     if (previewMatch.ok !== true) return adminCommBlockedResult_("fixture_prepare", previewMatch.code, dbgId, { blockReason: previewMatch.reason });
     if (typeof fodeLedgerPrepareIndividual_ !== "function") return adminCommBlockedResult_("fixture_prepare", "LEDGER_REQUIRED_HELPER_UNAVAILABLE", dbgId, { blockReason: "Durable communication ledger preparation is required before proof." });
-    var payloadForLedger = Object.assign({}, approved, {
-      applicantId: guard.applicantId,
-      messageType: guard.messageType,
-      communicationStatus: "PREPARED",
-      operationStatus: "PREPARED",
-      previewStatus: "PREPARED",
-      ledgerRequestTimestamp: new Date().toISOString()
-    });
-    var prepared = fodeLedgerPrepareIndividual_(identity, guard.applicantId, payloadForLedger, {
-      source: "R407_FIXTURE_PROOF",
-      contractVersion: "1.0",
-      externalDeliveryAuthority: "GMAIL_AFTER_SEPARATE_AUTHORIZATION",
-      actor: clean_(identity.actor || adminEmail),
-      stateFingerprint: clean_(identity.stateFingerprint || "")
-    }, {});
+    var prepareContract = adminCanonicalIndividualLedgerPrepareContract_(approved, identity, guard.applicantId, guard.messageType);
+    var prepared = fodeLedgerPrepareIndividual_(identity, guard.applicantId, prepareContract.payload, prepareContract.authorityContext, {});
     var correlation = adminCommunicationWithIdentity_(prepared, identity);
     correlation.commandId = clean_(correlation.commandId || prepared.commandId || prepared.response && prepared.response.commandId || "");
     correlation.eventId = clean_(correlation.eventId || prepared.eventId || prepared.response && prepared.response.eventId || "");
@@ -456,6 +528,13 @@ function admin_prepareFixtureCommunication(payload) {
     if (prepared.ok !== true || prepared.prepared !== true || prepared.status !== "PREPARED" || !environment || !correlation.commandId || !correlation.eventId || !correlation.communicationId) {
       return adminFixtureProofResult_(guard, Object.assign({}, correlation, { ok: false, result: "BLOCKED", blockCode: clean_(prepared.code || "LEDGER_PREPARE_PROOF_INCOMPLETE"), blockReason: "Durable PRE_SEND_PREPARED evidence or non-secret ledger environment was not returned; Gmail was not invoked." }), { route: "R407_FIXTURE_PREPARE", gmailInvoked: false, finalizeInvoked: false });
     }
+    approved.ledgerPrepared = true;
+    approved.ledgerPrepareReplayProven = prepared.replay === true || prepared.idempotent === true;
+    approved.ledgerCommunicationId = correlation.communicationId;
+    approved.ledgerCommandId = correlation.commandId;
+    approved.ledgerEventId = correlation.eventId;
+    approved.ledgerEnvironment = environment;
+    adminPersistIndividualCommunicationPreview_(approved);
     return adminFixtureProofResult_(guard, Object.assign({}, correlation, {
       ok: true,
       result: "PRE_SEND_PREPARED",
@@ -463,10 +542,52 @@ function admin_prepareFixtureCommunication(payload) {
       ledgerState: "PRE_SEND_PREPARED",
       ledgerEventType: "PRE_SEND_PREPARED",
       ledgerEnvironment: environment,
+      idempotent: prepared.idempotent === true,
+      replay: prepared.replay === true,
+      prepareReplayProven: approved.ledgerPrepareReplayProven === true,
+      previewFingerprint: prepareContract.previewFingerprint,
       prepareOnly: true,
       gmailInvoked: false,
       finalizeInvoked: false
     }), { route: "R407_FIXTURE_PREPARE", gmailInvoked: false, finalizeInvoked: false });
+  });
+}
+
+function admin_sendFixtureCommunication(payload) {
+  return withEnvelope_("admin_sendFixtureCommunication", function (dbgId) {
+    var adminEmail = getCallerEmail_();
+    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    if (!adminHasCapability_(adminEmail, "CAN_SEND_INDIVIDUAL_EMAIL")) {
+      return adminCommBlockedResult_("fixture_send", adminCapabilityBlockCode_("CAN_SEND_INDIVIDUAL_EMAIL"), dbgId, { blockReason: adminCapabilityBlockReason_("CAN_SEND_INDIVIDUAL_EMAIL") });
+    }
+    var guard = adminFixtureCommunicationGuard_(payload, "send_or_replay");
+    if (guard.ok !== true) return adminCommBlockedResult_("fixture_send", guard.code, dbgId, { blockReason: guard.reason, applicantId: guard.applicantId, messageType: guard.messageType });
+    var approved = adminReadIndividualCommunicationPreview_(guard.applicantId, guard.messageType);
+    if (!approved || approved.ledgerPrepared !== true || approved.ledgerPrepareReplayProven !== true) {
+      return adminCommBlockedResult_("fixture_send", "FIXTURE_PREPARED_REPLAY_REQUIRED", dbgId, { blockReason: "The fixture requires an accepted PREPARED result and an identical persisted PREPARED replay before Gmail." });
+    }
+    var identity = approved.identity || {};
+    var result = admin_sendApplicantMessage({
+      applicantId: guard.applicantId,
+      messageType: guard.messageType,
+      operationId: clean_(identity.operationId || ""),
+      previewId: clean_(identity.previewId || ""),
+      receiptId: clean_(identity.receiptId || ""),
+      commandType: clean_(identity.commandType || ""),
+      actor: clean_(identity.actor || ""),
+      stateFingerprint: clean_(identity.stateFingerprint || ""),
+      cooldownCycle: clean_(identity.cooldownCycle || ""),
+      idempotencyKey: clean_(identity.idempotencyKey || ""),
+      confirmManualSingleSend: true,
+      sourceSurface: "admin",
+      sourceView: "admin"
+    });
+    return adminFixtureProofResult_(guard, result, {
+      route: "R407_FIXTURE_SEND_OR_REPLAY",
+      approvedTemplateSource: clean_(approved.templateSource || ""),
+      approvedTemplateVersionId: clean_(approved.templateVersionId || ""),
+      previewFingerprint: clean_(approved.previewFingerprint || "")
+    });
   });
 }
 
@@ -650,13 +771,37 @@ function admin_sendApplicantMessage(payload) {
       if (Object.prototype.hasOwnProperty.call(boundPayload, "body") && clean_(boundPayload.body || "")) {
         sendOptions.editedBody = String(boundPayload.body || "");
       }
-      var ledgerPayload = Object.assign({}, boundPayload, {
-        applicantId: applicantId,
-        messageType: messageType,
-        templateId: clean_(boundPayload.templateId || requestedType),
-        templateVersionId: clean_(boundPayload.templateVersionId || ""),
-        ledgerRequestTimestamp: clean_(boundPayload.ledgerRequestTimestamp || new Date().toISOString())
-      });
+      var prepareContract = typeof adminCanonicalIndividualLedgerPrepareContract_ === "function"
+        ? adminCanonicalIndividualLedgerPrepareContract_(approvedPreview, identity, applicantId, messageType)
+        : {
+          payload: {
+            applicantId: applicantId,
+            messageType: messageType,
+            recipient: clean_(approvedPreview.recipient || ""),
+            subject: String(approvedPreview.subject || ""),
+            body: String(approvedPreview.body || ""),
+            cc: clean_(approvedPreview.cc || ""),
+            bcc: clean_(approvedPreview.bcc || ""),
+            templateId: clean_(approvedPreview.templateId || requestedType),
+            templateVersionId: clean_(approvedPreview.templateVersionId || ""),
+            templateSource: clean_(approvedPreview.templateSource || ""),
+            authorityOverride: approvedPreview.authorityOverride === true,
+            authorityOverrideReason: clean_(approvedPreview.authorityOverrideReason || ""),
+            previewFingerprint: clean_(approvedPreview.previewFingerprint || ""),
+            ledgerRequestTimestamp: clean_(approvedPreview.ledgerRequestTimestamp || approvedPreview.createdAt || ""),
+            communicationStatus: "PREPARED",
+            operationStatus: "PREPARED",
+            previewStatus: "PREPARED"
+          },
+          authorityContext: {
+            source: "R402_REQUIRED_LEDGER",
+            contractVersion: "1.0",
+            externalDeliveryAuthority: "GMAIL_AFTER_PREPARE",
+            actor: clean_(identity.actor || ""),
+            stateFingerprint: clean_(identity.stateFingerprint || "")
+          }
+        };
+      var ledgerPayload = prepareContract.payload;
       if (typeof fodeLedgerPrepareIndividual_ !== "function") {
         return adminCommBlockedResult_("send", "LEDGER_REQUIRED_HELPER_UNAVAILABLE", dbgId, {
           applicantId: applicantId,
@@ -667,13 +812,7 @@ function admin_sendApplicantMessage(payload) {
           blockReason: "Durable communication ledger preparation is required before Gmail."
       });
       }
-      var prepared = fodeLedgerPrepareIndividual_(identity, applicantId, ledgerPayload, {
-        source: "R402_REQUIRED_LEDGER",
-        contractVersion: "1.0",
-        externalDeliveryAuthority: "GMAIL_AFTER_PREPARE",
-        actor: identity.actor,
-        stateFingerprint: identity.stateFingerprint
-      }, {});
+      var prepared = fodeLedgerPrepareIndividual_(identity, applicantId, ledgerPayload, prepareContract.authorityContext, {});
       if (prepared.ok !== true) {
         return attachLedgerCorrelation_(adminCommBlockedResult_("send", clean_(prepared.code || "LEDGER_PREPARE_REJECTED"), dbgId, {
           applicantId: applicantId,
@@ -715,13 +854,7 @@ function admin_sendApplicantMessage(payload) {
         legacyResult.ledgerStatus = "DELIVERY_UNKNOWN";
         return legacyResult;
       }
-      var finalized = fodeLedgerFinalizeIndividual_(identity, applicantId, ledgerPayload, {
-        source: "R402_REQUIRED_LEDGER",
-        contractVersion: "1.0",
-        externalDeliveryAuthority: "GMAIL_AFTER_PREPARE",
-        actor: identity.actor,
-        stateFingerprint: identity.stateFingerprint
-      }, legacyResult, {});
+      var finalized = fodeLedgerFinalizeIndividual_(identity, applicantId, ledgerPayload, prepareContract.authorityContext, legacyResult, {});
       if (finalized.ok !== true) {
         legacyResult = attachLedgerCorrelation_(legacyResult, identity, finalized);
         legacyResult.result = "RECONCILIATION_REQUIRED";

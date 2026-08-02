@@ -3773,6 +3773,115 @@ function setPortalSecretForApplicant_(applicantId, newSecret) {
   return resetPortalSecretForApplicant_(applicantId, { secretPlain: secretNorm });
 }
 
+function reconcileTestCommAPortalSecretAuthority_(fixtureGuard) {
+  var guard = fixtureGuard && typeof fixtureGuard === "object" ? fixtureGuard : {};
+  var expectedApplicantId = "FODE-26-TEST-011";
+  var expectedMarker = "TEST_COMM_A";
+  var expectedType = "Regression Fixture";
+  var expectedRecipient = "sanjay@minervacenters.com";
+  var mode = clean_(typeof getWorkingDataMode_ === "function" ? getWorkingDataMode_() : "").toUpperCase();
+  if (mode !== "STAGING" || typeof isAdminDeploymentRequest_ !== "function" || isAdminDeploymentRequest_() !== true) {
+    return { ok: false, result: "BLOCKED", code: "FIXTURE_RECONCILIATION_STAGING_ONLY", environment: mode || "UNKNOWN", secretDisclosed: false, fodeDataWritten: false };
+  }
+  if (
+    clean_(guard.applicantId || "") !== expectedApplicantId
+    || clean_(guard.fixtureMarker || "") !== expectedMarker
+    || clean_(guard.type || "") !== expectedType
+    || clean_(guard.recipient || "").toLowerCase() !== expectedRecipient
+    || guard.nonOperational !== true
+    || guard.excludedFromNormalQueues !== true
+  ) {
+    return { ok: false, result: "BLOCKED", code: "FIXTURE_RECONCILIATION_IDENTITY_NOT_PROVEN", environment: mode, secretDisclosed: false, fodeDataWritten: false };
+  }
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) {
+    return { ok: false, result: "BLOCKED", code: "FIXTURE_RECONCILIATION_IN_PROGRESS", environment: mode, secretDisclosed: false, fodeDataWritten: false };
+  }
+  try {
+    var opened = openPortalSecretsExistingSheet_(newDebugId_());
+    if (!opened || opened.ok !== true) {
+      return { ok: false, result: "BLOCKED", code: clean_(opened && opened.code || "FIXTURE_PORTAL_SECRETS_UNAVAILABLE"), environment: mode, secretDisclosed: false, fodeDataWritten: false };
+    }
+    var sh = opened.sheet;
+    var lastCol = sh.getLastColumn();
+    var lastRow = sh.getLastRow();
+    if (lastCol < 1) return { ok: false, result: "BLOCKED", code: "PORTAL_SECRETS_SCHEMA_EMPTY", environment: mode, secretDisclosed: false, fodeDataWritten: false };
+    var headers = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+    var idx = buildPortalSecretHeaderIndex_(headers);
+    if (!idx.ApplicantID || !idx.Status || !resolvePortalSecretColumnIndex_(idx)) {
+      return { ok: false, result: "BLOCKED", code: "PORTAL_SECRETS_SCHEMA_INCOMPLETE", environment: mode, secretDisclosed: false, fodeDataWritten: false };
+    }
+    var rows = lastRow >= 2 ? sh.getRange(2, 1, lastRow - 1, lastCol).getValues() : [];
+    var matches = [];
+    var activeUsable = [];
+    rows.forEach(function (row, offset) {
+      var rec = normalizePortalSecretRow_(idx, row, offset + 2);
+      if (clean_(rec.applicantId || "").toLowerCase() !== expectedApplicantId.toLowerCase()) return;
+      rec.status = normalizePortalSecretStatus_(rec.status || "");
+      matches.push(rec);
+      if (rec.status === "ACTIVE" && !!clean_(rec.secretPlain || rec.secretHash || "")) activeUsable.push(rec);
+    });
+    if (matches.length === 1 && activeUsable.length === 1) {
+      return {
+        ok: true,
+        result: "RECONCILIATION_NOOP",
+        applicantId: expectedApplicantId,
+        fixtureMarker: expectedMarker,
+        environment: mode,
+        matchingRecordCount: 1,
+        activeUsableRecordCount: 1,
+        rowIndex: Number(activeUsable[0].rowIndex || 0),
+        secretDisclosed: false,
+        fodeDataWritten: false
+      };
+    }
+    if (matches.length !== 0) {
+      return {
+        ok: false,
+        result: "BLOCKED",
+        code: "FIXTURE_PORTAL_SECRET_CONFLICT",
+        applicantId: expectedApplicantId,
+        fixtureMarker: expectedMarker,
+        environment: mode,
+        matchingRecordCount: matches.length,
+        activeUsableRecordCount: activeUsable.length,
+        secretDisclosed: false,
+        fodeDataWritten: false
+      };
+    }
+    var generatedSecret = makePortalSecretForReset_();
+    var generatedHash = hashPortalSecret_(generatedSecret);
+    var nowIso = new Date().toISOString();
+    var newRow = buildPortalSecretOutputRow_(idx, lastCol, expectedApplicantId, generatedSecret, generatedHash, nowIso, {
+      email: expectedRecipient,
+      fullName: expectedMarker
+    });
+    var rowIndex = sh.getLastRow() + 1;
+    sh.getRange(rowIndex, 1, 1, lastCol).setValues([newRow]);
+    var readBack = normalizePortalSecretRow_(idx, sh.getRange(rowIndex, 1, 1, lastCol).getValues()[0], rowIndex);
+    var readBackUsable = clean_(readBack.applicantId || "") === expectedApplicantId
+      && normalizePortalSecretStatus_(readBack.status || "") === "ACTIVE"
+      && !!clean_(readBack.secretPlain || readBack.secretHash || "");
+    if (!readBackUsable) {
+      return { ok: false, result: "BLOCKED", code: "FIXTURE_PORTAL_SECRET_READBACK_FAILED", applicantId: expectedApplicantId, fixtureMarker: expectedMarker, environment: mode, matchingRecordCount: 1, activeUsableRecordCount: 0, secretDisclosed: false, fodeDataWritten: false };
+    }
+    return {
+      ok: true,
+      result: "RECONCILIATION_CREATED",
+      applicantId: expectedApplicantId,
+      fixtureMarker: expectedMarker,
+      environment: mode,
+      matchingRecordCount: 1,
+      activeUsableRecordCount: 1,
+      rowIndex: rowIndex,
+      secretDisclosed: false,
+      fodeDataWritten: false
+    };
+  } finally {
+    try { lock.releaseLock(); } catch (_releaseErr) {}
+  }
+}
+
 function buildStudentPortalUrl_(applicantId, secret) {
   var base = canonicalExecBase_(CONFIG.DEPLOYMENT_ID_STUDENT || CONFIG.WEBAPP_URL_STUDENT || "");
   if (!base) throw new Error("Missing canonical student exec base");

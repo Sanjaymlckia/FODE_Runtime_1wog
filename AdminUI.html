@@ -2339,7 +2339,7 @@
           </div>
         </div>
         <div class="opsCard" style="margin-top:14px;" data-r407-fixture-proof="TEST_COMM_A">
-          <div class="opsSectionHeader"><div><h3>TEST_COMM_A Fixture Proof</h3><p>Admin staging only: exact non-operational fixture, preview and durable ledger prepare evidence. This panel has no send action.</p></div><span class="opsStatusPill warn">No Gmail</span></div>
+          <div class="opsSectionHeader"><div><h3>TEST_COMM_A End-to-End Proof</h3><p>Admin staging only: reconcile the exact fixture authority, preview the approved template, prove persisted PREPARED, send once, then verify replay without another email.</p></div><span class="opsStatusPill warn">One controlled Gmail</span></div>
           <div class="opsInfoGrid">
             <div><strong>ApplicantID</strong><br>FODE-26-TEST-011</div>
             <div><strong>Message type</strong><br>docs_missing</div>
@@ -2347,10 +2347,13 @@
             <div><strong>Marker</strong><br>TEST_COMM_A / REGRESSION_FIXTURE_DO_NOT_PROCESS</div>
           </div>
           <div class="opsActionRow" style="margin-top:12px;">
-            <button class="opsActionBtn live" type="button" onclick="opsPreviewTestCommAFixture_()">Preview TEST_COMM_A</button>
-            <button class="opsActionBtn" type="button" onclick="opsPrepareTestCommAFixture_()">Prepare ledger proof only</button>
+            <button class="opsActionBtn" data-r407-fixture-action="reconcile" type="button" onclick="opsReconcileTestCommAFixture_()">Reconcile fixture authority</button>
+            <button class="opsActionBtn live" data-r407-fixture-action="preview" type="button" onclick="opsPreviewTestCommAFixture_()" disabled>Preview approved template</button>
+            <button class="opsActionBtn" data-r407-fixture-action="prepare" type="button" onclick="opsPrepareTestCommAFixture_()" disabled>Prepare ledger</button>
+            <button class="opsActionBtn danger" data-r407-fixture-action="send" type="button" onclick="opsSendTestCommAFixture_()" disabled>Send exactly once</button>
+            <button class="opsActionBtn" data-r407-fixture-action="replay" type="button" onclick="opsReplayTestCommAFixture_()" disabled>Verify no-send replay</button>
           </div>
-          <p class="opsControlNote">The prepare-only action is separately gated by the server fixture identity check and never invokes Gmail or finalization.</p>
+          <p class="opsControlNote">Send remains disabled until the server proves an initial PREPARED result and an identical persisted PREPARED replay. The replay control must return IDEMPOTENT_REPLAY without Gmail.</p>
           <div id="opsTestCommAFixtureResult" class="opsResultBox hidden"></div>
         </div>
         <div class="opsCard" style="margin-top:14px;">
@@ -2757,7 +2760,7 @@
 
     <section class="legacyPanelBlock" data-r407-fixture-proof-admin="TEST_COMM_A">
       <h3>TEST_COMM_A Fixture Proof — Admin staging</h3>
-      <div class="muted" style="margin-bottom:10px;">Exact non-operational fixture route. Preview and prepare-only ledger evidence are available here; this control has no Gmail send, finalize, or replay action.</div>
+      <div class="muted" style="margin-bottom:10px;">Exact non-operational staging fixture route. Complete authority reconciliation, approved preview and persisted PREPARED proof before the one controlled Gmail action becomes available.</div>
       <div class="commMeta">
         <div class="box"><div class="k">ApplicantID</div><div class="v">FODE-26-TEST-011</div></div>
         <div class="box"><div class="k">Message type</div><div class="v">docs_missing</div></div>
@@ -2765,8 +2768,11 @@
         <div class="box"><div class="k">Marker</div><div class="v">TEST_COMM_A / REGRESSION_FIXTURE_DO_NOT_PROCESS</div></div>
       </div>
       <div class="row" style="margin-top:10px;align-items:center;gap:8px;">
-        <button class="btn small" type="button" onclick="opsPreviewTestCommAFixture_()">Preview TEST_COMM_A</button>
-        <button class="btn small" type="button" onclick="opsPrepareTestCommAFixture_()">Prepare ledger proof only</button>
+        <button class="btn small" data-r407-fixture-action="reconcile" type="button" onclick="opsReconcileTestCommAFixture_()">Reconcile fixture authority</button>
+        <button class="btn small" data-r407-fixture-action="preview" type="button" onclick="opsPreviewTestCommAFixture_()" disabled>Preview approved template</button>
+        <button class="btn small" data-r407-fixture-action="prepare" type="button" onclick="opsPrepareTestCommAFixture_()" disabled>Prepare ledger</button>
+        <button class="btn small danger" data-r407-fixture-action="send" type="button" onclick="opsSendTestCommAFixture_()" disabled>Send exactly once</button>
+        <button class="btn small" data-r407-fixture-action="replay" type="button" onclick="opsReplayTestCommAFixture_()" disabled>Verify no-send replay</button>
       </div>
       <div id="adminTestCommAFixtureResult" class="sendSummary hidden" style="margin-top:8px;"></div>
     </section>
