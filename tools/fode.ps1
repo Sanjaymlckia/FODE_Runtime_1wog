@@ -124,8 +124,8 @@ function Write-ContextSummary {
 }
 
 function Invoke-SessionOrient {
-  $sessionArgs = @('-Action', 'Orient', '-TaskLabel', "FODE $Profile")
-  if ($OwnerLease) { $sessionArgs += @('-OwnerLease', $OwnerLease) }
+  $sessionArgs = @{ Action = 'Orient'; TaskLabel = "FODE $Profile" }
+  if ($OwnerLease) { $sessionArgs.OwnerLease = $OwnerLease }
   $output = @(& $SessionTool @sessionArgs 2>&1)
   $json = $output -join "`n"
   try { return $json | ConvertFrom-Json } catch { return $null }
