@@ -21,13 +21,14 @@ Runtime files such as `Config.js` still own project runtime behavior. REP contex
 Current FODE baseline recorded by `runtime-context.json`:
 
 - Repository: `C:\Repos\FODE_Runtime_1wog`
-- Git baseline: `2ebe8bfd76e71763ef708bd28cbe51eb5c73ef2b`
-- Admin staging: `@428 / r392 / 392`
-- Student: `@247 / r217 / 217`
+- Git baseline: `7f7e63555bfd850243af2513e2ccee5736760f56`
+- Admin staging last released: `@446 / r406 / 406`
+- R407 canonicalization source: committed at `7f7e63555bfd850243af2513e2ccee5736760f56`; release is separately authorized work and has not occurred
+- Student recorded expectation: `@439 / r403 / 403` (not re-read during this context refresh)
 - Production: untouched
-- Accepted repairs: `R390B1`, `R391A` audit, `R391B`, `R391C`
+- Accepted repairs through Admin staging: `R406A/R407` fixture-proof route and `R406B/R407` binding repair
 - Current restriction: Batch send prohibited
-- Next implementation pass after R392A tooling acceptance: `R391D/E`
+- Next safe action: obtain a Track H CIS for an Admin-@442-only R407 release; do not imply Student verification where Student is no-touch
 
 `runtime-context.json` is source-controlled tooling context. It records expected identities and governance state; it does not prove live runtime state by itself. Live `whoami` remains runtime truth before any release acceptance or deployment-dependent claim.
 
@@ -67,7 +68,7 @@ R392A consolidates normal Admin staging releases into:
 2. owner evidence review and acceptance
 3. `tools\Complete-FodeReleaseCommit.ps1`
 
-The pipeline uses `runtime-context.json` for repository, Apps Script project, Admin deployment, Student deployment, Production no-touch status, evidence roots and expected identities. Runtime context is still not live proof; Admin and Student `whoami` remain runtime truth after any deployment-dependent action.
+The pipeline uses `runtime-context.json` for repository, Apps Script project, deployment targets, Production no-touch status, evidence roots and expected identities. Runtime context is still not live proof; the repinned target deployment's `whoami` remains runtime truth after any deployment-dependent action. A no-touch deployment is verified only when the active CIS explicitly authorizes that read-only call.
 
 ## Adding a Project
 

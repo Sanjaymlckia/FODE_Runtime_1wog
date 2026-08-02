@@ -1,19 +1,23 @@
 # Admin Release Pipeline
 
-Status: R392A tooling consolidation. No runtime release is authorized by this document.
+Status: operator guidance. No runtime release is authorized by this document.
 
 ## Primary Command
 
 Use the governed Admin staging release command for normal bounded releases:
 
+This helper currently reads both Admin and Student identities. It is not valid for an Admin-only CIS that prohibits Student readback; use that CIS's target-only sequence until the helper has an explicitly tested Admin-only mode.
+
 ```powershell
 .\tools\Invoke-FodeAdminRelease.ps1 `
   -ReleaseClass BackendSemantic `
-  -ExpectedAdminRuntime r392 `
-  -ExpectedAdminDeploy 392 `
-  -ExpectedStudentRuntime r217 `
-  -ExpectedStudentDeploy 217
+  -ExpectedAdminRuntime rNNN `
+  -ExpectedAdminDeploy NNN `
+  -ExpectedStudentRuntime rNNN `
+  -ExpectedStudentDeploy NNN
 ```
+
+Substitute only the identity approved by the active CIS. Never reuse the example values or a previous release identity.
 
 The command detects changed files, prints the minimum release class, rejects risk downgrades, creates a manifest, runs the class-specific validation plan, preserves repeated remote Config readback before version creation, repins Admin only, verifies runtime identity, and stops before Git commit.
 

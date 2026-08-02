@@ -6,7 +6,7 @@ Live `whoami` is runtime truth.
 Local source is not proof of live runtime.
 Hot paths must avoid repeated sheet scans, repeated resolver calls, redundant guards.
 Every release requires exact acceptance URLs and PASS/FAIL checks.
-Release incomplete until Admin whoami, Student whoami, and browser checks pass.
+Release incomplete until the target deployment's live whoami and CIS-required browser checks pass. For an Admin-only release, Admin whoami is required; do not call Student whoami unless the CIS explicitly authorizes it as read-only verification or touches Student.
 When unsure, stop and surface uncertainty instead of guessing.
 Rollback prefers deployment repin first.
 Release closure follows `docs/governance/RELEASE_CLOSURE_DISCIPLINE.md`: close only against approved scope, classify new findings as BLOCKER or FOLLOW-UP, and record follow-ups without expanding the current release unless they are true blockers.
@@ -18,9 +18,9 @@ Every future CIS must explicitly declare exactly one release track before implem
 - `Track L` - light UI/documentation work, including documentation-only process hardening. Use only when the CIS does not change backend behavior, data mutation authority, send logic, portal security, payment/Books/classroom logic, schema, Script Properties, or deployment architecture.
   - Requires the CIS-defined allowed files, scoped diff checks, required runtime identity/deployment proof if a runtime release is performed, and acceptance evidence tied to the changed surface.
   - Codex browser visual capture is not mandatory. Rendered HTML, screenshots, operator-supplied browser evidence, or other CIS-approved visual/source evidence may satisfy acceptance when recorded as PASS/FAIL.
-  - Track L does not waive Admin/Student `whoami` checks for a runtime deployment and does not authorize dangerous actions during acceptance.
+  - Track L does not waive the target deployment's `whoami` check for a runtime deployment and does not authorize dangerous actions during acceptance. Student `whoami` remains CIS-authorized read-only verification only for Admin-only releases.
 - `Track H` - high-risk or behavior-changing release. Required for backend changes; send/write execution logic; authorization or supervisory gates; portal/security/token logic; Books/payment/classroom mutations; schema or Script Properties; or any change with material live-data risk.
-  - Requires full release identity, remote-source, deployment repin, Admin/Student `whoami`, browser acceptance, safety, rollback, and closure discipline specified by the CIS and this repository.
+  - Requires full release identity, remote-source, approved deployment repin, target-deployment `whoami`, browser acceptance, safety, rollback, and closure discipline specified by the CIS and this repository. Additional deployment `whoami` checks require CIS authority when that deployment is otherwise no-touch.
   - Acceptance must exercise only approved read-only or explicitly authorized actions; dangerous actions remain prohibited unless the CIS separately approves the exact action.
 
 Documentation-only process hardening is `Track L` and must additionally state `No runtime release`. It must not use an `rNNN` runtime identity, `clasp push`, Apps Script version, deployment repin, or staging tag unless separately authorized later.
@@ -50,7 +50,7 @@ Required order:
 7. Remote verification pull must be outside the clasp source root.
 8. Verify pulled remote `Config.js` equals intended local `VERSION` and `DEPLOY_VERSION_NUMBER`.
 9. Only then run `clasp version`.
-10. After version and deployment repin, verify Admin and Student `whoami`.
+10. After version and deployment repin, verify the repinned deployment's `whoami`. Verify any other deployment only when the CIS expressly authorizes read-only verification.
 11. If `whoami` does not match intended runtime, release fails.
 
 Contaminated version rule:
@@ -96,7 +96,7 @@ Level 2 - Feature/UI:
 Level 3 - Release:
 - release preflight.
 - `clasp push`, Apps Script version, and Admin staging repin only when authorized by the release CIS.
-- Admin/Student `whoami` proof as required by release discipline.
+- Target-deployment `whoami` proof as required by the CIS; do not call another deployment's endpoint by implication.
 - manual/operator acceptance.
 - Playwright only when explicitly requested by the release CIS or when a suspected browser-only regression cannot be proven by Node tests.
 

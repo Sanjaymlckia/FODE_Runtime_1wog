@@ -208,14 +208,18 @@ Apps Script:
 
 Primary governed Admin staging release command:
 
+This helper currently verifies both Admin and Student endpoints. Do **not** use it for an Admin-only CIS that prohibits Student readback; use the CIS-approved target-only release sequence until the helper gains an explicitly tested Admin-only mode.
+
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Invoke-FodeAdminRelease.ps1 `
   -ReleaseClass BackendSemantic `
-  -ExpectedAdminRuntime r392 `
-  -ExpectedAdminDeploy 392 `
-  -ExpectedStudentRuntime r217 `
-  -ExpectedStudentDeploy 217
+  -ExpectedAdminRuntime rNNN `
+  -ExpectedAdminDeploy NNN `
+  -ExpectedStudentRuntime rNNN `
+  -ExpectedStudentDeploy NNN
 ```
+
+Replace `rNNN`/`NNN` with the identity approved by the release CIS; never copy a prior release identity into a new version.
 
 Release classes:
 

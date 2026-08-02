@@ -31,16 +31,16 @@
           "deploymentId": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ",
           "url": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec",
           "whoamiUrl": "https://script.google.com/macros/s/AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ/exec?view=whoami",
-          "expectedRuntime": "r400",
-          "expectedDeploy": 400,
-          "expectedAppsScriptVersion": 436,
+          "expectedRuntime": "r406",
+          "expectedDeploy": 406,
+          "expectedAppsScriptVersion": 446,
           "lastRelease": {
-            "runtimeIdentity": "r392 / 392",
-            "appsScriptVersion": 428,
-            "deploymentPin": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @428",
-            "description": "R391C classification, routing, Finance, DTO and capability semantic repair",
+            "runtimeIdentity": "r406 / 406",
+            "appsScriptVersion": 446,
+            "deploymentPin": "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ @446",
+            "description": "R406B/R407 Admin staging binding repair",
             "commitRefs": [
-              "R391C closure commit"
+              "12d39e12bb153a4cd6ae2a858efc0b2208bfa49d"
             ]
           }
         },
