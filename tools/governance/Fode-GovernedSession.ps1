@@ -205,8 +205,8 @@ if (!$previous -or $previous.status -ne 'open') { Fail 'No open governed session
 if ($previous.baselineHead -ne $observed.head -or $previous.branch -ne $observed.branch) {
   $authorizedCloseAdvance = $Action -eq 'Close' -and $AcceptBaselineAdvance.IsPresent -and $observed.clean -and $observed.head -eq $observed.originMain -and $observed.branch -eq 'main'
   if (!$authorizedCloseAdvance) { Fail 'Recorded session baseline conflicts with observed Git evidence' 'BASELINE_DRIFT' }
-  $previous.baselineAdvancedFrom = $previous.baselineHead
-  $previous.baselineAdvanceReason = 'Owner-authorized release closure with HEAD aligned to origin/main'
+  Add-Or-Set $previous 'baselineAdvancedFrom' $previous.baselineHead
+  Add-Or-Set $previous 'baselineAdvanceReason' 'Owner-authorized release closure with HEAD aligned to origin/main'
   $previous.baselineHead = $observed.head
   $previous.branch = $observed.branch
 }
