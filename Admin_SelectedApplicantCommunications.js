@@ -354,28 +354,30 @@ function adminCommunicationWithIdentity_(result, identity) {
   return out;
 }
 
-var FODE_R407_TEST_COMM_A_FIXTURE = {
-  applicantId: "FODE-26-TEST-011",
-  marker: "TEST_COMM_A",
-  messageType: "docs_missing",
-  recipient: "sanjay@minervacenters.com",
-  nonOperationalMarker: "REGRESSION_FIXTURE_DO_NOT_PROCESS",
-  type: "Regression Fixture"
-};
-
 function adminFixtureCommunicationGuard_(payload, action) {
   var p = payload && typeof payload === "object" ? payload : {};
-  var fixture = FODE_R407_TEST_COMM_A_FIXTURE;
+  var fixture = getR408AuthorizedFixtureContract_();
   var applicantId = clean_(p.applicantId || "");
   var messageType = clean_(p.messageType || "").toLowerCase();
-  if (applicantId !== fixture.applicantId || messageType !== fixture.messageType) {
-    return { ok: false, code: "FIXTURE_ONLY_ROUTE", reason: "This route accepts only the approved TEST_COMM_A fixture and docs_missing." };
+  var submittedRecipient = clean_(p.recipient || "").toLowerCase();
+  if (!/^FODE-26-[0-9]{6}$/.test(applicantId) || messageType !== fixture.messageType) {
+    return { ok: false, code: "FIXTURE_ONLY_ROUTE", reason: "This route accepts one canonical FODE ApplicantID bound to the approved R408 TEST_COMM_A fixture and docs_missing." };
+  }
+  if (
+    clean_(p.fixtureMarker || "") !== fixture.firstName
+    || clean_(p.fixtureIdentity || "") !== fixture.lastName
+    || clean_(p.nonOperationalMarker || "") !== fixture.nonOperationalMarker
+    || clean_(p.queueExclusionMarker || "") !== fixture.queueExclusionMarker
+    || clean_(p.correlationId || "") !== fixture.correlationId
+    || submittedRecipient !== fixture.recipient
+  ) {
+    return { ok: false, code: "FIXTURE_BINDING_MISMATCH", reason: "Displayed and submitted R408 fixture identity or recipient binding does not match the server contract.", applicantId: applicantId, messageType: messageType };
   }
   if (Array.isArray(p.applicantIds) || Array.isArray(p.recipients) || Array.isArray(p.messages)) {
     return { ok: false, code: "FIXTURE_BULK_NOT_ALLOWED", reason: "The fixture proof route accepts one exact ApplicantID only." };
   }
-  var suppliedRecipient = clean_(p.recipient || p.effectiveEmail || "");
-  if (suppliedRecipient && suppliedRecipient.toLowerCase() !== fixture.recipient) {
+  var suppliedEffectiveRecipient = clean_(p.effectiveEmail || "");
+  if (suppliedEffectiveRecipient && suppliedEffectiveRecipient.toLowerCase() !== fixture.recipient) {
     return { ok: false, code: "FIXTURE_RECIPIENT_OVERRIDE", reason: "The fixture recipient is locked to sanjay@minervacenters.com." };
   }
   if (clean_(p.cc || "") || clean_(p.bcc || "") || clean_(p.subject || "") || clean_(p.body || "") || clean_(p.templateId || "") || clean_(p.templateVersionId || "")) {
@@ -383,14 +385,15 @@ function adminFixtureCommunicationGuard_(payload, action) {
   }
   var actor = resolveAdminCommActor_(p);
   actor.actorEmail = clean_(getCallerEmail_() || actor.actorEmail || "");
-  var context = resolveApplicantMessageContext_(fixture.applicantId, fixture.messageType, {
+  var context = resolveApplicantMessageContext_(applicantId, fixture.messageType, {
     action: "preview",
     actorEmail: actor.actorEmail,
     actorRole: actor.actorRole,
-    debugId: clean_(p.debugId || newDebugId_())
+    debugId: clean_(p.debugId || newDebugId_()),
+    authorizedR408Fixture: true
   });
   var row = context && context.rowObj && typeof context.rowObj === "object" ? context.rowObj : {};
-  var markerFields = Object.keys(row).filter(function (field) { return clean_(row[field] || "") === fixture.marker; });
+  var markerFields = Object.keys(row).filter(function (field) { return clean_(row[field] || "") === fixture.firstName; });
   var nonOperationalFields = Object.keys(row).filter(function (field) { return clean_(row[field] || "") === fixture.nonOperationalMarker; });
   var alternateFields = ["Student_Email_Internal", "CRM_Email", "Student_Email", "Alternate_Email", "Alt_Email", "Parent_Email_2", "Guardian_Email"];
   var alternateRecipients = {};
@@ -402,10 +405,14 @@ function adminFixtureCommunicationGuard_(payload, action) {
   });
   var primaryRecipient = clean_(row.Parent_Email_Corrected || row.Parent_Email || "");
   var valid = context && context.ok === true
-    && clean_(row.ApplicantID || "") === fixture.applicantId
+    && clean_(row.ApplicantID || "") === applicantId
     && clean_(row.Type || row.Record_Type || "") === fixture.type
-    && markerFields.length > 0
-    && nonOperationalFields.length > 0
+    && clean_(row.First_Name || "") === fixture.firstName
+    && clean_(row.Last_Name || "") === fixture.lastName
+    && clean_(row.Reason_For_Transfer || "") === fixture.nonOperationalMarker
+    && clean_(row.Siblings_Name_Grade || "") === fixture.queueExclusionMarker
+    && clean_(row.correlation_id || "") === fixture.correlationId
+    && isR408AuthorizedFixtureRow_(row) === true
     && primaryRecipient.toLowerCase() === fixture.recipient
     && clean_(context.effectiveEmail || "").toLowerCase() === fixture.recipient
     && alternateNonBlank === false;
@@ -414,21 +421,25 @@ function adminFixtureCommunicationGuard_(payload, action) {
       ok: false,
       code: "FIXTURE_IDENTITY_NOT_PROVEN",
       reason: "The exact fixture identity, non-operational marker, or recipient isolation could not be proven from the server row.",
-      applicantId: fixture.applicantId,
+      applicantId: applicantId,
       messageType: fixture.messageType,
       contextBlockCode: clean_(context && context.blockCode || "")
     };
   }
   return {
     ok: true,
-    applicantId: fixture.applicantId,
+    applicantId: applicantId,
     messageType: fixture.messageType,
-    fixtureMarker: fixture.marker,
+    fixtureMarker: fixture.firstName,
+    fixtureIdentity: fixture.lastName,
     fixtureMarkerFields: markerFields,
     type: fixture.type,
     nonOperational: true,
     nonOperationalMarker: fixture.nonOperationalMarker,
     nonOperationalMarkerFields: nonOperationalFields,
+    queueExclusionMarker: fixture.queueExclusionMarker,
+    queueExclusionMarkerFields: ["Siblings_Name_Grade"],
+    correlationId: fixture.correlationId,
     excludedFromNormalQueues: true,
     batchEligible: false,
     stageBatchEligible: false,
@@ -461,6 +472,44 @@ function adminFixtureProofResult_(guard, result, extra) {
   return out;
 }
 
+function adminR408FixtureApprovedPreviewValid_(approved, guard) {
+  var preview = approved && typeof approved === "object" ? approved : {};
+  var proof = guard && typeof guard === "object" ? guard : {};
+  var fixture = getR408AuthorizedFixtureContract_();
+  return clean_(preview.applicantId || "") === clean_(proof.applicantId || "")
+    && clean_(preview.messageType || "").toLowerCase() === fixture.messageType
+    && clean_(preview.recipient || preview.effectiveEmail || "").toLowerCase() === fixture.recipient
+    && clean_(preview.templateSource || "") === "BUILT_IN"
+    && clean_(preview.templateVersionId || "") === fixture.templateVersionId
+    && !clean_(preview.cc || "")
+    && !clean_(preview.bcc || "")
+    && preview.contentEdited !== true;
+}
+
+function admin_bindR408Fixture(payload) {
+  return withEnvelope_("admin_bindR408Fixture", function (dbgId) {
+    var adminEmail = getCallerEmail_();
+    if (!isAdmin_(adminEmail)) throw new Error("Access denied");
+    if (!adminHasCapability_(adminEmail, "CAN_PREVIEW_APPLICANT_COMMUNICATION")) {
+      return adminCommBlockedResult_("fixture_bind", adminCapabilityBlockCode_("CAN_PREVIEW_APPLICANT_COMMUNICATION"), dbgId, { blockReason: adminCapabilityBlockReason_("CAN_PREVIEW_APPLICANT_COMMUNICATION") });
+    }
+    var guard = adminFixtureCommunicationGuard_(payload, "bind");
+    if (guard.ok !== true) return adminCommBlockedResult_("fixture_bind", guard.code, dbgId, { blockReason: guard.reason, applicantId: guard.applicantId, messageType: guard.messageType });
+    var authority = getCanonicalApplicantAuthority_();
+    return adminFixtureProofResult_(guard, {
+      ok: true,
+      result: "BOUND",
+      applicantId: guard.applicantId,
+      recipient: guard.recipient,
+      messageType: guard.messageType,
+      canonicalApplicantSpreadsheetId: authority.spreadsheetId,
+      canonicalApplicantTab: authority.tabName,
+      applicantAuthorityValid: true,
+      gmailInvoked: false
+    }, { route: "R408_FIXTURE_BIND", gmailInvoked: false, prepareInvoked: false, finalizeInvoked: false });
+  });
+}
+
 function admin_previewFixtureCommunication(payload) {
   return withEnvelope_("admin_previewFixtureCommunication", function (dbgId) {
     var adminEmail = getCallerEmail_();
@@ -470,9 +519,23 @@ function admin_previewFixtureCommunication(payload) {
     }
     var guard = adminFixtureCommunicationGuard_(payload, "preview");
     if (guard.ok !== true) return adminCommBlockedResult_("fixture_preview", guard.code, dbgId, { blockReason: guard.reason, applicantId: guard.applicantId, messageType: guard.messageType });
-    var preview = admin_previewApplicantMessage({ applicantId: guard.applicantId, messageType: guard.messageType });
+    var preview = adminPreviewApplicantMessageCore_({ applicantId: guard.applicantId, messageType: guard.messageType }, { authorizedR408Fixture: true });
+    var fixture = getR408AuthorizedFixtureContract_();
+    if (
+      !preview
+      || preview.ok !== true
+      || clean_(preview.result || "").toUpperCase() !== "PREVIEW"
+      || clean_(preview.templateSource || "") !== "BUILT_IN"
+      || clean_(preview.templateVersionId || "") !== fixture.templateVersionId
+      || clean_(preview.cc || "")
+      || clean_(preview.bcc || "")
+      || clean_(preview.effectiveEmail || "").toLowerCase() !== fixture.recipient
+      || preview.contentEdited === true
+    ) {
+      return adminCommBlockedResult_("fixture_preview", "R408_FIXTURE_PREVIEW_CONTRACT_INVALID", dbgId, { blockReason: "The canonical built-in docs_missing version 1 preview with blank CC/BCC and the locked recipient was not proven.", applicantId: guard.applicantId, messageType: guard.messageType });
+    }
     return adminFixtureProofResult_(guard, preview, {
-      route: "R407_FIXTURE_PREVIEW",
+      route: "R408_FIXTURE_PREVIEW",
       gmailInvoked: false,
       prepareInvoked: false,
       finalizeInvoked: false,
@@ -490,12 +553,12 @@ function admin_reconcileFixturePortalSecret(payload) {
     }
     var guard = adminFixtureCommunicationGuard_(payload, "reconcile_portal_secret");
     if (guard.ok !== true) return adminCommBlockedResult_("fixture_secret_reconcile", guard.code, dbgId, { blockReason: guard.reason, applicantId: guard.applicantId, messageType: guard.messageType });
-    if (typeof reconcileTestCommAPortalSecretAuthority_ !== "function") {
-      return adminCommBlockedResult_("fixture_secret_reconcile", "FIXTURE_RECONCILIATION_HELPER_UNAVAILABLE", dbgId, { blockReason: "The bounded staging fixture reconciliation helper is unavailable." });
+    if (typeof reconcileR408FixturePortalSecretAuthority_ !== "function") {
+      return adminCommBlockedResult_("fixture_secret_reconcile", "FIXTURE_RECONCILIATION_HELPER_UNAVAILABLE", dbgId, { blockReason: "The bounded canonical R408 fixture reconciliation helper is unavailable." });
     }
-    var reconciled = reconcileTestCommAPortalSecretAuthority_(guard);
+    var reconciled = reconcileR408FixturePortalSecretAuthority_(guard);
     return adminFixtureProofResult_(guard, reconciled, {
-      route: "R407_FIXTURE_PORTAL_SECRET_RECONCILE",
+      route: "R408_FIXTURE_PORTAL_SECRET_RECONCILE",
       gmailInvoked: false,
       prepareInvoked: false,
       finalizeInvoked: false
@@ -514,6 +577,7 @@ function admin_prepareFixtureCommunication(payload) {
     if (guard.ok !== true) return adminCommBlockedResult_("fixture_prepare", guard.code, dbgId, { blockReason: guard.reason, applicantId: guard.applicantId, messageType: guard.messageType });
     var approved = adminReadIndividualCommunicationPreview_(guard.applicantId, guard.messageType);
     if (!approved) return adminCommBlockedResult_("fixture_prepare", "PREVIEW_REQUIRED", dbgId, { blockReason: "Run the fixture preview route before prepare-only ledger proof." });
+    if (adminR408FixtureApprovedPreviewValid_(approved, guard) !== true) return adminCommBlockedResult_("fixture_prepare", "R408_FIXTURE_PREVIEW_CONTRACT_INVALID", dbgId, { blockReason: "The persisted preview no longer matches the canonical built-in docs_missing version 1 fixture contract." });
     var identity = approved.identity || {};
     var previewMatch = adminIndividualCommunicationPreviewMatches_(approved, { applicantId: guard.applicantId, messageType: guard.messageType }, ["operationId", "previewId", "receiptId"]);
     if (previewMatch.ok !== true) return adminCommBlockedResult_("fixture_prepare", previewMatch.code, dbgId, { blockReason: previewMatch.reason });
@@ -526,7 +590,7 @@ function admin_prepareFixtureCommunication(payload) {
     correlation.communicationId = clean_(correlation.communicationId || prepared.communicationId || prepared.response && prepared.response.communicationId || "");
     var environment = clean_(prepared.ledgerEnvironment || prepared.response && prepared.response.ledgerEnvironment || "").toLowerCase();
     if (prepared.ok !== true || prepared.prepared !== true || prepared.status !== "PREPARED" || !environment || !correlation.commandId || !correlation.eventId || !correlation.communicationId) {
-      return adminFixtureProofResult_(guard, Object.assign({}, correlation, { ok: false, result: "BLOCKED", blockCode: clean_(prepared.code || "LEDGER_PREPARE_PROOF_INCOMPLETE"), blockReason: "Durable PRE_SEND_PREPARED evidence or non-secret ledger environment was not returned; Gmail was not invoked." }), { route: "R407_FIXTURE_PREPARE", gmailInvoked: false, finalizeInvoked: false });
+      return adminFixtureProofResult_(guard, Object.assign({}, correlation, { ok: false, result: "BLOCKED", blockCode: clean_(prepared.code || "LEDGER_PREPARE_PROOF_INCOMPLETE"), blockReason: "Durable PRE_SEND_PREPARED evidence or non-secret ledger environment was not returned; Gmail was not invoked." }), { route: "R408_FIXTURE_PREPARE", gmailInvoked: false, finalizeInvoked: false });
     }
     approved.ledgerPrepared = true;
     approved.ledgerPrepareReplayProven = prepared.replay === true || prepared.idempotent === true;
@@ -549,7 +613,7 @@ function admin_prepareFixtureCommunication(payload) {
       prepareOnly: true,
       gmailInvoked: false,
       finalizeInvoked: false
-    }), { route: "R407_FIXTURE_PREPARE", gmailInvoked: false, finalizeInvoked: false });
+    }), { route: "R408_FIXTURE_PREPARE", gmailInvoked: false, finalizeInvoked: false });
   });
 }
 
@@ -566,8 +630,9 @@ function admin_sendFixtureCommunication(payload) {
     if (!approved || approved.ledgerPrepared !== true || approved.ledgerPrepareReplayProven !== true) {
       return adminCommBlockedResult_("fixture_send", "FIXTURE_PREPARED_REPLAY_REQUIRED", dbgId, { blockReason: "The fixture requires an accepted PREPARED result and an identical persisted PREPARED replay before Gmail." });
     }
+    if (adminR408FixtureApprovedPreviewValid_(approved, guard) !== true) return adminCommBlockedResult_("fixture_send", "R408_FIXTURE_PREVIEW_CONTRACT_INVALID", dbgId, { blockReason: "The persisted preview no longer matches the canonical built-in docs_missing version 1 fixture contract." });
     var identity = approved.identity || {};
-    var result = admin_sendApplicantMessage({
+    var result = adminSendApplicantMessageCore_({
       applicantId: guard.applicantId,
       messageType: guard.messageType,
       operationId: clean_(identity.operationId || ""),
@@ -581,9 +646,9 @@ function admin_sendFixtureCommunication(payload) {
       confirmManualSingleSend: true,
       sourceSurface: "admin",
       sourceView: "admin"
-    });
+    }, { authorizedR408Fixture: true });
     return adminFixtureProofResult_(guard, result, {
-      route: "R407_FIXTURE_SEND_OR_REPLAY",
+      route: "R408_FIXTURE_SEND_OR_REPLAY",
       approvedTemplateSource: clean_(approved.templateSource || ""),
       approvedTemplateVersionId: clean_(approved.templateVersionId || ""),
       previewFingerprint: clean_(approved.previewFingerprint || "")
@@ -591,7 +656,8 @@ function admin_sendFixtureCommunication(payload) {
   });
 }
 
-function admin_previewApplicantMessage(payload) {
+function adminPreviewApplicantMessageCore_(payload, trustedOptions) {
+  var trusted = trustedOptions && typeof trustedOptions === "object" ? trustedOptions : {};
   return withEnvelope_("admin_previewApplicantMessage", function (dbgId) {
     var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
@@ -637,7 +703,8 @@ function admin_previewApplicantMessage(payload) {
       actor: identity.actor,
       stateFingerprint: identity.stateFingerprint,
       cooldownCycle: identity.cooldownCycle,
-      idempotencyKey: identity.idempotencyKey
+      idempotencyKey: identity.idempotencyKey,
+      authorizedR408Fixture: trusted.authorizedR408Fixture === true
     };
     if (Object.prototype.hasOwnProperty.call(p, "subject") && clean_(p.subject || "")) previewOptions.editedSubject = String(p.subject || "");
     if (Object.prototype.hasOwnProperty.call(p, "body") && clean_(p.body || "")) previewOptions.editedBody = String(p.body || "");
@@ -649,7 +716,12 @@ function admin_previewApplicantMessage(payload) {
   });
 }
 
-function admin_sendApplicantMessage(payload) {
+function admin_previewApplicantMessage(payload) {
+  return adminPreviewApplicantMessageCore_(payload, {});
+}
+
+function adminSendApplicantMessageCore_(payload, trustedOptions) {
+  var trusted = trustedOptions && typeof trustedOptions === "object" ? trustedOptions : {};
   return withEnvelope_("admin_sendApplicantMessage", function (dbgId) {
     var adminEmail = getCallerEmail_();
     if (!isAdmin_(adminEmail)) throw new Error("Access denied");
@@ -763,7 +835,8 @@ function admin_sendApplicantMessage(payload) {
         actor: identity.actor,
         stateFingerprint: identity.stateFingerprint,
         cooldownCycle: identity.cooldownCycle,
-        idempotencyKey: identity.idempotencyKey
+        idempotencyKey: identity.idempotencyKey,
+        authorizedR408Fixture: trusted.authorizedR408Fixture === true
       };
       if (Object.prototype.hasOwnProperty.call(boundPayload, "subject") && clean_(boundPayload.subject || "")) {
         sendOptions.editedSubject = String(boundPayload.subject || "");
@@ -891,6 +964,10 @@ function admin_sendApplicantMessage(payload) {
     }
     return sendResult;
   });
+}
+
+function admin_sendApplicantMessage(payload) {
+  return adminSendApplicantMessageCore_(payload, {});
 }
 
 function withAdminIndividualCommunicationLock_(adminEmail, dbgId, callback) {

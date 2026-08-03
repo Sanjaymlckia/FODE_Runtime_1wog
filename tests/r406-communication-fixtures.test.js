@@ -20,6 +20,30 @@ function extractFunction(source, name) {
 }
 
 const source = fs.readFileSync("Admin_SelectedApplicantCommunications.js", "utf8");
+const R408_APPLICANT_ID = "FODE-26-990011";
+const R408_FIXTURE_CONTRACT = {
+  firstName: "TEST_COMM_A",
+  lastName: "R408_CANONICAL_FIXTURE_20260803",
+  type: "Regression Fixture",
+  recipient: "sanjay@minervacenters.com",
+  nonOperationalMarker: "REGRESSION_FIXTURE_DO_NOT_PROCESS",
+  queueExclusionMarker: "REGRESSION_FIXTURE_QUEUE_EXCLUDED",
+  correlationId: "R408-FD-20260803-001",
+  messageType: "docs_missing",
+  templateVersionId: "1"
+};
+function r408FixturePayload(overrides = {}) {
+  return Object.assign({
+    applicantId: R408_APPLICANT_ID,
+    messageType: R408_FIXTURE_CONTRACT.messageType,
+    recipient: R408_FIXTURE_CONTRACT.recipient,
+    fixtureMarker: R408_FIXTURE_CONTRACT.firstName,
+    fixtureIdentity: R408_FIXTURE_CONTRACT.lastName,
+    nonOperationalMarker: R408_FIXTURE_CONTRACT.nonOperationalMarker,
+    queueExclusionMarker: R408_FIXTURE_CONTRACT.queueExclusionMarker,
+    correlationId: R408_FIXTURE_CONTRACT.correlationId
+  }, overrides);
+}
 const FIXTURES = [
   { fixtureId: "TEST_COMM_A", applicantId: "LOCAL-TEST-COMM-A", recipient: "sanjay@minervacenters.com", mode: "success", maySend: true },
   { fixtureId: "TEST_COMM_B", applicantId: "LOCAL-TEST-COMM-B", recipient: "sanjay@minervacenters.com", mode: "replay", maySend: false },
@@ -66,8 +90,9 @@ assert.match(opsCommunicationsUi, /admin_previewFixtureCommunication/);
 assert.match(opsCommunicationsUi, /admin_prepareFixtureCommunication/);
 assert.match(opsCommunicationsUi, /admin_reconcileFixturePortalSecret/);
 assert.match(opsCommunicationsUi, /admin_sendFixtureCommunication/);
-assert.match(adminUi, /data-r407-fixture-proof="TEST_COMM_A"/);
-assert.match(adminUi, /data-r407-fixture-proof-admin="TEST_COMM_A"/);
+assert.match(opsCommunicationsUi, /admin_bindR408Fixture/);
+assert.match(adminUi, /data-r408-fixture-proof="TEST_COMM_A"/);
+assert.match(adminUi, /data-r408-fixture-proof-admin="TEST_COMM_A"/);
 assert.match(adminUi, /adminTestCommAFixtureResult/);
 assert.match(opsCommunicationsUi, /opsTestCommAFixtureResultId_/);
 assert.match(adminUi, /Reconcile fixture authority/);
@@ -82,31 +107,37 @@ assert.match(adminUi, /Template version:/);
 assert.match(adminUi, /Ledger environment:/);
 assert.doesNotMatch(opsCommunicationsUi, /LEDGER_API_SIGNING_SECRET|fixture-secret|portal-secret/i);
 
-assert.match(utilsSource, /function getWorkingDataMode_\(\)/);
-assert.match(utilsSource, /isAdminDeploymentRequest_\(\) === true/);
-assert.match(configSource, /DATA_MODE: "PROD"/);
-const modeContext = {
-  CONFIG: { DATA_MODE: "PROD", SPREADSHEET_ID_STAGING: "STAGING-ID", SPREADSHEET_ID_PROD: "PROD-ID" },
-  clean_: value => String(value == null ? "" : value).trim(),
-  isAdminDeploymentRequest_: () => true
+assert.match(utilsSource, /function getCanonicalApplicantAuthority_\(\)/);
+assert.match(utilsSource, /function assertCanonicalApplicantSpreadsheet_\(ss\)/);
+assert.doesNotMatch(configSource, /DATA_MODE|SPREADSHEET_ID_STAGING|SPREADSHEET_ID_PROD|SHEET_ID_STAGING|SHEET_ID_PROD/);
+const canonicalApplicantId = "1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4SalU";
+const authorityContext = {
+  CONFIG: {
+    CODE_ENVIRONMENT: "STAGING",
+    SPREADSHEET_ID_CANONICAL_APPLICANT: canonicalApplicantId,
+    CANONICAL_APPLICANT_TAB: "FODE_Data",
+    DATA_SHEET: "FODE_Data",
+    DATA_MODE: "PROD",
+    SPREADSHEET_ID_STAGING: "IGNORED-STAGING-ID"
+  },
+  clean_: value => String(value == null ? "" : value).trim()
 };
-vm.createContext(modeContext);
-vm.runInContext(extractFunction(utilsSource, "getWorkingDataMode_"), modeContext);
-vm.runInContext(extractFunction(utilsSource, "getWorkingSpreadsheetId_"), modeContext);
-assert.equal(modeContext.getWorkingDataMode_(), "STAGING");
-assert.equal(modeContext.getWorkingSpreadsheetId_(), "STAGING-ID");
-modeContext.isAdminDeploymentRequest_ = () => false;
-assert.equal(modeContext.getWorkingDataMode_(), "PROD");
-assert.equal(modeContext.getWorkingSpreadsheetId_(), "PROD-ID");
+vm.createContext(authorityContext);
+["getCodeEnvironment_", "getCanonicalApplicantAuthority_", "getWorkingSpreadsheetId_"].forEach(name => vm.runInContext(extractFunction(utilsSource, name), authorityContext));
+assert.equal(authorityContext.getCodeEnvironment_(), "STAGING");
+assert.equal(authorityContext.getWorkingSpreadsheetId_(), canonicalApplicantId);
 
 const adminDeploymentId = "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ";
 const adminIdentityContext = {
   CONFIG: {
-    DATA_MODE: "PROD",
+    CODE_ENVIRONMENT: "STAGING",
+    SPREADSHEET_ID_CANONICAL_APPLICANT: canonicalApplicantId,
+    CANONICAL_APPLICANT_TAB: "FODE_Data",
+    DATA_SHEET: "FODE_Data",
     DEPLOYMENT_ID_ADMIN: adminDeploymentId,
     WEBAPP_URL_ADMIN: `https://script.google.com/macros/s/${adminDeploymentId}/exec`,
-    SPREADSHEET_ID_STAGING: "STAGING-ID",
-    SPREADSHEET_ID_PROD: "PROD-ID"
+    DATA_MODE: "PROD",
+    SPREADSHEET_ID_STAGING: "IGNORED-STAGING-ID"
   },
   clean_: value => String(value == null ? "" : value).trim(),
   Logger: { log: () => {} },
@@ -118,16 +149,16 @@ vm.createContext(adminIdentityContext);
   extractFunction(utilsSource, "extractDeploymentIdFromExecUrl_"),
   extractFunction(utilsSource, "canonicalExecBase_"),
   extractFunction(codeSource, "isAdminDeploymentRequest_"),
-  extractFunction(utilsSource, "getWorkingDataMode_"),
+  extractFunction(utilsSource, "getCodeEnvironment_"),
+  extractFunction(utilsSource, "getCanonicalApplicantAuthority_"),
   extractFunction(utilsSource, "getWorkingSpreadsheetId_")
 ].forEach(fn => vm.runInContext(fn, adminIdentityContext));
 assert.equal(adminIdentityContext.isAdminDeploymentRequest_(), true, "Domain-scoped Admin service URL must classify as Admin");
-assert.equal(adminIdentityContext.getWorkingDataMode_(), "STAGING");
-assert.equal(adminIdentityContext.getWorkingSpreadsheetId_(), "STAGING-ID");
+assert.equal(adminIdentityContext.getCodeEnvironment_(), "STAGING");
+assert.equal(adminIdentityContext.getWorkingSpreadsheetId_(), canonicalApplicantId);
 adminIdentityContext.ScriptApp = { getService: () => ({ getUrl: () => "https://script.google.com/macros/s/AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv/exec" }) };
 assert.equal(adminIdentityContext.isAdminDeploymentRequest_(), false, "Non-Admin deployment URL must not classify as Admin");
-assert.equal(adminIdentityContext.getWorkingDataMode_(), "PROD");
-assert.equal(adminIdentityContext.getWorkingSpreadsheetId_(), "PROD-ID");
+assert.equal(adminIdentityContext.getWorkingSpreadsheetId_(), canonicalApplicantId);
 
 function createContext(fixture) {
   const cache = new Map();
@@ -141,17 +172,18 @@ function createContext(fixture) {
   let ledgerFinalized = fixture.mode === "replay";
   const clean = value => String(value == null ? "" : value).trim();
   const context = {
-    FODE_R407_TEST_COMM_A_FIXTURE: {
-      applicantId: "FODE-26-TEST-011",
-      marker: "TEST_COMM_A",
-      messageType: "docs_missing",
-      recipient: "sanjay@minervacenters.com",
-      nonOperationalMarker: "REGRESSION_FIXTURE_DO_NOT_PROCESS",
-      type: "Regression Fixture"
-    },
-    CONFIG: { OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE: "" },
+    CONFIG: { OPS_SAFE_MODE_TEST_RECIPIENT_OVERRIDE: "", R408_AUTHORIZED_FIXTURE: R408_FIXTURE_CONTRACT },
     clean_: clean,
     safeStr_: clean,
+    getR408AuthorizedFixtureContract_: () => R408_FIXTURE_CONTRACT,
+    getCanonicalApplicantAuthority_: () => ({ spreadsheetId: canonicalApplicantId, tabName: "FODE_Data", codeEnvironment: "STAGING" }),
+    isR408AuthorizedFixtureRow_: row => clean(row.First_Name) === R408_FIXTURE_CONTRACT.firstName
+      && clean(row.Last_Name) === R408_FIXTURE_CONTRACT.lastName
+      && clean(row.Type) === R408_FIXTURE_CONTRACT.type
+      && clean(row.Parent_Email_Corrected || row.Parent_Email).toLowerCase() === R408_FIXTURE_CONTRACT.recipient
+      && clean(row.Reason_For_Transfer) === R408_FIXTURE_CONTRACT.nonOperationalMarker
+      && clean(row.Siblings_Name_Grade) === R408_FIXTURE_CONTRACT.queueExclusionMarker
+      && clean(row.correlation_id) === R408_FIXTURE_CONTRACT.correlationId,
     fodeLedgerCanonicalJson_: value => JSON.stringify(value),
     fodeLedgerSha256Hex_: value => `HASH-${Buffer.from(String(value)).toString("hex")}`,
     CacheService: { getUserCache: () => ({
@@ -167,15 +199,18 @@ function createContext(fixture) {
     newDebugId_: () => `LOCAL-${fixture.fixtureId}`,
     normalizeApplicantMessageType_: value => clean(value),
     resolveAdminCommActor_: () => ({ actorEmail: "operator@example.test", actorRole: "ADMIN" }),
-    resolveApplicantMessageContext_: () => ({
+    resolveApplicantMessageContext_: applicantId => ({
       ok: true,
       eligible: true,
       effectiveEmail: "sanjay@minervacenters.com",
       rowObj: {
-        ApplicantID: "FODE-26-TEST-011",
+        ApplicantID: applicantId,
         First_Name: "TEST_COMM_A",
+        Last_Name: "R408_CANONICAL_FIXTURE_20260803",
         Type: "Regression Fixture",
-        Home_Address: "REGRESSION_FIXTURE_DO_NOT_PROCESS",
+        Reason_For_Transfer: "REGRESSION_FIXTURE_DO_NOT_PROCESS",
+        Siblings_Name_Grade: "REGRESSION_FIXTURE_QUEUE_EXCLUDED",
+        correlation_id: "R408-FD-20260803-001",
         Parent_Email: "sanjay@minervacenters.com",
         Parent_Email_Corrected: "sanjay@minervacenters.com",
         Student_Email_Internal: "",
@@ -199,6 +234,9 @@ function createContext(fixture) {
         templateId: "docs_missing",
         templateVersionId: "1",
         templateSource: "BUILT_IN",
+        contentEdited: false,
+        applicantId: _applicantId,
+        messageType: _messageType,
         recipientSource: fixture.recipient ? "FIXTURE_LOCKED" : "MISSING"
       };
     },
@@ -244,7 +282,11 @@ function createContext(fixture) {
     "withAdminIndividualCommunicationLock_",
     "adminFixtureCommunicationGuard_",
     "adminFixtureProofResult_",
+    "adminR408FixtureApprovedPreviewValid_",
+    "admin_bindR408Fixture",
+    "adminPreviewApplicantMessageCore_",
     "admin_previewApplicantMessage",
+    "adminSendApplicantMessageCore_",
     "admin_sendApplicantMessage",
     "admin_previewFixtureCommunication",
     "admin_prepareFixtureCommunication",
@@ -273,7 +315,10 @@ assert.equal(a.sendCalls, 1);
 assert.equal(a.prepareCalls, 1);
 
 const fixtureRoute = createContext(FIXTURES[0]);
-const fixturePreview = fixtureRoute.context.admin_previewFixtureCommunication({ applicantId: "FODE-26-TEST-011", messageType: "docs_missing" });
+const fixtureBinding = fixtureRoute.context.admin_bindR408Fixture(r408FixturePayload());
+assert.equal(fixtureBinding.result, "BOUND");
+assert.equal(fixtureBinding.applicantId, R408_APPLICANT_ID);
+const fixturePreview = fixtureRoute.context.admin_previewFixtureCommunication(r408FixturePayload());
 assert.equal(fixturePreview.result, "PREVIEW");
 assert.equal(fixturePreview.fixtureProof.fixtureMarker, "TEST_COMM_A");
 assert.equal(fixturePreview.fixtureProof.nonOperational, true);
@@ -282,7 +327,7 @@ assert.equal(fixturePreview.fixtureProof.recipient, "sanjay@minervacenters.com")
 assert.equal(fixturePreview.fixtureProof.alternateRecipientFields.Student_Email_Internal, "");
 assert.equal(fixturePreview.gmailInvoked, false);
 assert.equal(fixtureRoute.prepareCalls, 0);
-const fixturePrepared = fixtureRoute.context.admin_prepareFixtureCommunication({ applicantId: "FODE-26-TEST-011", messageType: "docs_missing" });
+const fixturePrepared = fixtureRoute.context.admin_prepareFixtureCommunication(r408FixturePayload());
 assert.equal(fixturePrepared.result, "PRE_SEND_PREPARED");
 assert.equal(fixturePrepared.ledgerState, "PRE_SEND_PREPARED");
 assert.equal(fixturePrepared.ledgerEnvironment, "staging");
@@ -291,7 +336,7 @@ assert.equal(fixturePrepared.prepareReplayProven, false);
 assert.ok(fixturePrepared.commandId && fixturePrepared.operationId && fixturePrepared.previewId && fixturePrepared.receiptId && fixturePrepared.communicationId && fixturePrepared.eventId);
 assert.equal(fixturePrepared.gmailInvoked, false);
 assert.equal(fixturePrepared.finalizeInvoked, false);
-const fixturePreparedReplay = fixtureRoute.context.admin_prepareFixtureCommunication({ applicantId: "FODE-26-TEST-011", messageType: "docs_missing" });
+const fixturePreparedReplay = fixtureRoute.context.admin_prepareFixtureCommunication(r408FixturePayload());
 assert.equal(fixturePreparedReplay.result, "PRE_SEND_PREPARED");
 assert.equal(fixturePreparedReplay.idempotent, true);
 assert.equal(fixturePreparedReplay.replay, true);
@@ -300,14 +345,14 @@ assert.equal(fixturePreparedReplay.communicationId, fixturePrepared.communicatio
 assert.equal(fixtureRoute.communicationCount, 1);
 assert.equal(fixtureRoute.receiptCount, 1);
 assert.equal(fixtureRoute.eventCount, 1);
-const fixtureSent = fixtureRoute.context.admin_sendFixtureCommunication({ applicantId: "FODE-26-TEST-011", messageType: "docs_missing" });
+const fixtureSent = fixtureRoute.context.admin_sendFixtureCommunication(r408FixturePayload());
 assert.equal(fixtureSent.result, "SENT");
 assert.equal(fixtureRoute.sendCalls, 1);
 assert.equal(fixtureRoute.finalizeCalls, 1);
 assert.equal(fixtureRoute.communicationCount, 1);
 assert.equal(fixtureRoute.receiptCount, 1);
 assert.equal(fixtureRoute.eventCount, 2);
-const fixtureReplay = fixtureRoute.context.admin_sendFixtureCommunication({ applicantId: "FODE-26-TEST-011", messageType: "docs_missing" });
+const fixtureReplay = fixtureRoute.context.admin_sendFixtureCommunication(r408FixturePayload());
 assert.equal(fixtureReplay.result, "IDEMPOTENT_REPLAY");
 assert.equal(fixtureReplay.gmailAttempted, false);
 assert.equal(fixtureRoute.sendCalls, 1);
@@ -317,16 +362,16 @@ assert.equal(fixtureRoute.receiptCount, 1);
 assert.equal(fixtureRoute.eventCount, 2);
 
 const nonFixture = createContext(FIXTURES[0]);
-const nonFixtureBlocked = nonFixture.context.admin_previewFixtureCommunication({ applicantId: "FODE-26-TEST-001", messageType: "docs_missing" });
+const nonFixtureBlocked = nonFixture.context.admin_previewFixtureCommunication(r408FixturePayload({ applicantId: "FODE-26-TEST-011" }));
 assert.equal(nonFixtureBlocked.blockCode, "FIXTURE_ONLY_ROUTE");
 const recipientOverride = createContext(FIXTURES[0]);
-const recipientBlocked = recipientOverride.context.admin_previewFixtureCommunication({ applicantId: "FODE-26-TEST-011", messageType: "docs_missing", recipient: "other@example.test" });
-assert.equal(recipientBlocked.blockCode, "FIXTURE_RECIPIENT_OVERRIDE");
+const recipientBlocked = recipientOverride.context.admin_previewFixtureCommunication(r408FixturePayload({ recipient: "other@example.test" }));
+assert.equal(recipientBlocked.blockCode, "FIXTURE_BINDING_MISMATCH");
 
-function createPortalSecretReconciliationContext(initialRows, mode = "STAGING") {
+function createPortalSecretReconciliationContext(initialRows, codeEnvironment = "STAGING") {
   const headers = ["ApplicantID", "Email", "Full_Name", "Secret_Plain", "Secret_Hash", "Created_At", "Last_Rotated_At", "Status"];
   const rows = (initialRows || []).map(row => row.slice());
-  let effectiveMode = mode;
+  let effectiveCodeEnvironment = codeEnvironment;
   const sheet = {
     getLastColumn: () => headers.length,
     getLastRow: () => rows.length + 1,
@@ -344,7 +389,10 @@ function createPortalSecretReconciliationContext(initialRows, mode = "STAGING") 
   };
   const context = {
     clean_: value => String(value == null ? "" : value).trim(),
-    getWorkingDataMode_: () => effectiveMode,
+    getR408AuthorizedFixtureContract_: () => R408_FIXTURE_CONTRACT,
+    getCodeEnvironment_: () => effectiveCodeEnvironment,
+    getCanonicalApplicantAuthority_: () => ({ spreadsheetId: canonicalApplicantId, tabName: "FODE_Data", codeEnvironment: effectiveCodeEnvironment }),
+    getWorkingSpreadsheetId_: () => canonicalApplicantId,
     isAdminDeploymentRequest_: () => true,
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} }) },
     newDebugId_: () => "DBG-PORTAL-SECRET",
@@ -358,42 +406,43 @@ function createPortalSecretReconciliationContext(initialRows, mode = "STAGING") 
     buildPortalSecretOutputRow_: (_idx, _lastCol, applicantId, secretPlain, secretHash, nowIso, options) => [applicantId, options.email, options.fullName, secretPlain, secretHash, nowIso, nowIso, "Active"]
   };
   vm.createContext(context);
-  vm.runInContext(extractFunction(codeSource, "reconcileTestCommAPortalSecretAuthority_"), context);
-  return { context, rows, setMode: value => { effectiveMode = value; } };
+  vm.runInContext(extractFunction(codeSource, "reconcileR408FixturePortalSecretAuthority_"), context);
+  return { context, rows, setCodeEnvironment: value => { effectiveCodeEnvironment = value; } };
 }
 
 const portalGuard = {
-  applicantId: "FODE-26-TEST-011",
+  applicantId: R408_APPLICANT_ID,
   fixtureMarker: "TEST_COMM_A",
+  fixtureIdentity: "R408_CANONICAL_FIXTURE_20260803",
   type: "Regression Fixture",
   recipient: "sanjay@minervacenters.com",
   nonOperational: true,
   excludedFromNormalQueues: true
 };
 const portalCreate = createPortalSecretReconciliationContext([]);
-const portalCreated = portalCreate.context.reconcileTestCommAPortalSecretAuthority_(portalGuard);
+const portalCreated = portalCreate.context.reconcileR408FixturePortalSecretAuthority_(portalGuard);
 assert.equal(portalCreated.result, "RECONCILIATION_CREATED");
 assert.equal(portalCreated.matchingRecordCount, 1);
 assert.equal(portalCreated.activeUsableRecordCount, 1);
 assert.equal(portalCreated.fodeDataWritten, false);
 assert.doesNotMatch(JSON.stringify(portalCreated), /SECRET-VALUE-MUST-NOT-ESCAPE|HASH-VALUE-MUST-NOT-ESCAPE/);
-const portalNoop = portalCreate.context.reconcileTestCommAPortalSecretAuthority_(portalGuard);
+const portalNoop = portalCreate.context.reconcileR408FixturePortalSecretAuthority_(portalGuard);
 assert.equal(portalNoop.result, "RECONCILIATION_NOOP");
 assert.equal(portalCreate.rows.length, 1);
 
-const activePortalRow = ["FODE-26-TEST-011", "sanjay@minervacenters.com", "TEST_COMM_A", "secret", "hash", "2026-08-02T00:00:00Z", "", "Active"];
+const activePortalRow = [R408_APPLICANT_ID, "sanjay@minervacenters.com", "TEST_COMM_A", "secret", "hash", "2026-08-02T00:00:00Z", "", "Active"];
 const duplicatePortal = createPortalSecretReconciliationContext([activePortalRow, activePortalRow]);
-assert.equal(duplicatePortal.context.reconcileTestCommAPortalSecretAuthority_(portalGuard).code, "FIXTURE_PORTAL_SECRET_CONFLICT");
-const inactivePortal = createPortalSecretReconciliationContext([["FODE-26-TEST-011", "sanjay@minervacenters.com", "TEST_COMM_A", "secret", "hash", "", "", "Inactive"]]);
-assert.equal(inactivePortal.context.reconcileTestCommAPortalSecretAuthority_(portalGuard).code, "FIXTURE_PORTAL_SECRET_CONFLICT");
-const unusablePortal = createPortalSecretReconciliationContext([["FODE-26-TEST-011", "sanjay@minervacenters.com", "TEST_COMM_A", "", "", "", "", "Active"]]);
-assert.equal(unusablePortal.context.reconcileTestCommAPortalSecretAuthority_(portalGuard).code, "FIXTURE_PORTAL_SECRET_CONFLICT");
+assert.equal(duplicatePortal.context.reconcileR408FixturePortalSecretAuthority_(portalGuard).code, "FIXTURE_PORTAL_SECRET_CONFLICT");
+const inactivePortal = createPortalSecretReconciliationContext([[R408_APPLICANT_ID, "sanjay@minervacenters.com", "TEST_COMM_A", "secret", "hash", "", "", "Inactive"]]);
+assert.equal(inactivePortal.context.reconcileR408FixturePortalSecretAuthority_(portalGuard).code, "FIXTURE_PORTAL_SECRET_CONFLICT");
+const unusablePortal = createPortalSecretReconciliationContext([[R408_APPLICANT_ID, "sanjay@minervacenters.com", "TEST_COMM_A", "", "", "", "", "Active"]]);
+assert.equal(unusablePortal.context.reconcileR408FixturePortalSecretAuthority_(portalGuard).code, "FIXTURE_PORTAL_SECRET_CONFLICT");
 const wrongPortalApplicant = createPortalSecretReconciliationContext([]);
-assert.equal(wrongPortalApplicant.context.reconcileTestCommAPortalSecretAuthority_({ ...portalGuard, applicantId: "FODE-26-REAL-001" }).code, "FIXTURE_RECONCILIATION_IDENTITY_NOT_PROVEN");
+assert.equal(wrongPortalApplicant.context.reconcileR408FixturePortalSecretAuthority_({ ...portalGuard, applicantId: "FODE-26-TEST-011" }).code, "FIXTURE_RECONCILIATION_IDENTITY_NOT_PROVEN");
 const missingPortalMarker = createPortalSecretReconciliationContext([]);
-assert.equal(missingPortalMarker.context.reconcileTestCommAPortalSecretAuthority_({ ...portalGuard, fixtureMarker: "" }).code, "FIXTURE_RECONCILIATION_IDENTITY_NOT_PROVEN");
-const prodPortal = createPortalSecretReconciliationContext([], "PROD");
-assert.equal(prodPortal.context.reconcileTestCommAPortalSecretAuthority_(portalGuard).code, "FIXTURE_RECONCILIATION_STAGING_ONLY");
+assert.equal(missingPortalMarker.context.reconcileR408FixturePortalSecretAuthority_({ ...portalGuard, fixtureMarker: "" }).code, "FIXTURE_RECONCILIATION_IDENTITY_NOT_PROVEN");
+const productionCodePortal = createPortalSecretReconciliationContext([], "PRODUCTION");
+assert.equal(productionCodePortal.context.reconcileR408FixturePortalSecretAuthority_(portalGuard).code, "FIXTURE_RECONCILIATION_STAGING_CODE_ONLY");
 
 const b = createContext(FIXTURES[1]);
 const bPayload = { applicantId: FIXTURES[1].applicantId, messageType: "docs_missing" };

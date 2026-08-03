@@ -2338,20 +2338,25 @@
             <div id="opsCommunicationResult" class="opsResultBox hidden"></div>
           </div>
         </div>
-        <div class="opsCard" style="margin-top:14px;" data-r407-fixture-proof="TEST_COMM_A">
-          <div class="opsSectionHeader"><div><h3>TEST_COMM_A End-to-End Proof</h3><p>Admin staging only: reconcile the exact fixture authority, preview the approved template, prove persisted PREPARED, send once, then verify replay without another email.</p></div><span class="opsStatusPill warn">One controlled Gmail</span></div>
+        <div class="opsCard" style="margin-top:14px;" data-r408-fixture-proof="TEST_COMM_A">
+          <div class="opsSectionHeader"><div><h3>R408 TEST_COMM_A End-to-End Proof</h3><p>Admin staging code against canonical SalU/FODE_Data only. Bind the newly landed synthetic ApplicantID before reconciliation, preview, PREPARED proof, one Gmail send, and replay.</p></div><span class="opsStatusPill warn">One controlled Gmail</span></div>
           <div class="opsInfoGrid">
-            <div><strong>ApplicantID</strong><br>FODE-26-TEST-011</div>
+            <div><strong>ApplicantID</strong><br><span data-r408-fixture-applicant>Not bound</span></div>
             <div><strong>Message type</strong><br>docs_missing</div>
-            <div><strong>Recipient</strong><br>sanjay@minervacenters.com</div>
-            <div><strong>Marker</strong><br>TEST_COMM_A / REGRESSION_FIXTURE_DO_NOT_PROCESS</div>
+            <div><strong>Recipient</strong><br><span data-r408-fixture-recipient>sanjay@minervacenters.com</span></div>
+            <div><strong>Identity</strong><br>TEST_COMM_A / R408_CANONICAL_FIXTURE_20260803</div>
+            <div><strong>Exclusions</strong><br>REGRESSION_FIXTURE_DO_NOT_PROCESS / REGRESSION_FIXTURE_QUEUE_EXCLUDED</div>
           </div>
+          <label class="opsControlNote" style="display:block;margin-top:12px;">Canonical synthetic ApplicantID
+            <input data-r408-fixture-input type="text" inputmode="text" autocomplete="off" placeholder="FODE-26-000000" oninput="opsResetR408FixtureBinding_()">
+          </label>
           <div class="opsActionRow" style="margin-top:12px;">
-            <button class="opsActionBtn" data-r407-fixture-action="reconcile" type="button" onclick="opsReconcileTestCommAFixture_()">Reconcile fixture authority</button>
-            <button class="opsActionBtn live" data-r407-fixture-action="preview" type="button" onclick="opsPreviewTestCommAFixture_()" disabled>Preview approved template</button>
-            <button class="opsActionBtn" data-r407-fixture-action="prepare" type="button" onclick="opsPrepareTestCommAFixture_()" disabled>Prepare ledger</button>
-            <button class="opsActionBtn danger" data-r407-fixture-action="send" type="button" onclick="opsSendTestCommAFixture_()" disabled>Send exactly once</button>
-            <button class="opsActionBtn" data-r407-fixture-action="replay" type="button" onclick="opsReplayTestCommAFixture_()" disabled>Verify no-send replay</button>
+            <button class="opsActionBtn" data-r408-fixture-action="bind" type="button" onclick="opsBindR408Fixture_()">Bind canonical fixture</button>
+            <button class="opsActionBtn" data-r408-fixture-action="reconcile" type="button" onclick="opsReconcileTestCommAFixture_()" disabled>Reconcile fixture authority</button>
+            <button class="opsActionBtn live" data-r408-fixture-action="preview" type="button" onclick="opsPreviewTestCommAFixture_()" disabled>Preview approved template</button>
+            <button class="opsActionBtn" data-r408-fixture-action="prepare" type="button" onclick="opsPrepareTestCommAFixture_()" disabled>Prepare ledger</button>
+            <button class="opsActionBtn danger" data-r408-fixture-action="send" type="button" onclick="opsSendTestCommAFixture_()" disabled>Send exactly once</button>
+            <button class="opsActionBtn" data-r408-fixture-action="replay" type="button" onclick="opsReplayTestCommAFixture_()" disabled>Verify no-send replay</button>
           </div>
           <p class="opsControlNote">Send remains disabled until the server proves an initial PREPARED result and an identical persisted PREPARED replay. The replay control must return IDEMPOTENT_REPLAY without Gmail.</p>
           <div id="opsTestCommAFixtureResult" class="opsResultBox hidden"></div>
@@ -2758,21 +2763,26 @@
       <div id="actionabilityContextMenu" class="actionabilityContextMenu" role="menu" aria-label="Current Worklist context actions"></div>
     </div>
 
-    <section class="legacyPanelBlock" data-r407-fixture-proof-admin="TEST_COMM_A">
-      <h3>TEST_COMM_A Fixture Proof — Admin staging</h3>
-      <div class="muted" style="margin-bottom:10px;">Exact non-operational staging fixture route. Complete authority reconciliation, approved preview and persisted PREPARED proof before the one controlled Gmail action becomes available.</div>
+    <section class="legacyPanelBlock" data-r408-fixture-proof-admin="TEST_COMM_A">
+      <h3>R408 TEST_COMM_A Fixture Proof — canonical SalU</h3>
+      <div class="muted" style="margin-bottom:10px;">Bind the exact newly landed non-operational ApplicantID. The displayed identity and recipient must match the server submission before any controlled action becomes available.</div>
       <div class="commMeta">
-        <div class="box"><div class="k">ApplicantID</div><div class="v">FODE-26-TEST-011</div></div>
+        <div class="box"><div class="k">ApplicantID</div><div class="v"><span data-r408-fixture-applicant>Not bound</span></div></div>
         <div class="box"><div class="k">Message type</div><div class="v">docs_missing</div></div>
-        <div class="box"><div class="k">Recipient</div><div class="v">sanjay@minervacenters.com</div></div>
-        <div class="box"><div class="k">Marker</div><div class="v">TEST_COMM_A / REGRESSION_FIXTURE_DO_NOT_PROCESS</div></div>
+        <div class="box"><div class="k">Recipient</div><div class="v"><span data-r408-fixture-recipient>sanjay@minervacenters.com</span></div></div>
+        <div class="box"><div class="k">Identity</div><div class="v">TEST_COMM_A / R408_CANONICAL_FIXTURE_20260803</div></div>
+        <div class="box"><div class="k">Exclusions</div><div class="v">REGRESSION_FIXTURE_DO_NOT_PROCESS / REGRESSION_FIXTURE_QUEUE_EXCLUDED</div></div>
       </div>
+      <label class="muted" style="display:block;margin-top:10px;">Canonical synthetic ApplicantID
+        <input data-r408-fixture-input type="text" inputmode="text" autocomplete="off" placeholder="FODE-26-000000" oninput="opsResetR408FixtureBinding_()">
+      </label>
       <div class="row" style="margin-top:10px;align-items:center;gap:8px;">
-        <button class="btn small" data-r407-fixture-action="reconcile" type="button" onclick="opsReconcileTestCommAFixture_()">Reconcile fixture authority</button>
-        <button class="btn small" data-r407-fixture-action="preview" type="button" onclick="opsPreviewTestCommAFixture_()" disabled>Preview approved template</button>
-        <button class="btn small" data-r407-fixture-action="prepare" type="button" onclick="opsPrepareTestCommAFixture_()" disabled>Prepare ledger</button>
-        <button class="btn small danger" data-r407-fixture-action="send" type="button" onclick="opsSendTestCommAFixture_()" disabled>Send exactly once</button>
-        <button class="btn small" data-r407-fixture-action="replay" type="button" onclick="opsReplayTestCommAFixture_()" disabled>Verify no-send replay</button>
+        <button class="btn small" data-r408-fixture-action="bind" type="button" onclick="opsBindR408Fixture_()">Bind canonical fixture</button>
+        <button class="btn small" data-r408-fixture-action="reconcile" type="button" onclick="opsReconcileTestCommAFixture_()" disabled>Reconcile fixture authority</button>
+        <button class="btn small" data-r408-fixture-action="preview" type="button" onclick="opsPreviewTestCommAFixture_()" disabled>Preview approved template</button>
+        <button class="btn small" data-r408-fixture-action="prepare" type="button" onclick="opsPrepareTestCommAFixture_()" disabled>Prepare ledger</button>
+        <button class="btn small danger" data-r408-fixture-action="send" type="button" onclick="opsSendTestCommAFixture_()" disabled>Send exactly once</button>
+        <button class="btn small" data-r408-fixture-action="replay" type="button" onclick="opsReplayTestCommAFixture_()" disabled>Verify no-send replay</button>
       </div>
       <div id="adminTestCommAFixtureResult" class="sendSummary hidden" style="margin-top:8px;"></div>
     </section>

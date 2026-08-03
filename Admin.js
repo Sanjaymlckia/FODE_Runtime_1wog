@@ -856,7 +856,7 @@ function ensureZohoBooksHeaders_(sheet) {
   if (!sh) {
     return { ok: false, code: "SHEET_NOT_CONFIRMED", message: "Main data sheet is not available." };
   }
-  var expectedName = clean_(CONFIG.SHEET_NAME_WORKING || CONFIG.SHEET_TAB_WORKING || "");
+  var expectedName = getCanonicalApplicantAuthority_().tabName;
   var actualName = clean_(sh.getName ? sh.getName() : "");
   if (!expectedName || !actualName || actualName !== expectedName) {
     return {
@@ -1941,7 +1941,7 @@ function triggerInvoiceWebhook_(rowObj, debugId) {
 function getDocsFollowupSentAt_(rowObj) {
   var row = rowObj || {};
   var applicantId = clean_(row.ApplicantID || row.applicantId || "");
-  var key = buildDocsFollowupKey_(CONFIG.DATA_MODE, applicantId);
+  var key = buildDocsFollowupKey_(applicantId);
   try {
     return safeStr_(PropertiesService.getScriptProperties().getProperty(key) || "");
   } catch (_e) {
@@ -2037,7 +2037,7 @@ function admin_updateParentEmailCorrected(payload) {
     var beforePaymentVerified = clean_(rowObj.Payment_Verified || "");
     applyPatch_(sh, rowNumber, { Parent_Email_Corrected: newEmail });
 
-    var deletedKey = deleteDocsFollowupKey_(CONFIG.DATA_MODE, applicantId);
+    var deletedKey = deleteDocsFollowupKey_(applicantId);
     logAdminEvent_("EMAIL_OVERRIDE_SUPERADMIN", {
       operatorEmail: operatorEmail || "",
       applicantId: applicantId,
@@ -2170,8 +2170,8 @@ function handlePaymentVerifiedEmailTriggers_(rowObj, debugId) {
     return { ok: true, status: "disabled", warnings: warnings };
   }
   var applicantId = safeStr_(row.ApplicantID || "");
-  var mode = safeStr_(CONFIG.DATA_MODE || "UNKNOWN") || "UNKNOWN";
-  var key = "PAYVER_SENT::" + mode + "::" + (applicantId || ("ROW-" + safeStr_(row._rowNumber || "")));
+  var workflowNamespace = getApplicantWorkflowNamespace_();
+  var key = "PAYVER_SENT::" + workflowNamespace + "::" + (applicantId || ("ROW-" + safeStr_(row._rowNumber || "")));
   var props = PropertiesService.getScriptProperties();
   var already = safeStr_(props.getProperty(key) || "");
   if (already) {
@@ -3962,7 +3962,7 @@ function admin_getPopulationLedger(payload) {
   var data = sheet.getDataRange().getValues();
   var sourceSheetName = sheet && typeof sheet.getName === "function"
     ? clean_(sheet.getName() || "")
-    : clean_(typeof CONFIG !== "undefined" && CONFIG && (CONFIG.DATA_SHEET || CONFIG.SHEET_NAME_WORKING) || "");
+    : getCanonicalApplicantAuthority_().tabName;
   return buildPopulationLedgerFromValues_(data, sourceSheetName, {
     sampleLimit: p.sampleLimit,
     includeEntries: p.includeEntries !== false
@@ -6038,9 +6038,7 @@ function admin_planLegacyInviteBatch(payload) {
 // These helpers are retained for compatibility and recovery evidence only.
 // They must not be treated as the canonical Portal Communication authority.
 function adminDryRunFirst50LegacyInvites() {
-  var ss = SpreadsheetApp.openById('1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4SalU');
-  var sh = ss.getSheetByName('FODE_Applications_2026');
-  if (!sh) throw new Error('Missing sheet: FODE_Applications_2026');
+  var sh = getWorkingSheet_();
 
   var values = sh.getDataRange().getDisplayValues();
   if (!values || values.length < 2) {

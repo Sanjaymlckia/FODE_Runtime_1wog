@@ -2727,47 +2727,73 @@ function getHeaderIndexMap_(sheet) {
   return map;
 }
 
-function getWorkingDataMode_() {
-  var configuredMode = clean_(CONFIG.DATA_MODE || "STAGING").toUpperCase();
-  if (configuredMode === "PROD"
-    && typeof isAdminDeploymentRequest_ === "function"
-    && isAdminDeploymentRequest_() === true) {
-    return "STAGING";
+function getCodeEnvironment_() {
+  var environment = clean_(CONFIG.CODE_ENVIRONMENT || "").toUpperCase();
+  if (environment !== "STAGING" && environment !== "PRODUCTION") {
+    throw new Error("Invalid CODE_ENVIRONMENT: " + (environment || "MISSING"));
   }
-  return configuredMode === "PROD" || configuredMode === "STAGING" ? configuredMode : "STAGING";
+  return environment;
+}
+
+function getApplicantWorkflowNamespace_() {
+  getCanonicalApplicantAuthority_();
+  // Preserve the historical idempotency namespace without using it as a workbook selector.
+  return "PROD";
+}
+
+function getCanonicalApplicantAuthority_() {
+  var spreadsheetId = clean_(CONFIG.SPREADSHEET_ID_CANONICAL_APPLICANT || "");
+  var tabName = clean_(CONFIG.CANONICAL_APPLICANT_TAB || "");
+  if (spreadsheetId !== "1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4SalU") {
+    throw new Error("CANONICAL_APPLICANT_AUTHORITY_INVALID");
+  }
+  if (tabName !== "FODE_Data" || clean_(CONFIG.DATA_SHEET || "") !== tabName) {
+    throw new Error("CANONICAL_APPLICANT_TAB_INVALID");
+  }
+  return {
+    spreadsheetId: spreadsheetId,
+    tabName: tabName,
+    codeEnvironment: getCodeEnvironment_()
+  };
+}
+
+function assertCanonicalApplicantSpreadsheet_(ss) {
+  var authority = getCanonicalApplicantAuthority_();
+  if (!ss || typeof ss.getId !== "function") {
+    throw new Error("CANONICAL_APPLICANT_SPREADSHEET_REQUIRED");
+  }
+  var actualId = clean_(ss.getId());
+  if (actualId !== authority.spreadsheetId) {
+    throw new Error("APPLICANT_SPREADSHEET_AUTHORITY_MISMATCH");
+  }
+  var sheet = ss.getSheetByName(authority.tabName);
+  if (!sheet || clean_(sheet.getName()) !== authority.tabName) {
+    throw new Error("CANONICAL_APPLICANT_TAB_MISSING");
+  }
+  return ss;
 }
 
 function getWorkingSpreadsheetId_() {
-  var mode = getWorkingDataMode_();
-  if (mode === "PROD") return clean_(CONFIG.SHEET_ID_PROD || CONFIG.SPREADSHEET_ID_PROD || CONFIG.SHEET_ID || "");
-  return clean_(CONFIG.SPREADSHEET_ID_STAGING || CONFIG.SHEET_ID_STAGING || CONFIG.SHEET_ID || "");
+  return getCanonicalApplicantAuthority_().spreadsheetId;
 }
 
 function getWorkingSpreadsheet_() {
   var dbgId = (typeof newDebugId_ === "function") ? newDebugId_() : ("DBG-" + Utilities.getUuid().slice(0, 8));
-  var mode = getWorkingDataMode_();
-
-  var spreadsheetId = (mode === "PROD")
-    ? clean_(CONFIG.SPREADSHEET_ID_PROD || "")
-    : clean_(CONFIG.SPREADSHEET_ID_STAGING || "");
-  Logger.log("GET_WORKING_SS_START " + dbgId + " mode=" + mode + " spreadsheetId=" + spreadsheetId);
-
-  if (!spreadsheetId) {
-    Logger.log("GET_WORKING_SS_FAIL " + dbgId + " mode=" + mode + " spreadsheetId= err=missing spreadsheetId");
-    throw new Error("Missing spreadsheetId for mode=" + mode + ". DebugId=" + dbgId);
-  }
+  var authority = getCanonicalApplicantAuthority_();
+  var spreadsheetId = authority.spreadsheetId;
+  Logger.log("GET_WORKING_SS_START " + dbgId + " codeEnvironment=" + authority.codeEnvironment + " spreadsheetId=" + spreadsheetId);
 
   var ss;
   try {
     ss = SpreadsheetApp.openById(spreadsheetId);
   } catch (e) {
-    Logger.log("GET_WORKING_SS_FAIL " + dbgId + " mode=" + mode + " spreadsheetId=" + spreadsheetId + " err=" + (e && e.message ? e.message : e));
-    throw new Error("Cannot open working spreadsheet for mode=" + mode + ". DebugId=" + dbgId);
+    Logger.log("GET_WORKING_SS_FAIL " + dbgId + " codeEnvironment=" + authority.codeEnvironment + " spreadsheetId=" + spreadsheetId + " err=" + (e && e.message ? e.message : e));
+    throw new Error("Cannot open canonical applicant spreadsheet. DebugId=" + dbgId);
   }
 
   if (!ss) {
-    Logger.log("GET_WORKING_SS_FAIL " + dbgId + " mode=" + mode + " spreadsheetId=" + spreadsheetId + " err=SpreadsheetApp.openById returned null");
-    throw new Error("Cannot open working spreadsheet for mode=" + mode + ". DebugId=" + dbgId);
+    Logger.log("GET_WORKING_SS_FAIL " + dbgId + " spreadsheetId=" + spreadsheetId + " err=SpreadsheetApp.openById returned null");
+    throw new Error("Cannot open canonical applicant spreadsheet. DebugId=" + dbgId);
   }
 
   var ssName = "";
@@ -2775,12 +2801,11 @@ function getWorkingSpreadsheet_() {
   try { ssName = clean_(ss.getName()); } catch (_nameErr) {}
   try { ssId = clean_(ss.getId()); } catch (_idErr) {}
   Logger.log("GET_WORKING_SS_OK " + dbgId + " ssName=" + ssName + " ssId=" + ssId);
-
-  var requiredTab = clean_(CONFIG.SHEET_TAB_WORKING || CONFIG.SHEET_NAME_WORKING || "FODE_Data");
-  var sheet = ss.getSheetByName(requiredTab);
-  if (!sheet) {
-    Logger.log("GET_WORKING_SS_MISSING_TAB " + dbgId + " requiredTab=" + requiredTab + " ssName=" + ssName);
-    throw new Error("Working spreadsheet missing tab '" + requiredTab + "'. DebugId=" + dbgId);
+  try {
+    assertCanonicalApplicantSpreadsheet_(ss);
+  } catch (authorityErr) {
+    Logger.log("GET_WORKING_SS_AUTHORITY_FAIL " + dbgId + " expected=" + authority.spreadsheetId + " actual=" + ssId + " err=" + (authorityErr && authorityErr.message ? authorityErr.message : authorityErr));
+    throw new Error((authorityErr && authorityErr.message ? authorityErr.message : "CANONICAL_APPLICANT_AUTHORITY_INVALID") + ". DebugId=" + dbgId);
   }
 
   return ss;
@@ -2788,7 +2813,7 @@ function getWorkingSpreadsheet_() {
 
 function getWorkingSheet_() {
   var ss = getWorkingSpreadsheet_();
-  var tabName = clean_(CONFIG.SHEET_NAME_WORKING || CONFIG.SHEET_TAB_WORKING || CONFIG.DATA_SHEET || "FODE_Data");
+  var tabName = getCanonicalApplicantAuthority_().tabName;
   var sh = ss.getSheetByName(tabName);
   if (!sh) throw new Error("Missing working sheet tab: " + tabName);
   return sh;
@@ -3481,25 +3506,18 @@ function parseCsvEmails_(s) {
     .join(",");
 }
 
-function buildDocsFollowupKey_(dataMode, applicantId) {
-  var mode = "";
+function buildDocsFollowupKey_(applicant) {
   var id = "";
-  if (arguments.length >= 2) {
-    mode = safeStr_(dataMode || "");
-    id = safeStr_(applicantId || "");
-  } else if (dataMode && typeof dataMode === "object") {
-    mode = safeStr_((CONFIG && CONFIG.DATA_MODE) || "STAGING");
-    id = safeStr_(dataMode.ApplicantID || dataMode.applicantId || "");
+  if (applicant && typeof applicant === "object") {
+    id = safeStr_(applicant.ApplicantID || applicant.applicantId || "");
   } else {
-    mode = safeStr_((CONFIG && CONFIG.DATA_MODE) || "STAGING");
-    id = safeStr_(dataMode || "");
+    id = safeStr_(applicant || "");
   }
-  mode = mode.toUpperCase() || "STAGING";
-  return "DOCS_FOLLOWUP_SENT::" + mode + "::" + (id || "UNKNOWN");
+  return "DOCS_FOLLOWUP_SENT::" + getApplicantWorkflowNamespace_() + "::" + (id || "UNKNOWN");
 }
 
-function deleteDocsFollowupKey_(dataMode, applicantId) {
-  var key = buildDocsFollowupKey_(dataMode, applicantId);
+function deleteDocsFollowupKey_(applicantId) {
+  var key = buildDocsFollowupKey_(applicantId);
   try {
     PropertiesService.getScriptProperties().deleteProperty(key);
     return key;
@@ -3508,18 +3526,16 @@ function deleteDocsFollowupKey_(dataMode, applicantId) {
   }
 }
 
-function buildPayverWorkflowKey_(dataMode, applicantId) {
-  var mode = safeStr_(dataMode || "").toUpperCase() || "STAGING";
+function buildPayverWorkflowKey_(applicantId) {
   var id = safeStr_(applicantId || "");
-  return "PAYVER_WORKFLOW_SENT::" + mode + "::" + (id || "UNKNOWN");
+  return "PAYVER_WORKFLOW_SENT::" + getApplicantWorkflowNamespace_() + "::" + (id || "UNKNOWN");
 }
 
 function handlePaymentVerifiedTrigger_(rowObj, debugId) {
   var row = rowObj || {};
   var applicantId = clean_(row["ApplicantID"] || "");
-  var dataMode = clean_(CONFIG.DATA_MODE || "STAGING") || "STAGING";
   var props = PropertiesService.getScriptProperties();
-  var key = buildPayverWorkflowKey_(dataMode, applicantId);
+  var key = buildPayverWorkflowKey_(applicantId);
 
   if (!applicantId) {
     logAdminEvent_("PAYVER_WORKFLOW_SKIPPED", { debugId: debugId, reason: "missing ApplicantID" });
@@ -3770,8 +3786,7 @@ function portalDebugLog_(tag, obj) {
 }
 
 function isStagingDriveUrlResolverEnabled_() {
-  var mode = clean_((CONFIG && CONFIG.DATA_MODE) || "STAGING").toUpperCase();
-  return mode !== "PROD";
+  return getCodeEnvironment_() === "STAGING";
 }
 
 function getDriveUploadFields_() {

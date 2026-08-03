@@ -12,19 +12,29 @@ CHANGELOG_LAST: "r113: enforce mail identity alias guard and bounce mailbox alig
   DEPLOY_VERSION_NUMBER: 407,
 BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignment",
 
-  // STAGING/PROD data mode routing (working sheet)
-  DATA_MODE: "PROD", // "STAGING" | "PROD"
-  SPREADSHEET_ID_STAGING: "1YFgLtUExz__fzQ4zTNoIyGTu-nrnasS7dIaShNPl7Cs",
-  SPREADSHEET_ID_PROD: "1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4SalU",
-  CAPABILITY_GRANTS_SPREADSHEET_CONFIG_KEY: "SPREADSHEET_ID_PROD",
-  SHEET_ID_STAGING: "1YFgLtUExz__fzQ4zTNoIyGTu-nrnasS7dIaShNPl7Cs",
-  SHEET_ID_PROD: "1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4SalU",
-  SHEET_NAME_WORKING: "FODE_Data",
-  SHEET_TAB_WORKING: "FODE_Data",
-  // Backward-compatible aliases (legacy callers)
-  SHEET_ID: "1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4Salu",
+  // Deployment/code environment is independent of applicant-data authority.
+  CODE_ENVIRONMENT: "STAGING",
+
+  // Sole applicant-data authority. Runtime resolution must fail closed on any other workbook or tab.
+  SPREADSHEET_ID_CANONICAL_APPLICANT: "1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4SalU",
+  CANONICAL_APPLICANT_TAB: "FODE_Data",
+  CAPABILITY_GRANTS_SPREADSHEET_CONFIG_KEY: "SPREADSHEET_ID_CANONICAL_APPLICANT",
+  // Compatibility alias used by Routes.js; equality is enforced by the canonical resolver.
   DATA_SHEET: "FODE_Data",
   LOG_SHEET: "Webhook_Log",
+
+  // One bounded R408 live-proof identity. ApplicantID is allocated by canonical Form Designer intake.
+  R408_AUTHORIZED_FIXTURE: {
+    firstName: "TEST_COMM_A",
+    lastName: "R408_CANONICAL_FIXTURE_20260803",
+    type: "Regression Fixture",
+    recipient: "sanjay@minervacenters.com",
+    nonOperationalMarker: "REGRESSION_FIXTURE_DO_NOT_PROCESS",
+    queueExclusionMarker: "REGRESSION_FIXTURE_QUEUE_EXCLUDED",
+    correlationId: "R408-FD-20260803-001",
+    messageType: "docs_missing",
+    templateVersionId: "1"
+  },
 
   // PORTAL LOG spreadsheet (FODE Portal Log 2026)
   LOG_SHEET_ID: "1AQbkHUafLFxqHDqwH3dVHR8gTuOZYtyUPkheby5ejhU",

@@ -11,9 +11,9 @@ Fixes included:
 6) Portal locks when Payment_Verified == "Yes"
 7) Subjects always prefill correctly (JSON / map style / CSV) + display nicely
 
-Sheet:
-- Spreadsheet: CONFIG.SHEET_ID
-- Data sheet: CONFIG.DATA_SHEET
+Applicant authority:
+- Spreadsheet: CONFIG.SPREADSHEET_ID_CANONICAL_APPLICANT
+- Data sheet: CONFIG.CANONICAL_APPLICANT_TAB
 - Log sheet:  CONFIG.LOG_SHEET
 ************************************************************/
 
@@ -933,7 +933,8 @@ function validatePortalSubjectsForGrade_(gradeRaw, subjectsCsv) {
 }
 
 function handlePortalUpdate_(ss, dataSheet, logSheet, payload, postParams, debugId) {
-  if (!dataSheet || dataSheet.getName() !== CONFIG.DATA_SHEET) {
+  assertCanonicalApplicantSpreadsheet_(ss);
+  if (!dataSheet || dataSheet.getName() !== getCanonicalApplicantAuthority_().tabName) {
     throw new Error("DATA_SHEET mismatch");
   }
   log_(logSheet, "PORTAL_UPDATE payload", payloadSummary_(payload));
@@ -1264,8 +1265,8 @@ function savePortalUpload_(applicantId, fieldKey, fileName, mimeType, bytes, ctx
   if (!id) throw new Error("Missing ApplicantID");
   if (!isAllowedPortalUploadField_(key)) throw new Error("Invalid upload field");
 
-  var ss = context.ss || getWorkingSpreadsheet_();
-  var sheet = context.sheet || mustGetSheet_(ss, CONFIG.DATA_SHEET);
+  var ss = assertCanonicalApplicantSpreadsheet_(context.ss || getWorkingSpreadsheet_());
+  var sheet = mustGetDataSheet_(ss);
   var dbg = clean_(context.dbg || "");
   var preferRestOnly = context.preferRest === true && CONFIG.DRIVE_REST_FALLBACK_ENABLED === true && CONFIG.PORTAL_UPLOAD_PREFER_REST === true;
   var onStage = (typeof context.onStage === "function") ? context.onStage : null;
@@ -3431,7 +3432,8 @@ function logPortalPostEvent_(label, payload) {
 }
 
 function mustGetDataSheet_(ss) {
-  var expectedName = clean_(CONFIG.SHEET_TAB_WORKING || CONFIG.DATA_SHEET || "FODE_Data");
+  assertCanonicalApplicantSpreadsheet_(ss);
+  var expectedName = getCanonicalApplicantAuthority_().tabName;
   var sheet = mustGetSheet_(ss, expectedName);
   if (sheet.getName() !== expectedName) {
     throw new Error("DATA_SHEET mismatch");
@@ -3773,43 +3775,49 @@ function setPortalSecretForApplicant_(applicantId, newSecret) {
   return resetPortalSecretForApplicant_(applicantId, { secretPlain: secretNorm });
 }
 
-function reconcileTestCommAPortalSecretAuthority_(fixtureGuard) {
+function reconcileR408FixturePortalSecretAuthority_(fixtureGuard) {
   var guard = fixtureGuard && typeof fixtureGuard === "object" ? fixtureGuard : {};
-  var expectedApplicantId = "FODE-26-TEST-011";
-  var expectedMarker = "TEST_COMM_A";
-  var expectedType = "Regression Fixture";
-  var expectedRecipient = "sanjay@minervacenters.com";
-  var mode = clean_(typeof getWorkingDataMode_ === "function" ? getWorkingDataMode_() : "").toUpperCase();
-  if (mode !== "STAGING" || typeof isAdminDeploymentRequest_ !== "function" || isAdminDeploymentRequest_() !== true) {
-    return { ok: false, result: "BLOCKED", code: "FIXTURE_RECONCILIATION_STAGING_ONLY", environment: mode || "UNKNOWN", secretDisclosed: false, fodeDataWritten: false };
+  var fixture = getR408AuthorizedFixtureContract_();
+  var expectedApplicantId = clean_(guard.applicantId || "");
+  var codeEnvironment = clean_(getCodeEnvironment_()).toUpperCase();
+  var authority;
+  try {
+    authority = getCanonicalApplicantAuthority_();
+    if (getWorkingSpreadsheetId_() !== authority.spreadsheetId) throw new Error("APPLICANT_SPREADSHEET_AUTHORITY_MISMATCH");
+  } catch (_authorityErr) {
+    return { ok: false, result: "BLOCKED", code: "CANONICAL_APPLICANT_AUTHORITY_INVALID", codeEnvironment: codeEnvironment || "UNKNOWN", secretDisclosed: false, fodeDataWritten: false };
+  }
+  if (codeEnvironment !== "STAGING" || typeof isAdminDeploymentRequest_ !== "function" || isAdminDeploymentRequest_() !== true) {
+    return { ok: false, result: "BLOCKED", code: "FIXTURE_RECONCILIATION_STAGING_CODE_ONLY", codeEnvironment: codeEnvironment || "UNKNOWN", secretDisclosed: false, fodeDataWritten: false };
   }
   if (
-    clean_(guard.applicantId || "") !== expectedApplicantId
-    || clean_(guard.fixtureMarker || "") !== expectedMarker
-    || clean_(guard.type || "") !== expectedType
-    || clean_(guard.recipient || "").toLowerCase() !== expectedRecipient
+    !/^FODE-26-[0-9]{6}$/.test(expectedApplicantId)
+    || clean_(guard.fixtureMarker || "") !== fixture.firstName
+    || clean_(guard.fixtureIdentity || "") !== fixture.lastName
+    || clean_(guard.type || "") !== fixture.type
+    || clean_(guard.recipient || "").toLowerCase() !== fixture.recipient
     || guard.nonOperational !== true
     || guard.excludedFromNormalQueues !== true
   ) {
-    return { ok: false, result: "BLOCKED", code: "FIXTURE_RECONCILIATION_IDENTITY_NOT_PROVEN", environment: mode, secretDisclosed: false, fodeDataWritten: false };
+    return { ok: false, result: "BLOCKED", code: "FIXTURE_RECONCILIATION_IDENTITY_NOT_PROVEN", codeEnvironment: codeEnvironment, secretDisclosed: false, fodeDataWritten: false };
   }
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(30000)) {
-    return { ok: false, result: "BLOCKED", code: "FIXTURE_RECONCILIATION_IN_PROGRESS", environment: mode, secretDisclosed: false, fodeDataWritten: false };
+    return { ok: false, result: "BLOCKED", code: "FIXTURE_RECONCILIATION_IN_PROGRESS", codeEnvironment: codeEnvironment, secretDisclosed: false, fodeDataWritten: false };
   }
   try {
     var opened = openPortalSecretsExistingSheet_(newDebugId_());
     if (!opened || opened.ok !== true) {
-      return { ok: false, result: "BLOCKED", code: clean_(opened && opened.code || "FIXTURE_PORTAL_SECRETS_UNAVAILABLE"), environment: mode, secretDisclosed: false, fodeDataWritten: false };
+      return { ok: false, result: "BLOCKED", code: clean_(opened && opened.code || "FIXTURE_PORTAL_SECRETS_UNAVAILABLE"), codeEnvironment: codeEnvironment, secretDisclosed: false, fodeDataWritten: false };
     }
     var sh = opened.sheet;
     var lastCol = sh.getLastColumn();
     var lastRow = sh.getLastRow();
-    if (lastCol < 1) return { ok: false, result: "BLOCKED", code: "PORTAL_SECRETS_SCHEMA_EMPTY", environment: mode, secretDisclosed: false, fodeDataWritten: false };
+    if (lastCol < 1) return { ok: false, result: "BLOCKED", code: "PORTAL_SECRETS_SCHEMA_EMPTY", codeEnvironment: codeEnvironment, secretDisclosed: false, fodeDataWritten: false };
     var headers = sh.getRange(1, 1, 1, lastCol).getValues()[0];
     var idx = buildPortalSecretHeaderIndex_(headers);
     if (!idx.ApplicantID || !idx.Status || !resolvePortalSecretColumnIndex_(idx)) {
-      return { ok: false, result: "BLOCKED", code: "PORTAL_SECRETS_SCHEMA_INCOMPLETE", environment: mode, secretDisclosed: false, fodeDataWritten: false };
+      return { ok: false, result: "BLOCKED", code: "PORTAL_SECRETS_SCHEMA_INCOMPLETE", codeEnvironment: codeEnvironment, secretDisclosed: false, fodeDataWritten: false };
     }
     var rows = lastRow >= 2 ? sh.getRange(2, 1, lastRow - 1, lastCol).getValues() : [];
     var matches = [];
@@ -3826,8 +3834,8 @@ function reconcileTestCommAPortalSecretAuthority_(fixtureGuard) {
         ok: true,
         result: "RECONCILIATION_NOOP",
         applicantId: expectedApplicantId,
-        fixtureMarker: expectedMarker,
-        environment: mode,
+        fixtureMarker: fixture.firstName,
+        codeEnvironment: codeEnvironment,
         matchingRecordCount: 1,
         activeUsableRecordCount: 1,
         rowIndex: Number(activeUsable[0].rowIndex || 0),
@@ -3841,8 +3849,8 @@ function reconcileTestCommAPortalSecretAuthority_(fixtureGuard) {
         result: "BLOCKED",
         code: "FIXTURE_PORTAL_SECRET_CONFLICT",
         applicantId: expectedApplicantId,
-        fixtureMarker: expectedMarker,
-        environment: mode,
+        fixtureMarker: fixture.firstName,
+        codeEnvironment: codeEnvironment,
         matchingRecordCount: matches.length,
         activeUsableRecordCount: activeUsable.length,
         secretDisclosed: false,
@@ -3853,8 +3861,8 @@ function reconcileTestCommAPortalSecretAuthority_(fixtureGuard) {
     var generatedHash = hashPortalSecret_(generatedSecret);
     var nowIso = new Date().toISOString();
     var newRow = buildPortalSecretOutputRow_(idx, lastCol, expectedApplicantId, generatedSecret, generatedHash, nowIso, {
-      email: expectedRecipient,
-      fullName: expectedMarker
+      email: fixture.recipient,
+      fullName: fixture.firstName + " " + fixture.lastName
     });
     var rowIndex = sh.getLastRow() + 1;
     sh.getRange(rowIndex, 1, 1, lastCol).setValues([newRow]);
@@ -3863,14 +3871,14 @@ function reconcileTestCommAPortalSecretAuthority_(fixtureGuard) {
       && normalizePortalSecretStatus_(readBack.status || "") === "ACTIVE"
       && !!clean_(readBack.secretPlain || readBack.secretHash || "");
     if (!readBackUsable) {
-      return { ok: false, result: "BLOCKED", code: "FIXTURE_PORTAL_SECRET_READBACK_FAILED", applicantId: expectedApplicantId, fixtureMarker: expectedMarker, environment: mode, matchingRecordCount: 1, activeUsableRecordCount: 0, secretDisclosed: false, fodeDataWritten: false };
+      return { ok: false, result: "BLOCKED", code: "FIXTURE_PORTAL_SECRET_READBACK_FAILED", applicantId: expectedApplicantId, fixtureMarker: fixture.firstName, codeEnvironment: codeEnvironment, matchingRecordCount: 1, activeUsableRecordCount: 0, secretDisclosed: false, fodeDataWritten: false };
     }
     return {
       ok: true,
       result: "RECONCILIATION_CREATED",
       applicantId: expectedApplicantId,
-      fixtureMarker: expectedMarker,
-      environment: mode,
+      fixtureMarker: fixture.firstName,
+      codeEnvironment: codeEnvironment,
       matchingRecordCount: 1,
       activeUsableRecordCount: 1,
       rowIndex: rowIndex,
@@ -3924,6 +3932,20 @@ function buildRuntimeTruth_(e, surfaceHint) {
     else requestedSurface = requestedView || 'unknown';
   }
 
+  var deploymentRole = requestedSurface === 'admin' ? 'ADMIN' : (requestedSurface === 'student' ? 'STUDENT' : 'UNKNOWN');
+  var effectiveCodeEnvironment = '';
+  var applicantAuthority = { spreadsheetId: '', tabName: '' };
+  var applicantAuthorityValid = false;
+  var applicantAuthorityError = '';
+  try {
+    applicantAuthority = getCanonicalApplicantAuthority_();
+    effectiveCodeEnvironment = clean_(applicantAuthority.codeEnvironment || getCodeEnvironment_());
+    assertCanonicalApplicantSpreadsheet_(getWorkingSpreadsheet_());
+    applicantAuthorityValid = true;
+  } catch (authorityErr) {
+    applicantAuthorityError = clean_(authorityErr && authorityErr.message || authorityErr || 'CANONICAL_APPLICANT_AUTHORITY_INVALID');
+  }
+
   var runtime = {
     ok: true,
     endpoint: 'whoami',
@@ -3938,6 +3960,14 @@ function buildRuntimeTruth_(e, surfaceHint) {
     effectiveUser: effectiveUser,
     requestedView: requestedView,
     requestedSurface: requestedSurface,
+    role: deploymentRole,
+    deploymentRole: deploymentRole,
+    codeEnvironment: effectiveCodeEnvironment,
+    effectiveCodeEnvironment: effectiveCodeEnvironment,
+    canonicalApplicantSpreadsheetId: clean_(applicantAuthority.spreadsheetId || ''),
+    canonicalApplicantTab: clean_(applicantAuthority.tabName || ''),
+    applicantAuthorityValid: applicantAuthorityValid,
+    applicantAuthorityError: applicantAuthorityValid ? '' : applicantAuthorityError,
     scriptId: runtimeScriptId,
     scriptIdRuntime: runtimeScriptId,
     scriptIdConfig: configScriptId,
@@ -9095,6 +9125,40 @@ function previewRpcTerminalSummary_(payload) {
   return data;
 }
 
+function getR408AuthorizedFixtureContract_() {
+  var fixture = CONFIG.R408_AUTHORIZED_FIXTURE || {};
+  if (
+    clean_(fixture.firstName || "") !== "TEST_COMM_A"
+    || clean_(fixture.lastName || "") !== "R408_CANONICAL_FIXTURE_20260803"
+    || clean_(fixture.type || "") !== "Regression Fixture"
+    || clean_(fixture.recipient || "").toLowerCase() !== "sanjay@minervacenters.com"
+    || clean_(fixture.nonOperationalMarker || "") !== "REGRESSION_FIXTURE_DO_NOT_PROCESS"
+    || clean_(fixture.queueExclusionMarker || "") !== "REGRESSION_FIXTURE_QUEUE_EXCLUDED"
+    || clean_(fixture.correlationId || "") !== "R408-FD-20260803-001"
+    || clean_(fixture.messageType || "").toLowerCase() !== "docs_missing"
+    || clean_(fixture.templateVersionId || "") !== "1"
+  ) {
+    throw new Error("R408_FIXTURE_CONTRACT_INVALID");
+  }
+  if (!runtime.applicantAuthorityValid) {
+    runtime.mismatch = true;
+    runtime.mismatches.push('Canonical applicant authority invalid');
+  }
+  return fixture;
+}
+
+function isR408AuthorizedFixtureRow_(rowObj) {
+  var row = rowObj && typeof rowObj === "object" ? rowObj : {};
+  var fixture = getR408AuthorizedFixtureContract_();
+  return clean_(row.First_Name || "") === fixture.firstName
+    && clean_(row.Last_Name || "") === fixture.lastName
+    && clean_(row.Type || row.Record_Type || "") === fixture.type
+    && clean_(row.Parent_Email_Corrected || row.Parent_Email || "").toLowerCase() === fixture.recipient
+    && clean_(row.Reason_For_Transfer || "") === fixture.nonOperationalMarker
+    && clean_(row.Siblings_Name_Grade || "") === fixture.queueExclusionMarker
+    && clean_(row.correlation_id || "") === fixture.correlationId;
+}
+
 function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messageType, opts) {
   var options = opts && typeof opts === "object" ? opts : {};
   var debugId = clean_(options.debugId || newDebugId_());
@@ -9193,6 +9257,14 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
   var capabilityBlock = communicationCapabilityBlock_(actor, normalizedType, clean_(options.action || "") === "send" ? "send" : "preview");
   if (capabilityBlock) return block(capabilityBlock.blockCode, capabilityBlock.blockReason);
   if (!context.applicantId) return block("APPLICANT_NOT_FOUND");
+  var isAuthorizedR408Fixture = isR408AuthorizedFixtureRow_(row);
+  if (isAuthorizedR408Fixture && options.authorizedR408Fixture !== true) {
+    return block("REGRESSION_FIXTURE_EXCLUDED", "The non-operational R408 fixture is excluded from normal individual, Batch, Stage Batch, Student, and automated communication paths.");
+  }
+  if (options.authorizedR408Fixture === true && !isAuthorizedR408Fixture) {
+    return block("R408_FIXTURE_IDENTITY_NOT_PROVEN", "The submitted applicant does not match the exact authorized R408 fixture contract.");
+  }
+  context.authorizedR408Fixture = isAuthorizedR408Fixture && options.authorizedR408Fixture === true;
 
   var canonicalLifecycle = typeof resolveCanonicalApplicantLifecycle_ === "function"
     ? resolveCanonicalApplicantLifecycle_(row, {})
@@ -9459,7 +9531,7 @@ function runFdAcknowledgementForCommittedRow_(sheet, rowNumber, opts) {
     requestId: debugId
   });
   if (!context.eligible) {
-    if (!dryRun) {
+    if (!dryRun && clean_(context.blockCode || "") !== "REGRESSION_FIXTURE_EXCLUDED") {
       recordApplicantContactOutcome_(context, "BLOCKED", {
         actorEmail: actor.actorEmail,
         batchLabel: batchLabel,
