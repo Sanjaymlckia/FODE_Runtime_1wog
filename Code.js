@@ -3900,6 +3900,16 @@ function buildStudentPortalUrl_(applicantId, secret) {
     + encodeURIComponent(clean_(secret || ""));
 }
 
+function resolveRegisteredDeploymentRole_(serviceUrl, adminUrl, studentUrl) {
+  var current = canonicalExecBase_(serviceUrl || "");
+  var adminBase = canonicalExecBase_(adminUrl || "");
+  var studentBase = canonicalExecBase_(studentUrl || "");
+  if (!current) return "UNKNOWN";
+  if (adminBase && current === adminBase && current !== studentBase) return "ADMIN";
+  if (studentBase && current === studentBase && current !== adminBase) return "STUDENT";
+  return "UNKNOWN";
+}
+
 function buildRuntimeTruth_(e, surfaceHint) {
   var params = (e && e.parameter && typeof e.parameter === "object") ? e.parameter : {};
   var requestedView = clean_(params.view || "").toLowerCase();
@@ -3916,23 +3926,15 @@ function buildRuntimeTruth_(e, surfaceHint) {
   var deployVersion = Number(CONFIG.DEPLOY_VERSION_NUMBER || 0);
   var adminBase = canonicalExecBase_(CONFIG.DEPLOYMENT_ID_ADMIN || CONFIG.WEBAPP_URL_ADMIN || "");
   var studentBase = canonicalExecBase_(CONFIG.DEPLOYMENT_ID_STUDENT || CONFIG.WEBAPP_URL_STUDENT || "");
-  var serviceUrl = canonicalExecBase_(rawServiceUrl || adminBase || studentBase || "");
+  var serviceUrl = canonicalExecBase_(rawServiceUrl || "");
   var configAdminUrl = canonicalExecBase_(CONFIG.WEBAPP_URL_ADMIN || "");
   var configStudentUrl = canonicalExecBase_(CONFIG.WEBAPP_URL_STUDENT || CONFIG.WEBAPP_URL_STUDENT_EXEC || "");
   var warnings = [];
 
   if (rawServiceUrl && rawServiceUrl.indexOf('/a/') >= 0) warnings.push('ScriptApp service URL resolved as domain-scoped and was canonicalized for reporting.');
 
-  var requestedSurface = clean_(surfaceHint || '');
-  if (!requestedSurface) {
-    if (requestedView === 'admin') requestedSurface = 'admin';
-    else if (requestedView === 'portal') requestedSurface = 'student';
-    else if (serviceUrl && adminBase && serviceUrl === adminBase) requestedSurface = 'admin';
-    else if (serviceUrl && studentBase && serviceUrl === studentBase) requestedSurface = 'student';
-    else requestedSurface = requestedView || 'unknown';
-  }
-
-  var deploymentRole = requestedSurface === 'admin' ? 'ADMIN' : (requestedSurface === 'student' ? 'STUDENT' : 'UNKNOWN');
+  var requestedSurface = clean_(surfaceHint || '') || requestedView || 'unknown';
+  var deploymentRole = resolveRegisteredDeploymentRole_(serviceUrl, adminBase, studentBase);
   var effectiveCodeEnvironment = '';
   var applicantAuthority = { spreadsheetId: '', tabName: '' };
   var applicantAuthorityValid = false;
@@ -4013,6 +4015,10 @@ function buildRuntimeTruth_(e, surfaceHint) {
   if (!runtime.deployVersion || !runtime.deploymentIdAdmin || !runtime.deploymentIdStudent) {
     runtime.mismatch = true;
     runtime.mismatches.push('Missing runtime fields');
+  }
+  if (runtime.deploymentRole === 'UNKNOWN') {
+    runtime.mismatch = true;
+    runtime.mismatches.push('Deployment registry binding unresolved');
   }
 
   runtime.warning = runtime.mismatches.concat(runtime.warnings).join(' | ');

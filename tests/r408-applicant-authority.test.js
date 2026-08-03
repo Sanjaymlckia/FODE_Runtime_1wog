@@ -124,6 +124,88 @@ assert.match(doPostSource, /POST HIT/);
 assert.match(mustGetDataSheetSource, /assertCanonicalApplicantSpreadsheet_\(ss\)/);
 assert.match(mustGetDataSheetSource, /getCanonicalApplicantAuthority_\(\)\.tabName/);
 
+// Deployment role comes only from the actual service URL and registered bindings.
+const adminDeploymentId = "AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ";
+const studentDeploymentId = "AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv";
+const execBase = value => {
+  const text = clean(value);
+  const match = text.match(/\/s\/([^/?#]+)/);
+  const id = match ? match[1] : (/^AKfy/.test(text) ? text : "");
+  return id ? `https://script.google.com/macros/s/${id}/exec` : "";
+};
+const roleContext = { canonicalExecBase_: execBase };
+vm.createContext(roleContext);
+vm.runInContext(extractFunction(codeSource, "resolveRegisteredDeploymentRole_"), roleContext);
+assert.equal(roleContext.resolveRegisteredDeploymentRole_(
+  `https://script.google.com/a/macros/minervacenters.com/s/${adminDeploymentId}/exec`,
+  adminDeploymentId,
+  studentDeploymentId
+), "ADMIN");
+assert.equal(roleContext.resolveRegisteredDeploymentRole_(
+  `https://script.google.com/a/macros/minervacenters.com/s/${studentDeploymentId}/exec`,
+  adminDeploymentId,
+  studentDeploymentId
+), "STUDENT");
+assert.equal(roleContext.resolveRegisteredDeploymentRole_("https://script.google.com/macros/s/UNREGISTERED/exec", adminDeploymentId, studentDeploymentId), "UNKNOWN");
+assert.equal(roleContext.resolveRegisteredDeploymentRole_("", adminDeploymentId, studentDeploymentId), "UNKNOWN");
+assert.equal(roleContext.resolveRegisteredDeploymentRole_(adminDeploymentId, adminDeploymentId, adminDeploymentId), "UNKNOWN");
+
+let runtimeServiceUrl = `https://script.google.com/a/macros/minervacenters.com/s/${adminDeploymentId}/exec`;
+const runtimeRoleContext = {
+  CONFIG: {
+    VERSION: "r408",
+    DEPLOY_VERSION_NUMBER: 408,
+    DEPLOYMENT_ID_ADMIN: adminDeploymentId,
+    DEPLOYMENT_ID_STUDENT: studentDeploymentId,
+    WEBAPP_URL_ADMIN: execBase(adminDeploymentId),
+    WEBAPP_URL_STUDENT: execBase(studentDeploymentId),
+    WEBAPP_URL_STUDENT_EXEC: execBase(studentDeploymentId),
+    SCRIPT_ID: "SCRIPT-R408"
+  },
+  clean_: clean,
+  canonicalExecBase_: execBase,
+  ScriptApp: {
+    getService: () => ({ getUrl: () => runtimeServiceUrl }),
+    getScriptId: () => "SCRIPT-R408"
+  },
+  Session: {
+    getActiveUser: () => ({ getEmail: () => "sanjay@minervacenters.com" }),
+    getEffectiveUser: () => ({ getEmail: () => "sanjay@minervacenters.com" })
+  },
+  getCanonicalApplicantAuthority_: () => ({ spreadsheetId: CANONICAL_ID, tabName: CANONICAL_TAB, codeEnvironment: "STAGING" }),
+  getCodeEnvironment_: () => "STAGING",
+  getWorkingSpreadsheet_: () => goodSheet,
+  assertCanonicalApplicantSpreadsheet_: sheet => sheet,
+  Date
+};
+vm.createContext(runtimeRoleContext);
+vm.runInContext(extractFunction(codeSource, "resolveRegisteredDeploymentRole_"), runtimeRoleContext);
+vm.runInContext(extractFunction(codeSource, "buildRuntimeTruth_"), runtimeRoleContext);
+const adminWhoami = runtimeRoleContext.buildRuntimeTruth_({ parameter: { view: "whoami" } }, "whoami");
+assert.equal(adminWhoami.requestedSurface, "whoami");
+assert.equal(adminWhoami.role, "ADMIN");
+assert.equal(adminWhoami.deploymentRole, "ADMIN");
+assert.equal(adminWhoami.mismatch, false);
+
+runtimeServiceUrl = `https://script.google.com/a/macros/minervacenters.com/s/${studentDeploymentId}/exec`;
+const studentWhoami = runtimeRoleContext.buildRuntimeTruth_({ parameter: { view: "whoami" } }, "whoami");
+assert.equal(studentWhoami.role, "STUDENT");
+assert.equal(studentWhoami.deploymentRole, "STUDENT");
+assert.equal(studentWhoami.mismatch, false);
+
+runtimeServiceUrl = "https://script.google.com/macros/s/UNREGISTERED/exec";
+const unknownWhoami = runtimeRoleContext.buildRuntimeTruth_({ parameter: { view: "admin" } }, "admin");
+assert.equal(unknownWhoami.requestedSurface, "admin");
+assert.equal(unknownWhoami.role, "UNKNOWN");
+assert.equal(unknownWhoami.deploymentRole, "UNKNOWN");
+assert.equal(unknownWhoami.mismatch, true);
+assert.ok(Array.from(unknownWhoami.mismatches).includes("Deployment registry binding unresolved"));
+
+runtimeServiceUrl = "";
+const missingServiceWhoami = runtimeRoleContext.buildRuntimeTruth_({ parameter: { view: "admin" } }, "admin");
+assert.equal(missingServiceWhoami.role, "UNKNOWN");
+assert.equal(missingServiceWhoami.mismatch, true);
+
 // Admin population and communication paths use the same resolver; Admin identity cannot redirect data.
 assert.match(adminSource, /getWorkingSpreadsheet_\(\)/);
 assert.match(adminSource, /getCanonicalApplicantAuthority_\(\)\.tabName/);
