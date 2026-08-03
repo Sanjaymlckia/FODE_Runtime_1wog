@@ -44,7 +44,7 @@ class MockSheet {
 }
 
 class MockSpreadsheet {
-  constructor(id = CONFIG && CONFIG.SPREADSHEET_ID_PROD || "MOCK-SPREADSHEET", name = "FODE Authoritative") { this.sheets = {}; this.id = id; this.name = name; }
+  constructor(id = CONFIG && CONFIG.SPREADSHEET_ID_CANONICAL_APPLICANT || "MOCK-SPREADSHEET", name = "FODE Authoritative") { this.sheets = {}; this.id = id; this.name = name; }
   getId() { return this.id; }
   getName() { return this.name; }
   getSheets() { return Object.values(this.sheets); }
@@ -120,7 +120,7 @@ const dryRun = context.initializeCapabilityGrantSheet_({ spreadsheet });
 assert.equal(dryRun.ok, true);
 assert.equal(dryRun.action, "CREATE_REQUIRED");
 assert.equal(spreadsheet.getSheetByName("Capability_Grants"), null, "Dry-run must not create the live schema");
-assert.equal(dryRun.workbookId, CONFIG.SPREADSHEET_ID_PROD);
+assert.equal(dryRun.workbookId, CONFIG.SPREADSHEET_ID_CANONICAL_APPLICANT);
 
 const missingConfirmation = context.initializeCapabilityGrantSheet_({ spreadsheet, apply: true });
 assert.equal(missingConfirmation.ok, false);
@@ -316,7 +316,7 @@ const originalConfigKey = CONFIG.CAPABILITY_GRANTS_SPREADSHEET_CONFIG_KEY;
 delete CONFIG.CAPABILITY_GRANTS_SPREADSHEET_CONFIG_KEY;
 assert.throws(() => context.getCapabilityGrantsSpreadsheetId_(), /CAPABILITY_GRANTS_SPREADSHEET_CONFIG_MISSING/);
 CONFIG.CAPABILITY_GRANTS_SPREADSHEET_CONFIG_KEY = originalConfigKey;
-assert.equal(context.getCapabilityGrantsSpreadsheetId_(), CONFIG.SPREADSHEET_ID_PROD);
+assert.equal(context.getCapabilityGrantsSpreadsheetId_(), CONFIG.SPREADSHEET_ID_CANONICAL_APPLICANT);
 assert.doesNotMatch(grantsSource, /getWorkingSpreadsheet_/, "Grant persistence must not inherit DATA_MODE workbook selection");
 assert.doesNotMatch(grantsSource, /DATA_MODE/, "Grant persistence must not branch on global DATA_MODE");
 
@@ -344,7 +344,7 @@ const mockDrive = {
   sourceFile: new MockBackupFile("FODE Authoritative"),
   folders: [],
   createFolder(name) { const folder = new MockBackupFolder(name, this); this.folders.push(folder); return folder; },
-  getFileById(id) { assert.equal(id, CONFIG.SPREADSHEET_ID_PROD); return this.sourceFile; }
+  getFileById(id) { assert.equal(id, CONFIG.SPREADSHEET_ID_CANONICAL_APPLICANT); return this.sourceFile; }
 };
 const backup = context.capabilityGrantCreatePreMigrationBackup_({
   confirmation: "CREATE_H1_PRE_MIGRATION_BACKUP",
@@ -361,7 +361,7 @@ const backup = context.capabilityGrantCreatePreMigrationBackup_({
   now
 });
 assert.equal(backup.result, "BACKUP_VERIFIED");
-assert.equal(backup.sourceWorkbookId, CONFIG.SPREADSHEET_ID_PROD);
+assert.equal(backup.sourceWorkbookId, CONFIG.SPREADSHEET_ID_CANONICAL_APPLICANT);
 assert.equal(backup.tabCount, spreadsheet.getSheets().length);
 assert.equal(backup.scriptPropertyCount, 2);
 assert.deepEqual(Array.from(backup.scriptPropertyKeys), ["CONFIG_TWO", "SECRET_ONE"]);
@@ -379,7 +379,7 @@ assert.match(operatorNextSource, /onxGrantCapabilityFilter/);
 assert.match(operatorNextSource, /onxGrantStatusFilter/);
 assert.doesNotMatch(operatorNextSource, /ADMIN_ROLES\s*=/, "Operator Next must not mutate durable role mappings");
 assert.match(claspIgnore, /!Admin_CapabilityGrants\.js/, "Capability-grant module must be part of the deployable Admin contract");
-assert.match(configSource, /CAPABILITY_GRANTS_SPREADSHEET_CONFIG_KEY:\s*"SPREADSHEET_ID_PROD"/);
+assert.match(configSource, /CAPABILITY_GRANTS_SPREADSHEET_CONFIG_KEY:\s*"SPREADSHEET_ID_CANONICAL_APPLICANT"/);
 assert.equal(runtimeContext.projects.FODE.capabilityGrants.runtimeIdentity, "r340 / 340");
 assert.equal(runtimeContext.projects.FODE.capabilityGrants.appsScriptVersion, 373);
 assert.equal(runtimeContext.projects.FODE.deployments.studentStaging.expectedRuntime, "r217");
