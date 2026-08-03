@@ -382,8 +382,8 @@ assert.match(claspIgnore, /!Admin_CapabilityGrants\.js/, "Capability-grant modul
 assert.match(configSource, /CAPABILITY_GRANTS_SPREADSHEET_CONFIG_KEY:\s*"SPREADSHEET_ID_CANONICAL_APPLICANT"/);
 assert.equal(runtimeContext.projects.FODE.capabilityGrants.runtimeIdentity, "r340 / 340");
 assert.equal(runtimeContext.projects.FODE.capabilityGrants.appsScriptVersion, 373);
-assert.equal(runtimeContext.projects.FODE.deployments.studentStaging.expectedRuntime, "r217");
-assert.equal(runtimeContext.projects.FODE.deployments.studentStaging.expectedDeploy, 217);
+assert.equal(runtimeContext.projects.FODE.deployments.studentStaging.expectedRuntime, "r403");
+assert.equal(runtimeContext.projects.FODE.deployments.studentStaging.expectedDeploy, 403);
 assert.match(readonlyBrowserRpcTool, /READ_ONLY_RPC_ALLOWLIST/);
 assert.match(readonlyBrowserRpcTool, /admin_getCanonicalFinanceSummary/);
 assert.doesNotMatch(readonlyBrowserRpcTool, /admin_createCapabilityGrantPreMigrationBackup/);
