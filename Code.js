@@ -9257,7 +9257,8 @@ function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messag
   var capabilityBlock = communicationCapabilityBlock_(actor, normalizedType, clean_(options.action || "") === "send" ? "send" : "preview");
   if (capabilityBlock) return block(capabilityBlock.blockCode, capabilityBlock.blockReason);
   if (!context.applicantId) return block("APPLICANT_NOT_FOUND");
-  var isAuthorizedR408Fixture = isR408AuthorizedFixtureRow_(row);
+  var isAuthorizedR408Fixture = typeof isR408AuthorizedFixtureRow_ === "function"
+    && isR408AuthorizedFixtureRow_(row) === true;
   if (isAuthorizedR408Fixture && options.authorizedR408Fixture !== true) {
     return block("REGRESSION_FIXTURE_EXCLUDED", "The non-operational R408 fixture is excluded from normal individual, Batch, Stage Batch, Student, and automated communication paths.");
   }
