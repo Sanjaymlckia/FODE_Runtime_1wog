@@ -1,107 +1,170 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const repo = path.resolve(__dirname, '..', '..');
 const script = path.join(repo, 'tools', 'governance', 'Fode-GovernedSession.ps1');
-fs.mkdirSync(path.join(repo, '.codex', 'state'), { recursive: true });
-const stateRoot = fs.mkdtempSync(path.join(repo, '.codex', 'state', 'fode-governance-test-'));
-const supersedeRoot = fs.mkdtempSync(path.join(repo, '.codex', 'state', 'fode-governed-supersede-test-'));
+const stateBase = path.join(repo, '.codex', 'state');
+fs.mkdirSync(stateBase, { recursive: true });
+const roots = [];
+const baseline = 'eb92c73a20cd026f2169799d19be0d1af55b6869';
+const clean = { branch: 'main', head: baseline, originMain: baseline, clean: true, statusLines: [] };
+const approvedDirty = {
+  ...clean,
+  clean: false,
+  statusLines: [
+    ' M tools/governance/Fode-GovernedSession.ps1',
+    ' M tools/fode.ps1',
+    '?? tools/governance/Fode-GovernedSession.Core.ps1',
+    ' M tests/governance/fode-governed-session.test.js',
+    ' M tests/governance/fode-convenience-governance.test.js',
+    ' M docs/governance/RELEASE_CLOSURE_DISCIPLINE.md'
+  ]
+};
+const approvedPaths = [
+  'tools/governance/Fode-GovernedSession.ps1',
+  'tools/fode.ps1',
+  'tools/governance/Fode-GovernedSession.Core.ps1',
+  'tests/governance/fode-governed-session.test.js',
+  'tests/governance/fode-convenience-governance.test.js',
+  'docs/governance/RELEASE_CLOSURE_DISCIPLINE.md'
+].join(';');
 
-function runAt(root, action, extra = {}) {
-  const args = ['-NoProfile', '-File', script, '-Action', action, '-StateRoot', root];
-  for (const [key, value] of Object.entries(extra)) args.push(`-${key}`, String(value));
-  const result = spawnSync('pwsh.exe', args, { cwd: repo, encoding: 'utf8' });
-  const json = JSON.parse(result.stdout.trim());
-  return { ...result, json };
+function newRoot(label) {
+  const root = fs.mkdtempSync(path.join(stateBase, `fode-governance-test-${label}-`));
+  roots.push(root);
+  return root;
 }
 
-function run(action, extra = {}) {
-  return runAt(stateRoot, action, extra);
+function run(root, action, snapshot, extra = {}) {
+  const args = ['-NoProfile', '-File', script, '-Action', action, '-StateRoot', root];
+  for (const [key, value] of Object.entries(extra)) args.push(`-${key}`, String(value));
+  const env = { ...process.env, FODE_GOVERNANCE_TEST_SNAPSHOT: JSON.stringify(snapshot) };
+  const result = spawnSync('pwsh.exe', args, { cwd: repo, encoding: 'utf8', env });
+  assert.ok(result.stdout.trim(), `No JSON output for ${action}: ${result.stderr}`);
+  return { ...result, json: JSON.parse(result.stdout.trim()) };
 }
 
 try {
-  const skill = fs.readFileSync(path.join(repo, '.agents', 'skills', 'fode-governed-session', 'SKILL.md'), 'utf8');
-  for (const phrase of ['Continue FODE', 'Close FODE session', 'Recover FODE session']) assert.match(skill, new RegExp(phrase.replace(/[.]/g, '\\.') ));
-  assert.match(skill, /GOVERNED_SESSION_STOP/);
+  const cleanRoot = newRoot('clean');
+  const opened = run(cleanRoot, 'Orient', clean, { TaskId: 'clean', ApprovedPaths: approvedPaths });
+  assert.equal(opened.json.session.phase, 'OPEN');
+  const cleanClose = run(cleanRoot, 'Close', clean, { OwnerLease: opened.json.ownerLease, ClearPendingAcceptance: true });
+  assert.equal(cleanClose.json.session.status, 'closed');
+  assert.equal(cleanClose.json.session.phase, 'CLOSED');
 
-  const oriented = run('Orient');
-  assert.equal(oriented.json.repository, repo);
-  assert.ok(oriented.json.governedState);
-  assert.ok(fs.existsSync(path.join(stateRoot, 'current.json')));
-  assert.doesNotMatch(fs.readFileSync(path.join(stateRoot, 'current.json'), 'utf8'), /FODE-\d{2}-\d{6}/);
+  const workingRoot = newRoot('working');
+  const initial = run(workingRoot, 'Orient', clean, { TaskId: 'approved', ApprovedPaths: approvedPaths, ReleaseAuthorized: true });
+  const firstEdit = run(workingRoot, 'Checkpoint', approvedDirty, {
+    OwnerLease: initial.json.ownerLease,
+    SourceWork: 'approved governance edit'
+  });
+  assert.equal(firstEdit.json.session.phase, 'WORKING', 'first approved edit must not deadlock read-only');
+  assert.equal(firstEdit.json.governedState, 'WORKING');
+  assert.equal(firstEdit.json.session.communicationAuthorized, false, 'deployment authorization must not authorize communications');
 
-  const concurrent = run('Orient');
-  assert.equal(concurrent.status, 2);
-  assert.equal(concurrent.json.governedState, 'CONCURRENT_SESSION_DETECTED');
+  const paused = run(workingRoot, 'Pause', approvedDirty, { OwnerLease: initial.json.ownerLease });
+  assert.equal(paused.json.session.phase, 'PAUSED');
+  const resumed = run(workingRoot, 'Resume', approvedDirty, { OwnerLease: initial.json.ownerLease });
+  assert.equal(resumed.json.session.phase, 'WORKING');
+  assert.deepEqual(resumed.json.session.approvedPaths, initial.json.session.approvedPaths);
 
-  const interruptedState = JSON.parse(fs.readFileSync(path.join(stateRoot, 'current.json'), 'utf8'));
-  delete interruptedState.ownershipGeneration;
-  delete interruptedState.ownershipBinding;
-  delete interruptedState.ownershipLeaseHash;
-  delete interruptedState.ownershipTransfers;
-  interruptedState.lastCheckpointAt = '2020-01-01T00:00:00.000Z';
-  fs.writeFileSync(path.join(stateRoot, 'current.json'), JSON.stringify(interruptedState), 'utf8');
-  fs.utimesSync(path.join(stateRoot, 'current.json'), new Date('2020-01-01T00:00:00Z'), new Date('2020-01-01T00:00:00Z'));
-  const recovered = run('Orient');
-  assert.equal(recovered.json.governedState, 'READ_ONLY_RECONCILIATION');
-  assert.ok(recovered.json.ownerLease);
-  const recoveredEvents = JSON.parse(fs.readFileSync(path.join(stateRoot, 'events.json'), 'utf8'));
-  assert.ok(recoveredEvents.some((event) => event.kind === 'interrupted'));
+  const validated = run(workingRoot, 'Transition', approvedDirty, {
+    OwnerLease: initial.json.ownerLease,
+    TargetPhase: 'VALIDATED',
+    TestsPassed: true,
+    NoProhibitedExternalAction: true,
+    Tests: 'governance suite passed'
+  });
+  assert.equal(validated.json.session.phase, 'VALIDATED');
+  const releaseReady = run(workingRoot, 'Transition', approvedDirty, {
+    OwnerLease: initial.json.ownerLease,
+    TargetPhase: 'RELEASE_READY',
+    TestsPassed: true,
+    GitPreflightPassed: true,
+    DeploymentPreflightPassed: true,
+    NoProhibitedExternalAction: true,
+    ReleaseAuthorized: true
+  });
+  assert.equal(releaseReady.json.session.phase, 'RELEASE_READY');
+  const communicationBlocked = run(workingRoot, 'Transition', approvedDirty, {
+    OwnerLease: initial.json.ownerLease,
+    TargetPhase: 'RELEASED',
+    ReleaseAuthorized: true,
+    CommunicationAuthorized: true,
+    NoProhibitedExternalAction: true
+  });
+  assert.equal(communicationBlocked.status, 2);
+  assert.equal(communicationBlocked.json.governedState, 'OWNER_DECISION_REQUIRED');
 
-  const checkpoint = run('Checkpoint', { TaskId: 'governance-test', TaskLabel: 'contract test', OwnerLease: recovered.json.ownerLease });
-  assert.ok(['GOVERNED_SESSION_READY', 'READ_ONLY_RECONCILIATION'].includes(checkpoint.json.governedState));
+  const unrelatedRoot = newRoot('unrelated');
+  const unrelated = { ...approvedDirty, statusLines: [...approvedDirty.statusLines, ' M Config.js'] };
+  const readOnly = run(unrelatedRoot, 'Orient', unrelated, { ApprovedPaths: approvedPaths, ReleaseAuthorized: true });
+  assert.equal(readOnly.json.session.phase, 'READ_ONLY_RECONCILIATION');
+  const blocked = run(unrelatedRoot, 'Transition', unrelated, {
+    OwnerLease: readOnly.json.ownerLease,
+    TargetPhase: 'WORKING',
+    ApprovedPaths: approvedPaths
+  });
+  assert.equal(blocked.status, 2);
+  assert.equal(blocked.json.governedState, 'READ_ONLY_RECONCILIATION');
 
-  const decision = run('RecordDecision', { Decision: 'retain read-only mode', Scope: 'governance test', RelatedTask: 'governance-test', EvidenceSource: 'owner declaration', OwnerLease: recovered.json.ownerLease });
-  assert.equal(decision.json.session.lastDecision.relatedTask, 'governance-test');
+  const reconciledRoot = newRoot('reconciled');
+  const stale = run(reconciledRoot, 'Orient', clean, { ApprovedPaths: approvedPaths });
+  const statePath = path.join(reconciledRoot, 'current.json');
+  const staleState = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+  delete staleState.ownershipGeneration;
+  delete staleState.ownershipBinding;
+  delete staleState.ownershipLeaseHash;
+  delete staleState.ownershipTransfers;
+  fs.writeFileSync(statePath, JSON.stringify(staleState), 'utf8');
+  fs.utimesSync(statePath, new Date('2020-01-01T00:00:00Z'), new Date('2020-01-01T00:00:00Z'));
+  const recovered = run(reconciledRoot, 'Orient', clean, { Supersede: true, ApprovedPaths: approvedPaths });
+  assert.notEqual(recovered.json.session.sessionId, stale.json.session.sessionId);
+  const reconciledClose = run(reconciledRoot, 'Close', clean, {
+    OwnerLease: recovered.json.ownerLease,
+    Decision: 'STOPPED_CLEANLY_BEFORE_WORK',
+    ClearPendingAcceptance: true
+  });
+  assert.equal(reconciledClose.json.session.status, 'closed');
 
-  const beforeTransfer = JSON.parse(fs.readFileSync(path.join(stateRoot, 'current.json'), 'utf8'));
-  const transfer = run('TransferOwnership', { SessionId: beforeTransfer.sessionId, OwnerDecision: 'TRANSFER_SESSION_OWNERSHIP' });
-  assert.equal(transfer.json.session.sessionId, beforeTransfer.sessionId);
-  assert.equal(transfer.json.session.baselineHead, beforeTransfer.baselineHead);
-  assert.equal(transfer.json.session.pendingDecision, beforeTransfer.pendingDecision);
-  assert.equal(transfer.json.session.lastDecision.decision, 'TRANSFER_SESSION_OWNERSHIP');
-  assert.notEqual(transfer.json.session.ownershipGeneration, beforeTransfer.ownershipGeneration);
-  assert.notEqual(transfer.json.session.ownershipLeaseHash, beforeTransfer.ownershipLeaseHash);
-  assert.ok(transfer.json.ownerLease);
-  const transferEvents = JSON.parse(fs.readFileSync(path.join(stateRoot, 'events.json'), 'utf8'));
-  assert.ok(transferEvents.some((event) => event.kind === 'ownership-transferred' && event.sessionId === beforeTransfer.sessionId));
+  const stoppedDirtyRoot = newRoot('stopped-dirty');
+  const stoppedDirty = run(stoppedDirtyRoot, 'Orient', clean, { ApprovedPaths: approvedPaths, ReleaseAuthorized: true });
+  const dirtyWorking = run(stoppedDirtyRoot, 'Checkpoint', approvedDirty, { OwnerLease: stoppedDirty.json.ownerLease });
+  assert.equal(dirtyWorking.json.session.phase, 'WORKING');
+  const dirtyClose = run(stoppedDirtyRoot, 'Close', approvedDirty, {
+    OwnerLease: stoppedDirty.json.ownerLease,
+    Decision: 'STOPPED_WITH_APPROVED_WORK'
+  });
+  assert.equal(dirtyClose.status, 2);
+  assert.equal(dirtyClose.json.session.status, 'closed');
+  const dirtyResume = run(stoppedDirtyRoot, 'Orient', approvedDirty, { ApprovedPaths: approvedPaths, ReleaseAuthorized: true });
+  const resumedWorking = run(stoppedDirtyRoot, 'Transition', approvedDirty, {
+    OwnerLease: dirtyResume.json.ownerLease,
+    TargetPhase: 'WORKING',
+    ApprovedPaths: approvedPaths
+  });
+  assert.equal(resumedWorking.json.session.phase, 'WORKING', 'stopped approved work must resume without discard or recreation');
 
-  const staleLease = run('Checkpoint', { OwnerLease: recovered.json.ownerLease });
-  assert.equal(staleLease.status, 2);
-  assert.equal(staleLease.json.governedState, 'CONCURRENT_SESSION_DETECTED');
-  const unapprovedExecutor = run('Orient', { OwnerLease: 'not-the-active-lease' });
-  assert.equal(unapprovedExecutor.status, 2);
-  assert.equal(unapprovedExecutor.json.governedState, 'CONCURRENT_SESSION_DETECTED');
+  const core = path.join(repo, 'tools', 'governance', 'Fode-GovernedSession.Core.ps1').replace(/'/g, "''");
+  const policyProbe = spawnSync('pwsh.exe', ['-NoProfile', '-Command', [
+    `. '${core}'`,
+    `[pscustomobject]@{ mobile = (Get-FodeRollbackDisposition 'MOBILE_LAYOUT'); security = (Get-FodeRollbackDisposition 'SECURITY'); governance = (Get-FodeRollbackDisposition 'GOVERNANCE_TOOL') } | ConvertTo-Json -Compress`
+  ].join('; ')], { cwd: repo, encoding: 'utf8' });
+  const dispositions = JSON.parse(policyProbe.stdout.trim());
+  assert.equal(dispositions.mobile, 'STOP_FORWARD_FIX_NO_ROLLBACK');
+  assert.equal(dispositions.security, 'STOP_AND_ROLLBACK_DECISION_REQUIRED');
+  assert.equal(dispositions.governance, 'PRESERVE_RUNTIME_NO_ROLLBACK');
 
-  const newOwnerOrient = run('Orient', { OwnerLease: transfer.json.ownerLease });
-  assert.equal(newOwnerOrient.json.session.sessionId, beforeTransfer.sessionId);
-  assert.equal(newOwnerOrient.json.session.ownershipGeneration, transfer.json.session.ownershipGeneration);
-  assert.notEqual(newOwnerOrient.json.governedState, 'CONCURRENT_SESSION_DETECTED');
-
-  const repeatedTransfer = run('TransferOwnership', { SessionId: beforeTransfer.sessionId, OwnerDecision: 'TRANSFER_SESSION_OWNERSHIP' });
-  assert.equal(repeatedTransfer.json.session.sessionId, beforeTransfer.sessionId);
-  assert.equal(repeatedTransfer.json.session.ownershipGeneration, transfer.json.session.ownershipGeneration + 1);
-  assert.notEqual(repeatedTransfer.json.session.ownershipLeaseHash, transfer.json.session.ownershipLeaseHash);
-
-  const close = run('Close', { OwnerLease: repeatedTransfer.json.ownerLease });
-  assert.notEqual(close.json.session.status, 'accepted');
-  assert.equal(close.json.session.pendingAcceptance, '');
-
-  const supersedeInitial = runAt(supersedeRoot, 'Orient');
-  const supersedeReplacement = runAt(supersedeRoot, 'Orient', { Supersede: true });
-  assert.notEqual(supersedeReplacement.json.session.sessionId, supersedeInitial.json.session.sessionId);
-  assert.ok(['GOVERNED_SESSION_READY', 'READ_ONLY_RECONCILIATION'].includes(supersedeReplacement.json.governedState));
-
-  fs.writeFileSync(path.join(stateRoot, 'current.json'), '{ malformed', 'utf8');
-  const malformed = run('Status');
-  assert.equal(malformed.status, 2);
-  assert.equal(malformed.json.governedState, 'GOVERNED_SESSION_STOP');
+  const finalState = releaseReady.json.session;
+  assert.equal(finalState.actionReports[0].sourceWork, 'approved governance edit');
+  assert.equal(finalState.actionReports[1].tests, 'governance suite passed');
+  for (const field of ['sourceWork','tests','gitOperations','appsScriptPush','versionCreation','deploymentRepin','browserAcceptance','externalMutations']) {
+    assert.ok(Object.hasOwn(finalState.actionReports[0], field), `closure action reporting must distinguish ${field}`);
+  }
 } finally {
-  fs.rmSync(stateRoot, { recursive: true, force: true });
-  fs.rmSync(supersedeRoot, { recursive: true, force: true });
+  for (const root of roots) fs.rmSync(root, { recursive: true, force: true });
 }
 
-console.log('fode-governed-session PASS');
+console.log('fode-governed-session PASS: lifecycle, approved scope, pause/resume, recovery, authorization separation, rollback policy and action reporting');

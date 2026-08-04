@@ -19,6 +19,7 @@ assert.match(fode, /ValidateSet\('continue', 'doctor', 'close'\)/, "canonical en
 assert.match(fode, /Assert-ApprovedStorage/, "canonical entrypoint must validate storage placement");
 assert.match(fode, /capabilityProfiles/, "canonical entrypoint must use context capability profiles");
 assert.match(fode, /ClearPendingAcceptance/, "close must clear completed acceptance explicitly");
+assert.match(fode, /'WORKING'[\s\S]*'PAUSED'/, "continue must accept the supported resumable lifecycle states");
 assert.match(fode, /OwnerLease/, "close must preserve governed ownership");
 assert.match(fode, /checkpointBoundary/, "risk profiles must expose one authority boundary");
 assert.match(fode, /live-whoami/, "staging-release doctor must prove live whoami read-only");

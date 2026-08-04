@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [ValidateSet('Orient','Status','Checkpoint','RecordDecision','TransferOwnership','Close')]
+  [ValidateSet('Orient','Status','Checkpoint','RecordDecision','TransferOwnership','Transition','Pause','Resume','Close')]
   [string]$Action = 'Orient',
   [string]$TaskId = '',
   [string]$TaskLabel = '',
@@ -14,6 +14,24 @@ param(
   [string]$NextSafeAction = '',
   [string]$SessionId = '',
   [string]$OwnerLease = '',
+  [string]$ApprovedPaths = '',
+  [string]$TargetPhase = '',
+  [switch]$TestsPassed,
+  [switch]$GitPreflightPassed,
+  [switch]$DeploymentPreflightPassed,
+  [switch]$NoProhibitedExternalAction,
+  [switch]$ReleaseAuthorized,
+  [switch]$CommunicationAuthorized,
+  [switch]$AcceptancePassed,
+  [string]$FailureClass = '',
+  [string]$SourceWork = '',
+  [string]$Tests = '',
+  [string]$GitOperations = '',
+  [string]$AppsScriptPush = '',
+  [string]$VersionCreation = '',
+  [string]$DeploymentRepin = '',
+  [string]$BrowserAcceptance = '',
+  [string]$ExternalMutations = '',
   [switch]$ClearPendingAcceptance,
   [switch]$AcceptBaselineAdvance,
   [switch]$Supersede,
@@ -27,6 +45,7 @@ if ([string]::IsNullOrWhiteSpace($StateRoot)) { $StateRoot = Join-Path $repoRoot
 $statePath = Join-Path $StateRoot 'current.json'
 $eventsPath = Join-Path $StateRoot 'events.json'
 $newSessionId = [guid]::NewGuid().ToString('N')
+. (Join-Path $PSScriptRoot 'Fode-GovernedSession.Core.ps1')
 
 function Redact([string]$Value) {
   if ($null -eq $Value) { return '' }
@@ -63,6 +82,15 @@ function Git([string]$Command, [switch]$AllowMany) {
 }
 
 function Snapshot {
+  $testSnapshot = [Environment]::GetEnvironmentVariable('FODE_GOVERNANCE_TEST_SNAPSHOT')
+  $testStatePrefix = Join-Path $repoRoot '.codex\state\fode-governance-test-'
+  if ($testSnapshot -and $StateRoot.StartsWith($testStatePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+    try { $fixture = $testSnapshot | ConvertFrom-Json } catch { Fail 'Malformed governance test snapshot' }
+    return [ordered]@{
+      repoRoot = $repoRoot; branch = [string]$fixture.branch; head = [string]$fixture.head; originMain = [string]$fixture.originMain
+      clean = [bool]$fixture.clean; statusLines = @($fixture.statusLines); observedAt = (Get-Date).ToUniversalTime().ToString('o')
+    }
+  }
   $statusLines = @(Git 'status --porcelain=v1' -AllowMany)
   $branch = Git 'branch --show-current'
   $head = Git 'rev-parse HEAD'
@@ -149,7 +177,7 @@ if ($previous -and $previous.policyHash -and $previous.policyHash -ne $policyHas
 function Output-State([object]$State, [string]$Message = '') {
   $result = [ordered]@{
     governedState = $State.governedState
-    ok = ($State.governedState -in @('GOVERNED_SESSION_READY','GOVERNED_SESSION_RECOVERED'))
+    ok = ($State.governedState -in @('GOVERNED_SESSION_READY','GOVERNED_SESSION_RECOVERED','WORKING','VALIDATED','RELEASE_READY','RELEASED','VERIFIED','PAUSED'))
     repository = $repoRoot
     session = $State
     observed = $observed
@@ -157,7 +185,7 @@ function Output-State([object]$State, [string]$Message = '') {
   }
   if ($script:outputOwnerLease) { $result.ownerLease = $script:outputOwnerLease }
   $result | ConvertTo-Json -Depth 16
-  if (!$result.ok -and $Action -in @('Orient','Checkpoint','RecordDecision','Close')) { exit 2 }
+  if (!$result.ok -and $Action -in @('Orient','Checkpoint','RecordDecision','Transition','Pause','Resume','Close')) { exit 2 }
 }
 
 if ($Action -eq 'Status') {
@@ -175,7 +203,8 @@ if ($Action -eq 'Orient') {
       Require-OwnerLease $previous
       $previous.lastCheckpointAt = (Get-Date).ToUniversalTime().ToString('o')
       $previous.observed = $observed
-      $previous.governedState = $(if($observed.clean){'GOVERNED_SESSION_RECOVERED'}else{'READ_ONLY_RECONCILIATION'})
+      $scopeCheck = Test-FodeApprovedScope $observed.statusLines @($previous.approvedPaths)
+      $previous.governedState = $(if($observed.clean -or $scopeCheck.allowed){ if($previous.phase -and $previous.phase -ne 'OPEN'){$previous.phase}else{'GOVERNED_SESSION_RECOVERED'} }else{'READ_ONLY_RECONCILIATION'})
       Save-Event $previous 'oriented'
       Output-State $previous 'Existing governed session oriented under the active ownership lease.'
       exit 0
@@ -192,6 +221,7 @@ if ($Action -eq 'Orient') {
   $state = [ordered]@{
     sessionId = $newSessionId; openedAt = (Get-Date).ToUniversalTime().ToString('o'); lastCheckpointAt = (Get-Date).ToUniversalTime().ToString('o'); closedAt = $null; status = 'open'
     baselineHead = $observed.head; branch = $observed.branch; taskId = (Redact $TaskId); taskLabel = (Redact $TaskLabel); governedState = $(if($observed.clean){ if($previous){'GOVERNED_SESSION_RECOVERED'}else{'GOVERNED_SESSION_READY'} } else {'READ_ONLY_RECONCILIATION'})
+    phase = $(if($observed.clean){'OPEN'}else{'READ_ONLY_RECONCILIATION'}); approvedPaths = @(ConvertTo-FodeGovernancePaths $ApprovedPaths); releaseAuthorized = $ReleaseAuthorized.IsPresent; communicationAuthorized = $CommunicationAuthorized.IsPresent; actionReports = @()
     pendingDecision = (Redact $PendingDecision); pendingAcceptance = (Redact $PendingAcceptance); nextSafeAction = (Redact $(if($NextSafeAction){$NextSafeAction}else{'Review governed state before editing.'})); continuingProhibitions = @((Read-JsonFile $policyPath).controls); policyHash = $policyHash; observed = $observed
     ownershipGeneration = 1; ownershipBinding = 'generated-lease'; ownershipLeaseHash = (Hash-Text $newLease); ownershipTransfers = @()
   }
@@ -202,9 +232,15 @@ if ($Action -eq 'Orient') {
 }
 
 if (!$previous -or $previous.status -ne 'open') { Fail 'No open governed session exists' 'GOVERNED_SESSION_STOP' }
+if (!$previous.PSObject.Properties['phase']) { Add-Or-Set $previous 'phase' $(if($observed.clean){'OPEN'}else{'READ_ONLY_RECONCILIATION'}) }
+if (!$previous.PSObject.Properties['approvedPaths']) { Add-Or-Set $previous 'approvedPaths' @() }
+if (!$previous.PSObject.Properties['releaseAuthorized']) { Add-Or-Set $previous 'releaseAuthorized' $false }
+if (!$previous.PSObject.Properties['communicationAuthorized']) { Add-Or-Set $previous 'communicationAuthorized' $false }
+if (!$previous.PSObject.Properties['actionReports']) { Add-Or-Set $previous 'actionReports' @() }
 if ($previous.baselineHead -ne $observed.head -or $previous.branch -ne $observed.branch) {
   $authorizedCloseAdvance = $Action -eq 'Close' -and $AcceptBaselineAdvance.IsPresent -and $observed.clean -and $observed.head -eq $observed.originMain -and $observed.branch -eq 'main'
-  if (!$authorizedCloseAdvance) { Fail 'Recorded session baseline conflicts with observed Git evidence' 'BASELINE_DRIFT' }
+  $authorizedReleaseAdvance = $Action -eq 'Transition' -and $TargetPhase -eq 'RELEASED' -and $ReleaseAuthorized.IsPresent -and $observed.clean -and $observed.head -eq $observed.originMain -and $observed.branch -eq 'main'
+  if (!$authorizedCloseAdvance -and !$authorizedReleaseAdvance) { Fail 'Recorded session baseline conflicts with observed Git evidence' 'BASELINE_DRIFT' }
   Add-Or-Set $previous 'baselineAdvancedFrom' $previous.baselineHead
   Add-Or-Set $previous 'baselineAdvanceReason' 'Owner-authorized release closure with HEAD aligned to origin/main'
   $previous.baselineHead = $observed.head
@@ -257,7 +293,7 @@ if ($Action -eq 'TransferOwnership') {
   exit 0
 }
 
-if ($Action -in @('Checkpoint','RecordDecision','Close')) { Require-OwnerLease $previous }
+if ($Action -in @('Checkpoint','RecordDecision','Transition','Pause','Resume','Close')) { Require-OwnerLease $previous }
 
 if ($Action -eq 'RecordDecision') {
   if ([string]::IsNullOrWhiteSpace($Decision) -or [string]::IsNullOrWhiteSpace($Scope) -or [string]::IsNullOrWhiteSpace($RelatedTask)) { Fail 'RecordDecision requires Decision, Scope and RelatedTask' 'OWNER_DECISION_REQUIRED' }
@@ -275,7 +311,48 @@ if ($TaskLabel) { $previous.taskLabel = Redact $TaskLabel }
 if ($PendingDecision) { $previous.pendingDecision = Redact $PendingDecision }
 if ($PendingAcceptance) { $previous.pendingAcceptance = Redact $PendingAcceptance }
 if ($NextSafeAction) { $previous.nextSafeAction = Redact $NextSafeAction }
-if ($Action -eq 'Checkpoint') { $previous.governedState = $(if($observed.clean){'GOVERNED_SESSION_READY'}else{'READ_ONLY_RECONCILIATION'}); Save-Event $previous 'checkpointed'; Output-State $previous 'Checkpoint persisted.'; exit 0 }
+if ($ApprovedPaths) { Add-Or-Set $previous 'approvedPaths' @(ConvertTo-FodeGovernancePaths $ApprovedPaths) }
+$reportValues = [ordered]@{ sourceWork=$SourceWork; tests=$Tests; gitOperations=$GitOperations; appsScriptPush=$AppsScriptPush; versionCreation=$VersionCreation; deploymentRepin=$DeploymentRepin; browserAcceptance=$BrowserAcceptance; externalMutations=$ExternalMutations }
+if (@($reportValues.Values | Where-Object { $_ }).Count -gt 0) {
+  $reports = @($previous.actionReports)
+  $reports += [pscustomobject]([ordered]@{ at=(Get-Date).ToUniversalTime().ToString('o') } + $reportValues)
+  Add-Or-Set $previous 'actionReports' $reports
+}
+if ($Action -eq 'Checkpoint') {
+  $scopeCheck = Test-FodeApprovedScope $observed.statusLines @($previous.approvedPaths)
+  if (!$scopeCheck.allowed) { $previous.phase = 'READ_ONLY_RECONCILIATION'; $previous.governedState = 'READ_ONLY_RECONCILIATION'; Add-Or-Set $previous 'unapprovedPaths' @($scopeCheck.unapprovedPaths) }
+  elseif (!$observed.clean -and $previous.phase -eq 'OPEN') { $previous.phase = 'WORKING'; $previous.governedState = 'WORKING' }
+  elseif ($previous.phase -and $previous.phase -ne 'OPEN') { $previous.governedState = $previous.phase }
+  else { $previous.governedState = 'GOVERNED_SESSION_READY' }
+  Save-Event $previous 'checkpointed'; Output-State $previous 'Checkpoint persisted.'; exit 0
+}
+if ($Action -eq 'Transition') {
+  $validPhases = @('WORKING','VALIDATED','RELEASE_READY','RELEASED','VERIFIED')
+  if ($TargetPhase -notin $validPhases) { Fail 'Transition requires a supported TargetPhase' 'OWNER_DECISION_REQUIRED' }
+  if ($ApprovedPaths) { Add-Or-Set $previous 'approvedPaths' @(ConvertTo-FodeGovernancePaths $ApprovedPaths) }
+  $scopeCheck = Test-FodeApprovedScope $observed.statusLines @($previous.approvedPaths)
+  $transition = Test-FodeLifecycleTransition ([string]$previous.phase) $TargetPhase $scopeCheck.allowed $TestsPassed.IsPresent $GitPreflightPassed.IsPresent $DeploymentPreflightPassed.IsPresent $NoProhibitedExternalAction.IsPresent ($ReleaseAuthorized.IsPresent -or $previous.releaseAuthorized)
+  if (!$transition.allowed) { Fail $transition.reason 'READ_ONLY_RECONCILIATION' }
+  $previous.phase = $TargetPhase; $previous.governedState = $TargetPhase
+  if ($ReleaseAuthorized) { $previous.releaseAuthorized = $true }
+  if ($CommunicationAuthorized) { $previous.communicationAuthorized = $true }
+  if ($TargetPhase -eq 'VERIFIED' -and !$AcceptancePassed) { Fail 'VERIFIED requires passing acceptance evidence' 'EXTERNAL_STATE_UNVERIFIED' }
+  if ($CommunicationAuthorized -and (!$previous.lastDecision -or $previous.lastDecision.decision -ne 'OWNER_AUTHORIZED_COMMUNICATION')) { Fail 'Communication authorization requires a separate explicit owner decision' 'OWNER_DECISION_REQUIRED' }
+  if ($FailureClass) { Add-Or-Set $previous 'rollbackDisposition' (Get-FodeRollbackDisposition $FailureClass) }
+  Save-Event $previous 'transitioned'; Output-State $previous "Lifecycle transitioned to $TargetPhase."; exit 0
+}
+if ($Action -eq 'Pause') {
+  if ($previous.phase -in @('RELEASED','VERIFIED','READ_ONLY_RECONCILIATION')) { Fail 'This lifecycle phase cannot be paused' 'OWNER_DECISION_REQUIRED' }
+  Add-Or-Set $previous 'pausedFrom' $previous.phase; $previous.phase = 'PAUSED'; $previous.governedState = 'PAUSED'
+  Save-Event $previous 'paused'; Output-State $previous 'Governed session paused with scope preserved.'; exit 0
+}
+if ($Action -eq 'Resume') {
+  if ($previous.phase -ne 'PAUSED' -or !$previous.pausedFrom) { Fail 'Only a paused governed session can resume' 'OWNER_DECISION_REQUIRED' }
+  $scopeCheck = Test-FodeApprovedScope $observed.statusLines @($previous.approvedPaths)
+  if (!$scopeCheck.allowed) { Fail 'Paused session contains an unrelated or unauthorized changed path' 'READ_ONLY_RECONCILIATION' }
+  $previous.phase = $previous.pausedFrom; $previous.governedState = $previous.phase; $previous.pausedFrom = $null
+  Save-Event $previous 'resumed'; Output-State $previous 'Governed session resumed with approved scope preserved.'; exit 0
+}
 if ($Action -eq 'Close') {
   if ($ClearPendingAcceptance) {
     $previous.pendingDecision = $null
@@ -284,7 +361,8 @@ if ($Action -eq 'Close') {
   $previous.closedAt = (Get-Date).ToUniversalTime().ToString('o'); $previous.status = 'closed'
   if (!$observed.clean) { $previous.governedState = 'READ_ONLY_RECONCILIATION'; $previous.nextSafeAction = 'Review existing modifications; closure did not certify them.' }
   elseif ($previous.pendingDecision -or $previous.pendingAcceptance) { $previous.governedState = 'OWNER_DECISION_REQUIRED' }
-  else { $previous.governedState = 'GOVERNED_SESSION_READY' }
+  elseif ($previous.phase -in @('OPEN','VERIFIED') -or $Decision -eq 'STOPPED_CLEANLY_BEFORE_WORK') { $previous.phase = 'CLOSED'; $previous.governedState = 'GOVERNED_SESSION_READY' }
+  else { $previous.governedState = 'OWNER_DECISION_REQUIRED' }
   Save-Event $previous 'closed'; Output-State $previous 'Governed closure receipt persisted.'; exit 0
 }
 

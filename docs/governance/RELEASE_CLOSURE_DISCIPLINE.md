@@ -54,6 +54,14 @@ Action: must not block release closure.
 
 Platform-wide MariaDB restore, authoritative Drive reconstruction, and protected production-workbook backup are release blockers only when the active CIS changes the data model, changes production data, authorizes a destructive operation, or is a scheduled platform DR validation. For a bounded code-only staging release with no such change, incomplete DR work is a separate `FOLLOW-UP` or `BLOCKED` capability item and must not be relabelled `PASS` or used to expand the release scope.
 
+## Governed Session Lifecycle
+
+The supported lifecycle is `OPEN → WORKING → VALIDATED → RELEASE_READY → RELEASED → VERIFIED → CLOSED`. `PAUSED` preserves the approved file scope and resumes to the prior phase. `READ_ONLY_RECONCILIATION` remains fail-closed for unrelated or unauthorized changes, but an explicit owner-authorized scope may transition back to `WORKING` or directly to `RELEASE_READY` after the required validation and preflight evidence is recorded.
+
+Release authorization is independent from communication or applicant-data mutation authorization. A source deployment never grants permission to send communications or mutate external data.
+
+Governance-tool failure does not itself require an Apps Script rollback. Rollback decisions are reserved for material authentication, authority, source/deployment integrity, runtime, security, applicant identity/actionability, external-data risk, or desktop-surface failures. A bounded mobile-layout failure stops further versions and remains pinned for a forward correction when runtime identity is safe.
+
 ## Required CURRENT_TASK.md Section
 
 Every active release task must include this standing section or preserve the current repo-local equivalent:

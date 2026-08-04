@@ -167,7 +167,7 @@ if ($Command -eq 'continue') {
       Set-Content -LiteralPath $LeasePath -Value ([string]$session.ownerLease) -Encoding UTF8
     }
     Write-Output "Session: $($session.governedState)"
-    if ($session.governedState -notin @('GOVERNED_SESSION_READY', 'GOVERNED_SESSION_RECOVERED')) { exit 1 }
+    if ($session.governedState -notin @('GOVERNED_SESSION_READY', 'GOVERNED_SESSION_RECOVERED', 'WORKING', 'VALIDATED', 'RELEASE_READY', 'RELEASED', 'VERIFIED', 'PAUSED')) { exit 1 }
   } else {
     Write-Output 'Session: orientation did not return structured state'
     exit 1
