@@ -19,6 +19,16 @@ function tagFor(source, label) {
   return source.slice(start, end + endMarker.length);
 }
 
+function tagForAfter(source, marker, label) {
+  const markerIndex = source.indexOf(marker);
+  assert.ok(markerIndex >= 0, `${marker} must exist`);
+  const endMarker = `>${label}</a>`;
+  const end = source.indexOf(endMarker, markerIndex);
+  const start = end < 0 ? -1 : source.lastIndexOf("<a", end);
+  assert.ok(start >= markerIndex && end >= start, `${label} link must exist after ${marker}`);
+  return source.slice(start, end + endMarker.length);
+}
+
 function attribute(tag, name) {
   const match = tag.match(new RegExp(`\\b${name}="([^"]*)"`, "i"));
   return match ? match[1] : "";
@@ -40,15 +50,25 @@ function simulateSandboxedAppsScriptClick(source, tag, renderedHref) {
     : { target, topUrl: initialTopUrl, iframeUrl: renderedHref };
 }
 
-const adminToEduOpsLink = tagFor(adminUi, "EduOps workspace");
+const adminToEduOpsLink = tagForAfter(adminUi, '<div class="diagLinks">', "EduOps workspace");
+const adminToOperationsLink = tagForAfter(adminUi, '<div class="diagLinks">', "Operations workspace");
 const eduOpsToAdminLink = tagFor(eduOps, "Admin workspace");
+const eduOpsToOperationsLink = tagFor(eduOps, "Operations workspace");
+const operationsToAdminLink = tagForAfter(adminUi, 'class="opsSurfaceNav"', "Admin workspace");
+const operationsToEduOpsLink = tagForAfter(adminUi, 'class="opsSurfaceNav"', "EduOps workspace");
 
 assert.match(adminUi, /WEBAPP_URL_ADMIN[^\n]+\?view=eduops[^\n]+EduOps workspace/, "Admin must expose the canonical EduOps workspace route");
 assert.match(eduOps, /class="eduops-admin-workspace-link"[^>]+href="<\?= ADMIN_URL \?>\?view=admin"[^>]+target="_top"[^>]*>Admin workspace<\/a>/, "EduOps must expose the Admin specialist workspace route outside the Apps Script iframe");
+assert.match(adminUi, /WEBAPP_URL_ADMIN[^\n]+\?view=ops[^\n]+Operations workspace/, "Admin must expose the authenticated Operations workspace route");
+assert.match(eduOps, /href="<\?= ADMIN_URL \?>\?view=ops"[^>]+target="_top"[^>]*>Operations workspace<\/a>/, "EduOps must expose the authenticated Operations workspace route");
+assert.match(adminUi, /class="opsSurfaceNav"[\s\S]*?\?view=admin" target="_top">Admin workspace<\/a>[\s\S]*?\?view=eduops" target="_top">EduOps workspace<\/a>/, "Operations must expose explicit navigation back to Admin and EduOps");
 assert.match(eduOpsWorkload, /t\.ADMIN_URL = clean_\(CONFIG\.WEBAPP_URL_ADMIN \|\| CONFIG\.WEBAPP_URL \|\| ""\);/, "EduOps Admin navigation must come from canonical server configuration");
 assert.match(code, /if \(route === "eduops"\) return renderEduOpsApp_;/, "EduOps route must remain server-routed");
 assert.match(code, /if \(route === "admin"\) return renderAdminApp_;/, "Admin route must remain server-routed");
-assert.match(eduOpsStyles, /@media \(max-width: 900px\)[\s\S]*?\.eduops-global-search-strip \.eduops-global-search \{ grid-template-columns: minmax\(0, 1fr\) auto; \}/, "The dual-surface link must retain a bounded 390px layout");
+assert.match(code, /if \(route === "ops"\) return renderAdminApp_;/, "Operations route must remain server-routed through the authenticated Admin renderer");
+assert.match(adminUi, /@media \(max-width:680px\)[\s\S]*?\.topbar\{ align-items:stretch; flex-direction:column; \}[\s\S]*?\.topbar > \.sub\{ width:100%; min-width:0; overflow-wrap:anywhere; \}/, "Admin navigation header must shed intrinsic URL width at narrow viewports");
+assert.match(eduOpsStyles, /@media \(max-width: 560px\)[\s\S]*?\.eduops-workspace-links \{ grid-column: 1; grid-row: 2; display:grid; grid-template-columns:repeat\(2,minmax\(0,1fr\)\); \}/, "EduOps working-surface links must stack into a bounded mobile row");
+assert.match(adminUi, /@media \(max-width: 680px\)[\s\S]*?\.opsNav\{ flex-direction:row;[\s\S]*?overflow-x:auto;[\s\S]*?\.opsMain\{ height:auto; min-height:100vh; overflow:visible; padding:12px; \}/, "Operations mobile navigation must expose the working surface without a full-height sidebar gate");
 assert.doesNotMatch(adminUi + eduOps, /FODE-26-003241[^\n]+href=|href=[^\n]+FODE-26-003241/, "Cross-surface navigation must not transport or substitute an applicant identity");
 assert.doesNotMatch(adminUi + eduOps, /google\.script\.run[^\n]+(?:send|prepare|reconcile)/i, "Navigation links must not invoke communication or mutation RPCs");
 
@@ -65,5 +85,18 @@ assert.deepEqual(eduOpsToAdmin, {
   topUrl: "https://script.google.com/macros/s/admin/exec?view=admin",
   iframeUrl: "https://script.googleusercontent.com/userCodeAppPanel"
 }, "EduOps to Admin must escape the sandboxed Apps Script iframe through its explicit target");
+
+for (const [label, source, tag, href] of [
+  ["Admin to Operations", adminUi, adminToOperationsLink, "https://script.google.com/macros/s/admin/exec?view=ops"],
+  ["EduOps to Operations", eduOps, eduOpsToOperationsLink, "https://script.google.com/macros/s/admin/exec?view=ops"]
+  ,["Operations to Admin", adminUi, operationsToAdminLink, "https://script.google.com/macros/s/admin/exec?view=admin"]
+  ,["Operations to EduOps", adminUi, operationsToEduOpsLink, "https://script.google.com/macros/s/admin/exec?view=eduops"]
+]) {
+  assert.deepEqual(simulateSandboxedAppsScriptClick(source, tag, href), {
+    target: "_top",
+    topUrl: href,
+    iframeUrl: "https://script.googleusercontent.com/userCodeAppPanel"
+  }, `${label} must escape the sandboxed Apps Script iframe`);
+}
 
 console.log("PASS R408 Admin/EduOps dual working-surface navigation and mobile route contract");

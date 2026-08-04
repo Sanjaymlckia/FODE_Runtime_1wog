@@ -62,7 +62,10 @@
       <div class="eduops-global-search">
         <label for="eduopsGlobalSearch"><span>Find any applicant</span><input id="eduopsGlobalSearch" type="search" placeholder="Name, ApplicantID, email or phone"></label>
         <div id="eduopsGlobalSearchResults" class="eduops-global-search-results" aria-live="polite"></div>
-        <a class="eduops-admin-workspace-link" href="<?= ADMIN_URL ?>?view=admin" target="_top" title="Open the Admin specialist workspace">Admin workspace</a>
+        <nav class="eduops-workspace-links" aria-label="Working surfaces">
+          <a class="eduops-admin-workspace-link" href="<?= ADMIN_URL ?>?view=admin" target="_top" title="Open the Admin specialist workspace">Admin workspace</a>
+          <a class="eduops-admin-workspace-link" href="<?= ADMIN_URL ?>?view=ops" target="_top" title="Open the Operations workspace">Operations workspace</a>
+        </nav>
       </div>
     </section>
 

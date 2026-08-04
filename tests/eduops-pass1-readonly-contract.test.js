@@ -39,12 +39,11 @@ for (const [index, block] of scriptBlocks(files.html + "\n" + files.client).entr
 }
 
 assert.match(files.code, /if \(route === "eduops"\) return renderEduOpsApp_;/, "?view=eduops must route to the isolated EduOps renderer");
-const adminUiWithoutCanonicalEduOpsLink = files.adminUi.replace(
-  /<a href="<\?!= \(\(CONFIG && CONFIG\.WEBAPP_URL_ADMIN\)[\s\S]*?\?view=eduops">EduOps workspace<\/a>/,
-  ""
-);
-assert.notEqual(adminUiWithoutCanonicalEduOpsLink, files.adminUi, "Admin must expose only the canonical EduOps navigation link");
-assert.doesNotMatch(adminUiWithoutCanonicalEduOpsLink, /EduOps|eduops_/i, "AdminUI.html must not contain EduOps implementation beyond the canonical navigation link");
+const canonicalEduOpsLinks = files.adminUi.match(/<a[^\r\n]*\?view=eduops"[^\r\n]*>EduOps workspace<\/a>/g) || [];
+assert.equal(canonicalEduOpsLinks.length, 2, "Admin and Operations must each expose one canonical EduOps navigation link");
+assert.ok(canonicalEduOpsLinks.every(link => /target="_top"/.test(link)), "Every AdminUI EduOps navigation link must escape the Apps Script iframe");
+const adminUiWithoutCanonicalEduOpsLinks = files.adminUi.replace(/<a[^\r\n]*\?view=eduops"[^\r\n]*>EduOps workspace<\/a>/g, "");
+assert.doesNotMatch(adminUiWithoutCanonicalEduOpsLinks, /EduOps|eduops_/i, "AdminUI.html must not contain EduOps implementation beyond canonical navigation links");
 assert.doesNotMatch(files.operatorNext, /eduops_queryOperationalWorkload|EduOps Shadow/i, "Operator Next must not contain EduOps implementation");
 
 for (const name of [
