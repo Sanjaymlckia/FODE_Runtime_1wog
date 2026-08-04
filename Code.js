@@ -9161,10 +9161,10 @@ function isR408AuthorizedFixtureRow_(rowObj) {
   var row = rowObj && typeof rowObj === "object" ? rowObj : {};
   var fixture = getR408AuthorizedFixtureContract_();
   return clean_(row.ApplicantID || "") === fixture.applicantId
-    && clean_(row.First_Name || "") === fixture.firstName
-    && clean_(row.Last_Name || "") === fixture.lastName
+    && clean_(row.First_Name || "").toUpperCase() === clean_(fixture.firstName || "").toUpperCase()
+    && clean_(row.Last_Name || "").toUpperCase() === clean_(fixture.lastName || "").toUpperCase()
     && clean_(row.Type || row.Record_Type || "") === fixture.type
-    && clean_(row.Parent_Email_Corrected || row.Parent_Email || "").toLowerCase() === fixture.recipient
+    && clean_(row.Parent_Email_Corrected || row.Parent_Email || "") === fixture.recipient
     && clean_(row.FormID || "") === fixture.formId
     && clean_(row.FD_FormID || "") === fixture.fdFormId
     && clean_(row.Contact_ID || "") === fixture.contactId

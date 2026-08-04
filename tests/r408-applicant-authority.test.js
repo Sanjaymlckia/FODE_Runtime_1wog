@@ -245,8 +245,8 @@ vm.runInContext(extractFunction(codeSource, "isR408AuthorizedFixtureRow_"), fixt
 assert.equal(fixtureContractContext.getR408AuthorizedFixtureContract_(), landedFixtureContract);
 const landedFixtureRow = {
   ApplicantID: R408_FIXTURE_ID,
-  First_Name: "SSS",
-  Last_Name: "SSS",
+  First_Name: "sss",
+  Last_Name: "sss",
   Type: "Regression Fixture",
   Parent_Email: "sanjay@minervacenters.com",
   FormID: 32254778,
@@ -258,8 +258,13 @@ const landedFixtureRow = {
   correlation_id: 238943
 };
 assert.equal(fixtureContractContext.isR408AuthorizedFixtureRow_(landedFixtureRow), true);
+assert.equal(fixtureContractContext.isR408AuthorizedFixtureRow_({ ...landedFixtureRow, First_Name: "SSS", Last_Name: "SSS" }), true);
+assert.equal(fixtureContractContext.isR408AuthorizedFixtureRow_({ ...landedFixtureRow, First_Name: "SsS", Last_Name: "sSs" }), true);
+assert.equal(fixtureContractContext.isR408AuthorizedFixtureRow_({ ...landedFixtureRow, First_Name: "SS" }), false);
+assert.equal(fixtureContractContext.isR408AuthorizedFixtureRow_({ ...landedFixtureRow, Last_Name: "SSSX" }), false);
 assert.equal(fixtureContractContext.isR408AuthorizedFixtureRow_({ ...landedFixtureRow, ApplicantID: "FODE-26-003242" }), false);
 assert.equal(fixtureContractContext.isR408AuthorizedFixtureRow_({ ...landedFixtureRow, FormID: 32254779 }), false);
+assert.equal(fixtureContractContext.isR408AuthorizedFixtureRow_({ ...landedFixtureRow, Parent_Email: "SANJAY@minervacenters.com" }), false);
 assert.equal(fixtureContractContext.isR408AuthorizedFixtureRow_({ ...landedFixtureRow, correlation_id: "historical-provenance-preserved" }), true, "Historical intake correlation is not a communication-operation authority");
 
 // Only dedicated server routes may opt into the exact synthetic fixture bypass.

@@ -37,8 +37,8 @@ function extractFunction(source, name) {
 const clean = value => String(value == null ? "" : value).trim();
 const fixture = {
   ApplicantID: "FODE-26-003241",
-  First_Name: "SSS",
-  Last_Name: "SSS",
+  First_Name: "sss",
+  Last_Name: "sss",
   Type: "Regression Fixture",
   Parent_Email: "sanjay@minervacenters.com",
   FormID: "32254778",
@@ -52,8 +52,8 @@ const fixture = {
 };
 const contract = {
   applicantId: fixture.ApplicantID,
-  firstName: fixture.First_Name,
-  lastName: fixture.Last_Name,
+  firstName: "SSS",
+  lastName: "SSS",
   type: fixture.Type,
   recipient: fixture.Parent_Email,
   formId: fixture.FormID,
@@ -113,6 +113,25 @@ assert.equal(fixtureProjection.nextAction, "NO_ACTION");
 assert.equal(fixtureProjection.worklistKey, "");
 assert.equal(fixtureProjection.recommendedMessageType, "");
 assert.equal(fixtureProjection.reasonCode, "REGRESSION_FIXTURE_QUEUE_EXCLUDED");
+assert.equal(actionabilityContext.isR408AuthorizedFixtureRow_({ ...fixture, First_Name: "SSS", Last_Name: "SSS" }), true);
+assert.equal(actionabilityContext.isR408AuthorizedFixtureRow_({ ...fixture, First_Name: "SsS", Last_Name: "sSs" }), true);
+assert.equal(actionabilityContext.isR408AuthorizedFixtureRow_({ ...fixture, First_Name: " ssS ", Last_Name: " Sss " }), true);
+assert.equal(actionabilityContext.isR408AuthorizedFixtureRow_({ ...fixture, First_Name: "SS" }), false);
+assert.equal(actionabilityContext.isR408AuthorizedFixtureRow_({ ...fixture, Last_Name: "SSSX" }), false);
+
+for (const [field, value] of Object.entries({
+  ApplicantID: "fode-26-003241",
+  FormID: "32254779",
+  FD_FormID: "238944",
+  Parent_Email: "SANJAY@minervacenters.com",
+  Type: "regression fixture",
+  Reason_For_Transfer: "regression_fixture_do_not_process",
+  Siblings_Name_Grade: "regression_fixture_queue_excluded",
+  Contact_ID: "7101767000004904022",
+  Deal_ID: "7101767000005964002"
+})) {
+  assert.equal(actionabilityContext.isR408AuthorizedFixtureRow_({ ...fixture, [field]: value }), false, `${field} must remain an exact fixture identity field`);
+}
 
 const ordinary = { ...fixture, ApplicantID: "FODE-26-009999", Type: "Applicant", Reason_For_Transfer: "", Siblings_Name_Grade: "" };
 const ordinaryProjection = actionabilityContext.buildActionabilityPreviewRow_(ordinary, 339);
