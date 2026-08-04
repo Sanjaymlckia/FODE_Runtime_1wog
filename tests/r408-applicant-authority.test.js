@@ -6,6 +6,8 @@ const CANONICAL_ID = "1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4SalU";
 const CANONICAL_TAB = "FODE_Data";
 const ABANDONED_ID = "1YFgLtUExz__fzQ4zTNoIyGTu-nrnasS7dIaShNPl7Cs";
 const ABANDONED_FIXTURE = "FODE-26-TEST-011";
+const R408_FIXTURE_ID = "FODE-26-003241";
+const STALE_R408_FIXTURE = /TEST_COMM_A|R408_CANONICAL_FIXTURE_20260803|R408-FD-20260803-001/;
 
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}`);
@@ -49,11 +51,16 @@ assert.match(configSource, /CANONICAL_APPLICANT_TAB:\s*"FODE_Data"/);
 assert.match(configSource, /CODE_ENVIRONMENT:\s*"STAGING"/);
 assert.match(configSource, /CAPABILITY_GRANTS_SPREADSHEET_CONFIG_KEY:\s*"SPREADSHEET_ID_CANONICAL_APPLICANT"/);
 assert.doesNotMatch(configSource, /SPREADSHEET_ID_(?:STAGING|PROD(?:UCTION)?)|SHEET_ID_(?:STAGING|PROD(?:UCTION)?)/i);
+assert.match(configSource, /applicantId:\s*"FODE-26-003241"/);
+assert.match(configSource, /firstName:\s*"SSS"[\s\S]*lastName:\s*"SSS"/);
+assert.match(configSource, /formId:\s*"32254778"[\s\S]*fdFormId:\s*"238943"/);
+assert.doesNotMatch(configSource, STALE_R408_FIXTURE);
 
 // The abandoned workbook, fixture and legacy selectors cannot re-enter deployable source.
 for (const [file, source] of Object.entries(deployable)) {
   assert.equal(source.includes(ABANDONED_ID), false, `${file} contains the abandoned applicant workbook`);
   assert.equal(source.includes(ABANDONED_FIXTURE), false, `${file} contains the abandoned fixture`);
+  assert.doesNotMatch(source, STALE_R408_FIXTURE, `${file} contains the stale unlanded R408 fixture identity`);
   assert.doesNotMatch(source, /\bDATA_MODE\b/, `${file} contains legacy applicant DATA_MODE selection`);
   assert.doesNotMatch(source, /\b(?:STAGING|PRODUCTION)_SPREADSHEET_ID\b/i, `${file} contains a legacy spreadsheet selector`);
 }
@@ -215,6 +222,46 @@ assert.match(communicationsSource, /resolveApplicantMessageContext_\(/);
 assert.match(codeSource, /REGRESSION_FIXTURE_EXCLUDED/);
 assert.match(codeSource, /normal individual, Batch, Stage Batch, Student, and automated communication paths/);
 
+// The exact landed fixture contract is self-contained and does not depend on a function-local whoami object.
+const landedFixtureContract = {
+  applicantId: R408_FIXTURE_ID,
+  firstName: "SSS",
+  lastName: "SSS",
+  type: "Regression Fixture",
+  recipient: "sanjay@minervacenters.com",
+  formId: "32254778",
+  fdFormId: "238943",
+  contactId: "7101767000004904021",
+  dealId: "7101767000005964001",
+  nonOperationalMarker: "REGRESSION_FIXTURE_DO_NOT_PROCESS",
+  queueExclusionMarker: "REGRESSION_FIXTURE_QUEUE_EXCLUDED",
+  messageType: "docs_missing",
+  templateVersionId: "1"
+};
+const fixtureContractContext = { CONFIG: { R408_AUTHORIZED_FIXTURE: landedFixtureContract }, clean_: clean };
+vm.createContext(fixtureContractContext);
+vm.runInContext(extractFunction(codeSource, "getR408AuthorizedFixtureContract_"), fixtureContractContext);
+vm.runInContext(extractFunction(codeSource, "isR408AuthorizedFixtureRow_"), fixtureContractContext);
+assert.equal(fixtureContractContext.getR408AuthorizedFixtureContract_(), landedFixtureContract);
+const landedFixtureRow = {
+  ApplicantID: R408_FIXTURE_ID,
+  First_Name: "SSS",
+  Last_Name: "SSS",
+  Type: "Regression Fixture",
+  Parent_Email: "sanjay@minervacenters.com",
+  FormID: 32254778,
+  FD_FormID: 238943,
+  Contact_ID: "7101767000004904021",
+  Deal_ID: "7101767000005964001",
+  Reason_For_Transfer: "REGRESSION_FIXTURE_DO_NOT_PROCESS",
+  Siblings_Name_Grade: "REGRESSION_FIXTURE_QUEUE_EXCLUDED",
+  correlation_id: 238943
+};
+assert.equal(fixtureContractContext.isR408AuthorizedFixtureRow_(landedFixtureRow), true);
+assert.equal(fixtureContractContext.isR408AuthorizedFixtureRow_({ ...landedFixtureRow, ApplicantID: "FODE-26-003242" }), false);
+assert.equal(fixtureContractContext.isR408AuthorizedFixtureRow_({ ...landedFixtureRow, FormID: 32254779 }), false);
+assert.equal(fixtureContractContext.isR408AuthorizedFixtureRow_({ ...landedFixtureRow, correlation_id: "historical-provenance-preserved" }), true, "Historical intake correlation is not a communication-operation authority");
+
 // Only dedicated server routes may opt into the exact synthetic fixture bypass.
 const bypassLocations = [];
 for (const [file, source] of Object.entries(deployable)) {
@@ -222,7 +269,7 @@ for (const [file, source] of Object.entries(deployable)) {
   const regex = /authorizedR408Fixture\s*:\s*true/g;
   while ((match = regex.exec(source))) bypassLocations.push(file);
 }
-assert.deepEqual(bypassLocations, [
+assert.deepEqual([...new Set(bypassLocations)], [
   "Admin_SelectedApplicantCommunications.js"
 ]);
 assert.match(communicationsSource, /serverTrustToken === adminR408FixtureServerTrust_/);
@@ -232,10 +279,17 @@ assert.match(operationsUi, /admin_bindR408Fixture/);
 assert.match(operationsUi, /inputsMatch/);
 assert.match(operationsUi, /displaysMatch/);
 assert.match(operationsUi, /recipientsMatch/);
-assert.match(operationsUi, /out\.applicantId\s*\|\|\s*""\)\.trim\(\)\s*===\s*applicantId/);
-assert.match(communicationsSource, /\^FODE-26-\[0-9\]\{6\}\$/);
+assert.match(operationsUi, /String\(out\.applicantId\s*\|\|\s*""\)\.trim\(\)\s*===\s*opsR408FixtureContract_\.applicantId/);
+assert.match(communicationsSource, /applicantId\s*!==\s*fixture\.applicantId/);
 assert.match(communicationsSource, /FIXTURE_BINDING_MISMATCH/);
 assert.match(communicationsSource, /FIXTURE_BULK_NOT_ALLOWED/);
+assert.match(communicationsSource, /FIXTURE_CLIENT_OPERATION_IDENTITY_FORBIDDEN/);
+assert.match(operationsUi, /applicantId:"FODE-26-003241"/);
+assert.match(operationsUi, /firstName:"SSS"[\s\S]*lastName:"SSS"/);
+assert.match(operationsUi, /inputsMatch[\s\S]*displaysMatch[\s\S]*namesMatch[\s\S]*recipientsMatch[\s\S]*formIdsMatch/);
+assert.match(adminUi, /data-r408-fixture-applicant>FODE-26-003241</);
+assert.match(adminUi, /data-r408-fixture-name>SSS SSS</);
+assert.match(adminUi, /data-r408-fixture-form-id>32254778</);
 
 // Every direct spreadsheet open is either the canonical resolver or a named sidecar boundary.
 const allowedDirectOpenFunctions = new Set([

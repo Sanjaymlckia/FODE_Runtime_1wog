@@ -23,15 +23,19 @@ BUILD_LABEL: "r113 enforce mail identity alias guard and bounce mailbox alignmen
   DATA_SHEET: "FODE_Data",
   LOG_SHEET: "Webhook_Log",
 
-  // One bounded R408 live-proof identity. ApplicantID is allocated by canonical Form Designer intake.
+  // One bounded R408 live-proof identity already allocated by canonical Form Designer intake.
   R408_AUTHORIZED_FIXTURE: {
-    firstName: "TEST_COMM_A",
-    lastName: "R408_CANONICAL_FIXTURE_20260803",
+    applicantId: "FODE-26-003241",
+    firstName: "SSS",
+    lastName: "SSS",
     type: "Regression Fixture",
     recipient: "sanjay@minervacenters.com",
+    formId: "32254778",
+    fdFormId: "238943",
+    contactId: "7101767000004904021",
+    dealId: "7101767000005964001",
     nonOperationalMarker: "REGRESSION_FIXTURE_DO_NOT_PROCESS",
     queueExclusionMarker: "REGRESSION_FIXTURE_QUEUE_EXCLUDED",
-    correlationId: "R408-FD-20260803-001",
     messageType: "docs_missing",
     templateVersionId: "1"
   },

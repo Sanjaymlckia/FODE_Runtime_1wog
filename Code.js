@@ -3791,11 +3791,15 @@ function reconcileR408FixturePortalSecretAuthority_(fixtureGuard) {
     return { ok: false, result: "BLOCKED", code: "FIXTURE_RECONCILIATION_STAGING_CODE_ONLY", codeEnvironment: codeEnvironment || "UNKNOWN", secretDisclosed: false, fodeDataWritten: false };
   }
   if (
-    !/^FODE-26-[0-9]{6}$/.test(expectedApplicantId)
-    || clean_(guard.fixtureMarker || "") !== fixture.firstName
-    || clean_(guard.fixtureIdentity || "") !== fixture.lastName
+    expectedApplicantId !== fixture.applicantId
+    || clean_(guard.firstName || "") !== fixture.firstName
+    || clean_(guard.lastName || "") !== fixture.lastName
     || clean_(guard.type || "") !== fixture.type
     || clean_(guard.recipient || "").toLowerCase() !== fixture.recipient
+    || clean_(guard.formId || "") !== fixture.formId
+    || clean_(guard.fdFormId || "") !== fixture.fdFormId
+    || clean_(guard.contactId || "") !== fixture.contactId
+    || clean_(guard.dealId || "") !== fixture.dealId
     || guard.nonOperational !== true
     || guard.excludedFromNormalQueues !== true
   ) {
@@ -3834,7 +3838,7 @@ function reconcileR408FixturePortalSecretAuthority_(fixtureGuard) {
         ok: true,
         result: "RECONCILIATION_NOOP",
         applicantId: expectedApplicantId,
-        fixtureMarker: fixture.firstName,
+        fixtureName: fixture.firstName + " " + fixture.lastName,
         codeEnvironment: codeEnvironment,
         matchingRecordCount: 1,
         activeUsableRecordCount: 1,
@@ -3849,7 +3853,7 @@ function reconcileR408FixturePortalSecretAuthority_(fixtureGuard) {
         result: "BLOCKED",
         code: "FIXTURE_PORTAL_SECRET_CONFLICT",
         applicantId: expectedApplicantId,
-        fixtureMarker: fixture.firstName,
+        fixtureName: fixture.firstName + " " + fixture.lastName,
         codeEnvironment: codeEnvironment,
         matchingRecordCount: matches.length,
         activeUsableRecordCount: activeUsable.length,
@@ -3871,13 +3875,13 @@ function reconcileR408FixturePortalSecretAuthority_(fixtureGuard) {
       && normalizePortalSecretStatus_(readBack.status || "") === "ACTIVE"
       && !!clean_(readBack.secretPlain || readBack.secretHash || "");
     if (!readBackUsable) {
-      return { ok: false, result: "BLOCKED", code: "FIXTURE_PORTAL_SECRET_READBACK_FAILED", applicantId: expectedApplicantId, fixtureMarker: fixture.firstName, codeEnvironment: codeEnvironment, matchingRecordCount: 1, activeUsableRecordCount: 0, secretDisclosed: false, fodeDataWritten: false };
+      return { ok: false, result: "BLOCKED", code: "FIXTURE_PORTAL_SECRET_READBACK_FAILED", applicantId: expectedApplicantId, fixtureName: fixture.firstName + " " + fixture.lastName, codeEnvironment: codeEnvironment, matchingRecordCount: 1, activeUsableRecordCount: 0, secretDisclosed: false, fodeDataWritten: false };
     }
     return {
       ok: true,
       result: "RECONCILIATION_CREATED",
       applicantId: expectedApplicantId,
-      fixtureMarker: fixture.firstName,
+      fixtureName: fixture.firstName + " " + fixture.lastName,
       codeEnvironment: codeEnvironment,
       matchingRecordCount: 1,
       activeUsableRecordCount: 1,
@@ -9134,21 +9138,21 @@ function previewRpcTerminalSummary_(payload) {
 function getR408AuthorizedFixtureContract_() {
   var fixture = CONFIG.R408_AUTHORIZED_FIXTURE || {};
   if (
-    clean_(fixture.firstName || "") !== "TEST_COMM_A"
-    || clean_(fixture.lastName || "") !== "R408_CANONICAL_FIXTURE_20260803"
+    clean_(fixture.applicantId || "") !== "FODE-26-003241"
+    || clean_(fixture.firstName || "") !== "SSS"
+    || clean_(fixture.lastName || "") !== "SSS"
     || clean_(fixture.type || "") !== "Regression Fixture"
     || clean_(fixture.recipient || "").toLowerCase() !== "sanjay@minervacenters.com"
+    || clean_(fixture.formId || "") !== "32254778"
+    || clean_(fixture.fdFormId || "") !== "238943"
+    || clean_(fixture.contactId || "") !== "7101767000004904021"
+    || clean_(fixture.dealId || "") !== "7101767000005964001"
     || clean_(fixture.nonOperationalMarker || "") !== "REGRESSION_FIXTURE_DO_NOT_PROCESS"
     || clean_(fixture.queueExclusionMarker || "") !== "REGRESSION_FIXTURE_QUEUE_EXCLUDED"
-    || clean_(fixture.correlationId || "") !== "R408-FD-20260803-001"
     || clean_(fixture.messageType || "").toLowerCase() !== "docs_missing"
     || clean_(fixture.templateVersionId || "") !== "1"
   ) {
     throw new Error("R408_FIXTURE_CONTRACT_INVALID");
-  }
-  if (!runtime.applicantAuthorityValid) {
-    runtime.mismatch = true;
-    runtime.mismatches.push('Canonical applicant authority invalid');
   }
   return fixture;
 }
@@ -9156,13 +9160,17 @@ function getR408AuthorizedFixtureContract_() {
 function isR408AuthorizedFixtureRow_(rowObj) {
   var row = rowObj && typeof rowObj === "object" ? rowObj : {};
   var fixture = getR408AuthorizedFixtureContract_();
-  return clean_(row.First_Name || "") === fixture.firstName
+  return clean_(row.ApplicantID || "") === fixture.applicantId
+    && clean_(row.First_Name || "") === fixture.firstName
     && clean_(row.Last_Name || "") === fixture.lastName
     && clean_(row.Type || row.Record_Type || "") === fixture.type
     && clean_(row.Parent_Email_Corrected || row.Parent_Email || "").toLowerCase() === fixture.recipient
+    && clean_(row.FormID || "") === fixture.formId
+    && clean_(row.FD_FormID || "") === fixture.fdFormId
+    && clean_(row.Contact_ID || "") === fixture.contactId
+    && clean_(row.Deal_ID || "") === fixture.dealId
     && clean_(row.Reason_For_Transfer || "") === fixture.nonOperationalMarker
-    && clean_(row.Siblings_Name_Grade || "") === fixture.queueExclusionMarker
-    && clean_(row.correlation_id || "") === fixture.correlationId;
+    && clean_(row.Siblings_Name_Grade || "") === fixture.queueExclusionMarker;
 }
 
 function resolveApplicantMessageContextFromRow_(rowObj, rowNumber, sheet, messageType, opts) {

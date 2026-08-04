@@ -19,21 +19,27 @@ The synthetic workbook `1YFgLtUExz__fzQ4zTNoIyGTu-nrnasS7dIaShNPl7Cs` is abandon
 
 ## Authorized R408 synthetic record
 
-The only controlled live-proof record is created by one Form Designer submission into the canonical workbook. Its server-bound contract is:
+The only controlled live-proof record is the existing canonical Form Designer submission on physical row `338`. The row number is evidence, not authority; every identity below must match:
 
 | Field | Exact value |
 | --- | --- |
-| `First_Name` | `TEST_COMM_A` |
-| `Last_Name` | `R408_CANONICAL_FIXTURE_20260803` |
+| `ApplicantID` | `FODE-26-003241` |
+| `First_Name` | `SSS` |
+| `Last_Name` | `SSS` |
 | `Type` | `Regression Fixture` |
 | `Parent_Email` | `sanjay@minervacenters.com` |
+| `FormID` | `32254778` |
+| `FD_FormID` | `238943` |
+| `Contact_ID` | `7101767000004904021` |
+| `Deal_ID` | `7101767000005964001` |
 | `Reason_For_Transfer` | `REGRESSION_FIXTURE_DO_NOT_PROCESS` |
 | `Siblings_Name_Grade` | `REGRESSION_FIXTURE_QUEUE_EXCLUDED` |
-| `correlation_id` | `R408-FD-20260803-001` |
 | Message type | Built-in `docs_missing` |
 | Template version | `1` |
 
-The canonical intake allocates the `ApplicantID`. Admin controls require the operator to enter that generated ID and bind it read-only before reconciliation or communication proof. Displayed identity, submitted identity, recipient and the canonical server row must agree exactly. Missing, conflicting or substituted identity fails closed.
+`FD_FormID` identifies the Form Designer form. It is not a unique submission identity and is never reused as a communication operation or idempotency identity. `FormID` identifies this submission. Existing intake provenance and the earlier `fd_acknowledgement = SENT` evidence remain unchanged.
+
+Both Admin communication panels display and submit the exact locked ApplicantID, name, FormID and recipient. The canonical server row must agree exactly; missing, conflicting or substituted identity fails closed. A new operationId and idempotency key are generated server-side only when the controlled communication is prepared.
 
 The fixture is non-operational and excluded from normal individual, Batch, Stage Batch, Student and automated communication paths. Only the dedicated R408 proof routes can opt into it. Those routes accept one numeric canonical `FODE-26-NNNNNN` ApplicantID, one recipient, blank CC/BCC, and no subject, body, template or recipient override.
 

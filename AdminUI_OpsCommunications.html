@@ -845,11 +845,16 @@
         .admin_sendApplicantMessage(payload);
     }
     var opsR408FixtureContract_ = {
-      fixtureMarker:"TEST_COMM_A",
-      fixtureIdentity:"R408_CANONICAL_FIXTURE_20260803",
+      applicantId:"FODE-26-003241",
+      firstName:"SSS",
+      lastName:"SSS",
+      type:"Regression Fixture",
+      formId:"32254778",
+      fdFormId:"238943",
+      contactId:"7101767000004904021",
+      dealId:"7101767000005964001",
       nonOperationalMarker:"REGRESSION_FIXTURE_DO_NOT_PROCESS",
       queueExclusionMarker:"REGRESSION_FIXTURE_QUEUE_EXCLUDED",
-      correlationId:"R408-FD-20260803-001",
       messageType:"docs_missing",
       recipient:"sanjay@minervacenters.com"
     };
@@ -858,49 +863,63 @@
     }
     function opsSetR408FixtureBinding_(applicantId){
       var id = String(applicantId || "").trim();
+      if (id !== opsR408FixtureContract_.applicantId) return opsResetR408FixtureBinding_();
       opsR408FixtureNodes_('[data-r408-fixture-input]').forEach(function(input){ input.value = id; });
-      opsR408FixtureNodes_('[data-r408-fixture-applicant]').forEach(function(node){ node.textContent = id || "Not bound"; });
+      opsR408FixtureNodes_('[data-r408-fixture-applicant]').forEach(function(node){ node.textContent = id; });
     }
     function opsResetR408FixtureBinding_(){
-      opsTestCommAProofState_.applicantId = "";
-      opsTestCommAProofState_.bound = false;
-      opsTestCommAProofState_.reconciled = false;
-      opsTestCommAProofState_.previewed = false;
-      opsTestCommAProofState_.prepareReplayProven = false;
-      opsTestCommAProofState_.sent = false;
-      opsR408FixtureNodes_('[data-r408-fixture-applicant]').forEach(function(node){ node.textContent = "Not bound"; });
-      ["reconcile","preview","prepare","send","replay"].forEach(function(action){ opsSetTestCommAActionEnabled_(action, false); });
+      opsR408FixtureProofState_.applicantId = "";
+      opsR408FixtureProofState_.bound = false;
+      opsR408FixtureProofState_.reconciled = false;
+      opsR408FixtureProofState_.previewed = false;
+      opsR408FixtureProofState_.prepareReplayProven = false;
+      opsR408FixtureProofState_.sent = false;
+      opsR408FixtureNodes_('[data-r408-fixture-input]').forEach(function(input){ input.value = opsR408FixtureContract_.applicantId; });
+      opsR408FixtureNodes_('[data-r408-fixture-applicant]').forEach(function(node){ node.textContent = opsR408FixtureContract_.applicantId; });
+      ["reconcile","preview","prepare","send","replay"].forEach(function(action){ opsSetR408FixtureActionEnabled_(action, false); });
     }
     function opsReadR408FixtureApplicantInput_(){
-      var values = opsR408FixtureNodes_('[data-r408-fixture-input]').map(function(input){ return String(input.value || "").trim(); }).filter(function(value){ return !!value; });
-      var unique = values.filter(function(value, index){ return values.indexOf(value) === index; });
-      return unique.length === 1 && /^FODE-26-[0-9]{6}$/.test(unique[0]) ? unique[0] : "";
+      var inputs = opsR408FixtureNodes_('[data-r408-fixture-input]');
+      return inputs.length > 0 && inputs.every(function(input){ return String(input.value || "").trim() === opsR408FixtureContract_.applicantId; })
+        ? opsR408FixtureContract_.applicantId
+        : "";
     }
-    function opsTestCommAFixturePayload_(){
-      var id = String(opsTestCommAProofState_.applicantId || "").trim();
-      if (opsTestCommAProofState_.bound !== true || !id) return null;
-      var inputsMatch = opsR408FixtureNodes_('[data-r408-fixture-input]').every(function(input){ return String(input.value || "").trim() === id; });
-      var displaysMatch = opsR408FixtureNodes_('[data-r408-fixture-applicant]').every(function(node){ return String(node.textContent || "").trim() === id; });
-      var recipientsMatch = opsR408FixtureNodes_('[data-r408-fixture-recipient]').every(function(node){ return String(node.textContent || "").trim().toLowerCase() === opsR408FixtureContract_.recipient; });
-      if (!inputsMatch || !displaysMatch || !recipientsMatch) return null;
+    function opsR408FixturePayload_(){
+      var id = String(opsR408FixtureProofState_.applicantId || "").trim();
+      if (opsR408FixtureProofState_.bound !== true || id !== opsR408FixtureContract_.applicantId) return null;
+      var inputs = opsR408FixtureNodes_('[data-r408-fixture-input]');
+      var displays = opsR408FixtureNodes_('[data-r408-fixture-applicant]');
+      var names = opsR408FixtureNodes_('[data-r408-fixture-name]');
+      var recipients = opsR408FixtureNodes_('[data-r408-fixture-recipient]');
+      var formIds = opsR408FixtureNodes_('[data-r408-fixture-form-id]');
+      var inputsMatch = inputs.length > 0 && inputs.every(function(input){ return String(input.value || "").trim() === id; });
+      var displaysMatch = displays.length > 0 && displays.every(function(node){ return String(node.textContent || "").trim() === id; });
+      var namesMatch = names.length > 0 && names.every(function(node){ return String(node.textContent || "").trim() === opsR408FixtureContract_.firstName + " " + opsR408FixtureContract_.lastName; });
+      var recipientsMatch = recipients.length > 0 && recipients.every(function(node){ return String(node.textContent || "").trim().toLowerCase() === opsR408FixtureContract_.recipient; });
+      var formIdsMatch = formIds.length > 0 && formIds.every(function(node){ return String(node.textContent || "").trim() === opsR408FixtureContract_.formId; });
+      if (!inputsMatch || !displaysMatch || !namesMatch || !recipientsMatch || !formIdsMatch) return null;
       return {
         applicantId:id,
         messageType:opsR408FixtureContract_.messageType,
         recipient:opsR408FixtureContract_.recipient,
-        fixtureMarker:opsR408FixtureContract_.fixtureMarker,
-        fixtureIdentity:opsR408FixtureContract_.fixtureIdentity,
+        firstName:opsR408FixtureContract_.firstName,
+        lastName:opsR408FixtureContract_.lastName,
+        type:opsR408FixtureContract_.type,
+        formId:opsR408FixtureContract_.formId,
+        fdFormId:opsR408FixtureContract_.fdFormId,
+        contactId:opsR408FixtureContract_.contactId,
+        dealId:opsR408FixtureContract_.dealId,
         nonOperationalMarker:opsR408FixtureContract_.nonOperationalMarker,
-        queueExclusionMarker:opsR408FixtureContract_.queueExclusionMarker,
-        correlationId:opsR408FixtureContract_.correlationId
+        queueExclusionMarker:opsR408FixtureContract_.queueExclusionMarker
       };
     }
-    function opsTestCommAFixtureResultId_(){
+    function opsR408FixtureResultId_(){
       var view = typeof INITIAL_ADMIN_VIEW === "undefined" ? "ops" : String(INITIAL_ADMIN_VIEW || "").trim().toLowerCase();
-      return view === "admin" && document.getElementById("adminTestCommAFixtureResult")
-        ? "adminTestCommAFixtureResult"
-        : "opsTestCommAFixtureResult";
+      return view === "admin" && document.getElementById("adminR408FixtureResult")
+        ? "adminR408FixtureResult"
+        : "opsR408FixtureResult";
     }
-    var opsTestCommAProofState_ = {
+    var opsR408FixtureProofState_ = {
       applicantId:"",
       bound:false,
       reconciled:false,
@@ -908,7 +927,7 @@
       prepareReplayProven:false,
       sent:false
     };
-    function opsSetTestCommAActionEnabled_(action, enabled){
+    function opsSetR408FixtureActionEnabled_(action, enabled){
       Array.prototype.forEach.call(document.querySelectorAll('[data-r408-fixture-action="' + action + '"]'), function(button){
         button.disabled = enabled !== true;
       });
@@ -917,114 +936,124 @@
       setOpsResult_(resultId, { result:"BLOCKED", blockReason:"The visible ApplicantID or recipient does not match the server-bound canonical R408 fixture. Rebind before continuing." }, title || "R408 Fixture Binding Blocked");
     }
     function opsBindR408Fixture_(){
-      var resultId = opsTestCommAFixtureResultId_();
+      var resultId = opsR408FixtureResultId_();
       var applicantId = opsReadR408FixtureApplicantInput_();
       if (!applicantId) {
         opsBlockR408FixtureBinding_(resultId, "R408 Fixture Bind Blocked");
         return;
       }
-      var payload = Object.assign({}, opsR408FixtureContract_, { applicantId:applicantId });
+      var payload = opsR408FixtureContract_;
       setOpsResult_(resultId, { result:"GUIDANCE", applicantId:applicantId, message:"Verifying the exact synthetic row in canonical SalU/FODE_Data..." }, "R408 Fixture Bind");
       google.script.run
         .withSuccessHandler(function(out){
-          var bound = !!(out && out.ok === true && String(out.result || "").toUpperCase() === "BOUND" && String(out.applicantId || "").trim() === applicantId && String(out.recipient || "").trim().toLowerCase() === opsR408FixtureContract_.recipient && out.applicantAuthorityValid === true);
+          var bound = !!(out && out.ok === true
+            && String(out.result || "").toUpperCase() === "BOUND"
+            && String(out.applicantId || "").trim() === opsR408FixtureContract_.applicantId
+            && String(out.firstName || "").trim() === opsR408FixtureContract_.firstName
+            && String(out.lastName || "").trim() === opsR408FixtureContract_.lastName
+            && String(out.formId || "").trim() === opsR408FixtureContract_.formId
+            && String(out.fdFormId || "").trim() === opsR408FixtureContract_.fdFormId
+            && String(out.contactId || "").trim() === opsR408FixtureContract_.contactId
+            && String(out.dealId || "").trim() === opsR408FixtureContract_.dealId
+            && String(out.recipient || "").trim().toLowerCase() === opsR408FixtureContract_.recipient
+            && out.applicantAuthorityValid === true);
           if (!bound) {
             opsResetR408FixtureBinding_();
             setOpsResult_(resultId, out || { result:"BLOCKED", blockReason:"Canonical fixture binding was not proven." }, "R408 Fixture Bind Failed");
             return;
           }
-          opsTestCommAProofState_.applicantId = applicantId;
-          opsTestCommAProofState_.bound = true;
+          opsR408FixtureProofState_.applicantId = applicantId;
+          opsR408FixtureProofState_.bound = true;
           opsSetR408FixtureBinding_(applicantId);
-          opsSetTestCommAActionEnabled_("reconcile", true);
+          opsSetR408FixtureActionEnabled_("reconcile", true);
           setOpsResult_(resultId, out, "R408 Fixture Bound");
         })
         .withFailureHandler(function(err){ opsResetR408FixtureBinding_(); setOpsResult_(resultId, { result:"FAILED", blockReason:String((err && err.message) || err || "Fixture binding failed.") }, "R408 Fixture Bind Failed"); })
         .admin_bindR408Fixture(payload);
     }
-    function opsReconcileTestCommAFixture_(){
-      var resultId = opsTestCommAFixtureResultId_();
-      var payload = opsTestCommAFixturePayload_();
-      if (!payload) { opsBlockR408FixtureBinding_(resultId, "TEST_COMM_A Authority Blocked"); return; }
-      setOpsResult_(resultId, { result:"GUIDANCE", applicantId:payload.applicantId, message:"Reconciling the canonical fixture authority without exposing secret material..." }, "TEST_COMM_A Authority");
+    function opsReconcileR408Fixture_(){
+      var resultId = opsR408FixtureResultId_();
+      var payload = opsR408FixturePayload_();
+      if (!payload) { opsBlockR408FixtureBinding_(resultId, "R408 Fixture Authority Blocked"); return; }
+      setOpsResult_(resultId, { result:"GUIDANCE", applicantId:payload.applicantId, message:"Reconciling the canonical fixture authority without exposing secret material..." }, "R408 Fixture Authority");
       google.script.run
         .withSuccessHandler(function(out){
           var result = String(out && out.result || "").toUpperCase();
-          opsTestCommAProofState_.reconciled = result === "RECONCILIATION_CREATED" || result === "RECONCILIATION_NOOP";
-          opsSetTestCommAActionEnabled_("preview", opsTestCommAProofState_.reconciled);
-          setOpsResult_(resultId, out || { result:"FAILED", blockReason:"Invalid fixture authority response." }, "TEST_COMM_A Authority");
+          opsR408FixtureProofState_.reconciled = result === "RECONCILIATION_CREATED" || result === "RECONCILIATION_NOOP";
+          opsSetR408FixtureActionEnabled_("preview", opsR408FixtureProofState_.reconciled);
+          setOpsResult_(resultId, out || { result:"FAILED", blockReason:"Invalid fixture authority response." }, "R408 Fixture Authority");
         })
-        .withFailureHandler(function(err){ setOpsResult_(resultId, { result:"FAILED", blockReason:String((err && err.message) || err || "Fixture authority reconciliation failed.") }, "TEST_COMM_A Authority Failed"); })
+        .withFailureHandler(function(err){ setOpsResult_(resultId, { result:"FAILED", blockReason:String((err && err.message) || err || "Fixture authority reconciliation failed.") }, "R408 Fixture Authority Failed"); })
         .admin_reconcileFixturePortalSecret(payload);
     }
-    function opsPreviewTestCommAFixture_(){
-      var resultId = opsTestCommAFixtureResultId_();
-      var payload = opsTestCommAFixturePayload_();
-      if (!payload) { opsBlockR408FixtureBinding_(resultId, "TEST_COMM_A Preview Blocked"); return; }
-      setOpsResult_(resultId, { result:"GUIDANCE", applicantId:payload.applicantId, message:"Loading fixture preview..." }, "TEST_COMM_A Preview");
+    function opsPreviewR408Fixture_(){
+      var resultId = opsR408FixtureResultId_();
+      var payload = opsR408FixturePayload_();
+      if (!payload) { opsBlockR408FixtureBinding_(resultId, "R408 Fixture Preview Blocked"); return; }
+      setOpsResult_(resultId, { result:"GUIDANCE", applicantId:payload.applicantId, message:"Loading fixture preview..." }, "R408 Fixture Preview");
       google.script.run
         .withSuccessHandler(function(out){
-          opsTestCommAProofState_.previewed = String(out && out.result || "").toUpperCase() === "PREVIEW";
-          opsTestCommAProofState_.prepareReplayProven = false;
-          opsTestCommAProofState_.sent = false;
-          opsSetTestCommAActionEnabled_("prepare", opsTestCommAProofState_.previewed);
-          opsSetTestCommAActionEnabled_("send", false);
-          opsSetTestCommAActionEnabled_("replay", false);
-          setOpsResult_(resultId, out || { result:"FAILED", blockReason:"Invalid fixture preview response." }, "TEST_COMM_A Preview");
+          opsR408FixtureProofState_.previewed = String(out && out.result || "").toUpperCase() === "PREVIEW";
+          opsR408FixtureProofState_.prepareReplayProven = false;
+          opsR408FixtureProofState_.sent = false;
+          opsSetR408FixtureActionEnabled_("prepare", opsR408FixtureProofState_.previewed);
+          opsSetR408FixtureActionEnabled_("send", false);
+          opsSetR408FixtureActionEnabled_("replay", false);
+          setOpsResult_(resultId, out || { result:"FAILED", blockReason:"Invalid fixture preview response." }, "R408 Fixture Preview");
         })
-        .withFailureHandler(function(err){ setOpsResult_(resultId, { result:"FAILED", blockReason:String((err && err.message) || err || "Fixture preview failed.") }, "TEST_COMM_A Preview Failed"); })
+        .withFailureHandler(function(err){ setOpsResult_(resultId, { result:"FAILED", blockReason:String((err && err.message) || err || "Fixture preview failed.") }, "R408 Fixture Preview Failed"); })
         .admin_previewFixtureCommunication(payload);
     }
-    function opsPrepareTestCommAFixture_(){
-      var resultId = opsTestCommAFixtureResultId_();
-      var payload = opsTestCommAFixturePayload_();
-      if (!payload) { opsBlockR408FixtureBinding_(resultId, "TEST_COMM_A Ledger Proof Blocked"); return; }
-      setOpsResult_(resultId, { result:"GUIDANCE", applicantId:payload.applicantId, message:"Loading durable PRE_SEND_PREPARED proof..." }, "TEST_COMM_A Ledger Proof");
+    function opsPrepareR408Fixture_(){
+      var resultId = opsR408FixtureResultId_();
+      var payload = opsR408FixturePayload_();
+      if (!payload) { opsBlockR408FixtureBinding_(resultId, "R408 Fixture Ledger Proof Blocked"); return; }
+      setOpsResult_(resultId, { result:"GUIDANCE", applicantId:payload.applicantId, message:"Loading durable PRE_SEND_PREPARED proof..." }, "R408 Fixture Ledger Proof");
       google.script.run
         .withSuccessHandler(function(out){
-          opsTestCommAProofState_.prepareReplayProven = String(out && out.result || "").toUpperCase() === "PRE_SEND_PREPARED" && out && out.prepareReplayProven === true;
-          opsSetTestCommAActionEnabled_("send", opsTestCommAProofState_.prepareReplayProven);
+          opsR408FixtureProofState_.prepareReplayProven = String(out && out.result || "").toUpperCase() === "PRE_SEND_PREPARED" && out && out.prepareReplayProven === true;
+          opsSetR408FixtureActionEnabled_("send", opsR408FixtureProofState_.prepareReplayProven);
           Array.prototype.forEach.call(document.querySelectorAll('[data-r408-fixture-action="prepare"]'), function(button){
-            button.textContent = opsTestCommAProofState_.prepareReplayProven ? "Persisted PREPARED verified" : "Verify persisted PREPARED";
+            button.textContent = opsR408FixtureProofState_.prepareReplayProven ? "Persisted PREPARED verified" : "Verify persisted PREPARED";
           });
-          setOpsResult_(resultId, out || { result:"FAILED", blockReason:"Invalid fixture ledger response." }, "TEST_COMM_A Ledger Proof");
+          setOpsResult_(resultId, out || { result:"FAILED", blockReason:"Invalid fixture ledger response." }, "R408 Fixture Ledger Proof");
         })
-        .withFailureHandler(function(err){ setOpsResult_(resultId, { result:"FAILED", blockReason:String((err && err.message) || err || "Fixture ledger proof failed.") }, "TEST_COMM_A Ledger Proof Failed"); })
+        .withFailureHandler(function(err){ setOpsResult_(resultId, { result:"FAILED", blockReason:String((err && err.message) || err || "Fixture ledger proof failed.") }, "R408 Fixture Ledger Proof Failed"); })
         .admin_prepareFixtureCommunication(payload);
     }
-    function opsSendTestCommAFixture_(){
-      var resultId = opsTestCommAFixtureResultId_();
-      var payload = opsTestCommAFixturePayload_();
-      if (!payload) { opsBlockR408FixtureBinding_(resultId, "TEST_COMM_A Send Blocked"); return; }
-      if (opsTestCommAProofState_.prepareReplayProven !== true) {
-        setOpsResult_(resultId, { result:"BLOCKED", blockReason:"Persisted PREPARED replay proof is required before Gmail." }, "TEST_COMM_A Send Blocked");
+    function opsSendR408Fixture_(){
+      var resultId = opsR408FixtureResultId_();
+      var payload = opsR408FixturePayload_();
+      if (!payload) { opsBlockR408FixtureBinding_(resultId, "R408 Fixture Send Blocked"); return; }
+      if (opsR408FixtureProofState_.prepareReplayProven !== true) {
+        setOpsResult_(resultId, { result:"BLOCKED", blockReason:"Persisted PREPARED replay proof is required before Gmail." }, "R408 Fixture Send Blocked");
         return;
       }
       if (!window.confirm("Send exactly one approved docs_missing email to " + payload.recipient + " for " + payload.applicantId + "?")) return;
-      opsSetTestCommAActionEnabled_("send", false);
-      setOpsResult_(resultId, { result:"GUIDANCE", applicantId:payload.applicantId, message:"Executing the one authorized normal Admin send..." }, "TEST_COMM_A Send");
+      opsSetR408FixtureActionEnabled_("send", false);
+      setOpsResult_(resultId, { result:"GUIDANCE", applicantId:payload.applicantId, message:"Executing the one authorized normal Admin send..." }, "R408 Fixture Send");
       google.script.run
         .withSuccessHandler(function(out){
-          opsTestCommAProofState_.sent = String(out && out.result || "").toUpperCase() === "SENT";
-          opsSetTestCommAActionEnabled_("replay", opsTestCommAProofState_.sent);
-          setOpsResult_(resultId, out || { result:"FAILED", blockReason:"Invalid fixture send response." }, "TEST_COMM_A Send");
+          opsR408FixtureProofState_.sent = String(out && out.result || "").toUpperCase() === "SENT";
+          opsSetR408FixtureActionEnabled_("replay", opsR408FixtureProofState_.sent);
+          setOpsResult_(resultId, out || { result:"FAILED", blockReason:"Invalid fixture send response." }, "R408 Fixture Send");
         })
-        .withFailureHandler(function(err){ setOpsResult_(resultId, { result:"AMBIGUOUS", blockReason:String((err && err.message) || err || "Fixture send outcome is ambiguous. Do not retry Gmail.") }, "TEST_COMM_A Send Requires Reconciliation"); })
+        .withFailureHandler(function(err){ setOpsResult_(resultId, { result:"AMBIGUOUS", blockReason:String((err && err.message) || err || "Fixture send outcome is ambiguous. Do not retry Gmail.") }, "R408 Fixture Send Requires Reconciliation"); })
         .admin_sendFixtureCommunication(payload);
     }
-    function opsReplayTestCommAFixture_(){
-      var resultId = opsTestCommAFixtureResultId_();
-      var payload = opsTestCommAFixturePayload_();
-      if (!payload) { opsBlockR408FixtureBinding_(resultId, "TEST_COMM_A Replay Blocked"); return; }
-      if (opsTestCommAProofState_.sent !== true) {
-        setOpsResult_(resultId, { result:"BLOCKED", blockReason:"A confirmed SENT result is required before no-send replay verification." }, "TEST_COMM_A Replay Blocked");
+    function opsReplayR408Fixture_(){
+      var resultId = opsR408FixtureResultId_();
+      var payload = opsR408FixturePayload_();
+      if (!payload) { opsBlockR408FixtureBinding_(resultId, "R408 Fixture Replay Blocked"); return; }
+      if (opsR408FixtureProofState_.sent !== true) {
+        setOpsResult_(resultId, { result:"BLOCKED", blockReason:"A confirmed SENT result is required before no-send replay verification." }, "R408 Fixture Replay Blocked");
         return;
       }
-      opsSetTestCommAActionEnabled_("replay", false);
-      setOpsResult_(resultId, { result:"GUIDANCE", applicantId:payload.applicantId, message:"Replaying the identical finalized operation; Gmail must not be invoked..." }, "TEST_COMM_A Replay");
+      opsSetR408FixtureActionEnabled_("replay", false);
+      setOpsResult_(resultId, { result:"GUIDANCE", applicantId:payload.applicantId, message:"Replaying the identical finalized operation; Gmail must not be invoked..." }, "R408 Fixture Replay");
       google.script.run
-        .withSuccessHandler(function(out){ setOpsResult_(resultId, out || { result:"FAILED", blockReason:"Invalid fixture replay response." }, "TEST_COMM_A Replay"); })
-        .withFailureHandler(function(err){ setOpsResult_(resultId, { result:"FAILED", blockReason:String((err && err.message) || err || "Fixture replay failed.") }, "TEST_COMM_A Replay Failed"); })
+        .withSuccessHandler(function(out){ setOpsResult_(resultId, out || { result:"FAILED", blockReason:"Invalid fixture replay response." }, "R408 Fixture Replay"); })
+        .withFailureHandler(function(err){ setOpsResult_(resultId, { result:"FAILED", blockReason:String((err && err.message) || err || "Fixture replay failed.") }, "R408 Fixture Replay Failed"); })
         .admin_sendFixtureCommunication(payload);
     }
     function opsRenderCommunicationTimeline_(){

@@ -2338,28 +2338,29 @@
             <div id="opsCommunicationResult" class="opsResultBox hidden"></div>
           </div>
         </div>
-        <div class="opsCard" style="margin-top:14px;" data-r408-fixture-proof="TEST_COMM_A">
-          <div class="opsSectionHeader"><div><h3>R408 TEST_COMM_A End-to-End Proof</h3><p>Admin staging code against canonical SalU/FODE_Data only. Bind the newly landed synthetic ApplicantID before reconciliation, preview, PREPARED proof, one Gmail send, and replay.</p></div><span class="opsStatusPill warn">One controlled Gmail</span></div>
+        <div class="opsCard" style="margin-top:14px;" data-r408-fixture-proof="FODE-26-003241">
+          <div class="opsSectionHeader"><div><h3>R408 SSS SSS End-to-End Proof</h3><p>Admin staging code against canonical SalU/FODE_Data only. The exact applicant, FormID and recipient are fixed before reconciliation, preview, PREPARED proof, one Gmail send, and replay.</p></div><span class="opsStatusPill warn">One controlled Gmail</span></div>
           <div class="opsInfoGrid">
-            <div><strong>ApplicantID</strong><br><span data-r408-fixture-applicant>Not bound</span></div>
+            <div><strong>ApplicantID</strong><br><span data-r408-fixture-applicant>FODE-26-003241</span></div>
+            <div><strong>Applicant</strong><br><span data-r408-fixture-name>SSS SSS</span></div>
+            <div><strong>FormID</strong><br><span data-r408-fixture-form-id>32254778</span></div>
             <div><strong>Message type</strong><br>docs_missing</div>
             <div><strong>Recipient</strong><br><span data-r408-fixture-recipient>sanjay@minervacenters.com</span></div>
-            <div><strong>Identity</strong><br>TEST_COMM_A / R408_CANONICAL_FIXTURE_20260803</div>
             <div><strong>Exclusions</strong><br>REGRESSION_FIXTURE_DO_NOT_PROCESS / REGRESSION_FIXTURE_QUEUE_EXCLUDED</div>
           </div>
-          <label class="opsControlNote" style="display:block;margin-top:12px;">Canonical synthetic ApplicantID
-            <input data-r408-fixture-input type="text" inputmode="text" autocomplete="off" placeholder="FODE-26-000000" oninput="opsResetR408FixtureBinding_()">
+          <label class="opsControlNote" style="display:block;margin-top:12px;">Locked canonical synthetic ApplicantID
+            <input data-r408-fixture-input type="text" value="FODE-26-003241" readonly aria-readonly="true">
           </label>
           <div class="opsActionRow" style="margin-top:12px;">
             <button class="opsActionBtn" data-r408-fixture-action="bind" type="button" onclick="opsBindR408Fixture_()">Bind canonical fixture</button>
-            <button class="opsActionBtn" data-r408-fixture-action="reconcile" type="button" onclick="opsReconcileTestCommAFixture_()" disabled>Reconcile fixture authority</button>
-            <button class="opsActionBtn live" data-r408-fixture-action="preview" type="button" onclick="opsPreviewTestCommAFixture_()" disabled>Preview approved template</button>
-            <button class="opsActionBtn" data-r408-fixture-action="prepare" type="button" onclick="opsPrepareTestCommAFixture_()" disabled>Prepare ledger</button>
-            <button class="opsActionBtn danger" data-r408-fixture-action="send" type="button" onclick="opsSendTestCommAFixture_()" disabled>Send exactly once</button>
-            <button class="opsActionBtn" data-r408-fixture-action="replay" type="button" onclick="opsReplayTestCommAFixture_()" disabled>Verify no-send replay</button>
+            <button class="opsActionBtn" data-r408-fixture-action="reconcile" type="button" onclick="opsReconcileR408Fixture_()" disabled>Reconcile fixture authority</button>
+            <button class="opsActionBtn live" data-r408-fixture-action="preview" type="button" onclick="opsPreviewR408Fixture_()" disabled>Preview approved template</button>
+            <button class="opsActionBtn" data-r408-fixture-action="prepare" type="button" onclick="opsPrepareR408Fixture_()" disabled>Prepare ledger</button>
+            <button class="opsActionBtn danger" data-r408-fixture-action="send" type="button" onclick="opsSendR408Fixture_()" disabled>Send exactly once</button>
+            <button class="opsActionBtn" data-r408-fixture-action="replay" type="button" onclick="opsReplayR408Fixture_()" disabled>Verify no-send replay</button>
           </div>
           <p class="opsControlNote">Send remains disabled until the server proves an initial PREPARED result and an identical persisted PREPARED replay. The replay control must return IDEMPOTENT_REPLAY without Gmail.</p>
-          <div id="opsTestCommAFixtureResult" class="opsResultBox hidden"></div>
+          <div id="opsR408FixtureResult" class="opsResultBox hidden"></div>
         </div>
         <div class="opsCard" style="margin-top:14px;">
           <div class="opsSectionHeader"><div><h3>Template Quick Look</h3><p>Secondary reference under the selected queue/action context.</p></div><span class="opsStatusPill info">Demoted reference</span></div>
@@ -2763,28 +2764,29 @@
       <div id="actionabilityContextMenu" class="actionabilityContextMenu" role="menu" aria-label="Current Worklist context actions"></div>
     </div>
 
-    <section class="legacyPanelBlock" data-r408-fixture-proof-admin="TEST_COMM_A">
-      <h3>R408 TEST_COMM_A Fixture Proof — canonical SalU</h3>
-      <div class="muted" style="margin-bottom:10px;">Bind the exact newly landed non-operational ApplicantID. The displayed identity and recipient must match the server submission before any controlled action becomes available.</div>
+    <section class="legacyPanelBlock" data-r408-fixture-proof-admin="FODE-26-003241">
+      <h3>R408 SSS SSS Fixture Proof — canonical SalU</h3>
+      <div class="muted" style="margin-bottom:10px;">Bind the exact classified non-operational ApplicantID. The displayed applicant, FormID and recipient must match the server row before any controlled action becomes available.</div>
       <div class="commMeta">
-        <div class="box"><div class="k">ApplicantID</div><div class="v"><span data-r408-fixture-applicant>Not bound</span></div></div>
+        <div class="box"><div class="k">ApplicantID</div><div class="v"><span data-r408-fixture-applicant>FODE-26-003241</span></div></div>
+        <div class="box"><div class="k">Applicant</div><div class="v"><span data-r408-fixture-name>SSS SSS</span></div></div>
+        <div class="box"><div class="k">FormID</div><div class="v"><span data-r408-fixture-form-id>32254778</span></div></div>
         <div class="box"><div class="k">Message type</div><div class="v">docs_missing</div></div>
         <div class="box"><div class="k">Recipient</div><div class="v"><span data-r408-fixture-recipient>sanjay@minervacenters.com</span></div></div>
-        <div class="box"><div class="k">Identity</div><div class="v">TEST_COMM_A / R408_CANONICAL_FIXTURE_20260803</div></div>
         <div class="box"><div class="k">Exclusions</div><div class="v">REGRESSION_FIXTURE_DO_NOT_PROCESS / REGRESSION_FIXTURE_QUEUE_EXCLUDED</div></div>
       </div>
-      <label class="muted" style="display:block;margin-top:10px;">Canonical synthetic ApplicantID
-        <input data-r408-fixture-input type="text" inputmode="text" autocomplete="off" placeholder="FODE-26-000000" oninput="opsResetR408FixtureBinding_()">
+      <label class="muted" style="display:block;margin-top:10px;">Locked canonical synthetic ApplicantID
+        <input data-r408-fixture-input type="text" value="FODE-26-003241" readonly aria-readonly="true">
       </label>
       <div class="row" style="margin-top:10px;align-items:center;gap:8px;">
         <button class="btn small" data-r408-fixture-action="bind" type="button" onclick="opsBindR408Fixture_()">Bind canonical fixture</button>
-        <button class="btn small" data-r408-fixture-action="reconcile" type="button" onclick="opsReconcileTestCommAFixture_()" disabled>Reconcile fixture authority</button>
-        <button class="btn small" data-r408-fixture-action="preview" type="button" onclick="opsPreviewTestCommAFixture_()" disabled>Preview approved template</button>
-        <button class="btn small" data-r408-fixture-action="prepare" type="button" onclick="opsPrepareTestCommAFixture_()" disabled>Prepare ledger</button>
-        <button class="btn small danger" data-r408-fixture-action="send" type="button" onclick="opsSendTestCommAFixture_()" disabled>Send exactly once</button>
-        <button class="btn small" data-r408-fixture-action="replay" type="button" onclick="opsReplayTestCommAFixture_()" disabled>Verify no-send replay</button>
+        <button class="btn small" data-r408-fixture-action="reconcile" type="button" onclick="opsReconcileR408Fixture_()" disabled>Reconcile fixture authority</button>
+        <button class="btn small" data-r408-fixture-action="preview" type="button" onclick="opsPreviewR408Fixture_()" disabled>Preview approved template</button>
+        <button class="btn small" data-r408-fixture-action="prepare" type="button" onclick="opsPrepareR408Fixture_()" disabled>Prepare ledger</button>
+        <button class="btn small danger" data-r408-fixture-action="send" type="button" onclick="opsSendR408Fixture_()" disabled>Send exactly once</button>
+        <button class="btn small" data-r408-fixture-action="replay" type="button" onclick="opsReplayR408Fixture_()" disabled>Verify no-send replay</button>
       </div>
-      <div id="adminTestCommAFixtureResult" class="sendSummary hidden" style="margin-top:8px;"></div>
+      <div id="adminR408FixtureResult" class="sendSummary hidden" style="margin-top:8px;"></div>
     </section>
 
     <details id="reviewQueuesPanel" class="card queue-panel secondarySurfacePanel secondaryOperationalPanel">
@@ -4368,7 +4370,7 @@
         return;
       }
       var type = String(res.result || (res.ok === false ? "FAILED" : "INFO")).toUpperCase();
-      var isFixtureEvidence = id === "adminTestCommAFixtureResult" || id === "opsTestCommAFixtureResult";
+      var isFixtureEvidence = id === "adminR408FixtureResult" || id === "opsR408FixtureResult";
       var cls = "opsResultBox";
       if (type === "SENT" || type === "PREVIEW" || type === "OPEN") cls += " ok";
       else if (type === "BLOCKED" || type === "EMPTY" || type === "GUIDANCE") cls += " warn";

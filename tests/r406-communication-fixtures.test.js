@@ -20,15 +20,19 @@ function extractFunction(source, name) {
 }
 
 const source = fs.readFileSync("Admin_SelectedApplicantCommunications.js", "utf8");
-const R408_APPLICANT_ID = "FODE-26-990011";
+const R408_APPLICANT_ID = "FODE-26-003241";
 const R408_FIXTURE_CONTRACT = {
-  firstName: "TEST_COMM_A",
-  lastName: "R408_CANONICAL_FIXTURE_20260803",
+  applicantId: R408_APPLICANT_ID,
+  firstName: "SSS",
+  lastName: "SSS",
   type: "Regression Fixture",
   recipient: "sanjay@minervacenters.com",
+  formId: "32254778",
+  fdFormId: "238943",
+  contactId: "7101767000004904021",
+  dealId: "7101767000005964001",
   nonOperationalMarker: "REGRESSION_FIXTURE_DO_NOT_PROCESS",
   queueExclusionMarker: "REGRESSION_FIXTURE_QUEUE_EXCLUDED",
-  correlationId: "R408-FD-20260803-001",
   messageType: "docs_missing",
   templateVersionId: "1"
 };
@@ -37,11 +41,15 @@ function r408FixturePayload(overrides = {}) {
     applicantId: R408_APPLICANT_ID,
     messageType: R408_FIXTURE_CONTRACT.messageType,
     recipient: R408_FIXTURE_CONTRACT.recipient,
-    fixtureMarker: R408_FIXTURE_CONTRACT.firstName,
-    fixtureIdentity: R408_FIXTURE_CONTRACT.lastName,
+    firstName: R408_FIXTURE_CONTRACT.firstName,
+    lastName: R408_FIXTURE_CONTRACT.lastName,
+    type: R408_FIXTURE_CONTRACT.type,
+    formId: R408_FIXTURE_CONTRACT.formId,
+    fdFormId: R408_FIXTURE_CONTRACT.fdFormId,
+    contactId: R408_FIXTURE_CONTRACT.contactId,
+    dealId: R408_FIXTURE_CONTRACT.dealId,
     nonOperationalMarker: R408_FIXTURE_CONTRACT.nonOperationalMarker,
-    queueExclusionMarker: R408_FIXTURE_CONTRACT.queueExclusionMarker,
-    correlationId: R408_FIXTURE_CONTRACT.correlationId
+    queueExclusionMarker: R408_FIXTURE_CONTRACT.queueExclusionMarker
   }, overrides);
 }
 const FIXTURES = [
@@ -91,21 +99,25 @@ assert.match(opsCommunicationsUi, /admin_prepareFixtureCommunication/);
 assert.match(opsCommunicationsUi, /admin_reconcileFixturePortalSecret/);
 assert.match(opsCommunicationsUi, /admin_sendFixtureCommunication/);
 assert.match(opsCommunicationsUi, /admin_bindR408Fixture/);
-assert.match(adminUi, /data-r408-fixture-proof="TEST_COMM_A"/);
-assert.match(adminUi, /data-r408-fixture-proof-admin="TEST_COMM_A"/);
-assert.match(adminUi, /adminTestCommAFixtureResult/);
-assert.match(opsCommunicationsUi, /opsTestCommAFixtureResultId_/);
+assert.match(adminUi, /data-r408-fixture-proof="FODE-26-003241"/);
+assert.match(adminUi, /data-r408-fixture-proof-admin="FODE-26-003241"/);
+assert.match(adminUi, /adminR408FixtureResult/);
+assert.match(opsCommunicationsUi, /opsR408FixtureResultId_/);
+assert.match(adminUi, /SSS SSS/);
+assert.match(adminUi, /32254778/);
+assert.match(adminUi, /value="FODE-26-003241" readonly/);
 assert.match(adminUi, /Reconcile fixture authority/);
 assert.match(adminUi, /Send exactly once/);
 assert.match(adminUi, /Verify no-send replay/);
 assert.match(adminUi, /function fixtureCommunicationEvidenceText_\(value\)/);
 assert.match(adminUi, /\[SECURE PORTAL LINK REDACTED\]/);
-assert.match(adminUi, /id === "adminTestCommAFixtureResult" \|\| id === "opsTestCommAFixtureResult"/);
+assert.match(adminUi, /id === "adminR408FixtureResult" \|\| id === "opsR408FixtureResult"/);
 assert.match(adminUi, /id === "opsCommunicationResult" \|\| isFixtureEvidence/);
 assert.match(adminUi, /Template source:/);
 assert.match(adminUi, /Template version:/);
 assert.match(adminUi, /Ledger environment:/);
 assert.doesNotMatch(opsCommunicationsUi, /LEDGER_API_SIGNING_SECRET|fixture-secret|portal-secret/i);
+assert.doesNotMatch(adminUi + opsCommunicationsUi, /TEST_COMM_A|R408_CANONICAL_FIXTURE_20260803|R408-FD-20260803-001/);
 
 assert.match(utilsSource, /function getCanonicalApplicantAuthority_\(\)/);
 assert.match(utilsSource, /function assertCanonicalApplicantSpreadsheet_\(ss\)/);
@@ -177,13 +189,17 @@ function createContext(fixture) {
     safeStr_: clean,
     getR408AuthorizedFixtureContract_: () => R408_FIXTURE_CONTRACT,
     getCanonicalApplicantAuthority_: () => ({ spreadsheetId: canonicalApplicantId, tabName: "FODE_Data", codeEnvironment: "STAGING" }),
-    isR408AuthorizedFixtureRow_: row => clean(row.First_Name) === R408_FIXTURE_CONTRACT.firstName
+    isR408AuthorizedFixtureRow_: row => clean(row.ApplicantID) === R408_FIXTURE_CONTRACT.applicantId
+      && clean(row.First_Name) === R408_FIXTURE_CONTRACT.firstName
       && clean(row.Last_Name) === R408_FIXTURE_CONTRACT.lastName
       && clean(row.Type) === R408_FIXTURE_CONTRACT.type
       && clean(row.Parent_Email_Corrected || row.Parent_Email).toLowerCase() === R408_FIXTURE_CONTRACT.recipient
+      && clean(row.FormID) === R408_FIXTURE_CONTRACT.formId
+      && clean(row.FD_FormID) === R408_FIXTURE_CONTRACT.fdFormId
+      && clean(row.Contact_ID) === R408_FIXTURE_CONTRACT.contactId
+      && clean(row.Deal_ID) === R408_FIXTURE_CONTRACT.dealId
       && clean(row.Reason_For_Transfer) === R408_FIXTURE_CONTRACT.nonOperationalMarker
-      && clean(row.Siblings_Name_Grade) === R408_FIXTURE_CONTRACT.queueExclusionMarker
-      && clean(row.correlation_id) === R408_FIXTURE_CONTRACT.correlationId,
+      && clean(row.Siblings_Name_Grade) === R408_FIXTURE_CONTRACT.queueExclusionMarker,
     fodeLedgerCanonicalJson_: value => JSON.stringify(value),
     fodeLedgerSha256Hex_: value => `HASH-${Buffer.from(String(value)).toString("hex")}`,
     CacheService: { getUserCache: () => ({
@@ -205,14 +221,22 @@ function createContext(fixture) {
       effectiveEmail: "sanjay@minervacenters.com",
       rowObj: {
         ApplicantID: applicantId,
-        First_Name: "TEST_COMM_A",
-        Last_Name: "R408_CANONICAL_FIXTURE_20260803",
+        First_Name: "SSS",
+        Last_Name: "SSS",
         Type: "Regression Fixture",
+        FormID: "32254778",
+        FD_FormID: "238943",
+        Contact_ID: "7101767000004904021",
+        Deal_ID: "7101767000005964001",
         Reason_For_Transfer: "REGRESSION_FIXTURE_DO_NOT_PROCESS",
         Siblings_Name_Grade: "REGRESSION_FIXTURE_QUEUE_EXCLUDED",
-        correlation_id: "R408-FD-20260803-001",
+        correlation_id: "238943",
         Parent_Email: "sanjay@minervacenters.com",
         Parent_Email_Corrected: "sanjay@minervacenters.com",
+        Email_Status: "SENT",
+        Last_Contact_Type: "fd_acknowledgement",
+        Last_Contact_By: "sanjay@minervacenters.com",
+        Last_Contact_Result: "SENT",
         Student_Email_Internal: "",
         CRM_Email: ""
       }
@@ -319,11 +343,19 @@ assert.equal(fixtureBinding.result, "BOUND");
 assert.equal(fixtureBinding.applicantId, R408_APPLICANT_ID);
 const fixturePreview = fixtureRoute.context.admin_previewFixtureCommunication(r408FixturePayload());
 assert.equal(fixturePreview.result, "PREVIEW");
-assert.equal(fixturePreview.fixtureProof.fixtureMarker, "TEST_COMM_A");
+assert.equal(fixturePreview.fixtureProof.applicantId, R408_APPLICANT_ID);
+assert.equal(fixturePreview.fixtureProof.displayName, "SSS SSS");
+assert.equal(fixturePreview.fixtureProof.formId, "32254778");
+assert.equal(fixturePreview.fixtureProof.fdFormId, "238943");
 assert.equal(fixturePreview.fixtureProof.nonOperational, true);
 assert.equal(fixturePreview.fixtureProof.excludedFromNormalQueues, true);
 assert.equal(fixturePreview.fixtureProof.recipient, "sanjay@minervacenters.com");
+assert.equal(fixturePreview.fixtureProof.priorAcknowledgementObserved, true);
+assert.equal(fixturePreview.fixtureProof.intakeCorrelationUsedAsOperationIdentity, false);
 assert.equal(fixturePreview.fixtureProof.alternateRecipientFields.Student_Email_Internal, "");
+assert.equal(fixturePreview.operationId, "");
+assert.equal(fixturePreview.idempotencyKey, "");
+assert.ok(fixturePreview.previewId);
 assert.equal(fixturePreview.gmailInvoked, false);
 assert.equal(fixtureRoute.prepareCalls, 0);
 const fixturePrepared = fixtureRoute.context.admin_prepareFixtureCommunication(r408FixturePayload());
@@ -332,6 +364,11 @@ assert.equal(fixturePrepared.ledgerState, "PRE_SEND_PREPARED");
 assert.equal(fixturePrepared.ledgerEnvironment, "staging");
 assert.equal(fixturePrepared.idempotent, false);
 assert.equal(fixturePrepared.prepareReplayProven, false);
+assert.ok(fixturePrepared.operationId);
+assert.ok(fixturePrepared.idempotencyKey);
+assert.equal(fixturePrepared.previewId, fixturePreview.previewId);
+assert.notEqual(fixturePrepared.operationId, "238943");
+assert.notEqual(fixturePrepared.idempotencyKey, "238943");
 assert.ok(fixturePrepared.commandId && fixturePrepared.operationId && fixturePrepared.previewId && fixturePrepared.receiptId && fixturePrepared.communicationId && fixturePrepared.eventId);
 assert.equal(fixturePrepared.gmailInvoked, false);
 assert.equal(fixturePrepared.finalizeInvoked, false);
@@ -366,6 +403,19 @@ assert.equal(nonFixtureBlocked.blockCode, "FIXTURE_ONLY_ROUTE");
 const recipientOverride = createContext(FIXTURES[0]);
 const recipientBlocked = recipientOverride.context.admin_previewFixtureCommunication(r408FixturePayload({ recipient: "other@example.test" }));
 assert.equal(recipientBlocked.blockCode, "FIXTURE_BINDING_MISMATCH");
+for (const mismatch of [
+  { firstName: "OTHER" },
+  { lastName: "OTHER" },
+  { formId: "32254779" },
+  { fdFormId: "999999" },
+  { contactId: "7101767000004904022" },
+  { dealId: "7101767000005964002" }
+]) {
+  const mismatchContext = createContext(FIXTURES[0]);
+  assert.equal(mismatchContext.context.admin_previewFixtureCommunication(r408FixturePayload(mismatch)).blockCode, "FIXTURE_BINDING_MISMATCH");
+}
+const staleCorrelation = createContext(FIXTURES[0]);
+assert.equal(staleCorrelation.context.admin_previewFixtureCommunication(r408FixturePayload({ correlationId: "238943" })).blockCode, "FIXTURE_CLIENT_OPERATION_IDENTITY_FORBIDDEN");
 
 function createPortalSecretReconciliationContext(initialRows, codeEnvironment = "STAGING") {
   const headers = ["ApplicantID", "Email", "Full_Name", "Secret_Plain", "Secret_Hash", "Created_At", "Last_Rotated_At", "Status"];
@@ -411,10 +461,14 @@ function createPortalSecretReconciliationContext(initialRows, codeEnvironment = 
 
 const portalGuard = {
   applicantId: R408_APPLICANT_ID,
-  fixtureMarker: "TEST_COMM_A",
-  fixtureIdentity: "R408_CANONICAL_FIXTURE_20260803",
+  firstName: "SSS",
+  lastName: "SSS",
   type: "Regression Fixture",
   recipient: "sanjay@minervacenters.com",
+  formId: "32254778",
+  fdFormId: "238943",
+  contactId: "7101767000004904021",
+  dealId: "7101767000005964001",
   nonOperational: true,
   excludedFromNormalQueues: true
 };
@@ -429,17 +483,17 @@ const portalNoop = portalCreate.context.reconcileR408FixturePortalSecretAuthorit
 assert.equal(portalNoop.result, "RECONCILIATION_NOOP");
 assert.equal(portalCreate.rows.length, 1);
 
-const activePortalRow = [R408_APPLICANT_ID, "sanjay@minervacenters.com", "TEST_COMM_A", "secret", "hash", "2026-08-02T00:00:00Z", "", "Active"];
+const activePortalRow = [R408_APPLICANT_ID, "sanjay@minervacenters.com", "SSS SSS", "secret", "hash", "2026-08-02T00:00:00Z", "", "Active"];
 const duplicatePortal = createPortalSecretReconciliationContext([activePortalRow, activePortalRow]);
 assert.equal(duplicatePortal.context.reconcileR408FixturePortalSecretAuthority_(portalGuard).code, "FIXTURE_PORTAL_SECRET_CONFLICT");
-const inactivePortal = createPortalSecretReconciliationContext([[R408_APPLICANT_ID, "sanjay@minervacenters.com", "TEST_COMM_A", "secret", "hash", "", "", "Inactive"]]);
+const inactivePortal = createPortalSecretReconciliationContext([[R408_APPLICANT_ID, "sanjay@minervacenters.com", "SSS SSS", "secret", "hash", "", "", "Inactive"]]);
 assert.equal(inactivePortal.context.reconcileR408FixturePortalSecretAuthority_(portalGuard).code, "FIXTURE_PORTAL_SECRET_CONFLICT");
-const unusablePortal = createPortalSecretReconciliationContext([[R408_APPLICANT_ID, "sanjay@minervacenters.com", "TEST_COMM_A", "", "", "", "", "Active"]]);
+const unusablePortal = createPortalSecretReconciliationContext([[R408_APPLICANT_ID, "sanjay@minervacenters.com", "SSS SSS", "", "", "", "", "Active"]]);
 assert.equal(unusablePortal.context.reconcileR408FixturePortalSecretAuthority_(portalGuard).code, "FIXTURE_PORTAL_SECRET_CONFLICT");
 const wrongPortalApplicant = createPortalSecretReconciliationContext([]);
 assert.equal(wrongPortalApplicant.context.reconcileR408FixturePortalSecretAuthority_({ ...portalGuard, applicantId: "FODE-26-TEST-011" }).code, "FIXTURE_RECONCILIATION_IDENTITY_NOT_PROVEN");
-const missingPortalMarker = createPortalSecretReconciliationContext([]);
-assert.equal(missingPortalMarker.context.reconcileR408FixturePortalSecretAuthority_({ ...portalGuard, fixtureMarker: "" }).code, "FIXTURE_RECONCILIATION_IDENTITY_NOT_PROVEN");
+const missingPortalName = createPortalSecretReconciliationContext([]);
+assert.equal(missingPortalName.context.reconcileR408FixturePortalSecretAuthority_({ ...portalGuard, firstName: "" }).code, "FIXTURE_RECONCILIATION_IDENTITY_NOT_PROVEN");
 const productionCodePortal = createPortalSecretReconciliationContext([], "PRODUCTION");
 assert.equal(productionCodePortal.context.reconcileR408FixturePortalSecretAuthority_(portalGuard).code, "FIXTURE_RECONCILIATION_STAGING_CODE_ONLY");
 
