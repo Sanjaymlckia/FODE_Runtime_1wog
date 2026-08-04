@@ -351,7 +351,7 @@
 
 .eduops-global-search-strip .eduops-global-search {
   display: grid;
-  grid-template-columns: minmax(380px, 0.72fr) minmax(280px, 1fr);
+  grid-template-columns: minmax(380px, 0.72fr) minmax(280px, 1fr) auto;
   gap: 8px;
   align-items: start;
   min-height: 0;
@@ -361,6 +361,30 @@
   background: transparent;
   border: 0;
   box-shadow: none;
+}
+
+.eduops-admin-workspace-link {
+  align-self: center;
+  min-height: 30px;
+  padding: 6px 10px;
+  color: #0b4f85;
+  background: #ffffff;
+  border: 1px solid #8fb6d2;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.eduops-admin-workspace-link:hover,
+.eduops-admin-workspace-link:focus-visible {
+  color: #ffffff;
+  background: #1559a6;
+  border-color: #1559a6;
+  outline: none;
 }
 
 .eduops-global-search-strip .eduops-global-search label {
@@ -1736,6 +1760,9 @@ body.eduops-confirm-open { overflow: hidden; }
   .eduops-topbar { position: sticky; top: 0; grid-template-columns: 1fr auto; height: 64px; }
   .eduops-brand { border-right: 0; }
   .eduops-topbar-tools { padding-right: 8px; }
+  .eduops-global-search-strip .eduops-global-search { grid-template-columns: minmax(0, 1fr) auto; }
+  .eduops-global-search-strip .eduops-global-search-results { grid-column: 1 / -1; grid-row: 2; }
+  .eduops-admin-workspace-link { grid-column: 2; grid-row: 1; }
   .eduops-profile-control { grid-template-columns: 78px; }
   .eduops-profile-control span,
   .eduops-release-badge { display: none; }

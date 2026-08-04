@@ -8,6 +8,7 @@ function renderEduOpsApp_(e) {
   t.BUILD_VERSION = CONFIG.VERSION;
   t.BUILD_RENDERED_AT = new Date().toISOString();
   t.BUILD_SCRIPT_ID = ScriptApp.getScriptId();
+  t.ADMIN_URL = clean_(CONFIG.WEBAPP_URL_ADMIN || CONFIG.WEBAPP_URL || "");
   t.EDUOPS_CONFIG = eduopsConfig_();
   return t.evaluate()
     .setTitle((CONFIG.BRAND && CONFIG.BRAND.name ? CONFIG.BRAND.name : "FODE") + " - EduOps Operations")
