@@ -4,6 +4,7 @@ function eduopsFodeCanonicalSnapshot_() {
 
 var EDUOPS_FODE_SNAPSHOT_CACHE_TTL_SECONDS = 120;
 var EDUOPS_FODE_SNAPSHOT_CACHE_CHUNK_CHARS = 75000;
+var EDUOPS_FODE_PROJECTION_CONTRACT = "R408_QUEUE_EXCLUSION_V1";
 
 function eduopsFodeSourceVersion_() {
   var started = Date.now();
@@ -18,6 +19,9 @@ function eduopsFodeSourceVersion_() {
   }
   var source = {
     product: "FODE",
+    runtimeVersion: eduopsClean_(CONFIG.VERSION || ""),
+    deployVersion: Number(CONFIG.DEPLOY_VERSION_NUMBER || 0),
+    projectionContract: EDUOPS_FODE_PROJECTION_CONTRACT,
     spreadsheetId: eduopsClean_(spreadsheetId),
     sheetName: sheet && typeof sheet.getName === "function" ? eduopsClean_(sheet.getName()) : "",
     lastRow: sheet && typeof sheet.getLastRow === "function" ? Number(sheet.getLastRow() || 0) : 0,
@@ -25,7 +29,7 @@ function eduopsFodeSourceVersion_() {
     updatedMs: Number(updatedMs || 0)
   };
   source.cacheable = !!(source.spreadsheetId && source.sheetName && source.updatedMs);
-  source.key = [source.product, source.spreadsheetId, source.sheetName, source.lastRow, source.lastColumn, source.updatedMs].join("|");
+  source.key = [source.product, source.runtimeVersion, source.deployVersion, source.projectionContract, source.spreadsheetId, source.sheetName, source.lastRow, source.lastColumn, source.updatedMs].join("|");
   source.durationMs = Date.now() - started;
   return source;
 }
@@ -177,6 +181,8 @@ function eduopsFodeActionabilityRowFromCanonical_(canonical) {
   var contactability = row.contactability || {};
   var lifecycle = row.lifecycle || {};
   return {
+    operational: actionability.operational !== false,
+    lockedRegressionFixture: actionability.lockedRegressionFixture === true,
     rowNumber: Number(identity.rowNumber || 0),
     applicantId: eduopsClean_(identity.applicantId || ""),
     name: eduopsClean_(applicant.name || ""),
@@ -509,7 +515,9 @@ function eduopsRowTraceAudit_(row, snapshotId) {
 }
 
 function eduopsFodeRowsForSnapshot_(snapshot) {
-  return (snapshot.rows || []).map(eduopsFodeActionabilityRowFromCanonical_);
+  return (snapshot.rows || []).filter(function (row) {
+    return !(row && row.actionability && row.actionability.operational === false);
+  }).map(eduopsFodeActionabilityRowFromCanonical_);
 }
 
 function eduopsFodeSearchResultDto_(row, query, snapshotId) {

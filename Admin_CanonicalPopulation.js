@@ -103,6 +103,9 @@ function buildCanonicalPopulationRow_(rowObj, rowNumber, opts) {
   var authorityState = authorityRow.authorityState || {};
   var communication = canonicalPopulationCommunicationProjection_(row, authorityRow, options.messageType, options);
   var actionability = {
+    operational: authorityRow.operational !== false,
+    lockedRegressionFixture: authorityRow.lockedRegressionFixture === true,
+    fixtureClassification: clean_(authorityRow.fixtureClassification || ""),
     state: clean_(authorityRow.actionabilityState || "UNKNOWN").toUpperCase(),
     workloadGroupKey: clean_(authorityRow.workloadGroupKey || "UNKNOWN").toUpperCase(),
     worklistKey: clean_(authorityRow.worklistKey || ""),
@@ -175,9 +178,11 @@ function buildCanonicalPopulationRow_(rowObj, rowNumber, opts) {
     },
     owner: clean_(authorityRow.actionOwner || lifecycle.actionOwner || "UNKNOWN"),
     visibility: {
-      hidden: authorityRow.actionabilityState === "COMPLETE",
+      hidden: authorityRow.operational === false || authorityRow.actionabilityState === "COMPLETE",
       exception: clean_(authorityRow.workloadGroupKey || "").toUpperCase() === "CONTACTABILITY" || clean_(authorityRow.workloadGroupKey || "").toUpperCase() === "MANAGEMENT",
-      hiddenReason: authorityRow.actionabilityState === "COMPLETE" ? "No current operator action." : ""
+      hiddenReason: authorityRow.operational === false
+        ? clean_(authorityRow.selectBlockReason || "Non-operational record.")
+        : (authorityRow.actionabilityState === "COMPLETE" ? "No current operator action." : "")
     },
     diagnostics: {
       lifecycleMismatch: canonicalPopulationClone_(authorityRow.lifecycleMismatch || {}),
@@ -643,6 +648,7 @@ function canonicalPopulationArrayFilter_(actual, requested) {
 
 function canonicalPopulationRowMatchesFilters_(row, filters) {
   var f = filters && typeof filters === "object" ? filters : {};
+  if (row && row.actionability && row.actionability.operational === false) return false;
   if (!canonicalPopulationArrayFilter_(row.lifecycle.baseState, f.lifecycleBaseStates || f.lifecycleBaseState)) return false;
   if (!canonicalPopulationArrayFilter_(row.actionability.state, f.actionabilityStates || f.actionabilityState)) return false;
   if (!canonicalPopulationArrayFilter_(row.actionability.workloadGroupKey, f.workloadGroupKeys || f.workloadGroupKey)) return false;

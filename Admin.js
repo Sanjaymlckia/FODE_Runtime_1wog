@@ -158,6 +158,7 @@ function admin_searchApplicants(payload) {
   var snapshot = canonicalPopulationSnapshot_();
   var rows = (snapshot.rows || []).filter(function (row) {
     var canonical = row || {};
+    if (canonical.actionability && canonical.actionability.operational === false) return false;
     var id = clean_(canonical.identity && canonical.identity.applicantId || "");
     var fullName = clean_(canonical.applicant && canonical.applicant.name || "").toLowerCase();
     var effectiveEmail = clean_(canonical.applicant && canonical.applicant.effectiveEmail || "").toLowerCase();
@@ -3079,10 +3080,90 @@ function resolveActionabilityState_(facts) {
   return out;
 }
 
+function buildR408FixtureNonOperationalActionabilityRow_(rowObj, rowNumber) {
+  var row = rowObj || {};
+  var applicantId = clean_(row.ApplicantID || "");
+  var name = (clean_(row.First_Name || "") + " " + clean_(row.Last_Name || "")).trim();
+  var exclusionReason = "Locked R408 regression fixture; excluded from ordinary queues, Batch, and Stage Batch.";
+  return {
+    rowNumber: Number(rowNumber || 0),
+    applicantId: applicantId,
+    name: name,
+    operational: false,
+    lockedRegressionFixture: true,
+    fixtureClassification: "R408_LOCKED_REGRESSION_FIXTURE",
+    actionOwner: "NONE",
+    workloadGroupKey: "NON_OPERATIONAL",
+    worklistKey: "",
+    worklistLabel: "",
+    worklistReason: "",
+    nextAction: "NO_ACTION",
+    actionabilityState: "NON_OPERATIONAL",
+    selectable: false,
+    selectBlockReason: exclusionReason,
+    coolingOffUntil: "",
+    recommendedAction: "",
+    reasonCode: "REGRESSION_FIXTURE_QUEUE_EXCLUDED",
+    urgencyLevel: "NONE",
+    urgencyReason: exclusionReason,
+    suppressor: "REGRESSION_FIXTURE_QUEUE_EXCLUDED",
+    recommendedMessageType: "",
+    communicationProgress: "Locked regression fixture",
+    communicationProgressDetail: exclusionReason,
+    canonicalLifecycle: {
+      baseState: "NON_OPERATIONAL",
+      lifecycleStage: "NON_OPERATIONAL",
+      overlays: ["REGRESSION_FIXTURE"],
+      recommendedNextAction: "",
+      recommendedMessageType: "",
+      actionOwner: "NONE",
+      reason: exclusionReason
+    },
+    lifecycleMismatch: {
+      hasLifecycleMismatch: false,
+      legacyLifecycle: "",
+      canonicalBaseState: "NON_OPERATIONAL",
+      canonicalOverlays: ["REGRESSION_FIXTURE"],
+      mismatchReason: ""
+    },
+    explanation: exclusionReason,
+    lastRelevantDate: "",
+    lastRelevantDateSource: "",
+    ageDays: "",
+    lastContactAgeDays: "",
+    sourceAuthorities: [
+      "Fixture identity: isR408AuthorizedFixtureRow_",
+      "Queue exclusion: REGRESSION_FIXTURE_QUEUE_EXCLUDED"
+    ],
+    authorityState: {
+      lifecycleStage: "NON_OPERATIONAL",
+      documentState: "NON_OPERATIONAL",
+      requiredDocumentUploadComplete: false,
+      uploadedRequiredDocumentCount: 0,
+      requiredDocumentCount: 0,
+      missingRequiredDocuments: [],
+      docsVerified: false,
+      portalSubmitted: false,
+      paymentEvidencePresent: false,
+      paymentVerified: false,
+      canonicalFinanceState: "NON_OPERATIONAL",
+      hasValidEmail: !!clean_(row.Parent_Email_Corrected || row.Parent_Email || ""),
+      hasPhoneFallback: false,
+      contactabilityState: "NON_OPERATIONAL",
+      communicationCooldownCycle: "",
+      communicationSuccessfulSendCount: 0,
+      communicationManualReviewRequired: false
+    }
+  };
+}
+
 function buildActionabilityPreviewRow_(rowObj, rowNumber) {
   var row = typeof communicationCompatibilityReadRow_ === "function"
     ? communicationCompatibilityReadRow_(rowObj || {})
     : (rowObj || {});
+  if (typeof isR408AuthorizedFixtureRow_ === "function" && isR408AuthorizedFixtureRow_(row) === true) {
+    return buildR408FixtureNonOperationalActionabilityRow_(row, rowNumber);
+  }
   var applicantId = clean_(row.ApplicantID || "");
   var firstName = clean_(row.First_Name || "");
   var lastName = clean_(row.Last_Name || "");
@@ -3654,6 +3735,7 @@ function admin_getActionabilityPreview(payload) {
   (snapshot.rows || []).forEach(function (canonical) {
     var financeAuthority = canonical.finance && canonical.finance.financeAuthority || {};
     var actionability = canonical.actionability || {};
+    if (actionability.operational === false) return;
     var item = {
       rowNumber: Number(canonical.identity && canonical.identity.rowNumber || 0),
       applicantId: clean_(canonical.identity && canonical.identity.applicantId || ""),
@@ -3739,6 +3821,7 @@ function populationLedgerBucketNames_() {
     "Management Exceptions",
     "Dormant",
     "Completed / No Action",
+    "Non-operational Fixtures",
     "Unknown / Unclassified"
   ];
 }
@@ -3775,6 +3858,7 @@ function populationLedgerNextActionFamily_(nextAction) {
 
 function populationLedgerBucketFromActionability_(item) {
   var row = item || {};
+  if (row.operational === false) return { bucket: "Non-operational Fixtures", reason: clean_(row.selectBlockReason || "Locked non-operational fixture.") };
   var owner = clean_(row.actionOwner || "").toUpperCase();
   var nextAction = clean_(row.nextAction || "").toUpperCase();
   if (!owner || !nextAction) return { bucket: "Unknown / Unclassified", reason: "Missing actionability owner or next action." };

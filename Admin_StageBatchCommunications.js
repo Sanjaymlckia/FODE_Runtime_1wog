@@ -526,6 +526,10 @@ function setStageCursor_(stage, messageType, row) {
   PropertiesService.getScriptProperties().setProperty(key, String(n && n >= 2 ? n : 2));
 }
 
+function stageBatchShouldExcludeNonOperationalFixture_(rowObj) {
+  return typeof isR408AuthorizedFixtureRow_ === "function" && isR408AuthorizedFixtureRow_(rowObj || {}) === true;
+}
+
 function collectStageBatchCohort_(stage, limit, offset, opts) {
   var normalizedStage = normalizeStageBatchStage_(stage);
   var batchLimit = clampStageBatchLimit_(limit);
@@ -689,6 +693,7 @@ function collectStageBatchCohort_(stage, limit, offset, opts) {
       nextCursor = r + 2;
       var applicantId = clean_(rowObj.ApplicantID || "");
       if (!applicantId) continue;
+      if (stageBatchShouldExcludeNonOperationalFixture_(rowObj)) continue;
       var candidateStartedAtMs = new Date().getTime();
       var snapshot = stageAggregationSnapshot_(rowObj);
       phaseTimings.candidateSelectionMs += new Date().getTime() - candidateStartedAtMs;
