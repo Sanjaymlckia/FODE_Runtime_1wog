@@ -1,4 +1,6 @@
-param()
+param(
+  [switch]$FastR411
+)
 
 $ErrorActionPreference = "Continue"
 $script:Failed = $false
@@ -26,6 +28,19 @@ function Invoke-FodeStep {
 }
 
 Set-Location -LiteralPath $repoRoot
+if ($FastR411) {
+  Write-Host "FODE FAST RELEASE PREFLIGHT (R411)"
+  Invoke-FodeStep "node --check Admin.js" { & node --check Admin.js }
+  Invoke-FodeStep "node tests\\r411-admin-route-binding.test.js" { & node tests\r411-admin-route-binding.test.js }
+  Invoke-FodeStep "node tests\\admin-review-workspace-v2-surface.test.js" { & node tests\admin-review-workspace-v2-surface.test.js }
+  Invoke-FodeStep "node tests\\r410-actionability-gallery.test.js" { & node tests\r410-actionability-gallery.test.js }
+  Invoke-FodeStep "Preview contract" { Push-Location tools\eduops-snapshot-capture; try { & npm.cmd run test:contract } finally { Pop-Location } }
+  Invoke-FodeStep "R410 responsive Preview browser" { Push-Location tools\eduops-snapshot-capture; try { & node tests\r410-actionability-gallery.browser.test.js } finally { Pop-Location } }
+  Invoke-FodeStep "git diff --check" { & git diff --check }
+  if ($script:Failed) { Write-Host "FODE FAST RELEASE PREFLIGHT FAIL" -ForegroundColor Red; exit 1 }
+  Write-Host "R411C_FAST_PREFLIGHT_PASS" -ForegroundColor Green
+  exit 0
+}
 Write-Host "Permanent Admin surface tests:"
 Write-Host "  Operations Workbench: tests\admin-ui-actionability-dashboard-surface.test.js"
 Write-Host "  Operator Acceptance: tests\admin-operator-scenario-contract.test.js"

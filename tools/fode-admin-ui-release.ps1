@@ -14,6 +14,7 @@ $AbsentMarkers = @()
 $VersionDescription = "Admin UI-only release"
 $SkipCommit = $false
 $DryRun = $false
+$FastR411 = $false
 
 for ($i = 0; $i -lt @($RawArgs).Count; $i++) {
   $arg = [string]$RawArgs[$i]
@@ -42,6 +43,7 @@ for ($i = 0; $i -lt @($RawArgs).Count; $i++) {
     "-VersionDescription" { $i++; $VersionDescription = [string]$RawArgs[$i] }
     "-SkipCommit" { $SkipCommit = $true }
     "-DryRun" { $DryRun = $true }
+    "-FastR411" { $FastR411 = $true }
     default { throw "Unknown argument: $arg" }
   }
 }
@@ -212,9 +214,11 @@ Invoke-Step "node --check Admin.js" { & node --check Admin.js }
 Invoke-Step "node tests\admin-operator-scenario-contract.test.js" { & node tests\admin-operator-scenario-contract.test.js }
 Invoke-Step "node tests\admin-ui-actionability-dashboard-surface.test.js" { & node tests\admin-ui-actionability-dashboard-surface.test.js }
 Invoke-Step "node tests\admin-review-workspace-ux-surface.test.js" { & node tests\admin-review-workspace-ux-surface.test.js }
-Invoke-Step "tools\fode-preflight.ps1" { & (Join-Path $PSScriptRoot "fode-preflight.ps1") }
-Invoke-Step "tools\fode-smoke.ps1 -Profile operator" { & (Join-Path $PSScriptRoot "fode-smoke.ps1") -Profile operator }
-Invoke-Step "tools\fode-smoke.ps1 -Profile surfaces" { & (Join-Path $PSScriptRoot "fode-smoke.ps1") -Profile surfaces }
+Invoke-Step "tools\fode-preflight.ps1" { & (Join-Path $PSScriptRoot "fode-preflight.ps1") $(if ($FastR411) { "-FastR411" }) }
+if (!$FastR411) {
+  Invoke-Step "tools\fode-smoke.ps1 -Profile operator" { & (Join-Path $PSScriptRoot "fode-smoke.ps1") -Profile operator }
+  Invoke-Step "tools\fode-smoke.ps1 -Profile surfaces" { & (Join-Path $PSScriptRoot "fode-smoke.ps1") -Profile surfaces }
+}
 Invoke-Step "git diff --check" { & git -c core.autocrlf=false diff --check }
 
 Write-Host "Proof-readiness markers: $($Markers -join ', ')"
@@ -249,6 +253,9 @@ Invoke-Step "clasp push" { & clasp.cmd push }
 Invoke-Step "remote marker proof" {
   & (Join-Path $PSScriptRoot "fode-admin-ui-remote-markers.ps1") @remoteMarkerProofArgs
 }
+Invoke-Step "remote Config identity and source proof" {
+  & (Join-Path $PSScriptRoot "verify-remote-config-before-version.ps1") -RequireHashMatch
+}
 
 Invoke-Step "clasp version" {
   $output = & clasp.cmd version $VersionDescription
@@ -263,15 +270,21 @@ Invoke-Step "Admin staging repin" {
   & clasp.cmd deploy --deploymentId $adminDeployId --versionNumber ([int]$script:VersionNumber) --description $VersionDescription
 }
 
+ $configText = Get-Content -LiteralPath (Join-Path $repoRoot "Config.js") -Raw
+ $runtimeMatch = [regex]::Match($configText, 'VERSION\s*:\s*"([^"]+)"')
+ $deployMatch = [regex]::Match($configText, 'DEPLOY_VERSION_NUMBER\s*:\s*(\d+)')
+ if (!$runtimeMatch.Success -or !$deployMatch.Success -or $runtimeMatch.Groups[1].Value -ne ("r" + $deployMatch.Groups[1].Value)) { throw "Config.js release identity is invalid." }
 Invoke-Step "runtime verifier" {
   & (Join-Path $PSScriptRoot "verify-runtime.ps1") `
-    -AdminExpectedRuntime ([string]$admin.expectedRuntime) `
-    -AdminExpectedDeploy ([int]$admin.expectedDeploy) `
+    -AdminExpectedRuntime $runtimeMatch.Groups[1].Value `
+    -AdminExpectedDeploy ([int]$deployMatch.Groups[1].Value) `
     -StudentExpectedRuntime ([string]$student.expectedRuntime) `
     -StudentExpectedDeploy ([int]$student.expectedDeploy)
 }
-Invoke-Step "operator smoke" { & (Join-Path $PSScriptRoot "fode-smoke.ps1") -Profile operator }
-Invoke-Step "surfaces smoke" { & (Join-Path $PSScriptRoot "fode-smoke.ps1") -Profile surfaces }
+if (!$FastR411) {
+  Invoke-Step "operator smoke" { & (Join-Path $PSScriptRoot "fode-smoke.ps1") -Profile operator }
+  Invoke-Step "surfaces smoke" { & (Join-Path $PSScriptRoot "fode-smoke.ps1") -Profile surfaces }
+}
 
 $head = (& git rev-parse --short HEAD).Trim()
 $deployments = @(& clasp.cmd deployments)

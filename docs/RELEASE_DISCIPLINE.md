@@ -27,6 +27,12 @@ If platform DR work is not required by the active CIS, preserve any partial evid
 7. Do not trigger dangerous write/send/create/reset/lock/export-sensitive actions during acceptance unless the CIS explicitly approves the exact action.
 8. Finalize Git only after required acceptance is PASS and closure findings are classified.
 
+## Fast Admin Staging Gate
+
+For a bounded, owner-authorized Admin-only UI release, use a short named preflight before source mutation: environment and ownership, exact scope, syntax, targeted route/gallery tests, targeted responsive proof, diff check, and live Admin/Student identity proof. Do not run broad browser or repository suites before deployment merely because they are available.
+
+Each preflight command reports its own start, finish, and PASS/FAIL result. A preflight timeout stops before source or deployment mutation. Broad browser acceptance occurs after the Admin staging repin; a browser timeout leaves the release deployed with live acceptance pending, never recasts it as a source-validation failure.
+
 ## Track H Checklist
 
 1. Declare `Track H` in the CIS and identify the high-risk behavior or authority boundary affected.

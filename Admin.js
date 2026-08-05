@@ -549,10 +549,12 @@ function admin_getApplicantDetail(payload) {
           contactabilityState: clean_(authorityRow.authorityState.contactabilityState || "")
         } : null
       };
-      detailObj._authorityProjection = {
+      detailObj.actionabilityDecision = {
         rowNumber: Number(authorityRow && authorityRow.rowNumber || rowNumber || 0) || 0,
         applicantId: clean_(authorityRow && authorityRow.applicantId || detailObj.ApplicantID || ""),
         name: clean_(authorityRow && authorityRow.name || ""),
+        effectiveEmail: clean_(authorityRow && authorityRow.effectiveEmail || detailObj.Parent_Email_Corrected || detailObj.Parent_Email || ""),
+        phone: clean_(authorityRow && authorityRow.phone || detailObj.Parent_Phone || detailObj.Parent_Mobile || detailObj.Phone_Number || ""),
         actionOwner: clean_(authorityRow && authorityRow.actionOwner || ""),
         workloadGroupKey: clean_(authorityRow && authorityRow.workloadGroupKey || ""),
         worklistKey: clean_(authorityRow && authorityRow.worklistKey || ""),
@@ -599,9 +601,12 @@ function admin_getApplicantDetail(payload) {
           canonicalFinanceState: clean_(authorityRow.authorityState.canonicalFinanceState || ""),
           hasValidEmail: authorityRow.authorityState.hasValidEmail === true,
           hasPhoneFallback: authorityRow.authorityState.hasPhoneFallback === true,
-          contactabilityState: clean_(authorityRow.authorityState.contactabilityState || "")
+          contactabilityState: clean_(authorityRow.authorityState.contactabilityState || ""),
+          effectiveEmail: clean_(authorityRow && authorityRow.effectiveEmail || detailObj.Parent_Email_Corrected || detailObj.Parent_Email || ""),
+          phone: clean_(authorityRow && authorityRow.phone || detailObj.Parent_Phone || detailObj.Parent_Mobile || detailObj.Phone_Number || "")
         } : {}
       };
+      detailObj._authorityProjection = detailObj.actionabilityDecision;
     }
 
     if (!detailObj) {
@@ -611,6 +616,13 @@ function admin_getApplicantDetail(payload) {
     Logger.log("DOC_URL_SAMPLE: %s", JSON.stringify(detailObj._docs.map(function (d) {
       return { file: d.file, url: d.url, t: typeof d.url };
     })));
+    detailObj.routeBinding = {
+      contract: "ADMIN_APPLICANT_REVIEW_ROUTE_R411",
+      handler: "admin_getApplicantDetail_json",
+      actionabilityDecision: "AUTHORITATIVE",
+      documentGallery: "admin_getApplicantDocumentManifest",
+      readOnly: true
+    };
     var resultObject = { ok: true, detail: detailObj };
     Logger.log("DETAIL RETURN SHAPE: %s", JSON.stringify(resultObject));
     return resultObject;

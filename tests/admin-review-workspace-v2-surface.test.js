@@ -72,7 +72,8 @@ expectMatch(v2Functions, /PAID_VERIFIED: "Payment verified"/, "Payment verified 
 expectMatch(v2Functions, /Raw enums intentionally limited to this Audit tab/, "Raw diagnostics must be isolated to Audit");
 
 expectMatch(applicantDetail, /buildActionabilityPreviewRow_\(detailObj,\s*rowNumber\)/, "Applicant detail must reuse the shared actionability projection builder");
-expectMatch(applicantDetail, /detailObj\._authorityProjection\s*=\s*\{/, "Applicant detail must attach the shared authority projection DTO for V2");
+expectMatch(applicantDetail, /detailObj\.actionabilityDecision\s*=\s*\{/, "Applicant detail must attach the explicit actionability decision DTO for V2");
+expectMatch(applicantDetail, /detailObj\.routeBinding\s*=\s*\{[\s\S]*ADMIN_APPLICANT_REVIEW_ROUTE_R411/, "Applicant detail must declare the Admin review route binding");
 [
   "workloadGroupKey",
   "worklistKey",
@@ -89,7 +90,9 @@ expectMatch(applicantDetail, /detailObj\._authorityProjection\s*=\s*\{/, "Applic
   expectMatch(applicantDetail, new RegExp(field), `Authority projection must carry ${field}`);
 });
 
-expectMatch(v2Functions, /function reviewWorkspaceV2Projection_/, "Review V2 must read the shared authority projection DTO");
+expectMatch(v2Functions, /function reviewWorkspaceV2Projection_[\s\S]*detail\.actionabilityDecision/, "Review V2 must read the explicit actionability decision DTO");
+expectNoMatch(v2Functions, /_authorityProjection/, "Review V2 must not fall back to the legacy authority projection");
+expectMatch(v2Functions, /Authoritative actionability decision was not returned/, "Review V2 must reject missing actionability decisions");
 expectMatch(v2Facts, /reviewWorkspaceV2Projection_\(d\)/, "Review V2 facts must start from the shared authority projection");
 expectMatch(v2Facts, /actionabilityPrimaryRouteLabel_\(projection\)/, "Primary route must use Current Admin actionability helper");
 expectMatch(v2Facts, /actionabilityNextActionLabel_\(projection\.nextAction\)/, "Next action must use Current Admin actionability helper");
@@ -106,6 +109,9 @@ expectNoMatch(v2Render, /reviewV2RowNumber|reviewV2Owner|reviewV2FinanceState/, 
 expectNoMatch(v2Render, /Loaded exact applicant|Mutation actions remain delegated/, "Operator-facing V2 status must not expose implementation wording");
 expectNoMatch(v2Functions, /Finance authority returned in applicant detail|No contactability status returned|No active blocker returned/, "V2 normal panels must not render diagnostic fallback strings");
 expectMatch(v2Functions, /Open Legacy Review/, "Legacy fallback must be available only as an explicit Audit support action");
+expectMatch(v2Functions, /loadReviewWorkspaceV2DocumentGallery_[\s\S]*admin_getApplicantDocumentManifest/, "V2 documents must use the established read-only manifest route");
+expectMatch(v2Functions, /All required document positions are shown together/, "V2 documents must present the gallery as one complete surface");
+expectNoMatch(v2Functions, /Open legacy document controls|legacy gallery\/fallback/, "V2 documents must not direct operators to the legacy gallery");
 
 expectNoMatch(adminUi, /admin_getApplicantDetailsModern|admin_updateReviewWorkspaceModern/, "Review V2 must not introduce parallel review RPCs");
 expectNoMatch(v2Functions, /admin_updateDocStatuses|admin_setPortalAccess|admin_sendApplicantMessage\(/, "Review V2 must not introduce direct mutation RPC calls");

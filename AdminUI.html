@@ -12867,7 +12867,8 @@ function renderStageDashboard_(items, emptyMessage){
       returnContext: null,
       trigger: null,
       activeTab: "overview",
-      legacyFallbackUsed: false
+      legacyFallbackUsed: false,
+      documentGalleryRequestId: 0
     };
 
     function isReviewWorkspaceV2Available_(){
@@ -12937,29 +12938,9 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function reviewWorkspaceV2Projection_(detail){
-      var projection = detail && detail._authorityProjection && typeof detail._authorityProjection === "object"
-        ? detail._authorityProjection
+      return detail && detail.actionabilityDecision && typeof detail.actionabilityDecision === "object"
+        ? detail.actionabilityDecision
         : null;
-      if (projection) return projection;
-      var authority = reviewAuthoritySnapshot_(detail) || {};
-      return {
-        rowNumber: Number((detail && detail._rowNumber) || currentRowNumber || 0) || 0,
-        applicantId: String((detail && detail.ApplicantID) || "").trim(),
-        actionOwner: String(authority.actionOwner || "").trim(),
-        workloadGroupKey: String(authority.workloadGroupKey || "").trim(),
-        worklistKey: String(authority.worklistKey || "").trim(),
-        worklistLabel: String(authority.worklistLabel || "").trim(),
-        worklistReason: String(authority.worklistReason || "").trim(),
-        nextAction: String(authority.nextAction || "").trim(),
-        actionabilityState: String(authority.actionabilityState || "").trim(),
-        selectBlockReason: String(authority.selectBlockReason || "").trim(),
-        coolingOffUntil: String(authority.coolingOffUntil || "").trim(),
-        recommendedMessageType: String(authority.recommendedMessageType || "").trim(),
-        communicationProgress: String(authority.communicationProgress || "").trim(),
-        communicationProgressDetail: String(authority.communicationProgressDetail || "").trim(),
-        canonicalLifecycle: authority.canonicalLifecycle || null,
-        authorityState: authority.authorityState || {}
-      };
     }
 
     function reviewWorkspaceV2FinanceState_(projection){
@@ -13121,6 +13102,14 @@ function renderStageDashboard_(items, emptyMessage){
         return "Applicant row mismatch. Requested row " + requestedRow + " but server returned row " + loadedRow + ".";
       }
       if (!loadedId) return "Applicant detail response did not include ApplicantID.";
+      var binding = detail && detail.routeBinding;
+      var decision = reviewWorkspaceV2Projection_(detail);
+      if (!binding || binding.contract !== "ADMIN_APPLICANT_REVIEW_ROUTE_R411" || binding.handler !== "admin_getApplicantDetail_json") {
+        return "Applicant detail response did not confirm the Admin review route binding.";
+      }
+      if (!decision || !decision.applicantId || !decision.actionabilityState || !decision.nextAction || !decision.authorityState) {
+        return "Authoritative actionability decision was not returned.";
+      }
       return "";
     }
 
@@ -13229,20 +13218,52 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function renderReviewWorkspaceV2Documents_(detail, f){
-      var docs = Array.isArray(detail && detail._docs) ? detail._docs : [];
-      var rows = docs.length ? docs.map(function(doc, idx){
-        return '<div class="reviewV2-card reviewV2-document">'
-          + '<div><div class="reviewV2-cardTitle">' + esc(doc.label || ("Document " + String(idx + 1))) + '</div><div class="reviewV2-cardText">' + esc(doc.hasFile ? "File evidence present" : "No uploaded file") + '</div></div>'
-          + '<div><span class="reviewV2-label">Review state</span><span class="reviewV2-pill">' + esc(reviewWorkspaceV2Humanize_(doc.status || "Pending")) + '</span></div>'
-          + '<div><span class="reviewV2-label">Reviewer note</span><div class="reviewV2-cardText">' + esc(doc.comment || "No note returned") + '</div></div>'
-          + '<div><span class="reviewV2-label">Authority</span><div class="reviewV2-cardText">' + esc(doc.hasFile ? "Existing verification controls available" : "Verification blocked until upload exists") + '</div></div>'
-          + '</div>';
-      }).join("") : reviewWorkspaceV2CardHtml_("Documents", "No document DTOs were returned for this applicant.", "");
+      var applicantId = String(detail && detail.ApplicantID || "").trim();
       reviewWorkspaceV2SetHtml_("reviewV2Panel-documents",
         '<h3 class="reviewV2-sectionTitle">Documents</h3>'
-        + '<div class="reviewV2-card"><div class="reviewV2-cardText">Document saves remain authority-gated and use the existing saveDocs handler. Heavy previews are not rendered until the operator explicitly opens the legacy gallery/fallback.</div>'
-        + '<div class="reviewV2-actions">' + reviewWorkspaceV2ActionHtml_("Open legacy document controls", "openReviewWorkspaceV2LegacyFallback_", false, true) + reviewWorkspaceV2ActionHtml_("Save document statuses", "saveDocs", !CAN_SAVE_DOCUMENT_STATUSES, false) + '</div></div>'
-        + '<div class="reviewV2-list" style="margin-top:12px;">' + rows + '</div>');
+        + '<div class="reviewV2-card"><div class="reviewV2-cardText">Loading the read-only document gallery for ' + esc(applicantId) + '.</div></div>');
+      loadReviewWorkspaceV2DocumentGallery_(applicantId);
+    }
+
+    function renderReviewWorkspaceV2DocumentGallery_(manifest){
+      var docs = Array.isArray(manifest && manifest.files) ? manifest.files : [];
+      var missing = Array.isArray(manifest && manifest.missingExpected) ? manifest.missingExpected : [];
+      var rows = docs.map(function(doc, idx){
+        return '<div class="reviewV2-card reviewV2-document">'
+          + '<div><div class="reviewV2-cardTitle">' + esc(doc.label || ("Document " + String(idx + 1))) + '</div><div class="reviewV2-cardText">' + esc(doc.fileName || "File evidence present") + '</div></div>'
+          + '<div><span class="reviewV2-label">Review state</span><span class="reviewV2-pill">Evidence mapped</span></div>'
+          + '<div><span class="reviewV2-label">Authority</span><div class="reviewV2-cardText">Existing verification controls available</div></div>'
+          + '</div>';
+      }).concat(missing.map(function(doc){
+        return '<div class="reviewV2-card reviewV2-document">'
+          + '<div><div class="reviewV2-cardTitle">' + esc(doc.label || "Required document") + '</div><div class="reviewV2-cardText">Not uploaded</div></div>'
+          + '<div><span class="reviewV2-label">Review state</span><span class="reviewV2-pill">Missing</span></div>'
+          + '<div><span class="reviewV2-label">Authority</span><div class="reviewV2-cardText">Verification blocked until upload exists</div></div>'
+          + '</div>';
+      })).join("");
+      reviewWorkspaceV2SetHtml_("reviewV2Panel-documents",
+        '<h3 class="reviewV2-sectionTitle">Documents</h3>'
+        + '<div class="reviewV2-card"><div class="reviewV2-cardText">All required document positions are shown together. Document saves remain authority-gated and use the existing saveDocs handler.</div>'
+        + '<div class="reviewV2-actions">' + reviewWorkspaceV2ActionHtml_("Save document statuses", "saveDocs", !CAN_SAVE_DOCUMENT_STATUSES, false) + '</div></div>'
+        + '<div class="reviewV2-list" style="margin-top:12px;">' + (rows || reviewWorkspaceV2CardHtml_("Documents", "No document manifest entries were returned for this applicant.", "")) + '</div>');
+    }
+
+    function loadReviewWorkspaceV2DocumentGallery_(applicantId){
+      var requestId = ++reviewWorkspaceV2State.documentGalleryRequestId;
+      google.script.run
+        .withSuccessHandler(function(res){
+          if (requestId !== reviewWorkspaceV2State.documentGalleryRequestId || String(reviewWorkspaceV2State.requestedApplicantId || "") !== applicantId) return;
+          if (!res || res.ok !== true || String(res.applicantId || "") !== applicantId) {
+            renderReviewWorkspaceV2Error_(String(res && (res.error || res.message || res.code) || "Document gallery could not be loaded."));
+            return;
+          }
+          renderReviewWorkspaceV2DocumentGallery_(res);
+        })
+        .withFailureHandler(function(err){
+          if (requestId !== reviewWorkspaceV2State.documentGalleryRequestId || String(reviewWorkspaceV2State.requestedApplicantId || "") !== applicantId) return;
+          renderReviewWorkspaceV2Error_(String(err && err.message ? err.message : err || "Document gallery could not be loaded."));
+        })
+        .admin_getApplicantDocumentManifest({ applicantId: applicantId });
     }
 
     function renderReviewWorkspaceV2Finance_(detail, f){
