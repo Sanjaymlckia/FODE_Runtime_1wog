@@ -60,6 +60,8 @@ The supported lifecycle is `OPEN → WORKING → VALIDATED → RELEASE_READY →
 
 The recorded release baseline is immutable during implementation and pre-release validation. Approved dirty work, or an approved commit pushed before `RELEASE_READY`, must not trigger baseline drift merely because `HEAD` differs from that baseline. Before `RELEASE_READY`, committed paths are checked against the approved scope and an `approvedScopeHash` is recorded. The rollback baseline may advance only after release deployment and verification.
 
+When a governance-only CIS verifies a clean `main` worktree aligned with `origin/main` and proves every committed path since the recorded baseline is already approved, the governed-session tool may reconcile its baseline through its explicit `AcceptBaselineAdvance` checkpoint. That checkpoint records the prior baseline and reason; it does not alter deployment, runtime, or historical release evidence.
+
 Release authorization is independent from communication or applicant-data mutation authorization. A source deployment never grants permission to send communications or mutate external data.
 
 Governance-tool failure does not itself require an Apps Script rollback. Rollback decisions are reserved for material authentication, authority, source/deployment integrity, runtime, security, applicant identity/actionability, external-data risk, or desktop-surface failures. A bounded mobile-layout failure stops further versions and remains pinned for a forward correction when runtime identity is safe.

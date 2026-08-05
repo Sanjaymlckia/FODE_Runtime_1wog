@@ -254,11 +254,13 @@ if ($previous.baselineHead -ne $observed.head -or $previous.branch -ne $observed
   $candidateApproved = if ($ApprovedPaths) { @(ConvertTo-FodeGovernancePaths $ApprovedPaths) } else { @($previous.approvedPaths) }
   $committedScope = @(Get-CommitScopePaths $previous.baselineHead $observed.head)
   $unapprovedCommitted = @($committedScope | Where-Object { $_ -notin $candidateApproved })
+  $dirtyScope = Test-FodeApprovedScope $observed.statusLines $candidateApproved
+  $authorizedGovernanceAdvance = $Action -eq 'Checkpoint' -and $AcceptBaselineAdvance.IsPresent -and $dirtyScope.allowed -and $observed.head -eq $observed.originMain -and $observed.branch -eq 'main' -and $unapprovedCommitted.Count -eq 0
   $preReleaseDrift = $Action -eq 'Transition' -and $TargetPhase -in @('WORKING','VALIDATED','RELEASE_READY') -and $unapprovedCommitted.Count -eq 0
-  if (!$authorizedCloseAdvance -and !$authorizedReleaseAdvance -and !$preReleaseDrift) { Fail 'Recorded session baseline conflicts with observed Git evidence or committed scope is unauthorized' 'BASELINE_DRIFT' }
-  if ($authorizedCloseAdvance -or $authorizedReleaseAdvance) {
+  if (!$authorizedCloseAdvance -and !$authorizedReleaseAdvance -and !$authorizedGovernanceAdvance -and !$preReleaseDrift) { Fail 'Recorded session baseline conflicts with observed Git evidence or committed scope is unauthorized' 'BASELINE_DRIFT' }
+  if ($authorizedCloseAdvance -or $authorizedReleaseAdvance -or $authorizedGovernanceAdvance) {
     Add-Or-Set $previous 'baselineAdvancedFrom' $previous.baselineHead
-    Add-Or-Set $previous 'baselineAdvanceReason' 'Owner-authorized release closure with HEAD aligned to origin/main'
+    Add-Or-Set $previous 'baselineAdvanceReason' $(if ($authorizedGovernanceAdvance) { 'Owner-authorized governance baseline reconciliation with approved scope and HEAD aligned to origin/main' } else { 'Owner-authorized release closure with HEAD aligned to origin/main' })
     $previous.baselineHead = $observed.head
     $previous.branch = $observed.branch
   }
