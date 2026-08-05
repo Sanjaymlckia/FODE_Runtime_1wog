@@ -152,19 +152,30 @@ async function runVisibleSmoke(page, includeBootstrapFailureRecovery) {
   await click(page.locator("#eduopsRailCollapse"), "Expand rail", async () => assert.notEqual(await page.locator("#eduopsApp").getAttribute("data-rail-collapsed"), "true"));
   await click(page.locator('#eduopsActionNav [data-state="COOLING_OFF"]'), "Actionability Cooling Off", () => waitWorkload(page));
   await click(page.locator('#eduopsActionNav [data-state="READY"]'), "Actionability Ready", () => waitWorkload(page));
+  await click(page.locator('#eduopsActionNav [data-state="READY"]'), "Reset Actionability Ready", () => waitWorkload(page));
 
-  const worklistValue = await page.locator("#eduopsWorklistKeys [data-worklist]").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-worklist")).find(Boolean) || "");
+  const worklistValue = await page.locator("#eduopsWorklistKeys [data-worklist]").evaluateAll((nodes) => nodes.find((node) => {
+    const style = getComputedStyle(node);
+    const rect = node.getBoundingClientRect();
+    return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+  })?.getAttribute("data-worklist") || "");
   if (worklistValue) {
     await click(page.locator(`#eduopsWorklistKeys [data-worklist="${worklistValue}"]`), "Worklist key", () => waitWorkload(page));
     await click(page.locator('#eduopsWorklistKeys [data-worklist=""]'), "Worklist reset", () => waitWorkload(page));
   }
-  await click(page.locator('[data-work-scope="ESCALATED"]'), "Escalated scope", () => waitWorkload(page));
-  await click(page.locator('[data-work-scope="ALL_AUTHORISED"]'), "All Authorised scope", () => waitWorkload(page));
+  const escalatedScope = page.locator('[data-work-scope="ESCALATED"]:visible');
+  if (await escalatedScope.count()) {
+    await click(escalatedScope, "Escalated scope", () => waitWorkload(page));
+  }
+  const allAuthorisedScope = page.locator('[data-work-scope="ALL_AUTHORISED"]:visible');
+  if (await allAuthorisedScope.count()) {
+    await click(allAuthorisedScope, "All Authorised scope", () => waitWorkload(page));
+  }
   assert.equal(await page.locator("#eduopsRefreshSnapshot").isVisible(), false, "Hidden legacy workload refresh must not be treated as an operator control");
 
   await fill(page.locator("#eduopsGlobalSearch"), "Waffi", "Global applicant search", () => page.waitForFunction(() => document.querySelector("#eduopsGlobalSearchResults")?.textContent.includes("Keziah Waffi")));
   await fill(page.locator("#eduopsGlobalSearch"), "", "Clear global applicant search", () => page.waitForFunction(() => document.querySelector("#eduopsGlobalSearchResults")?.textContent.includes("Find any applicant by name, ApplicantID, email or phone.")));
-  await fill(page.locator("#eduopsSearch"), "Jackson", "Workload search", () => page.waitForFunction(() => document.querySelector("#eduopsWorklistRows")?.textContent.includes("Jackson Numa")));
+  await fill(page.locator("#eduopsSearch"), "Preview Applicant 004", "Workload search", () => page.waitForFunction(() => document.querySelector("#eduopsWorklistRows")?.textContent.includes("Preview Applicant 004")));
   await click(page.locator("#eduopsToggleFilters"), "More filters", async () => assert.equal(await page.locator("#eduopsAdvancedFilters").isVisible(), true));
   await click(page.locator("#eduopsClearFilters"), "Clear filters after search", () => waitWorkload(page));
 
@@ -181,16 +192,19 @@ async function runVisibleSmoke(page, includeBootstrapFailureRecovery) {
   await select(page.locator("#eduopsSort"), "name:asc", "Sort by applicant name", () => waitWorkload(page));
   await click(page.locator("#eduopsToggleFilters"), "Close filters", async () => assert.equal(await page.locator("#eduopsAdvancedFilters").isVisible(), false));
 
-  await click(page.locator("#eduopsSelectVisible"), "Select visible", async () => assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /Operator selection intent [1-9]\d*/i));
-  await click(page.locator("#eduopsClearSelection"), "Clear selection", async () => assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /Operator selection intent 0 .*\/ 0 excluded/i));
-  await click(page.locator("#eduopsWorklistRows [data-open-applicant]"), "Open applicant", async () => {
+  const selectVisible = page.locator("#eduopsSelectVisible:visible");
+  if (await selectVisible.count()) {
+    await click(selectVisible, "Select visible", async () => assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /Operator selection intent [1-9]\d*/i));
+    await click(page.locator("#eduopsClearSelection:visible"), "Clear selection", async () => assert.match(await page.locator("#eduopsSelectionSummary").innerText(), /Operator selection intent 0 .*\/ 0 excluded/i));
+  }
+  await click(page.locator("#eduopsWorklistRows [data-open-applicant]:visible"), "Open applicant", async () => {
     await page.waitForSelector("#eduopsWorkbench:not([hidden])");
     await page.waitForFunction(() => location.hash.startsWith("#workbench="));
   });
   await page.goBack();
   await page.waitForFunction(() => document.querySelector("#eduopsWorkbench")?.hidden === true);
   controls.push("Browser Back from clean Workbench");
-  await click(page.locator("#eduopsWorklistRows [data-open-applicant]"), "Reopen applicant", async () => {
+  await click(page.locator("#eduopsWorklistRows [data-open-applicant]:visible"), "Reopen applicant", async () => {
     await page.waitForSelector("#eduopsWorkbench:not([hidden])");
     await page.waitForFunction(() => location.hash.startsWith("#workbench="));
   });

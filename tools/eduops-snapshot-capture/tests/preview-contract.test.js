@@ -107,7 +107,7 @@ assert.match(captureSource, /--dry-run/, "Capture must expose a no-browser dry-r
 assert.doesNotMatch(captureSource.slice(0, 800), /require\(playwrightModule\)/, "Capture help and dry-run must not eagerly require Playwright");
 
 const context = { scenarioId: "normal-authoritative", serverDurationMs: 123 };
-const workload = previewData.handleRpc("eduops_queryOperationalWorkload", context, { actionabilityState: "READY", page: 1, pageSize: 25 }, repoRoot);
+const workload = previewData.handleRpc("eduops_queryOperationalWorkload", context, { actionabilityState: "ALL", filters: { search: "Jackson" }, page: 1, pageSize: 25 }, repoRoot);
 assert.equal(workload.ok, true);
 assert.equal(workload.snapshotId, previewData.SNAPSHOT_ID);
 assert.equal(workload.timings.serverRpcMs, 123);

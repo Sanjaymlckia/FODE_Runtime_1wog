@@ -12,6 +12,14 @@ const viewports = [
 async function waitWorkload(page) {
   await page.waitForFunction(() => document.querySelector("#eduopsApp")?.getAttribute("aria-busy") === "false" && document.querySelectorAll("#eduopsWorklistRows tr").length > 0, null, { timeout: 14000 });
 }
+async function chooseAll(page) {
+  await page.evaluate(() => document.querySelector('#eduopsHistoryNav [data-state="ALL"]')?.click());
+  await waitWorkload(page);
+}
+async function chooseComplete(page) {
+  await page.evaluate(() => document.querySelector('#eduopsHistoryNav [data-state="COMPLETE"]')?.click());
+  await waitWorkload(page);
+}
 async function noOverflow(page) {
   return page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 2);
 }
@@ -39,10 +47,11 @@ async function chooseScenario(page, scenario, wait = true) {
       });
       await page.goto(service.url, { waitUntil: "domcontentloaded" });
       await waitWorkload(page);
+      await chooseComplete(page);
       assert.equal(external.length, 0, `${viewport.label}: Preview Lab must remain offline`); assertions++;
       assert.equal(await noOverflow(page), true, `${viewport.label}: no horizontal overflow`); assertions++;
 
-      const firstRow = page.locator("#eduopsWorklistRows tr[data-applicant-row]").first();
+      const firstRow = page.locator('#eduopsWorklistRows tr[data-applicant-row="FODE-26-002985"]');
       assert.match(await firstRow.innerText(), /jackson\.numa@example\.test/i, `${viewport.label}: valid recipient email is visible in the worklist`); assertions++;
       assert.doesNotMatch(await firstRow.innerText(), /^Email available$/im, `${viewport.label}: status must not be only Email available`); assertions++;
       await firstRow.locator("[data-open-applicant]").click();
@@ -53,6 +62,7 @@ async function chooseScenario(page, scenario, wait = true) {
       assert.equal(await page.locator("#eduopsCommRecipient").inputValue(), "jackson.numa@example.test", `${viewport.label}: communication recipient matches the selected applicant`); assertions++;
       await page.locator("#eduopsCloseWorkbench").click();
       await page.waitForFunction(() => document.querySelector("#eduopsWorkbench")?.hidden === true);
+      await chooseAll(page);
 
       await chooseScenario(page, "contactability-failure");
       console.log(`R409 browser scenario contactability-failure ${viewport.label}`);

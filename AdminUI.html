@@ -10135,7 +10135,8 @@ function renderStageDashboard_(items, emptyMessage){
       var nextAction = String(r.nextAction || "").trim().toUpperCase();
       if (owner === "NONE" || nextAction === "NO_ACTION") return "COMPLETE";
       if (urgency === "DORMANT") return "DORMANT";
-      if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "CONTACTABILITY";
+      if (suppressor === "UNCONTACTABLE" || suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "CONTACTABILITY";
+      if (suppressor === "REMINDER_EXHAUSTED") return "DORMANT";
       if (nextAction === "SEND_PAYMENT_REMINDER" || nextAction === "VERIFY_PAYMENT") return "FINANCE";
       if (owner === "APPLICANT") return "APPLICANT";
       if (owner === "OFFICER") return "ADMISSIONS";
@@ -10180,6 +10181,8 @@ function renderStageDashboard_(items, emptyMessage){
       if (key === "PAYMENT_REVIEW") return "Payment Review";
       if (key === "DOCUMENT_FOLLOW_UP") return "Missing Documents";
       if (key === "DOCUMENT_REVIEW") return "Document Review";
+      if (key === "CONTACTABILITY_EXCEPTION") return "Contactability Gate";
+      if (key === "DORMANT_REENGAGEMENT") return "Dormant / Re-engagement";
       return actionabilityNextActionLabel_(row && row.nextAction);
     }
 
@@ -10189,6 +10192,8 @@ function renderStageDashboard_(items, emptyMessage){
       var key = actionabilityWorklistKey_(row);
       if (key === "PAYMENT_FOLLOW_UP") return "Awaiting payment evidence";
       if (key === "PAYMENT_REVIEW") return "Receipt pending verification";
+      if (key === "CONTACTABILITY_EXCEPTION") return "Contactability must be resolved before communication";
+      if (key === "DORMANT_REENGAGEMENT") return "Third governed reminder exhausted; explicit re-engagement requires authorization";
       return "";
     }
 
@@ -10216,6 +10221,8 @@ function renderStageDashboard_(items, emptyMessage){
       if (state === "AWAITING_APPLICANT") return "Waiting for applicant";
       if (state === "AWAITING_PAYMENT") return "Waiting for payment evidence";
       if (state === "REVIEW_REQUIRED") return "Review required";
+      if (state === "UNCONTACTABLE") return "Uncontactable";
+      if (state === "DORMANT") return "Dormant / re-engagement";
       if (state === "COMPLETE") return "Complete / no action";
       return state ? actionabilityHumanizeToken_(state) : "State unavailable";
     }
@@ -10453,15 +10460,29 @@ function renderStageDashboard_(items, emptyMessage){
       return actionabilityIsUncontactable_(row) ? "Missing" : "Available";
     }
 
+    function actionabilityRecipientEmail_(row){
+      var r = row || {};
+      var state = r.authorityState || {};
+      var email = String(r.effectiveEmail || state.effectiveEmail || "").trim();
+      return email || "No email recorded";
+    }
+
+    function actionabilityRecipientPhone_(row){
+      var r = row || {};
+      var state = r.authorityState || {};
+      var phone = String(r.phone || state.phone || "").trim();
+      return phone || "No phone recorded";
+    }
+
     function actionabilityContactGuidance_(row){
       var r = row || {};
       var state = r.authorityState || {};
       var suppressor = String(r.suppressor || "").toUpperCase();
-      if (actionabilityIsUncontactable_(r)) return "No usable email or phone. Route to Contactability Gate.";
+      if (actionabilityIsUncontactable_(r)) return "Uncontactable: No email or phone recorded. No usable email or phone. Route to Contactability Gate.";
       if (suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "Email blocked or bounced. Route to Contactability Gate.";
       if (suppressor === "NO_EFFECTIVE_EMAIL") return state.hasPhoneFallback ? "Phone fallback only. Route to Contactability Gate." : "No usable email. Route to Contactability Gate.";
       if (suppressor === "COOLDOWN_ACTIVE") return "Email available after cooling period.";
-      if (state.hasValidEmail === true || r.effectiveEmail) return "Email action eligible after Review Workspace gate.";
+      if (state.hasValidEmail === true || r.effectiveEmail) return "Recipient: " + actionabilityRecipientEmail_(r) + ". Email action remains behind the Review Workspace gate.";
       if (state.hasPhoneFallback === true) return "Phone fallback only. Route to Contactability Gate.";
       return "Contactability unknown. Verify before communication.";
     }
@@ -12401,7 +12422,7 @@ function renderStageDashboard_(items, emptyMessage){
         var selected = selectable && !!actionabilitySelectedKeys[rowKey];
         if (!selectable && rowKey && actionabilitySelectedKeys[rowKey]) delete actionabilitySelectedKeys[rowKey];
         html += '<div class="actionabilityWorklistRow" role="row" data-actionability-row="' + esc(String(index)) + '" data-actionability-state="' + esc(r.actionabilityState || "UNKNOWN") + '" oncontextmenu="return openActionabilityContextMenu_(event, ' + String(index) + ')">';
-        html += '<div class="actionabilityWorklistCell actionabilityApplicantCell" role="cell"><label class="actionabilitySelectBox"><input type="checkbox" aria-label="Select applicant ' + esc(r.applicantId || "") + '" onchange="toggleActionabilitySelection_(' + String(index) + ', this.checked)" ' + (selected ? "checked" : "") + (selectable ? "" : " disabled") + ' title="' + esc(selectable ? "Eligible for batch preview." : actionabilitySelectionGuidance_(r)) + '"><strong>' + esc(r.name || "Name not shown") + '</strong></label>' + actionabilityFieldHtml_("Applicant ID", r.applicantId || "Unavailable") + actionabilityFieldHtml_("Next action", nextAction, true) + actionabilityFieldHtml_("Blocker", blocker, true) + '<span class="actionabilityGuidance">' + esc(actionabilitySelectionGuidance_(r)) + '</span></div>';
+        html += '<div class="actionabilityWorklistCell actionabilityApplicantCell" role="cell"><label class="actionabilitySelectBox"><input type="checkbox" aria-label="Select applicant ' + esc(r.applicantId || "") + '" onchange="toggleActionabilitySelection_(' + String(index) + ', this.checked)" ' + (selected ? "checked" : "") + (selectable ? "" : " disabled") + ' title="' + esc(selectable ? "Eligible for batch preview." : actionabilitySelectionGuidance_(r)) + '"><strong>' + esc(r.name || "Name not shown") + '</strong></label>' + actionabilityFieldHtml_("Applicant ID", r.applicantId || "Unavailable") + actionabilityFieldHtml_("Recipient", actionabilityRecipientEmail_(r), true) + actionabilityFieldHtml_("Next action", nextAction, true) + actionabilityFieldHtml_("Blocker", blocker, true) + '<span class="actionabilityGuidance">' + esc(actionabilitySelectionGuidance_(r)) + '</span></div>';
         html += '<div class="actionabilityWorklistCell actionabilityOwnerCell" role="cell">' + actionabilityFieldHtml_("Primary route", actionabilityGroupKey_(r) === "FINANCE" ? ("Finance / " + worklistLabel) : actionabilityBucketDisplayLabel_(r)) + actionabilityFieldHtml_("Owner", authority, true) + (worklistReason ? actionabilityFieldHtml_("Route reason", worklistReason, true) : '') + '<span class="opsStatusPill ' + priorityClass + '" title="' + esc(r.urgencyReason || priority) + '">' + esc(priority) + '</span></div>';
         html += '<div class="actionabilityWorklistCell actionabilityStatusChips actionabilityProgressCell" role="cell"><span class="actionabilityMiniChip ' + (state.portalSubmitted ? "ok" : "warn") + '">' + esc(portalLabel) + '</span><span class="actionabilityMiniChip ' + docsClass + '">' + esc(docsLabel) + '</span><span class="actionabilityMiniChip ' + paymentClass + '">' + esc(paymentLabel) + '</span><span class="actionabilityMiniChip ' + contactClass + '">' + esc(contactLabel) + '</span><div class="actionabilityAuthorityFields">' + actionabilityFieldHtml_("Status", actionabilityStateLabel_(r.actionabilityState), true) + actionabilityFieldHtml_("Reason", actionabilityBlockerText_(r), true) + '</div></div>';
         html += '<div class="actionabilityWorklistCell actionabilityDueBlock" role="cell">' + actionabilityFieldHtml_("Urgency / timeline", due) + '<span class="actionabilityUrgencyReason">Urgency: ' + esc(actionabilityUrgencyProvenance_(r)) + '</span><span>Age ' + esc(r.ageDays === "" || r.ageDays === undefined ? "-" : String(r.ageDays) + "d") + ' | Last ' + esc(r.lastContactAgeDays === "" ? "none" : String(r.lastContactAgeDays) + "d") + '</span><span>' + esc(commProgress || commNext) + '</span><span>Recommended communication: ' + esc(commNext) + '</span>' + actionabilityFieldHtml_("Next action available", actionabilityNextActionDateText_(r), true) + '</div>';
@@ -12955,10 +12976,14 @@ function renderStageDashboard_(items, emptyMessage){
     function reviewWorkspaceV2Contactability_(projection){
       var state = projection && projection.authorityState ? projection.authorityState : {};
       var raw = String(state.contactabilityState || "").trim().toUpperCase();
-      if (raw) return reviewWorkspaceV2Humanize_(raw);
-      if (state.hasValidEmail === true) return "Email available";
-      if (state.hasPhoneFallback === true) return "Phone fallback available";
-      return "Contactability unavailable";
+      var email = String(state.effectiveEmail || projection && projection.effectiveEmail || "").trim();
+      var phone = String(state.phone || projection && projection.phone || "").trim();
+      if (raw === "UNCONTACTABLE" || (!email && !phone && state.hasValidEmail !== true && state.hasPhoneFallback !== true)) {
+        return "Uncontactable — No email recorded; No phone recorded";
+      }
+      if (email || state.hasValidEmail === true) return "Email: " + (email || "Email available");
+      if (phone || state.hasPhoneFallback === true) return "No email recorded; Phone: " + (phone || "Phone fallback available");
+      return raw ? reviewWorkspaceV2Humanize_(raw) : "No email recorded; No phone recorded";
     }
 
     function reviewWorkspaceV2Owner_(projection){
@@ -12974,6 +12999,8 @@ function renderStageDashboard_(items, emptyMessage){
       if (raw === "READY") return "Ready";
       if (raw === "COOLING_OFF") return "Cooling-off active";
       if (raw === "REVIEW_REQUIRED") return "Review required";
+      if (raw === "UNCONTACTABLE") return "Uncontactable";
+      if (raw === "DORMANT") return "Dormant / re-engagement";
       if (raw === "COMPLETE") return "Complete";
       return actionabilityStateLabel_(raw);
     }

@@ -40,6 +40,8 @@ const STATE_LABELS = {
   AWAITING_APPLICANT: "Awaiting Applicant",
   AWAITING_PAYMENT: "Awaiting Payment",
   REVIEW_REQUIRED: "Review Required",
+  UNCONTACTABLE: "Uncontactable",
+  DORMANT: "Dormant / Re-engagement",
   BLOCKED: "Blocked",
   UNKNOWN: "Unknown",
   COMPLETE: "Complete"
@@ -53,11 +55,14 @@ const STATE_COUNTS = {
   REVIEW_REQUIRED: 75,
   BLOCKED: 8,
   UNKNOWN: 4,
-  COMPLETE: 1
+  COMPLETE: 1,
+  UNCONTACTABLE: 0,
+  DORMANT: 0
 };
 
 const SCENARIOS = [
   ["normal-authoritative", "Normal authoritative", "Stable snapshot, representative workload, exact Workbench and document PNG available."],
+  ["r410-actionability-gallery", "R410 actionability and gallery", "Deterministic actionability, cadence, contactability and five-position document gallery fixtures."],
   ["long-display-values", "Long display values", "Long applicant and recipient values exercise wrapping without changing authority state."],
   ["slow-6s", "Slow request - 6 seconds", "Workload call is delayed six seconds to inspect pending state and supersession."],
   ["timeout-10s", "Timeout - over 10 seconds", "Workload call exceeds the client timeout and exposes retry."],
@@ -158,16 +163,18 @@ function exactRows() {
       name: "Jackson Numa",
       email: "jackson.numa@example.test",
       phone: "+675 7000 2985",
-      actionabilityState: "READY",
-      worklistKey: "DOCUMENT_REVIEW",
-      worklistLabel: "Document review",
-      nextAction: "Review document evidence",
-      actionOwner: "OFFICER",
-      urgencyLevel: "CRITICAL",
-      documentState: "REVIEW_REQUIRED",
-      financeState: "NOT_YET_PAYMENT_APPLICABLE",
+      actionabilityState: "COMPLETE",
+      worklistKey: "COMPLETE",
+      worklistLabel: "Completed / No Action",
+      nextAction: "No immediate operator action",
+      actionOwner: "NONE",
+      urgencyLevel: "NORMAL",
+      documentState: "VERIFIED",
+      financeState: "PAID_VERIFIED",
       contactabilityState: "EMAIL_AVAILABLE",
-      recommendedMessageType: "DOCUMENT_REVIEW_REQUIRED"
+      recommendedMessageType: "",
+      selectable: false,
+      selectBlockReason: "Completed record; no operator action is required."
     }),
     row({
       index: 2,
@@ -217,6 +224,7 @@ function row(input) {
     applicantId: input.applicantId,
     displayName: input.name,
     email: input.email,
+    effectiveEmail: input.email || "",
     phone: input.phone,
     actionabilityState: input.actionabilityState,
     actionabilityLabel: STATE_LABELS[input.actionabilityState] || input.actionabilityState,
@@ -250,6 +258,10 @@ function row(input) {
     urgencyReason: input.urgencyReason || "Preview deterministic ordering",
     coolingOffUntil: input.coolingOffUntil || "",
     recommendedMessageType: input.recommendedMessageType || "",
+    reminderCount: Number(input.reminderCount || 0),
+    lastAttemptAt: input.lastAttemptAt || "",
+    lastAttemptResult: input.lastAttemptResult || "",
+    reminderDue: input.reminderDue === true,
     communicationAuthoritySummary: input.communicationAuthoritySummary || "Read-only preview communication authority",
     presentation: fixtureRowPresentation(input),
     canonicalLifecycle: {
@@ -304,7 +316,7 @@ function routeFor(nextAction) {
 
 function generatedRows(size = 200) {
   const rows = exactRows();
-  const stateKeys = Object.keys(STATE_COUNTS);
+  const stateKeys = ["READY", "COOLING_OFF", "AWAITING_APPLICANT", "AWAITING_PAYMENT", "REVIEW_REQUIRED", "BLOCKED", "UNKNOWN", "COMPLETE"];
   for (let i = 4; i <= size; i += 1) {
     const state = stateKeys[(i - 4) % stateKeys.length];
     const escalated = state === "REVIEW_REQUIRED" && i % 5 !== 0;
@@ -332,6 +344,9 @@ function generatedRows(size = 200) {
 
 function rowsForScenario(scenarioId) {
   const rows = generatedRows(scenarioId === "large-workload" ? 360 : 200);
+  if (scenarioId === "r410-actionability-gallery") {
+    rows.unshift(...r410ActionabilityRows());
+  }
   if (scenarioId === "long-display-values") {
     rows.unshift(row({
       index: 1000,
@@ -393,6 +408,36 @@ function rowsForScenario(scenarioId) {
     }));
   }
   return rows;
+}
+
+function r410ActionabilityRows() {
+  const base = {
+    worklistKey: "DOCUMENT_FOLLOW_UP",
+    worklistLabel: "Missing Documents",
+    nextAction: "Await applicant document upload",
+    actionOwner: "APPLICANT",
+    urgencyLevel: "NORMAL",
+    documentState: "MISSING",
+    financeState: "NOT_YET_PAYMENT_APPLICABLE",
+    contactabilityState: "EMAIL_AVAILABLE",
+    recommendedMessageType: "",
+    selectable: false
+  };
+  return [
+    row({ ...base, index: 4101, applicantId: "FODE-26-R410-EMPTY", rowNumber: 94101, name: "R410 Zero Documents", email: "zero.docs@example.test", phone: "+675 7000 4101", actionabilityState: "AWAITING_APPLICANT", selectBlockReason: "Waiting for applicant upload; no governed reminder is currently due." }),
+    row({ ...base, index: 4102, applicantId: "FODE-26-R410-MISSING", rowNumber: 94102, name: "R410 All Documents Missing", email: "all.missing@example.test", phone: "+675 7000 4102", actionabilityState: "AWAITING_APPLICANT", selectBlockReason: "Waiting for applicant upload; no governed reminder is currently due." }),
+    row({ ...base, index: 4103, applicantId: "FODE-26-R410-PARTIAL", rowNumber: 94103, name: "R410 Partial Upload", email: "partial.upload@example.test", phone: "+675 7000 4103", actionabilityState: "AWAITING_APPLICANT", documentState: "INCOMPLETE", selectBlockReason: "Waiting for applicant upload; no governed reminder is currently due." }),
+    row({ ...base, index: 4104, applicantId: "FODE-26-R410-REVIEW", rowNumber: 94104, name: "R410 Documents To Review", email: "docs.review@example.test", phone: "+675 7000 4104", actionabilityState: "REVIEW_REQUIRED", worklistKey: "DOCUMENT_REVIEW", worklistLabel: "Document Review", nextAction: "Review document evidence", actionOwner: "OFFICER", urgencyLevel: "HIGH", documentState: "REVIEW_REQUIRED", selectBlockReason: "Admissions review is required before applicant communication." }),
+    row({ ...base, index: 4105, applicantId: "FODE-26-R410-VERIFIED", rowNumber: 94105, name: "R410 Documents Verified", email: "docs.verified@example.test", phone: "+675 7000 4105", actionabilityState: "READY", worklistKey: "ENROLMENT_COMPLETION", worklistLabel: "Academic Administration", nextAction: "Complete enrolment", actionOwner: "ADMIN", urgencyLevel: "DUE", documentState: "VERIFIED", selectable: false, selectBlockReason: "Admin completion is required." }),
+    row({ ...base, index: 4106, applicantId: "FODE-26-R410-PHONE", rowNumber: 94106, name: "R410 Phone Only", email: "", phone: "+675 7000 4106", actionabilityState: "REVIEW_REQUIRED", worklistKey: "CONTACTABILITY_EXCEPTION", worklistLabel: "Contactability Gate", nextAction: "Fix contact details", actionOwner: "ADMIN", contactabilityState: "PHONE_FALLBACK_AVAILABLE", selectBlockReason: "No email recorded; phone fallback requires contactability review." }),
+    row({ ...base, index: 4107, applicantId: "FODE-26-R410-UNCONTACTABLE", rowNumber: 94107, name: "R410 Uncontactable", email: "", phone: "", actionabilityState: "UNCONTACTABLE", worklistKey: "CONTACTABILITY_EXCEPTION", worklistLabel: "Contactability Gate", nextAction: "Fix contact details", actionOwner: "ADMIN", urgencyLevel: "UNCONTACTABLE", contactabilityState: "UNCONTACTABLE", selectable: false, selectBlockReason: "Uncontactable: No email or phone recorded. Contactability Gate must be resolved before communication." }),
+    row({ ...base, index: 4108, applicantId: "FODE-26-R410-COOLING", rowNumber: 94108, name: "R410 Cooling Off", email: "cooling.off@example.test", phone: "+675 7000 4108", actionabilityState: "COOLING_OFF", worklistKey: "DOCUMENT_FOLLOW_UP", worklistLabel: "Missing Documents", nextAction: "Await cooling-off expiry", actionOwner: "APPLICANT", urgencyLevel: "NORMAL", coolingOffUntil: "2026-08-15T00:00:00.000Z", selectBlockReason: "Cooling-off active until 2026-08-15T00:00:00.000Z." }),
+    row({ ...base, index: 4109, applicantId: "FODE-26-R410-REMINDER-0", rowNumber: 94109, name: "R410 Reminder Count 0", email: "reminder.zero@example.test", phone: "+675 7000 4109", actionabilityState: "AWAITING_APPLICANT", reminderCount: 0, reminderDue: false }),
+    row({ ...base, index: 4110, applicantId: "FODE-26-R410-REMINDER-1", rowNumber: 94110, name: "R410 Reminder Count 1", email: "reminder.one@example.test", phone: "+675 7000 4110", actionabilityState: "READY", selectable: true, reminderCount: 1, reminderDue: true, lastAttemptAt: "2026-07-20T00:00:00.000Z", lastAttemptResult: "SENT", recommendedMessageType: "docs_missing" }),
+    row({ ...base, index: 4111, applicantId: "FODE-26-R410-REMINDER-2", rowNumber: 94111, name: "R410 Reminder Count 2", email: "reminder.two@example.test", phone: "+675 7000 4111", actionabilityState: "REVIEW_REQUIRED", reminderCount: 2, reminderDue: false, lastAttemptAt: "2026-07-20T00:00:00.000Z", lastAttemptResult: "SENT", worklistKey: "COMMUNICATION_REVIEW", worklistLabel: "Communication Review", nextAction: "Review communication cadence", actionOwner: "ADMIN", selectBlockReason: "Compatibility communication cadence requires manual review before another send." }),
+    row({ ...base, index: 4112, applicantId: "FODE-26-R410-REMINDER-3", rowNumber: 94112, name: "R410 Reminder Count 3 Dormant", email: "reminder.three@example.test", phone: "+675 7000 4112", actionabilityState: "DORMANT", reminderCount: 3, reminderDue: false, lastAttemptAt: "2026-07-20T00:00:00.000Z", lastAttemptResult: "SENT", worklistKey: "DORMANT_REENGAGEMENT", worklistLabel: "Dormant / Re-engagement", nextAction: "Explicit re-engagement review", actionOwner: "ADMIN", urgencyLevel: "DORMANT", selectable: false, selectBlockReason: "Third governed reminder exhausted; explicit re-engagement is required." }),
+    row({ ...base, index: 4113, applicantId: "FODE-26-R410-LONG", rowNumber: 94113, name: "R410 Applicant With A Deliberately Long Name For Wrapping Checks", email: "r410.long.recipient.address.with.multiple.segments@example.test", phone: "+675 7000 4113", actionabilityState: "AWAITING_APPLICANT", selectBlockReason: "Waiting for applicant upload; no governed reminder is currently due." })
+  ];
 }
 
 function populationIntegrityForRows(rows) {
@@ -590,6 +635,8 @@ function fixtureStatePresentation(state) {
     AWAITING_APPLICANT: ["Waiting for applicant", "Applicant input or evidence is required.", "warn"],
     AWAITING_PAYMENT: ["Waiting for payment", "Payment or evidence is outstanding.", "warn"],
     REVIEW_REQUIRED: ["Needs review", "An internal decision is required.", "warn"],
+    UNCONTACTABLE: ["Uncontactable", "No valid email or phone is recorded; Contactability Gate is required.", "blocked"],
+    DORMANT: ["Dormant / re-engagement", "The third governed reminder is exhausted; explicit re-engagement is required.", "warn"],
     BLOCKED: ["Blocked - intervention required", "A known blocker prevents progress.", "blocked"],
     UNKNOWN: ["Classification required", "Authority cannot classify this record safely.", "blocked"],
     COMPLETE: ["Completed records", "No current operator action is required.", "ready"],
@@ -637,7 +684,7 @@ function fixtureDistribution(rows, getter, authoritySource) {
 }
 
 function fixtureActionabilityPresentation(counts) {
-  return ["READY", "COOLING_OFF", "AWAITING_APPLICANT", "AWAITING_PAYMENT", "REVIEW_REQUIRED", "BLOCKED", "UNKNOWN", "COMPLETE"].map(function (code) {
+  return ["READY", "COOLING_OFF", "AWAITING_APPLICANT", "AWAITING_PAYMENT", "REVIEW_REQUIRED", "UNCONTACTABLE", "DORMANT", "BLOCKED", "UNKNOWN", "COMPLETE"].map(function (code) {
     var item = fixtureStatePresentation(code);
     item.count = Number(counts && counts[code] || 0);
     return item;
@@ -1322,6 +1369,79 @@ function readOnlyAction(label, capability) {
   return { label, enabled: false, readOnly: true, requiredCapability: capability, reason: "Available in EduOps Pass 2. Current Admin remains the operational path." };
 }
 
+function r410DocumentGalleryManifest_(applicantId, wb) {
+  const definitions = [
+    ["Birth_ID_Passport_File", "Birth / ID / Passport", "verified", "image/png", true],
+    ["Latest_School_Report_File", "Latest School Report", "review", "application/pdf", true],
+    ["Transfer_Certificate_File", "Transfer Certificate", "rejected", "application/pdf", true],
+    ["Passport_Photo_File", "Passport Photo", "missing", "", false],
+    ["Fee_Receipt_File", "Fee Receipt", "missing", "", false]
+  ];
+  const files = [];
+  const missingExpected = [];
+  definitions.forEach(([sourceField, label, state, mimeType, hasFile], index) => {
+    const item = { sourceField, label, itemIndex: 0 };
+    if (!hasFile) {
+      missingExpected.push(item);
+      return;
+    }
+    const file = {
+      fileId: `r410-file-${applicantId}-${index}`,
+      fileName: `${label.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase()}.${mimeType === "image/png" ? "png" : "pdf"}`,
+      label,
+      mimeType,
+      sizeBytes: 12048 + index,
+      createdTime: SNAPSHOT_AS_OF,
+      modifiedTime: SNAPSHOT_AS_OF,
+      parentFolderId: "r410-preview-folder",
+      sourceField,
+      itemIndex: 0,
+      mappingMethod: "r410-fixture",
+      suspectedDocumentType: label.toLowerCase(),
+      previewEligible: mimeType === "image/png",
+      renditionEligible: mimeType === "image/png",
+      renditionKind: mimeType === "image/png" ? "image-png" : "",
+      thumbnailAvailable: mimeType === "image/png",
+      previewUrl: "",
+      openUrl: "preview://r410-open-original",
+      downloadUrl: "preview://r410-download-original",
+      warnings: []
+    };
+    file.documentKey = [applicantId, String(wb.identity.rowNumber), sourceField, "0"].join("|");
+    file.documentType = label;
+    file.status = state === "verified" ? "VERIFIED" : state === "rejected" ? "REJECTED" : "REVIEW_REQUIRED";
+    file.statusPresentation = fixtureCodePresentation(file.status, fixtureHumanize(file.status), "R410 fixture document status.", "Document authority");
+    file.availableDecisions = [
+      fixtureCodePresentation("VERIFIED", "Verified", "Document evidence is acceptable.", "Document authority"),
+      fixtureCodePresentation("REJECTED", "Rejected", "Document evidence needs correction.", "Document authority")
+    ];
+    file.evidenceCount = 1;
+    file.evidenceFiles = [Object.assign({}, file, { activeEvidenceIndex: 0 })];
+    files.push(file);
+  });
+  const galleryDocuments = files.concat(missingExpected.map((item) => ({ ...item, status: "MISSING", hasFile: false })));
+  return {
+    schemaVersion: "EDUOPS_DOCUMENT_MANIFEST_V2",
+    authoritySource: "R410 Preview fixture document authority",
+    ok: true,
+    readOnly: true,
+    applicantId,
+    applicantName: wb.identity.displayName,
+    rowNumber: wb.identity.rowNumber,
+    folderId: "r410-preview-folder",
+    folderName: "R410 Preview simulated folder",
+    folderUrl: "",
+    source: "r410-preview-fixture",
+    files,
+    documentGallery: { schemaVersion: "OPSEDU_DOCUMENT_GALLERY_V1", authoritySource: "R410 Preview fixture document authority", documents: galleryDocuments },
+    actionAuthority: { schemaVersion: "EDUOPS_WORKBENCH_ACTION_V1", authoritySource: "R410 Preview fixture document authority", operation: "DOCUMENT_REVIEW", available: true, reason: "Preview fixture permits document decision preview only.", options: files[0] && files[0].availableDecisions || [] },
+    missingExpected,
+    warnings: [],
+    renditionRule: "canonical original -> server-derived PNG rendition -> separate signed Open Original action",
+    timings: { documentManifestMs: 3 }
+  };
+}
+
 function documentManifest(context, payload) {
   const p = payload && typeof payload === "object" ? payload : {};
   if (context.mode === "snapshot") {
@@ -1335,6 +1455,7 @@ function documentManifest(context, payload) {
   const product = productCode(p.product || applicantId.split("-")[0]);
   const wb = getApplicantWorkbench(context, { product, applicantId, expectedSnapshotId: productSnapshotId(product) });
   if (wb.ok !== true) return wb;
+  if (context.scenarioId === "r410-actionability-gallery") return r410DocumentGalleryManifest_(applicantId, wb);
   const unavailable = context.scenarioId === "document-preview-unavailable";
   const file = {
     fileId: `preview-file-${applicantId}`,
@@ -1405,7 +1526,12 @@ function validateDocumentContext(context, payload) {
   const p = payload && typeof payload === "object" ? payload : {};
   const manifest = documentManifest(context, p);
   if (manifest.ok !== true) return manifest;
-  const expected = manifest.files[0];
+  const candidates = Array.isArray(manifest.files) ? manifest.files : [];
+  const expected = candidates.find((file) => {
+    if (p.documentKey && p.documentKey === file.documentKey) return true;
+    return String(p.sourceField || "") === String(file.sourceField || "") && Number(p.itemIndex) === Number(file.itemIndex);
+  }) || candidates[0];
+  if (!expected) return { ok: false, readOnly: true, code: "DOCUMENT_CONTEXT_MISMATCH", error: "Document context does not match the applicant manifest" };
   if (context.scenarioId === "invalid-cross-applicant-document") {
     return { ok: false, readOnly: true, code: "DOCUMENT_CONTEXT_MISMATCH", error: "Document context does not match the applicant manifest" };
   }
@@ -1943,6 +2069,7 @@ module.exports = {
   SNAPSHOT_ID,
   listScenarios,
   scenarioById,
+  rowsForScenario,
   validateSnapshot,
   getDelayMs,
   handleRpc

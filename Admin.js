@@ -2553,6 +2553,7 @@ function actionabilityWorkloadExplanationEmpty_() {
     "Escalation due": 0,
     "Ready for reminder": 0,
     "Ready for academic review": 0,
+    "Dormant / re-engagement": 0,
     "Document received today": 0,
     "Other": 0
   };
@@ -2576,9 +2577,11 @@ function actionabilityWorkloadExplanationForRow_(row) {
   var authority = r.authorityState || {};
   var uploaded = Number(authority.uploadedRequiredDocumentCount || 0);
   var required = Number(authority.requiredDocumentCount || 0);
+  if (reason === "UNCONTACTABLE" || suppressor === "UNCONTACTABLE") return "Contactability exception";
   if (reason === "NO_EFFECTIVE_EMAIL" || reason === "EMAIL_BLOCKED_OR_BOUNCED" || suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") {
     return "Contactability exception";
   }
+  if (state === "DORMANT" || reason === "REMINDER_EXHAUSTED" || suppressor === "REMINDER_EXHAUSTED") return "Dormant / re-engagement";
   if (reason === "MANUAL_REVIEW_REQUIRED" || suppressor === "MANUAL_REVIEW_REQUIRED") return "Manual communication review";
   if (state === "COOLING_OFF" || reason === "COOLDOWN_ACTIVE") return "Cooling-off";
   if (isSameLocalDate_(r.lastRelevantDate || "", new Date()) && uploaded > 0 && required > uploaded) return "Document received today";
@@ -2940,9 +2943,10 @@ function actionabilityPreviewLastContactAgeDays_(rowObj) {
 
 function actionabilityPreviewUrgency_(owner, nextAction, dateInfo, suppressor, cooldownActive) {
   if (owner === "NONE" || nextAction === "NO_ACTION") return { level: "NORMAL", reason: "No operator action is currently required." };
-  if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") {
+  if (suppressor === "UNCONTACTABLE" || suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") {
     return { level: "ESCALATED", reason: "Applicant action is blocked by contactability issue." };
   }
+  if (suppressor === "REMINDER_EXHAUSTED") return { level: "DORMANT", reason: "Third governed reminder exhausted; explicit re-engagement is required." };
   if (suppressor === "MANUAL_REVIEW_REQUIRED") {
     return { level: "ESCALATED", reason: "Compatibility communication cadence requires manual review." };
   }
@@ -2986,6 +2990,15 @@ function resolveActionabilityState_(facts) {
     : "";
   var stageRecommendedType = canonicalRecommendedBatchType || legacyStageRecommendedType;
   var coolingOffUntil = clean_(f.coolingOffUntil || "");
+  var contactabilityState = clean_(f.contactabilityState || "").toUpperCase();
+  var uncontactable = f.uncontactable === true || contactabilityState === "UNCONTACTABLE";
+  var reminderCount = Math.max(0, Number(f.reminderCount || f.successfulSendCount || 0));
+  var reminderExhausted = f.reminderExhausted === true || reminderCount >= 3;
+  var reminderDue = f.reminderDue === true;
+  var requiredCount = Number(f.requiredDocumentCount || 0);
+  var uploadedCount = Number(f.uploadedRequiredDocumentCount || 0);
+  var documentsIncomplete = f.requiredDocumentUploadComplete === false
+    || (requiredCount > 0 && uploadedCount < requiredCount);
   var out = {
     actionabilityState: "UNKNOWN",
     selectable: false,
@@ -3002,6 +3015,13 @@ function resolveActionabilityState_(facts) {
     out.reasonCode = "COMPLETE";
     return out;
   }
+  if (uncontactable || suppressor === "UNCONTACTABLE") {
+    out.actionabilityState = "UNCONTACTABLE";
+    out.selectBlockReason = "Uncontactable: No email or phone recorded. Contactability Gate must be resolved before communication.";
+    out.recommendedAction = "FIX_CONTACT_DETAILS";
+    out.reasonCode = "UNCONTACTABLE";
+    return out;
+  }
   if (suppressor === "COOLDOWN_ACTIVE") {
     out.actionabilityState = "COOLING_OFF";
     out.selectBlockReason = coolingOffUntil
@@ -3009,6 +3029,13 @@ function resolveActionabilityState_(facts) {
       : "Cooling-off active after a recent communication.";
     out.recommendedAction = "WAIT";
     out.reasonCode = "COOLDOWN_ACTIVE";
+    return out;
+  }
+  if (reminderExhausted || suppressor === "REMINDER_EXHAUSTED") {
+    out.actionabilityState = "DORMANT";
+    out.selectBlockReason = "Third governed reminder exhausted; explicit re-engagement is required.";
+    out.recommendedAction = "REENGAGE_APPLICANT";
+    out.reasonCode = "REMINDER_EXHAUSTED";
     return out;
   }
   if (suppressor === "MANUAL_REVIEW_REQUIRED") {
@@ -3047,6 +3074,13 @@ function resolveActionabilityState_(facts) {
     return out;
   }
   if (owner === "APPLICANT") {
+    if (documentsIncomplete && !reminderDue && nextAction !== "SEND_PAYMENT_REMINDER") {
+      out.actionabilityState = "AWAITING_APPLICANT";
+      out.selectBlockReason = "Waiting for applicant upload; no governed reminder is currently due.";
+      out.recommendedAction = "WAIT";
+      out.reasonCode = "AWAITING_APPLICANT";
+      return out;
+    }
     if (!recommendedBatchType) {
       out.actionabilityState = nextAction === "SEND_PAYMENT_REMINDER" ? "AWAITING_PAYMENT" : "AWAITING_APPLICANT";
       out.selectBlockReason = nextAction === "SEND_PAYMENT_REMINDER"
@@ -3212,6 +3246,8 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
   var nextActionTs = parseTime_(row.Email_Next_Action_Date || "");
   var cooldownActive = cadenceState.cooldownActive === true;
   var manualReviewRequired = cadenceState.manualReviewRequired === true;
+  var reminderCount = Number(cadenceState.successfulSendCount || 0);
+  var reminderExhausted = reminderCount >= 3 && !cooldownActive;
   var postDocsMissingSentCoolingOff = cooldownActive
     && clean_(row.Last_Contact_Type || "").toLowerCase() === "docs_missing"
     && clean_(row.Last_Contact_Result || "").toUpperCase() === "SENT";
@@ -3221,9 +3257,11 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
   var suppressor = "";
   var explanation = "";
 
-  if (!hasValidEmail) suppressor = "NO_EFFECTIVE_EMAIL";
+  if (isUncontactable) suppressor = "UNCONTACTABLE";
+  else if (!hasValidEmail) suppressor = "NO_EFFECTIVE_EMAIL";
   else if (emailIssue) suppressor = "EMAIL_BLOCKED_OR_BOUNCED";
   else if (postDocsMissingSentCoolingOff || cooldownActive) suppressor = "COOLDOWN_ACTIVE";
+  else if (reminderExhausted) suppressor = "REMINDER_EXHAUSTED";
 
   if (enrolled) {
     owner = "NONE";
@@ -3266,12 +3304,18 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     explanation = "Document and payment authorities appear satisfied; enrollment/admin completion is next.";
   }
 
+  var explicitReminderDue = isYes_(row.Reminder_Due || row.Communication_Reminder_Due || row.Next_Action_Due)
+    || clean_(row.Reminder_Due || row.Communication_Reminder_Due || row.Next_Action_Due).toUpperCase() === "DUE";
+  var reminderDue = !!recommendedMessageType && !isUncontactable && !cooldownActive && !manualReviewRequired
+    && (explicitReminderDue || (lastContactAgeDays !== "" && Number(lastContactAgeDays) >= 14) || (reminderCount > 0 && !reminderExhausted));
   if (!suppressor && owner === "APPLICANT" && manualReviewRequired) {
     suppressor = "MANUAL_REVIEW_REQUIRED";
   }
   if (suppressor === "COOLDOWN_ACTIVE" || suppressor === "MANUAL_REVIEW_REQUIRED") recommendedMessageType = "";
   var urgency = actionabilityPreviewUrgency_(owner, nextAction, dateInfo, suppressor, cooldownActive);
-  if (isUncontactable) {
+  if (reminderExhausted && !isUncontactable) {
+    urgency = { level: "DORMANT", reason: "Third governed reminder exhausted; explicit re-engagement is required." };
+  } else if (isUncontactable) {
     urgency = { level: "UNCONTACTABLE", reason: "No valid email or phone fallback is available." };
   }
   var actionabilityState = resolveActionabilityState_({
@@ -3281,13 +3325,24 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     lifecycleStage: lifecycleStage,
     recommendedMessageType: recommendedMessageType,
     canonicalRecommendedMessageType: canonicalLifecycle && canonicalLifecycle.recommendedMessageType || "",
-    coolingOffUntil: row.Email_Next_Action_Date || ""
+    coolingOffUntil: row.Email_Next_Action_Date || "",
+    contactabilityState: isUncontactable ? "UNCONTACTABLE" : (hasValidEmail ? "EMAIL_AVAILABLE" : "PHONE_FALLBACK_AVAILABLE"),
+    uncontactable: isUncontactable,
+    reminderCount: reminderCount,
+    reminderExhausted: reminderExhausted,
+    reminderDue: reminderDue,
+    requiredDocumentUploadComplete: !!uploadSummary.requiredDocumentUploadComplete,
+    uploadedRequiredDocumentCount: Number(uploadSummary.uploadedRequiredCount || 0),
+    requiredDocumentCount: Number(uploadSummary.requiredCount || 0)
   });
   var authoritativeRecommendedMessageType = actionabilityAuthorityRecommendedMessageType_(
     canonicalLifecycle && canonicalLifecycle.recommendedMessageType,
     recommendedMessageType
   );
   if (suppressor === "MANUAL_REVIEW_REQUIRED") {
+    authoritativeRecommendedMessageType = "";
+  }
+  if (["READY", "COOLING_OFF"].indexOf(actionabilityState.actionabilityState) < 0) {
     authoritativeRecommendedMessageType = "";
   }
   var communicationProgress = actionabilityWorkloadExplanationForRow_({
@@ -3316,6 +3371,8 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     rowNumber: rowNumber,
     applicantId: applicantId,
     name: name,
+    effectiveEmail: effectiveEmail,
+    phone: clean_(getWhatsAppFallbackPhoneRaw_(row) || row.Phone || row.Phone_Number || row.Parent_Phone || row.Parent_Mobile || ""),
     actionOwner: owner,
     workloadGroupKey: actionabilityWorkloadGroupKey_({ actionOwner: owner, nextAction: nextAction, urgencyLevel: urgency.level, suppressor: suppressor }),
     worklistKey: clean_(worklistProjection.worklistKey || ""),
@@ -3378,9 +3435,17 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
       canonicalFinanceState: clean_(canonicalFinanceState.financeState || "UNKNOWN"),
       hasValidEmail: !!hasValidEmail,
       hasPhoneFallback: !!hasPhoneFallback,
+      effectiveEmail: effectiveEmail,
+      phone: clean_(getWhatsAppFallbackPhoneRaw_(row) || row.Phone || row.Phone_Number || row.Parent_Phone || row.Parent_Mobile || ""),
       contactabilityState: isUncontactable ? "UNCONTACTABLE" : (hasValidEmail ? "EMAIL_AVAILABLE" : "PHONE_FALLBACK_AVAILABLE"),
       communicationCooldownCycle: clean_(cadenceState.cooldownCycle || ""),
       communicationSuccessfulSendCount: Number(cadenceState.successfulSendCount || 0),
+      communicationReminderCount: reminderCount,
+      communicationReminderDue: reminderDue,
+      communicationReminderExhausted: reminderExhausted,
+      communicationLastAttemptAt: clean_(row.Last_Contacted_At || row.Email_Last_Sent_At || ""),
+      communicationLastAttemptResult: clean_(row.Last_Contact_Result || row.Email_Status || ""),
+      communicationNextActionAt: clean_(row.Email_Next_Action_Date || ""),
       communicationManualReviewRequired: manualReviewRequired
     }
   };
@@ -3401,8 +3466,8 @@ function actionabilityWorkloadGroupKey_(row) {
   var suppressor = clean_(r.suppressor || "").toUpperCase();
   var nextAction = clean_(r.nextAction || "").toUpperCase();
   if (owner === "NONE" || nextAction === "NO_ACTION") return "COMPLETE";
-  if (urgency === "DORMANT") return "DORMANT";
-  if (suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "CONTACTABILITY";
+  if (urgency === "DORMANT" || suppressor === "REMINDER_EXHAUSTED") return "DORMANT";
+  if (suppressor === "UNCONTACTABLE" || suppressor === "NO_EFFECTIVE_EMAIL" || suppressor === "EMAIL_BLOCKED_OR_BOUNCED") return "CONTACTABILITY";
   if (suppressor === "MANUAL_REVIEW_REQUIRED") return "MANAGEMENT";
   if (nextAction === "SEND_PAYMENT_REMINDER" || nextAction === "VERIFY_PAYMENT") return "FINANCE";
   if (owner === "APPLICANT") return "APPLICANT";
@@ -3418,6 +3483,20 @@ function actionabilityWorklistProjection_(row) {
   var nextAction = clean_(r.nextAction || "").toUpperCase();
   var suppressor = clean_(r.suppressor || "").toUpperCase();
   var authority = r.authorityState || {};
+  if (suppressor === "UNCONTACTABLE") {
+    return {
+      worklistKey: "CONTACTABILITY_EXCEPTION",
+      worklistLabel: "Contactability Gate",
+      worklistReason: "Uncontactable: no email or phone is recorded"
+    };
+  }
+  if (suppressor === "REMINDER_EXHAUSTED") {
+    return {
+      worklistKey: "DORMANT_REENGAGEMENT",
+      worklistLabel: "Dormant / Re-engagement",
+      worklistReason: "Third governed reminder exhausted; explicit re-engagement requires authorization"
+    };
+  }
   if (suppressor === "MANUAL_REVIEW_REQUIRED") {
     return {
       worklistKey: "COMMUNICATION_REVIEW",
@@ -3740,6 +3819,8 @@ function admin_getActionabilityPreview(payload) {
       rowNumber: Number(canonical.identity && canonical.identity.rowNumber || 0),
       applicantId: clean_(canonical.identity && canonical.identity.applicantId || ""),
       name: clean_(canonical.applicant && canonical.applicant.name || ""),
+      effectiveEmail: clean_(canonical.applicant && canonical.applicant.effectiveEmail || ""),
+      phone: clean_(canonical.applicant && canonical.applicant.phone || ""),
       actionOwner: clean_(actionability.actionOwner || canonical.owner || canonical.lifecycle && canonical.lifecycle.actionOwner || "NONE"),
       workloadGroupKey: clean_(actionability.workloadGroupKey || "UNKNOWN").toUpperCase(),
       worklistKey: clean_(actionability.worklistKey || ""),
@@ -3789,7 +3870,15 @@ function admin_getActionabilityPreview(payload) {
         canonicalFinanceState: clean_(financeAuthority.financeState || "UNKNOWN"),
         hasValidEmail: canonical.contactability && canonical.contactability.hasValidEmail === true,
         hasPhoneFallback: canonical.contactability && canonical.contactability.hasPhoneFallback === true,
-        contactabilityState: clean_(canonical.contactability && canonical.contactability.state || "UNKNOWN")
+        effectiveEmail: clean_(canonical.applicant && canonical.applicant.effectiveEmail || ""),
+        phone: clean_(canonical.applicant && canonical.applicant.phone || ""),
+        contactabilityState: clean_(canonical.contactability && canonical.contactability.state || "UNKNOWN"),
+        communicationReminderCount: Number(actionability.communicationReminderCount || actionability.reminderCount || 0),
+        communicationReminderDue: actionability.communicationReminderDue === true || actionability.reminderDue === true,
+        communicationReminderExhausted: actionability.communicationReminderExhausted === true || actionability.reminderExhausted === true,
+        communicationLastAttemptAt: clean_(actionability.communicationLastAttemptAt || actionability.lastAttemptAt || ""),
+        communicationLastAttemptResult: clean_(actionability.communicationLastAttemptResult || actionability.lastAttemptResult || ""),
+        communicationNextActionAt: clean_(actionability.communicationNextActionAt || actionability.nextActionAt || "")
       }
     };
     var owner = clean_(item.actionOwner || "NONE").toUpperCase() || "NONE";
