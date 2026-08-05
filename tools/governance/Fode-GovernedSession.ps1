@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [ValidateSet('Orient','Status','Checkpoint','RecordDecision','TransferOwnership','Transition','Pause','Resume','Close')]
+  [ValidateSet('Orient','Status','Checkpoint','RecordDecision','TransferOwnership','Recover','Transition','Pause','Resume','Close')]
   [string]$Action = 'Orient',
   [string]$TaskId = '',
   [string]$TaskLabel = '',
@@ -44,6 +44,7 @@ $policyPath = Join-Path $repoRoot 'governance\owner-policy.json'
 if ([string]::IsNullOrWhiteSpace($StateRoot)) { $StateRoot = Join-Path $repoRoot '.codex\state\fode-governance' }
 $statePath = Join-Path $StateRoot 'current.json'
 $eventsPath = Join-Path $StateRoot 'events.json'
+$transactionPath = Join-Path $StateRoot 'transaction.json'
 $newSessionId = [guid]::NewGuid().ToString('N')
 . (Join-Path $PSScriptRoot 'Fode-GovernedSession.Core.ps1')
 
@@ -61,7 +62,7 @@ function Fail([string]$Message, [string]$State = 'GOVERNED_SESSION_STOP') {
 
 function Read-JsonFile([string]$Path) {
   if (!(Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
-  try { return (Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json) } catch { Fail "Malformed state: $Path" }
+  try { return (Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json) } catch { Fail "Malformed governance state requires recovery: $Path" 'RECOVERY_REQUIRED' }
 }
 
 function Write-Atomic([string]$Path, [object]$Value) {
@@ -139,7 +140,10 @@ function Add-Or-Set([object]$Object, [string]$Name, [object]$Value) {
 
 function Require-OwnerLease([object]$State) {
   $leaseHashProperty = $State.PSObject.Properties['ownershipLeaseHash']
-  if ($null -eq $leaseHashProperty -or [string]::IsNullOrWhiteSpace([string]$leaseHashProperty.Value)) { return }
+  $generationProperty = $State.PSObject.Properties['ownershipGeneration']
+  $bindingProperty = $State.PSObject.Properties['ownershipBinding']
+  if ($null -eq $leaseHashProperty -or [string]::IsNullOrWhiteSpace([string]$leaseHashProperty.Value) -or [string]$leaseHashProperty.Value -notmatch '^[a-f0-9]{64}$') { Fail 'Governed ownership lease data is missing or invalid' 'CONCURRENT_SESSION_DETECTED' }
+  if ($null -eq $generationProperty -or [int]$generationProperty.Value -lt 1 -or $null -eq $bindingProperty -or [string]$bindingProperty.Value -ne 'generated-lease') { Fail 'Governed ownership binding is incomplete or invalid' 'CONCURRENT_SESSION_DETECTED' }
   if ([string]::IsNullOrWhiteSpace($OwnerLease)) { Fail 'An ownership lease is required for this governed session' 'CONCURRENT_SESSION_DETECTED' }
   if ((Hash-Text $OwnerLease) -ne [string]$leaseHashProperty.Value) { Fail 'The supplied ownership lease is no longer valid' 'CONCURRENT_SESSION_DETECTED' }
 }
@@ -154,35 +158,122 @@ function Existing-Events {
   return @($existing)
 }
 
-function Commit-Transfer([object]$PreviousState, [object]$NextState, [object[]]$NextEvents) {
-  $oldEvents = Existing-Events
-  $oldStateJson = $PreviousState | ConvertTo-Json -Depth 32
-  $oldEventsJson = $oldEvents | ConvertTo-Json -Depth 32
-  try {
-    Write-Atomic $eventsPath $NextEvents
-    Write-Atomic $statePath $NextState
-  } catch {
-    try {
-      $oldEvents | ConvertFrom-Json | Out-Null
-      Write-Atomic $eventsPath ($oldEvents | ConvertFrom-Json)
-      Write-Atomic $statePath ($oldStateJson | ConvertFrom-Json)
-    } catch { Fail 'Ownership transfer failed and rollback could not be verified' }
-    Fail 'Ownership transfer failed; previous governed state was restored'
+function Get-StateSummary([object]$State) {
+  if ($null -eq $State) { return $null }
+  return [ordered]@{
+    status = [string]$State.status; phase = [string]$State.phase; governedState = [string]$State.governedState
+    baselineHead = [string]$State.baselineHead; branch = [string]$State.branch
+    ownershipGeneration = if ($State.PSObject.Properties['ownershipGeneration']) { [int]$State.ownershipGeneration } else { 0 }
+    approvedScopeHash = if ($State.PSObject.Properties['approvedScopeHash']) { [string]$State.approvedScopeHash } else { '' }
   }
 }
 
-function Save-Event([object]$State, [string]$Kind) {
-  $existingEvents = Read-JsonFile $eventsPath
-  $events = @()
-  if ($existingEvents) { $events = @($existingEvents) }
-  $events += [ordered]@{ kind = $Kind; at = (Get-Date).ToUniversalTime().ToString('o'); sessionId = $State.sessionId; governedState = $State.governedState }
-  Write-Atomic $eventsPath $events
-  Write-Atomic $statePath $State
+function Get-EventHash([object]$Event) {
+  $copy = [ordered]@{}
+  foreach ($property in $Event.PSObject.Properties) { if ($property.Name -ne 'eventHash') { $copy[$property.Name] = $property.Value } }
+  return (Hash-Text ($copy | ConvertTo-Json -Depth 32 -Compress))
+}
+
+function Assert-EventHistory([object]$State, [object[]]$Events) {
+  if ($null -eq $State) { return }
+  if ($State.PSObject.Properties['lastEventId']) {
+    if (@($Events).Count -eq 0) { Fail 'Governance state has no matching event history' 'RECOVERY_REQUIRED' }
+    $last = @($Events)[@($Events).Count - 1]
+    if ([string]$last.eventId -ne [string]$State.lastEventId -or [string]$last.eventHash -ne [string]$State.lastEventHash -or [string]$last.eventHash -notmatch '^[a-f0-9]{64}$') { Fail 'Governance state and event history are contradictory' 'RECOVERY_REQUIRED' }
+  }
+}
+
+function Invoke-TestFailurePoint([string]$Point) {
+  if (!(Test-GovernanceSnapshotMode)) { return }
+  if ([Environment]::GetEnvironmentVariable('FODE_GOVERNANCE_TEST_FAILURE_POINT') -eq $Point) { throw "Injected governance write failure at $Point" }
+}
+
+function Restore-GovernanceStore([object]$State, [object]$Events) {
+  if ($null -eq $Events) { if (Test-Path -LiteralPath $eventsPath) { Remove-Item -LiteralPath $eventsPath -Force } } else { Write-Atomic $eventsPath $Events }
+  if ($null -eq $State) { if (Test-Path -LiteralPath $statePath) { Remove-Item -LiteralPath $statePath -Force } } else { Write-Atomic $statePath $State }
+}
+
+function Commit-GovernanceStore([object]$PreviousState, [object]$PreviousEvents, [object]$NextState, [object[]]$NextEvents, [string]$Operation) {
+  $journal = [ordered]@{
+    schemaVersion = 1; transactionId = [guid]::NewGuid().ToString('N'); operation = $Operation; createdAt = (Get-Date).ToUniversalTime().ToString('o')
+    sessionId = [string]$NextState.sessionId; previousState = $PreviousState; previousEvents = $PreviousEvents; nextState = $NextState; nextEvents = $NextEvents
+  }
+  Write-Atomic $transactionPath $journal
+  try {
+    Write-Atomic $eventsPath $NextEvents
+    Invoke-TestFailurePoint 'after-events'
+    Write-Atomic $statePath $NextState
+    Invoke-TestFailurePoint 'after-state'
+    $verifiedState = Read-JsonFile $statePath
+    $verifiedEvents = @(Existing-Events)
+    Assert-EventHistory $verifiedState $verifiedEvents
+    Remove-Item -LiteralPath $transactionPath -Force
+  } catch {
+    try {
+      Restore-GovernanceStore $PreviousState $PreviousEvents
+      if (Test-Path -LiteralPath $transactionPath) { Remove-Item -LiteralPath $transactionPath -Force }
+      $restoredState = Read-JsonFile $statePath
+      $restoredEvents = @(Existing-Events)
+      if (($null -eq $PreviousState) -ne ($null -eq $restoredState) -or @($restoredEvents).Count -ne @($PreviousEvents).Count) { throw 'Rollback verification failed' }
+    } catch { Fail 'Governance checkpoint failed and recovery is required' 'RECOVERY_REQUIRED' }
+    Fail 'Governance checkpoint failed; prior state was restored' 'GOVERNED_SESSION_STOP'
+  }
+}
+
+function Save-Event([object]$State, [string]$Kind, [string]$Reason = '') {
+  $priorState = Read-JsonFile $statePath
+  $priorEvents = if (Test-Path -LiteralPath $eventsPath -PathType Leaf) { @(Existing-Events) } else { $null }
+  $priorEventList = @($priorEvents | Where-Object { $null -ne $_ })
+  Assert-EventHistory $priorState $priorEventList
+  $previousEventHash = ''
+  if ($priorEventList.Count -gt 0) {
+    $lastPriorEvent = $priorEventList[$priorEventList.Count - 1]
+    if ($lastPriorEvent.PSObject.Properties['eventHash']) { $previousEventHash = [string]$lastPriorEvent.eventHash }
+  }
+  $event = [ordered]@{
+    eventId = [guid]::NewGuid().ToString('N'); sequence = $priorEventList.Count + 1; kind = $Kind; at = (Get-Date).ToUniversalTime().ToString('o')
+    sessionId = [string]$State.sessionId; ownershipGeneration = if ($State.PSObject.Properties['ownershipGeneration']) { [int]$State.ownershipGeneration } else { 0 }
+    previousBaseline = if ($priorState) { [string]$priorState.baselineHead } else { '' }; newBaseline = [string]$State.baselineHead
+    approvedPaths = @($State.approvedPaths); approvedScopeHash = if ($State.PSObject.Properties['approvedScopeHash']) { [string]$State.approvedScopeHash } else { '' }
+    commitIdentity = [string]$State.observed.head; reason = (Redact $Reason); priorState = (Get-StateSummary $priorState); resultingState = (Get-StateSummary $State); previousEventHash = $previousEventHash
+  }
+  $event.eventHash = Get-EventHash ([pscustomobject]$event)
+  $events = $priorEventList + [pscustomobject]$event
+  Add-Or-Set $State 'eventHistoryVersion' 2
+  Add-Or-Set $State 'lastEventId' $event.eventId
+  Add-Or-Set $State 'lastEventHash' $event.eventHash
+  Commit-GovernanceStore $priorState $priorEvents $State $events $Kind
 }
 
 $observed = Snapshot
 $policyHash = PolicyHash
+$stateExists = Test-Path -LiteralPath $statePath -PathType Leaf
+$eventsExist = Test-Path -LiteralPath $eventsPath -PathType Leaf
+$pendingTransaction = Read-JsonFile $transactionPath
+if ($pendingTransaction) {
+  if ($Action -ne 'Recover') { Fail 'An interrupted governance checkpoint requires explicit recovery' 'RECOVERY_REQUIRED' }
+  $recoveryState = $pendingTransaction.previousState
+  if ($null -eq $recoveryState) { Fail 'The interrupted initial checkpoint cannot be recovered without an owner decision and clean state review' 'RECOVERY_REQUIRED' }
+  if ([string]::IsNullOrWhiteSpace($SessionId) -or $SessionId -ne [string]$recoveryState.sessionId) { Fail 'Recovery requires the exact interrupted session ID' 'OWNER_DECISION_REQUIRED' }
+  if ($OwnerDecision -ne 'RECOVER_GOVERNANCE_STATE') { Fail 'Recovery requires OwnerDecision RECOVER_GOVERNANCE_STATE' 'OWNER_DECISION_REQUIRED' }
+  Require-OwnerLease $recoveryState
+  try {
+    Restore-GovernanceStore $pendingTransaction.previousState $pendingTransaction.previousEvents
+    Remove-Item -LiteralPath $transactionPath -Force
+    $recovered = Read-JsonFile $statePath
+    Add-Or-Set $recovered 'recoveryOutcome' ([ordered]@{ at=(Get-Date).ToUniversalTime().ToString('o'); transactionId=[string]$pendingTransaction.transactionId; operation=[string]$pendingTransaction.operation; outcome='restored-prior-state'; ownerDecision='RECOVER_GOVERNANCE_STATE' })
+    $recovered.governedState = 'GOVERNED_SESSION_RECOVERED'
+    $recovered.lastCheckpointAt = (Get-Date).ToUniversalTime().ToString('o')
+    $recovered.observed = $observed
+    Save-Event $recovered 'recovery-restored' 'Explicit owner-authorized recovery restored the prior serialized state.'
+    Output-State $recovered 'Interrupted governance checkpoint recovered to its prior serialized state.'
+    exit 0
+  } catch { Fail 'Governance recovery could not restore the prior serialized state' 'RECOVERY_REQUIRED' }
+}
+if ($stateExists -ne $eventsExist) { Fail 'Governance current state and event history are inconsistent; explicit recovery is required' 'RECOVERY_REQUIRED' }
 $previous = Read-JsonFile $statePath
+$existingEvents = if ($eventsExist) { @(Existing-Events) } else { @() }
+Assert-EventHistory $previous $existingEvents
 if ($previous -and $previous.policyHash -and $previous.policyHash -ne $policyHash) { Fail 'Owner policy changed since the recorded checkpoint' 'OWNER_DECISION_REQUIRED' }
 
 function Output-State([object]$State, [string]$Message = '') {
@@ -210,8 +301,8 @@ if ($Action -eq 'Orient') {
   $state = $null
   $message = 'Fresh governed orientation completed.'
   if ($previous -and $previous.status -eq 'open') {
-    if ($Supersede.IsPresent -eq $false -and $previous.PSObject.Properties['ownershipLeaseHash']) {
-      Require-OwnerLease $previous
+    Require-OwnerLease $previous
+    if ($Supersede.IsPresent -eq $false) {
       $previous.lastCheckpointAt = (Get-Date).ToUniversalTime().ToString('o')
       $previous.observed = $observed
       $scopeCheck = Test-FodeApprovedScope $observed.statusLines @($previous.approvedPaths)
@@ -220,13 +311,13 @@ if ($Action -eq 'Orient') {
       Output-State $previous 'Existing governed session oriented under the active ownership lease.'
       exit 0
     }
-    $age = ((Get-Date).ToUniversalTime() - (Get-Item -LiteralPath $statePath).LastWriteTimeUtc).TotalMinutes
-    if (($age -lt 30) -and ($Supersede.IsPresent -eq $false)) { Fail 'An active governed session owns this worktree' 'CONCURRENT_SESSION_DETECTED' }
+    if ([string]::IsNullOrWhiteSpace($SessionId) -or $SessionId -ne [string]$previous.sessionId) { Fail 'Supersede requires the exact active session ID' 'OWNER_DECISION_REQUIRED' }
+    if ($OwnerDecision -ne 'SUPERSEDE_GOVERNED_SESSION') { Fail 'Supersede requires OwnerDecision SUPERSEDE_GOVERNED_SESSION' 'OWNER_DECISION_REQUIRED' }
     $previous.status = 'interrupted'
     $previous.governedState = 'GOVERNED_SESSION_STOP'
     $previous.closedAt = $null
-    Save-Event $previous 'interrupted'
-    $message = 'Prior open session was classified as interrupted; state was reconstructed from current evidence.'
+    Save-Event $previous 'superseded' 'Explicit owner-authorized supersession of the active governed session.'
+    $message = 'Prior open session was explicitly superseded by the valid owner lease.'
   }
   $newLease = New-OwnerLease
   $state = [ordered]@{
@@ -267,6 +358,7 @@ if ($previous.baselineHead -ne $observed.head -or $previous.branch -ne $observed
 }
 
 if ($Action -eq 'TransferOwnership') {
+  Require-OwnerLease $previous
   if ([string]::IsNullOrWhiteSpace($SessionId) -or $SessionId -ne [string]$previous.sessionId) { Fail 'TransferOwnership requires the exact open session ID' 'OWNER_DECISION_REQUIRED' }
   if ([string]::IsNullOrWhiteSpace($OwnerDecision) -or $OwnerDecision -ne 'TRANSFER_SESSION_OWNERSHIP') { Fail 'TransferOwnership requires OwnerDecision TRANSFER_SESSION_OWNERSHIP' 'OWNER_DECISION_REQUIRED' }
   $oldGeneration = if ($previous.PSObject.Properties['ownershipGeneration']) { [int]$previous.ownershipGeneration } else { 0 }
@@ -304,15 +396,13 @@ if ($Action -eq 'TransferOwnership') {
   })
   $next.lastCheckpointAt = $now
   $next.observed = $observed
-  $events = Existing-Events
-  $events += [pscustomobject]@{ kind = 'ownership-transferred'; at = $now; sessionId = [string]$previous.sessionId; governedState = [string]$next.governedState; formerOwnershipGeneration = $oldGeneration; newOwnershipGeneration = $newGeneration; formerLeaseHash = $oldLeaseHash; newLeaseHash = [string]$next.ownershipLeaseHash }
-  Commit-Transfer $previous $next $events
+  Save-Event $next 'ownership-transferred' 'Explicit owner-authorized in-place ownership transfer.'
   $script:outputOwnerLease = $newLease
   Output-State $next 'Owner-approved in-place session ownership transfer completed.'
   exit 0
 }
 
-if ($Action -in @('Checkpoint','RecordDecision','Transition','Pause','Resume','Close')) { Require-OwnerLease $previous }
+if ($Action -in @('Checkpoint','RecordDecision','TransferOwnership','Transition','Pause','Resume','Close')) { Require-OwnerLease $previous }
 
 if ($Action -eq 'RecordDecision') {
   if ([string]::IsNullOrWhiteSpace($Decision) -or [string]::IsNullOrWhiteSpace($Scope) -or [string]::IsNullOrWhiteSpace($RelatedTask)) { Fail 'RecordDecision requires Decision, Scope and RelatedTask' 'OWNER_DECISION_REQUIRED' }

@@ -62,6 +62,14 @@ The recorded release baseline is immutable during implementation and pre-release
 
 When a governance-only CIS verifies a clean `main` worktree aligned with `origin/main` and proves every committed path since the recorded baseline is already approved, the governed-session tool may reconcile its baseline through its explicit `AcceptBaselineAdvance` checkpoint. That checkpoint records the prior baseline and reason; it does not alter deployment, runtime, or historical release evidence.
 
+## Governed-session ownership and recovery
+
+An open governed session is bound to its generated ownership lease, generation, and binding type. Missing, malformed, stale, or mismatched lease data fails closed. `-Supersede` never bypasses an active lease: it requires the active lease, the exact session ID, and the explicit `SUPERSEDE_GOVERNED_SESSION` owner decision. In-place ownership transfer similarly requires the active lease, exact session ID, and `TRANSFER_SESSION_OWNERSHIP` decision.
+
+`current.json` and `events.json` are committed through a durable transaction journal. A failed write restores the prior serialized state and append-only event history; an interrupted transaction remains explicitly `RECOVERY_REQUIRED` until the valid lease holder supplies the exact session ID and `RECOVER_GOVERNANCE_STATE` decision. A missing, malformed, or contradictory current/event pair is never treated as a fresh session.
+
+Each hardened event records its timestamp, session and ownership generation, baseline transition, approved scope/hash, observed commit, reason, and prior/resulting state summaries. This preserves audit evidence without recording secrets.
+
 Release authorization is independent from communication or applicant-data mutation authorization. A source deployment never grants permission to send communications or mutate external data.
 
 Governance-tool failure does not itself require an Apps Script rollback. Rollback decisions are reserved for material authentication, authority, source/deployment integrity, runtime, security, applicant identity/actionability, external-data risk, or desktop-surface failures. A bounded mobile-layout failure stops further versions and remains pinned for a forward correction when runtime identity is safe.

@@ -46,9 +46,19 @@ function run(root, action, snapshot, extra = {}) {
   return { ...result, json: JSON.parse(result.stdout.trim()) };
 }
 
+function runWithEnv(root, action, snapshot, extra, injectedEnv) {
+  const args = ['-NoProfile', '-File', script, '-Action', action, '-StateRoot', root];
+  for (const [key, value] of Object.entries(extra)) args.push(`-${key}`, String(value));
+  const env = { ...process.env, FODE_GOVERNANCE_TEST_SNAPSHOT: JSON.stringify(snapshot), ...injectedEnv };
+  const result = spawnSync('pwsh.exe', args, { cwd: repo, encoding: 'utf8', env });
+  assert.ok(result.stdout.trim(), `No JSON output for ${action}: ${result.stderr}`);
+  return { ...result, json: JSON.parse(result.stdout.trim()) };
+}
+
 try {
   const cleanRoot = newRoot('clean');
   const opened = run(cleanRoot, 'Orient', clean, { TaskId: 'clean', ApprovedPaths: approvedPaths });
+  assert.equal(opened.status, 0, JSON.stringify(opened.json));
   assert.equal(opened.json.session.phase, 'OPEN');
   const cleanClose = run(cleanRoot, 'Close', clean, { OwnerLease: opened.json.ownerLease, ClearPendingAcceptance: true });
   assert.equal(cleanClose.json.session.status, 'closed');
@@ -60,6 +70,7 @@ try {
     OwnerLease: initial.json.ownerLease,
     SourceWork: 'approved governance edit'
   });
+  assert.equal(firstEdit.status, 0, JSON.stringify(firstEdit.json));
   assert.equal(firstEdit.json.session.phase, 'WORKING', 'first approved edit must not deadlock read-only');
   assert.equal(firstEdit.json.governedState, 'WORKING');
   assert.equal(firstEdit.json.session.communicationAuthorized, false, 'deployment authorization must not authorize communications');
@@ -94,6 +105,7 @@ try {
   const postCommitRoot = newRoot('post-commit-ready');
   const postCommitInitial = run(postCommitRoot, 'Orient', clean, { TaskId: 'post-commit', ApprovedPaths: approvedPaths, ReleaseAuthorized: true });
   const postCommitWorking = run(postCommitRoot, 'Checkpoint', approvedDirty, { OwnerLease: postCommitInitial.json.ownerLease });
+  assert.equal(postCommitWorking.status, 0, JSON.stringify(postCommitWorking.json));
   assert.equal(postCommitWorking.json.session.phase, 'WORKING');
   const postCommitValidated = run(postCommitRoot, 'Transition', approvedDirty, {
     OwnerLease: postCommitInitial.json.ownerLease,
@@ -138,24 +150,101 @@ try {
   assert.equal(blocked.status, 2);
   assert.equal(blocked.json.governedState, 'READ_ONLY_RECONCILIATION');
 
-  const reconciledRoot = newRoot('reconciled');
-  const stale = run(reconciledRoot, 'Orient', clean, { ApprovedPaths: approvedPaths });
-  const statePath = path.join(reconciledRoot, 'current.json');
-  const staleState = JSON.parse(fs.readFileSync(statePath, 'utf8'));
-  delete staleState.ownershipGeneration;
-  delete staleState.ownershipBinding;
-  delete staleState.ownershipLeaseHash;
-  delete staleState.ownershipTransfers;
-  fs.writeFileSync(statePath, JSON.stringify(staleState), 'utf8');
-  fs.utimesSync(statePath, new Date('2020-01-01T00:00:00Z'), new Date('2020-01-01T00:00:00Z'));
-  const recovered = run(reconciledRoot, 'Orient', clean, { Supersede: true, ApprovedPaths: approvedPaths });
-  assert.notEqual(recovered.json.session.sessionId, stale.json.session.sessionId);
-  const reconciledClose = run(reconciledRoot, 'Close', clean, {
-    OwnerLease: recovered.json.ownerLease,
-    Decision: 'STOPPED_CLEANLY_BEFORE_WORK',
-    ClearPendingAcceptance: true
+  const supersedeRoot = newRoot('supersede');
+  const superseded = run(supersedeRoot, 'Orient', clean, { ApprovedPaths: approvedPaths });
+  const supersedeWithoutLease = run(supersedeRoot, 'Orient', clean, { Supersede: true, SessionId: superseded.json.session.sessionId });
+  assert.equal(supersedeWithoutLease.status, 2);
+  assert.equal(supersedeWithoutLease.json.governedState, 'CONCURRENT_SESSION_DETECTED');
+  const supersedeWithoutDecision = run(supersedeRoot, 'Orient', clean, { Supersede: true, OwnerLease: superseded.json.ownerLease, SessionId: superseded.json.session.sessionId });
+  assert.equal(supersedeWithoutDecision.status, 2);
+  assert.equal(supersedeWithoutDecision.json.governedState, 'OWNER_DECISION_REQUIRED');
+  const recovered = run(supersedeRoot, 'Orient', clean, {
+    Supersede: true,
+    OwnerLease: superseded.json.ownerLease,
+    SessionId: superseded.json.session.sessionId,
+    OwnerDecision: 'SUPERSEDE_GOVERNED_SESSION',
+    ApprovedPaths: approvedPaths
   });
-  assert.equal(reconciledClose.json.session.status, 'closed');
+  assert.equal(recovered.status, 0, JSON.stringify(recovered.json));
+  assert.notEqual(recovered.json.session.sessionId, superseded.json.session.sessionId);
+
+  const leaseRoot = newRoot('lease');
+  const leaseOpened = run(leaseRoot, 'Orient', clean, { ApprovedPaths: approvedPaths });
+  const staleLease = run(leaseRoot, 'Checkpoint', clean, { OwnerLease: 'not-the-active-lease' });
+  assert.equal(staleLease.status, 2);
+  assert.equal(staleLease.json.governedState, 'CONCURRENT_SESSION_DETECTED');
+  const leaseStatePath = path.join(leaseRoot, 'current.json');
+  const missingLeaseState = JSON.parse(fs.readFileSync(leaseStatePath, 'utf8'));
+  delete missingLeaseState.ownershipLeaseHash;
+  fs.writeFileSync(leaseStatePath, JSON.stringify(missingLeaseState), 'utf8');
+  const missingLease = run(leaseRoot, 'Checkpoint', clean, { OwnerLease: leaseOpened.json.ownerLease });
+  assert.equal(missingLease.status, 2);
+  assert.equal(missingLease.json.governedState, 'CONCURRENT_SESSION_DETECTED');
+
+  const missingStateRoot = newRoot('missing-state');
+  run(missingStateRoot, 'Orient', clean, { ApprovedPaths: approvedPaths });
+  fs.rmSync(path.join(missingStateRoot, 'current.json'));
+  const missingState = run(missingStateRoot, 'Status', clean);
+  assert.equal(missingState.status, 2);
+  assert.equal(missingState.json.governedState, 'RECOVERY_REQUIRED');
+
+  const missingEventsRoot = newRoot('missing-events');
+  run(missingEventsRoot, 'Orient', clean, { ApprovedPaths: approvedPaths });
+  fs.rmSync(path.join(missingEventsRoot, 'events.json'));
+  const missingEvents = run(missingEventsRoot, 'Status', clean);
+  assert.equal(missingEvents.status, 2);
+  assert.equal(missingEvents.json.governedState, 'RECOVERY_REQUIRED');
+
+  const malformedRoot = newRoot('malformed');
+  run(malformedRoot, 'Orient', clean, { ApprovedPaths: approvedPaths });
+  fs.writeFileSync(path.join(malformedRoot, 'current.json'), '{not-json', 'utf8');
+  const malformed = run(malformedRoot, 'Status', clean);
+  assert.equal(malformed.status, 2);
+  assert.equal(malformed.json.governedState, 'RECOVERY_REQUIRED');
+
+  const failureRoot = newRoot('write-failure');
+  const failureOpened = run(failureRoot, 'Orient', clean, { ApprovedPaths: approvedPaths });
+  const beforeFailureState = JSON.parse(fs.readFileSync(path.join(failureRoot, 'current.json'), 'utf8'));
+  const beforeFailureEvents = JSON.parse(fs.readFileSync(path.join(failureRoot, 'events.json'), 'utf8'));
+  const injectedFailure = runWithEnv(failureRoot, 'Checkpoint', approvedDirty, {
+    OwnerLease: failureOpened.json.ownerLease,
+    SourceWork: 'failure injection'
+  }, { FODE_GOVERNANCE_TEST_FAILURE_POINT: 'after-events' });
+  assert.equal(injectedFailure.status, 2);
+  assert.equal(injectedFailure.json.governedState, 'GOVERNED_SESSION_STOP');
+  const restoredState = JSON.parse(fs.readFileSync(path.join(failureRoot, 'current.json'), 'utf8'));
+  const restoredEvents = JSON.parse(fs.readFileSync(path.join(failureRoot, 'events.json'), 'utf8'));
+  assert.equal(restoredState.lastEventId, beforeFailureState.lastEventId, 'failed checkpoint must restore the prior state');
+  assert.deepEqual(restoredEvents, beforeFailureEvents, 'failed checkpoint must preserve the append-only event history');
+  assert.equal(fs.existsSync(path.join(failureRoot, 'transaction.json')), false, 'successful rollback must clear its recovery journal');
+
+  const stateFailureRoot = newRoot('state-write-failure');
+  const stateFailureOpened = run(stateFailureRoot, 'Orient', clean, { ApprovedPaths: approvedPaths });
+  const beforeStateFailure = JSON.parse(fs.readFileSync(path.join(stateFailureRoot, 'current.json'), 'utf8'));
+  const beforeStateFailureEvents = JSON.parse(fs.readFileSync(path.join(stateFailureRoot, 'events.json'), 'utf8'));
+  const injectedStateFailure = runWithEnv(stateFailureRoot, 'Checkpoint', approvedDirty, {
+    OwnerLease: stateFailureOpened.json.ownerLease,
+    SourceWork: 'state write failure injection'
+  }, { FODE_GOVERNANCE_TEST_FAILURE_POINT: 'after-state' });
+  assert.equal(injectedStateFailure.status, 2);
+  assert.equal(injectedStateFailure.json.governedState, 'GOVERNED_SESSION_STOP');
+  const restoredStateWrite = JSON.parse(fs.readFileSync(path.join(stateFailureRoot, 'current.json'), 'utf8'));
+  const restoredStateWriteEvents = JSON.parse(fs.readFileSync(path.join(stateFailureRoot, 'events.json'), 'utf8'));
+  assert.equal(restoredStateWrite.lastEventId, beforeStateFailure.lastEventId, 'post-state failure must restore the prior state');
+  assert.deepEqual(restoredStateWriteEvents, beforeStateFailureEvents, 'post-state failure must preserve event history');
+
+  const historyRoot = newRoot('history');
+  const historyOpened = run(historyRoot, 'Orient', clean, { ApprovedPaths: approvedPaths });
+  const historyCheckpoint = run(historyRoot, 'Checkpoint', approvedDirty, { OwnerLease: historyOpened.json.ownerLease, SourceWork: 'history proof' });
+  const history = JSON.parse(fs.readFileSync(path.join(historyRoot, 'events.json'), 'utf8'));
+  const historyState = JSON.parse(fs.readFileSync(path.join(historyRoot, 'current.json'), 'utf8'));
+  assert.equal(history.length, 2);
+  assert.match(history[0].eventId, /^[a-f0-9]{32}$/, 'event history must preserve the opening event');
+  assert.equal(history[1].previousEventHash, history[0].eventHash, 'event history must link to its preserved predecessor');
+  for (const field of ['eventId', 'sequence', 'sessionId', 'ownershipGeneration', 'previousBaseline', 'newBaseline', 'approvedPaths', 'approvedScopeHash', 'commitIdentity', 'priorState', 'resultingState', 'eventHash']) {
+    assert.ok(Object.hasOwn(history[1], field), `event history must record ${field}`);
+  }
+  assert.equal(historyState.lastEventId, history[1].eventId);
 
   const stoppedDirtyRoot = newRoot('stopped-dirty');
   const stoppedDirty = run(stoppedDirtyRoot, 'Orient', clean, { ApprovedPaths: approvedPaths, ReleaseAuthorized: true });
