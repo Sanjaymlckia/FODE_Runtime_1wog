@@ -7,6 +7,7 @@ const { spawnSync } = require('node:child_process');
 const repo = path.resolve(__dirname, '..', '..');
 const script = path.join(repo, 'tools', 'governance', 'Fode-GovernedSession.ps1');
 assert.match(fs.readFileSync(script, 'utf8'), /System\.Security\.Cryptography\.SHA256/, 'governance policy hashing must retain a Windows PowerShell fallback');
+assert.match(fs.readFileSync(script, 'utf8'), /Add-Type -AssemblyName System\.Security/, 'governance lease storage must load the Windows DPAPI assembly explicitly');
 const stateBase = path.join(repo, '.codex', 'state');
 fs.mkdirSync(stateBase, { recursive: true });
 const roots = [];

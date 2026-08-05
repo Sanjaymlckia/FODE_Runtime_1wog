@@ -181,6 +181,7 @@ function Save-ProtectedOwnerLease([string]$SessionId, [string]$Lease) {
     if (Test-GovernanceSnapshotMode) {
       [System.IO.File]::WriteAllBytes($path, [System.Text.Encoding]::UTF8.GetBytes($Lease))
     } else {
+      Add-Type -AssemblyName System.Security
       $plain = [System.Text.Encoding]::UTF8.GetBytes($Lease)
       try { $protected = [System.Security.Cryptography.ProtectedData]::Protect($plain, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser) } finally { [Array]::Clear($plain, 0, $plain.Length) }
       [System.IO.File]::WriteAllBytes($path, $protected)
@@ -195,6 +196,7 @@ function Get-ProtectedOwnerLease([string]$SessionId) {
   try {
     $stored = [System.IO.File]::ReadAllBytes($path)
     if (Test-GovernanceSnapshotMode) { return [System.Text.Encoding]::UTF8.GetString($stored) }
+    Add-Type -AssemblyName System.Security
     $plain = [System.Security.Cryptography.ProtectedData]::Unprotect($stored, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
     try { return [System.Text.Encoding]::UTF8.GetString($plain) } finally { [Array]::Clear($plain, 0, $plain.Length) }
   } catch { Fail 'Protected local ownership lease could not be read' 'CONCURRENT_SESSION_DETECTED' }
