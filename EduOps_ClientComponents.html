@@ -153,9 +153,9 @@
       + '<div><span>Documents</span><strong>' + app.esc(op.documentLabel || app.authorityLabel(p.documents, "document state")) + '</strong></div>'
       + '<div><span>Missing documents</span><strong>' + app.esc(missingNames || "None returned") + '</strong></div>'
       + '<div><span>Finance</span><strong>' + app.esc(op.financeLabel || app.authorityLabel(p.finance, "finance")) + '</strong></div>'
-      + '<div><span>Contactability</span><strong>' + app.esc(op.contactabilityLabel || app.authorityLabel(p.contactability, "contactability")) + '</strong></div>'
+      + '<div><span>Contactability</span><strong>' + app.esc((op.contactabilityLabel || app.authorityLabel(p.contactability, "contactability")) + " · " + app.displayRecipientEmail(row.email)) + '</strong></div>'
       + '<div><span>Communication</span><strong>' + app.esc(op.communicationLabel || "Not returned") + '</strong></div>'
-      + '<div><span>Next-action timestamp</span><strong>' + app.esc(op.nextActionTimestamp || app.authorityUnavailable("next-action timestamp")) + '</strong></div>'
+      + '<div><span>Next-action timestamp</span><strong>' + app.esc(op.nextActionTimestamp ? app.formatPngDisplay(op.nextActionTimestamp) + " · ISO " + op.nextActionTimestamp : app.formatPngDisplay("", "Not scheduled")) + '</strong></div>'
       + '<div><span>Selection</span><strong>' + app.esc(op.selectionLabel || "Not selectable") + '</strong></div>'
       + '<div><span>Selection block</span><strong>' + app.esc(row.selectBlockReason || "None") + '</strong></div>'
       + '<div><span>Authority result</span><strong>' + app.esc(op.authorityResultLabel || app.authorityLabel(p.actionability, "authority result")) + '</strong></div>'
@@ -226,7 +226,7 @@
     var blockedReason = authority.reason || row.selectBlockReason || app.authorityUnavailable("actionability");
     var op = operationalRow(row);
     var issueMeta = [op.issueEvidence, op.issueDetail].filter(function (value) { return !!value; }).join(" - ");
-    var statusMeta = [op.contactLabel, op.dueLabel, op.statusLabel].filter(function (value) { return !!value; }).join(" - ");
+    var statusMeta = ["Email: " + app.displayRecipientEmail(row.email), op.dueLabel, op.statusLabel].filter(function (value) { return !!value; }).join(" - ");
     return '<tr data-applicant-row="' + app.esc(id) + '"' + (selected ? ' data-selected="true"' : '') + '>'
       + '<td class="eduops-col-select"><input class="eduops-row-checkbox" type="checkbox" data-select-applicant="' + app.esc(id) + '" aria-label="Select ' + app.esc(row.displayName) + '"' + (selected ? " checked" : "") + (blocked ? " disabled" : "") + '></td>'
       + '<td class="eduops-col-applicant"><button type="button" class="eduops-applicant-link" data-quick-applicant="' + app.esc(id) + '"><strong>' + app.esc(row.displayName) + '</strong><span>' + app.esc(id) + '</span></button></td>'
@@ -329,9 +329,9 @@
     var snapshotId = runtime.snapshotId || response.snapshotId || "";
     var snapshotAsOf = runtime.snapshotAsOf || response.snapshotAsOf || response.reconciliation && response.reconciliation.asOf || "";
     dom.eduopsSnapshotShort.textContent = snapshotId || "Snapshot unavailable";
-    dom.eduopsSnapshotTime.textContent = snapshotAsOf || "Current authority";
+    dom.eduopsSnapshotTime.textContent = snapshotAsOf ? app.formatPngDisplay(snapshotAsOf) : "Snapshot time unavailable";
     if (dom.eduopsReleaseSnapshotIdentity) dom.eduopsReleaseSnapshotIdentity.textContent = snapshotId ? "Snapshot " + snapshotId : "Snapshot unavailable";
-    if (dom.eduopsReleaseSnapshotTime) dom.eduopsReleaseSnapshotTime.textContent = snapshotAsOf ? "As of " + snapshotAsOf : "As of unavailable";
+    if (dom.eduopsReleaseSnapshotTime) { dom.eduopsReleaseSnapshotTime.setAttribute("data-iso-label", snapshotAsOf ? "As of " + snapshotAsOf : "As of unavailable"); dom.eduopsReleaseSnapshotTime.textContent = snapshotAsOf ? "As of " + app.formatPngDisplay(snapshotAsOf) : "As of unavailable"; }
     if (dom.eduopsRuntimeIdentity) dom.eduopsRuntimeIdentity.textContent = response.runtime && response.runtime.runtimeIdentity || "Runtime identity unavailable.";
     var operationalClassification = byId("eduopsOperationalClassification");
     if (operationalClassification) operationalClassification.textContent = response.runtime && response.runtime.operationalClassification || "Runtime identity unavailable.";
@@ -403,7 +403,7 @@
     if (!row) return;
     dom.eduopsDrawerTitle.textContent = row.displayName;
     var p = row.presentation || {};
-    dom.eduopsDrawerContent.innerHTML = '<dl class="eduops-definition-list"><div><dt>ApplicantID</dt><dd>' + app.esc(row.applicantId) + '</dd></div><div><dt>Actionability</dt><dd>' + app.esc(app.authorityLabel(p.actionability, "actionability")) + '</dd></div><div><dt>Worklist</dt><dd>' + app.esc(app.authorityLabel(p.worklist, "worklist")) + '</dd></div><div><dt>Next action</dt><dd>' + app.esc(app.authorityLabel(p.nextAction, "next action")) + '</dd></div></dl>';
+    dom.eduopsDrawerContent.innerHTML = '<section class="eduops-primary-identity"><span class="eduops-eyebrow">Applicant identity and contact</span><h3>' + app.esc(row.displayName) + '</h3><dl class="eduops-definition-list"><div><dt>ApplicantID</dt><dd>' + app.esc(row.applicantId) + '</dd></div><div><dt>Recipient email</dt><dd>' + app.esc(app.displayRecipientEmail(row.email)) + '</dd></div><div><dt>Contactability</dt><dd>' + app.esc(app.authorityLabel(p.contactability, "contactability")) + '</dd></div></dl></section><dl class="eduops-definition-list"><div><dt>Actionability</dt><dd>' + app.esc(app.authorityLabel(p.actionability, "actionability")) + '</dd></div><div><dt>Worklist</dt><dd>' + app.esc(app.authorityLabel(p.worklist, "worklist")) + '</dd></div><div><dt>Next action</dt><dd>' + app.esc(app.authorityLabel(p.nextAction, "next action")) + '</dd></div></dl>';
     dom.eduopsDrawerActions.innerHTML = '<button class="eduops-button eduops-button-primary" type="button" data-open-applicant="' + app.esc(applicantId) + '" data-open-row-number="' + Number(row.rowNumber || 0) + '">Open Individual Workbench</button>';
     dom.eduopsQuickDrawer.hidden = false;
     dom.eduopsQuickDrawer.setAttribute("aria-hidden", "false");
@@ -821,6 +821,7 @@
     return '<div class="eduops-table-shell"><table class="eduops-work-table"><thead><tr>' + columns.map(function (column) { return '<th>' + app.esc(column[0]) + '</th>'; }).join("") + '</tr></thead><tbody>' + list.map(function (row) {
       return '<tr>' + columns.map(function (column) {
         var value = typeof column[1] === "function" ? column[1](row) : row[column[1]];
+        if (value && /date|time|recorded|created|updated|expires|expiry|granted/i.test(column[0])) value = app.formatPngDisplay(value, "Not recorded");
         return '<td>' + app.esc(Array.isArray(value) ? value.join(", ") : value == null || value === "" ? "-" : value) + '</td>';
       }).join("") + '</tr>';
     }).join("") + '</tbody></table></div>';
@@ -1166,7 +1167,7 @@
     return '<details class="eduops-roles-account-detail"><summary>View details</summary><div class="eduops-roles-detail-grid">' + (account.capabilities || []).map(function (capability) {
       var grant = capability.temporaryGrant || {};
       return '<section><h4>' + app.esc(rolesCapabilityLabel(capability.capabilityKey)) + '</h4>'
-        + rolesDefinitionHtml([["Effective access", capabilityLabel(capability.state)], ["Source", capabilityLabel(capability.source || (capability.inheritedAllowed ? "ROLE_DEFAULT" : "NOT_ASSIGNED"))], ["Operation availability", "Projected by workload modules"], ["Temporary expiry", grant.expiresAt || "-"], ["Technical key", capability.capabilityKey]], "eduops-roles-technical") + '</section>';
+        + rolesDefinitionHtml([["Effective access", capabilityLabel(capability.state)], ["Source", capabilityLabel(capability.source || (capability.inheritedAllowed ? "ROLE_DEFAULT" : "NOT_ASSIGNED"))], ["Operation availability", "Projected by workload modules"], ["Temporary expiry", app.formatPngDisplay(grant.expiresAt, "Not recorded")], ["Technical key", capability.capabilityKey]], "eduops-roles-technical") + '</section>';
     }).join("") + '</div></details>';
   }
   function rolesAccountRowsHtml(matrix, accounts) {
@@ -1205,7 +1206,7 @@
     if (!grants.length) return '<div class="eduops-empty-state"><strong>No temporary grant records returned</strong><span>Capability_Grants audit history is empty or unavailable to this role.</span></div>';
     return '<ul class="eduops-audit-list">' + grants.map(function (grant) {
       var revoke = matrix.isSuper && grant.status === "ACTIVE" ? '<button type="button" class="eduops-button eduops-button-secondary" data-role-revoke-grant="' + app.esc(grant.grantId || "") + '" data-role-record-version="' + app.esc(grant.recordVersion || "") + '">Revoke</button>' : "";
-      return '<li><strong>' + app.esc(capabilityLabel(grant.status || "UNKNOWN")) + ' - ' + app.esc(rolesCapabilityLabel(grant.capabilityKey || "")) + '</strong><span>' + app.esc(grant.accountEmail || "") + ' / Grant ID ' + app.esc(grant.grantId || "") + ' / Reason: ' + app.esc(grant.reason || "") + ' / Granted ' + app.esc(grant.startsAt || "-") + ' / Expired at ' + app.esc(grant.expiresAt || "-") + '</span>' + revoke + '<details><summary>Technical evidence</summary><pre>' + app.esc(JSON.stringify(grant, null, 2)) + '</pre></details></li>';
+      return '<li><strong>' + app.esc(capabilityLabel(grant.status || "UNKNOWN")) + ' - ' + app.esc(rolesCapabilityLabel(grant.capabilityKey || "")) + '</strong><span>' + app.esc(grant.accountEmail || "") + ' / Grant ID ' + app.esc(grant.grantId || "") + ' / Reason: ' + app.esc(grant.reason || "") + ' / Granted ' + app.esc(app.formatPngDisplay(grant.startsAt, "Not recorded")) + ' / Expired at ' + app.esc(app.formatPngDisplay(grant.expiresAt, "Not recorded")) + '</span>' + revoke + '<details><summary>Technical evidence</summary><pre>' + app.esc(JSON.stringify(grant, null, 2)) + '</pre></details></li>';
     }).join("") + '</ul>';
   }
   function rolesGrantFormHtml(matrix) {

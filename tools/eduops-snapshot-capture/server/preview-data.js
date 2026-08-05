@@ -58,6 +58,7 @@ const STATE_COUNTS = {
 
 const SCENARIOS = [
   ["normal-authoritative", "Normal authoritative", "Stable snapshot, representative workload, exact Workbench and document PNG available."],
+  ["long-display-values", "Long display values", "Long applicant and recipient values exercise wrapping without changing authority state."],
   ["slow-6s", "Slow request - 6 seconds", "Workload call is delayed six seconds to inspect pending state and supersession."],
   ["timeout-10s", "Timeout - over 10 seconds", "Workload call exceeds the client timeout and exposes retry."],
   ["stale-snapshot", "Stale snapshot", "A prior expected snapshot is rejected without silent rebasing."],
@@ -263,6 +264,21 @@ function row(input) {
     canonicalFinanceState: input.financeState || "UNKNOWN",
     documentState: input.documentState || "UNKNOWN",
     contactabilityState: input.contactabilityState || "EMAIL_AVAILABLE",
+    operationalRow: {
+      schemaVersion: "OPSEDU_OPERATIONAL_ROW_V1",
+      issueLabel: input.nextAction || "Review authoritative fixture",
+      issueEvidence: input.communicationAuthoritySummary || "Preview fixture authority.",
+      nextActionLabel: input.nextAction || "Review authoritative fixture",
+      nextActionDetail: input.worklistLabel || "Current authoritative work package",
+      statusLabel: STATE_LABELS[input.actionabilityState] || input.actionabilityState || "Unknown",
+      contactLabel: fixtureHumanize(input.contactabilityState || "UNKNOWN"),
+      dueLabel: input.coolingOffUntil ? "Cooling-off active" : "",
+      workPackageLabel: input.worklistLabel || fixtureHumanize(input.worklistKey),
+      authorityReason: input.blockerReason || input.nextAction || "Preview fixture authority.",
+      selectionLabel: selectable ? "Selectable" : "Not selectable",
+      nextActionTimestamp: input.nextActionTimestamp || SNAPSHOT_AS_OF,
+      missingDocumentNames: input.documentState === "REVIEW_REQUIRED" ? ["Proof of identity"] : []
+    },
     portalState: input.portalState || "SUBMITTED",
     sourceReliability: reliability("AUTHORITATIVE", "Preview fixture authority is deterministic."),
     authorityProjectionVersion: CONTRACT_VERSION,
@@ -316,6 +332,26 @@ function generatedRows(size = 200) {
 
 function rowsForScenario(scenarioId) {
   const rows = generatedRows(scenarioId === "large-workload" ? 360 : 200);
+  if (scenarioId === "long-display-values") {
+    rows.unshift(row({
+      index: 1000,
+      applicantId: "FODE-26-LONG-001",
+      rowNumber: 9100,
+      name: "Alexandria-Mary-Jane Applicant With A Deliberately Long Display Name",
+      email: "alexandria.mary.jane.applicant.with.a.deliberately.long.recipient.address@example.test",
+      phone: "+675 7000 9100",
+      actionabilityState: "READY",
+      worklistKey: "DOCUMENT_REVIEW",
+      worklistLabel: "Document review",
+      nextAction: "Review long-value fixture",
+      actionOwner: "OFFICER",
+      urgencyLevel: "HIGH",
+      documentState: "REVIEW_REQUIRED",
+      financeState: "NOT_YET_PAYMENT_APPLICABLE",
+      contactabilityState: "EMAIL_AVAILABLE",
+      recommendedMessageType: "DOCUMENT_REVIEW_REQUIRED"
+    }));
+  }
   if (scenarioId === UNSAFE_DUPLICATE_INTEGRITY_SCENARIO) {
     rows.push(row({
       index: 1002,

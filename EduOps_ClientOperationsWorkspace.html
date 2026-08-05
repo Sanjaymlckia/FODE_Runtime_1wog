@@ -72,7 +72,7 @@
     }
     byId("eduopsOperationsWorkspaceContext").textContent = cockpit.productLabel;
     byId("eduopsOperationsWorkspaceHeading").textContent = cockpit.heading;
-    byId("eduopsOperationsWorkspaceSnapshot").textContent = "Snapshot " + cockpit.snapshotId + " / " + cockpit.snapshotTimestamp;
+    byId("eduopsOperationsWorkspaceSnapshot").textContent = "Snapshot " + cockpit.snapshotId + " / " + (typeof app.formatPngDisplay === "function" ? app.formatPngDisplay(cockpit.snapshotTimestamp, "Snapshot time unavailable") : cockpit.snapshotTimestamp || "Snapshot time unavailable");
     var bucketTarget = byId("eduopsOperationsPrimaryBuckets");
     var buckets = Array.isArray(cockpit.primaryBuckets) ? cockpit.primaryBuckets : [];
     if (bucketTarget) bucketTarget.innerHTML = buckets.map(bucketButton).join("");

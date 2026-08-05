@@ -309,6 +309,14 @@
     parts.forEach(function (part) { if (part.type !== "literal") byType[part.type] = part.value; });
     return [byType.day, byType.month, byType.year].join(" ") + ", " + byType.hour + ":" + byType.minute + " " + String(byType.dayPeriod || "").toUpperCase();
   };
+  app.formatPngDisplay = function (value, missingLabel) {
+    var rendered = app.formatPngDate(value);
+    return rendered === "Not scheduled" ? (missingLabel || "Not recorded") : rendered + " PNG";
+  };
+  app.displayRecipientEmail = function (value) {
+    var email = app.clean(value);
+    return email || "No email recorded";
+  };
   app.idempotencyKey = function (operation, applicantId) {
     return ["EDUOPS", operation, applicantId || "COHORT", Date.now(), Math.random().toString(36).slice(2, 10)].join("::");
   };

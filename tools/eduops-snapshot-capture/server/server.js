@@ -53,6 +53,7 @@ function renderEduOpsPreviewHtml() {
     html = html.replace(include, (index === 0 ? previewTransport + "\n" : "") + source);
   });
   html = html
+    .replace(/<\?= ADMIN_URL \?>/g, "/")
     .replace(/<\?= BUILD_VERSION \?>/g, "r352-preview")
     .replace(/<\?= BUILD_RENDERED_AT \?>/g, serverBuildTimestamp)
     .replace(/<\?= USER_EMAIL \?>/g, "preview.owner@example.test")
