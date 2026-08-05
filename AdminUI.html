@@ -1830,6 +1830,7 @@
     .opsReady.ok{ color:#138a4a; }
     .opsReady.warn{ color:#d46a00; }
     .opsInfoGrid{ display:grid; grid-template-columns:repeat(2,minmax(120px,1fr)); gap:10px; }
+    .opsInfoGrid > *{ min-width:0; }
     .opsInfoItem{ background:#fbfdff; border:1px solid #e3ebf4; border-radius:10px; padding:10px; }
     .opsInfoItem .k{ color:#708295; font-size:11px; font-weight:800; }
     .opsInfoItem .v{ margin-top:5px; color:#10263c; font-size:13px; font-weight:900; overflow-wrap:anywhere; }
@@ -1961,9 +1962,20 @@
       .opsNav{ flex-direction:row; gap:6px; overflow-x:auto; padding:2px 0 5px; }
       .opsNav a{ flex:0 0 auto; min-height:36px; padding:6px 8px; font-size:12px; }
       .opsNav a:before{ width:20px; height:20px; }
+      .opsHeader{ align-items:flex-start; flex-direction:column; }
+      .opsHeaderTools{ width:100%; min-width:0; flex-wrap:wrap; justify-content:flex-start; gap:8px; }
+      .opsKpiGrid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .opsKpiCard{ min-width:0; max-width:100%; overflow:hidden; grid-template-columns:40px minmax(0,1fr); gap:8px; padding:12px; }
+      .opsKpiCard > *{ min-width:0; max-width:100%; overflow-wrap:anywhere; }
+      .opsKpiIcon{ width:40px; height:40px; }
       .opsSectionGrid{ grid-template-columns:1fr !important; }
       .opsWorkspaceSwitch{ grid-template-columns:minmax(0,1fr) !important; }
       .opsWorkspaceCard,.opsWorkspaceInfo,.opsSectionPage,.opsCard{ min-width:0; max-width:100%; box-sizing:border-box; }
+      .opsCard{ overflow:hidden; }
+      .opsSectionHeader{ min-width:0; }
+      .opsSectionHeader > *{ min-width:0; max-width:100%; overflow-wrap:anywhere; }
+      .opsInfoGrid{ grid-template-columns:repeat(2,minmax(0,1fr)); min-width:0; max-width:100%; }
+      .opsInfoGrid > *, .opsInfoItem{ min-width:0; max-width:100%; overflow-wrap:anywhere; }
       .opsWorkspaceCard h3,.opsWorkspaceCard p{ overflow-wrap:anywhere; }
       .opsSideBottom{ display:none; }
       .opsMain{ height:auto; min-height:100vh; overflow:visible; padding:12px; }

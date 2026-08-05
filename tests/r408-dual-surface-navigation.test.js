@@ -75,6 +75,9 @@ assert.match(adminUi, /@media \(max-width: 680px\)[\s\S]*?\.opsNav\{ flex-direct
 assert.match(adminUi, /@media \(max-width: 680px\)[\s\S]*?\.opsSectionGrid\{ grid-template-columns:1fr !important; \}/, "Loaded Operations section grids must collapse below the mobile breakpoint");
 assert.match(adminUi, /@media \(max-width: 680px\)[\s\S]*?\.opsWorkspaceSwitch\{ grid-template-columns:minmax\(0,1fr\) !important; \}/, "Loaded Operations workspace cards must collapse below the mobile breakpoint");
 assert.match(adminUi, /\.opsWorkspaceCard,\.opsWorkspaceInfo,\.opsSectionPage,\.opsCard\{ min-width:0; max-width:100%; box-sizing:border-box; \}/, "Loaded Operations cards must shed intrinsic width on mobile");
+assert.match(adminUi, /@media \(max-width: 680px\)[\s\S]*?\.opsInfoGrid\{ grid-template-columns:repeat\(2,minmax\(0,1fr\)\); min-width:0; max-width:100%; \}/, "Loaded Operations info cards must contain long applicant identity values on mobile");
+assert.match(adminUi, /@media \(max-width: 680px\)[\s\S]*?\.opsKpiCard\{ min-width:0; max-width:100%; overflow:hidden; grid-template-columns:40px minmax\(0,1fr\);/, "Loaded Operations KPI cards must shed intrinsic value width on mobile");
+assert.match(adminUi, /@media \(max-width: 680px\)[\s\S]*?\.opsHeaderTools\{ width:100%; min-width:0; flex-wrap:wrap;/, "Loaded Operations header tools must wrap within the mobile header");
 assert.doesNotMatch(adminUi + eduOps, /FODE-26-003241[^\n]+href=|href=[^\n]+FODE-26-003241/, "Cross-surface navigation must not transport or substitute an applicant identity");
 assert.doesNotMatch(adminUi + eduOps, /google\.script\.run[^\n]+(?:send|prepare|reconcile)/i, "Navigation links must not invoke communication or mutation RPCs");
 
