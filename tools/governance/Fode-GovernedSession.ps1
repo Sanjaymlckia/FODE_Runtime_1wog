@@ -118,6 +118,17 @@ function Hash-Text([string]$Value) {
   } finally { $sha.Dispose() }
 }
 
+function Test-GovernanceSnapshotMode {
+  $snapshot = [Environment]::GetEnvironmentVariable('FODE_GOVERNANCE_TEST_SNAPSHOT')
+  $prefix = Join-Path $repoRoot '.codex\state\fode-governance-test-'
+  return [bool]($snapshot -and $StateRoot.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase))
+}
+
+function Get-CommitScopePaths([string]$Baseline, [string]$Head) {
+  if ((Test-GovernanceSnapshotMode) -or [string]::IsNullOrWhiteSpace($Baseline) -or $Baseline -eq $Head) { return @() }
+  return @(Git "diff --name-only $Baseline..$Head" -AllowMany | ForEach-Object { $_.Trim().Replace('\', '/') } | Where-Object { $_ })
+}
+
 function New-OwnerLease {
   return [guid]::NewGuid().ToString('N')
 }
@@ -240,11 +251,17 @@ if (!$previous.PSObject.Properties['actionReports']) { Add-Or-Set $previous 'act
 if ($previous.baselineHead -ne $observed.head -or $previous.branch -ne $observed.branch) {
   $authorizedCloseAdvance = $Action -eq 'Close' -and $AcceptBaselineAdvance.IsPresent -and $observed.clean -and $observed.head -eq $observed.originMain -and $observed.branch -eq 'main'
   $authorizedReleaseAdvance = $Action -eq 'Transition' -and $TargetPhase -eq 'RELEASED' -and $ReleaseAuthorized.IsPresent -and $observed.clean -and $observed.head -eq $observed.originMain -and $observed.branch -eq 'main'
-  if (!$authorizedCloseAdvance -and !$authorizedReleaseAdvance) { Fail 'Recorded session baseline conflicts with observed Git evidence' 'BASELINE_DRIFT' }
-  Add-Or-Set $previous 'baselineAdvancedFrom' $previous.baselineHead
-  Add-Or-Set $previous 'baselineAdvanceReason' 'Owner-authorized release closure with HEAD aligned to origin/main'
-  $previous.baselineHead = $observed.head
-  $previous.branch = $observed.branch
+  $candidateApproved = if ($ApprovedPaths) { @(ConvertTo-FodeGovernancePaths $ApprovedPaths) } else { @($previous.approvedPaths) }
+  $committedScope = @(Get-CommitScopePaths $previous.baselineHead $observed.head)
+  $unapprovedCommitted = @($committedScope | Where-Object { $_ -notin $candidateApproved })
+  $preReleaseDrift = $Action -eq 'Transition' -and $TargetPhase -in @('WORKING','VALIDATED','RELEASE_READY') -and $unapprovedCommitted.Count -eq 0
+  if (!$authorizedCloseAdvance -and !$authorizedReleaseAdvance -and !$preReleaseDrift) { Fail 'Recorded session baseline conflicts with observed Git evidence or committed scope is unauthorized' 'BASELINE_DRIFT' }
+  if ($authorizedCloseAdvance -or $authorizedReleaseAdvance) {
+    Add-Or-Set $previous 'baselineAdvancedFrom' $previous.baselineHead
+    Add-Or-Set $previous 'baselineAdvanceReason' 'Owner-authorized release closure with HEAD aligned to origin/main'
+    $previous.baselineHead = $observed.head
+    $previous.branch = $observed.branch
+  }
 }
 
 if ($Action -eq 'TransferOwnership') {
@@ -318,6 +335,7 @@ if (@($reportValues.Values | Where-Object { $_ }).Count -gt 0) {
   $reports += [pscustomobject]([ordered]@{ at=(Get-Date).ToUniversalTime().ToString('o') } + $reportValues)
   Add-Or-Set $previous 'actionReports' $reports
 }
+
 if ($Action -eq 'Checkpoint') {
   $scopeCheck = Test-FodeApprovedScope $observed.statusLines @($previous.approvedPaths)
   if (!$scopeCheck.allowed) { $previous.phase = 'READ_ONLY_RECONCILIATION'; $previous.governedState = 'READ_ONLY_RECONCILIATION'; Add-Or-Set $previous 'unapprovedPaths' @($scopeCheck.unapprovedPaths) }
@@ -333,6 +351,11 @@ if ($Action -eq 'Transition') {
   $scopeCheck = Test-FodeApprovedScope $observed.statusLines @($previous.approvedPaths)
   $transition = Test-FodeLifecycleTransition ([string]$previous.phase) $TargetPhase $scopeCheck.allowed $TestsPassed.IsPresent $GitPreflightPassed.IsPresent $DeploymentPreflightPassed.IsPresent $NoProhibitedExternalAction.IsPresent ($ReleaseAuthorized.IsPresent -or $previous.releaseAuthorized)
   if (!$transition.allowed) { Fail $transition.reason 'READ_ONLY_RECONCILIATION' }
+  if ($TargetPhase -eq 'RELEASE_READY') {
+    $committedScope = @(Get-CommitScopePaths $previous.baselineHead $observed.head)
+    $scopeHashInput = @(@($previous.approvedPaths) + $committedScope | Sort-Object -Unique) -join "`n"
+    Add-Or-Set $previous 'approvedScopeHash' (Hash-Text $scopeHashInput)
+  }
   $previous.phase = $TargetPhase; $previous.governedState = $TargetPhase
   if ($ReleaseAuthorized) { $previous.releaseAuthorized = $true }
   if ($CommunicationAuthorized) { $previous.communicationAuthorized = $true }

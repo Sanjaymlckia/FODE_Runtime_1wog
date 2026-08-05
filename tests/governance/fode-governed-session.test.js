@@ -88,6 +88,34 @@ try {
     ReleaseAuthorized: true
   });
   assert.equal(releaseReady.json.session.phase, 'RELEASE_READY');
+  assert.equal(releaseReady.json.session.baselineHead, baseline, 'RELEASE_READY must preserve the last-released rollback baseline');
+  assert.match(releaseReady.json.session.approvedScopeHash, /^[0-9a-f]{64}$/, 'RELEASE_READY must record an approved scope hash');
+
+  const postCommitRoot = newRoot('post-commit-ready');
+  const postCommitInitial = run(postCommitRoot, 'Orient', clean, { TaskId: 'post-commit', ApprovedPaths: approvedPaths, ReleaseAuthorized: true });
+  const postCommitWorking = run(postCommitRoot, 'Checkpoint', approvedDirty, { OwnerLease: postCommitInitial.json.ownerLease });
+  assert.equal(postCommitWorking.json.session.phase, 'WORKING');
+  const postCommitValidated = run(postCommitRoot, 'Transition', approvedDirty, {
+    OwnerLease: postCommitInitial.json.ownerLease,
+    TargetPhase: 'VALIDATED',
+    TestsPassed: true,
+    NoProhibitedExternalAction: true
+  });
+  assert.equal(postCommitValidated.json.session.phase, 'VALIDATED');
+  const postCommitSnapshot = { ...clean, head: 'post-commit-head', originMain: 'post-commit-head' };
+  const postCommitReady = run(postCommitRoot, 'Transition', postCommitSnapshot, {
+    OwnerLease: postCommitInitial.json.ownerLease,
+    TargetPhase: 'RELEASE_READY',
+    TestsPassed: true,
+    GitPreflightPassed: true,
+    DeploymentPreflightPassed: true,
+    NoProhibitedExternalAction: true,
+    ReleaseAuthorized: true
+  });
+  assert.equal(postCommitReady.json.session.phase, 'RELEASE_READY', 'post-commit approved scope must reach RELEASE_READY');
+  assert.equal(postCommitReady.json.session.baselineHead, baseline, 'post-commit RELEASE_READY must not advance rollback baseline');
+  assert.match(postCommitReady.json.session.approvedScopeHash, /^[0-9a-f]{64}$/);
+
   const communicationBlocked = run(workingRoot, 'Transition', approvedDirty, {
     OwnerLease: initial.json.ownerLease,
     TargetPhase: 'RELEASED',
