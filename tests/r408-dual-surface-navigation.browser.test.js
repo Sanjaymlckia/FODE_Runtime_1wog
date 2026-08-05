@@ -105,16 +105,32 @@ async function measureLayout(page, selector, viewport, surface) {
 async function assertResponsiveLayouts(browser, viewport) {
   const page = await browser.newPage({ viewport });
   const adminHeader = renderTemplates(fragmentBetween(adminUi, '<div class="topbar">', '<div id="studentUrlWarn"'));
-  await page.setContent(`${firstStyle(adminUi)}<div class="wrap">${adminHeader}</div>`);
+  const loadedQueue = `<div class="queue-section"><div class="queue-section-body"><table class="queue-table"><tr><th>Applicant</th><th>Name</th><th>Workflow</th><th>Status</th><th>Received</th><th>Age</th><th>Communication</th><th>Action</th></tr><tr><td>FODE-26-002856</td><td>Antoinette Aisakina</td><td>Portal Access Pending</td><td>Portal submitted</td><td>2026-08-05</td><td>1 day</td><td>Applicant email pending</td><td>Review</td></tr></table></div></div>`;
+  await page.setContent(`${firstStyle(adminUi)}<div class="wrap">${adminHeader}${loadedQueue}</div>`);
   const admin = await measureLayout(page, ".diagLinks", viewport, "Admin");
 
   const eduHeader = renderTemplates(fragmentBetween(eduOps, '<header class="eduops-topbar">', '<div class="eduops-shell">'));
   await page.setContent(`${eduOpsStyles}${eduHeader}`);
+  await page.locator("#eduopsRuntimeIdentity").evaluate(el => { el.textContent = "r408 / 408"; });
+  await page.locator("#eduopsAppsScriptIdentity").evaluate(el => { el.textContent = "The Apps Script runtime does not expose its immutable platform version"; });
+  await page.locator("#eduopsReleaseSnapshotIdentity").evaluate(el => { el.textContent = "Snapshot FODE-Psjbl2HabEgBpxsf"; });
+  await page.locator("#eduopsReleaseSnapshotTime").evaluate(el => { el.textContent = "As of 2026-08-05T03:09:46.533Z"; });
   const edu = await measureLayout(page, ".eduops-workspace-links", viewport, "EduOps");
+  if (viewport.width >= 900) {
+    const eduAdminLink = page.locator('.eduops-workspace-links a[href*="view=admin"]');
+    assert.equal(await eduAdminLink.count(), 1, "Loaded EduOps Admin link must be unique");
+    const eduHit = await eduAdminLink.evaluate(link => {
+      const rect = link.getBoundingClientRect();
+      const hit = document.elementFromPoint((rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2);
+      return hit === link || Boolean(hit && hit.closest("a") === link);
+    });
+    assert.equal(eduHit, true, "Loaded EduOps Admin link must remain clickable above runtime text");
+  }
 
   const operationsHeader = renderTemplates(fragmentBetween(adminUi, '<div class="opsBrand">', '<div class="opsModeStack">'));
   const operationsNav = fragmentBetween(adminUi, '<nav class="opsNav">', '<div class="opsSideBottom">');
-  const operationsShell = `<div id="opsCockpitShell" class="opsShell active"><aside class="opsSidebar">${operationsHeader}<div class="opsModeStack"><div class="opsModeBar"><button class="opsModeBtn active">Admin Mode</button></div><div class="opsRoleStrip"><strong>operator@example.test</strong><div class="opsRoleMeta">Authenticated Admin</div></div></div>${operationsNav}</aside><main class="opsMain"><section class="opsSectionPage"><div class="opsHeader"><h1>Operational Supervision</h1></div></section></main></div>`;
+  const loadedOperations = `<section id="opsCommunications" class="opsSectionPage"><div class="opsSectionGrid" style="grid-template-columns:minmax(260px,.85fr) minmax(360px,1.1fr) minmax(340px,1fr);"><div class="opsCard">Loaded communications cohort</div><div class="opsCard">Loaded communication controls</div><div class="opsCard">Loaded audit context</div></div></section>`;
+  const operationsShell = `<div id="opsCockpitShell" class="opsShell active"><aside class="opsSidebar">${operationsHeader}<div class="opsModeStack"><div class="opsModeBar"><button class="opsModeBtn active">Admin Mode</button></div><div class="opsRoleStrip"><strong>operator@example.test</strong><div class="opsRoleMeta">Authenticated Admin</div></div></div>${operationsNav}</aside><main class="opsMain"><section class="opsSectionPage"><div class="opsHeader"><h1>Operational Supervision</h1></div></section>${loadedOperations}</main></div>`;
   await page.setContent(`${firstStyle(adminUi)}${operationsShell}`);
   const operations = await measureLayout(page, ".opsSurfaceNav", viewport, "Operations");
   await page.close();
