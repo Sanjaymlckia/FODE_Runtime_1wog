@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
@@ -30,6 +31,9 @@ const approvedPaths = [
   'tests/governance/fode-convenience-governance.test.js',
   'docs/governance/RELEASE_CLOSURE_DISCIPLINE.md'
 ].join(';');
+const testLease = 'governance-test-local-lease';
+const testLeaseRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'fode-governance-lease-test-'));
+const normalizeSerializedTimes = (value) => JSON.parse(JSON.stringify(value, (_key, item) => typeof item === 'string' ? item.replace(/(\.\d+?)0+Z$/, '$1Z') : item));
 
 function newRoot(label) {
   const root = fs.mkdtempSync(path.join(stateBase, `fode-governance-test-${label}-`));
@@ -39,8 +43,8 @@ function newRoot(label) {
 
 function run(root, action, snapshot, extra = {}) {
   const args = ['-NoProfile', '-File', script, '-Action', action, '-StateRoot', root];
-  for (const [key, value] of Object.entries(extra)) args.push(`-${key}`, String(value));
-  const env = { ...process.env, FODE_GOVERNANCE_TEST_SNAPSHOT: JSON.stringify(snapshot) };
+  for (const [key, value] of Object.entries(extra)) if (value !== undefined) args.push(`-${key}`, String(value));
+  const env = { ...process.env, FODE_GOVERNANCE_TEST_SNAPSHOT: JSON.stringify(snapshot), FODE_GOVERNANCE_TEST_LEASE: testLease, FODE_GOVERNANCE_TEST_LEASE_ROOT: testLeaseRoot };
   const result = spawnSync('pwsh.exe', args, { cwd: repo, encoding: 'utf8', env });
   assert.ok(result.stdout.trim(), `No JSON output for ${action}: ${result.stderr}`);
   return { ...result, json: JSON.parse(result.stdout.trim()) };
@@ -48,8 +52,8 @@ function run(root, action, snapshot, extra = {}) {
 
 function runWithEnv(root, action, snapshot, extra, injectedEnv) {
   const args = ['-NoProfile', '-File', script, '-Action', action, '-StateRoot', root];
-  for (const [key, value] of Object.entries(extra)) args.push(`-${key}`, String(value));
-  const env = { ...process.env, FODE_GOVERNANCE_TEST_SNAPSHOT: JSON.stringify(snapshot), ...injectedEnv };
+  for (const [key, value] of Object.entries(extra)) if (value !== undefined) args.push(`-${key}`, String(value));
+  const env = { ...process.env, FODE_GOVERNANCE_TEST_SNAPSHOT: JSON.stringify(snapshot), FODE_GOVERNANCE_TEST_LEASE: testLease, FODE_GOVERNANCE_TEST_LEASE_ROOT: testLeaseRoot, ...injectedEnv };
   const result = spawnSync('pwsh.exe', args, { cwd: repo, encoding: 'utf8', env });
   assert.ok(result.stdout.trim(), `No JSON output for ${action}: ${result.stderr}`);
   return { ...result, json: JSON.parse(result.stdout.trim()) };
@@ -59,6 +63,7 @@ try {
   const cleanRoot = newRoot('clean');
   const opened = run(cleanRoot, 'Orient', clean, { TaskId: 'clean', ApprovedPaths: approvedPaths });
   assert.equal(opened.status, 0, JSON.stringify(opened.json));
+  assert.equal(Object.hasOwn(opened.json, 'ownerLease'), false, 'lease values must never be returned in JSON');
   assert.equal(opened.json.session.phase, 'OPEN');
   const cleanClose = run(cleanRoot, 'Close', clean, { OwnerLease: opened.json.ownerLease, ClearPendingAcceptance: true });
   assert.equal(cleanClose.json.session.status, 'closed');
@@ -152,9 +157,9 @@ try {
 
   const supersedeRoot = newRoot('supersede');
   const superseded = run(supersedeRoot, 'Orient', clean, { ApprovedPaths: approvedPaths });
-  const supersedeWithoutLease = run(supersedeRoot, 'Orient', clean, { Supersede: true, SessionId: superseded.json.session.sessionId });
-  assert.equal(supersedeWithoutLease.status, 2);
-  assert.equal(supersedeWithoutLease.json.governedState, 'CONCURRENT_SESSION_DETECTED');
+  const supersedeWithoutDecisionViaLocalLease = run(supersedeRoot, 'Orient', clean, { Supersede: true, SessionId: superseded.json.session.sessionId });
+  assert.equal(supersedeWithoutDecisionViaLocalLease.status, 2);
+  assert.equal(supersedeWithoutDecisionViaLocalLease.json.governedState, 'OWNER_DECISION_REQUIRED');
   const supersedeWithoutDecision = run(supersedeRoot, 'Orient', clean, { Supersede: true, OwnerLease: superseded.json.ownerLease, SessionId: superseded.json.session.sessionId });
   assert.equal(supersedeWithoutDecision.status, 2);
   assert.equal(supersedeWithoutDecision.json.governedState, 'OWNER_DECISION_REQUIRED');
@@ -180,6 +185,36 @@ try {
   const missingLease = run(leaseRoot, 'Checkpoint', clean, { OwnerLease: leaseOpened.json.ownerLease });
   assert.equal(missingLease.status, 2);
   assert.equal(missingLease.json.governedState, 'CONCURRENT_SESSION_DETECTED');
+
+  const lostLeaseRoot = newRoot('lost-lease');
+  const lostLeaseOpened = run(lostLeaseRoot, 'Orient', clean, { ApprovedPaths: approvedPaths });
+  assert.equal(lostLeaseOpened.status, 0, JSON.stringify(lostLeaseOpened.json));
+  const recoverySnapshot = { ...clean, head: 'recovery-commit', originMain: 'recovery-commit' };
+  const recoveredLease = runWithEnv(lostLeaseRoot, 'RecoverLostLease', recoverySnapshot, {
+    SessionId: lostLeaseOpened.json.session.sessionId,
+    OwnerDecision: 'RECOVER_LOST_OWNER_LEASE'
+  }, { FODE_GOVERNANCE_TEST_CONFIRM_LOST_LEASE: 'RECOVER LOST OWNER LEASE', FODE_GOVERNANCE_TEST_RECOVERY_SCOPE: 'tools/governance/Fode-GovernedSession.ps1;tests/governance/fode-governed-session.test.js', FODE_GOVERNANCE_TEST_LEASE: 'governance-test-replacement-lease' });
+  assert.equal(recoveredLease.status, 0, JSON.stringify(recoveredLease.json));
+  assert.equal(recoveredLease.json.session.sessionId, lostLeaseOpened.json.session.sessionId);
+  assert.equal(recoveredLease.json.session.ownershipGeneration, 2);
+  assert.equal(recoveredLease.json.session.baselineHead, 'recovery-commit');
+  assert.equal([].concat(recoveredLease.json.session.lostLeaseRecoveries).at(-1).decision, 'RECOVER_LOST_OWNER_LEASE');
+  assert.equal(JSON.stringify(recoveredLease.json).includes('governance-test-replacement-lease'), false, 'recovery output must redact lease material');
+  const oldLeaseRejected = run(lostLeaseRoot, 'Checkpoint', recoverySnapshot, { OwnerLease: testLease });
+  assert.equal(oldLeaseRejected.status, 2);
+  assert.equal(oldLeaseRejected.json.governedState, 'CONCURRENT_SESSION_DETECTED');
+  const localLeaseReuse = run(lostLeaseRoot, 'Orient', recoverySnapshot);
+  assert.equal(localLeaseReuse.status, 0, JSON.stringify(localLeaseReuse.json));
+  const confirmationRoot = newRoot('lost-lease-no-confirm');
+  const confirmationOpened = run(confirmationRoot, 'Orient', clean, { ApprovedPaths: approvedPaths });
+  const rejectedConfirmation = runWithEnv(confirmationRoot, 'RecoverLostLease', recoverySnapshot, { SessionId: confirmationOpened.json.session.sessionId, OwnerDecision: 'RECOVER_LOST_OWNER_LEASE' }, { FODE_GOVERNANCE_TEST_RECOVERY_SCOPE: 'tools/governance/Fode-GovernedSession.ps1;tests/governance/fode-governed-session.test.js' });
+  assert.equal(rejectedConfirmation.status, 2);
+  assert.equal(rejectedConfirmation.json.governedState, 'OWNER_DECISION_REQUIRED');
+  const dpapiFailureRoot = newRoot('lost-lease-dpapi-failure');
+  const dpapiOpened = run(dpapiFailureRoot, 'Orient', clean, { ApprovedPaths: approvedPaths });
+  const dpapiFailure = runWithEnv(dpapiFailureRoot, 'RecoverLostLease', recoverySnapshot, { SessionId: dpapiOpened.json.session.sessionId, OwnerDecision: 'RECOVER_LOST_OWNER_LEASE' }, { FODE_GOVERNANCE_TEST_CONFIRM_LOST_LEASE: 'RECOVER LOST OWNER LEASE', FODE_GOVERNANCE_TEST_RECOVERY_SCOPE: 'tools/governance/Fode-GovernedSession.ps1;tests/governance/fode-governed-session.test.js', FODE_GOVERNANCE_TEST_DPAPI_FAIL: '1' });
+  assert.equal(dpapiFailure.status, 2);
+  assert.equal(dpapiFailure.json.governedState, 'RECOVERY_REQUIRED');
 
   const missingStateRoot = newRoot('missing-state');
   run(missingStateRoot, 'Orient', clean, { ApprovedPaths: approvedPaths });
@@ -215,7 +250,7 @@ try {
   const restoredState = JSON.parse(fs.readFileSync(path.join(failureRoot, 'current.json'), 'utf8'));
   const restoredEvents = JSON.parse(fs.readFileSync(path.join(failureRoot, 'events.json'), 'utf8'));
   assert.equal(restoredState.lastEventId, beforeFailureState.lastEventId, 'failed checkpoint must restore the prior state');
-  assert.deepEqual(restoredEvents, beforeFailureEvents, 'failed checkpoint must preserve the append-only event history');
+  assert.deepEqual(normalizeSerializedTimes(restoredEvents), normalizeSerializedTimes(beforeFailureEvents), 'failed checkpoint must preserve the append-only event history');
   assert.equal(fs.existsSync(path.join(failureRoot, 'transaction.json')), false, 'successful rollback must clear its recovery journal');
 
   const stateFailureRoot = newRoot('state-write-failure');
@@ -231,7 +266,7 @@ try {
   const restoredStateWrite = JSON.parse(fs.readFileSync(path.join(stateFailureRoot, 'current.json'), 'utf8'));
   const restoredStateWriteEvents = JSON.parse(fs.readFileSync(path.join(stateFailureRoot, 'events.json'), 'utf8'));
   assert.equal(restoredStateWrite.lastEventId, beforeStateFailure.lastEventId, 'post-state failure must restore the prior state');
-  assert.deepEqual(restoredStateWriteEvents, beforeStateFailureEvents, 'post-state failure must preserve event history');
+  assert.deepEqual(normalizeSerializedTimes(restoredStateWriteEvents), normalizeSerializedTimes(beforeStateFailureEvents), 'post-state failure must preserve event history');
 
   const historyRoot = newRoot('history');
   const historyOpened = run(historyRoot, 'Orient', clean, { ApprovedPaths: approvedPaths });
@@ -282,6 +317,7 @@ try {
   }
 } finally {
   for (const root of roots) fs.rmSync(root, { recursive: true, force: true });
+  fs.rmSync(testLeaseRoot, { recursive: true, force: true });
 }
 
 console.log('fode-governed-session PASS: lifecycle, approved scope, pause/resume, recovery, authorization separation, rollback policy and action reporting');

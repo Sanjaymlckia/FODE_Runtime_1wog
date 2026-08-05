@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [ValidateSet('Orient','Status','Checkpoint','RecordDecision','TransferOwnership','Recover','Transition','Pause','Resume','Close')]
+  [ValidateSet('Orient','Status','Checkpoint','RecordDecision','TransferOwnership','RecoverLostLease','Recover','Transition','Pause','Resume','Close')]
   [string]$Action = 'Orient',
   [string]$TaskId = '',
   [string]$TaskLabel = '',
@@ -131,7 +131,68 @@ function Get-CommitScopePaths([string]$Baseline, [string]$Head) {
 }
 
 function New-OwnerLease {
+  if (Test-GovernanceSnapshotMode) {
+    $testLease = [Environment]::GetEnvironmentVariable('FODE_GOVERNANCE_TEST_LEASE')
+    if ($testLease) { return $testLease }
+  }
   return [guid]::NewGuid().ToString('N')
+}
+
+function Get-OwnerLeaseStoreRoot {
+  if (Test-GovernanceSnapshotMode) {
+    $testRoot = [Environment]::GetEnvironmentVariable('FODE_GOVERNANCE_TEST_LEASE_ROOT')
+    if ([string]::IsNullOrWhiteSpace($testRoot)) { Fail 'Governance test lease root is required' 'RECOVERY_REQUIRED' }
+    return $testRoot
+  }
+  $root = [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
+  if ([string]::IsNullOrWhiteSpace($root)) { Fail 'Windows local application data is unavailable for protected lease storage' 'RECOVERY_REQUIRED' }
+  return (Join-Path $root 'FODE\governance-leases')
+}
+
+function Get-OwnerLeaseStorePath([string]$SessionId) {
+  if ([string]::IsNullOrWhiteSpace($SessionId) -or $SessionId -notmatch '^[a-f0-9]{32}$') { Fail 'Governed session identifier is invalid for protected lease storage' 'RECOVERY_REQUIRED' }
+  return (Join-Path (Get-OwnerLeaseStoreRoot) ("$SessionId.lease"))
+}
+
+function Set-UserOnlyLeaseAcl([string]$Path) {
+  if (Test-GovernanceSnapshotMode) { return }
+  try {
+    $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+    if ($null -eq $identity) { throw 'Current Windows user SID is unavailable' }
+    $acl = New-Object System.Security.AccessControl.FileSecurity
+    $acl.SetAccessRuleProtection($true, $false)
+    $rule = New-Object System.Security.AccessControl.FileSystemAccessRule($identity, 'FullControl', 'Allow')
+    $acl.AddAccessRule($rule)
+    [System.IO.File]::SetAccessControl($Path, $acl)
+  } catch { Fail 'Protected local lease access control could not be applied' 'RECOVERY_REQUIRED' }
+}
+
+function Save-ProtectedOwnerLease([string]$SessionId, [string]$Lease) {
+  if ([string]::IsNullOrWhiteSpace($Lease)) { Fail 'A replacement ownership lease could not be created' 'RECOVERY_REQUIRED' }
+  if ([Environment]::GetEnvironmentVariable('FODE_GOVERNANCE_TEST_DPAPI_FAIL') -eq '1') { Fail 'Protected local lease storage failed' 'RECOVERY_REQUIRED' }
+  $path = Get-OwnerLeaseStorePath $SessionId
+  try {
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $path) | Out-Null
+    if (Test-GovernanceSnapshotMode) {
+      [System.IO.File]::WriteAllBytes($path, [System.Text.Encoding]::UTF8.GetBytes($Lease))
+    } else {
+      $plain = [System.Text.Encoding]::UTF8.GetBytes($Lease)
+      try { $protected = [System.Security.Cryptography.ProtectedData]::Protect($plain, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser) } finally { [Array]::Clear($plain, 0, $plain.Length) }
+      [System.IO.File]::WriteAllBytes($path, $protected)
+    }
+    Set-UserOnlyLeaseAcl $path
+  } catch { Fail 'Protected local lease storage failed' 'RECOVERY_REQUIRED' }
+}
+
+function Get-ProtectedOwnerLease([string]$SessionId) {
+  $path = Get-OwnerLeaseStorePath $SessionId
+  if (!(Test-Path -LiteralPath $path -PathType Leaf)) { Fail 'No protected local ownership lease is available for this session' 'CONCURRENT_SESSION_DETECTED' }
+  try {
+    $stored = [System.IO.File]::ReadAllBytes($path)
+    if (Test-GovernanceSnapshotMode) { return [System.Text.Encoding]::UTF8.GetString($stored) }
+    $plain = [System.Security.Cryptography.ProtectedData]::Unprotect($stored, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
+    try { return [System.Text.Encoding]::UTF8.GetString($plain) } finally { [Array]::Clear($plain, 0, $plain.Length) }
+  } catch { Fail 'Protected local ownership lease could not be read' 'CONCURRENT_SESSION_DETECTED' }
 }
 
 function Add-Or-Set([object]$Object, [string]$Name, [object]$Value) {
@@ -144,8 +205,24 @@ function Require-OwnerLease([object]$State) {
   $bindingProperty = $State.PSObject.Properties['ownershipBinding']
   if ($null -eq $leaseHashProperty -or [string]::IsNullOrWhiteSpace([string]$leaseHashProperty.Value) -or [string]$leaseHashProperty.Value -notmatch '^[a-f0-9]{64}$') { Fail 'Governed ownership lease data is missing or invalid' 'CONCURRENT_SESSION_DETECTED' }
   if ($null -eq $generationProperty -or [int]$generationProperty.Value -lt 1 -or $null -eq $bindingProperty -or [string]$bindingProperty.Value -ne 'generated-lease') { Fail 'Governed ownership binding is incomplete or invalid' 'CONCURRENT_SESSION_DETECTED' }
-  if ([string]::IsNullOrWhiteSpace($OwnerLease)) { Fail 'An ownership lease is required for this governed session' 'CONCURRENT_SESSION_DETECTED' }
-  if ((Hash-Text $OwnerLease) -ne [string]$leaseHashProperty.Value) { Fail 'The supplied ownership lease is no longer valid' 'CONCURRENT_SESSION_DETECTED' }
+  $effectiveLease = if ([string]::IsNullOrWhiteSpace($OwnerLease)) { Get-ProtectedOwnerLease ([string]$State.sessionId) } else { $OwnerLease }
+  if ((Hash-Text $effectiveLease) -ne [string]$leaseHashProperty.Value) { Fail 'The supplied ownership lease is no longer valid' 'CONCURRENT_SESSION_DETECTED' }
+}
+
+function Confirm-LostLeaseRecovery {
+  if (Test-GovernanceSnapshotMode) { return ([Environment]::GetEnvironmentVariable('FODE_GOVERNANCE_TEST_CONFIRM_LOST_LEASE') -eq 'RECOVER LOST OWNER LEASE') }
+  if ([Console]::IsInputRedirected) { Fail 'Lost-lease recovery requires an interactive Windows owner confirmation' 'OWNER_DECISION_REQUIRED' }
+  $confirmation = Read-Host 'Windows owner: type RECOVER LOST OWNER LEASE to confirm local governed-session lease recovery'
+  return ($confirmation -ceq 'RECOVER LOST OWNER LEASE')
+}
+
+function Get-LostLeaseRecoveryScope([string]$Baseline, [string]$Head) {
+  if (Test-GovernanceSnapshotMode) {
+    $scope = [Environment]::GetEnvironmentVariable('FODE_GOVERNANCE_TEST_RECOVERY_SCOPE')
+    if ([string]::IsNullOrWhiteSpace($scope)) { return @() }
+    return @($scope -split ';' | ForEach-Object { $_.Trim().Replace('\\','/') } | Where-Object { $_ } | Sort-Object -Unique)
+  }
+  return @(Get-CommitScopePaths $Baseline $Head | Sort-Object -Unique)
 }
 
 function Clone-State([object]$State) {
@@ -285,7 +362,6 @@ function Output-State([object]$State, [string]$Message = '') {
     observed = $observed
     message = (Redact $Message)
   }
-  if ($script:outputOwnerLease) { $result.ownerLease = $script:outputOwnerLease }
   $result | ConvertTo-Json -Depth 16
   if (!$result.ok -and $Action -in @('Orient','Checkpoint','RecordDecision','Transition','Pause','Resume','Close')) { exit 2 }
 }
@@ -327,8 +403,8 @@ if ($Action -eq 'Orient') {
     pendingDecision = (Redact $PendingDecision); pendingAcceptance = (Redact $PendingAcceptance); nextSafeAction = (Redact $(if($NextSafeAction){$NextSafeAction}else{'Review governed state before editing.'})); continuingProhibitions = @((Read-JsonFile $policyPath).controls); policyHash = $policyHash; observed = $observed
     ownershipGeneration = 1; ownershipBinding = 'generated-lease'; ownershipLeaseHash = (Hash-Text $newLease); ownershipTransfers = @()
   }
+  Save-ProtectedOwnerLease $state.sessionId $newLease
   Save-Event $state 'opened'
-  $script:outputOwnerLease = $newLease
   Output-State $state $message
   exit 0
 }
@@ -348,7 +424,8 @@ if ($previous.baselineHead -ne $observed.head -or $previous.branch -ne $observed
   $dirtyScope = Test-FodeApprovedScope $observed.statusLines $candidateApproved
   $authorizedGovernanceAdvance = $Action -eq 'Checkpoint' -and $AcceptBaselineAdvance.IsPresent -and $dirtyScope.allowed -and $observed.head -eq $observed.originMain -and $observed.branch -eq 'main' -and $unapprovedCommitted.Count -eq 0
   $preReleaseDrift = $Action -eq 'Transition' -and $TargetPhase -in @('WORKING','VALIDATED','RELEASE_READY') -and $unapprovedCommitted.Count -eq 0
-  if (!$authorizedCloseAdvance -and !$authorizedReleaseAdvance -and !$authorizedGovernanceAdvance -and !$preReleaseDrift) { Fail 'Recorded session baseline conflicts with observed Git evidence or committed scope is unauthorized' 'BASELINE_DRIFT' }
+  $lostLeaseRecoveryCandidate = $Action -eq 'RecoverLostLease'
+  if (!$authorizedCloseAdvance -and !$authorizedReleaseAdvance -and !$authorizedGovernanceAdvance -and !$preReleaseDrift -and !$lostLeaseRecoveryCandidate) { Fail 'Recorded session baseline conflicts with observed Git evidence or committed scope is unauthorized' 'BASELINE_DRIFT' }
   if ($authorizedCloseAdvance -or $authorizedReleaseAdvance -or $authorizedGovernanceAdvance) {
     Add-Or-Set $previous 'baselineAdvancedFrom' $previous.baselineHead
     Add-Or-Set $previous 'baselineAdvanceReason' $(if ($authorizedGovernanceAdvance) { 'Owner-authorized governance baseline reconciliation with approved scope and HEAD aligned to origin/main' } else { 'Owner-authorized release closure with HEAD aligned to origin/main' })
@@ -396,9 +473,40 @@ if ($Action -eq 'TransferOwnership') {
   })
   $next.lastCheckpointAt = $now
   $next.observed = $observed
+  Save-ProtectedOwnerLease $next.sessionId $newLease
   Save-Event $next 'ownership-transferred' 'Explicit owner-authorized in-place ownership transfer.'
-  $script:outputOwnerLease = $newLease
   Output-State $next 'Owner-approved in-place session ownership transfer completed.'
+  exit 0
+}
+
+if ($Action -eq 'RecoverLostLease') {
+  if ([string]::IsNullOrWhiteSpace($SessionId) -or $SessionId -ne [string]$previous.sessionId) { Fail 'Lost-lease recovery requires the exact open session ID' 'OWNER_DECISION_REQUIRED' }
+  if ($OwnerDecision -ne 'RECOVER_LOST_OWNER_LEASE') { Fail 'Lost-lease recovery requires OwnerDecision RECOVER_LOST_OWNER_LEASE' 'OWNER_DECISION_REQUIRED' }
+  if (!$observed.clean -or $observed.branch -ne 'main' -or $observed.head -ne $observed.originMain) { Fail 'Lost-lease recovery requires a clean main branch aligned with origin/main' 'BASELINE_DRIFT' }
+  $recoveryScope = @(Get-LostLeaseRecoveryScope $previous.baselineHead $observed.head)
+  $expectedRecoveryScope = @('tools/governance/Fode-GovernedSession.ps1','tests/governance/fode-governed-session.test.js')
+  if ($recoveryScope.Count -ne $expectedRecoveryScope.Count -or @($recoveryScope | Where-Object { $_ -notin $expectedRecoveryScope }).Count -ne 0) { Fail 'Lost-lease recovery requires only the exact governance recovery commit since the recorded baseline' 'BASELINE_DRIFT' }
+  if (!(Confirm-LostLeaseRecovery)) { Fail 'Lost-lease recovery requires an interactive Windows owner confirmation' 'OWNER_DECISION_REQUIRED' }
+  $formerGeneration = [int]$previous.ownershipGeneration
+  if ($formerGeneration -lt 1) { Fail 'Lost-lease recovery requires a valid recorded ownership generation' 'RECOVERY_REQUIRED' }
+  $replacementLease = New-OwnerLease
+  $next = Clone-State $previous
+  Add-Or-Set $next 'ownershipGeneration' ($formerGeneration + 1)
+  Add-Or-Set $next 'ownershipBinding' 'generated-lease'
+  Add-Or-Set $next 'ownershipLeaseHash' (Hash-Text $replacementLease)
+  Add-Or-Set $next 'baselineAdvancedFrom' $previous.baselineHead
+  Add-Or-Set $next 'baselineAdvanceReason' 'Owner-authorized lost-lease recovery accepted the exact governance recovery commit on clean main.'
+  $next.baselineHead = $observed.head
+  $next.branch = $observed.branch
+  $now = (Get-Date).ToUniversalTime().ToString('o')
+  $audit = [pscustomobject]@{ decision='RECOVER_LOST_OWNER_LEASE'; sessionId=[string]$previous.sessionId; timestamp=$now; formerOwnershipGeneration=$formerGeneration; newOwnershipGeneration=($formerGeneration + 1); baselineAdvancedFrom=[string]$previous.baselineHead; baselineAdvancedTo=[string]$observed.head; recoveryScope=$recoveryScope; evidenceSource='Interactive Windows owner confirmation' }
+  $recoveries = if ($next.PSObject.Properties['lostLeaseRecoveries']) { @($next.lostLeaseRecoveries) } else { @() }
+  Add-Or-Set $next 'lostLeaseRecoveries' ($recoveries + $audit)
+  $next.lastCheckpointAt = $now
+  $next.observed = $observed
+  Save-ProtectedOwnerLease $next.sessionId $replacementLease
+  Save-Event $next 'lost-lease-recovered' 'Owner-authorized lost-lease recovery created a protected local replacement lease.'
+  Output-State $next 'Lost ownership lease recovered in place.'
   exit 0
 }
 
