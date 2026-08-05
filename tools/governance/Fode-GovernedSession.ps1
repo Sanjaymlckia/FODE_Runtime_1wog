@@ -109,7 +109,12 @@ function Snapshot {
 
 function PolicyHash {
   if (!(Test-Path -LiteralPath $policyPath -PathType Leaf)) { Fail 'Owner policy is missing' }
-  return (Get-FileHash -LiteralPath $policyPath -Algorithm SHA256).Hash
+  $getFileHash = Get-Command -Name Get-FileHash -ErrorAction SilentlyContinue
+  if ($getFileHash) { return (Get-FileHash -LiteralPath $policyPath -Algorithm SHA256).Hash }
+  try {
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try { return ([BitConverter]::ToString($sha.ComputeHash([System.IO.File]::ReadAllBytes($policyPath))).Replace('-', '')) } finally { $sha.Dispose() }
+  } catch { Fail 'Owner policy hash could not be calculated' 'RECOVERY_REQUIRED' }
 }
 
 function Hash-Text([string]$Value) {
