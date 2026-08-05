@@ -68,10 +68,13 @@ assert.match(code, /if \(route === "admin"\) return renderAdminApp_;/, "Admin ro
 assert.match(code, /if \(route === "ops"\) return renderAdminApp_;/, "Operations route must remain server-routed through the authenticated Admin renderer");
 assert.match(adminUi, /@media \(max-width:680px\)[\s\S]*?\.topbar\{ align-items:stretch; flex-direction:column; \}[\s\S]*?\.topbar > \.sub\{ width:100%; min-width:0; overflow-wrap:anywhere; \}/, "Admin navigation header must shed intrinsic URL width at narrow viewports");
 assert.match(adminUi, /\.queue-section-body\{ max-width:100%; min-width:0; overflow-x:auto; overflow-y:hidden; box-sizing:border-box; \}/, "Loaded Admin queues must contain intrinsic table width inside the queue body");
+assert.match(adminUi, /\.queue-section\{[\s\S]*?max-width:100%; min-width:0; overflow:hidden; box-sizing:border-box;/, "Loaded Admin queue sections must contain overflowing queue bodies");
 assert.match(eduOpsStyles, /@media \(max-width: 560px\)[\s\S]*?\.eduops-workspace-links \{ grid-column: 1; grid-row: 2; display:grid; grid-template-columns:repeat\(2,minmax\(0,1fr\)\); \}/, "EduOps working-surface links must stack into a bounded mobile row");
 assert.match(eduOpsStyles, /\.eduops-global-search-strip \{[\s\S]*?z-index: 45;/, "EduOps loaded topbar overflow must not cover the working-surface links");
 assert.match(adminUi, /@media \(max-width: 680px\)[\s\S]*?\.opsNav\{ flex-direction:row;[\s\S]*?overflow-x:auto;[\s\S]*?\.opsMain\{ height:auto; min-height:100vh; overflow:visible; padding:12px; \}/, "Operations mobile navigation must expose the working surface without a full-height sidebar gate");
 assert.match(adminUi, /@media \(max-width: 680px\)[\s\S]*?\.opsSectionGrid\{ grid-template-columns:1fr !important; \}/, "Loaded Operations section grids must collapse below the mobile breakpoint");
+assert.match(adminUi, /@media \(max-width: 680px\)[\s\S]*?\.opsWorkspaceSwitch\{ grid-template-columns:minmax\(0,1fr\) !important; \}/, "Loaded Operations workspace cards must collapse below the mobile breakpoint");
+assert.match(adminUi, /\.opsWorkspaceCard,\.opsWorkspaceInfo,\.opsSectionPage,\.opsCard\{ min-width:0; max-width:100%; box-sizing:border-box; \}/, "Loaded Operations cards must shed intrinsic width on mobile");
 assert.doesNotMatch(adminUi + eduOps, /FODE-26-003241[^\n]+href=|href=[^\n]+FODE-26-003241/, "Cross-surface navigation must not transport or substitute an applicant identity");
 assert.doesNotMatch(adminUi + eduOps, /google\.script\.run[^\n]+(?:send|prepare|reconcile)/i, "Navigation links must not invoke communication or mutation RPCs");
 

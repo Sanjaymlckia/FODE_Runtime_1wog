@@ -107,6 +107,7 @@
       border-radius:var(--panelRadius);
       background: #fff;
       padding:10px;
+      max-width:100%; min-width:0; overflow:hidden; box-sizing:border-box;
     }
     .queue-section.expanded{
       border-color: rgba(14,165,164,.45);
@@ -1961,6 +1962,9 @@
       .opsNav a{ flex:0 0 auto; min-height:36px; padding:6px 8px; font-size:12px; }
       .opsNav a:before{ width:20px; height:20px; }
       .opsSectionGrid{ grid-template-columns:1fr !important; }
+      .opsWorkspaceSwitch{ grid-template-columns:minmax(0,1fr) !important; }
+      .opsWorkspaceCard,.opsWorkspaceInfo,.opsSectionPage,.opsCard{ min-width:0; max-width:100%; box-sizing:border-box; }
+      .opsWorkspaceCard h3,.opsWorkspaceCard p{ overflow-wrap:anywhere; }
       .opsSideBottom{ display:none; }
       .opsMain{ height:auto; min-height:100vh; overflow:visible; padding:12px; }
     }
