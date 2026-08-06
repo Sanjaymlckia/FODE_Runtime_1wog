@@ -10171,11 +10171,11 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function actionabilityWorklistKey_(row){
-      return String(row && row.worklistKey || "").trim().toUpperCase();
+      return String(row && (row.reviewBucketKey || row.worklistKey) || "").trim().toUpperCase();
     }
 
     function actionabilityWorklistLabel_(row){
-      var explicit = String(row && row.worklistLabel || "").trim();
+      var explicit = String(row && (row.reviewBucketLabel || row.worklistLabel) || "").trim();
       if (explicit) return explicit;
       var key = actionabilityWorklistKey_(row);
       if (key === "PAYMENT_FOLLOW_UP") return "Payment Follow-up";
@@ -10188,7 +10188,7 @@ function renderStageDashboard_(items, emptyMessage){
     }
 
     function actionabilityWorklistReason_(row){
-      var explicit = String(row && row.worklistReason || "").trim();
+      var explicit = String(row && (row.reviewReason || row.worklistReason) || "").trim();
       if (explicit) return explicit;
       var key = actionabilityWorklistKey_(row);
       if (key === "PAYMENT_FOLLOW_UP") return "Awaiting payment evidence";
@@ -12435,6 +12435,10 @@ function renderStageDashboard_(items, emptyMessage){
           + '<div class="actionabilityFact"><strong>Missing Documents:</strong> <span>' + esc(actionabilityMissingDocumentsDetail_(r)) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Worklist:</strong> <span>' + esc(worklistLabel + (worklistReason ? (" | " + worklistReason) : "")) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Lifecycle:</strong> <span>' + esc(String(state.lifecycleStage || "Not shown").replace(/_/g, " ")) + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Requirement:</strong> <span>' + esc(r.reviewRequirement || worklistReason || "Not returned") + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Waiting on:</strong> <span>' + esc(r.reviewWaitingOn || "Not returned") + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Why this is in this queue:</strong> <span>' + esc(r.reviewReason || worklistReason || "Not returned") + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Source evidence:</strong> <span>' + esc(r.reviewSourceEvidence || "Canonical applicant lifecycle facts") + '</span></div>'
           + '<div class="actionabilityFact"><strong>Next Message:</strong> <span>' + esc(commNext) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Communication Progress:</strong> <span>' + esc(r.communicationProgressDetail || commProgress || commNext) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Actionability:</strong> <span>' + esc(r.actionabilityState || "UNKNOWN") + ' | ' + esc(r.reasonCode || "") + '</span></div>'

@@ -3203,6 +3203,64 @@ function buildR408FixtureNonOperationalActionabilityRow_(rowObj, rowNumber) {
   };
 }
 
+function applicantReviewFollowupEvidence_(events, applicantId, requirement, lifecycleStage) {
+  var seen = {};
+  var qualifying = [];
+  (Array.isArray(events) ? events : []).forEach(function(event) {
+    var e = event && typeof event === "object" ? event : {};
+    var result = clean_(e.result || e.status || "").toUpperCase();
+    var boundApplicant = clean_(e.applicantId || e.applicant_id || "");
+    var boundRequirement = clean_(e.requirement || e.requirementId || e.requirement_id || "");
+    var boundStage = clean_(e.lifecycleStage || e.lifecycle_stage || "").toUpperCase();
+    var operationId = clean_(e.operationId || e.operation_id || e.debugId || e.debug_id || "");
+    if (result !== "SENT" || e.correctlyBound !== true || !operationId) return;
+    if (boundApplicant !== clean_(applicantId) || boundRequirement !== clean_(requirement) || boundStage !== clean_(lifecycleStage).toUpperCase()) return;
+    if (seen[operationId]) return;
+    seen[operationId] = true;
+    qualifying.push(e);
+  });
+  return qualifying;
+}
+
+function applicantReviewLifecycleProjection_(facts) {
+  var f = facts && typeof facts === "object" ? facts : {};
+  var stage = clean_(f.lifecycleStage || "UNKNOWN").toUpperCase();
+  var requirement = clean_(f.requirement || f.reviewReason || "Unclassified operational requirement");
+  var evidence = applicantReviewFollowupEvidence_(f.communicationEvents, f.applicantId, requirement, stage);
+  var count = evidence.length;
+  var closed = f.closed === true || ["ADMITTED_ENROLLED", "NOT_ADMITTED", "WITHDRAWN", "EXPIRED", "CLOSED"].indexOf(stage) >= 0;
+  var common = {
+    lifecycleStage: stage,
+    requirement: requirement,
+    sourceEvidence: clean_(f.sourceEvidence || "Canonical applicant lifecycle and requirement facts"),
+    owner: clean_(f.owner || "Unassigned"),
+    dueDate: clean_(f.dueDate || ""),
+    waitingOn: clean_(f.waitingOn || ""),
+    qualifyingFollowupCount: count,
+    communicationEvidenceAvailable: Array.isArray(f.communicationEvents),
+    reason: ""
+  };
+  function bucket(key, label, reason, waitingOn) {
+    common.bucketKey = key; common.bucketLabel = label; common.reason = reason;
+    if (waitingOn) common.waitingOn = waitingOn;
+    return common;
+  }
+  if (closed) return bucket("CLOSED_OUTCOME", "Closed outcomes", "Canonical outcome is concluded; retained for audit and search.", "No active party");
+  if (f.integrityException === true) return bucket("DATA_INTEGRITY_EXCEPTION", "Data / integrity exception", "Identity, binding, duplicate, or conflicting-source evidence requires resolution.", "Data steward");
+  if (f.uncontactable === true) return bucket("LOST_UNCONTACTABLE", "Lost / uncontactable", "No valid usable contact route is available.", "Contact correction");
+  if (clean_(f.holdReason)) return bucket("HELD_ABEYANCE_OTHER", "Held in abeyance — other reason", clean_(f.holdReason), "Review on " + clean_(f.holdReviewDate || "unscheduled") + "; reactivate when " + clean_(f.reactivationCondition || "the recorded condition is met"));
+  if (f.working === true) return bucket("WORKING_ON_IT", "Working on it", "Active staff work is recorded.", "Assigned owner");
+  if (f.readyForDecision === true) return bucket("READY_FOR_DECISION", "Ready for decision", "Evidence is complete and an authorised decision is required.", "Decision authority");
+  if (f.admittedOutstanding === true) return bucket("ADMITTED_ONBOARDING_OUTSTANDING", "Admitted — onboarding outstanding", "Admission is made; a downstream onboarding action remains.", "Admissions / applicant");
+  if (f.documentsReceived === true && f.documentsVerified !== true) return bucket("DOCUMENTS_ASSESSMENT", "Documents received — assessment / verification required", "Material exists and requires substantive review.", "Admissions reviewer");
+  if (f.documentsIncomplete === true) {
+    if (count >= 3) return bucket("HELD_ABEYANCE_NO_RESPONSE", "Held in abeyance — no response", "Three successful, distinct, correctly bound follow-ups for this requirement received no substantive response.", "Reactivation condition");
+    if (count > 0) return bucket("PENDING_APPLICANT_RESPONSE", "Pending applicant response", "A successful, correctly bound follow-up was sent for this unresolved requirement.", "Applicant response or scheduled follow-up");
+    return bucket("DOCUMENTS_FOLLOW_UP", "Documents — review / follow-up", "A requirement remains unresolved and needs staff review before any individual follow-up.", "Admissions reviewer");
+  }
+  return bucket("READY_FOR_DECISION", "Ready for decision", "No unresolved document or contactability requirement is evidenced; confirm the authorised next decision.", "Decision authority");
+}
+
 function buildActionabilityPreviewRow_(rowObj, rowNumber) {
   var row = typeof communicationCompatibilityReadRow_ === "function"
     ? communicationCompatibilityReadRow_(rowObj || {})
@@ -3379,6 +3437,27 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
       docsVerified: docsVerified
     }
   });
+  var reviewRequirement = (uploadSummary.missingRequiredDocuments || []).join(", ") || explanation || "Applicant lifecycle review";
+  var reviewLifecycle = applicantReviewLifecycleProjection_({
+    applicantId: applicantId,
+    lifecycleStage: clean_(canonicalLifecycle && canonicalLifecycle.lifecycleStage || lifecycleStage),
+    requirement: reviewRequirement,
+    sourceEvidence: explanation,
+    owner: owner,
+    dueDate: clean_(row.Review_Due_Date || row.Email_Next_Action_Date || ""),
+    holdReason: clean_(row.Hold_Reason || row.Abeyance_Reason || ""),
+    holdReviewDate: clean_(row.Hold_Review_Date || ""),
+    reactivationCondition: clean_(row.Reactivation_Condition || ""),
+    working: isYes_(row.Working_On_It || ""),
+    readyForDecision: nextAction === "ENROLL" || isYes_(row.Ready_For_Decision || ""),
+    admittedOutstanding: isYes_(row.Admitted || "") && !enrolled,
+    integrityException: isYes_(row.Integrity_Exception || "") || lifecycleMismatch.hasLifecycleMismatch === true,
+    uncontactable: isUncontactable,
+    documentsReceived: !!uploadSummary.requiredDocumentUploadComplete,
+    documentsVerified: !!docsVerified,
+    documentsIncomplete: !uploadSummary.requiredDocumentUploadComplete,
+    communicationEvents: Array.isArray(row.Communication_Events) ? row.Communication_Events : null
+  });
   return {
     rowNumber: rowNumber,
     applicantId: applicantId,
@@ -3390,6 +3469,14 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     worklistKey: clean_(worklistProjection.worklistKey || ""),
     worklistLabel: clean_(worklistProjection.worklistLabel || ""),
     worklistReason: clean_(worklistProjection.worklistReason || ""),
+    reviewBucketKey: reviewLifecycle.bucketKey,
+    reviewBucketLabel: reviewLifecycle.bucketLabel,
+    reviewReason: reviewLifecycle.reason,
+    reviewRequirement: reviewLifecycle.requirement,
+    reviewWaitingOn: reviewLifecycle.waitingOn,
+    reviewSourceEvidence: reviewLifecycle.sourceEvidence,
+    reviewFollowupCount: reviewLifecycle.qualifyingFollowupCount,
+    reviewCommunicationEvidenceAvailable: reviewLifecycle.communicationEvidenceAvailable,
     nextAction: nextAction,
     actionabilityState: actionabilityState.actionabilityState,
     selectable: actionabilityState.selectable === true,
@@ -3459,14 +3546,25 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
       communicationLastAttemptResult: clean_(row.Last_Contact_Result || row.Email_Status || ""),
       communicationNextActionAt: clean_(row.Email_Next_Action_Date || ""),
       communicationManualReviewRequired: manualReviewRequired
-    }
+    },
+    reviewLifecycle: reviewLifecycle
   };
 }
 
 function compareActionabilityPreviewRows_(a, b) {
-  var order = { UNCONTACTABLE: 1, DORMANT: 2, ESCALATED: 3, OVERDUE: 4, DUE: 5, NORMAL: 6 };
-  var aRank = order[clean_(a && a.urgencyLevel || "").toUpperCase()] || 99;
-  var bRank = order[clean_(b && b.urgencyLevel || "").toUpperCase()] || 99;
+  var aBucket = clean_(a && a.reviewBucketKey || "").toUpperCase();
+  var bBucket = clean_(b && b.reviewBucketKey || "").toUpperCase();
+  var rank = function(row, bucket) {
+    var urgency = clean_(row && row.urgencyLevel || "").toUpperCase();
+    if (urgency === "OVERDUE") return 1;
+    if (bucket === "READY_FOR_DECISION") return 2;
+    if (bucket === "WORKING_ON_IT") return 3;
+    if (bucket === "PENDING_APPLICANT_RESPONSE" || bucket === "DOCUMENTS_FOLLOW_UP" || bucket === "DOCUMENTS_ASSESSMENT") return 5;
+    if (bucket === "LOST_UNCONTACTABLE" || bucket === "DATA_INTEGRITY_EXCEPTION" || bucket.indexOf("HELD_") === 0) return 7;
+    return 4;
+  };
+  var aRank = rank(a, aBucket);
+  var bRank = rank(b, bBucket);
   if (aRank !== bRank) return aRank - bRank;
   return Number(b && b.ageDays || 0) - Number(a && a.ageDays || 0);
 }
@@ -3797,6 +3895,21 @@ function lifecycleDriftRecord_(summary, mismatch) {
   return lifecycleDriftRecordReason_(s, m.mismatchReason);
 }
 
+function applicantReviewLifecycleReconciliationEmpty_() {
+  return { totalRows: 0, activeRows: 0, closedRows: 0, unmappedRows: 0, byBucket: {}, unmappedApplicantIds: [] };
+}
+
+function applicantReviewLifecycleReconcile_(summary, row) {
+  var out = summary && typeof summary === "object" ? summary : applicantReviewLifecycleReconciliationEmpty_();
+  var bucket = clean_(row && row.reviewBucketKey || "").toUpperCase();
+  out.totalRows++;
+  if (!bucket) { out.unmappedRows++; out.unmappedApplicantIds.push(clean_(row && row.applicantId || "")); return out; }
+  out.byBucket[bucket] = Number(out.byBucket[bucket] || 0) + 1;
+  if (bucket === "CLOSED_OUTCOME") out.closedRows++;
+  else out.activeRows++;
+  return out;
+}
+
 function admin_getActionabilityPreview(payload) {
   var adminEmail = getCallerEmail_();
   if (!isAdmin_(adminEmail)) throw new Error("Access denied");
@@ -3816,6 +3929,7 @@ function admin_getActionabilityPreview(payload) {
     workloadSummary: { READY: 0, COOLING_OFF: 0, AWAITING_APPLICANT: 0, AWAITING_PAYMENT: 0, REVIEW_REQUIRED: 0, COMPLETE: 0, UNKNOWN: 0 },
     workloadExplanation: actionabilityWorkloadExplanationEmpty_(),
     lifecycleDriftSummary: lifecycleDriftEmptySummary_(),
+    reviewLifecycleReconciliation: applicantReviewLifecycleReconciliationEmpty_(),
     populationLedger: populationLedgerPublicSummary_(ledger),
     bucketSummaries: {},
     worklistSummary: { totalRows: 0, returnedRows: 0, boundedRows: 0, limit: limit },
@@ -3838,6 +3952,14 @@ function admin_getActionabilityPreview(payload) {
       worklistKey: clean_(actionability.worklistKey || ""),
       worklistLabel: clean_(actionability.worklistLabel || ""),
       worklistReason: clean_(actionability.worklistReason || ""),
+      reviewBucketKey: clean_(actionability.reviewBucketKey || ""),
+      reviewBucketLabel: clean_(actionability.reviewBucketLabel || ""),
+      reviewReason: clean_(actionability.reviewReason || ""),
+      reviewRequirement: clean_(actionability.reviewRequirement || ""),
+      reviewWaitingOn: clean_(actionability.reviewWaitingOn || ""),
+      reviewSourceEvidence: clean_(actionability.reviewSourceEvidence || ""),
+      reviewFollowupCount: Number(actionability.reviewFollowupCount || 0),
+      reviewCommunicationEvidenceAvailable: actionability.reviewCommunicationEvidenceAvailable === true,
       nextAction: clean_(actionability.nextAction || ""),
       actionabilityState: clean_(actionability.state || "UNKNOWN").toUpperCase(),
       selectable: actionability.selectable === true,
@@ -3893,6 +4015,30 @@ function admin_getActionabilityPreview(payload) {
         communicationNextActionAt: clean_(actionability.communicationNextActionAt || actionability.nextActionAt || "")
       }
     };
+    if (!item.reviewBucketKey) {
+      var derivedReviewLifecycle = applicantReviewLifecycleProjection_({
+        applicantId: item.applicantId,
+        lifecycleStage: item.canonicalLifecycle.lifecycleStage,
+        requirement: item.explanation || "Applicant lifecycle review",
+        sourceEvidence: item.explanation,
+        owner: item.actionOwner,
+        dueDate: item.coolingOffUntil,
+        uncontactable: item.authorityState.contactabilityState === "UNCONTACTABLE",
+        documentsReceived: item.authorityState.requiredDocumentUploadComplete,
+        documentsVerified: item.authorityState.docsVerified,
+        documentsIncomplete: !item.authorityState.requiredDocumentUploadComplete,
+        readyForDecision: item.nextAction === "ENROLL",
+        integrityException: item.lifecycleMismatch && item.lifecycleMismatch.hasLifecycleMismatch === true
+      });
+      item.reviewBucketKey = derivedReviewLifecycle.bucketKey;
+      item.reviewBucketLabel = derivedReviewLifecycle.bucketLabel;
+      item.reviewReason = derivedReviewLifecycle.reason;
+      item.reviewRequirement = derivedReviewLifecycle.requirement;
+      item.reviewWaitingOn = derivedReviewLifecycle.waitingOn;
+      item.reviewSourceEvidence = derivedReviewLifecycle.sourceEvidence;
+      item.reviewFollowupCount = derivedReviewLifecycle.qualifyingFollowupCount;
+      item.reviewCommunicationEvidenceAvailable = derivedReviewLifecycle.communicationEvidenceAvailable;
+    }
     var owner = clean_(item.actionOwner || "NONE").toUpperCase() || "NONE";
     if (!Object.prototype.hasOwnProperty.call(out.countsByOwner, owner)) out.countsByOwner[owner] = 0;
     out.countsByOwner[owner]++;
@@ -3901,6 +4047,7 @@ function admin_getActionabilityPreview(payload) {
     out.workloadSummary[state]++;
     out.workloadExplanation = incrementActionabilityWorkloadExplanation_(out.workloadExplanation, item.communicationProgress);
     out.lifecycleDriftSummary = lifecycleDriftRecord_(out.lifecycleDriftSummary, item.lifecycleMismatch);
+    out.reviewLifecycleReconciliation = applicantReviewLifecycleReconcile_(out.reviewLifecycleReconciliation, item);
     rows.push(item);
   });
   rows.sort(compareActionabilityPreviewRows_);
