@@ -104,12 +104,14 @@ assert.equal(pendingRows.length, 1, "EduOps lifecycle selection must filter the 
 const activeRows = Array.from(eduopsContext.eduopsFilterRows_(fixtures, { actionabilityState: "ALL", worklistKey: "", reviewBucketKey: "ALL_ACTIVE", workScope: "ALL_AUTHORISED", filters: {} }));
 assert.equal(activeRows.length, fixtures.length - 1, "EduOps active lifecycle work must exclude closed outcomes");
 
+const liveExceptionTarget = { innerHTML: "" };
 const renderContext = {
+  document: { getElementById: id => id === "eduopsLifecycleExceptions" ? liveExceptionTarget : null },
   dom: {
     eduopsAdmissionsPopulationSummary: { innerHTML: "" },
     eduopsAdmissionsStages: { innerHTML: "" },
     eduopsWorklistKeys: { innerHTML: "" },
-    eduopsLifecycleExceptions: { innerHTML: "" }
+    eduopsLifecycleExceptions: { innerHTML: "", isConnected: false }
   },
   app: {
     state: { reviewBucketKey: "PENDING_APPLICANT_RESPONSE" },
@@ -126,6 +128,7 @@ renderContext.renderWorklists({
   populationSummary: { total: fixtures.length, active: fixtures.length - 1, closed: 1 }
 });
 assert.match(renderContext.dom.eduopsWorklistKeys.innerHTML, /data-lifecycle-worklist="PENDING_APPLICANT_RESPONSE"[^>]*aria-selected="true"/);
+assert.equal((liveExceptionTarget.innerHTML.match(/<button/g) || []).length, 4, "the current EduOps exception mount must render all exception and utility controls");
 assert.doesNotMatch(renderContext.dom.eduopsWorklistKeys.innerHTML, /Closed outcomes/, "only the selected stage's precise worklists should render");
 assert.ok(lifecyclePresentation.some(item => item.code === "CLOSED_OUTCOME"), "Closed outcomes remain available through their admissions stage");
 

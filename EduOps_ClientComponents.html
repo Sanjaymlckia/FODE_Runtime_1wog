@@ -60,11 +60,21 @@
     dom.eduopsWorklistKeys.innerHTML = lifecycleWorklists.filter(function (item) { return selectedStage && item.stageKey === selectedStage.code; }).map(function (item) {
       return '<button type="button" class="eduops-worklist-key eduops-lifecycle-worklist-key" data-lifecycle-worklist="' + app.esc(item.code) + '" aria-selected="' + (app.state.reviewBucketKey === item.code ? "true" : "false") + '" data-closed="' + (item.closed === true ? "true" : "false") + '"><span>' + app.esc(item.label) + '</span><span class="eduops-key-count">' + Number(item.count || 0) + '</span></button>';
     }).join("");
-    var exceptionTarget = dom.eduopsLifecycleExceptions || document.getElementById("eduopsLifecycleExceptions");
+    var exceptionTarget = document.getElementById("eduopsLifecycleExceptions");
+    dom.eduopsLifecycleExceptions = exceptionTarget;
     if (exceptionTarget) exceptionTarget.innerHTML = lifecycleExceptions.map(function (item) {
       var binding = item.code === "LEGACY_REVIEW_AGGREGATE" ? ' data-legacy-review="true"' : ' data-lifecycle-worklist="' + app.esc(item.code) + '"';
       return '<button type="button" class="eduops-lifecycle-exception"' + binding + ' aria-selected="' + (app.state.reviewBucketKey === item.code || item.code === "LEGACY_REVIEW_AGGREGATE" && app.state.actionabilityState === "REVIEW_REQUIRED" ? "true" : "false") + '><span>' + app.esc(item.label) + '</span><strong>' + Number(item.count || 0) + '</strong></button>';
     }).join("");
+  }
+  function activateAdmissionsLifecycleControl(event) {
+    var lifecycleWorklist = event.target.closest("[data-lifecycle-worklist]");
+    if (lifecycleWorklist) { app.state.reviewBucketKey = lifecycleWorklist.getAttribute("data-lifecycle-worklist"); app.state.actionabilityState = "ALL"; app.state.worklistKey = ""; app.clearSelection(); app.requestWorkload({ resetPage: true }); return true; }
+    var admissionsStage = event.target.closest("[data-admissions-stage]");
+    if (admissionsStage) { app.state.reviewBucketKey = admissionsStage.getAttribute("data-first-worklist") || "DOCUMENTS_FOLLOW_UP"; app.state.actionabilityState = "ALL"; app.state.worklistKey = ""; app.clearSelection(); app.requestWorkload({ resetPage: true }); return true; }
+    var legacyReview = event.target.closest("[data-legacy-review]");
+    if (legacyReview) { app.state.reviewBucketKey = "ALL_ACTIVE"; app.state.actionabilityState = "REVIEW_REQUIRED"; app.state.worklistKey = ""; app.clearSelection(); app.requestWorkload({ resetPage: true }); return true; }
+    return false;
   }
   function renderQueueContext(response, selectedState, selectedStage, selectedWorklist) {
     if (!dom.eduopsOperationsQueueContext) return;
@@ -1412,12 +1422,7 @@
       }
       var worklist = event.target.closest("[data-worklist]");
       if (worklist) { app.state.worklistKey = worklist.getAttribute("data-worklist"); app.clearSelection(); app.requestWorkload({ resetPage: true }); return; }
-      var lifecycleWorklist = event.target.closest("[data-lifecycle-worklist]");
-      if (lifecycleWorklist) { app.state.reviewBucketKey = lifecycleWorklist.getAttribute("data-lifecycle-worklist"); app.state.actionabilityState = "ALL"; app.state.worklistKey = ""; app.clearSelection(); app.requestWorkload({ resetPage: true }); return; }
-      var admissionsStage = event.target.closest("[data-admissions-stage]");
-      if (admissionsStage) { app.state.reviewBucketKey = admissionsStage.getAttribute("data-first-worklist") || "DOCUMENTS_FOLLOW_UP"; app.state.actionabilityState = "ALL"; app.state.worklistKey = ""; app.clearSelection(); app.requestWorkload({ resetPage: true }); return; }
-      var legacyReview = event.target.closest("[data-legacy-review]");
-      if (legacyReview) { app.state.reviewBucketKey = "ALL_ACTIVE"; app.state.actionabilityState = "REVIEW_REQUIRED"; app.state.worklistKey = ""; app.clearSelection(); app.requestWorkload({ resetPage: true }); return; }
+      if (activateAdmissionsLifecycleControl(event)) return;
       var scope = event.target.closest("[data-work-scope]");
       if (scope) { app.state.workScope = scope.getAttribute("data-work-scope"); app.clearSelection(); app.requestWorkload({ resetPage: true }); return; }
       var page = event.target.closest("[data-page]");

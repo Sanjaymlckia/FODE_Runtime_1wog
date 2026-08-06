@@ -146,18 +146,25 @@ assert.match(primaryHtml, /Population Ledger[\s\S]*Documents[\s\S]*Review \/ fol
 assert.doesNotMatch(primaryHtml, /Canonical lifecycle worklists/);
 
 const currentExceptionTarget = { innerHTML:"" };
+const staleExceptionTarget = { innerHTML:"", isConnected:false };
+const eduopsRequests = [];
 const eduopsRenderContext = {
-  app: { state: { reviewBucketKey:"DOCUMENTS_FOLLOW_UP", actionabilityState:"ALL" }, esc: value => clean(value) },
+  app: {
+    state: { reviewBucketKey:"DOCUMENTS_FOLLOW_UP", actionabilityState:"ALL", worklistKey:"" },
+    esc: value => clean(value),
+    clearSelection: () => {},
+    requestWorkload: options => eduopsRequests.push({ options, reviewBucketKey:eduopsRenderContext.app.state.reviewBucketKey, actionabilityState:eduopsRenderContext.app.state.actionabilityState })
+  },
   document: { getElementById: id => id === "eduopsLifecycleExceptions" ? currentExceptionTarget : null },
   dom: {
     eduopsAdmissionsPopulationSummary: { innerHTML:"" },
     eduopsAdmissionsStages: { innerHTML:"" },
     eduopsWorklistKeys: { innerHTML:"" },
-    eduopsLifecycleExceptions: null
+    eduopsLifecycleExceptions: staleExceptionTarget
   }
 };
 vm.createContext(eduopsRenderContext);
-vm.runInContext(extract(eduopsUi, "renderWorklists"), eduopsRenderContext);
+vm.runInContext([extract(eduopsUi, "renderWorklists"), extract(eduopsUi, "activateAdmissionsLifecycleControl")].join("\n"), eduopsRenderContext);
 eduopsRenderContext.renderWorklists({
   lifecycleWorklists: JSON.parse(JSON.stringify(lifecycleWorklists)),
   admissionsStages: JSON.parse(JSON.stringify(stages)),
@@ -165,8 +172,26 @@ eduopsRenderContext.renderWorklists({
   actionabilityBuckets: [{ code:"REVIEW_REQUIRED", count:4 }]
 });
 assert.equal((eduopsRenderContext.dom.eduopsWorklistKeys.innerHTML.match(/data-lifecycle-worklist=/g) || []).length, 2);
-assert.equal((currentExceptionTarget.innerHTML.match(/<button/g) || []).length, 4, "EduOps must render canonical exceptions even when the cached DOM reference and an older DTO omit the convenience fields");
+assert.equal(staleExceptionTarget.innerHTML, "", "a detached cached target must never intercept live exception rendering");
+assert.equal(eduopsRenderContext.dom.eduopsLifecycleExceptions, currentExceptionTarget, "the DOM cache must refresh to the current live mount");
+assert.equal((currentExceptionTarget.innerHTML.match(/<button/g) || []).length, 4, "EduOps must render canonical exceptions into the current DOM when a stale cached target and an older DTO omit the convenience fields");
 assert.match(currentExceptionTarget.innerHTML, /Lost \/ uncontactable[\s\S]*Data \/ integrity exception[\s\S]*All active work[\s\S]*Legacy Review aggregate/);
+function activateEduOpsControl(selector, attributes) {
+  const control = { getAttribute: name => attributes[name] || "" };
+  return eduopsRenderContext.activateAdmissionsLifecycleControl({ target:{ closest: requested => requested === selector ? control : null } });
+}
+assert.equal(activateEduOpsControl("[data-lifecycle-worklist]", { "data-lifecycle-worklist":"LOST_UNCONTACTABLE" }), true);
+assert.equal(activateEduOpsControl("[data-lifecycle-worklist]", { "data-lifecycle-worklist":"DATA_INTEGRITY_EXCEPTION" }), true);
+assert.equal(activateEduOpsControl("[data-lifecycle-worklist]", { "data-lifecycle-worklist":"ALL_ACTIVE" }), true);
+assert.equal(activateEduOpsControl("[data-legacy-review]", { "data-legacy-review":"true" }), true);
+assert.deepEqual(eduopsRequests.map(item => [item.reviewBucketKey, item.actionabilityState]), [
+  ["LOST_UNCONTACTABLE", "ALL"],
+  ["DATA_INTEGRITY_EXCEPTION", "ALL"],
+  ["ALL_ACTIVE", "ALL"],
+  ["ALL_ACTIVE", "REVIEW_REQUIRED"]
+], "every EduOps exception/utility control must select a canonical query and request the central list");
+assert.match(currentExceptionTarget.innerHTML, /<button type="button"[^>]*data-lifecycle-worklist="LOST_UNCONTACTABLE"/);
+assert.match(currentExceptionTarget.innerHTML, /<button type="button"[^>]*data-legacy-review="true"/);
 
 const canonicalFixture = {
   identity: { applicantId: "FODE-MOREAH-FIXTURE", rowNumber: 44 },
