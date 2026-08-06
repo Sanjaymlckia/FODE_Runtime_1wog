@@ -193,6 +193,14 @@ function eduopsFodeActionabilityRowFromCanonical_(canonical) {
     worklistKey: eduopsClean_(actionability.worklistKey || ""),
     worklistLabel: eduopsClean_(actionability.worklistLabel || ""),
     worklistReason: eduopsClean_(actionability.worklistReason || ""),
+    reviewBucketKey: eduopsClean_(actionability.reviewBucketKey || ""),
+    reviewBucketLabel: eduopsClean_(actionability.reviewBucketLabel || ""),
+    reviewReason: eduopsClean_(actionability.reviewReason || ""),
+    reviewRequirement: eduopsClean_(actionability.reviewRequirement || ""),
+    reviewWaitingOn: eduopsClean_(actionability.reviewWaitingOn || ""),
+    reviewSourceEvidence: eduopsClean_(actionability.reviewSourceEvidence || ""),
+    reviewFollowupCount: Number(actionability.reviewFollowupCount || 0),
+    reviewCommunicationEvidenceAvailable: actionability.reviewCommunicationEvidenceAvailable === true,
     nextAction: eduopsClean_(actionability.nextAction || ""),
     nextActionDate: eduopsClean_(actionability.nextActionDate || ""),
     actionabilityState: eduopsClean_(actionability.state || "").toUpperCase(),
@@ -250,6 +258,7 @@ function eduopsFodeRowDto_(row, query, snapshotId, reliability) {
   var actionabilityPresentation = eduopsStatePresentation_(row.actionabilityState);
   var reliabilityPresentation = eduopsStatePresentation_(sourceReliability.state);
   var worklistPresentation = eduopsCodePresentation_(row.worklistKey, row.worklistLabel, row.worklistReason, "Actionability Resolver");
+  var reviewBucketPresentation = eduopsCodePresentation_(row.reviewBucketKey, row.reviewBucketLabel, row.reviewReason, "Canonical applicant lifecycle projection");
   var lifecycleState = row.canonicalLifecycle && (row.canonicalLifecycle.lifecycleStage || row.canonicalLifecycle.baseState) || "";
   var coolingPresentation = row.actionabilityState === "COOLING_OFF"
     ? (row.coolingOffUntil ? eduopsCodePresentation_("COOLING_OFF", "Recently contacted - waiting period", "Cooling-off expires " + row.coolingOffUntil + ".", "Actionability Resolver") : eduopsAuthorityUnavailable_("cooling-off expiry", "Actionability Resolver"))
@@ -269,6 +278,19 @@ function eduopsFodeRowDto_(row, query, snapshotId, reliability) {
     actionabilityLabel: actionabilityPresentation.label || "",
     worklistKey: eduopsClean_(row.worklistKey || ""),
     worklistLabel: worklistPresentation.label || "",
+    reviewLifecycle: {
+      bucketKey: eduopsClean_(row.reviewBucketKey || ""),
+      bucketLabel: reviewBucketPresentation.label || "",
+      lifecycleStage: eduopsClean_(row.canonicalLifecycle && (row.canonicalLifecycle.lifecycleStage || row.canonicalLifecycle.baseState) || ""),
+      requirement: eduopsClean_(row.reviewRequirement || ""),
+      reason: eduopsClean_(row.reviewReason || ""),
+      nextAction: eduopsClean_(row.nextAction || ""),
+      waitingOn: eduopsClean_(row.reviewWaitingOn || ""),
+      sourceEvidence: eduopsClean_(row.reviewSourceEvidence || ""),
+      contactability: eduopsClean_(authorityState.contactabilityState || ""),
+      qualifyingCommunicationCount: Number(row.reviewFollowupCount || 0),
+      communicationEvidenceAvailable: row.reviewCommunicationEvidenceAvailable === true
+    },
     primaryRoute: primaryRoute,
     actionOwner: eduopsClean_(row.actionOwner || ""),
     workOwnership: eduopsWorkOwnership_(row),
@@ -291,6 +313,7 @@ function eduopsFodeRowDto_(row, query, snapshotId, reliability) {
     presentation: {
       actionability: actionabilityPresentation,
       worklist: worklistPresentation,
+      reviewBucket: reviewBucketPresentation,
       nextAction: eduopsCodePresentation_(row.nextAction, eduopsHumanize_(row.nextAction), row.worklistReason, "Actionability Resolver"),
       coolingOff: coolingPresentation,
       route: eduopsCodePresentation_(eduopsPrimaryRouteForRow_(row), eduopsPrimaryRouteForRow_(row), "", "Actionability Resolver"),

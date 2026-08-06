@@ -829,7 +829,7 @@ function eduops_getParityDiagnostics(payload) {
       missingFromAdminBoundedPreview.push(row.applicantId);
       return;
     }
-    ["actionabilityState", "worklistKey", "nextAction", "selectable", "coolingOffUntil", "recommendedMessageType"].forEach(function (field) {
+    ["actionabilityState", "worklistKey", "nextAction", "selectable", "coolingOffUntil", "recommendedMessageType", "reviewBucketKey", "reviewReason", "reviewRequirement"].forEach(function (field) {
       if (String(row[field]) !== String(adminRow[field])) {
         mismatches.push({ applicantId: row.applicantId, field: field, eduops: row[field], currentAdmin: adminRow[field] });
       }
@@ -841,7 +841,7 @@ function eduops_getParityDiagnostics(payload) {
     }
   });
   var unsafe = mismatches.filter(function (m) {
-    return m.field === "actionabilityState" || m.field === "selectable" || m.field === "worklistKey";
+    return m.field === "actionabilityState" || m.field === "selectable" || m.field === "worklistKey" || m.field === "reviewBucketKey";
   });
   return {
     ok: unsafe.length === 0,
