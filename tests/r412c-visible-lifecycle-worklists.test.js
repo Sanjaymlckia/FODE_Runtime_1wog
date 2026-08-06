@@ -44,6 +44,8 @@ const fixtures = lifecycleKeys.map((key, index) => ({
   name: `Lifecycle Fixture ${index + 1}`,
   reviewBucketKey: key,
   reviewBucketLabel: key.replace(/_/g, " "),
+  admissionsStageKey: key === "CLOSED_OUTCOME" ? "CLOSED_OUTCOMES" : "DOCUMENTS",
+  admissionsStageLabel: key === "CLOSED_OUTCOME" ? "Closed outcomes" : "Documents",
   reviewRequirement: key === "DOCUMENTS_FOLLOW_UP" ? "Passport copy" : "Canonical requirement",
   reviewReason: `Canonical reason for ${key}`,
   reviewWaitingOn: key === "PENDING_APPLICANT_RESPONSE" ? "Applicant response" : "Admissions reviewer",
@@ -70,8 +72,8 @@ const adminContext = {
 };
 vm.createContext(adminContext);
 vm.runInContext([
-  "opsReviewLifecycleDefinitions_", "opsReviewLifecycleBucketKey_", "opsRowsForReviewLifecycleBucket_",
-  "opsReviewLifecycleCount_", "opsReviewLifecycleStageText_", "opsReviewLifecycleValue_",
+  "opsAdmissionsStageDefinitions_", "opsReviewLifecycleDefinitions_", "opsReviewLifecycleBucketKey_", "opsRowsForReviewLifecycleBucket_",
+  "opsReviewLifecycleCount_", "opsAdmissionsStageCount_", "opsReviewLifecycleStageText_", "opsReviewLifecycleValue_", "opsReviewLifecycleDisplayCode_",
   "opsReviewLifecycleRowsHtml_"
 ].map(name => extract(adminLifecycleUi, name)).join("\n"), adminContext);
 
@@ -80,7 +82,7 @@ lifecycleKeys.forEach(key => assert.ok(adminDefinitions.some(item => item.key ==
 assert.equal(adminContext.opsRowsForReviewLifecycleBucket_("PENDING_APPLICANT_RESPONSE").length, 1);
 assert.equal(adminContext.opsRowsForReviewLifecycleBucket_("ALL_ACTIVE").length, fixtures.length - 1, "closed outcomes must be separated from active work");
 const adminRendered = adminContext.opsReviewLifecycleRowsHtml_(fixtures);
-["Lifecycle bucket / stage", "Outstanding requirement", "Waiting on / next action", "Contactability", "Owner", "Last meaningful activity", "Review / reactivation", "Qualifying successful communications", "Why this is in this queue", "Source evidence"].forEach(label => assert.match(adminRendered, new RegExp(label)));
+["Admissions stage / precise worklist", "Outstanding requirement", "Waiting on / next action", "Contactability", "Owner", "Last meaningful activity", "Review / reactivation", "Qualifying successful communications", "Why this is in this worklist", "Why this is in this queue", "Source evidence"].forEach(label => assert.match(adminRendered, new RegExp(label)));
 assert.match(adminRendered, /UNCONTACTABLE · Not sendable/, "uncontactable must never look sendable");
 
 const eduopsContext = {
@@ -103,7 +105,12 @@ const activeRows = Array.from(eduopsContext.eduopsFilterRows_(fixtures, { action
 assert.equal(activeRows.length, fixtures.length - 1, "EduOps active lifecycle work must exclude closed outcomes");
 
 const renderContext = {
-  dom: { eduopsWorklistKeys: { innerHTML: "" } },
+  dom: {
+    eduopsAdmissionsPopulationSummary: { innerHTML: "" },
+    eduopsAdmissionsStages: { innerHTML: "" },
+    eduopsWorklistKeys: { innerHTML: "" },
+    eduopsLifecycleExceptions: { innerHTML: "" }
+  },
   app: {
     state: { reviewBucketKey: "PENDING_APPLICANT_RESPONSE" },
     esc: value => String(value == null ? "" : value),
@@ -112,9 +119,15 @@ const renderContext = {
 };
 vm.createContext(renderContext);
 vm.runInContext(extract(eduopsComponents, "renderWorklists"), renderContext);
-renderContext.renderWorklists({ lifecycleWorklists: lifecyclePresentation });
+renderContext.renderWorklists({
+  lifecycleWorklists: lifecyclePresentation,
+  admissionsStages: [{ code: "WAITING_ON_APPLICANT", label: "Waiting on applicant", count: 2, worklistCodes: ["PENDING_APPLICANT_RESPONSE", "HELD_ABEYANCE_NO_RESPONSE"], firstWorklistCode: "PENDING_APPLICANT_RESPONSE" }],
+  lifecycleExceptions: [],
+  populationSummary: { total: fixtures.length, active: fixtures.length - 1, closed: 1 }
+});
 assert.match(renderContext.dom.eduopsWorklistKeys.innerHTML, /data-lifecycle-worklist="PENDING_APPLICANT_RESPONSE"[^>]*aria-selected="true"/);
-assert.match(renderContext.dom.eduopsWorklistKeys.innerHTML, /Closed outcomes/);
+assert.doesNotMatch(renderContext.dom.eduopsWorklistKeys.innerHTML, /Closed outcomes/, "only the selected stage's precise worklists should render");
+assert.ok(lifecyclePresentation.some(item => item.code === "CLOSED_OUTCOME"), "Closed outcomes remain available through their admissions stage");
 
 const canonicalFixture = {
   identity: { applicantId: "FODE-PARITY-1", rowNumber: 7 },
@@ -146,13 +159,14 @@ assert.deepEqual(
 );
 
 assert.doesNotMatch([adminUi, adminLifecycleUi, eduopsComponents, eduopsWorkload].join("\n"), /Needs review/i, "legacy generic Needs review must not remain the primary rendered label");
-assert.match(adminLifecycleUi, /Secondary compatibility stage map/);
+assert.match(adminLifecycleUi, /Admissions-stage workspace/);
+assert.match(adminLifecycleUi, /Legacy Review aggregate/);
 assert.match(eduopsComponents, /Actionability remains secondary execution context/);
 assert.match(adminLifecycleUi, /@media \(max-width:720px\)[\s\S]*grid-template-columns:1fr/);
 assert.match(eduopsStyles, /@media \(max-width: 560px\)[\s\S]*\.eduops-worklist-keys \{ grid-template-columns: 1fr; overflow: visible; \}/);
 assert.doesNotMatch(eduopsStyles, /\.eduops-worklist-key-band \{ display: none; \}/, "lifecycle controls must remain accessible in compact layouts");
 assert.doesNotMatch(eduopsOperationsStyles, /\.eduops-worklist-key-band,\s*\.eduops-operations-layout \.eduops-work-scope-band \{ display: none; \}/, "Operations Workspace must not hide canonical lifecycle controls");
-assert.match(eduopsOperationsStyles, /\.eduops-operations-layout \.eduops-worklist-key-band \{\s*display: grid;/, "Operations Workspace must visibly render lifecycle controls");
+assert.match(eduopsOperationsStyles, /\.eduops-operations-layout \.eduops-worklist-key-band \{\s*display: block;/, "Operations Workspace must visibly render lifecycle controls");
 assert.match(eduopsOperationsStyles, /@media \(max-width: 560px\)[\s\S]*\.eduops-operations-layout \.eduops-worklist-keys \{ grid-template-columns: 1fr; \}/, "Operations Workspace lifecycle controls must fit 390px layouts");
 assert.doesNotMatch(eduopsHtml, /class="eduops-worklist-key-band"[^>]*aria-hidden="true"/, "Lifecycle controls must remain available to keyboard and assistive-technology users");
 assert.match(adminQueues, /reviewLifecycleCounts:[\s\S]*reviewLifecycleStageSubtotals:/, "Admin review queue response must carry global lifecycle counts and stage subtotals");

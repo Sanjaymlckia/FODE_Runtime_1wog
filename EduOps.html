@@ -205,8 +205,18 @@
           </header>
 
           <div class="eduops-worklist-key-band" data-eduops-layout-region="work-type">
-            <span class="eduops-band-label">Lifecycle worklist</span>
-            <div id="eduopsWorklistKeys" class="eduops-worklist-keys" role="tablist" aria-label="Canonical lifecycle worklists"></div>
+            <div id="eduopsAdmissionsPopulationSummary" class="eduops-admissions-population" aria-label="Applicant population summary"></div>
+            <div id="eduopsAdmissionsStages" class="eduops-admissions-stage-strip" role="tablist" aria-label="Admissions stages"></div>
+            <div class="eduops-admissions-hierarchy">
+              <section class="eduops-admissions-worklists" aria-labelledby="eduopsAdmissionsWorklistsHeading">
+                <span id="eduopsAdmissionsWorklistsHeading" class="eduops-band-label">Precise worklists</span>
+                <div id="eduopsWorklistKeys" class="eduops-worklist-keys" role="tablist" aria-label="Precise admissions worklists"></div>
+              </section>
+              <aside class="eduops-admissions-exceptions" aria-labelledby="eduopsAdmissionsExceptionsHeading">
+                <span id="eduopsAdmissionsExceptionsHeading" class="eduops-band-label">Exceptions and utilities</span>
+                <div id="eduopsLifecycleExceptions" class="eduops-lifecycle-exception-links"></div>
+              </aside>
+            </div>
           </div>
 
           <div class="eduops-work-scope-band" data-eduops-layout-region="scope-controls" aria-hidden="true">

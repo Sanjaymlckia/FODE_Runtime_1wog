@@ -1397,13 +1397,27 @@ function eduopsWorkloadPresentation_(allRows, matchedRows, pageRows, query, reli
     return copy;
   });
   var routeRows = (Array.isArray(allRows) ? allRows : []).map(function (row) { return { primaryRoute: eduopsPrimaryRouteForRow_(row) }; });
+  var lifecycleWorklists = eduopsReviewLifecyclePresentation_(allRows);
+  var lifecycleByCode = {};
+  lifecycleWorklists.forEach(function (item) { lifecycleByCode[item.code] = item; });
+  var activeLifecycleCount = Number(lifecycleByCode.ALL_ACTIVE && lifecycleByCode.ALL_ACTIVE.count || 0);
+  var closedLifecycleCount = Number(lifecycleByCode.CLOSED_OUTCOME && lifecycleByCode.CLOSED_OUTCOME.count || 0);
   return {
     schemaVersion: "EDUOPS_WORKLOAD_PRESENTATION_V1",
     authoritySource: "EduOps backend projection services",
     actionabilityBuckets: eduopsActionabilityPresentation_(actionabilityCounts),
     allActionability: { code: "ALL", label: "All authoritative records", count: Object.keys(actionabilityCounts || {}).reduce(function (sum, key) { return sum + Number(actionabilityCounts[key] || 0); }, 0), authoritySource: "Actionability Resolver" },
     worklists: eduopsWorklistPresentation_(worklistKeyCounts, allRows),
-    lifecycleWorklists: eduopsReviewLifecyclePresentation_(allRows),
+    lifecycleWorklists: lifecycleWorklists,
+    admissionsStages: eduopsAdmissionsStagePresentation_(lifecycleWorklists),
+    lifecycleExceptions: eduopsLifecycleExceptionPresentation_(lifecycleWorklists, actionabilityCounts),
+    populationSummary: {
+      schemaVersion: "EDUOPS_ADMISSIONS_POPULATION_V1",
+      authoritySource: "Population Ledger",
+      total: activeLifecycleCount + closedLifecycleCount,
+      active: activeLifecycleCount,
+      closed: closedLifecycleCount
+    },
     workScopes: eduopsWorkScopePresentation_(),
     reliability: eduopsStatePresentation_(reliability && reliability.state || "UNAVAILABLE"),
     metrics: [
@@ -1492,19 +1506,65 @@ function eduopsWorklistCounts_(rows, query) {
 
 function eduopsReviewLifecycleDefinitions_() {
   return [
-    ["ALL_ACTIVE", "All active lifecycle work", false],
-    ["DOCUMENTS_FOLLOW_UP", "Documents — review / follow-up", false],
-    ["DOCUMENTS_ASSESSMENT", "Documents received — assessment / verification required", false],
-    ["PENDING_APPLICANT_RESPONSE", "Pending applicant response", false],
-    ["HELD_ABEYANCE_NO_RESPONSE", "Held in abeyance — no response", false],
-    ["HELD_ABEYANCE_OTHER", "Held in abeyance — other reason", false],
-    ["WORKING_ON_IT", "Working on it", false],
-    ["READY_FOR_DECISION", "Ready for decision", false],
-    ["ADMITTED_ONBOARDING_OUTSTANDING", "Admitted — onboarding outstanding", false],
-    ["LOST_UNCONTACTABLE", "Lost / uncontactable", false],
-    ["DATA_INTEGRITY_EXCEPTION", "Data / integrity exception", false],
-    ["CLOSED_OUTCOME", "Closed outcomes", true]
+    ["ALL_ACTIVE", "All active work", false, "", false, true],
+    ["DOCUMENTS_FOLLOW_UP", "Review / follow-up", false, "DOCUMENTS", false, false],
+    ["DOCUMENTS_ASSESSMENT", "Received — verification", false, "DOCUMENTS", false, false],
+    ["PENDING_APPLICANT_RESPONSE", "Pending response", false, "WAITING_ON_APPLICANT", false, false],
+    ["HELD_ABEYANCE_NO_RESPONSE", "Held in abeyance — no response", false, "WAITING_ON_APPLICANT", false, false],
+    ["HELD_ABEYANCE_OTHER", "Held in abeyance — other reason", false, "INTERNAL_ASSESSMENT", false, false],
+    ["WORKING_ON_IT", "Working on it", false, "INTERNAL_ASSESSMENT", false, false],
+    ["READY_FOR_DECISION", "Ready for decision", false, "DECISION", false, false],
+    ["ADMITTED_ONBOARDING_OUTSTANDING", "Admitted — onboarding outstanding", false, "ONBOARDING", false, false],
+    ["LOST_UNCONTACTABLE", "Lost / uncontactable", false, "", true, false],
+    ["DATA_INTEGRITY_EXCEPTION", "Data / integrity exception", false, "", true, false],
+    ["CLOSED_OUTCOME", "Closed outcomes", true, "CLOSED_OUTCOMES", false, false]
   ];
+}
+
+function eduopsAdmissionsStageDefinitions_() {
+  return [
+    ["DOCUMENTS", "Documents", ["DOCUMENTS_FOLLOW_UP", "DOCUMENTS_ASSESSMENT"]],
+    ["WAITING_ON_APPLICANT", "Waiting on applicant", ["PENDING_APPLICANT_RESPONSE", "HELD_ABEYANCE_NO_RESPONSE"]],
+    ["INTERNAL_ASSESSMENT", "Internal assessment", ["WORKING_ON_IT", "HELD_ABEYANCE_OTHER"]],
+    ["DECISION", "Decision", ["READY_FOR_DECISION"]],
+    ["ONBOARDING", "Onboarding", ["ADMITTED_ONBOARDING_OUTSTANDING"]],
+    ["CLOSED_OUTCOMES", "Closed outcomes", ["CLOSED_OUTCOME"]]
+  ];
+}
+
+function eduopsAdmissionsStagePresentation_(lifecycleWorklists) {
+  var byCode = {};
+  (Array.isArray(lifecycleWorklists) ? lifecycleWorklists : []).forEach(function (item) { byCode[item.code] = item; });
+  return eduopsAdmissionsStageDefinitions_().map(function (definition) {
+    return {
+      schemaVersion: "EDUOPS_ADMISSIONS_STAGE_V1",
+      authoritySource: "Canonical applicant lifecycle projection",
+      code: definition[0],
+      label: definition[1],
+      count: definition[2].reduce(function (total, code) { return total + Number(byCode[code] && byCode[code].count || 0); }, 0),
+      worklistCodes: definition[2].slice(),
+      firstWorklistCode: definition[2][0]
+    };
+  });
+}
+
+function eduopsLifecycleExceptionPresentation_(lifecycleWorklists, actionabilityCounts) {
+  var byCode = {};
+  (Array.isArray(lifecycleWorklists) ? lifecycleWorklists : []).forEach(function (item) { byCode[item.code] = item; });
+  return ["LOST_UNCONTACTABLE", "DATA_INTEGRITY_EXCEPTION", "ALL_ACTIVE"].map(function (code) {
+    var item = eduopsClone_(byCode[code] || { code: code, label: eduopsHumanize_(code), count: 0 });
+    item.exception = code !== "ALL_ACTIVE";
+    item.utility = code === "ALL_ACTIVE";
+    return item;
+  }).concat([{
+    schemaVersion: "EDUOPS_LIFECYCLE_WORKLIST_V1",
+    authoritySource: "Actionability Resolver compatibility view",
+    code: "LEGACY_REVIEW_AGGREGATE",
+    label: "Legacy Review aggregate",
+    count: Number(actionabilityCounts && actionabilityCounts.REVIEW_REQUIRED || 0),
+    utility: true,
+    secondary: true
+  }]);
 }
 
 function eduopsReviewLifecyclePresentation_(rows) {
@@ -1531,6 +1591,9 @@ function eduopsReviewLifecyclePresentation_(rows) {
       label: definition[1],
       count: Number(counts[key] || 0),
       closed: definition[2] === true,
+      stageKey: definition[3] || "",
+      exception: definition[4] === true,
+      utility: definition[5] === true,
       stageSubtotals: Object.keys(stages[key] || {}).sort().map(function (stage) {
         return { code: stage, count: stages[key][stage] };
       })

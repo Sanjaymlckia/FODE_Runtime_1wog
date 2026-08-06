@@ -195,6 +195,8 @@ function eduopsFodeActionabilityRowFromCanonical_(canonical) {
     worklistReason: eduopsClean_(actionability.worklistReason || ""),
     reviewBucketKey: eduopsClean_(actionability.reviewBucketKey || ""),
     reviewBucketLabel: eduopsClean_(actionability.reviewBucketLabel || ""),
+    admissionsStageKey: eduopsClean_(actionability.admissionsStageKey || ""),
+    admissionsStageLabel: eduopsClean_(actionability.admissionsStageLabel || ""),
     reviewReason: eduopsClean_(actionability.reviewReason || ""),
     reviewRequirement: eduopsClean_(actionability.reviewRequirement || ""),
     reviewWaitingOn: eduopsClean_(actionability.reviewWaitingOn || ""),
@@ -285,6 +287,8 @@ function eduopsFodeRowDto_(row, query, snapshotId, reliability) {
     reviewLifecycle: {
       bucketKey: eduopsClean_(row.reviewBucketKey || ""),
       bucketLabel: reviewBucketPresentation.label || "",
+      admissionsStageKey: eduopsClean_(row.admissionsStageKey || ""),
+      admissionsStageLabel: eduopsClean_(row.admissionsStageLabel || ""),
       lifecycleStage: eduopsClean_(row.canonicalLifecycle && (row.canonicalLifecycle.lifecycleStage || row.canonicalLifecycle.baseState) || ""),
       requirement: eduopsClean_(row.reviewRequirement || ""),
       reason: eduopsClean_(row.reviewReason || ""),

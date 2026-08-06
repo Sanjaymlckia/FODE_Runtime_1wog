@@ -19,7 +19,7 @@ function extract(name) {
 
 const context = { clean_: value => String(value == null ? "" : value).trim() };
 vm.createContext(context);
-vm.runInContext(`${extract("applicantReviewFollowupEvidence_")}\n${extract("applicantReviewLifecycleProjection_")}\n${extract("compareActionabilityPreviewRows_")}\n${extract("applicantReviewLifecycleReconciliationEmpty_")}\n${extract("applicantReviewLifecycleReconcile_")}`, context);
+vm.runInContext(`${extract("applicantReviewFollowupEvidence_")}\n${extract("applicantAdmissionsStageProjection_")}\n${extract("applicantReviewLifecycleProjection_")}\n${extract("compareActionabilityPreviewRows_")}\n${extract("applicantReviewLifecycleReconciliationEmpty_")}\n${extract("applicantReviewLifecycleReconcile_")}`, context);
 
 const identity = { applicantId: "FODE-R412A-1", lifecycleStage: "INCOMPLETE_DOCUMENTS", requirement: "Passport copy", documentsIncomplete: true };
 const event = operationId => ({ applicantId: identity.applicantId, lifecycleStage: identity.lifecycleStage, requirement: identity.requirement, result: "SENT", correctlyBound: true, operationId });

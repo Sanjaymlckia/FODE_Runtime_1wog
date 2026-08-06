@@ -12,11 +12,28 @@
     .opsLifecycleToggle{ display:flex; flex-wrap:wrap; gap:8px; }
     .opsLifecycleModeBtn{ border:1px solid #cddded; background:#fff; color:#1d3550; border-radius:999px; padding:8px 12px; font-weight:900; cursor:pointer; }
     .opsLifecycleModeBtn.active{ background:#1f70ea; border-color:#1f70ea; color:#fff; }
-    .opsReviewLifecycleDeck{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:9px; margin:12px 0; }
+    .opsAdmissionsPopulationSummary{ display:grid; grid-template-columns:minmax(0,1fr) repeat(3,minmax(100px,auto)); gap:10px; align-items:center; margin:12px 0; padding:12px; background:#f4f8fc; border:1px solid #d5e2ee; border-radius:10px; }
+    .opsAdmissionsPopulationSummary strong{ font-size:16px; color:#14263b; }
+    .opsAdmissionsPopulationMetric{ display:grid; gap:2px; min-width:0; }
+    .opsAdmissionsPopulationMetric span{ color:#6a7e92; font-size:10px; font-weight:900; text-transform:uppercase; }
+    .opsAdmissionsPopulationMetric b{ color:#1f5aa5; font-size:20px; }
+    .opsAdmissionsStageStrip{ display:grid; grid-template-columns:repeat(6,minmax(145px,1fr)); gap:7px; margin:10px 0; overflow-x:auto; padding:2px 1px 5px; }
+    .opsAdmissionsStageBtn{ min-height:70px; padding:9px; border:1px solid #cddded; border-radius:8px; background:#fff; color:#17324d; text-align:left; cursor:pointer; }
+    .opsAdmissionsStageBtn span,.opsAdmissionsStageBtn strong{ display:block; }
+    .opsAdmissionsStageBtn span{ font-weight:900; }
+    .opsAdmissionsStageBtn strong{ margin-top:4px; color:#1f70ea; font-size:22px; }
+    .opsAdmissionsStageBtn[aria-selected="true"]{ color:#fff; background:#1f5aa5; border-color:#1f5aa5; }
+    .opsAdmissionsStageBtn[aria-selected="true"] strong{ color:#fff; }
+    .opsAdmissionsHierarchy{ display:grid; grid-template-columns:minmax(0,1fr) minmax(210px,.28fr); gap:10px; align-items:start; }
+    .opsAdmissionsWorklistPanel,.opsAdmissionsExceptionPanel{ min-width:0; padding:10px; border:1px solid #dce6ef; border-radius:9px; background:#fbfdff; }
+    .opsAdmissionsWorklistPanel h3,.opsAdmissionsExceptionPanel h3{ margin:0 0 3px; color:#17324d; font-size:14px; }
+    .opsAdmissionsWorklistPanel p,.opsAdmissionsExceptionPanel p{ margin:0 0 8px; color:#60758b; font-size:11px; }
+    .opsReviewLifecycleDeck{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:7px; }
+    .opsAdmissionsExceptionDeck{ display:grid; gap:6px; }
     .opsReviewLifecycleCard{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px 10px; min-height:94px; padding:11px; border:1px solid #dce6ef; border-radius:9px; background:#fff; color:#17324d; text-align:left; cursor:pointer; }
     .opsReviewLifecycleCard:hover{ border-color:#7da9dc; background:#f7fbff; }
     .opsReviewLifecycleCard.active{ border-color:#1f70ea; box-shadow:inset 0 0 0 2px rgba(31,112,234,.18); background:#f2f7ff; }
-    .opsReviewLifecycleCard.closed{ border-style:dashed; }
+    .opsReviewLifecycleCard.closed,.opsReviewLifecycleCard.exception{ border-style:dashed; }
     .opsReviewLifecycleCard .bucketName{ font-weight:900; line-height:1.25; }
     .opsReviewLifecycleCard .bucketCount{ color:#1f70ea; font-size:22px; font-weight:900; }
     .opsReviewLifecycleCard .bucketStages{ grid-column:1 / -1; color:#60758b; font-size:11px; line-height:1.35; }
@@ -30,7 +47,10 @@
     .opsLegacyLifecycleDetails{ margin-top:16px; border-top:1px solid #dce6ef; padding-top:12px; }
     .opsLegacyLifecycleDetails > summary{ color:#536b82; font-weight:800; cursor:pointer; }
     @media (max-width:720px){
-      .opsReviewLifecycleDeck{ grid-template-columns:1fr; }
+      .opsAdmissionsPopulationSummary{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+      .opsAdmissionsPopulationSummary > strong{ grid-column:1 / -1; }
+      .opsAdmissionsStageStrip{ grid-template-columns:repeat(2,minmax(0,1fr)); overflow:visible; }
+      .opsAdmissionsHierarchy,.opsReviewLifecycleDeck{ grid-template-columns:1fr; }
       .opsReviewLifecycleRow{ grid-template-columns:1fr; }
       .opsReviewLifecycleWhy{ grid-column:1; }
       .opsReviewLifecycleSelection{ align-items:flex-start; flex-direction:column; }
@@ -38,28 +58,27 @@
 </style>
 <section id="opsLifecycleMap" class="opsSectionPage" data-ops-mode-group="operator">
   <div class="opsPageIntro">
-    <div><h2>Applicant Lifecycle Worklists</h2><p>Canonical lifecycle buckets are the primary staff work-management view. Select a bucket to see its loaded applicants and evidence.</p></div>
+    <div><h2>Admissions-stage workspace</h2><p>Whole population → admissions stage → precise worklist → applicant action.</p></div>
     <span class="opsStatusPill ok" id="opsReviewLifecycleAuthorityPill">Canonical projection</span>
   </div>
   <div class="opsCard">
-    <div class="opsSafetyNotice">Counts reconcile to the Population Ledger. Closed outcomes are separated from active work; Lost / uncontactable is read-only and never presented as sendable.</div>
-    <div class="opsReviewLifecycleDeck" id="opsReviewLifecycleBucketCards" role="tablist" aria-label="Canonical applicant lifecycle worklists"></div>
-    <div class="opsReviewLifecycleSelection" id="opsReviewLifecycleSelection"><strong>Selected worklist: All active lifecycle work</strong><span>Choose a bucket above to filter the loaded worklist.</span></div>
-    <div class="opsReviewLifecycleRows" id="opsReviewLifecycleRows"></div>
-    <details class="opsLegacyLifecycleDetails">
-      <summary>Secondary compatibility stage map</summary>
-      <p class="opsSafetyNotice">This legacy stage aggregate is retained for compatibility and batch-stage navigation. It is not the primary applicant lifecycle worklist.</p>
-    <div class="opsLifecycleControls">
-      <div class="opsLifecycleToggle" aria-label="Lifecycle view mode">
-        <button class="opsLifecycleModeBtn active" id="opsLifecycleGlobalBtn" type="button" onclick="opsSetLifecycleViewMode_('global')">Global View</button>
-        <button class="opsLifecycleModeBtn" id="opsLifecycleWorkingBtn" type="button" onclick="opsSetLifecycleViewMode_('working')">Working View</button>
-      </div>
-      <span class="opsStatusPill info" id="opsLifecycleLoadedMeta">Loading lifecycle summary</span>
+    <div class="opsSafetyNotice">Counts reconcile to the Population Ledger. Exceptions are separate from admissions stages; Lost / uncontactable is read-only and never presented as sendable.</div>
+    <div class="opsAdmissionsPopulationSummary" id="opsAdmissionsPopulationSummary" aria-label="Applicant population summary"></div>
+    <div class="opsAdmissionsStageStrip" id="opsAdmissionsStageStrip" role="tablist" aria-label="Admissions stages"></div>
+    <div class="opsAdmissionsHierarchy">
+      <section class="opsAdmissionsWorklistPanel" aria-labelledby="opsAdmissionsWorklistHeading">
+        <h3 id="opsAdmissionsWorklistHeading">Precise worklists</h3>
+        <p id="opsAdmissionsWorklistHint">Choose an admissions stage to see its applicable worklists.</p>
+        <div class="opsReviewLifecycleDeck" id="opsReviewLifecycleBucketCards" role="tablist" aria-label="Precise applicant worklists"></div>
+      </section>
+      <aside class="opsAdmissionsExceptionPanel" aria-labelledby="opsAdmissionsExceptionHeading">
+        <h3 id="opsAdmissionsExceptionHeading">Exceptions and utilities</h3>
+        <p>Counted links outside the admissions-stage sequence.</p>
+        <div class="opsAdmissionsExceptionDeck" id="opsAdmissionsExceptionCards"></div>
+      </aside>
     </div>
-    <div class="opsSafetyNotice" id="opsLifecycleScopeText" style="margin-bottom:12px;">Global View is full active admissions population truth. Working queues remain loaded, filtered, and paginated operational snapshots.</div>
-    <div class="opsStageCascade" id="opsLifecycleStageCards"></div>
-    <div class="opsInspectPanel" id="opsLifecycleInspector">Select a lifecycle stage. Global counts come from the full active admissions population; loaded record drill-down remains a Working View operation.</div>
-    </details>
+    <div class="opsReviewLifecycleSelection" id="opsReviewLifecycleSelection"><strong>Documents → Review / follow-up</strong><span>Loaded applicants use the canonical population projection.</span></div>
+    <div class="opsReviewLifecycleRows" id="opsReviewLifecycleRows"></div>
   </div>
 </section>
 <script>
@@ -72,21 +91,33 @@
       generatedAt: "",
       source: "pending"
     };
-    var opsSelectedReviewBucket = "ALL_ACTIVE";
+    var opsSelectedAdmissionsStage = "DOCUMENTS";
+    var opsSelectedReviewBucket = "DOCUMENTS_FOLLOW_UP";
+    function opsAdmissionsStageDefinitions_(){
+      return [
+        { key:"DOCUMENTS", label:"Documents", worklists:["DOCUMENTS_FOLLOW_UP","DOCUMENTS_ASSESSMENT"] },
+        { key:"WAITING_ON_APPLICANT", label:"Waiting on applicant", worklists:["PENDING_APPLICANT_RESPONSE","HELD_ABEYANCE_NO_RESPONSE"] },
+        { key:"INTERNAL_ASSESSMENT", label:"Internal assessment", worklists:["WORKING_ON_IT","HELD_ABEYANCE_OTHER"] },
+        { key:"DECISION", label:"Decision", worklists:["READY_FOR_DECISION"] },
+        { key:"ONBOARDING", label:"Onboarding", worklists:["ADMITTED_ONBOARDING_OUTSTANDING"] },
+        { key:"CLOSED_OUTCOMES", label:"Closed outcomes", worklists:["CLOSED_OUTCOME"] }
+      ];
+    }
     function opsReviewLifecycleDefinitions_(){
       return [
-        { key:"ALL_ACTIVE", label:"All active lifecycle work", closed:false },
-        { key:"DOCUMENTS_FOLLOW_UP", label:"Documents — review / follow-up", closed:false },
-        { key:"DOCUMENTS_ASSESSMENT", label:"Documents received — assessment / verification required", closed:false },
-        { key:"PENDING_APPLICANT_RESPONSE", label:"Pending applicant response", closed:false },
-        { key:"HELD_ABEYANCE_NO_RESPONSE", label:"Held in abeyance — no response", closed:false },
-        { key:"HELD_ABEYANCE_OTHER", label:"Held in abeyance — other reason", closed:false },
-        { key:"WORKING_ON_IT", label:"Working on it", closed:false },
-        { key:"READY_FOR_DECISION", label:"Ready for decision", closed:false },
-        { key:"ADMITTED_ONBOARDING_OUTSTANDING", label:"Admitted — onboarding outstanding", closed:false },
-        { key:"LOST_UNCONTACTABLE", label:"Lost / uncontactable", closed:false },
-        { key:"DATA_INTEGRITY_EXCEPTION", label:"Data / integrity exception", closed:false },
-        { key:"CLOSED_OUTCOME", label:"Closed outcomes", closed:true }
+        { key:"DOCUMENTS_FOLLOW_UP", label:"Review / follow-up", stageKey:"DOCUMENTS" },
+        { key:"DOCUMENTS_ASSESSMENT", label:"Received — verification", stageKey:"DOCUMENTS" },
+        { key:"PENDING_APPLICANT_RESPONSE", label:"Pending response", stageKey:"WAITING_ON_APPLICANT" },
+        { key:"HELD_ABEYANCE_NO_RESPONSE", label:"Held in abeyance — no response", stageKey:"WAITING_ON_APPLICANT" },
+        { key:"WORKING_ON_IT", label:"Working on it", stageKey:"INTERNAL_ASSESSMENT" },
+        { key:"HELD_ABEYANCE_OTHER", label:"Held in abeyance — other reason", stageKey:"INTERNAL_ASSESSMENT" },
+        { key:"READY_FOR_DECISION", label:"Ready for decision", stageKey:"DECISION" },
+        { key:"ADMITTED_ONBOARDING_OUTSTANDING", label:"Admitted — onboarding outstanding", stageKey:"ONBOARDING" },
+        { key:"CLOSED_OUTCOME", label:"Closed outcomes", stageKey:"CLOSED_OUTCOMES", closed:true },
+        { key:"LOST_UNCONTACTABLE", label:"Lost / uncontactable", exception:true },
+        { key:"DATA_INTEGRITY_EXCEPTION", label:"Data / integrity exception", exception:true },
+        { key:"ALL_ACTIVE", label:"All active work", utility:true },
+        { key:"LEGACY_REVIEW_AGGREGATE", label:"Legacy Review aggregate", utility:true, secondary:true }
       ];
     }
     function opsReviewLifecycleBucketKey_(row){
@@ -96,6 +127,7 @@
       var key = String(bucketKey || "ALL_ACTIVE").trim().toUpperCase();
       return opsAllQueueRows_().filter(function(row){
         var rowKey = opsReviewLifecycleBucketKey_(row);
+        if (key === "LEGACY_REVIEW_AGGREGATE") return String(row.actionabilityState || "").toUpperCase() === "REVIEW_REQUIRED";
         return key === "ALL_ACTIVE" ? rowKey !== "CLOSED_OUTCOME" : rowKey === key;
       });
     }
@@ -104,7 +136,15 @@
       if (definition.key === "ALL_ACTIVE") {
         return Object.keys(counts).reduce(function(total, key){ return key === "CLOSED_OUTCOME" ? total : total + Number(counts[key] || 0); }, 0);
       }
+      if (definition.key === "LEGACY_REVIEW_AGGREGATE") return Number(typeof actionabilityWorkloadSummaryState !== "undefined" && actionabilityWorkloadSummaryState.REVIEW_REQUIRED || 0);
       return Number(counts[definition.key] || 0);
+    }
+    function opsAdmissionsStageCount_(stage){
+      var definitions = opsReviewLifecycleDefinitions_();
+      return (stage.worklists || []).reduce(function(total, key){
+        var definition = definitions.filter(function(item){ return item.key === key; })[0];
+        return total + (definition ? opsReviewLifecycleCount_(definition) : 0);
+      }, 0);
     }
     function opsReviewLifecycleStageText_(definition){
       if (definition.key === "ALL_ACTIVE") return "Select a specific bucket for lifecycle-stage subtotals.";
@@ -115,44 +155,79 @@
     function opsReviewLifecycleValue_(label, value){
       return "<div><span class='label'>" + esc(label) + "</span><span class='value'>" + esc(value || "Not returned") + "</span></div>";
     }
+    function opsReviewLifecycleDisplayCode_(value){
+      return String(value || "").toLowerCase().replace(/_/g, " ").replace(/(^|\s)\S/g, function(letter){ return letter.toUpperCase(); });
+    }
     function opsReviewLifecycleRowsHtml_(rows){
       return (Array.isArray(rows) ? rows : []).map(function(row){
         var id = String(row.applicantId || row.ApplicantID || "");
         var name = String(row.name || row.Name || "Unknown applicant");
         var contactability = String(row.contactabilityState || "UNKNOWN").toUpperCase();
         var reviewDate = row.reviewDate || "Not scheduled";
-        var stage = row.canonicalLifecycle && (row.canonicalLifecycle.lifecycleStage || row.canonicalLifecycle.baseState) || row.opsLifecycleStageKey || "UNKNOWN";
+        var stage = row.admissionsStageLabel || opsReviewLifecycleDisplayCode_(row.admissionsStageKey || "UNKNOWN");
         var source = row.reviewSourceEvidence || "Canonical applicant lifecycle projection";
         return "<article class='opsReviewLifecycleRow opsQueueSelectableRow' data-applicant-id='" + esc(id) + "' data-applicant-name='" + esc(name) + "'>"
           + opsReviewLifecycleValue_("Applicant", name + " · " + id)
-          + opsReviewLifecycleValue_("Lifecycle bucket / stage", (row.reviewBucketLabel || opsReviewLifecycleBucketKey_(row).replace(/_/g, " ")) + " · " + String(stage).replace(/_/g, " "))
+          + opsReviewLifecycleValue_("Admissions stage / precise worklist", stage + " · " + (row.reviewBucketLabel || opsReviewLifecycleBucketKey_(row).replace(/_/g, " ")))
           + opsReviewLifecycleValue_("Outstanding requirement", row.reviewRequirement)
-          + opsReviewLifecycleValue_("Waiting on / next action", (row.reviewWaitingOn || "Not returned") + " · " + (row.reviewNextAction || row.nextAction || "Not returned"))
+          + opsReviewLifecycleValue_("Waiting on / next action", (row.reviewWaitingOn || "Not returned") + " · " + opsReviewLifecycleDisplayCode_(row.reviewNextAction || row.nextAction || "Not returned"))
           + opsReviewLifecycleValue_("Contactability", contactability + (opsReviewLifecycleBucketKey_(row) === "LOST_UNCONTACTABLE" ? " · Not sendable" : ""))
           + opsReviewLifecycleValue_("Owner", row.reviewOwner || row.actionOwner)
           + opsReviewLifecycleValue_("Last meaningful activity", row.reviewLastMeaningfulActivity || row.receivedAt)
           + opsReviewLifecycleValue_("Review / reactivation", reviewDate + (row.reviewReactivationCondition ? " · " + row.reviewReactivationCondition : ""))
           + opsReviewLifecycleValue_("Qualifying successful communications", String(Number(row.reviewFollowupCount || 0)) + (row.reviewCommunicationEvidenceAvailable ? " · requirement scoped" : " · evidence unavailable"))
-          + "<details class='opsReviewLifecycleWhy'><summary>Why this is in this queue</summary><div class='value'><strong>Canonical reason:</strong> " + esc(row.reviewReason || "Not returned") + "</div><div class='value'><strong>Source evidence:</strong> " + esc(source) + "</div></details>"
+          + "<details class='opsReviewLifecycleWhy'><summary>Why this is in this worklist</summary><div class='value'><strong>Why this is in this queue:</strong> " + esc(row.reviewReason || "Not returned") + "</div><div class='value'><strong>Source evidence:</strong> " + esc(source) + "</div></details>"
           + "</article>";
       }).join("");
     }
     function renderOpsReviewLifecycleWorklists_(){
       var cards = document.getElementById("opsReviewLifecycleBucketCards");
+      var stagesWrap = document.getElementById("opsAdmissionsStageStrip");
+      var exceptionsWrap = document.getElementById("opsAdmissionsExceptionCards");
+      var population = document.getElementById("opsAdmissionsPopulationSummary");
+      var hint = document.getElementById("opsAdmissionsWorklistHint");
       var selection = document.getElementById("opsReviewLifecycleSelection");
       var rowsWrap = document.getElementById("opsReviewLifecycleRows");
-      if (!cards || !rowsWrap) return;
+      if (!cards || !stagesWrap || !exceptionsWrap || !rowsWrap) return;
       var definitions = opsReviewLifecycleDefinitions_();
-      cards.innerHTML = definitions.map(function(definition){
+      var stageDefinitions = opsAdmissionsStageDefinitions_();
+      var activeDefinition = definitions.filter(function(item){ return item.key === "ALL_ACTIVE"; })[0];
+      var closedDefinition = definitions.filter(function(item){ return item.key === "CLOSED_OUTCOME"; })[0];
+      var activeCount = opsReviewLifecycleCount_(activeDefinition);
+      var closedCount = opsReviewLifecycleCount_(closedDefinition);
+      if (population) population.innerHTML = "<strong>Population Ledger</strong><div class='opsAdmissionsPopulationMetric'><span>Total applicants</span><b>" + String(activeCount + closedCount) + "</b></div><div class='opsAdmissionsPopulationMetric'><span>Active</span><b>" + String(activeCount) + "</b></div><div class='opsAdmissionsPopulationMetric'><span>Closed</span><b>" + String(closedCount) + "</b></div>";
+      stagesWrap.innerHTML = stageDefinitions.map(function(stage){
+        return "<button type='button' class='opsAdmissionsStageBtn' data-admissions-stage='" + esc(stage.key) + "' aria-selected='" + (opsSelectedAdmissionsStage === stage.key ? "true" : "false") + "'><span>" + esc(stage.label) + "</span><strong>" + String(opsAdmissionsStageCount_(stage)) + "</strong></button>";
+      }).join("");
+      var selectedStage = stageDefinitions.filter(function(stage){ return stage.key === opsSelectedAdmissionsStage; })[0] || null;
+      var preciseWorklists = selectedStage ? definitions.filter(function(item){ return item.stageKey === selectedStage.key; }) : [];
+      if (hint) hint.textContent = selectedStage ? selectedStage.label + " worklists; choose one to filter the central applicant list." : "A cross-cutting exception or utility is selected; choose a stage to return to its precise worklists.";
+      cards.innerHTML = preciseWorklists.map(function(definition){
         return "<button type='button' class='opsReviewLifecycleCard" + (opsSelectedReviewBucket === definition.key ? " active" : "") + (definition.closed ? " closed" : "") + "' data-review-lifecycle-bucket='" + esc(definition.key) + "' aria-selected='" + (opsSelectedReviewBucket === definition.key ? "true" : "false") + "'><span class='bucketName'>" + esc(definition.label) + "</span><span class='bucketCount'>" + String(opsReviewLifecycleCount_(definition)) + "</span><span class='bucketStages'>" + esc(opsReviewLifecycleStageText_(definition)) + "</span></button>";
+      }).join("");
+      var exceptions = definitions.filter(function(item){ return item.exception === true || item.utility === true; });
+      exceptionsWrap.innerHTML = exceptions.map(function(definition){
+        return "<button type='button' class='opsReviewLifecycleCard exception" + (opsSelectedReviewBucket === definition.key ? " active" : "") + "' data-review-lifecycle-bucket='" + esc(definition.key) + "' aria-selected='" + (opsSelectedReviewBucket === definition.key ? "true" : "false") + "'><span class='bucketName'>" + esc(definition.label) + "</span><span class='bucketCount'>" + String(opsReviewLifecycleCount_(definition)) + "</span></button>";
       }).join("");
       var selected = definitions.filter(function(item){ return item.key === opsSelectedReviewBucket; })[0] || definitions[0];
       var rows = opsRowsForReviewLifecycleBucket_(selected.key);
-      if (selection) selection.innerHTML = "<strong>Selected worklist: " + esc(selected.label) + "</strong><span>" + String(rows.length) + " loaded row(s)" + (queueDataState && queueDataState.hasMore ? "; use Load More for the remaining bounded snapshot." : ".") + "</span>";
+      var hierarchyLabel = selectedStage && selected.stageKey === selectedStage.key ? selectedStage.label + " → " + selected.label : "Exceptions and utilities → " + selected.label;
+      if (selection) selection.innerHTML = "<strong>" + esc(hierarchyLabel) + "</strong><span>" + String(rows.length) + " loaded row(s)" + (queueDataState && queueDataState.hasMore ? "; use Load More for the remaining bounded snapshot." : ".") + "</span>";
       rowsWrap.innerHTML = rows.length ? opsReviewLifecycleRowsHtml_(rows) : "<div class='opsPlaceholder'>No loaded applicants currently resolve to this lifecycle worklist.</div>";
-      Array.prototype.slice.call(cards.querySelectorAll("[data-review-lifecycle-bucket]")).forEach(function(button){
+      Array.prototype.slice.call(stagesWrap.querySelectorAll("[data-admissions-stage]")).forEach(function(button){
+        button.addEventListener("click", function(){
+          opsSelectedAdmissionsStage = String(button.getAttribute("data-admissions-stage") || "DOCUMENTS");
+          var selectedStageDefinition = stageDefinitions.filter(function(stage){ return stage.key === opsSelectedAdmissionsStage; })[0];
+          opsSelectedReviewBucket = selectedStageDefinition && selectedStageDefinition.worklists[0] || "DOCUMENTS_FOLLOW_UP";
+          opsActionState.queueFilter = "review:" + opsSelectedReviewBucket;
+          renderOpsQueue_();
+        });
+      });
+      Array.prototype.slice.call(document.querySelectorAll("#opsReviewLifecycleBucketCards [data-review-lifecycle-bucket], #opsAdmissionsExceptionCards [data-review-lifecycle-bucket]")).forEach(function(button){
         button.addEventListener("click", function(){
           opsSelectedReviewBucket = String(button.getAttribute("data-review-lifecycle-bucket") || "ALL_ACTIVE");
+          var selectedDefinition = definitions.filter(function(item){ return item.key === opsSelectedReviewBucket; })[0];
+          opsSelectedAdmissionsStage = selectedDefinition && selectedDefinition.stageKey || "";
           opsActionState.queueFilter = "review:" + opsSelectedReviewBucket;
           renderOpsQueue_();
           opsScrollTo_("opsReviewLifecycleRows");

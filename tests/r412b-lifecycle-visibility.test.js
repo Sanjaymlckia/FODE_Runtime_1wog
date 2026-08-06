@@ -14,7 +14,7 @@ assert.match(adminUi, /Waiting on:[\s\S]*Why this is in this queue:[\s\S]*Source
 assert.match(canonical, /reviewBucketKey:[\s\S]*reviewReason:[\s\S]*reviewRequirement:[\s\S]*reviewWaitingOn:/, "canonical population must retain R412A lifecycle fields");
 assert.match(adapter, /reviewBucketKey: eduopsClean_\(actionability\.reviewBucketKey[\s\S]*reviewFollowupCount:[\s\S]*reviewCommunicationEvidenceAvailable:/, "EduOps adapter must pass canonical lifecycle evidence through without recalculation");
 assert.match(adapter, /reviewLifecycle: \{[\s\S]*bucketKey:[\s\S]*requirement:[\s\S]*qualifyingCommunicationCount:/, "EduOps DTO must expose the authoritative lifecycle position");
-assert.match(eduopsUi, /review\.bucketLabel[\s\S]*review\.lifecycleStage[\s\S]*review\.requirement/, "EduOps worklist rows must show lifecycle bucket, stage, and requirement");
+assert.match(eduopsUi, /review\.admissionsStageLabel[\s\S]*review\.bucketLabel[\s\S]*review\.requirement/, "EduOps worklist rows must show admissions stage, precise worklist, and requirement");
 assert.match(eduopsUi, /Why this is in this queue[\s\S]*Waiting on[\s\S]*Qualifying communications[\s\S]*Source evidence/, "EduOps quick view must expose evidence and read-only communication status");
 assert.match(workload, /"reviewBucketKey", "reviewReason", "reviewRequirement"/, "Admin/EduOps parity diagnostics must compare canonical lifecycle fields");
 assert.match(eduopsShell, /eduops-table-scroll/, "EduOps lifecycle rows remain inside the responsive table container");

@@ -7,11 +7,11 @@ const styles = fs.readFileSync("EduOps_OperationsWorkspaceStyles.html", "utf8");
 const components = fs.readFileSync("EduOps_ClientComponents.html", "utf8");
 const workload = fs.readFileSync("EduOps_Workload.js", "utf8");
 
-assert.match(config, /VERSION:\s*"r413"/);
-assert.match(config, /DEPLOY_VERSION_NUMBER:\s*413/);
+assert.match(config, /VERSION:\s*"r414"/);
+assert.match(config, /DEPLOY_VERSION_NUMBER:\s*414/);
 assert.doesNotMatch(html, /class="eduops-worklist-key-band"[^>]*aria-hidden="true"/);
 assert.doesNotMatch(styles, /\.eduops-worklist-key-band,\s*\.eduops-operations-layout \.eduops-work-scope-band \{ display: none; \}/);
-assert.match(styles, /\.eduops-operations-layout \.eduops-worklist-key-band \{\s*display: grid;[\s\S]*max-height: 180px;/);
+assert.match(styles, /\.eduops-operations-layout \.eduops-worklist-key-band \{\s*display: block;[\s\S]*max-height: none;/);
 assert.match(styles, /\.eduops-operations-layout \.eduops-worklist-keys \{\s*display: grid;[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(190px, 1fr\)\);/);
 assert.match(styles, /@media \(max-width: 560px\)[\s\S]*\.eduops-operations-layout \.eduops-worklist-keys \{ grid-template-columns: 1fr; \}/);
 assert.match(components, /data-lifecycle-worklist/);

@@ -3222,6 +3222,32 @@ function applicantReviewFollowupEvidence_(events, applicantId, requirement, life
   return qualifying;
 }
 
+function applicantAdmissionsStageProjection_(reviewBucketKey, lifecycleStage) {
+  var bucketKey = clean_(reviewBucketKey || "").toUpperCase();
+  var mapped = {
+    DOCUMENTS_FOLLOW_UP: ["DOCUMENTS", "Documents"],
+    DOCUMENTS_ASSESSMENT: ["DOCUMENTS", "Documents"],
+    PENDING_APPLICANT_RESPONSE: ["WAITING_ON_APPLICANT", "Waiting on applicant"],
+    HELD_ABEYANCE_NO_RESPONSE: ["WAITING_ON_APPLICANT", "Waiting on applicant"],
+    WORKING_ON_IT: ["INTERNAL_ASSESSMENT", "Internal assessment"],
+    HELD_ABEYANCE_OTHER: ["INTERNAL_ASSESSMENT", "Internal assessment"],
+    READY_FOR_DECISION: ["DECISION", "Decision"],
+    ADMITTED_ONBOARDING_OUTSTANDING: ["ONBOARDING", "Onboarding"],
+    CLOSED_OUTCOME: ["CLOSED_OUTCOMES", "Closed outcomes"]
+  };
+  var stage = mapped[bucketKey];
+  if (!stage) {
+    var lifecycle = clean_(lifecycleStage || "").toUpperCase();
+    if (/CLOSED|WITHDRAWN|NOT_ADMITTED|EXPIRED/.test(lifecycle)) stage = ["CLOSED_OUTCOMES", "Closed outcomes"];
+    else if (/ADMIT|ENROL|ONBOARD|CLASSROOM/.test(lifecycle)) stage = ["ONBOARDING", "Onboarding"];
+    else if (/DECISION|ELIGIB/.test(lifecycle)) stage = ["DECISION", "Decision"];
+    else if (/ASSESS|VERIFY|REVIEW|WORKING/.test(lifecycle)) stage = ["INTERNAL_ASSESSMENT", "Internal assessment"];
+    else if (/PENDING|WAIT|HOLD|CONTACT/.test(lifecycle) || bucketKey === "LOST_UNCONTACTABLE") stage = ["WAITING_ON_APPLICANT", "Waiting on applicant"];
+    else stage = ["DOCUMENTS", "Documents"];
+  }
+  return { key: stage[0], label: stage[1] };
+}
+
 function applicantReviewLifecycleProjection_(facts) {
   var f = facts && typeof facts === "object" ? facts : {};
   var stage = clean_(f.lifecycleStage || "UNKNOWN").toUpperCase();
@@ -3244,7 +3270,10 @@ function applicantReviewLifecycleProjection_(facts) {
     reason: ""
   };
   function bucket(key, label, reason, waitingOn) {
+    var admissionsStage = applicantAdmissionsStageProjection_(key, stage);
     common.bucketKey = key; common.bucketLabel = label; common.reason = reason;
+    common.admissionsStageKey = admissionsStage.key;
+    common.admissionsStageLabel = admissionsStage.label;
     if (waitingOn) common.waitingOn = waitingOn;
     return common;
   }
@@ -3475,6 +3504,8 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     worklistReason: clean_(worklistProjection.worklistReason || ""),
     reviewBucketKey: reviewLifecycle.bucketKey,
     reviewBucketLabel: reviewLifecycle.bucketLabel,
+    admissionsStageKey: reviewLifecycle.admissionsStageKey,
+    admissionsStageLabel: reviewLifecycle.admissionsStageLabel,
     reviewReason: reviewLifecycle.reason,
     reviewRequirement: reviewLifecycle.requirement,
     reviewWaitingOn: reviewLifecycle.waitingOn,
@@ -3962,6 +3993,8 @@ function admin_getActionabilityPreview(payload) {
       worklistReason: clean_(actionability.worklistReason || ""),
       reviewBucketKey: clean_(actionability.reviewBucketKey || ""),
       reviewBucketLabel: clean_(actionability.reviewBucketLabel || ""),
+      admissionsStageKey: clean_(actionability.admissionsStageKey || ""),
+      admissionsStageLabel: clean_(actionability.admissionsStageLabel || ""),
       reviewReason: clean_(actionability.reviewReason || ""),
       reviewRequirement: clean_(actionability.reviewRequirement || ""),
       reviewWaitingOn: clean_(actionability.reviewWaitingOn || ""),
@@ -4044,6 +4077,8 @@ function admin_getActionabilityPreview(payload) {
       });
       item.reviewBucketKey = derivedReviewLifecycle.bucketKey;
       item.reviewBucketLabel = derivedReviewLifecycle.bucketLabel;
+      item.admissionsStageKey = derivedReviewLifecycle.admissionsStageKey;
+      item.admissionsStageLabel = derivedReviewLifecycle.admissionsStageLabel;
       item.reviewReason = derivedReviewLifecycle.reason;
       item.reviewRequirement = derivedReviewLifecycle.requirement;
       item.reviewWaitingOn = derivedReviewLifecycle.waitingOn;
@@ -4054,6 +4089,11 @@ function admin_getActionabilityPreview(payload) {
       item.reviewDate = derivedReviewLifecycle.reviewDate;
       item.reviewReactivationCondition = derivedReviewLifecycle.reactivationCondition;
       item.reviewLastMeaningfulActivity = derivedReviewLifecycle.lastMeaningfulActivity || item.lastRelevantDate;
+    }
+    if (!item.admissionsStageKey) {
+      var derivedAdmissionsStage = applicantAdmissionsStageProjection_(item.reviewBucketKey, item.canonicalLifecycle.lifecycleStage);
+      item.admissionsStageKey = derivedAdmissionsStage.key;
+      item.admissionsStageLabel = derivedAdmissionsStage.label;
     }
     var owner = clean_(item.actionOwner || "NONE").toUpperCase() || "NONE";
     if (!Object.prototype.hasOwnProperty.call(out.countsByOwner, owner)) out.countsByOwner[owner] = 0;
