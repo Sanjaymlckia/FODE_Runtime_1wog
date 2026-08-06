@@ -5,6 +5,7 @@ const vm = require("node:vm");
 const admin = fs.readFileSync("Admin.js", "utf8");
 const canonical = fs.readFileSync("Admin_CanonicalPopulation.js", "utf8");
 const adminUi = fs.readFileSync("AdminUI_OpsLifecycle.html", "utf8");
+const adminPrimaryUi = fs.readFileSync("AdminUI.html", "utf8");
 const adapter = fs.readFileSync("EduOps_FODE_Adapter.js", "utf8");
 const workload = fs.readFileSync("EduOps_Workload.js", "utf8");
 const eduopsHtml = fs.readFileSync("EduOps.html", "utf8");
@@ -100,6 +101,71 @@ const exceptions = Array.from(eduopsContext.eduopsLifecycleExceptionPresentation
 assert.deepEqual(exceptions.map(item => item.label), ["Lost / uncontactable", "Data / integrity exception", "All active work", "Legacy Review aggregate"]);
 assert.equal(exceptions.find(item => item.code === "LEGACY_REVIEW_AGGREGATE").count, 4);
 
+const reviewDefinitions = [
+  { key:"DOCUMENTS_FOLLOW_UP", label:"Review / follow-up", stageKey:"DOCUMENTS" },
+  { key:"DOCUMENTS_ASSESSMENT", label:"Received — verification", stageKey:"DOCUMENTS" },
+  { key:"PENDING_APPLICANT_RESPONSE", label:"Pending response", stageKey:"WAITING_ON_APPLICANT" },
+  { key:"HELD_ABEYANCE_NO_RESPONSE", label:"Held in abeyance — no response", stageKey:"WAITING_ON_APPLICANT" },
+  { key:"WORKING_ON_IT", label:"Working on it", stageKey:"INTERNAL_ASSESSMENT" },
+  { key:"HELD_ABEYANCE_OTHER", label:"Held in abeyance — other reason", stageKey:"INTERNAL_ASSESSMENT" },
+  { key:"READY_FOR_DECISION", label:"Ready for decision", stageKey:"DECISION" },
+  { key:"ADMITTED_ONBOARDING_OUTSTANDING", label:"Admitted — onboarding outstanding", stageKey:"ONBOARDING" },
+  { key:"CLOSED_OUTCOME", label:"Closed outcomes", stageKey:"CLOSED_OUTCOMES", closed:true },
+  { key:"LOST_UNCONTACTABLE", label:"Lost / uncontactable", exception:true },
+  { key:"DATA_INTEGRITY_EXCEPTION", label:"Data / integrity exception", exception:true },
+  { key:"ALL_ACTIVE", label:"All active work", utility:true },
+  { key:"LEGACY_REVIEW_AGGREGATE", label:"Legacy Review aggregate", utility:true, secondary:true }
+];
+const stageDefinitions = [
+  { key:"DOCUMENTS", label:"Documents", worklists:["DOCUMENTS_FOLLOW_UP","DOCUMENTS_ASSESSMENT"] },
+  { key:"WAITING_ON_APPLICANT", label:"Waiting on applicant", worklists:["PENDING_APPLICANT_RESPONSE","HELD_ABEYANCE_NO_RESPONSE"] },
+  { key:"INTERNAL_ASSESSMENT", label:"Internal assessment", worklists:["WORKING_ON_IT","HELD_ABEYANCE_OTHER"] },
+  { key:"DECISION", label:"Decision", worklists:["READY_FOR_DECISION"] },
+  { key:"ONBOARDING", label:"Onboarding", worklists:["ADMITTED_ONBOARDING_OUTSTANDING"] },
+  { key:"CLOSED_OUTCOMES", label:"Closed outcomes", worklists:["CLOSED_OUTCOME"] }
+];
+const primaryContext = {
+  esc: value => clean(value),
+  opsReviewLifecycleDefinitions_: () => reviewDefinitions,
+  opsAdmissionsStageDefinitions_: () => stageDefinitions,
+  actionabilityActiveReviewBucket: "DOCUMENTS_FOLLOW_UP",
+  actionabilityReviewLifecycleState: { byBucket: Object.fromEntries(lifecycleWorklists.map(item => [item.code, item.count])), activeRows: 10, closedRows: 1 },
+  actionabilityWorkloadSummaryState: { REVIEW_REQUIRED: 4 }
+};
+vm.createContext(primaryContext);
+vm.runInContext([
+  "actionabilityReviewBucketDefinitions_",
+  "actionabilityAdmissionsStageDefinitions_",
+  "actionabilityReviewLifecycleCount_",
+  "renderActionabilityLifecycleBucketDeck_"
+].map(name => extract(adminPrimaryUi, name)).join("\n"), primaryContext);
+const primaryHtml = primaryContext.renderActionabilityLifecycleBucketDeck_([]);
+assert.equal((primaryHtml.match(/data-actionability-admissions-stage=/g) || []).length, 6);
+assert.equal((primaryHtml.match(/data-actionability-review-bucket=/g) || []).length, 6, "two Documents worklists and four exception/utility links must render");
+assert.match(primaryHtml, /Population Ledger[\s\S]*Documents[\s\S]*Review \/ follow-up[\s\S]*Exceptions and utilities/);
+assert.doesNotMatch(primaryHtml, /Canonical lifecycle worklists/);
+
+const eduopsRenderContext = {
+  app: { state: { reviewBucketKey:"DOCUMENTS_FOLLOW_UP", actionabilityState:"ALL" }, esc: value => clean(value) },
+  dom: {
+    eduopsAdmissionsPopulationSummary: { innerHTML:"" },
+    eduopsAdmissionsStages: { innerHTML:"" },
+    eduopsWorklistKeys: { innerHTML:"" },
+    eduopsLifecycleExceptions: { innerHTML:"" }
+  }
+};
+vm.createContext(eduopsRenderContext);
+vm.runInContext(extract(eduopsUi, "renderWorklists"), eduopsRenderContext);
+eduopsRenderContext.renderWorklists({
+  lifecycleWorklists: JSON.parse(JSON.stringify(lifecycleWorklists)),
+  admissionsStages: JSON.parse(JSON.stringify(stages)),
+  populationSummary: { total:11, active:10, closed:1 },
+  actionabilityBuckets: [{ code:"REVIEW_REQUIRED", count:4 }]
+});
+assert.equal((eduopsRenderContext.dom.eduopsWorklistKeys.innerHTML.match(/data-lifecycle-worklist=/g) || []).length, 2);
+assert.equal((eduopsRenderContext.dom.eduopsLifecycleExceptions.innerHTML.match(/<button/g) || []).length, 4, "EduOps must render canonical exceptions even when an older cached DTO omits the convenience field");
+assert.match(eduopsRenderContext.dom.eduopsLifecycleExceptions.innerHTML, /Lost \/ uncontactable[\s\S]*Data \/ integrity exception[\s\S]*All active work[\s\S]*Legacy Review aggregate/);
+
 const canonicalFixture = {
   identity: { applicantId: "FODE-MOREAH-FIXTURE", rowNumber: 44 },
   applicant: { name: "Moreah Fixture" },
@@ -128,9 +194,17 @@ assert.deepEqual(
 assert.match(canonical, /admissionsStageKey:[\s\S]*admissionsStageLabel:/);
 assert.match(adminUi, /Whole population → admissions stage → precise worklist → applicant action/);
 assert.match(adminUi, /id="opsAdmissionsPopulationSummary"[\s\S]*id="opsAdmissionsStageStrip"[\s\S]*id="opsReviewLifecycleBucketCards"[\s\S]*id="opsAdmissionsExceptionCards"/);
+assert.match(adminPrimaryUi, /data-r414-primary-hierarchy="true"/);
+assert.match(adminPrimaryUi, /class="opsAdmissionsPopulationSummary"/);
+assert.match(adminPrimaryUi, /data-actionability-admissions-stage/);
+assert.match(adminPrimaryUi, /class="opsAdmissionsWorklistPanel"/);
+assert.match(adminPrimaryUi, /class="opsAdmissionsExceptionPanel"/);
+assert.match(adminPrimaryUi, /let actionabilityActiveReviewBucket = "DOCUMENTS_FOLLOW_UP"/);
+assert.match(adminPrimaryUi, /function selectActionabilityAdmissionsStage_[\s\S]*selectActionabilityReviewBucket_\(stage\.worklists\[0\]\)/);
 assert.match(eduopsHtml, /id="eduopsAdmissionsPopulationSummary"[\s\S]*id="eduopsAdmissionsStages"[\s\S]*id="eduopsWorklistKeys"[\s\S]*id="eduopsLifecycleExceptions"/);
 assert.match(eduopsUi, /data-admissions-stage[\s\S]*data-first-worklist[\s\S]*data-lifecycle-worklist/);
 assert.match(eduopsUi, /app\.state\.reviewBucketKey = admissionsStage\.getAttribute\("data-first-worklist"\)[\s\S]*app\.requestWorkload/);
+assert.match(eduopsUi, /if \(!lifecycleExceptions\.length\)[\s\S]*LOST_UNCONTACTABLE[\s\S]*DATA_INTEGRITY_EXCEPTION[\s\S]*LEGACY_REVIEW_AGGREGATE/);
 assert.match(eduopsStyles, /@media \(max-width: 560px\)[\s\S]*\.eduops-admissions-stage-strip \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); overflow: visible; \}/);
 assert.doesNotMatch([adminUi, eduopsHtml, eduopsUi].join("\n"), />[^<]*journey[^<]*</i, "journey must not be a staff-facing label");
 assert.doesNotMatch(adminUi, /Secondary compatibility stage map/);

@@ -3899,7 +3899,7 @@
     let actionabilityBucketSortState = "operational";
     let actionabilityActiveGroup = "";
     let actionabilityActiveWorklistKey = "";
-    let actionabilityActiveReviewBucket = "ALL_ACTIVE";
+    let actionabilityActiveReviewBucket = "DOCUMENTS_FOLLOW_UP";
     let actionabilityPreviewMetaState = { includedRows: 0, scannedRows: 0, applicantIdRows: 0, integrityStatus: "" };
     let actionabilityPreviewCountsState = {};
     let actionabilityWorkloadSummaryState = {};
@@ -10234,26 +10234,68 @@ function renderStageDashboard_(items, emptyMessage){
       var selected = String(key || "ALL_ACTIVE").toUpperCase();
       return (Array.isArray(rows) ? rows : []).filter(function(row){
         var bucket = String(row && row.reviewBucketKey || "DATA_INTEGRITY_EXCEPTION").toUpperCase();
+        if (selected === "LEGACY_REVIEW_AGGREGATE") return String(row && row.actionabilityState || "").toUpperCase() === "REVIEW_REQUIRED";
         return selected === "ALL_ACTIVE" ? bucket !== "CLOSED_OUTCOME" : bucket === selected;
       });
     }
 
+    function actionabilityAdmissionsStageDefinitions_(){
+      return typeof opsAdmissionsStageDefinitions_ === "function" ? opsAdmissionsStageDefinitions_() : [
+        { key:"DOCUMENTS", label:"Documents", worklists:["DOCUMENTS_FOLLOW_UP","DOCUMENTS_ASSESSMENT"] },
+        { key:"WAITING_ON_APPLICANT", label:"Waiting on applicant", worklists:["PENDING_APPLICANT_RESPONSE","HELD_ABEYANCE_NO_RESPONSE"] },
+        { key:"INTERNAL_ASSESSMENT", label:"Internal assessment", worklists:["WORKING_ON_IT","HELD_ABEYANCE_OTHER"] },
+        { key:"DECISION", label:"Decision", worklists:["READY_FOR_DECISION"] },
+        { key:"ONBOARDING", label:"Onboarding", worklists:["ADMITTED_ONBOARDING_OUTSTANDING"] },
+        { key:"CLOSED_OUTCOMES", label:"Closed outcomes", worklists:["CLOSED_OUTCOME"] }
+      ];
+    }
+
+    function actionabilityReviewLifecycleCount_(definition, counts){
+      if (definition.key === "ALL_ACTIVE") {
+        return Object.keys(counts).reduce(function(sum, key){ return key === "CLOSED_OUTCOME" ? sum : sum + Number(counts[key] || 0); }, 0);
+      }
+      if (definition.key === "LEGACY_REVIEW_AGGREGATE") return Number(actionabilityWorkloadSummaryState && actionabilityWorkloadSummaryState.REVIEW_REQUIRED || 0);
+      return Number(counts[definition.key] || 0);
+    }
+
     function renderActionabilityLifecycleBucketDeck_(rows){
       var counts = actionabilityReviewLifecycleState && actionabilityReviewLifecycleState.byBucket || {};
-      return '<section class="actionabilityLifecyclePrimary"><div class="actionabilityWorklistTitle"><span>Canonical lifecycle worklists</span><span class="muted">Primary staff work-management view · Population Ledger authority</span></div><div class="opsReviewLifecycleDeck" aria-label="Population Ledger lifecycle worklists">'
-        + actionabilityReviewBucketDefinitions_().map(function(definition){
-          var count = definition.key === "ALL_ACTIVE"
-            ? Object.keys(counts).reduce(function(sum, key){ return key === "CLOSED_OUTCOME" ? sum : sum + Number(counts[key] || 0); }, 0)
-            : Number(counts[definition.key] || 0);
-          var selected = actionabilityActiveReviewBucket === definition.key;
-          var stageCounts = {};
-          actionabilityRowsForReviewBucket_(rows, definition.key).forEach(function(row){
-            var stage = String(row && row.canonicalLifecycle && (row.canonicalLifecycle.lifecycleStage || row.canonicalLifecycle.baseState) || row && row.authorityState && row.authorityState.lifecycleStage || "UNKNOWN").toUpperCase();
-            stageCounts[stage] = Number(stageCounts[stage] || 0) + 1;
-          });
-          var stages = definition.key === "ALL_ACTIVE" ? "Select a bucket for stage subtotals" : Object.keys(stageCounts).sort().map(function(stage){ return stage.replace(/_/g, " ") + " " + stageCounts[stage]; }).join(" · ") || "No returned stage subtotal";
-          return '<button type="button" class="opsReviewLifecycleCard' + (selected ? ' active' : '') + (definition.closed ? ' closed' : '') + '" data-actionability-review-bucket="' + esc(definition.key) + '" aria-selected="' + (selected ? 'true' : 'false') + '" onclick="selectActionabilityReviewBucket_(\'' + esc(definition.key) + '\')"><span class="bucketName">' + esc(definition.label) + '</span><span class="bucketCount">' + String(count) + '</span><span class="bucketStages">' + esc(stages) + '</span></button>';
-        }).join("") + '</div></section>';
+      var definitions = actionabilityReviewBucketDefinitions_();
+      var stages = actionabilityAdmissionsStageDefinitions_();
+      var selectedStage = stages.filter(function(stage){ return (stage.worklists || []).indexOf(actionabilityActiveReviewBucket) >= 0; })[0] || null;
+      var active = Number(actionabilityReviewLifecycleState && actionabilityReviewLifecycleState.activeRows || actionabilityReviewLifecycleCount_({ key:"ALL_ACTIVE" }, counts));
+      var closed = Number(actionabilityReviewLifecycleState && actionabilityReviewLifecycleState.closedRows || counts.CLOSED_OUTCOME || 0);
+      var precise = definitions.filter(function(definition){ return selectedStage && definition.stageKey === selectedStage.key; });
+      var exceptions = definitions.filter(function(definition){ return definition.exception === true || definition.utility === true; });
+      var stageButtons = stages.map(function(stage){
+        var count = (stage.worklists || []).reduce(function(sum, key){
+          var definition = definitions.filter(function(item){ return item.key === key; })[0] || { key:key };
+          return sum + actionabilityReviewLifecycleCount_(definition, counts);
+        }, 0);
+        var selected = selectedStage && selectedStage.key === stage.key;
+        return '<button type="button" data-actionability-admissions-stage="' + esc(stage.key) + '" aria-selected="' + (selected ? 'true' : 'false') + '" onclick="selectActionabilityAdmissionsStage_(\'' + esc(stage.key) + '\')"><span>' + esc(stage.label) + '</span><strong>' + String(count) + '</strong></button>';
+      }).join("");
+      var worklistButtons = precise.map(function(definition){
+        var selected = actionabilityActiveReviewBucket === definition.key;
+        return '<button type="button" class="opsReviewLifecycleCard' + (selected ? ' active' : '') + (definition.closed ? ' closed' : '') + '" data-actionability-review-bucket="' + esc(definition.key) + '" aria-selected="' + (selected ? 'true' : 'false') + '" onclick="selectActionabilityReviewBucket_(\'' + esc(definition.key) + '\')"><span class="bucketName">' + esc(definition.label) + '</span><span class="bucketCount">' + String(actionabilityReviewLifecycleCount_(definition, counts)) + '</span></button>';
+      }).join("");
+      var exceptionButtons = exceptions.map(function(definition){
+        var selected = actionabilityActiveReviewBucket === definition.key;
+        return '<button type="button" class="opsReviewLifecycleCard' + (selected ? ' active' : '') + '" data-actionability-review-bucket="' + esc(definition.key) + '" aria-selected="' + (selected ? 'true' : 'false') + '" onclick="selectActionabilityReviewBucket_(\'' + esc(definition.key) + '\')"><span class="bucketName">' + esc(definition.label) + '</span><span class="bucketCount">' + String(actionabilityReviewLifecycleCount_(definition, counts)) + '</span></button>';
+      }).join("");
+      return '<section class="actionabilityLifecyclePrimary" data-r414-primary-hierarchy="true">'
+        + '<div class="actionabilityWorklistTitle"><span>Admissions-stage workspace</span><span class="muted">Whole population → admissions stage → precise worklist → applicant action</span></div>'
+        + '<div class="opsAdmissionsPopulationSummary" aria-label="Applicant population summary"><strong>Population Ledger</strong><span><small>Total applicants</small><b>' + String(active + closed) + '</b></span><span><small>Active</small><b>' + String(active) + '</b></span><span><small>Closed</small><b>' + String(closed) + '</b></span></div>'
+        + '<div class="opsAdmissionsStageStrip" role="tablist" aria-label="Admissions stages">' + stageButtons + '</div>'
+        + '<div class="opsAdmissionsHierarchy"><section class="opsAdmissionsWorklistPanel"><h3>Precise worklists</h3><p>' + esc(selectedStage ? selectedStage.label + " worklists" : "Choose an admissions stage to see its applicable worklists.") + '</p><div class="opsReviewLifecycleDeck" role="tablist" aria-label="Precise applicant worklists">' + worklistButtons + '</div></section>'
+        + '<aside class="opsAdmissionsExceptionPanel"><h3>Exceptions and utilities</h3><p>Counted links outside the admissions-stage sequence.</p><div class="opsAdmissionsExceptionDeck">' + exceptionButtons + '</div></aside></div>'
+        + '</section>';
+    }
+
+    function selectActionabilityAdmissionsStage_(key){
+      var stage = actionabilityAdmissionsStageDefinitions_().filter(function(item){ return item.key === String(key || "").toUpperCase(); })[0];
+      if (!stage || !stage.worklists || !stage.worklists.length) return;
+      selectActionabilityReviewBucket_(stage.worklists[0]);
     }
 
     function selectActionabilityReviewBucket_(key){
