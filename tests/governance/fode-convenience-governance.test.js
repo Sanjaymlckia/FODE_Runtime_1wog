@@ -24,6 +24,7 @@ assert.match(fode, /OwnerLease/, "close must preserve governed ownership");
 assert.match(fode, /checkpointBoundary/, "risk profiles must expose one authority boundary");
 assert.match(fode, /live-whoami/, "staging-release doctor must prove live whoami read-only");
 assert.match(sessionTool, /AcceptBaselineAdvance/, "authorized release closure must record baseline advancement explicitly");
+assert.match(sessionTool, /Get-FodeWorkMode/, "governance must classify scope into a proportional work mode");
 assert.match(remoteVerifier, /File\]::ReadAllText/, "remote source verification must read UTF-8 bytes correctly on Windows PowerShell");
 
 assert.equal(project.capabilityProfiles["code-only"].drRequired, false, "code-only work must not inherit the full DR gate");

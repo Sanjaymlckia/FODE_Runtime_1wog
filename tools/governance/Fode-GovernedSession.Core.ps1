@@ -64,3 +64,14 @@ function Get-FodeRollbackDisposition([string]$FailureClass) {
   if ($FailureClass -eq 'GOVERNANCE_TOOL') { return 'PRESERVE_RUNTIME_NO_ROLLBACK' }
   return 'STOP_AND_CLASSIFY'
 }
+
+function Get-FodeWorkMode([string]$Scope) {
+  $value = ([string]$Scope).ToLowerInvariant()
+  if ($value -match '(send|gmail|php|mariadb|mysql|database|ledger|applicant[ -]?data|student|production|drive|sheet|classroom|zoho|credential|secret|token|authori[sz]ation|security|schema|payment|books)') {
+    return [pscustomobject]@{ mode='HIGH'; track='H'; sessionRequired=$true; ownerCheckpoint='Before any external or authority-affecting action'; reason='The scope can affect authority, data, communications, an external system, Student, or Production.' }
+  }
+  if ($value -match '(adminui|eduops|\.html|\.css|client|browser|preview|staging|deploy|repin|clasp|runtime)') {
+    return [pscustomobject]@{ mode='MEDIUM'; track='L'; sessionRequired=$false; ownerCheckpoint='Before commit/push or an Admin staging release'; reason='The scope changes an operator-facing UI or Admin staging surface.' }
+  }
+  return [pscustomobject]@{ mode='LOW'; track='L'; sessionRequired=$false; ownerCheckpoint='None for local work; normal scoped diff and test checks apply'; reason='The scope is local code, tests, documentation, or governance tooling only.' }
+}

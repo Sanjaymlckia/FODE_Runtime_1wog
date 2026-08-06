@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [ValidateSet('Orient','Status','Checkpoint','RecordDecision','TransferOwnership','RecoverLostLease','Recover','Transition','Pause','Resume','Close')]
+  [ValidateSet('Assess','Orient','Status','Checkpoint','RecordDecision','TransferOwnership','RecoverLostLease','Recover','Transition','Pause','Resume','Close')]
   [string]$Action = 'Orient',
   [string]$TaskId = '',
   [string]$TaskLabel = '',
@@ -373,6 +373,12 @@ function Output-State([object]$State, [string]$Message = '') {
   if (!$result.ok -and $Action -in @('Orient','Checkpoint','RecordDecision','Transition','Pause','Resume','Close')) { exit 2 }
 }
 
+if ($Action -eq 'Assess') {
+  $mode = Get-FodeWorkMode $Scope
+  [ordered]@{ ok=$true; repository=$repoRoot; mode=$mode.mode; track=$mode.track; sessionRequired=$mode.sessionRequired; ownerCheckpoint=$mode.ownerCheckpoint; reason=$mode.reason; message='Mode was selected from the declared scope; it performs no state or external action.' } | ConvertTo-Json -Depth 4
+  exit 0
+}
+
 if ($Action -eq 'Status') {
   if (!$previous) { Fail 'No governed checkpoint exists' 'READ_ONLY_RECONCILIATION' }
   if ($previous.branch -ne $observed.branch -or $previous.baselineHead -ne $observed.head) { $previous.governedState = 'BASELINE_DRIFT' }
@@ -591,7 +597,7 @@ if ($Action -eq 'Close') {
   $previous.closedAt = (Get-Date).ToUniversalTime().ToString('o'); $previous.status = 'closed'
   if (!$observed.clean) { $previous.governedState = 'READ_ONLY_RECONCILIATION'; $previous.nextSafeAction = 'Review existing modifications; closure did not certify them.' }
   elseif ($previous.pendingDecision -or $previous.pendingAcceptance) { $previous.governedState = 'OWNER_DECISION_REQUIRED' }
-  elseif ($previous.phase -in @('OPEN','VERIFIED') -or $Decision -eq 'STOPPED_CLEANLY_BEFORE_WORK') { $previous.phase = 'CLOSED'; $previous.governedState = 'GOVERNED_SESSION_READY' }
+  elseif ($previous.phase -in @('OPEN','VERIFIED') -or $Decision -eq 'STOPPED_CLEANLY_BEFORE_WORK' -or ($previous.phase -eq 'RELEASED' -and $AcceptancePassed)) { $previous.phase = 'CLOSED'; $previous.governedState = 'GOVERNED_SESSION_READY' }
   else { $previous.governedState = 'OWNER_DECISION_REQUIRED' }
   Save-Event $previous 'closed'; Output-State $previous 'Governed closure receipt persisted.'; exit 0
 }
