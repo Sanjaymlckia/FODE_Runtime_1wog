@@ -145,13 +145,15 @@ assert.equal((primaryHtml.match(/data-actionability-review-bucket=/g) || []).len
 assert.match(primaryHtml, /Population Ledger[\s\S]*Documents[\s\S]*Review \/ follow-up[\s\S]*Exceptions and utilities/);
 assert.doesNotMatch(primaryHtml, /Canonical lifecycle worklists/);
 
+const currentExceptionTarget = { innerHTML:"" };
 const eduopsRenderContext = {
   app: { state: { reviewBucketKey:"DOCUMENTS_FOLLOW_UP", actionabilityState:"ALL" }, esc: value => clean(value) },
+  document: { getElementById: id => id === "eduopsLifecycleExceptions" ? currentExceptionTarget : null },
   dom: {
     eduopsAdmissionsPopulationSummary: { innerHTML:"" },
     eduopsAdmissionsStages: { innerHTML:"" },
     eduopsWorklistKeys: { innerHTML:"" },
-    eduopsLifecycleExceptions: { innerHTML:"" }
+    eduopsLifecycleExceptions: null
   }
 };
 vm.createContext(eduopsRenderContext);
@@ -163,8 +165,8 @@ eduopsRenderContext.renderWorklists({
   actionabilityBuckets: [{ code:"REVIEW_REQUIRED", count:4 }]
 });
 assert.equal((eduopsRenderContext.dom.eduopsWorklistKeys.innerHTML.match(/data-lifecycle-worklist=/g) || []).length, 2);
-assert.equal((eduopsRenderContext.dom.eduopsLifecycleExceptions.innerHTML.match(/<button/g) || []).length, 4, "EduOps must render canonical exceptions even when an older cached DTO omits the convenience field");
-assert.match(eduopsRenderContext.dom.eduopsLifecycleExceptions.innerHTML, /Lost \/ uncontactable[\s\S]*Data \/ integrity exception[\s\S]*All active work[\s\S]*Legacy Review aggregate/);
+assert.equal((currentExceptionTarget.innerHTML.match(/<button/g) || []).length, 4, "EduOps must render canonical exceptions even when the cached DOM reference and an older DTO omit the convenience fields");
+assert.match(currentExceptionTarget.innerHTML, /Lost \/ uncontactable[\s\S]*Data \/ integrity exception[\s\S]*All active work[\s\S]*Legacy Review aggregate/);
 
 const canonicalFixture = {
   identity: { applicantId: "FODE-MOREAH-FIXTURE", rowNumber: 44 },

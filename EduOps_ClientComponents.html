@@ -60,7 +60,8 @@
     dom.eduopsWorklistKeys.innerHTML = lifecycleWorklists.filter(function (item) { return selectedStage && item.stageKey === selectedStage.code; }).map(function (item) {
       return '<button type="button" class="eduops-worklist-key eduops-lifecycle-worklist-key" data-lifecycle-worklist="' + app.esc(item.code) + '" aria-selected="' + (app.state.reviewBucketKey === item.code ? "true" : "false") + '" data-closed="' + (item.closed === true ? "true" : "false") + '"><span>' + app.esc(item.label) + '</span><span class="eduops-key-count">' + Number(item.count || 0) + '</span></button>';
     }).join("");
-    if (dom.eduopsLifecycleExceptions) dom.eduopsLifecycleExceptions.innerHTML = lifecycleExceptions.map(function (item) {
+    var exceptionTarget = dom.eduopsLifecycleExceptions || document.getElementById("eduopsLifecycleExceptions");
+    if (exceptionTarget) exceptionTarget.innerHTML = lifecycleExceptions.map(function (item) {
       var binding = item.code === "LEGACY_REVIEW_AGGREGATE" ? ' data-legacy-review="true"' : ' data-lifecycle-worklist="' + app.esc(item.code) + '"';
       return '<button type="button" class="eduops-lifecycle-exception"' + binding + ' aria-selected="' + (app.state.reviewBucketKey === item.code || item.code === "LEGACY_REVIEW_AGGREGATE" && app.state.actionabilityState === "REVIEW_REQUIRED" ? "true" : "false") + '><span>' + app.esc(item.label) + '</span><strong>' + Number(item.count || 0) + '</strong></button>';
     }).join("");
