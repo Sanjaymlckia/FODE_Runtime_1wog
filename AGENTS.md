@@ -1,27 +1,47 @@
-CIS only. No discussion edits.
-Modify only files explicitly allowed in current CIS.
+## Standing FODE Operating Policy
+
+Normal local diagnosis, editing, no-send testing, necessary non-mutating
+external reads, and owner-requested local commits require no startup CIS,
+lease recovery, governed-session orientation, or governance transition.
+New chats resume from available accepted context without a recovery ritual.
+
+Protected actions require the owner's fresh, specific approval immediately
+before execution. The approval must identify the exact target, intended
+effect, and any irreversible external change; it does not carry over when
+those materially change. Protected actions are remote pushes; deployments,
+versions, and repins; sends; external or automation-triggered writes;
+database or schema changes; credentials, properties, secrets, or access
+changes; financial actions; and Production writes or changes. Read-only
+Production diagnosis is allowed only when narrowly necessary, minimal, and
+non-mutating.
+
+No release, deployment, send, external write, database or credential change,
+Production change, financial action, or remote push is implied by local work.
+When older repository guidance conflicts with this policy about ordinary local
+work, this policy controls. Existing release identity and live-runtime checks
+remain required once a protected release action has been freshly approved.
 Prefer upstream normalization over repeated null checks.
 Do not add defensive branching unless a concrete failure mode exists.
 Live `whoami` is runtime truth.
 Local source is not proof of live runtime.
 Hot paths must avoid repeated sheet scans, repeated resolver calls, redundant guards.
 Every release requires exact acceptance URLs and PASS/FAIL checks.
-Release incomplete until the target deployment's live whoami and CIS-required browser checks pass. For an Admin-only release, Admin whoami is required; do not call Student whoami unless the CIS explicitly authorizes it as read-only verification or touches Student.
+Release incomplete until the target deployment's live whoami and owner-approved browser checks pass. For an Admin-only release, Admin whoami is required; do not call Student whoami unless the owner explicitly authorizes it as read-only verification or touches Student.
 When unsure, stop and surface uncertainty instead of guessing.
 Rollback prefers deployment repin first.
 Release closure follows `docs/governance/RELEASE_CLOSURE_DISCIPLINE.md`: close only against approved scope, classify new findings as BLOCKER or FOLLOW-UP, and record follow-ups without expanding the current release unless they are true blockers.
 
 ## Release Track Classification
 
-Every future CIS must explicitly declare exactly one release track before implementation or release work begins:
+Every protected release action must be classified as exactly one release track before execution:
 
-- `Track L` - light UI/documentation work, including documentation-only process hardening. Use only when the CIS does not change backend behavior, data mutation authority, send logic, portal security, payment/Books/classroom logic, schema, Script Properties, or deployment architecture.
-  - Requires the CIS-defined allowed files, scoped diff checks, required runtime identity/deployment proof if a runtime release is performed, and acceptance evidence tied to the changed surface.
-  - Codex browser visual capture is not mandatory. Rendered HTML, screenshots, operator-supplied browser evidence, or other CIS-approved visual/source evidence may satisfy acceptance when recorded as PASS/FAIL.
-  - Track L does not waive the target deployment's `whoami` check for a runtime deployment and does not authorize dangerous actions during acceptance. Student `whoami` remains CIS-authorized read-only verification only for Admin-only releases.
+- `Track L` - light UI/documentation work, including documentation-only process hardening. Use only when the approved action does not change backend behavior, data mutation authority, send logic, portal security, payment/Books/classroom logic, schema, Script Properties, or deployment architecture.
+  - Requires scoped diff checks, required runtime identity/deployment proof if a runtime release is performed, and acceptance evidence tied to the changed surface.
+  - Codex browser visual capture is not mandatory. Rendered HTML, screenshots, operator-supplied browser evidence, or owner-approved visual/source evidence may satisfy acceptance when recorded as PASS/FAIL.
+  - Track L does not waive the target deployment's `whoami` check for a runtime deployment and does not authorize dangerous actions during acceptance. Student `whoami` remains owner-authorized read-only verification only for Admin-only releases.
 - `Track H` - high-risk or behavior-changing release. Required for backend changes; send/write execution logic; authorization or supervisory gates; portal/security/token logic; Books/payment/classroom mutations; schema or Script Properties; or any change with material live-data risk.
-  - Requires full release identity, remote-source, approved deployment repin, target-deployment `whoami`, browser acceptance, safety, rollback, and closure discipline specified by the CIS and this repository. Additional deployment `whoami` checks require CIS authority when that deployment is otherwise no-touch.
-  - Acceptance must exercise only approved read-only or explicitly authorized actions; dangerous actions remain prohibited unless the CIS separately approves the exact action.
+  - Requires full release identity, remote-source, approved deployment repin, target-deployment `whoami`, browser acceptance, safety, rollback, and closure discipline specified by the owner approval and this repository. Additional deployment `whoami` checks require owner authority when that deployment is otherwise no-touch.
+  - Acceptance must exercise only approved read-only or explicitly authorized actions; dangerous actions remain prohibited unless the owner separately approves the exact action.
 
 Documentation-only process hardening is `Track L` and must additionally state `No runtime release`. It must not use an `rNNN` runtime identity, `clasp push`, Apps Script version, deployment repin, or staging tag unless separately authorized later.
 
@@ -50,7 +70,7 @@ Required order:
 7. Remote verification pull must be outside the clasp source root.
 8. Verify pulled remote `Config.js` equals intended local `VERSION` and `DEPLOY_VERSION_NUMBER`.
 9. Only then run `clasp version`.
-10. After version and deployment repin, verify the repinned deployment's `whoami`. Verify any other deployment only when the CIS expressly authorizes read-only verification.
+10. After version and deployment repin, verify the repinned deployment's `whoami`. Verify any other deployment only when the owner expressly authorizes read-only verification.
 11. If `whoami` does not match intended runtime, release fails.
 
 Contaminated version rule:
@@ -67,7 +87,7 @@ Forbidden release shortcuts:
 Codex may use the Chrome extension only for narrow authenticated browser acceptance checks when explicitly instructed.
 
 Rules:
-- Browser acceptance must be read-only unless a separate CIS authorizes action.
+- Browser acceptance must be read-only unless a separate owner approval authorizes action.
 - Codex must not edit code while browser-testing.
 - Codex must not deploy while browser-testing.
 - Codex must not send live emails unless the user explicitly approves the exact recipient and message type.
@@ -84,7 +104,7 @@ Level 1 - Refactor/default:
 - targeted Node regression tests.
 - `git diff --check`.
 - audit/report artifact where required.
-- commit/push when the CIS authorizes closure.
+- commit when the owner requests it; push only when the owner freshly approves it.
 - no Playwright.
 - no Apps Script push, deployment, version, or repin.
 
@@ -95,10 +115,10 @@ Level 2 - Feature/UI:
 
 Level 3 - Release:
 - release preflight.
-- `clasp push`, Apps Script version, and Admin staging repin only when authorized by the release CIS.
-- Target-deployment `whoami` proof as required by the CIS; do not call another deployment's endpoint by implication.
+- `clasp push`, Apps Script version, and Admin staging repin only when freshly authorized by the owner.
+- Target-deployment `whoami` proof as required by the owner approval; do not call another deployment's endpoint by implication.
 - manual/operator acceptance.
-- Playwright only when explicitly requested by the release CIS or when a suspected browser-only regression cannot be proven by Node tests.
+- Playwright only when explicitly requested by the owner or when a suspected browser-only regression cannot be proven by Node tests.
 
 Rules:
 - Do not run Playwright by default.
@@ -108,7 +128,7 @@ Rules:
 
 ## Engineering Efficiency Policy
 
-Docs-only CIS:
+Docs-only work:
 - Run `git status -sb`.
 - Run `git diff --check`.
 - Stage exact files only.
@@ -117,7 +137,7 @@ Docs-only CIS:
 - Do not run Node tests unless docs tooling changed and requires it.
 - Do not run Playwright.
 
-Refactor CIS:
+Refactor work:
 - Validate only changed runtime files.
 - Run only tests protecting the changed authority surface.
 - Do not run exploratory validation unless a concrete defect is found.
@@ -129,7 +149,7 @@ Windows runner:
 - Do not spend time or credits on repeated runner recovery loops unless the operator specifically requests it.
 
 Apps Script:
-- Never run `clasp push`, create an Apps Script version, or repin a deployment unless the active release CIS explicitly authorizes it.
+- Never run `clasp push`, create an Apps Script version, or repin a deployment unless the owner freshly and specifically authorizes it.
 
 ## Non-Repo Clone / Sandbox Boundary Rule
 
@@ -141,7 +161,7 @@ The old Google Drive synced copy at `E:\Gdrive\01_SANJAY\Codex_Sync\FODE_Runtime
 
 GitHub remains the review authority for committed work.
 
-No Apps Script push, version creation, deployment repin, or release action may be performed from this repository unless the active CIS explicitly authorizes it and the applicable source and deployment identity gates pass.
+No Apps Script push, version creation, deployment repin, or release action may be performed from this repository unless the owner freshly and specifically approves it and the applicable source and deployment identity gates pass.
 
 Do not create temp repos, remote verification clones, or non-repo source copies outside this path unless explicitly authorized by the operator.
 

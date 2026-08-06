@@ -1,7 +1,29 @@
 # Architecture Governance
 
-Status: R392A release-pipeline governance update
-Scope: tooling, test and documentation governance; no application runtime behaviour change
+Status: FODE Simplified Operating Controls
+Scope: standing policy for local governance; no application runtime behaviour change
+
+## Standing Operating Policy
+
+Routine local work does not require a startup CIS, lease recovery,
+governed-session orientation, or governance transition. This includes local
+inspection, diagnosis, editing, no-send tests, necessary non-mutating external
+reads, and owner-requested local commits. A new chat resumes from accepted
+context without a recovery requirement.
+
+Protected actions require the owner's fresh, specific approval immediately
+before execution. That approval must name the exact target, intended effect,
+and any irreversible external change, and becomes invalid if the target or
+effect materially changes. Protected actions are remote pushes; deployments,
+releases, versions, and repins; sends; external or automation-triggered
+writes; database/schema changes; credential, Script Property, secret, or
+access-control changes; financial actions; and Production writes or changes.
+Read-only Production diagnosis is permitted only when narrowly necessary,
+minimal, and non-mutating.
+
+This policy supersedes older local-startup requirements. It does not waive
+release identity, remote-source, live `whoami`, or acceptance checks after a
+protected release action has been approved.
 
 ## Canonical Convenience-First Control Layer
 
@@ -83,14 +105,14 @@ The pipeline must classify file risk conservatively, select a proportionate Fast
 
 ## Proportionate Disaster-Recovery Gate Policy
 
-Platform-wide disaster-recovery work is not a universal prerequisite for every release. The active CIS must classify the changed surface and require only the recovery evidence proportionate to the approved risk:
+Platform-wide disaster-recovery work is not a universal prerequisite for every release. The freshly approved protected release action must classify the changed surface and require only the recovery evidence proportionate to the approved risk:
 
 | Release scope | DR requirement |
 |---|---|
 | Bounded code-only staging release with no data-model change, production change, destructive action, or applicant-data mutation | Preserve source, Git rollback, release identity, and staging acceptance evidence. Full MariaDB restore drills, authoritative Drive reconstruction, and protected production-workbook backups are follow-up capability work, not release blockers. |
 | Database/schema migration, production data change, destructive operation, or scheduled platform DR validation | Require the applicable MariaDB backup/restore, authoritative Sheet/Drive reconstruction, protected configuration backup, and isolated-restore evidence before closure. |
 
-An incomplete platform DR exercise must be recorded as `FOLLOW-UP` or `BLOCKED` against the DR capability task; it must not be reported as `PASS` and must not block a lower-risk release unless the active CIS explicitly makes that evidence a release invariant. The standing capability follow-up for the current readiness gap is `FODE_LOCAL_TOOLCHAIN_AND_DR_READINESS`.
+An incomplete platform DR exercise must be recorded as `FOLLOW-UP` or `BLOCKED` against the DR capability task; it must not be reported as `PASS` and must not block a lower-risk release unless the owner approval explicitly makes that evidence a release invariant. The standing capability follow-up for the current readiness gap is `FODE_LOCAL_TOOLCHAIN_AND_DR_READINESS`.
 
 ## Source Preservation Rule
 
@@ -164,9 +186,9 @@ Required checklist:
 | Apps Script project verified | `.clasp.json` script ID matches the approved target before `clasp push`, version, or deployment work. |
 | Deployment ID verified | Admin, Student, or production deployment ID is explicitly proven before repin or browser acceptance. |
 | Runtime version verified | Live `whoami` matches intended `Config.js` identity before release acceptance. |
-| Environment verified | The action is tied to the approved CIS environment; production and Student are prohibited unless explicitly authorized. |
+| Environment verified | The action is tied to the owner-approved environment; Production and Student are prohibited unless explicitly authorized. |
 | Authority source verified | Evidence source is named and current; docs alone are not enough for live mutation. |
-| Action explicitly authorized | The active CIS authorizes the exact mutation class. |
+| Action explicitly authorized | Fresh owner approval identifies the exact mutation class, target, and intended effect. |
 
 Examples:
 
@@ -181,19 +203,19 @@ Current documented authority baseline:
 
 | Surface | Authoritative identity | Authority source | Mutation rule |
 | --- | --- | --- | --- |
-| Local Git repository | `C:\Repos\FODE_Runtime_1wog` | `AGENTS.md`, active workspace path | Mutate only files allowed by active CIS. |
+| Local Git repository | `C:\Repos\FODE_Runtime_1wog` | `AGENTS.md`, active workspace path | Normal local work is permitted; remote push requires fresh owner approval. |
 | GitHub repository | `https://github.com/Sanjaymlckia/FODE_Runtime_1wog.git` | `.git/config` | Commit/push only when explicitly authorized. |
-| Apps Script project | `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90` | `.clasp.json` | No push/version/repin without release CIS and remote-source gate. |
+| Apps Script project | `1wogECIIksKIhrho6OeKXdt3f7nmrMjSSeFfXwlypa3o-Do3MECvKOI90` | `.clasp.json` | No push/version/repin without fresh owner approval and the remote-source gate. |
 | Admin staging deployment | `AKfycbxkuj6ElPa8xE9WJnECcW9u_hGNPMpd79F5Vhxgur-p7MCpmDF2HaLFIgx7yTYRC8aZ`, accepted `@428 / r392 / 392` | `Config.js`, `LIVE_URLS.md`, live `whoami` | Repin/browser accept only after live `whoami` proof. |
 | Student staging deployment | `AKfycbxqTpEAJzk2NwFOumKTV0-bphasgPxM-kJHpbx5KobveYrhNtP5FbP0LJvL8kpA4PBv`, accepted `@247 / r217 / 217` | `Config.js`, `LIVE_URLS.md`, live `whoami` | No Student action unless separately authorized. |
 | Production deployment | Unknown / not proven | `audits/fode_runtime_dr_backup_audit_v01.md` | Read-only until exact deployment ID and environment are proven. |
-| Runtime spreadsheet - staging | `1YFgLtUExz__fzQ4zTNoIyGTu-nrnasS7dIaShNPl7Cs`, tab `FODE_Data` | `Config.js` | No Sheet mutation unless CIS authorizes exact row/tab operation. |
+| Runtime spreadsheet - staging | `1YFgLtUExz__fzQ4zTNoIyGTu-nrnasS7dIaShNPl7Cs`, tab `FODE_Data` | `Config.js` | No Sheet mutation unless fresh owner approval identifies the exact row/tab operation. |
 | Runtime spreadsheet - production | `1fHmeGNmpOj9PEPQ5Fp4tUyCP4UdH70lltukraD4SalU`, tab `FODE_Data` | `Config.js`, Data Source Authority Register | Production mutation prohibited unless explicitly authorized. |
 | Population Ledger | Read-only `FODE_Data` ApplicantID accounting | `admin_getPopulationLedger()`, `buildPopulationLedgerFromValues_()` | Read-only reconciliation only; no Sheet/Drive/send/deployment mutation. |
 | Portal log spreadsheet | `1AQbkHUafLFxqHDqwH3dVHR8gTuOZYtyUPkheby5ejhU` | `Config.js`, Data Source Authority Register | Diagnostic/read-only unless exact write is authorized. |
-| Portal secrets spreadsheet | `1HEJPtSov-iE5YTpSWWZ89YLIQAw4Eju9DDMG46HkTRc` | `Config.js`, Data Source Authority Register | Sensitive; no broad reads or writes without security CIS. |
+| Portal secrets spreadsheet | `1HEJPtSov-iE5YTpSWWZ89YLIQAw4Eju9DDMG46HkTRc` | `Config.js`, Data Source Authority Register | Sensitive; no broad reads or writes without specific owner approval. |
 | Runtime Drive root | `1vGD3DoOv1hlxYoTIfrNCZqAnrVKmghuB` | `Config.js` | No Drive create/copy/move/delete unless exact action is authorized. |
 | Playwright sandbox | `D:\FODE_Tooling\Playwright` | fixture docs and harness source | Read-only browser evidence only; no arbitrary applicants or fallback rows. Evidence is written under `D:\FODE_Test_Evidence\R401`. |
-| PowerShell tooling | `tools/*.ps1` under local repo | `tools/README.md` | Tool use must match CIS; no clasp push/version/repin unless authorized. |
+| PowerShell tooling | `tools/*.ps1` under local repo | `tools/README.md` | Normal local use is permitted; no clasp push/version/repin unless freshly owner-authorized. |
 | Documentation authority | `docs/architecture/Governance.md` plus active `AGENTS.md` | This document and repo root instructions | Docs define process; they do not prove live runtime state. |
 

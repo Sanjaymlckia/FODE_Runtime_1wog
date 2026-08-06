@@ -44,7 +44,7 @@ function newRoot(label) {
 }
 
 function run(root, action, snapshot, extra = {}) {
-  const args = ['-NoProfile', '-File', script, '-Action', action, '-StateRoot', root];
+  const args = ['-NoProfile', '-File', script, '-Action', action, '-StateRoot', root, '-Governed'];
   for (const [key, value] of Object.entries(extra)) if (value !== undefined) args.push(`-${key}`, String(value));
   const env = { ...process.env, FODE_GOVERNANCE_TEST_SNAPSHOT: JSON.stringify(snapshot), FODE_GOVERNANCE_TEST_LEASE: testLease, FODE_GOVERNANCE_TEST_LEASE_ROOT: testLeaseRoot };
   const result = spawnSync('pwsh.exe', args, { cwd: repo, encoding: 'utf8', env });
@@ -53,7 +53,7 @@ function run(root, action, snapshot, extra = {}) {
 }
 
 function runWithEnv(root, action, snapshot, extra, injectedEnv) {
-  const args = ['-NoProfile', '-File', script, '-Action', action, '-StateRoot', root];
+  const args = ['-NoProfile', '-File', script, '-Action', action, '-StateRoot', root, '-Governed'];
   for (const [key, value] of Object.entries(extra)) if (value !== undefined) args.push(`-${key}`, String(value));
   const env = { ...process.env, FODE_GOVERNANCE_TEST_SNAPSHOT: JSON.stringify(snapshot), FODE_GOVERNANCE_TEST_LEASE: testLease, FODE_GOVERNANCE_TEST_LEASE_ROOT: testLeaseRoot, ...injectedEnv };
   const result = spawnSync('pwsh.exe', args, { cwd: repo, encoding: 'utf8', env });
@@ -62,6 +62,17 @@ function runWithEnv(root, action, snapshot, extra, injectedEnv) {
 }
 
 try {
+  const routineRoot = newRoot('routine-orient');
+  const routine = spawnSync('pwsh.exe', ['-NoProfile', '-File', script, '-Action', 'Orient', '-StateRoot', routineRoot], {
+    cwd: repo,
+    encoding: 'utf8',
+    env: { ...process.env, FODE_GOVERNANCE_TEST_SNAPSHOT: JSON.stringify(clean) }
+  });
+  assert.equal(routine.status, 0, routine.stderr);
+  const routineJson = JSON.parse(routine.stdout.trim());
+  assert.equal(routineJson.session.mode, 'NORMAL_LOCAL_WORK');
+  assert.equal(fs.existsSync(path.join(routineRoot, 'current.json')), false, 'routine local work must not create a lease or recovery state');
+
   const cleanRoot = newRoot('clean');
   const opened = run(cleanRoot, 'Orient', clean, { TaskId: 'clean', ApprovedPaths: approvedPaths });
   assert.equal(opened.status, 0, JSON.stringify(opened.json));
@@ -108,6 +119,37 @@ try {
   assert.equal(releaseReady.json.session.phase, 'RELEASE_READY');
   assert.equal(releaseReady.json.session.baselineHead, baseline, 'RELEASE_READY must preserve the last-released rollback baseline');
   assert.match(releaseReady.json.session.approvedScopeHash, /^[0-9a-f]{64}$/, 'RELEASE_READY must record an approved scope hash');
+  const protectedApproval = run(workingRoot, 'RecordDecision', approvedDirty, {
+    OwnerLease: initial.json.ownerLease,
+    Decision: 'OWNER_AUTHORIZED_PROTECTED_ACTION',
+    Scope: 'release execution',
+    RelatedTask: 'governance test',
+    ProtectedActionTarget: 'Admin staging deployment @429',
+    ProtectedActionEffect: 'repin to the tested version'
+  });
+  assert.equal(protectedApproval.status, 0, JSON.stringify(protectedApproval.json));
+  const blanketApproval = run(workingRoot, 'RecordDecision', approvedDirty, {
+    OwnerLease: initial.json.ownerLease,
+    Decision: 'OWNER_AUTHORIZED_PROTECTED_ACTION',
+    Scope: 'release execution',
+    RelatedTask: 'governance test',
+    ProtectedActionTarget: 'Admin staging deployment @429'
+  });
+  assert.equal(blanketApproval.status, 2);
+  assert.equal(blanketApproval.json.governedState, 'OWNER_DECISION_REQUIRED');
+  const staleApproval = run(workingRoot, 'Transition', approvedDirty, {
+    OwnerLease: initial.json.ownerLease,
+    TargetPhase: 'RELEASED',
+    TestsPassed: true,
+    GitPreflightPassed: true,
+    DeploymentPreflightPassed: true,
+    NoProhibitedExternalAction: true,
+    ReleaseAuthorized: true,
+    ProtectedActionTarget: 'Admin staging deployment @430',
+    ProtectedActionEffect: 'repin to the tested version'
+  });
+  assert.equal(staleApproval.status, 2);
+  assert.equal(staleApproval.json.governedState, 'OWNER_DECISION_REQUIRED');
 
   const postCommitRoot = newRoot('post-commit-ready');
   const postCommitInitial = run(postCommitRoot, 'Orient', clean, { TaskId: 'post-commit', ApprovedPaths: approvedPaths, ReleaseAuthorized: true });

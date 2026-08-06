@@ -4,6 +4,7 @@ param(
   [string]$Action = 'Orient',
   [string]$TaskId = '',
   [string]$TaskLabel = '',
+  [switch]$Governed,
   [string]$Decision = '',
   [string]$OwnerDecision = '',
   [string]$Scope = '',
@@ -32,6 +33,8 @@ param(
   [string]$DeploymentRepin = '',
   [string]$BrowserAcceptance = '',
   [string]$ExternalMutations = '',
+  [string]$ProtectedActionTarget = '',
+  [string]$ProtectedActionEffect = '',
   [switch]$ClearPendingAcceptance,
   [switch]$AcceptBaselineAdvance,
   [switch]$Supersede,
@@ -330,6 +333,18 @@ function Save-Event([object]$State, [string]$Kind, [string]$Reason = '') {
 }
 
 $observed = Snapshot
+$routineOrient = $Action -eq 'Orient' -and !$Governed.IsPresent
+if ($routineOrient) {
+  [ordered]@{
+    governedState = 'GOVERNED_SESSION_READY'
+    ok = $true
+    repository = $repoRoot
+    session = [ordered]@{ mode = 'NORMAL_LOCAL_WORK'; status = 'not-required' }
+    observed = $observed
+    message = 'Routine local work is permitted without session orientation, a lease, or recovery.'
+  } | ConvertTo-Json -Depth 8
+  exit 0
+}
 $policyHash = PolicyHash
 $stateExists = Test-Path -LiteralPath $statePath -PathType Leaf
 $eventsExist = Test-Path -LiteralPath $eventsPath -PathType Leaf
@@ -527,8 +542,9 @@ if ($Action -in @('Checkpoint','RecordDecision','TransferOwnership','Transition'
 
 if ($Action -eq 'RecordDecision') {
   if ([string]::IsNullOrWhiteSpace($Decision) -or [string]::IsNullOrWhiteSpace($Scope) -or [string]::IsNullOrWhiteSpace($RelatedTask)) { Fail 'RecordDecision requires Decision, Scope and RelatedTask' 'OWNER_DECISION_REQUIRED' }
+  if ($Decision -eq 'OWNER_AUTHORIZED_PROTECTED_ACTION' -and ([string]::IsNullOrWhiteSpace($ProtectedActionTarget) -or [string]::IsNullOrWhiteSpace($ProtectedActionEffect))) { Fail 'Protected-action approval requires an exact target and intended effect' 'OWNER_DECISION_REQUIRED' }
   $previous.pendingDecision = $null
-  $decisionRecord = [ordered]@{ decision = (Redact $Decision); scope = (Redact $Scope); relatedTask = (Redact $RelatedTask); timestamp = (Get-Date).ToUniversalTime().ToString('o'); evidenceSource = (Redact $EvidenceSource); continuingRestrictions = @($previous.continuingProhibitions) }
+  $decisionRecord = [ordered]@{ decision = (Redact $Decision); scope = (Redact $Scope); relatedTask = (Redact $RelatedTask); target = (Redact $ProtectedActionTarget); effect = (Redact $ProtectedActionEffect); timestamp = (Get-Date).ToUniversalTime().ToString('o'); evidenceSource = (Redact $EvidenceSource); continuingRestrictions = @($previous.continuingProhibitions) }
   $previous | Add-Member -NotePropertyName lastDecision -NotePropertyValue $decisionRecord -Force
   $previous.lastCheckpointAt = (Get-Date).ToUniversalTime().ToString('o')
   Save-Event $previous 'decision-recorded'; Output-State $previous 'Owner decision recorded.'; exit 0
@@ -564,6 +580,10 @@ if ($Action -eq 'Transition') {
   $scopeCheck = Test-FodeApprovedScope $observed.statusLines @($previous.approvedPaths)
   $transition = Test-FodeLifecycleTransition ([string]$previous.phase) $TargetPhase $scopeCheck.allowed $TestsPassed.IsPresent $GitPreflightPassed.IsPresent $DeploymentPreflightPassed.IsPresent $NoProhibitedExternalAction.IsPresent ($ReleaseAuthorized.IsPresent -or $previous.releaseAuthorized)
   if (!$transition.allowed) { Fail $transition.reason 'READ_ONLY_RECONCILIATION' }
+  if ($TargetPhase -eq 'RELEASED') {
+    if ([string]::IsNullOrWhiteSpace($ProtectedActionTarget) -or [string]::IsNullOrWhiteSpace($ProtectedActionEffect)) { Fail 'Protected release execution requires the approved target and intended effect' 'OWNER_DECISION_REQUIRED' }
+    if (!$previous.lastDecision -or $previous.lastDecision.decision -ne 'OWNER_AUTHORIZED_PROTECTED_ACTION' -or $previous.lastDecision.target -ne (Redact $ProtectedActionTarget) -or $previous.lastDecision.effect -ne (Redact $ProtectedActionEffect)) { Fail 'No fresh protected-action approval matches this release target and effect' 'OWNER_DECISION_REQUIRED' }
+  }
   if ($TargetPhase -eq 'RELEASE_READY') {
     $committedScope = @(Get-CommitScopePaths $previous.baselineHead $observed.head)
     $scopeHashInput = @(@($previous.approvedPaths) + $committedScope | Sort-Object -Unique) -join "`n"

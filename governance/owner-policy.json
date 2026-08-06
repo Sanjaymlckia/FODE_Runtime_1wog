@@ -1,14 +1,15 @@
 {
-  "schemaVersion": 1,
-  "policyName": "FODE durable owner controls",
+  "schemaVersion": 2,
+  "policyName": "FODE Simplified Operating Controls",
   "controls": [
-    "Production mutations prohibited unless explicitly authorized.",
-    "Batch communication prohibited.",
-    "Gmail, Drive, Classroom, Zoho and database writes prohibited unless explicitly authorized.",
-    "No commit, push or deployment without task-specific authority.",
+    "Normal local diagnosis, editing, no-send testing, necessary non-mutating external reads, and owner-requested local commits require no startup governance step.",
+    "Protected actions require fresh, specific owner approval immediately before execution, bound to the exact target and intended effect.",
+    "Remote pushes, deployments, sends, external writes, database/schema changes, credential/property/access changes, financial actions, and Production writes or changes are protected actions.",
+    "Read-only Production diagnosis is permitted only when narrowly necessary, minimal, and non-mutating.",
+    "Batch communication prohibited unless freshly and specifically approved.",
     "No destructive Git cleanup.",
     "Do not infer owner acceptance.",
-    "External actions require governed evidence.",
+    "A stale or blanket approval does not authorize a materially changed target or effect.",
     "Observed evidence outranks generated checkpoints."
   ],
   "sensitiveData": "Do not store secrets, tokens, credentials, secure links, applicant data or personal data."
