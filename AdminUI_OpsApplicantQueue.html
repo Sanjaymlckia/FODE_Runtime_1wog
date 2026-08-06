@@ -293,7 +293,7 @@
   }
   function opsAllQueueRows_(){
     var all = []
-      .concat(queueDataState.fdReceived || [], queueDataState.docs || [], queueDataState.awaitingPayment || [], queueDataState.payments || [], queueDataState.anomalies || [], queueDataState.paidApproved || []);
+      .concat(queueDataState.lifecycle || [], queueDataState.fdReceived || [], queueDataState.docs || [], queueDataState.awaitingPayment || [], queueDataState.payments || [], queueDataState.anomalies || [], queueDataState.paidApproved || []);
     var seen = {};
     return all.filter(function(row){
       var key = String((row && (row.applicantId || row.ApplicantID)) || "").trim();

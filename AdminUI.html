@@ -3840,6 +3840,7 @@
     const queueRenderCache = {};
     let queueExpandState = {};
     let queueDataState = {
+      lifecycle: [],
       fdReceived: [],
       docs: [],
       awaitingPayment: [],
@@ -3847,6 +3848,8 @@
       anomalies: [],
       paidApproved: [],
       counts: { fdReceived: 0, docs: 0, awaitingPayment: 0, payments: 0, anomalies: 0, paidApproved: 0 },
+      reviewLifecycleCounts: {},
+      reviewLifecycleStageSubtotals: {},
       hasMore: false,
       nextOffset: 0
     };
@@ -3896,11 +3899,13 @@
     let actionabilityBucketSortState = "operational";
     let actionabilityActiveGroup = "";
     let actionabilityActiveWorklistKey = "";
+    let actionabilityActiveReviewBucket = "ALL_ACTIVE";
     let actionabilityPreviewMetaState = { includedRows: 0, scannedRows: 0, applicantIdRows: 0, integrityStatus: "" };
     let actionabilityPreviewCountsState = {};
     let actionabilityWorkloadSummaryState = {};
     let actionabilityWorkloadExplanationState = {};
     let actionabilityBucketSummariesState = {};
+    let actionabilityReviewLifecycleState = { byBucket: {}, totalRows: 0, activeRows: 0, closedRows: 0 };
     let actionabilityPopulationLedgerState = null;
     let actionabilityResponseTrafficState = null;
     let actionabilityHiddenRecordsState = { byGroup: {}, totalByGroup: {}, perBucketLimit: 5 };
@@ -5093,6 +5098,8 @@
         if (filter.indexOf("stage:") === 0) {
           var stageKey = filter.slice(6);
           rows = opsRowsForLifecycleStage_(stageKey);
+        } else if (filter.indexOf("review:") === 0) {
+          rows = opsRowsForReviewLifecycleBucket_(filter.slice(7));
         } else {
           rows = rows.filter(function(row){
             var invoiceState = opsInvoiceSummary_(row);
@@ -8925,6 +8932,7 @@
 
     function resetQueueDataState_(){
       queueDataState = {
+        lifecycle: [],
         fdReceived: [],
         docs: [],
         awaitingPayment: [],
@@ -8932,6 +8940,8 @@
         anomalies: [],
         paidApproved: [],
         counts: { fdReceived: 0, docs: 0, awaitingPayment: 0, payments: 0, anomalies: 0, paidApproved: 0 },
+        reviewLifecycleCounts: {},
+        reviewLifecycleStageSubtotals: {},
         hasMore: false,
         nextOffset: 0
       };
@@ -8959,6 +8969,7 @@
       if (!btn || !meta) return;
       var hasMore = !!(queueDataState && queueDataState.hasMore);
       var loadedMax = Math.max(
+        Number((queueDataState.lifecycle || []).length || 0),
         Number((queueDataState.fdReceived || []).length || 0),
         Number((queueDataState.docs || []).length || 0),
         Number((queueDataState.awaitingPayment || []).length || 0),
@@ -9691,6 +9702,7 @@ function renderStageDashboard_(items, emptyMessage){
             try {
               var data = (res && typeof res === "object") ? res : {};
               if (append) {
+                queueDataState.lifecycle = mergeQueueRows_(queueDataState.lifecycle, data.lifecycle);
                 queueDataState.fdReceived = mergeQueueRows_(queueDataState.fdReceived, data.fdReceived);
                 queueDataState.docs = mergeQueueRows_(queueDataState.docs, data.docs);
                 queueDataState.awaitingPayment = mergeQueueRows_(queueDataState.awaitingPayment, data.awaitingPayment);
@@ -9698,6 +9710,7 @@ function renderStageDashboard_(items, emptyMessage){
                 queueDataState.anomalies = mergeQueueRows_(queueDataState.anomalies, data.anomalies);
                 queueDataState.paidApproved = mergeQueueRows_(queueDataState.paidApproved, data.paidApproved);
               } else {
+                queueDataState.lifecycle = Array.isArray(data.lifecycle) ? data.lifecycle.slice() : [];
                 queueDataState.fdReceived = Array.isArray(data.fdReceived) ? data.fdReceived.slice() : [];
                 queueDataState.docs = Array.isArray(data.docs) ? data.docs.slice() : [];
                 queueDataState.awaitingPayment = Array.isArray(data.awaitingPayment) ? data.awaitingPayment.slice() : [];
@@ -9706,6 +9719,8 @@ function renderStageDashboard_(items, emptyMessage){
                 queueDataState.paidApproved = Array.isArray(data.paidApproved) ? data.paidApproved.slice() : [];
               }
               queueDataState.counts = (data && data.counts) ? data.counts : (queueDataState.counts || {});
+              queueDataState.reviewLifecycleCounts = (data && data.reviewLifecycleCounts) ? data.reviewLifecycleCounts : (queueDataState.reviewLifecycleCounts || {});
+              queueDataState.reviewLifecycleStageSubtotals = (data && data.reviewLifecycleStageSubtotals) ? data.reviewLifecycleStageSubtotals : (queueDataState.reviewLifecycleStageSubtotals || {});
               queueDataState.hasMore = !!(data && data.hasMore);
               queueDataState.nextOffset = Number(data && data.nextOffset || 0) || 0;
               requestAnimationFrame(function(){
@@ -10198,6 +10213,59 @@ function renderStageDashboard_(items, emptyMessage){
       return "";
     }
 
+    function actionabilityReviewBucketDefinitions_(){
+      return typeof opsReviewLifecycleDefinitions_ === "function" ? opsReviewLifecycleDefinitions_() : [
+        { key:"ALL_ACTIVE", label:"All active lifecycle work", closed:false },
+        { key:"DOCUMENTS_FOLLOW_UP", label:"Documents — review / follow-up", closed:false },
+        { key:"DOCUMENTS_ASSESSMENT", label:"Documents received — assessment / verification required", closed:false },
+        { key:"PENDING_APPLICANT_RESPONSE", label:"Pending applicant response", closed:false },
+        { key:"HELD_ABEYANCE_NO_RESPONSE", label:"Held in abeyance — no response", closed:false },
+        { key:"HELD_ABEYANCE_OTHER", label:"Held in abeyance — other reason", closed:false },
+        { key:"WORKING_ON_IT", label:"Working on it", closed:false },
+        { key:"READY_FOR_DECISION", label:"Ready for decision", closed:false },
+        { key:"ADMITTED_ONBOARDING_OUTSTANDING", label:"Admitted — onboarding outstanding", closed:false },
+        { key:"LOST_UNCONTACTABLE", label:"Lost / uncontactable", closed:false },
+        { key:"DATA_INTEGRITY_EXCEPTION", label:"Data / integrity exception", closed:false },
+        { key:"CLOSED_OUTCOME", label:"Closed outcomes", closed:true }
+      ];
+    }
+
+    function actionabilityRowsForReviewBucket_(rows, key){
+      var selected = String(key || "ALL_ACTIVE").toUpperCase();
+      return (Array.isArray(rows) ? rows : []).filter(function(row){
+        var bucket = String(row && row.reviewBucketKey || "DATA_INTEGRITY_EXCEPTION").toUpperCase();
+        return selected === "ALL_ACTIVE" ? bucket !== "CLOSED_OUTCOME" : bucket === selected;
+      });
+    }
+
+    function renderActionabilityLifecycleBucketDeck_(rows){
+      var counts = actionabilityReviewLifecycleState && actionabilityReviewLifecycleState.byBucket || {};
+      return '<section class="actionabilityLifecyclePrimary"><div class="actionabilityWorklistTitle"><span>Canonical lifecycle worklists</span><span class="muted">Primary staff work-management view · Population Ledger authority</span></div><div class="opsReviewLifecycleDeck" aria-label="Population Ledger lifecycle worklists">'
+        + actionabilityReviewBucketDefinitions_().map(function(definition){
+          var count = definition.key === "ALL_ACTIVE"
+            ? Object.keys(counts).reduce(function(sum, key){ return key === "CLOSED_OUTCOME" ? sum : sum + Number(counts[key] || 0); }, 0)
+            : Number(counts[definition.key] || 0);
+          var selected = actionabilityActiveReviewBucket === definition.key;
+          var stageCounts = {};
+          actionabilityRowsForReviewBucket_(rows, definition.key).forEach(function(row){
+            var stage = String(row && row.canonicalLifecycle && (row.canonicalLifecycle.lifecycleStage || row.canonicalLifecycle.baseState) || row && row.authorityState && row.authorityState.lifecycleStage || "UNKNOWN").toUpperCase();
+            stageCounts[stage] = Number(stageCounts[stage] || 0) + 1;
+          });
+          var stages = definition.key === "ALL_ACTIVE" ? "Select a bucket for stage subtotals" : Object.keys(stageCounts).sort().map(function(stage){ return stage.replace(/_/g, " ") + " " + stageCounts[stage]; }).join(" · ") || "No returned stage subtotal";
+          return '<button type="button" class="opsReviewLifecycleCard' + (selected ? ' active' : '') + (definition.closed ? ' closed' : '') + '" data-actionability-review-bucket="' + esc(definition.key) + '" aria-selected="' + (selected ? 'true' : 'false') + '" onclick="selectActionabilityReviewBucket_(\'' + esc(definition.key) + '\')"><span class="bucketName">' + esc(definition.label) + '</span><span class="bucketCount">' + String(count) + '</span><span class="bucketStages">' + esc(stages) + '</span></button>';
+        }).join("") + '</div></section>';
+    }
+
+    function selectActionabilityReviewBucket_(key){
+      actionabilityActiveReviewBucket = String(key || "ALL_ACTIVE").toUpperCase();
+      actionabilityActiveGroup = "";
+      actionabilityActiveWorklistKey = "";
+      actionabilityPageState.page = 0;
+      renderActionabilityPreview_({ preserveRows: true });
+      var target = document.getElementById("actionabilityPreviewRows");
+      if (target && target.scrollIntoView) target.scrollIntoView({ behavior:"smooth", block:"start" });
+    }
+
     function actionabilityHumanizeToken_(value){
       var text = String(value || "").trim();
       if (!text) return "";
@@ -10550,6 +10618,7 @@ function renderStageDashboard_(items, emptyMessage){
     function selectActionabilityGroup_(key){
       var normalized = String(key || "").trim().toUpperCase();
       actionabilityActiveGroup = actionabilityActiveGroup === normalized ? "" : normalized;
+      actionabilityActiveReviewBucket = actionabilityActiveGroup ? "" : "ALL_ACTIVE";
       if (!actionabilityActiveGroup) {
         actionabilityActiveWorklistKey = "";
       } else if (actionabilityActiveGroup !== "FINANCE") {
@@ -10566,6 +10635,7 @@ function renderStageDashboard_(items, emptyMessage){
     function showAllActionability_(){
       actionabilityActiveGroup = "";
       actionabilityActiveWorklistKey = "";
+      actionabilityActiveReviewBucket = "ALL_ACTIVE";
       actionabilityPageState.page = 0;
       renderActionabilityPreview_({ preserveRows: true });
       window.setTimeout(function(){
@@ -10578,6 +10648,7 @@ function renderStageDashboard_(items, emptyMessage){
       var normalized = String(key || "").trim().toUpperCase();
       if (!normalized) return;
       actionabilityActiveGroup = normalized;
+      actionabilityActiveReviewBucket = "";
       if (normalized !== "FINANCE") actionabilityActiveWorklistKey = "";
       actionabilityPageState.page = 0;
       renderActionabilityPreview_({ preserveRows: true });
@@ -12316,6 +12387,7 @@ function renderStageDashboard_(items, emptyMessage){
         actionabilityWorkloadSummaryState = data.workloadSummary || {};
         actionabilityWorkloadExplanationState = data.workloadExplanation || {};
         actionabilityBucketSummariesState = data.bucketSummaries || {};
+        actionabilityReviewLifecycleState = data.reviewLifecycleReconciliation || { byBucket: {}, totalRows: 0, activeRows: 0, closedRows: 0 };
         actionabilityHiddenRecordsState = data.hiddenRecords && typeof data.hiddenRecords === "object" ? data.hiddenRecords : { byGroup: {}, totalByGroup: {}, perBucketLimit: 5 };
       }
       if (data.preserveRows !== true && Array.isArray(data.rows)) actionabilityPreviewRows = data.rows.slice();
@@ -12332,15 +12404,17 @@ function renderStageDashboard_(items, emptyMessage){
         kpiEl.innerHTML = renderActionabilityLedgerBar_();
       }
       var sortedBucketKeys = sortedActionabilityBucketKeys_(groups, groupRows);
-      summaryEl.innerHTML = renderActionabilityBucketSortControls_()
-        + '<div class="actionabilityBucketDeck" aria-label="Operational bucket cards">'
-        + sortedBucketKeys.map(function(key){
-          return renderActionabilityBucketCard_(key, groupRows[key] || []);
-        }).join("")
-        + '</div>';
+      summaryEl.innerHTML = renderActionabilityLifecycleBucketDeck_(rows)
+        + '<details class="opsLegacyLifecycleDetails"><summary>Secondary actionability and ownership aggregates</summary>'
+        + renderActionabilityBucketSortControls_()
+        + '<div class="actionabilityBucketDeck" aria-label="Secondary operational bucket cards">'
+        + sortedBucketKeys.map(function(key){ return renderActionabilityBucketCard_(key, groupRows[key] || []); }).join("")
+        + '</div></details>';
       renderActionabilityResponseTraffic_();
       summaryEl.innerHTML += renderActionabilityWorkloadExplanation_();
-      var rawDisplayRows = actionabilityActiveGroup ? (groupRows[actionabilityActiveGroup] || []) : rows;
+      var rawDisplayRows = actionabilityActiveReviewBucket
+        ? actionabilityRowsForReviewBucket_(rows, actionabilityActiveReviewBucket)
+        : (actionabilityActiveGroup ? (groupRows[actionabilityActiveGroup] || []) : rows);
       if (actionabilityActiveGroup === "FINANCE") {
         var availableWorklistKey = actionabilityDefaultWorklistKeyForGroup_(actionabilityActiveGroup, rawDisplayRows);
         if (availableWorklistKey && actionabilityActiveWorklistKey !== availableWorklistKey && actionabilityWorklistKeysForGroup_(actionabilityActiveGroup, rawDisplayRows).indexOf(actionabilityActiveWorklistKey) < 0) {
@@ -12357,7 +12431,8 @@ function renderStageDashboard_(items, emptyMessage){
       actionabilityRenderedRows = pageRows.slice();
       if (metaEl) {
         var populationTotal = Number(actionabilityPreviewMetaState.applicantIdRows || actionabilityPreviewMetaState.includedRows || rows.length || 0);
-        var filterLabel = actionabilityActiveGroup ? actionabilityGroupLabel_(actionabilityActiveGroup) : "All";
+        var selectedLifecycleDefinition = actionabilityReviewBucketDefinitions_().filter(function(item){ return item.key === actionabilityActiveReviewBucket; })[0];
+        var filterLabel = selectedLifecycleDefinition ? selectedLifecycleDefinition.label : (actionabilityActiveGroup ? actionabilityGroupLabel_(actionabilityActiveGroup) : "All");
         if (actionabilityActiveWorklistKey) filterLabel += " / " + actionabilityWorklistLabel_({ worklistKey: actionabilityActiveWorklistKey });
         var integrity = actionabilityPreviewMetaState.integrityStatus ? (" | Ledger " + actionabilityPreviewMetaState.integrityStatus) : "";
         var workload = actionabilityWorkloadSummaryState || {};
@@ -12381,9 +12456,10 @@ function renderStageDashboard_(items, emptyMessage){
         var active = actionabilitySortState && actionabilitySortState.key === key;
         return '<button class="actionabilitySortBtn' + (active ? ' active' : '') + '" type="button" data-actionability-sort="' + esc(key) + '" aria-pressed="' + (active ? "true" : "false") + '" onclick="sortActionabilityPreview_(\'' + esc(key) + '\')">' + esc(label + actionabilitySortLabel_(key)) + '</button>';
       };
-      var activeFilterLabel = actionabilityActiveGroup ? actionabilityGroupLabel_(actionabilityActiveGroup) : "";
+      var activeLifecycleDefinition = actionabilityReviewBucketDefinitions_().filter(function(item){ return item.key === actionabilityActiveReviewBucket; })[0];
+      var activeFilterLabel = activeLifecycleDefinition ? activeLifecycleDefinition.label : (actionabilityActiveGroup ? actionabilityGroupLabel_(actionabilityActiveGroup) : "");
       if (actionabilityActiveWorklistKey) activeFilterLabel += " / " + actionabilityWorklistLabel_({ worklistKey: actionabilityActiveWorklistKey });
-      var html = actionabilityActiveGroup ? '<div class="actionabilityFilterNote">Showing: ' + esc(activeFilterLabel) + ' <button class="btn small" type="button" onclick="selectActionabilityGroup_(\'' + esc(actionabilityActiveGroup) + '\')">Show All</button></div>' : "";
+      var html = (actionabilityActiveReviewBucket || actionabilityActiveGroup) ? '<div class="actionabilityFilterNote">Selected lifecycle worklist: ' + esc(activeFilterLabel || "All") + ' <button class="btn small" type="button" onclick="selectActionabilityReviewBucket_(\'ALL_ACTIVE\')">Show all active lifecycle work</button></div>' : "";
       if (actionabilityActiveGroup) html += renderActionabilityWorklistSwitcher_(actionabilityActiveGroup, rawDisplayRows);
       html += '<div class="actionabilityWorklist" aria-label="Current Worklist">'
         + '<div class="actionabilityWorklistTitle"><span>Current Worklist</span><span class="muted">Review opens authoritative editing.</span></div>'
@@ -12423,10 +12499,10 @@ function renderStageDashboard_(items, emptyMessage){
         var selected = selectable && !!actionabilitySelectedKeys[rowKey];
         if (!selectable && rowKey && actionabilitySelectedKeys[rowKey]) delete actionabilitySelectedKeys[rowKey];
         html += '<div class="actionabilityWorklistRow" role="row" data-actionability-row="' + esc(String(index)) + '" data-actionability-state="' + esc(r.actionabilityState || "UNKNOWN") + '" oncontextmenu="return openActionabilityContextMenu_(event, ' + String(index) + ')">';
-        html += '<div class="actionabilityWorklistCell actionabilityApplicantCell" role="cell"><label class="actionabilitySelectBox"><input type="checkbox" aria-label="Select applicant ' + esc(r.applicantId || "") + '" onchange="toggleActionabilitySelection_(' + String(index) + ', this.checked)" ' + (selected ? "checked" : "") + (selectable ? "" : " disabled") + ' title="' + esc(selectable ? "Eligible for batch preview." : actionabilitySelectionGuidance_(r)) + '"><strong>' + esc(r.name || "Name not shown") + '</strong></label>' + actionabilityFieldHtml_("Applicant ID", r.applicantId || "Unavailable") + actionabilityFieldHtml_("Recipient", actionabilityRecipientEmail_(r), true) + actionabilityFieldHtml_("Next action", nextAction, true) + actionabilityFieldHtml_("Blocker", blocker, true) + '<span class="actionabilityGuidance">' + esc(actionabilitySelectionGuidance_(r)) + '</span></div>';
-        html += '<div class="actionabilityWorklistCell actionabilityOwnerCell" role="cell">' + actionabilityFieldHtml_("Primary route", actionabilityGroupKey_(r) === "FINANCE" ? ("Finance / " + worklistLabel) : actionabilityBucketDisplayLabel_(r)) + actionabilityFieldHtml_("Owner", authority, true) + (worklistReason ? actionabilityFieldHtml_("Route reason", worklistReason, true) : '') + '<span class="opsStatusPill ' + priorityClass + '" title="' + esc(r.urgencyReason || priority) + '">' + esc(priority) + '</span></div>';
-        html += '<div class="actionabilityWorklistCell actionabilityStatusChips actionabilityProgressCell" role="cell"><span class="actionabilityMiniChip ' + (state.portalSubmitted ? "ok" : "warn") + '">' + esc(portalLabel) + '</span><span class="actionabilityMiniChip ' + docsClass + '">' + esc(docsLabel) + '</span><span class="actionabilityMiniChip ' + paymentClass + '">' + esc(paymentLabel) + '</span><span class="actionabilityMiniChip ' + contactClass + '">' + esc(contactLabel) + '</span><div class="actionabilityAuthorityFields">' + actionabilityFieldHtml_("Status", actionabilityStateLabel_(r.actionabilityState), true) + actionabilityFieldHtml_("Reason", actionabilityBlockerText_(r), true) + '</div></div>';
-        html += '<div class="actionabilityWorklistCell actionabilityDueBlock" role="cell">' + actionabilityFieldHtml_("Urgency / timeline", due) + '<span class="actionabilityUrgencyReason">Urgency: ' + esc(actionabilityUrgencyProvenance_(r)) + '</span><span>Age ' + esc(r.ageDays === "" || r.ageDays === undefined ? "-" : String(r.ageDays) + "d") + ' | Last ' + esc(r.lastContactAgeDays === "" ? "none" : String(r.lastContactAgeDays) + "d") + '</span><span>' + esc(commProgress || commNext) + '</span><span>Recommended communication: ' + esc(commNext) + '</span>' + actionabilityFieldHtml_("Next action available", actionabilityNextActionDateText_(r), true) + '</div>';
+        html += '<div class="actionabilityWorklistCell actionabilityApplicantCell" role="cell"><label class="actionabilitySelectBox"><input type="checkbox" aria-label="Select applicant ' + esc(r.applicantId || "") + '" onchange="toggleActionabilitySelection_(' + String(index) + ', this.checked)" ' + (selected ? "checked" : "") + (selectable ? "" : " disabled") + ' title="' + esc(selectable ? "Eligible for batch preview." : actionabilitySelectionGuidance_(r)) + '"><strong>' + esc(r.name || "Name not shown") + '</strong></label>' + actionabilityFieldHtml_("Applicant ID", r.applicantId || "Unavailable") + actionabilityFieldHtml_("Lifecycle bucket", r.reviewBucketLabel || worklistLabel, true) + actionabilityFieldHtml_("Lifecycle stage", String(r.canonicalLifecycle && (r.canonicalLifecycle.lifecycleStage || r.canonicalLifecycle.baseState) || state.lifecycleStage || "UNKNOWN").replace(/_/g, " "), true) + actionabilityFieldHtml_("Recipient", actionabilityRecipientEmail_(r), true) + actionabilityFieldHtml_("Next action", nextAction, true) + actionabilityFieldHtml_("Blocker", blocker, true) + '<span class="actionabilityGuidance">' + esc(actionabilitySelectionGuidance_(r)) + '</span></div>';
+        html += '<div class="actionabilityWorklistCell actionabilityOwnerCell" role="cell">' + actionabilityFieldHtml_("Primary route", actionabilityGroupKey_(r) === "FINANCE" ? ("Finance / " + worklistLabel) : actionabilityBucketDisplayLabel_(r)) + actionabilityFieldHtml_("Owner", r.reviewOwner || authority, true) + actionabilityFieldHtml_("Waiting on", r.reviewWaitingOn || "Not returned", true) + (worklistReason ? actionabilityFieldHtml_("Route reason", worklistReason, true) : '') + '<span class="opsStatusPill ' + priorityClass + '" title="' + esc(r.urgencyReason || priority) + '">' + esc(priority) + '</span></div>';
+        html += '<div class="actionabilityWorklistCell actionabilityStatusChips actionabilityProgressCell" role="cell"><span class="actionabilityMiniChip ' + (state.portalSubmitted ? "ok" : "warn") + '">' + esc(portalLabel) + '</span><span class="actionabilityMiniChip ' + docsClass + '">' + esc(docsLabel) + '</span><span class="actionabilityMiniChip ' + paymentClass + '">' + esc(paymentLabel) + '</span><span class="actionabilityMiniChip ' + contactClass + '">' + esc(contactLabel) + '</span><div class="actionabilityAuthorityFields">' + actionabilityFieldHtml_("Requirement", r.reviewRequirement || "Not returned", true) + actionabilityFieldHtml_("Status", actionabilityStateLabel_(r.actionabilityState), true) + actionabilityFieldHtml_("Reason", r.reviewReason || actionabilityBlockerText_(r), true) + '</div></div>';
+        html += '<div class="actionabilityWorklistCell actionabilityDueBlock" role="cell">' + actionabilityFieldHtml_("Urgency / timeline", due) + '<span class="actionabilityUrgencyReason">Urgency: ' + esc(actionabilityUrgencyProvenance_(r)) + '</span><span>Age ' + esc(r.ageDays === "" || r.ageDays === undefined ? "-" : String(r.ageDays) + "d") + ' | Last ' + esc(r.lastContactAgeDays === "" ? "none" : String(r.lastContactAgeDays) + "d") + '</span>' + actionabilityFieldHtml_("Last meaningful activity", r.reviewLastMeaningfulActivity || r.lastRelevantDate || "Not returned", true) + actionabilityFieldHtml_("Review / reactivation", r.reviewDate || "Not scheduled", true) + actionabilityFieldHtml_("Qualifying communications", String(Number(r.reviewFollowupCount || 0)), true) + '<span>' + esc(commProgress || commNext) + '</span><span>Recommended communication: ' + esc(commNext) + '</span>' + actionabilityFieldHtml_("Next action available", actionabilityNextActionDateText_(r), true) + '</div>';
         html += '<div class="actionabilityWorklistCell actionabilityReviewCell" role="cell"><button class="btn actionabilityReviewBtn operatorControl operatorControlPrimary" type="button" onclick="reviewActionabilityRow_(' + String(index) + ', this)">Open Review</button></div>';
         html += '<details class="actionabilityDetails actionabilityWorklistDetails"><summary>Details</summary>'
           + '<div class="actionabilityFactGrid" style="margin-top:8px;">'
@@ -12439,6 +12515,7 @@ function renderStageDashboard_(items, emptyMessage){
           + '<div class="actionabilityFact"><strong>Waiting on:</strong> <span>' + esc(r.reviewWaitingOn || "Not returned") + '</span></div>'
           + '<div class="actionabilityFact"><strong>Why this is in this queue:</strong> <span>' + esc(r.reviewReason || worklistReason || "Not returned") + '</span></div>'
           + '<div class="actionabilityFact"><strong>Source evidence:</strong> <span>' + esc(r.reviewSourceEvidence || "Canonical applicant lifecycle facts") + '</span></div>'
+          + '<div class="actionabilityFact"><strong>Reactivation condition:</strong> <span>' + esc(r.reviewReactivationCondition || "Not returned") + '</span></div>'
           + '<div class="actionabilityFact"><strong>Next Message:</strong> <span>' + esc(commNext) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Communication Progress:</strong> <span>' + esc(r.communicationProgressDetail || commProgress || commNext) + '</span></div>'
           + '<div class="actionabilityFact"><strong>Actionability:</strong> <span>' + esc(r.actionabilityState || "UNKNOWN") + ' | ' + esc(r.reasonCode || "") + '</span></div>'

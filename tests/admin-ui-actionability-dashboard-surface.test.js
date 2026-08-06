@@ -177,7 +177,8 @@ assert.match(functionSource("filterActionabilityBucketForReview_"), /actionabili
 assert.match(adminUi, /actionabilityBucketHiddenPanel[\s\S]*Hidden ' \+ esc\(hiddenCount\)/, "Operational bucket cards must expose secondary hidden controls");
 assert.match(adminUi, /data-actionability-bucket-sort/, "Operational bucket cards must expose sort controls");
 assert.match(adminUi, /onclick="selectActionabilityGroup_/, "Operational bucket rows must select an actionability group");
-assert.match(adminUi, /var rawDisplayRows = actionabilityActiveGroup \? \(groupRows\[actionabilityActiveGroup\] \|\| \[\]\) : rows;/, "KPI/group filters must still drive displayed worklist source rows");
+assert.match(adminUi, /var rawDisplayRows = actionabilityActiveReviewBucket[\s\S]*?actionabilityRowsForReviewBucket_\(rows, actionabilityActiveReviewBucket\)[\s\S]*?: \(actionabilityActiveGroup \? \(groupRows\[actionabilityActiveGroup\] \|\| \[\]\) : rows\);/, "Canonical lifecycle selection must be primary while secondary KPI/group filters still drive rows when selected");
+assert.match(functionSource("filterActionabilityBucketForReview_"), /actionabilityActiveReviewBucket\s*=\s*""/, "Secondary bucket review must clear the primary lifecycle filter before rendering");
 assert.match(adminUi, /var worklistRows = actionabilityActiveGroup \? actionabilityRowsForActiveWorklist_\(actionabilityActiveGroup, rawDisplayRows\) : rawDisplayRows;/, "Displayed rows must first reconcile the immediate active worklist within the broad group");
 assert.match(adminUi, /var displayRows = actionabilityActiveGroup \? actionabilityDisplayRowsForGroup_\(actionabilityActiveGroup, worklistRows\) : worklistRows;/, "KPI/group filters must reconcile displayed worklist rows through server actionability DTOs after worklist scoping");
 assert.match(adminUi, /actionabilityPopulationLedgerState\s*=\s*ledger/, "Operations Workspace must retain Population Ledger summary from the backend");

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>R412C lifecycle worklists — local rendered evidence</title>
+  <style>
+    :root { color-scheme: light; font: 14px/1.4 Arial, sans-serif; color: #172033; background: #f4f6fa; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; }
+    main { max-width: 1180px; margin: auto; display: grid; gap: 24px; }
+    section { background: white; border: 1px solid #d8deea; border-radius: 12px; padding: 20px; min-width: 0; }
+    h1, h2, p { margin: 0 0 12px; }
+    .notice { color: #586174; }
+    .deck { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+    button { appearance: none; text-align: left; padding: 10px; border: 1px solid #b8c2d8; border-radius: 8px; background: #fff; color: inherit; }
+    button[aria-pressed="true"] { border-color: #315cc6; background: #edf3ff; box-shadow: inset 0 0 0 1px #315cc6; }
+    .label { display: block; font-weight: 700; }
+    .count { display: block; margin-top: 4px; color: #315cc6; }
+    .closed { border-style: dashed; }
+    .selected { margin: 14px 0 10px; padding: 9px 11px; background: #edf3ff; border-radius: 7px; font-weight: 700; }
+    .row { display: grid; grid-template-columns: minmax(170px, .75fr) minmax(250px, 1.25fr); gap: 14px; padding: 14px; border: 1px solid #d8deea; border-radius: 9px; }
+    .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }
+    .fact b { display: block; font-size: 11px; text-transform: uppercase; color: #6c7485; }
+    .why { grid-column: 1 / -1; padding: 10px; background: #f7f9fc; border-left: 3px solid #315cc6; }
+    @media (max-width: 560px) {
+      body { padding: 10px; }
+      section { padding: 12px; }
+      .deck, .row, .facts { grid-template-columns: 1fr; }
+      .deck { gap: 6px; }
+      button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>R412C local rendered evidence</h1>
+    <p class="notice">Non-live fixture only. It demonstrates the production surface hierarchy and responsive contract without applicant or external-system access.</p>
+  </header>
+
+  <section aria-labelledby="admin-heading">
+    <h2 id="admin-heading">Admin — Applicant Lifecycle Worklists</h2>
+    <div class="deck" aria-label="Canonical lifecycle buckets">
+      <button aria-pressed="false"><span class="label">All active lifecycle</span><span class="count">172 · 7 stages</span></button>
+      <button aria-pressed="true"><span class="label">Documents — review / follow-up</span><span class="count">24 · REVIEW 16 · FOLLOW_UP 8</span></button>
+      <button aria-pressed="false"><span class="label">Documents received — assessment / verification required</span><span class="count">11</span></button>
+      <button aria-pressed="false"><span class="label">Pending applicant response</span><span class="count">39</span></button>
+      <button aria-pressed="false"><span class="label">Held in abeyance — no response</span><span class="count">8</span></button>
+      <button aria-pressed="false"><span class="label">Held in abeyance — other reason</span><span class="count">4</span></button>
+      <button aria-pressed="false"><span class="label">Working on it</span><span class="count">26</span></button>
+      <button aria-pressed="false"><span class="label">Ready for decision</span><span class="count">13</span></button>
+      <button aria-pressed="false"><span class="label">Admitted — onboarding outstanding</span><span class="count">7</span></button>
+      <button aria-pressed="false"><span class="label">Lost / uncontactable</span><span class="count">5 · Not sendable</span></button>
+      <button aria-pressed="false"><span class="label">Data / integrity exception</span><span class="count">3</span></button>
+      <button class="closed" aria-pressed="false"><span class="label">Closed outcomes</span><span class="count">32 · separated</span></button>
+    </div>
+    <div class="selected">Selected: Documents — review / follow-up · 24 applicants</div>
+    <article class="row">
+      <div><strong>Fixture applicant A</strong><br>Documents — review / follow-up<br>Stage: DOCUMENT_REVIEW</div>
+      <div class="facts">
+        <div class="fact"><b>Outstanding requirement</b>Certified transcript</div>
+        <div class="fact"><b>Waiting on</b>Applicant</div>
+        <div class="fact"><b>Next action</b>Review supplied document</div>
+        <div class="fact"><b>Contactability</b>Contactable</div>
+        <div class="fact"><b>Owner</b>Admissions review</div>
+        <div class="fact"><b>Last meaningful activity</b>2026-08-04</div>
+        <div class="fact"><b>Qualifying communications</b>2 (read-only evidence)</div>
+        <div class="fact"><b>Review / reactivation</b>On document receipt</div>
+      </div>
+      <div class="why"><strong>Why this is in this queue:</strong> Canonical document evidence is present but verification remains outstanding. Source: canonical applicant lifecycle projection.</div>
+    </article>
+  </section>
+
+  <section aria-labelledby="eduops-heading">
+    <h2 id="eduops-heading">EduOps — same canonical lifecycle position</h2>
+    <div class="deck">
+      <button aria-pressed="false"><span class="label">All active lifecycle</span><span class="count">172</span></button>
+      <button aria-pressed="true"><span class="label">Documents — review / follow-up</span><span class="count">24 · REVIEW 16 · FOLLOW_UP 8</span></button>
+      <button class="closed" aria-pressed="false"><span class="label">Closed outcomes</span><span class="count">32 · separated</span></button>
+    </div>
+    <div class="selected">Lifecycle worklist: Documents — review / follow-up</div>
+    <article class="row">
+      <div><strong>Fixture applicant A</strong><br>Documents — review / follow-up<br>Stage: DOCUMENT_REVIEW</div>
+      <div class="facts">
+        <div class="fact"><b>Requirement / reason</b>Certified transcript · verification outstanding</div>
+        <div class="fact"><b>Next action</b>Review supplied document</div>
+        <div class="fact"><b>Waiting / held</b>Applicant · not held</div>
+        <div class="fact"><b>Contactability</b>Contactable</div>
+        <div class="fact"><b>Communications</b>2 · latest 2026-08-04</div>
+        <div class="fact"><b>Authority</b>Read-only canonical projection</div>
+      </div>
+      <div class="why"><strong>Why this is in this queue:</strong> Same canonical reason, requirement, and next action shown in Admin; EduOps does not recalculate status.</div>
+    </article>
+  </section>
+</main>
+</body>
+</html>

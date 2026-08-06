@@ -201,6 +201,10 @@ function eduopsFodeActionabilityRowFromCanonical_(canonical) {
     reviewSourceEvidence: eduopsClean_(actionability.reviewSourceEvidence || ""),
     reviewFollowupCount: Number(actionability.reviewFollowupCount || 0),
     reviewCommunicationEvidenceAvailable: actionability.reviewCommunicationEvidenceAvailable === true,
+    reviewOwner: eduopsClean_(actionability.reviewOwner || actionability.actionOwner || ""),
+    reviewDate: eduopsClean_(actionability.reviewDate || ""),
+    reviewReactivationCondition: eduopsClean_(actionability.reviewReactivationCondition || ""),
+    reviewLastMeaningfulActivity: eduopsClean_(actionability.reviewLastMeaningfulActivity || actionability.lastRelevantDate || ""),
     nextAction: eduopsClean_(actionability.nextAction || ""),
     nextActionDate: eduopsClean_(actionability.nextActionDate || ""),
     actionabilityState: eduopsClean_(actionability.state || "").toUpperCase(),
@@ -289,7 +293,11 @@ function eduopsFodeRowDto_(row, query, snapshotId, reliability) {
       sourceEvidence: eduopsClean_(row.reviewSourceEvidence || ""),
       contactability: eduopsClean_(authorityState.contactabilityState || ""),
       qualifyingCommunicationCount: Number(row.reviewFollowupCount || 0),
-      communicationEvidenceAvailable: row.reviewCommunicationEvidenceAvailable === true
+      communicationEvidenceAvailable: row.reviewCommunicationEvidenceAvailable === true,
+      owner: eduopsClean_(row.reviewOwner || row.actionOwner || ""),
+      reviewDate: eduopsClean_(row.reviewDate || ""),
+      reactivationCondition: eduopsClean_(row.reviewReactivationCondition || ""),
+      lastMeaningfulActivity: eduopsClean_(row.reviewLastMeaningfulActivity || row.lastRelevantDate || "")
     },
     primaryRoute: primaryRoute,
     actionOwner: eduopsClean_(row.actionOwner || ""),

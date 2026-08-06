@@ -117,7 +117,7 @@ function sliceQueueByOffset_(rows, offset, limit) {
 }
 
 function normalizeReviewQueueData_(data) {
-  var names = ["fdReceived", "docs", "awaitingPayment", "payments", "anomalies", "paidApproved", "postPaymentIssues"];
+  var names = ["lifecycle", "fdReceived", "docs", "awaitingPayment", "payments", "anomalies", "paidApproved", "postPaymentIssues"];
   var src = (data && typeof data === "object") ? data : {};
   var out = { counts: {} };
   for (var i = 0; i < names.length; i++) {
@@ -142,7 +142,7 @@ function filterDocumentsToVerifyQueue_(rows) {
 }
 
 function mergeQueuePageMeta_(queues, offset, limit) {
-  var names = ["fdReceived", "docs", "awaitingPayment", "payments", "anomalies", "paidApproved", "postPaymentIssues"];
+  var names = ["lifecycle", "fdReceived", "docs", "awaitingPayment", "payments", "anomalies", "paidApproved", "postPaymentIssues"];
   var hasMore = false;
   var nextOffset = "";
   for (var i = 0; i < names.length; i++) {
@@ -202,6 +202,20 @@ function admin_getReviewQueues(payload) {
       selectBlockReason: clean_(item.selectBlockReason || ""),
       recommendedMessageType: clean_(item.recommendedMessageType || ""),
       actionOwner: clean_(item.actionOwner || ""),
+      reviewBucketKey: clean_(item.reviewBucketKey || ""),
+      reviewBucketLabel: clean_(item.reviewBucketLabel || ""),
+      reviewReason: clean_(item.reviewReason || ""),
+      reviewRequirement: clean_(item.reviewRequirement || ""),
+      reviewWaitingOn: clean_(item.reviewWaitingOn || ""),
+      reviewSourceEvidence: clean_(item.reviewSourceEvidence || ""),
+      reviewFollowupCount: Number(item.reviewFollowupCount || 0),
+      reviewCommunicationEvidenceAvailable: item.reviewCommunicationEvidenceAvailable === true,
+      reviewOwner: clean_(item.reviewOwner || item.actionOwner || ""),
+      reviewDate: clean_(item.reviewDate || ""),
+      reviewReactivationCondition: clean_(item.reviewReactivationCondition || ""),
+      reviewLastMeaningfulActivity: clean_(item.reviewLastMeaningfulActivity || item.lastRelevantDate || ""),
+      reviewNextAction: clean_(item.nextAction || ""),
+      contactabilityState: clean_(item.contactabilityState || "UNKNOWN"),
       canonicalLifecycle: {
         baseState: clean_(item.lifecycleBaseState || ""),
         lifecycleStage: clean_(item.lifecycleStage || ""),
@@ -231,6 +245,7 @@ function admin_getReviewQueues(payload) {
   }
 
   var fullData = normalizeReviewQueueData_({
+    lifecycle: allRows.map(buildReviewQueueRow_),
     fdReceived: allRows.filter(function (row) {
       var base = clean_(row.lifecycleBaseState || "").toUpperCase();
       return base === "APPLICATION_RECEIVED" || base === "AWAITING_PORTAL_OR_INTAKE";
@@ -256,6 +271,7 @@ function admin_getReviewQueues(payload) {
   });
 
   fullData.counts = {
+    lifecycle: fullData.lifecycle.length,
     fdReceived: fullData.fdReceived.length,
     docs: fullData.docs.length,
     awaitingPayment: fullData.awaitingPayment.length,
@@ -265,9 +281,20 @@ function admin_getReviewQueues(payload) {
     postPaymentIssues: fullData.postPaymentIssues.length
   };
 
+  var reviewLifecycleCounts = {};
+  var reviewLifecycleStageSubtotals = {};
+  allRows.forEach(function (row) {
+    var bucket = clean_(row && row.reviewBucketKey || "DATA_INTEGRITY_EXCEPTION").toUpperCase() || "DATA_INTEGRITY_EXCEPTION";
+    var stage = clean_(row && row.lifecycleStage || row && row.lifecycleBaseState || "UNKNOWN").toUpperCase() || "UNKNOWN";
+    reviewLifecycleCounts[bucket] = Number(reviewLifecycleCounts[bucket] || 0) + 1;
+    if (!reviewLifecycleStageSubtotals[bucket]) reviewLifecycleStageSubtotals[bucket] = {};
+    reviewLifecycleStageSubtotals[bucket][stage] = Number(reviewLifecycleStageSubtotals[bucket][stage] || 0) + 1;
+  });
+
   var pageMeta = mergeQueuePageMeta_(fullData, offset, limit);
   return {
     ok: true,
+    lifecycle: sliceQueueByOffset_(fullData.lifecycle, offset, limit),
     fdReceived: sliceQueueByOffset_(fullData.fdReceived, offset, limit),
     docs: sliceQueueByOffset_(fullData.docs, offset, limit),
     awaitingPayment: sliceQueueByOffset_(fullData.awaitingPayment, offset, limit),
@@ -276,6 +303,8 @@ function admin_getReviewQueues(payload) {
     paidApproved: sliceQueueByOffset_(fullData.paidApproved, offset, limit),
     postPaymentIssues: sliceQueueByOffset_(fullData.postPaymentIssues, offset, limit),
     counts: fullData.counts,
+    reviewLifecycleCounts: reviewLifecycleCounts,
+    reviewLifecycleStageSubtotals: reviewLifecycleStageSubtotals,
     offset: offset,
     limit: limit,
     hasMore: pageMeta.hasMore,

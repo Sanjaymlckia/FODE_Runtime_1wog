@@ -40,8 +40,10 @@
     dom.eduopsReliabilityBanner.innerHTML = '<strong>' + app.esc(item && item.label || app.authorityUnavailable("source reliability")) + '</strong><span>' + app.esc(item && item.reason || app.authorityUnavailable("source reliability")) + '</span><div>' + controls + '</div>';
   }
   function renderWorklists(presentation) {
-    dom.eduopsWorklistKeys.innerHTML = (presentation.worklists || []).map(function (item) {
-      return '<button type="button" class="eduops-worklist-key" data-worklist="' + app.esc(item.code) + '" aria-selected="' + (app.state.worklistKey === item.code ? "true" : "false") + '">' + app.esc(item.label) + '<span class="eduops-key-count">' + Number(item.count || 0) + '</span></button>';
+    var lifecycleWorklists = presentation.lifecycleWorklists || [];
+    dom.eduopsWorklistKeys.innerHTML = lifecycleWorklists.map(function (item) {
+      var stages = (item.stageSubtotals || []).map(function (stage) { return app.formatCode(stage.code) + " " + Number(stage.count || 0); }).join(" · ");
+      return '<button type="button" class="eduops-worklist-key eduops-lifecycle-worklist-key" data-lifecycle-worklist="' + app.esc(item.code) + '" aria-selected="' + (app.state.reviewBucketKey === item.code ? "true" : "false") + '" data-closed="' + (item.closed === true ? "true" : "false") + '"><span>' + app.esc(item.label) + '</span><span class="eduops-key-count">' + Number(item.count || 0) + '</span><small>' + app.esc(stages || "No stage subtotal") + '</small></button>';
     }).join("");
   }
   function renderQueueContext(response, selectedState, selectedWorklist) {
@@ -50,8 +52,8 @@
     var packages = (cockpit.actionPackages || []).filter(function (item) { return !item.actionabilityState || item.actionabilityState === app.state.actionabilityState; });
     var activePackage = packages.filter(function (item) { return item.worklistKey === app.state.worklistKey || (!app.state.worklistKey && !item.worklistKey); })[0] || packages[0] || null;
     dom.eduopsOperationsToolbarState.textContent = selectedState && selectedState.label || app.authorityUnavailable("actionability");
-    dom.eduopsOperationsToolbarPackage.textContent = selectedWorklist && selectedWorklist.label || activePackage && activePackage.label || "All work types";
-    dom.eduopsOperationsQueueContext.innerHTML = '<span class="eduops-eyebrow">Secondary context</span><h2>' + app.esc(selectedWorklist && selectedWorklist.label || activePackage && activePackage.label || "All work types") + '</h2><p>The top ribbon is the authoritative queue summary. Use it to change work type.</p><div class="eduops-operations-package-panel-control" role="group" aria-label="Package actions"><span class="eduops-visually-hidden">Current summary</span><button type="button" data-eduops-operations-focus-packages>Open workspace packages</button></div>';
+    dom.eduopsOperationsToolbarPackage.textContent = selectedWorklist && selectedWorklist.label || "All lifecycle work";
+    dom.eduopsOperationsQueueContext.innerHTML = '<span class="eduops-eyebrow">Canonical lifecycle worklist</span><h2>' + app.esc(selectedWorklist && selectedWorklist.label || "All lifecycle work") + '</h2><p>Lifecycle placement comes from the canonical applicant projection. Actionability remains secondary execution context.</p><div class="eduops-operations-package-panel-control" role="group" aria-label="Package actions"><span class="eduops-visually-hidden">Current actionability package</span><button type="button" data-eduops-operations-focus-packages>' + app.esc(activePackage && activePackage.label || "Open actionability packages") + '</button></div>';
   }
   function neutralizeQueueContext(state, message) {
     var loading = state === "LOADING";
@@ -141,6 +143,7 @@
 
   function rowDetailHtml(row, op, blockedReason) {
     var p = row.presentation || {};
+    var review = row.reviewLifecycle || {};
     var missingNames = (op.missingDocumentNames || []).join(", ");
     return '<details class="eduops-row-detail"><summary>▾ Details</summary><div class="eduops-row-detail-grid">'
       + '<div><span>Lifecycle</span><strong>' + app.esc(op.lifecycleLabel || app.authorityLabel(p.lifecycle, "lifecycle state")) + '</strong></div>'
@@ -160,7 +163,7 @@
       + '<div><span>Selection block</span><strong>' + app.esc(row.selectBlockReason || "None") + '</strong></div>'
       + '<div><span>Authority result</span><strong>' + app.esc(op.authorityResultLabel || app.authorityLabel(p.actionability, "authority result")) + '</strong></div>'
       + '<div class="eduops-row-detail-wide"><span>Authority reason</span><strong>' + app.esc(blockedReason || op.authorityReason || "No block returned") + '</strong></div>'
-      + '</div>' + contextRibbonHtml(row) + '</details>';
+      + '</div><section class="eduops-lifecycle-evidence" aria-label="Why this is in this queue"><h4>Why this is in this queue</h4><dl class="eduops-definition-list"><div><dt>Lifecycle bucket</dt><dd>' + app.esc(review.bucketLabel || "Not returned") + '</dd></div><div><dt>Requirement</dt><dd>' + app.esc(review.requirement || "Not returned") + '</dd></div><div><dt>Reason</dt><dd>' + app.esc(review.reason || "Not returned") + '</dd></div><div><dt>Waiting on</dt><dd>' + app.esc(review.waitingOn || "Not returned") + '</dd></div><div><dt>Owner</dt><dd>' + app.esc(review.owner || row.actionOwner || "Not returned") + '</dd></div><div><dt>Review / reactivation date</dt><dd>' + app.esc(review.reviewDate || "Not scheduled") + '</dd></div><div><dt>Reactivation condition</dt><dd>' + app.esc(review.reactivationCondition || "Not returned") + '</dd></div><div><dt>Last meaningful activity</dt><dd>' + app.esc(review.lastMeaningfulActivity || "Not returned") + '</dd></div><div><dt>Qualifying communications</dt><dd>' + app.esc(String(Number(review.qualifyingCommunicationCount || 0))) + '</dd></div><div><dt>Source evidence</dt><dd>' + app.esc(review.sourceEvidence || "Canonical applicant lifecycle projection") + '</dd></div></dl></section>' + contextRibbonHtml(row) + '</details>';
   }
 
   function selectionCount(response) {
@@ -232,8 +235,8 @@
       + '<td class="eduops-col-select"><input class="eduops-row-checkbox" type="checkbox" data-select-applicant="' + app.esc(id) + '" aria-label="Select ' + app.esc(row.displayName) + '"' + (selected ? " checked" : "") + (blocked ? " disabled" : "") + '></td>'
       + '<td class="eduops-col-applicant"><button type="button" class="eduops-applicant-link" data-quick-applicant="' + app.esc(id) + '"><strong>' + app.esc(row.displayName) + '</strong><span>' + app.esc(id) + '</span></button></td>'
       + '<td class="eduops-col-issue"><strong>' + app.esc(review.bucketLabel || op.issueLabel || app.authorityUnavailable("current issue")) + '</strong><span>' + app.esc([review.lifecycleStage, review.requirement, review.reason].filter(function(value){ return !!value; }).join(" - ") || issueMeta || app.authorityUnavailable("evidence summary")) + '</span>' + rowDetailHtml(row, op, blockedReason) + '</td>'
-      + '<td class="eduops-col-next-action"><strong>' + app.esc(op.nextActionLabel || app.authorityLabel(p.nextAction, "next action")) + '</strong><span>' + app.esc(op.nextActionDetail || op.workPackageLabel || app.authorityLabel(p.worklist, "work package")) + '</span></td>'
-      + '<td class="eduops-col-row-status"><strong>' + app.esc(op.statusLabel || app.authorityLabel(p.actionability, "status")) + '</strong><span>' + app.esc(statusMeta || app.authorityUnavailable("contactability")) + '</span></td>'
+      + '<td class="eduops-col-next-action"><strong>' + app.esc(review.nextAction || op.nextActionLabel || app.authorityLabel(p.nextAction, "next action")) + '</strong><span>' + app.esc(review.waitingOn || op.nextActionDetail || op.workPackageLabel || app.authorityLabel(p.worklist, "work package")) + '</span></td>'
+      + '<td class="eduops-col-row-status"><strong>' + app.esc(review.contactability || op.statusLabel || app.authorityLabel(p.actionability, "status")) + '</strong><span>' + app.esc(statusMeta || app.authorityUnavailable("contactability")) + '</span></td>'
       + '<td class="eduops-col-open"><button class="eduops-row-open" type="button" data-open-applicant="' + app.esc(id) + '">Open</button></td></tr>';
   }
 
@@ -318,11 +321,11 @@
     renderSelection(response);
     renderPagination(response);
     var selectedState = authorityItem(presentation.actionabilityBuckets, app.state.actionabilityState) || presentation.allActionability;
-    var selectedWorklist = authorityItem(presentation.worklists, app.state.worklistKey);
+    var selectedWorklist = authorityItem(presentation.lifecycleWorklists, app.state.reviewBucketKey);
     var selectedScope = authorityItem(presentation.workScopes, app.state.workScope);
     renderQueueContext(response, selectedState, selectedWorklist);
-    dom.eduopsSelectedStateLabel.textContent = selectedState && selectedState.label || app.authorityUnavailable("actionability");
-    dom.eduopsSelectedWorklistLabel.textContent = selectedWorklist && selectedWorklist.label || app.authorityUnavailable("worklist");
+    dom.eduopsSelectedStateLabel.textContent = "Lifecycle worklist";
+    dom.eduopsSelectedWorklistLabel.textContent = selectedWorklist && selectedWorklist.label || "All lifecycle work";
     dom.eduopsSearch.placeholder = "Search within " + (selectedWorklist && selectedWorklist.label || selectedState && selectedState.label || "current workload");
     dom.eduopsWorklistReason.textContent = response.totalMatched + " matched. " + (selectedScope && selectedScope.label || app.authorityUnavailable("work scope")) + ".";
     dom.eduopsTopContext.textContent = (selectedState && selectedState.label || app.authorityUnavailable("actionability")) + " / " + (selectedWorklist && selectedWorklist.label || app.authorityUnavailable("worklist"));
@@ -342,7 +345,7 @@
     }
     dom.eduopsHiddenRailCount.textContent = String(response.reconciliation && response.reconciliation.hiddenFromCurrentView || 0);
     if (!app.state.workbench && !app.state.batch) {
-      app.replaceRoute("workload?state=" + encodeURIComponent(app.state.actionabilityState) + "&worklist=" + encodeURIComponent(app.state.worklistKey) + "&scope=" + encodeURIComponent(app.state.workScope) + "&page=" + app.state.page);
+      app.replaceRoute("workload?lifecycle=" + encodeURIComponent(app.state.reviewBucketKey) + "&state=" + encodeURIComponent(app.state.actionabilityState) + "&worklist=" + encodeURIComponent(app.state.worklistKey) + "&scope=" + encodeURIComponent(app.state.workScope) + "&page=" + app.state.page);
     }
   };
 
@@ -405,7 +408,7 @@
     dom.eduopsDrawerTitle.textContent = row.displayName;
     var p = row.presentation || {};
     var review = row.reviewLifecycle || {};
-    dom.eduopsDrawerContent.innerHTML = '<section class="eduops-primary-identity"><span class="eduops-eyebrow">Applicant identity and contact</span><h3>' + app.esc(row.displayName) + '</h3><dl class="eduops-definition-list"><div><dt>ApplicantID</dt><dd>' + app.esc(row.applicantId) + '</dd></div><div><dt>Recipient email</dt><dd>' + app.esc(app.displayRecipientEmail(row.email)) + '</dd></div><div><dt>Contactability</dt><dd>' + app.esc(review.contactability || app.authorityLabel(p.contactability, "contactability")) + '</dd></div></dl></section><dl class="eduops-definition-list"><div><dt>Lifecycle bucket</dt><dd>' + app.esc(review.bucketLabel || app.authorityLabel(p.worklist, "worklist")) + '</dd></div><div><dt>Lifecycle stage</dt><dd>' + app.esc(review.lifecycleStage || "Not returned") + '</dd></div><div><dt>Outstanding requirement</dt><dd>' + app.esc(review.requirement || "Not returned") + '</dd></div><div><dt>Why this is in this queue</dt><dd>' + app.esc(review.reason || "Not returned") + '</dd></div><div><dt>Waiting on</dt><dd>' + app.esc(review.waitingOn || "Not returned") + '</dd></div><div><dt>Next action</dt><dd>' + app.esc(review.nextAction || app.authorityLabel(p.nextAction, "next action")) + '</dd></div><div><dt>Qualifying communications</dt><dd>' + app.esc(String(Number(review.qualifyingCommunicationCount || 0))) + (review.communicationEvidenceAvailable ? " (requirement-scoped evidence)" : " (evidence unavailable)") + '</dd></div><div><dt>Source evidence</dt><dd>' + app.esc(review.sourceEvidence || "Canonical applicant lifecycle projection") + '</dd></div></dl>';
+    dom.eduopsDrawerContent.innerHTML = '<section class="eduops-primary-identity"><span class="eduops-eyebrow">Applicant identity and contact</span><h3>' + app.esc(row.displayName) + '</h3><dl class="eduops-definition-list"><div><dt>ApplicantID</dt><dd>' + app.esc(row.applicantId) + '</dd></div><div><dt>Recipient email</dt><dd>' + app.esc(app.displayRecipientEmail(row.email)) + '</dd></div><div><dt>Contactability</dt><dd>' + app.esc(review.contactability || app.authorityLabel(p.contactability, "contactability")) + '</dd></div></dl></section><dl class="eduops-definition-list"><div><dt>Lifecycle bucket</dt><dd>' + app.esc(review.bucketLabel || app.authorityLabel(p.worklist, "worklist")) + '</dd></div><div><dt>Lifecycle stage</dt><dd>' + app.esc(review.lifecycleStage || "Not returned") + '</dd></div><div><dt>Outstanding requirement</dt><dd>' + app.esc(review.requirement || "Not returned") + '</dd></div><div><dt>Why this is in this queue</dt><dd>' + app.esc(review.reason || "Not returned") + '</dd></div><div><dt>Waiting on</dt><dd>' + app.esc(review.waitingOn || "Not returned") + '</dd></div><div><dt>Owner</dt><dd>' + app.esc(review.owner || row.actionOwner || "Not returned") + '</dd></div><div><dt>Review / reactivation date</dt><dd>' + app.esc(review.reviewDate || "Not scheduled") + '</dd></div><div><dt>Reactivation condition</dt><dd>' + app.esc(review.reactivationCondition || "Not returned") + '</dd></div><div><dt>Last meaningful activity</dt><dd>' + app.esc(review.lastMeaningfulActivity || "Not returned") + '</dd></div><div><dt>Next action</dt><dd>' + app.esc(review.nextAction || app.authorityLabel(p.nextAction, "next action")) + '</dd></div><div><dt>Qualifying communications</dt><dd>' + app.esc(String(Number(review.qualifyingCommunicationCount || 0))) + (review.communicationEvidenceAvailable ? " (requirement-scoped evidence)" : " (evidence unavailable)") + '</dd></div><div><dt>Source evidence</dt><dd>' + app.esc(review.sourceEvidence || "Canonical applicant lifecycle projection") + '</dd></div></dl>';
     dom.eduopsDrawerActions.innerHTML = '<button class="eduops-button eduops-button-primary" type="button" data-open-applicant="' + app.esc(applicantId) + '" data-open-row-number="' + Number(row.rowNumber || 0) + '">Open Individual Workbench</button>';
     dom.eduopsQuickDrawer.hidden = false;
     dom.eduopsQuickDrawer.setAttribute("aria-hidden", "false");
@@ -1379,6 +1382,7 @@
         var requested = stateButton.getAttribute("data-state");
         app.state.actionabilityState = requested;
         app.state.worklistKey = "";
+        app.state.reviewBucketKey = requested === "COMPLETE" ? "CLOSED_OUTCOME" : "ALL_ACTIVE";
         if (!app.state.workScopePinned) app.state.workScope = "ALL_AUTHORISED";
         app.clearSelection();
         app.requestWorkload({ resetPage: true });
@@ -1386,6 +1390,8 @@
       }
       var worklist = event.target.closest("[data-worklist]");
       if (worklist) { app.state.worklistKey = worklist.getAttribute("data-worklist"); app.clearSelection(); app.requestWorkload({ resetPage: true }); return; }
+      var lifecycleWorklist = event.target.closest("[data-lifecycle-worklist]");
+      if (lifecycleWorklist) { app.state.reviewBucketKey = lifecycleWorklist.getAttribute("data-lifecycle-worklist"); app.state.actionabilityState = "ALL"; app.state.worklistKey = ""; app.clearSelection(); app.requestWorkload({ resetPage: true }); return; }
       var scope = event.target.closest("[data-work-scope]");
       if (scope) { app.state.workScope = scope.getAttribute("data-work-scope"); app.clearSelection(); app.requestWorkload({ resetPage: true }); return; }
       var page = event.target.closest("[data-page]");

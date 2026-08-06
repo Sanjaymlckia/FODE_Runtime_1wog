@@ -12,13 +12,43 @@
     .opsLifecycleToggle{ display:flex; flex-wrap:wrap; gap:8px; }
     .opsLifecycleModeBtn{ border:1px solid #cddded; background:#fff; color:#1d3550; border-radius:999px; padding:8px 12px; font-weight:900; cursor:pointer; }
     .opsLifecycleModeBtn.active{ background:#1f70ea; border-color:#1f70ea; color:#fff; }
+    .opsReviewLifecycleDeck{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:9px; margin:12px 0; }
+    .opsReviewLifecycleCard{ display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px 10px; min-height:94px; padding:11px; border:1px solid #dce6ef; border-radius:9px; background:#fff; color:#17324d; text-align:left; cursor:pointer; }
+    .opsReviewLifecycleCard:hover{ border-color:#7da9dc; background:#f7fbff; }
+    .opsReviewLifecycleCard.active{ border-color:#1f70ea; box-shadow:inset 0 0 0 2px rgba(31,112,234,.18); background:#f2f7ff; }
+    .opsReviewLifecycleCard.closed{ border-style:dashed; }
+    .opsReviewLifecycleCard .bucketName{ font-weight:900; line-height:1.25; }
+    .opsReviewLifecycleCard .bucketCount{ color:#1f70ea; font-size:22px; font-weight:900; }
+    .opsReviewLifecycleCard .bucketStages{ grid-column:1 / -1; color:#60758b; font-size:11px; line-height:1.35; }
+    .opsReviewLifecycleSelection{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; background:#edf5fd; border:1px solid #cddff1; border-radius:9px; }
+    .opsReviewLifecycleRows{ display:grid; gap:9px; margin-top:10px; }
+    .opsReviewLifecycleRow{ display:grid; grid-template-columns:minmax(180px,.9fr) repeat(3,minmax(150px,1fr)); gap:8px; padding:11px; border:1px solid #dce6ef; border-radius:9px; background:#fff; }
+    .opsReviewLifecycleRow .label{ display:block; color:#6a7e92; font-size:10px; font-weight:900; text-transform:uppercase; }
+    .opsReviewLifecycleRow .value{ display:block; margin-top:2px; color:#17324d; font-size:12px; line-height:1.35; word-break:break-word; }
+    .opsReviewLifecycleWhy{ grid-column:1 / -1; padding-top:7px; border-top:1px solid #e4edf5; }
+    .opsReviewLifecycleWhy summary{ color:#1f5aa5; font-weight:900; cursor:pointer; }
+    .opsLegacyLifecycleDetails{ margin-top:16px; border-top:1px solid #dce6ef; padding-top:12px; }
+    .opsLegacyLifecycleDetails > summary{ color:#536b82; font-weight:800; cursor:pointer; }
+    @media (max-width:720px){
+      .opsReviewLifecycleDeck{ grid-template-columns:1fr; }
+      .opsReviewLifecycleRow{ grid-template-columns:1fr; }
+      .opsReviewLifecycleWhy{ grid-column:1; }
+      .opsReviewLifecycleSelection{ align-items:flex-start; flex-direction:column; }
+    }
 </style>
 <section id="opsLifecycleMap" class="opsSectionPage" data-ops-mode-group="operator">
   <div class="opsPageIntro">
-    <div><h2>Lifecycle Map</h2><p>Global View shows full active admissions population counts. Working View shows only the currently loaded OPS rows.</p></div>
-    <span class="opsStatusPill info" id="opsLifecycleScopePill">Global View</span>
+    <div><h2>Applicant Lifecycle Worklists</h2><p>Canonical lifecycle buckets are the primary staff work-management view. Select a bucket to see its loaded applicants and evidence.</p></div>
+    <span class="opsStatusPill ok" id="opsReviewLifecycleAuthorityPill">Canonical projection</span>
   </div>
   <div class="opsCard">
+    <div class="opsSafetyNotice">Counts reconcile to the Population Ledger. Closed outcomes are separated from active work; Lost / uncontactable is read-only and never presented as sendable.</div>
+    <div class="opsReviewLifecycleDeck" id="opsReviewLifecycleBucketCards" role="tablist" aria-label="Canonical applicant lifecycle worklists"></div>
+    <div class="opsReviewLifecycleSelection" id="opsReviewLifecycleSelection"><strong>Selected worklist: All active lifecycle work</strong><span>Choose a bucket above to filter the loaded worklist.</span></div>
+    <div class="opsReviewLifecycleRows" id="opsReviewLifecycleRows"></div>
+    <details class="opsLegacyLifecycleDetails">
+      <summary>Secondary compatibility stage map</summary>
+      <p class="opsSafetyNotice">This legacy stage aggregate is retained for compatibility and batch-stage navigation. It is not the primary applicant lifecycle worklist.</p>
     <div class="opsLifecycleControls">
       <div class="opsLifecycleToggle" aria-label="Lifecycle view mode">
         <button class="opsLifecycleModeBtn active" id="opsLifecycleGlobalBtn" type="button" onclick="opsSetLifecycleViewMode_('global')">Global View</button>
@@ -29,6 +59,7 @@
     <div class="opsSafetyNotice" id="opsLifecycleScopeText" style="margin-bottom:12px;">Global View is full active admissions population truth. Working queues remain loaded, filtered, and paginated operational snapshots.</div>
     <div class="opsStageCascade" id="opsLifecycleStageCards"></div>
     <div class="opsInspectPanel" id="opsLifecycleInspector">Select a lifecycle stage. Global counts come from the full active admissions population; loaded record drill-down remains a Working View operation.</div>
+    </details>
   </div>
 </section>
 <script>
@@ -41,6 +72,99 @@
       generatedAt: "",
       source: "pending"
     };
+    var opsSelectedReviewBucket = "ALL_ACTIVE";
+    function opsReviewLifecycleDefinitions_(){
+      return [
+        { key:"ALL_ACTIVE", label:"All active lifecycle work", closed:false },
+        { key:"DOCUMENTS_FOLLOW_UP", label:"Documents — review / follow-up", closed:false },
+        { key:"DOCUMENTS_ASSESSMENT", label:"Documents received — assessment / verification required", closed:false },
+        { key:"PENDING_APPLICANT_RESPONSE", label:"Pending applicant response", closed:false },
+        { key:"HELD_ABEYANCE_NO_RESPONSE", label:"Held in abeyance — no response", closed:false },
+        { key:"HELD_ABEYANCE_OTHER", label:"Held in abeyance — other reason", closed:false },
+        { key:"WORKING_ON_IT", label:"Working on it", closed:false },
+        { key:"READY_FOR_DECISION", label:"Ready for decision", closed:false },
+        { key:"ADMITTED_ONBOARDING_OUTSTANDING", label:"Admitted — onboarding outstanding", closed:false },
+        { key:"LOST_UNCONTACTABLE", label:"Lost / uncontactable", closed:false },
+        { key:"DATA_INTEGRITY_EXCEPTION", label:"Data / integrity exception", closed:false },
+        { key:"CLOSED_OUTCOME", label:"Closed outcomes", closed:true }
+      ];
+    }
+    function opsReviewLifecycleBucketKey_(row){
+      return String(row && row.reviewBucketKey || "DATA_INTEGRITY_EXCEPTION").trim().toUpperCase() || "DATA_INTEGRITY_EXCEPTION";
+    }
+    function opsRowsForReviewLifecycleBucket_(bucketKey){
+      var key = String(bucketKey || "ALL_ACTIVE").trim().toUpperCase();
+      return opsAllQueueRows_().filter(function(row){
+        var rowKey = opsReviewLifecycleBucketKey_(row);
+        return key === "ALL_ACTIVE" ? rowKey !== "CLOSED_OUTCOME" : rowKey === key;
+      });
+    }
+    function opsReviewLifecycleCount_(definition){
+      var counts = queueDataState && queueDataState.reviewLifecycleCounts || {};
+      if (definition.key === "ALL_ACTIVE") {
+        return Object.keys(counts).reduce(function(total, key){ return key === "CLOSED_OUTCOME" ? total : total + Number(counts[key] || 0); }, 0);
+      }
+      return Number(counts[definition.key] || 0);
+    }
+    function opsReviewLifecycleStageText_(definition){
+      if (definition.key === "ALL_ACTIVE") return "Select a specific bucket for lifecycle-stage subtotals.";
+      var subtotals = queueDataState && queueDataState.reviewLifecycleStageSubtotals && queueDataState.reviewLifecycleStageSubtotals[definition.key] || {};
+      var labels = Object.keys(subtotals).sort().map(function(stage){ return stage.replace(/_/g, " ") + " " + Number(subtotals[stage] || 0); });
+      return labels.length ? labels.join(" · ") : "No current lifecycle-stage subtotal";
+    }
+    function opsReviewLifecycleValue_(label, value){
+      return "<div><span class='label'>" + esc(label) + "</span><span class='value'>" + esc(value || "Not returned") + "</span></div>";
+    }
+    function opsReviewLifecycleRowsHtml_(rows){
+      return (Array.isArray(rows) ? rows : []).map(function(row){
+        var id = String(row.applicantId || row.ApplicantID || "");
+        var name = String(row.name || row.Name || "Unknown applicant");
+        var contactability = String(row.contactabilityState || "UNKNOWN").toUpperCase();
+        var reviewDate = row.reviewDate || "Not scheduled";
+        var stage = row.canonicalLifecycle && (row.canonicalLifecycle.lifecycleStage || row.canonicalLifecycle.baseState) || row.opsLifecycleStageKey || "UNKNOWN";
+        var source = row.reviewSourceEvidence || "Canonical applicant lifecycle projection";
+        return "<article class='opsReviewLifecycleRow opsQueueSelectableRow' data-applicant-id='" + esc(id) + "' data-applicant-name='" + esc(name) + "'>"
+          + opsReviewLifecycleValue_("Applicant", name + " · " + id)
+          + opsReviewLifecycleValue_("Lifecycle bucket / stage", (row.reviewBucketLabel || opsReviewLifecycleBucketKey_(row).replace(/_/g, " ")) + " · " + String(stage).replace(/_/g, " "))
+          + opsReviewLifecycleValue_("Outstanding requirement", row.reviewRequirement)
+          + opsReviewLifecycleValue_("Waiting on / next action", (row.reviewWaitingOn || "Not returned") + " · " + (row.reviewNextAction || row.nextAction || "Not returned"))
+          + opsReviewLifecycleValue_("Contactability", contactability + (opsReviewLifecycleBucketKey_(row) === "LOST_UNCONTACTABLE" ? " · Not sendable" : ""))
+          + opsReviewLifecycleValue_("Owner", row.reviewOwner || row.actionOwner)
+          + opsReviewLifecycleValue_("Last meaningful activity", row.reviewLastMeaningfulActivity || row.receivedAt)
+          + opsReviewLifecycleValue_("Review / reactivation", reviewDate + (row.reviewReactivationCondition ? " · " + row.reviewReactivationCondition : ""))
+          + opsReviewLifecycleValue_("Qualifying successful communications", String(Number(row.reviewFollowupCount || 0)) + (row.reviewCommunicationEvidenceAvailable ? " · requirement scoped" : " · evidence unavailable"))
+          + "<details class='opsReviewLifecycleWhy'><summary>Why this is in this queue</summary><div class='value'><strong>Canonical reason:</strong> " + esc(row.reviewReason || "Not returned") + "</div><div class='value'><strong>Source evidence:</strong> " + esc(source) + "</div></details>"
+          + "</article>";
+      }).join("");
+    }
+    function renderOpsReviewLifecycleWorklists_(){
+      var cards = document.getElementById("opsReviewLifecycleBucketCards");
+      var selection = document.getElementById("opsReviewLifecycleSelection");
+      var rowsWrap = document.getElementById("opsReviewLifecycleRows");
+      if (!cards || !rowsWrap) return;
+      var definitions = opsReviewLifecycleDefinitions_();
+      cards.innerHTML = definitions.map(function(definition){
+        return "<button type='button' class='opsReviewLifecycleCard" + (opsSelectedReviewBucket === definition.key ? " active" : "") + (definition.closed ? " closed" : "") + "' data-review-lifecycle-bucket='" + esc(definition.key) + "' aria-selected='" + (opsSelectedReviewBucket === definition.key ? "true" : "false") + "'><span class='bucketName'>" + esc(definition.label) + "</span><span class='bucketCount'>" + String(opsReviewLifecycleCount_(definition)) + "</span><span class='bucketStages'>" + esc(opsReviewLifecycleStageText_(definition)) + "</span></button>";
+      }).join("");
+      var selected = definitions.filter(function(item){ return item.key === opsSelectedReviewBucket; })[0] || definitions[0];
+      var rows = opsRowsForReviewLifecycleBucket_(selected.key);
+      if (selection) selection.innerHTML = "<strong>Selected worklist: " + esc(selected.label) + "</strong><span>" + String(rows.length) + " loaded row(s)" + (queueDataState && queueDataState.hasMore ? "; use Load More for the remaining bounded snapshot." : ".") + "</span>";
+      rowsWrap.innerHTML = rows.length ? opsReviewLifecycleRowsHtml_(rows) : "<div class='opsPlaceholder'>No loaded applicants currently resolve to this lifecycle worklist.</div>";
+      Array.prototype.slice.call(cards.querySelectorAll("[data-review-lifecycle-bucket]")).forEach(function(button){
+        button.addEventListener("click", function(){
+          opsSelectedReviewBucket = String(button.getAttribute("data-review-lifecycle-bucket") || "ALL_ACTIVE");
+          opsActionState.queueFilter = "review:" + opsSelectedReviewBucket;
+          renderOpsQueue_();
+          opsScrollTo_("opsReviewLifecycleRows");
+        });
+      });
+      Array.prototype.slice.call(rowsWrap.querySelectorAll(".opsQueueSelectableRow")).forEach(function(rowEl){
+        rowEl.addEventListener("click", function(event){
+          if (event.target && event.target.closest && event.target.closest("details")) return;
+          opsSelectApplicantContext_(rowEl.getAttribute("data-applicant-id") || "", rowEl.getAttribute("data-applicant-name") || "");
+        });
+      });
+    }
     function opsLifecycleDefinitions_(){
       return [
         { key:"fd_received", name:"Application Received / FD Received", mode:"operator workflow", meaning:"External FD intake row has been received and assigned an ApplicantID.", next:"Review Application", matches:function(row){ return opsLifecycleStageKeyFromFacts_(row) === "fd_received"; } },
@@ -171,6 +295,7 @@
         .admin_getOpsLifecycleSummary({ force: o.force ? 1 : 0 });
     }
     function renderOpsLifecycleCascade_(){
+      renderOpsReviewLifecycleWorklists_();
       var wrap = document.getElementById("opsLifecycleStageCards");
       var detail = document.getElementById("opsLifecycleInspector");
       if (!wrap) return;

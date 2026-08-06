@@ -111,7 +111,7 @@ function eduops_getProfile() {
     products: eduopsProductProfileRegistry_(),
     contractVersion: cfg.contractVersion,
     profileVersion: cfg.profileVersion,
-    defaultQuery: { product: "FODE", actionabilityState: "READY", worklistKey: "", workScope: "ALL_AUTHORISED", filters: { search: "" }, sort: { key: "urgency", direction: "asc" }, page: 1, pageSize: 25 },
+    defaultQuery: { product: "FODE", actionabilityState: "ALL", worklistKey: "", reviewBucketKey: "ALL_ACTIVE", workScope: "ALL_AUTHORISED", filters: { search: "" }, sort: { key: "urgency", direction: "asc" }, page: 1, pageSize: 25 },
     actionabilityStates: eduopsActionabilityPresentation_({}),
     workScopes: eduopsWorkScopePresentation_(),
     featureFlags: eduopsFeatureFlags_(),
@@ -194,6 +194,7 @@ function eduops_queryOperationalWorkload(payload) {
     reliabilityReasons: reliability.reasons,
     actionabilityState: query.actionabilityState,
     worklistKey: query.worklistKey,
+    reviewBucketKey: query.reviewBucketKey,
     workScope: query.workScope,
     filters: query.filters,
     sort: query.sort,
@@ -873,8 +874,9 @@ function eduopsNormalizeWorkloadQuery_(payload) {
   var p = payload && typeof payload === "object" ? payload : {};
   return {
     product: eduopsNormalizeProduct_(p.product || "FODE"),
-    actionabilityState: eduopsUpper_(p.actionabilityState || "READY"),
+    actionabilityState: eduopsUpper_(p.actionabilityState || "ALL"),
     worklistKey: eduopsClean_(p.worklistKey || ""),
+    reviewBucketKey: eduopsUpper_(p.reviewBucketKey || "ALL_ACTIVE"),
     workScope: eduopsUpper_(p.workScope || "ALL_AUTHORISED"),
     filters: p.filters && typeof p.filters === "object" ? p.filters : {},
     sort: p.sort && typeof p.sort === "object" ? p.sort : { key: "urgency", direction: "asc" },
@@ -1024,6 +1026,7 @@ function eduopsDemoProductWorkload_(query, started, accessMs) {
     reliabilityReasons: reliability.reasons,
     actionabilityState: query.actionabilityState,
     worklistKey: query.worklistKey,
+    reviewBucketKey: query.reviewBucketKey,
     workScope: query.workScope,
     filters: query.filters,
     sort: query.sort,
@@ -1105,6 +1108,8 @@ function eduopsFilterRows_(rows, query, reliability) {
   return list.filter(function (row) {
     if (query.actionabilityState !== "ALL" && eduopsUpper_(row.actionabilityState || "") !== query.actionabilityState) return false;
     if (query.worklistKey && eduopsClean_(row.worklistKey || "") !== query.worklistKey) return false;
+    if (query.reviewBucketKey === "ALL_ACTIVE" && eduopsUpper_(row.reviewBucketKey || "") === "CLOSED_OUTCOME") return false;
+    if (query.reviewBucketKey && query.reviewBucketKey !== "ALL_ACTIVE" && eduopsUpper_(row.reviewBucketKey || "") !== query.reviewBucketKey) return false;
     if (query.workScope && query.workScope !== "ALL_AUTHORISED" && eduopsWorkScope_(row) !== query.workScope) return false;
     var filters = query.filters || {};
     if (filters.owner && eduopsClean_(row.actionOwner || "") !== eduopsClean_(filters.owner)) return false;
@@ -1214,7 +1219,7 @@ function eduopsActionPackageDescriptor_(row) {
     return { packageKey: state + ":" + worklistKey, actionabilityState: state, worklistKey: worklistKey, label: "Missing documents - applicant follow-up due", shortLabel: "Applicant missing documents", ownerDomain: "Documents", sortPriority: 20, mutationBoundary: "Document authority + Communication Authority" };
   }
   if (state === "COOLING_OFF") return { packageKey: "COOLING_OFF", actionabilityState: state, worklistKey: "", label: "Recently contacted / cooling off", shortLabel: "Waiting period", ownerDomain: "Operations", sortPriority: 70, mutationBoundary: "Actionability Resolver" };
-  if (state === "REVIEW_REQUIRED" && !descriptors[worklistKey]) return { packageKey: "REVIEW_REQUIRED", actionabilityState: state, worklistKey: "", label: "Needs review", shortLabel: "Needs review", ownerDomain: "Review", sortPriority: 80, mutationBoundary: "Review Workspace" };
+  if (state === "REVIEW_REQUIRED" && !descriptors[worklistKey]) return { packageKey: "REVIEW_REQUIRED", actionabilityState: state, worklistKey: "", label: "Lifecycle review — actionability detail", shortLabel: "Lifecycle review detail", ownerDomain: "Review", sortPriority: 80, mutationBoundary: "Review Workspace" };
   if (state === "COMPLETE") return { packageKey: "COMPLETE", actionabilityState: state, worklistKey: "", label: "Completed / no action", shortLabel: "Completed", ownerDomain: "History", sortPriority: 900, mutationBoundary: "Canonical Lifecycle Resolver" };
   var descriptor = descriptors[worklistKey] || {};
   return {
@@ -1398,6 +1403,7 @@ function eduopsWorkloadPresentation_(allRows, matchedRows, pageRows, query, reli
     actionabilityBuckets: eduopsActionabilityPresentation_(actionabilityCounts),
     allActionability: { code: "ALL", label: "All authoritative records", count: Object.keys(actionabilityCounts || {}).reduce(function (sum, key) { return sum + Number(actionabilityCounts[key] || 0); }, 0), authoritySource: "Actionability Resolver" },
     worklists: eduopsWorklistPresentation_(worklistKeyCounts, allRows),
+    lifecycleWorklists: eduopsReviewLifecyclePresentation_(allRows),
     workScopes: eduopsWorkScopePresentation_(),
     reliability: eduopsStatePresentation_(reliability && reliability.state || "UNAVAILABLE"),
     metrics: [
@@ -1482,6 +1488,54 @@ function eduopsWorklistCounts_(rows, query) {
     out[key] = Number(out[key] || 0) + 1;
   });
   return out;
+}
+
+function eduopsReviewLifecycleDefinitions_() {
+  return [
+    ["ALL_ACTIVE", "All active lifecycle work", false],
+    ["DOCUMENTS_FOLLOW_UP", "Documents — review / follow-up", false],
+    ["DOCUMENTS_ASSESSMENT", "Documents received — assessment / verification required", false],
+    ["PENDING_APPLICANT_RESPONSE", "Pending applicant response", false],
+    ["HELD_ABEYANCE_NO_RESPONSE", "Held in abeyance — no response", false],
+    ["HELD_ABEYANCE_OTHER", "Held in abeyance — other reason", false],
+    ["WORKING_ON_IT", "Working on it", false],
+    ["READY_FOR_DECISION", "Ready for decision", false],
+    ["ADMITTED_ONBOARDING_OUTSTANDING", "Admitted — onboarding outstanding", false],
+    ["LOST_UNCONTACTABLE", "Lost / uncontactable", false],
+    ["DATA_INTEGRITY_EXCEPTION", "Data / integrity exception", false],
+    ["CLOSED_OUTCOME", "Closed outcomes", true]
+  ];
+}
+
+function eduopsReviewLifecyclePresentation_(rows) {
+  var counts = {};
+  var stages = {};
+  (Array.isArray(rows) ? rows : []).forEach(function (row) {
+    var key = eduopsUpper_(row && row.reviewBucketKey || "DATA_INTEGRITY_EXCEPTION") || "DATA_INTEGRITY_EXCEPTION";
+    var stage = eduopsUpper_(row && row.canonicalLifecycle && (row.canonicalLifecycle.lifecycleStage || row.canonicalLifecycle.baseState) || "UNKNOWN") || "UNKNOWN";
+    counts[key] = Number(counts[key] || 0) + 1;
+    if (!stages[key]) stages[key] = {};
+    stages[key][stage] = Number(stages[key][stage] || 0) + 1;
+    if (key !== "CLOSED_OUTCOME") {
+      counts.ALL_ACTIVE = Number(counts.ALL_ACTIVE || 0) + 1;
+      if (!stages.ALL_ACTIVE) stages.ALL_ACTIVE = {};
+      stages.ALL_ACTIVE[stage] = Number(stages.ALL_ACTIVE[stage] || 0) + 1;
+    }
+  });
+  return eduopsReviewLifecycleDefinitions_().map(function (definition) {
+    var key = definition[0];
+    return {
+      schemaVersion: "EDUOPS_LIFECYCLE_WORKLIST_V1",
+      authoritySource: "Canonical applicant lifecycle projection",
+      code: key,
+      label: definition[1],
+      count: Number(counts[key] || 0),
+      closed: definition[2] === true,
+      stageSubtotals: Object.keys(stages[key] || {}).sort().map(function (stage) {
+        return { code: stage, count: stages[key][stage] };
+      })
+    };
+  });
 }
 
 function eduopsMetricCounts_(rows) {
@@ -1678,6 +1732,8 @@ function eduopsHiddenReasonPage_(hiddenReasons, page, pageSize, snapshotId, quer
 function eduopsHiddenReasonCode_(row, query) {
   if (query.actionabilityState !== "ALL" && eduopsUpper_(row.actionabilityState || "") !== query.actionabilityState) return eduopsUpper_(row.actionabilityState || "OTHER_ACTIONABILITY");
   if (query.worklistKey && eduopsClean_(row.worklistKey || "") !== query.worklistKey) return "ANOTHER_WORKLIST_KEY";
+  if (query.reviewBucketKey === "ALL_ACTIVE" && eduopsUpper_(row.reviewBucketKey || "") === "CLOSED_OUTCOME") return "ANOTHER_LIFECYCLE_BUCKET";
+  if (query.reviewBucketKey && query.reviewBucketKey !== "ALL_ACTIVE" && eduopsUpper_(row.reviewBucketKey || "") !== query.reviewBucketKey) return "ANOTHER_LIFECYCLE_BUCKET";
   if (query.workScope && query.workScope !== "ALL_AUTHORISED" && eduopsWorkScope_(row) !== query.workScope) return "ANOTHER_WORK_SCOPE";
   if (row.selectable !== true) return eduopsClean_(row.reasonCode || "NOT_SELECTABLE");
   return "FILTERED_FROM_VIEW";
@@ -1686,6 +1742,7 @@ function eduopsHiddenReasonCode_(row, query) {
 function eduopsHiddenReasonText_(row, query) {
   var code = eduopsHiddenReasonCode_(row, query);
   if (code === "ANOTHER_WORKLIST_KEY") return "Applicant belongs to another worklist key.";
+  if (code === "ANOTHER_LIFECYCLE_BUCKET") return "Applicant belongs to another canonical lifecycle worklist.";
   if (code === "ANOTHER_WORK_SCOPE") return "Applicant belongs to another work ownership scope.";
   if (code === "COOLING_OFF") return "Applicant is in cooling-off.";
   if (code === "AWAITING_APPLICANT") return "Applicant owns the next action.";

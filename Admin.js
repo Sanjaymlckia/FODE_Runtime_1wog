@@ -3235,6 +3235,9 @@ function applicantReviewLifecycleProjection_(facts) {
     sourceEvidence: clean_(f.sourceEvidence || "Canonical applicant lifecycle and requirement facts"),
     owner: clean_(f.owner || "Unassigned"),
     dueDate: clean_(f.dueDate || ""),
+    reviewDate: clean_(f.holdReviewDate || f.dueDate || ""),
+    reactivationCondition: clean_(f.reactivationCondition || ""),
+    lastMeaningfulActivity: clean_(f.lastMeaningfulActivity || ""),
     waitingOn: clean_(f.waitingOn || ""),
     qualifyingFollowupCount: count,
     communicationEvidenceAvailable: Array.isArray(f.communicationEvents),
@@ -3456,6 +3459,7 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     documentsReceived: !!uploadSummary.requiredDocumentUploadComplete,
     documentsVerified: !!docsVerified,
     documentsIncomplete: !uploadSummary.requiredDocumentUploadComplete,
+    lastMeaningfulActivity: dateInfo.value,
     communicationEvents: Array.isArray(row.Communication_Events) ? row.Communication_Events : null
   });
   return {
@@ -3477,6 +3481,10 @@ function buildActionabilityPreviewRow_(rowObj, rowNumber) {
     reviewSourceEvidence: reviewLifecycle.sourceEvidence,
     reviewFollowupCount: reviewLifecycle.qualifyingFollowupCount,
     reviewCommunicationEvidenceAvailable: reviewLifecycle.communicationEvidenceAvailable,
+    reviewOwner: reviewLifecycle.owner,
+    reviewDate: reviewLifecycle.reviewDate,
+    reviewReactivationCondition: reviewLifecycle.reactivationCondition,
+    reviewLastMeaningfulActivity: reviewLifecycle.lastMeaningfulActivity,
     nextAction: nextAction,
     actionabilityState: actionabilityState.actionabilityState,
     selectable: actionabilityState.selectable === true,
@@ -3960,6 +3968,10 @@ function admin_getActionabilityPreview(payload) {
       reviewSourceEvidence: clean_(actionability.reviewSourceEvidence || ""),
       reviewFollowupCount: Number(actionability.reviewFollowupCount || 0),
       reviewCommunicationEvidenceAvailable: actionability.reviewCommunicationEvidenceAvailable === true,
+      reviewOwner: clean_(actionability.reviewOwner || actionability.actionOwner || ""),
+      reviewDate: clean_(actionability.reviewDate || ""),
+      reviewReactivationCondition: clean_(actionability.reviewReactivationCondition || ""),
+      reviewLastMeaningfulActivity: clean_(actionability.reviewLastMeaningfulActivity || actionability.lastRelevantDate || ""),
       nextAction: clean_(actionability.nextAction || ""),
       actionabilityState: clean_(actionability.state || "UNKNOWN").toUpperCase(),
       selectable: actionability.selectable === true,
@@ -4038,6 +4050,10 @@ function admin_getActionabilityPreview(payload) {
       item.reviewSourceEvidence = derivedReviewLifecycle.sourceEvidence;
       item.reviewFollowupCount = derivedReviewLifecycle.qualifyingFollowupCount;
       item.reviewCommunicationEvidenceAvailable = derivedReviewLifecycle.communicationEvidenceAvailable;
+      item.reviewOwner = derivedReviewLifecycle.owner;
+      item.reviewDate = derivedReviewLifecycle.reviewDate;
+      item.reviewReactivationCondition = derivedReviewLifecycle.reactivationCondition;
+      item.reviewLastMeaningfulActivity = derivedReviewLifecycle.lastMeaningfulActivity || item.lastRelevantDate;
     }
     var owner = clean_(item.actionOwner || "NONE").toUpperCase() || "NONE";
     if (!Object.prototype.hasOwnProperty.call(out.countsByOwner, owner)) out.countsByOwner[owner] = 0;

@@ -84,6 +84,7 @@
     product: "FODE",
     actionabilityState: "",
     worklistKey: "",
+    reviewBucketKey: "ALL_ACTIVE",
     workScope: "",
     workScopePinned: false,
     filters: { search: "" },
@@ -404,6 +405,7 @@
       product: app.state.product,
       actionabilityState: app.state.actionabilityState,
       worklistKey: app.state.worklistKey,
+      reviewBucketKey: app.state.reviewBucketKey,
       workScope: app.state.workScope,
       filters: app.clone(app.state.filters),
       sort: app.clone(app.state.sort),
@@ -480,6 +482,7 @@
       product: p.product,
       actionabilityState: p.actionabilityState,
       worklistKey: p.worklistKey,
+      reviewBucketKey: p.reviewBucketKey,
       workScope: p.workScope,
       filters: app.clone(p.filters || {}),
       snapshotId: snapshotId || p.expectedSnapshotId || app.state.snapshotId || ""
@@ -490,6 +493,7 @@
     return left.product === right.product
       && left.actionabilityState === right.actionabilityState
       && left.worklistKey === right.worklistKey
+      && left.reviewBucketKey === right.reviewBucketKey
       && left.workScope === right.workScope
       && left.snapshotId === right.snapshotId
       && JSON.stringify(left.filters || {}) === JSON.stringify(right.filters || {});
@@ -566,13 +570,14 @@
   };
 
   app.contextLabel = function (payload) {
-    return app.formatCode(payload.actionabilityState) + " / " + (payload.worklistKey ? app.formatCode(payload.worklistKey) : "All work types") + " / " + app.formatCode(payload.workScope) + " / page " + payload.page;
+    return (payload.reviewBucketKey ? app.formatCode(payload.reviewBucketKey) : "All lifecycle work") + " / " + app.formatCode(payload.actionabilityState) + " / " + (payload.worklistKey ? app.formatCode(payload.worklistKey) : "All action types") + " / " + app.formatCode(payload.workScope) + " / page " + payload.page;
   };
 
   app.saveProductState = function (product) {
     app.state.productStates[product || app.state.product] = {
       actionabilityState: app.state.actionabilityState,
       worklistKey: app.state.worklistKey,
+      reviewBucketKey: app.state.reviewBucketKey,
       workScope: app.state.workScope,
       filters: app.clone(app.state.filters),
       sort: app.clone(app.state.sort),
@@ -587,6 +592,7 @@
     var defaults = app.state.profile && app.state.profile.defaultQuery || {};
     app.state.actionabilityState = saved.actionabilityState || defaults.actionabilityState || "";
     app.state.worklistKey = saved.worklistKey || "";
+    app.state.reviewBucketKey = saved.reviewBucketKey || defaults.reviewBucketKey || "ALL_ACTIVE";
     app.state.workScope = saved.workScope || defaults.workScope || "";
     app.state.filters = app.clone(saved.filters || { search: "" });
     app.state.sort = app.clone(saved.sort || defaults.sort || {});
@@ -822,6 +828,7 @@
       product: app.state.product,
       actionabilityState: app.state.actionabilityState,
       worklistKey: app.state.worklistKey,
+      reviewBucketKey: app.state.reviewBucketKey,
       workScope: app.state.workScope,
       filters: app.clone(app.state.filters),
       sort: app.clone(app.state.sort),
@@ -853,6 +860,7 @@
     return String(workload.product || app.state.product || "") === String(ctx.product || app.state.product || "")
       && String(workload.actionabilityState || "") === String(ctx.actionabilityState || "")
       && String(workload.worklistKey || "") === String(ctx.worklistKey || "")
+      && String(workload.reviewBucketKey || "") === String(ctx.reviewBucketKey || "")
       && String(workload.workScope || "") === String(ctx.workScope || "")
       && Number(workload.page || 1) === Number(ctx.page || 1)
       && Number(workload.pageSize || 25) === Number(ctx.pageSize || 25)
@@ -868,6 +876,7 @@
     app.state.product = ctx.product || defaults.product || "FODE";
     app.state.actionabilityState = ctx.actionabilityState || defaults.actionabilityState || "";
     app.state.worklistKey = ctx.worklistKey || "";
+    app.state.reviewBucketKey = ctx.reviewBucketKey || defaults.reviewBucketKey || "ALL_ACTIVE";
     app.state.workScope = ctx.workScope || defaults.workScope || "";
     app.state.filters = app.clone(ctx.filters || { search: "" });
     app.state.sort = app.clone(ctx.sort || defaults.sort || {});
