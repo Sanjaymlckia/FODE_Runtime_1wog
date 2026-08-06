@@ -9,6 +9,8 @@ const eduopsWorkload = fs.readFileSync("EduOps_Workload.js", "utf8");
 const eduopsAdapter = fs.readFileSync("EduOps_FODE_Adapter.js", "utf8");
 const eduopsComponents = fs.readFileSync("EduOps_ClientComponents.html", "utf8");
 const eduopsStyles = fs.readFileSync("EduOps_Styles.html", "utf8");
+const eduopsOperationsStyles = fs.readFileSync("EduOps_OperationsWorkspaceStyles.html", "utf8");
+const eduopsHtml = fs.readFileSync("EduOps.html", "utf8");
 const renderedEvidence = fs.readFileSync("tests/r412c-visible-lifecycle-worklists.render.html", "utf8");
 
 function extract(source, name) {
@@ -149,6 +151,10 @@ assert.match(eduopsComponents, /Actionability remains secondary execution contex
 assert.match(adminLifecycleUi, /@media \(max-width:720px\)[\s\S]*grid-template-columns:1fr/);
 assert.match(eduopsStyles, /@media \(max-width: 560px\)[\s\S]*\.eduops-worklist-keys \{ grid-template-columns: 1fr; overflow: visible; \}/);
 assert.doesNotMatch(eduopsStyles, /\.eduops-worklist-key-band \{ display: none; \}/, "lifecycle controls must remain accessible in compact layouts");
+assert.doesNotMatch(eduopsOperationsStyles, /\.eduops-worklist-key-band,\s*\.eduops-operations-layout \.eduops-work-scope-band \{ display: none; \}/, "Operations Workspace must not hide canonical lifecycle controls");
+assert.match(eduopsOperationsStyles, /\.eduops-operations-layout \.eduops-worklist-key-band \{\s*display: grid;/, "Operations Workspace must visibly render lifecycle controls");
+assert.match(eduopsOperationsStyles, /@media \(max-width: 560px\)[\s\S]*\.eduops-operations-layout \.eduops-worklist-keys \{ grid-template-columns: 1fr; \}/, "Operations Workspace lifecycle controls must fit 390px layouts");
+assert.doesNotMatch(eduopsHtml, /class="eduops-worklist-key-band"[^>]*aria-hidden="true"/, "Lifecycle controls must remain available to keyboard and assistive-technology users");
 assert.match(adminQueues, /reviewLifecycleCounts:[\s\S]*reviewLifecycleStageSubtotals:/, "Admin review queue response must carry global lifecycle counts and stage subtotals");
 assert.match(renderedEvidence, /Non-live fixture only/);
 assert.match(renderedEvidence, /Documents — review \/ follow-up/);

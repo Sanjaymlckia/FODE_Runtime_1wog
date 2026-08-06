@@ -296,8 +296,25 @@
   gap: var(--eduops-r399-row-gap);
 }
 .eduops-operations-layout .eduops-workspace-header,
-.eduops-operations-layout .eduops-worklist-key-band,
 .eduops-operations-layout .eduops-work-scope-band { display: none; }
+.eduops-operations-layout .eduops-worklist-key-band {
+  display: grid;
+  flex: 0 0 auto;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.eduops-operations-layout .eduops-worklist-keys {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  overflow: visible;
+}
+@media (max-width: 560px) {
+  .eduops-operations-layout .eduops-worklist-key-band {
+    max-height: none;
+    overflow: visible;
+  }
+  .eduops-operations-layout .eduops-worklist-keys { grid-template-columns: 1fr; }
+}
 .eduops-operations-layout .eduops-filter-toolbar {
   position: static;
   z-index: auto;
